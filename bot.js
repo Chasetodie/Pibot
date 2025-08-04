@@ -30,7 +30,7 @@ app.get('/status', (req, res) => {
 // Iniciar servidor web
 app.listen(PORT, () => {
     console.log(`🌐 Servidor web corriendo en puerto ${PORT}`);
-    console.log(`📡 URL del bot: https://${process.env.REPL_SLUG}.${process.env.REPL_OWNER}.repl.co`);
+    console.log(`📡 URL del bot: https://${process.env.RAILWAY_PUBLIC_DOMAIN || 'localhost:8080'}`);
 });
 
 // Configuración del bot de Discord
@@ -321,4 +321,5 @@ process.on('unhandledRejection', (error) => {
 });
 
 // Iniciar el bot
+
 client.login(process.env.TOKEN);
