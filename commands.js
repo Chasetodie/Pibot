@@ -104,10 +104,10 @@ class CommandHandler {
             .setTitle('📋 Comandos Disponibles')
             .setDescription('Lista de comandos del bot (solo administradores)')
             .addFields(
-                { name: '!contadores', value: 'Muestra los contadores actuales', inline: false },
-                { name: '!reset <pibes> <pibas>', value: 'Actualiza los contadores manualmente', inline: false },
-                { name: '!reload', value: 'Recarga contadores desde variables de entorno', inline: false },
-                { name: '!help', value: 'Muestra esta lista de comandos', inline: false }
+                { name: '!=contadores', value: 'Muestra los contadores actuales', inline: false },
+                { name: '!=reset <pibes> <pibas>', value: 'Actualiza los contadores manualmente', inline: false },
+                { name: '!=reload', value: 'Recarga contadores desde variables de entorno', inline: false },
+                { name: '!=help', value: 'Muestra esta lista de comandos', inline: false }
             )
             .setColor('#FF6B6B')
             .setTimestamp()
