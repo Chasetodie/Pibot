@@ -2,78 +2,11 @@ const { Client, GatewayIntentBits, ActionRowBuilder, ButtonBuilder, ButtonStyle,
 const express = require('express');
 const fs = require('fs');
 const path = require('path');
+const CommandHandler = require('./commands'); // Importar el manejador de comandos
 
 // Configuración del servidor web para mantener activo el bot
 const app = express();
 const PORT = process.env.PORT || 3000;
-
-// Ruta principal para verificar que el bot está funcionando
-app.get('/', (req, res) => {
-    res.send(`
-        <h1>🤖 Bot Pibe/Piba está funcionando!</h1>
-        <p>Estado: <strong style="color: green;">ONLINE</strong></p>
-        <p>Última verificación: ${new Date().toLocaleString()}</p>
-        <p>Contadores actuales: Pibe ${counters.pibe}, Piba ${counters.piba}</p>
-        <hr>
-        <h3>⚙️ Configuración:</h3>
-        <p>Pibe inicial: ${process.env.PIBE_COUNT || 0}</p>
-        <p>Piba inicial: ${process.env.PIBA_COUNT || 0}</p>
-    `);
-});
-
-// Ruta para verificar el estado (útil para monitoreo)
-app.get('/status', (req, res) => {
-    res.json({
-        status: 'online',
-        uptime: process.uptime(),
-        timestamp: new Date().toISOString(),
-        counters: counters,
-        environment: {
-            pibe_initial: process.env.PIBE_COUNT || 0,
-            piba_initial: process.env.PIBA_COUNT || 0
-        }
-    });
-});
-
-// Ruta para resetear contadores (método alternativo)
-app.get('/reset/:pibe/:piba', (req, res) => {
-    const { pibe, piba } = req.params;
-    const pibeCount = parseInt(pibe);
-    const pibaCount = parseInt(piba);
-    
-    if (!isNaN(pibeCount) && !isNaN(pibaCount) && pibeCount >= 0 && pibaCount >= 0) {
-        counters.pibe = pibeCount;
-        counters.piba = pibaCount;
-        saveCounters(counters);
-        
-        res.json({
-            success: true,
-            message: `Contadores actualizados: Pibe ${pibeCount}, Piba ${pibaCount}`,
-            counters: counters
-        });
-    } else {
-        res.status(400).json({
-            success: false,
-            message: 'Números inválidos. Usa: /reset/18/5'
-        });
-    }
-});
-
-// Iniciar servidor web
-app.listen(PORT, () => {
-    console.log(`🌐 Servidor web corriendo en puerto ${PORT}`);
-    console.log(`📡 URL del bot: ${process.env.RAILWAY_PUBLIC_DOMAIN ? `https://${process.env.RAILWAY_PUBLIC_DOMAIN}` : `http://localhost:${PORT}`}`);
-});
-
-// Configuración del bot de Discord
-const client = new Client({
-    intents: [
-        GatewayIntentBits.Guilds,
-        GatewayIntentBits.GuildMembers,
-        GatewayIntentBits.DirectMessages,
-        GatewayIntentBits.MessageContent
-    ]
-});
 
 // Archivo para guardar los contadores
 const countersFile = path.join(__dirname, 'counters.json');
@@ -115,11 +48,82 @@ function saveCounters(counters) {
 // Cargar contadores al iniciar
 let counters = loadCounters();
 
+// Crear instancia del manejador de comandos
+const commandHandler = new CommandHandler(counters, saveCounters);
+
+// Rutas del servidor web
+app.get('/', (req, res) => {
+    res.send(`
+        <h1>Monilia Al Habla!</h1>
+        <p>Estado: <strong style="color: green;">ONLINE</strong></p>
+        <p>Última verificación: ${new Date().toLocaleString()}</p>
+        <p>Contadores actuales: Pibe ${counters.pibe}, Piba ${counters.piba}</p>
+        <hr>
+        <h3>Configuración:</h3>
+        <p>Pibe inicial: ${process.env.PIBE_COUNT || 0}</p>
+        <p>Piba inicial: ${process.env.PIBA_COUNT || 0}</p>
+    `);
+});
+
+app.get('/status', (req, res) => {
+    res.json({
+        status: 'online',
+        uptime: process.uptime(),
+        timestamp: new Date().toISOString(),
+        counters: counters,
+        environment: {
+            pibe_initial: process.env.PIBE_COUNT || 0,
+            piba_initial: process.env.PIBA_COUNT || 0
+        }
+    });
+});
+
+app.get('/reset/:pibe/:piba', (req, res) => {
+    const { pibe, piba } = req.params;
+    const pibeCount = parseInt(pibe);
+    const pibaCount = parseInt(piba);
+    
+    if (!isNaN(pibeCount) && !isNaN(pibaCount) && pibeCount >= 0 && pibaCount >= 0) {
+        counters.pibe = pibeCount;
+        counters.piba = pibaCount;
+        saveCounters(counters);
+        
+        res.json({
+            success: true,
+            message: `Contadores actualizados: Pibe ${pibeCount}, Piba ${pibaCount}`,
+            counters: counters
+        });
+    } else {
+        res.status(400).json({
+            success: false,
+            message: 'Números inválidos. Usa: /reset/18/5'
+        });
+    }
+});
+
+// Iniciar servidor web
+app.listen(PORT, () => {
+    console.log(`Servidor web corriendo en puerto ${PORT}`);
+    console.log(`URL del bot: ${process.env.RAILWAY_PUBLIC_DOMAIN ? `https://${process.env.RAILWAY_PUBLIC_DOMAIN}` : `http://localhost:${PORT}`}`);
+});
+
+// Configuración del bot de Discord con TODOS los intents necesarios
+const client = new Client({
+    intents: [
+        GatewayIntentBits.Guilds,
+        GatewayIntentBits.GuildMembers,
+        GatewayIntentBits.GuildMessages, // ¡ESTE ERA EL INTENT FALTANTE!
+        GatewayIntentBits.DirectMessages,
+        GatewayIntentBits.MessageContent
+    ]
+});
+
 // Evento cuando el bot está listo
 client.once('ready', () => {
-    console.log(`🤖 Bot conectado como ${client.user.tag}`);
+    console.log(`✅ Bot conectado como ${client.user.tag}`);
     console.log(`📊 Contadores actuales: Pibe ${counters.pibe}, Piba ${counters.piba}`);
-    console.log(`⚙️ Variables de entorno: PIBE_COUNT=${process.env.PIBE_COUNT || 'no definida'}, PIBA_COUNT=${process.env.PIBA_COUNT || 'no definida'}`);
+    console.log(`🌍 Variables de entorno: PIBE_COUNT=${process.env.PIBE_COUNT || 'no definida'}, PIBA_COUNT=${process.env.PIBA_COUNT || 'no definida'}`);
+    console.log(`🔧 Comandos disponibles: !contadores, !reset, !reload, !help`);
 });
 
 // Evento cuando un miembro abandona el servidor
@@ -139,7 +143,7 @@ client.on('guildMemberRemove', async (member) => {
                 // Era el último pibe, reducir contador
                 counters.pibe--;
                 saveCounters(counters);
-                console.log(`📉 Contador de pibes reducido a: ${counters.pibe}`);
+                console.log(`🔵 Contador de pibes reducido a: ${counters.pibe}`);
             }
         } else if (pibaMatch) {
             // Era una piba, restar del contador
@@ -148,12 +152,12 @@ client.on('guildMemberRemove', async (member) => {
                 // Era la última piba, reducir contador
                 counters.piba--;
                 saveCounters(counters);
-                console.log(`📉 Contador de pibas reducido a: ${counters.piba}`);
+                console.log(`🔴 Contador de pibas reducido a: ${counters.piba}`);
             }
         }
         
     } catch (error) {
-        console.error('Error procesando salida de miembro:', error);
+        console.error('❌ Error procesando salida de miembro:', error);
     }
 });
 
@@ -164,8 +168,8 @@ client.on('guildMemberAdd', async (member) => {
         
         // Crear el embed para el mensaje directo
         const embed = new EmbedBuilder()
-            .setTitle('¡Bienvenido/a al servidor! 🎉')
-            .setDescription('Por favor selecciona tu categoría para asignarte un apodo:')
+            .setTitle('¡Bienvenido/a a Prófugos del crotolamo!')
+            .setDescription('Por favor selecciona tu género para asignarte un apodo:')
             .setColor('#5865F2')
             .addFields(
                 { name: '🔵 Pibe', value: `Siguiente número: **${counters.pibe + 1}**`, inline: true },
@@ -194,10 +198,10 @@ client.on('guildMemberAdd', async (member) => {
             components: [row]
         });
 
-        console.log(`📨 Mensaje directo enviado a ${member.user.tag}`);
+        console.log(`📩 Mensaje directo enviado a ${member.user.tag}`);
         
     } catch (error) {
-        console.error('Error enviando mensaje directo:', error);
+        console.error('❌ Error enviando mensaje directo:', error);
         
         // Si no se puede enviar DM, intentar enviar mensaje en un canal del servidor
         try {
@@ -210,9 +214,10 @@ client.on('guildMemberAdd', async (member) => {
                     embeds: [embed],
                     components: [row]
                 });
+                console.log(`📢 Mensaje enviado en canal del sistema para ${member.user.tag}`);
             }
         } catch (channelError) {
-            console.error('Error enviando mensaje en canal:', channelError);
+            console.error('❌ Error enviando mensaje en canal:', channelError);
         }
     }
 });
@@ -251,7 +256,7 @@ client.on('interactionCreate', async (interaction) => {
             
             if (!member || !guild) {
                 await interaction.reply({
-                    content: '❌ No pude encontrarte en ningún servidor. Asegúrate de estar en el servidor antes de usar los botones.',
+                    content: 'No pude encontrarte en ningún servidor. Asegúrate de estar en el servidor antes de usar los botones.',
                     flags: 64 // ephemeral
                 });
                 return;
@@ -271,7 +276,7 @@ client.on('interactionCreate', async (interaction) => {
             
             // Responder al usuario
             const successEmbed = new EmbedBuilder()
-                .setTitle('¡Apodo asignado! ✅')
+                .setTitle('¡Apodo asignado!')
                 .setDescription(`Tu apodo ha sido cambiado a: **${nickname}**`)
                 .setColor('#00FF00')
                 .setFooter({ text: '¡Bienvenido al servidor!' });
@@ -296,7 +301,7 @@ client.on('interactionCreate', async (interaction) => {
             
             // Responder al usuario
             const successEmbed = new EmbedBuilder()
-                .setTitle('¡Apodo asignado! ✅')
+                .setTitle('¡Apodo asignado!')
                 .setDescription(`Tu apodo ha sido cambiado a: **${nickname}**`)
                 .setColor('#FF69B4')
                 .setFooter({ text: '¡Bienvenida al servidor!' });
@@ -310,77 +315,45 @@ client.on('interactionCreate', async (interaction) => {
         }
         
     } catch (error) {
-        console.error('Error procesando selección:', error);
+        console.error('❌ Error procesando selección:', error);
         
         try {
             await interaction.reply({
-                content: '❌ Hubo un error al asignar tu apodo. Por favor contacta a un administrador.',
+                content: 'Hubo un error al asignar tu apodo. Por favor contacta a un administrador.',
                 flags: 64 // ephemeral
             });
         } catch (replyError) {
-            console.error('Error enviando mensaje de error:', replyError);
+            console.error('❌ Error enviando mensaje de error:', replyError);
         }
     }
 });
 
-// Comandos de Discord (mantienen funcionalidad)
+// Manejar mensajes (AHORA CON EL SISTEMA DE COMANDOS SEPARADO)
 client.on('messageCreate', async (message) => {
-    // Comando para verificar contadores
-    if (message.content === '!contadores' && message.member?.permissions.has('Administrator')) {
-        const embed = new EmbedBuilder()
-            .setTitle('Contadores Actuales')
-            .addFields(
-                { name: '🔵 Pibes', value: counters.pibe.toString(), inline: true },
-                { name: '🔴 Pibas', value: counters.piba.toString(), inline: true }
-            )
-            .setColor('#5865F2')
-            .setFooter({ text: 'También puedes cambiar contadores desde variables de entorno' });
-        
-        await message.reply({ embeds: [embed] });
-    }
-    
-    // Comando para resetear contadores
-    if (message.content.startsWith('!reset') && message.member?.permissions.has('Administrator')) {
-        const args = message.content.split(' ');
-        if (args.length === 3) {
-            const pibeCount = parseInt(args[1]);
-            const pibaCount = parseInt(args[2]);
-            
-            if (!isNaN(pibeCount) && !isNaN(pibaCount) && pibeCount >= 0 && pibaCount >= 0) {
-                counters.pibe = pibeCount;
-                counters.piba = pibaCount;
-                saveCounters(counters);
-                
-                await message.reply(`✅ Contadores actualizados: Pibe ${pibeCount}, Piba ${pibaCount}`);
-            } else {
-                await message.reply('❌ Números inválidos. Usa números positivos: `!reset 18 5`');
-            }
-        } else {
-            await message.reply('Uso: `!reset <numero_pibes> <numero_pibas>`\nEjemplo: `!reset 18 5`');
-        }
-    }
-
-    // Comando para reiniciar desde variables de entorno
-    if (message.content === '!reload' && message.member?.permissions.has('Administrator')) {
-        const pibeFromEnv = parseInt(process.env.PIBE_COUNT) || 0;
-        const pibaFromEnv = parseInt(process.env.PIBA_COUNT) || 0;
-        
-        counters.pibe = pibeFromEnv;
-        counters.piba = pibaFromEnv;
-        saveCounters(counters);
-        
-        await message.reply(`🔄 Contadores recargados desde variables de entorno: Pibe ${pibeFromEnv}, Piba ${pibaFromEnv}`);
-    }
+    // Procesar comandos con el nuevo sistema
+    await commandHandler.processCommand(message);
 });
 
 // Manejo de errores
 client.on('error', (error) => {
-    console.error('Error del cliente:', error);
+    console.error('❌ Error del cliente:', error);
 });
 
 process.on('unhandledRejection', (error) => {
-    console.error('Unhandled promise rejection:', error);
+    console.error('⚠️ Unhandled promise rejection:', error);
+});
+
+// Proceso de cierre limpio
+process.on('SIGINT', () => {
+    console.log('\n🔄 Cerrando bot...');
+    saveCounters(counters);
+    client.destroy();
+    process.exit(0);
 });
 
 // Iniciar el bot
-client.login(process.env.TOKEN);
+client.login(process.env.TOKEN).then(() => {
+    console.log('🚀 Proceso de login iniciado...');
+}).catch(error => {
+    console.error('❌ Error en el login:', error);
+});
