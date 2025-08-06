@@ -3,8 +3,8 @@ const express = require('express');
 const fs = require('fs');
 const path = require('path');
 const CommandHandler = require('./commands'); // Importar el manejador de comandos
-/*const EconomySystem = require('./economy'); // Importar el sistema de economia
-const MinigamesSystem = require('./minigames'); // Importar el sistema de minijuegos
+const EconomySystem = require('./economy'); // Importar el sistema de economia
+/*const MinigamesSystem = require('./minigames'); // Importar el sistema de minijuegos
 const AchievementsSystem = require('./achievements');
 const ShopSystem = require('./shop');
 const BettingSystem = require('./betting');
@@ -59,10 +59,10 @@ let counters = loadCounters();
 const commandHandler = new CommandHandler(counters, saveCounters);
 
 
-/*//Crear instancia del sistema de economia
+//Crear instancia del sistema de economia
 const economy = new EconomySystem();
 
-//Crear instancia del sistema de Minijuegos
+/*//Crear instancia del sistema de Minijuegos
 const minigames = new MinigamesSystem(economy);
 
 //Instancia de sistemas extra
