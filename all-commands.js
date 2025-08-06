@@ -671,7 +671,23 @@ class AllCommands {
                 case 'mon!job':
                     await this.handleWork(message);
                     break;*/
+                
+                case 'mon!add':
+                    await this.handleAddMoney(message);
+                    break;
+                
+                case 'mon!remove':
+                    await this.handleRemoveMoney(message);
+                    break;
 
+                case 'mon!addxp':
+                    await this.handleAddXp(message);
+                    break;
+                
+                // Help
+                case 'mon!help':
+                    await this.showHelp(message);
+                    break;
                 default:
                     // No es un comando de economía
                     break;
@@ -776,13 +792,9 @@ class AllCommands {
             if (command === 'mon!eventstats') {
                 await this.events.showEventStats(message);
                 return;
-            }            
+            }            */
 
-            // Help
-            if (command === 'mon!help') {
-                await this.showHelp(message);
-                return;
-            }*/
+
 
         } catch (error) {
             console.error('❌ Error procesando comando:', error);
