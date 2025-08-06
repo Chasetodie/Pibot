@@ -482,12 +482,12 @@ class EconomyCommands {
             .setDescription(`Sistema de **${this.economy.config.currency}** y Niveles`)
             .setColor('#17a2b8')
             .addFields(
-                { name: '💰 !balance [@usuario]', value: 'Ver tu dinero y nivel (o el de otro usuario)', inline: false },
-                { name: '🎁 !daily', value: `Reclamar ${this.economy.config.dailyAmount}±${this.economy.config.dailyVariation} ${this.economy.config.currencySymbol} diarios`, inline: false },
-                { name: '🛠️ !work [tipo]', value: 'Trabajar para ganar dinero (delivery, programmer, doctor, criminal)', inline: false },
-                { name: '📊 !level [@usuario]', value: 'Ver información detallada de nivel', inline: false },
-                { name: '💸 !pay @usuario <cantidad>', value: 'Transferir dinero a otro usuario', inline: false },
-                { name: '🏆 !top [money/level]', value: 'Ver los rankings del servidor', inline: false },
+                { name: '💰 mon!balance [@usuario]', value: 'Ver tu dinero y nivel (o el de otro usuario)', inline: false },
+                { name: '🎁 mon!daily', value: `Reclamar ${this.economy.config.dailyAmount}±${this.economy.config.dailyVariation} ${this.economy.config.currencySymbol} diarios`, inline: false },
+                { name: '🛠️ mon!work [tipo]', value: 'Trabajar para ganar dinero (delivery, programmer, doctor, criminal)', inline: false },
+                { name: '📊 mon!level [@usuario]', value: 'Ver información detallada de nivel', inline: false },
+                { name: '💸 mon!pay @usuario <cantidad>', value: 'Transferir dinero a otro usuario', inline: false },
+                { name: '🏆 mon!top [money/level]', value: 'Ver los rankings del servidor', inline: false },
                 { name: '📈 Sistema de XP', value: `Ganas ${this.economy.config.xpPerMessage}±${this.economy.config.xpVariation} XP por mensaje\nCada nivel te da ${this.economy.config.levelUpReward} ${this.economy.config.currencySymbol}`, inline: false }
             )
             .setFooter({ text: 'Próximamente: minijuegos, apuestas, tienda y más!' })
@@ -505,42 +505,42 @@ class EconomyCommands {
 
         try {
             switch (command) {
-                case '!balance':
-                case '!bal':
-                case '!money':
+                case 'mon!balance':
+                case 'mon!bal':
+                case 'mon!money':
                     const targetUser = message.mentions.members.first();
                     await this.handleBalance(message, targetUser);
                     break;
 
-                case '!daily':
+                case 'mon!daily':
                     await this.handleDaily(message);
                     break;
 
-                case '!level':
-                case '!lvl':
-                case '!rank':
+                case 'mon!level':
+                case 'mon!lvl':
+                case 'mon!rank':
                     const levelTargetUser = message.mentions.members.first();
                     await this.handleLevel(message, levelTargetUser);
                     break;
 
-                case '!pay':
-                case '!transfer':
+                case 'mon!pay':
+                case 'mon!transfer':
                     await this.handlePay(message);
                     break;
 
-                case '!top':
-                case '!leaderboard':
-                case '!lb':
+                case 'mon!top':
+                case 'mon!leaderboard':
+                case 'mon!lb':
                     await this.handleTop(message);
                     break;
 
-                case '!work':
-                case '!job':
+                case 'mon!work':
+                case 'mon!job':
                     await this.handleWork(message);
                     break;
 
-                case '!ecohelp':
-                case '!economyhelp':
+                case 'mon!ecohelp':
+                case 'mon!economyhelp':
                     await this.handleEcoHelp(message);
                     break;
 

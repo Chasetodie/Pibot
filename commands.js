@@ -104,10 +104,10 @@ class CommandHandler {
             .setTitle('📋 Comandos Disponibles')
             .setDescription('Lista de comandos del bot (solo administradores)')
             .addFields(
-                { name: '!=contadores', value: 'Muestra los contadores actuales', inline: false },
-                { name: '!=reset <pibes> <pibas>', value: 'Actualiza los contadores manualmente', inline: false },
-                { name: '!=reload', value: 'Recarga contadores desde variables de entorno', inline: false },
-                { name: '!=help', value: 'Muestra esta lista de comandos', inline: false }
+                { name: 'mon!contadores', value: 'Muestra los contadores actuales', inline: false },
+                { name: 'mon!reset <pibes> <pibas>', value: 'Actualiza los contadores manualmente', inline: false },
+                { name: 'mon!reload', value: 'Recarga contadores desde variables de entorno', inline: false },
+                { name: 'mon!help-admin', value: 'Muestra todos los comandos', inline: false },
             )
             .setColor('#FF6B6B')
             .setTimestamp()
@@ -125,17 +125,16 @@ class CommandHandler {
 
         try {
             switch (command) {
-                case '!contadores':
+                case 'mon!contadores':
                     await this.handleContadores(message);
                     break;
-                case '!reset':
+                case 'mon!reset':
                     await this.handleReset(message);
                     break;
-                case '!reload':
+                case 'mon!reload':
                     await this.handleReload(message);
                     break;
-                case '!help':
-                case '!ayuda':
+                case 'mon!help-admin':
                     await this.handleHelp(message);
                     break;
                 default:

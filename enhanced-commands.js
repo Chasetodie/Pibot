@@ -17,33 +17,30 @@ class EnhancedCommands {
 
         try {
             // Achievements
-            if (command === '!achievements' || command === '!logros') {
+            if (command === 'mon!achievements' || command === 'mon!logros') {
                 const achievementTarget = message.mentions.members?.first();
                 await this.achievements.showUserAchievements(message, achievementTarget);
                 return;
             }
-            if (command === '!allachievements' || command === '!todoslogros') {
+            if (command === 'mon!allachievements' || command === 'mon!todoslogros') {
                 await this.achievements.showAllAchievements(message);
                 return;
             }
-
-            // Notificar logros desbloqueados (solo si lo usas como comando)
-            if (command === '!notifyachievements') {
-                // Ejemplo de uso: !notifyachievements <achievementId1> <achievementId2> ...
+            if (command === 'mon!notifyachievements') {
                 const achievementIds = args.slice(1);
                 await this.achievements.notifyAchievements(message, achievementIds);
                 return;
             }
 
             // Shop
-            if (command === '!shop' || command === '!tienda') {
+            if (command === 'mon!shop' || command === 'mon!tienda') {
                 const category = args[1];
                 await this.shop.showShop(message, category);
                 return;
             }
-            if (command === '!buy' || command === '!comprar') {
+            if (command === 'mon!buy' || command === 'mon!comprar') {
                 if (args.length < 2) {
-                    await message.reply('❌ Uso: `!buy <item> [cantidad]`');
+                    await message.reply('❌ Uso: `mon!buy <item> [cantidad]`');
                     return;
                 }
                 const itemId = args[1];
@@ -51,23 +48,23 @@ class EnhancedCommands {
                 await this.shop.buyItem(message, itemId, quantity);
                 return;
             }
-            if (command === '!use' || command === '!usar') {
+            if (command === 'mon!use' || command === 'mon!usar') {
                 if (args.length < 2) {
-                    await message.reply('❌ Uso: `!use <item>`');
+                    await message.reply('❌ Uso: `mon!use <item>`');
                     return;
                 }
                 const itemId = args[1];
                 await this.shop.useItem(message, itemId);
                 return;
             }
-            if (command === '!inventory' || command === '!inv' || command === '!inventario') {
+            if (command === 'mon!inventory' || command === 'mon!inv' || command === 'mon!inventario') {
                 const targetUser = message.mentions.members?.first();
                 await this.shop.showInventory(message, targetUser);
                 return;
             }
-            if (command === '!sell' || command === '!vender') {
+            if (command === 'mon!sell' || command === 'mon!vender') {
                 if (args.length < 2) {
-                    await message.reply('❌ Uso: `!sell <item> [cantidad]`');
+                    await message.reply('❌ Uso: `mon!sell <item> [cantidad]`');
                     return;
                 }
                 const itemId = args[1];
@@ -75,38 +72,36 @@ class EnhancedCommands {
                 await this.shop.sellItem(message, itemId, quantity);
                 return;
             }
-            if (command === '!shophelp' || command === '!ayudatienda') {
+            if (command === 'mon!shophelp' || command === 'mon!ayudatienda') {
                 await this.shopHelp(message);
                 return;
             }
 
             // Betting
-            if (command === '!bet' || command === '!apuesta') {
+            if (command === 'mon!bet' || command === 'mon!apuesta') {
                 await this.betting.createBet(message, args);
                 return;
             }
-            if (command === '!mybets' || command === '!misapuestas') {
+            if (command === 'mon!mybets' || command === 'mon!misapuestas') {
                 await this.betting.showActiveBets(message);
                 return;
             }
-            if (command === '!betstats' || command === '!estadisticasapuestas') {
+            if (command === 'mon!betstats' || command === 'mon!estadisticasapuestas') {
                 const targetUser = message.mentions.members?.first();
                 await this.betting.showBetStats(message, targetUser);
                 return;
             }
-            // Para resolver/cancelar apuestas por comando (opcional, si usas botones puedes omitir)
-            if (command === '!resolve') {
+            if (command === 'mon!resolve') {
                 if (args.length < 3) {
-                    await message.reply('❌ Uso: `!resolve <betId> <ganador: challenger|opponent>`');
+                    await message.reply('❌ Uso: `mon!resolve <betId> <ganador: challenger|opponent>`');
                     return;
                 }
-                // Aquí deberías llamar a betting.resolveBet si lo implementas por comando
                 await message.reply('❌ Resolución manual por comando no implementada, usa los botones.');
                 return;
             }
 
             // Help
-            if (command === '!help' || command === '!ayuda') {
+            if (command === 'mon!help') {
                 await this.showHelp(message);
                 return;
             }
@@ -122,11 +117,11 @@ class EnhancedCommands {
             .setTitle('🛒 Comandos de la Tienda')
             .setColor('#9932CC')
             .addFields(
-                { name: '🛒 !shop [categoría]', value: 'Ver la tienda y sus categorías', inline: false },
-                { name: '💸 !buy <itemId> [cantidad]', value: 'Comprar un item de la tienda', inline: false },
-                { name: '⚡ !use <itemId>', value: 'Usar un boost/cosmético', inline: false },
-                { name: '🎒 !inventory [@usuario]', value: 'Ver tu inventario o el de otro usuario', inline: false },
-                { name: '💰 !sell <itemId> [cantidad]', value: 'Vender items de tu inventario', inline: false }
+                { name: '🛒 mon!shop [categoría]', value: 'Ver la tienda y sus categorías', inline: false },
+                { name: '💸 mon!buy <itemId> [cantidad]', value: 'Comprar un item de la tienda', inline: false },
+                { name: '⚡ mon!use <itemId>', value: 'Usar un boost/cosmético', inline: false },
+                { name: '🎒 mon!inventory [@usuario]', value: 'Ver tu inventario o el de otro usuario', inline: false },
+                { name: '💰 mon!sell <itemId> [cantidad]', value: 'Vender items de tu inventario', inline: false }
             )
             .setFooter({ text: '¡Colecciona, mejora y presume tus objetos!' })
             .setTimestamp();
@@ -139,12 +134,12 @@ class EnhancedCommands {
             .setColor('#00BFFF')
             .addFields(
                 // Achievements
-                { name: '🏆 Logros', value: '`!achievements [@usuario]` - Ver logros\n`!allachievements` - Ver todos los logros', inline: false },
-                { name: '🏅 Notificar Logros', value: '`!notifyachievements <id1> <id2> ...` - Notifica logros desbloqueados (admin/test)', inline: false },
+                { name: '🏆 Logros', value: '`mon!achievements [@usuario]` - Ver logros\n`mon!allachievements` - Ver todos los logros', inline: false },
+                { name: '🏅 Notificar Logros', value: '`mon!notifyachievements <id1> <id2> ...` - Notifica logros desbloqueados (admin/test)', inline: false },
                 // Shop
-                { name: '🛒 Tienda', value: '`!shop [categoría]`\n`!buy <item> [cantidad]`\n`!use <item>`\n`!inventory [@usuario]`\n`!sell <item> [cantidad]`\n`!shophelp`', inline: false },
+                { name: '🛒 Tienda', value: '`mon!shop [categoría]`\n`mon!buy <item> [cantidad]`\n`mon!use <item>`\n`mon!inventory [@usuario]`\n`mon!sell <item> [cantidad]`\n`mon!shophelp`', inline: false },
                 // Betting
-                { name: '🎲 Apuestas', value: '`!bet @usuario <cantidad> <descripción>` - Crear apuesta\n`!mybets` - Ver tus apuestas activas\n`!betstats [@usuario]` - Ver estadísticas de apuestas', inline: false }
+                { name: '🎲 Apuestas', value: '`mon!bet @usuario <cantidad> <descripción>` - Crear apuesta\n`mon!mybets` - Ver tus apuestas activas\n`mon!betstats [@usuario]` - Ver estadísticas de apuestas', inline: false }
             )
             .setFooter({ text: 'Usa los comandos para interactuar con el bot.' })
             .setTimestamp();

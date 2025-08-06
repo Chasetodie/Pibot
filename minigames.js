@@ -302,21 +302,21 @@ class MinigamesSystem {
 
         try {
             switch (command) {
-                case '!coinflip':
-                case '!cf':
-                case '!coin':
+                case 'mon!coinflip':
+                case 'mon!cf':
+                case 'mon!coin':
                     await this.handleCoinflip(message, args);
                     break;
 
-                case '!dice':
-                case '!dado':
-                case '!d':
+                case 'mon!dice':
+                case 'mon!dado':
+                case 'mon!d':
                     await this.handleDice(message, args);
                     break;
 
-                case '!games':
-                case '!minigames':
-                case '!juegos':
+                case 'mon!games':
+                case 'mon!minigames':
+                case 'mon!juegos':
                     await this.showGamesList(message);
                     break;
 
@@ -339,12 +339,12 @@ class MinigamesSystem {
             .addFields(
                 { 
                     name: '🪙 Coinflip', 
-                    value: '`!coinflip <cara/cruz> <cantidad>`\nApuesta: 50-10,000 C$\nGanancia: x1.95', 
+                    value: '`mon!coinflip <cara/cruz> <cantidad>`\nApuesta: 50-10,000 C$\nGanancia: x1.95', 
                     inline: false 
                 },
                 { 
                     name: '🎲 Dados', 
-                    value: '`!dice <1-6/alto/bajo> <cantidad>`\nApuesta: 50-10,000 C$\nGanancia: x1.9 - x5.8', 
+                    value: '`mon!dice <1-6/alto/bajo> <cantidad>`\nApuesta: 50-10,000 C$\nGanancia: x1.9 - x5.8', 
                     inline: false 
                 },
                 { 
