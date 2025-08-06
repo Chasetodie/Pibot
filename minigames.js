@@ -84,14 +84,14 @@ class MinigamesSystem {
     // ===================
     
     async handleCoinflip(message, args) {
+        const userId = message.author.id;
+        const user = this.economy.getUser(userId);
+        
         // Al inicio de handleCoinflip y handleDice
         if (this.events) {
             this.events.applyEventModifiers(userId, 0, 'games');
         }
 
-        const userId = message.author.id;
-        const user = this.economy.getUser(userId);
-        
         // Verificar argumentos
         if (args.length < 3) {
             const embed = new EmbedBuilder()
@@ -186,14 +186,13 @@ class MinigamesSystem {
     // ===================
     
     async handleDice(message, args) {
-        // Al inicio de handleCoinflip y handleDice
+        const userId = message.author.id;
+        const user = this.economy.getUser(userId);
+
         if (this.events) {
             this.events.applyEventModifiers(userId, 0, 'games');
         }
 
-        const userId = message.author.id;
-        const user = this.economy.getUser(userId);
-        
         // Si no hay argumentos, mostrar ayuda
         if (args.length < 3) {
             const embed = new EmbedBuilder()

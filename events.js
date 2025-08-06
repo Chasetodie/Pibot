@@ -257,6 +257,8 @@ class EventsSystem {
                 // Actualizar estadísticas del evento
                 if (context === 'message') {
                     event.stats.messagesAffected++;
+                } else if (context === 'games') {
+                    event.stats.gamesAffected++;
                 }
             }
         }
