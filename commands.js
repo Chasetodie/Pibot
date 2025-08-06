@@ -128,6 +128,7 @@ class CommandHandler {
             .setDescription('Lista de comandos del bot (solo administradores)')
             .addFields(
                 { name: 'mon!contadores', value: 'Muestra los contadores actuales', inline: false },
+                { name: 'mon!notifyachievements <id1> <id2>', value: 'Notifica logros desbloqueados', inline: false },
                 { name: 'mon!reset <pibes> <pibas>', value: 'Actualiza los contadores manualmente', inline: false },
                 { name: 'mon!reload', value: 'Recarga contadores desde variables de entorno', inline: false },
                 { name: 'mon!clear <cantidad>', value: 'Borra la cantidad de mensajes indicada en el canal', inline: false },
