@@ -127,15 +127,15 @@ class CommandHandler {
             .setTitle('📋 Comandos Disponibles')
             .setDescription('Lista de comandos del bot (solo administradores)')
             .addFields(
-                { name: 'mon!contadores', value: 'Muestra los contadores actuales', inline: false },
-                { name: 'mon!notifyachievements <id1> <id2>', value: 'Notifica logros desbloqueados', inline: false },
-                { name: 'mon!reset <pibes> <pibas>', value: 'Actualiza los contadores manualmente', inline: false },
-                { name: 'mon!reload', value: 'Recarga contadores desde variables de entorno', inline: false },
-                { name: 'mon!clear <cantidad>', value: 'Borra la cantidad de mensajes indicada en el canal', inline: false },
-                { name: 'mon!help-admin', value: 'Muestra todos los comandos', inline: false },
-                { name: 'mon!createevent <tipo> [duración]', value: 'Crear evento manual', inline: false },
-                { name: 'mon!eventstats', value: 'Estadísticas de eventos', inline: false }
-            )
+                // Apodos
+                { name: 'Comandos Para Los Apodos', value: '`mon!contadores` - Muestra los contadores actuales\n`mon!reset <pibes> <pibas>` - Actualiza los contadores manualmente\n`mon!reload` - Recarga contadores desde variables de entorno', inline: false },
+                // Eventos
+                { name: 'Eventos', value: '`mon!createevent <tipo> [duración]` - Crear evento manual\n`mon!eventstats` - Estadísticas de eventos', inline: false },
+                // Logros
+                { name: 'Logros', value: '`mon!notifyachievements <id1> <id2>` - Notifica logros desbloqueados', inline: false },               
+                // Basicos
+                { name: 'Basicos', value: '`mon!clear <cantidad>` - Borra la cantidad de mensajes indicada en el canal\n`mon!help-admin` - Muestra todos los comandos de Administrador', inline: false },
+           )
             .setColor('#FF6B6B')
             .setTimestamp()
             .setFooter({ text: 'Solo usuarios con permisos de administrador pueden usar estos comandos' });
@@ -168,7 +168,7 @@ class CommandHandler {
                     await this.handleHelp(message);
                     break;
                 default:
-                    // No hacer nada si no es un comando reconocido
+                    // El Comando no Existe
                     break;
             }
         } catch (error) {

@@ -3,13 +3,13 @@ const express = require('express');
 const fs = require('fs');
 const path = require('path');
 const CommandHandler = require('./commands'); // Importar el manejador de comandos
-const EconomySystem = require('./economy'); // Importar el sistema de economia
+/*const EconomySystem = require('./economy'); // Importar el sistema de economia
 const MinigamesSystem = require('./minigames'); // Importar el sistema de minijuegos
 const AchievementsSystem = require('./achievements');
 const ShopSystem = require('./shop');
 const BettingSystem = require('./betting');
 const EventsSystem = require('./events');
-const AllCommands = require('./all-commands');
+const AllCommands = require('./all-commands');*/
 
 // Configuración del servidor web para mantener activo el bot
 const app = express();
@@ -59,25 +59,23 @@ let counters = loadCounters();
 const commandHandler = new CommandHandler(counters, saveCounters);
 
 
-//Crear instancia del sistema de economia
+/*//Crear instancia del sistema de economia
 const economy = new EconomySystem();
 
-// Events
-const events = new EventsSystem(economy);
-
 //Crear instancia del sistema de Minijuegos
-const minigames = new MinigamesSystem(economy, events);
+const minigames = new MinigamesSystem(economy);
 
 //Instancia de sistemas extra
 const achievements = new AchievementsSystem(economy);
 const shop = new ShopSystem(economy);
+const events = new EventsSystem(economy);
 const betting = new BettingSystem(economy);
 
 // Instancia del sistema de comandos mejorados
 const allCommands = new AllCommands(economy, achievements, shop, betting, events);
 
 economy.events = events;
-minigames.events = events;
+minigames.events = events;*/
 
 // Rutas del servidor web
 app.get('/', (req, res) => {
@@ -356,7 +354,7 @@ client.on('interactionCreate', async (interaction) => {
     }
 });
 
-// Manejar mensajes (COMANDOS + XP + ECONOMÍA)
+/*// Manejar mensajes (COMANDOS + XP + ECONOMÍA)
 client.on('messageCreate', async (message) => {
     // Ignorar mensajes de bots
     if (message.author.bot) return;
@@ -391,7 +389,7 @@ client.on('messageCreate', async (message) => {
     
     // Luego procesar comandos normales (como !contadores, !reset, etc.)
     await commandHandler.processCommand(message);
-});
+});*/
 
 // Manejo de errores
 client.on('error', (error) => {

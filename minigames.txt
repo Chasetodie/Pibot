@@ -1,9 +1,8 @@
 const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 
 class MinigamesSystem {
-    constructor(economySystem, eventsSystem) {
+    constructor(economySystem) {
         this.economy = economySystem;
-        this.events = eventsSystem;
         this.activeGames = new Map(); // Para manejar juegos en progreso
         
         // Configuración de minijuegos
