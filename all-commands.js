@@ -476,8 +476,13 @@ class AllCommands {
         const reason = message.content.split(' ').slice(3).join(' ') || 'No Especificada';        
 
         // Realizar transferencia
+        if (this.formatNumber(result) < amount) {
+            await message.reply('❌ El Usuario no Tiene esa Cantidad de π-b Coins.');
+            return;
+        }
+
         const result = this.economy.removeMoney(targetUser.id, amount, reason);
-        
+
         const embed = new EmbedBuilder()
             .setTitle('✅ Se ha Quitado Exitosamente el Dinero')
             .setDescription(`Has quitado **${this.formatNumber(amount)}** ${this.economy.config.currencySymbol} a ${targetUser}\nRazón: ${reason}`)
@@ -486,8 +491,8 @@ class AllCommands {
             )
             .setColor('#00FF00')
             .setTimestamp();
-        
-        await message.reply({ embeds: [embed] });
+            
+        await message.reply({ embeds: [embed] });      
     }
 
     async handleAddXp(message) {
@@ -554,7 +559,7 @@ class AllCommands {
         if (xpResult && xpResult.levelUp) {
             const levelUpEmbed = new EmbedBuilder()
                 .setTitle('🎉 ¡Subiste de Nivel!')
-                .setDescription(`${message.author} alcanzó el **Nivel ${xpResult.newLevel}**`)
+                .setDescription(`${targetUser} alcanzó el **Nivel ${xpResult.newLevel}**`)
                 .addFields(
                     { name: '📈 XP Ganada', value: `+${xpResult.xpGained} XP`, inline: true },
                     { name: '🎁 Recompensa', value: `+${xpResult.reward} π-b$`, inline: true },
