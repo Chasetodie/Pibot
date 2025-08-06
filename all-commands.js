@@ -1,12 +1,12 @@
 const { EmbedBuilder } = require('discord.js');
 
 class AllCommands {
-    constructor(economySystem, achievementsSystem, shopSystem, bettingSystem, eventsSystem) {
+    constructor(economySystem/*, achievementsSystem, shopSystem, bettingSystem, eventsSystem*/) {
         this.economy = economySystem;
-        this.achievements = achievementsSystem;
+/*        this.achievements = achievementsSystem;
         this.shop = shopSystem;
         this.betting = bettingSystem;
-        this.events = eventsSystem;
+        this.events = eventsSystem;*/
     }
 
     // Formatear tiempo restante para daily
@@ -151,7 +151,7 @@ class AllCommands {
     }
 
     // Comando !level - Ver información detallada de nivel
-    async handleLevel(message, targetUser = null) {
+/*    async handleLevel(message, targetUser = null) {
         const userId = targetUser ? targetUser.id : message.author.id;
         const displayName = targetUser ? targetUser.displayName : message.author.displayName;
         const user = this.economy.getUser(userId);
@@ -215,7 +215,7 @@ class AllCommands {
             .setTimestamp();
 
         await message.reply({ embeds: [embed] });
-    }
+    }*/
 
 /*    // Comando !pay - Transferir dinero a otro usuario
     async handlePay(message) {
@@ -409,7 +409,20 @@ class AllCommands {
             await message.reply('❌ La cantidad debe ser un número positivo.');
             return;
         }
-        
+
+        const reason = args[3];
+        if (reason.length > 100) {
+            await message.reply('❌ La razón no puede tener más de 100 caracteres.');
+            return;
+        }
+        else if (reason.length === 0) {
+            await message.reply('❌ La razón no puede estar vacía.');
+            return;
+        }
+        else if (reason === '') {
+            reason = "No Especificada";
+        }
+
         // Realizar transferencia
         const result = this.economy.addMoney(targetUser.id, amount, reason);
         
@@ -492,7 +505,7 @@ class AllCommands {
             return;
         }
         
-        const xpResult = economy.addXp(targetUser.id, baseXP);
+        const xpResult = this.economy.addXp(targetUser.id, baseXP);
 
         // Si subió de nivel, notificar
         if (xpResult && xpResult.levelUp) {
@@ -649,12 +662,12 @@ class AllCommands {
                     await this.handleDaily(message);
                     break;
 
-                case 'mon!level':
+/*                case 'mon!level':
                 case 'mon!lvl':
                 case 'mon!rank':
                     const levelTargetUser = message.mentions.members.first();
                     await this.handleLevel(message, levelTargetUser);
-                    break;
+                    break;*/
 
 /*                case 'mon!pay':
                 case 'mon!transfer':
