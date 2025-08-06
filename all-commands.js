@@ -417,7 +417,7 @@ class AllCommands {
         
         const embed = new EmbedBuilder()
             .setTitle('✅ Se ha Entregado Exitosamente el Dinero')
-            .setDescription(`Has dado **${this.formatNumber(amount)}** ${this.economy.config.currencySymbol} a ${targetUser}. Razón: ${reason}`)
+            .setDescription(`Has dado **${this.formatNumber(amount)}** ${this.economy.config.currencySymbol} a ${targetUser}\nRazón: ${reason}`)
             .addFields(
                 { name: '💰 Balance de Destino', value: `${this.formatNumber(result)} ${this.economy.config.currencySymbol}`, inline: true }
             )
@@ -472,13 +472,15 @@ class AllCommands {
             await message.reply('❌ La cantidad debe ser un número positivo.');
             return;
         }
-        
+
+        const reason = message.content.split(' ').slice(3).join(' ') || 'No Especificada';        
+
         // Realizar transferencia
         const result = this.economy.removeMoney(targetUser.id, amount, reason);
         
         const embed = new EmbedBuilder()
             .setTitle('✅ Se ha Quitado Exitosamente el Dinero')
-            .setDescription(`Has quitado **${this.formatNumber(amount)}** ${this.economy.config.currencySymbol} a ${targetUser}. Razón: ${reason}`)
+            .setDescription(`Has quitado **${this.formatNumber(amount)}** ${this.economy.config.currencySymbol} a ${targetUser}\nRazón: ${reason}`)
             .addFields(
                 { name: '💰 Balance de Destino', value: `${this.formatNumber(result)} ${this.economy.config.currencySymbol}`, inline: true }
             )
@@ -534,7 +536,18 @@ class AllCommands {
             return;
         }
         
-        const xpResult = this.economy.addXp(targetUser.id, baseXP);
+        const reason = message.content.split(' ').slice(3).join(' ') || 'No Especificada';
+
+        const xpResult = this.economy.addXp(targetUser.id, baseXP, reason);
+
+        const embed = new EmbedBuilder()
+            .setTitle('✅ Se Aumentado Exitosamente el XP')
+            .setDescription(`Has Aumentado **${this.formatNumber(baseXP)}** de XP a ${targetUser}\nRazón: ${reason}`)
+            .addFields(
+                { name: 'XP Total', value: `${this.formatNumber(xpResult)}`, inline: true }
+            )
+            .setColor('#00FF00')
+            .setTimestamp();
 
         // Si subió de nivel, notificar
         if (xpResult && xpResult.levelUp) {
@@ -714,11 +727,11 @@ class AllCommands {
                     await this.handleWork(message);
                     break;*/
                 
-                case 'mon!add':
+                case 'mon!addmoney':
                     await this.handleAddMoney(message);
                     break;
                 
-                case 'mon!remove':
+                case 'mon!removemoney':
                     await this.handleRemoveMoney(message);
                     break;
 
