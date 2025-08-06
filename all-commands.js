@@ -410,10 +410,7 @@ class AllCommands {
             return;
         }
 
-        const reason = args[3];
-        if (reason === '') {
-            reason = "No Especificada";
-        }
+        const reason = message.content.split(' ').slice(3).join(' ') || 'No Especificada';
 
         // Realizar transferencia
         const result = this.economy.addMoney(targetUser.id, amount, reason);
@@ -506,6 +503,13 @@ class AllCommands {
               
         if (targetUser.bot) {
             await message.reply('❌ No puedes dar dinero a bots.');
+            return;
+        }
+
+        // Obtener cantidad
+        const baseXP = parseInt(args[2]);
+        if (isNaN(baseXP) || baseXP <= 0) {
+            await message.reply('❌ La cantidad debe ser un número positivo.');
             return;
         }
         
