@@ -62,13 +62,15 @@ const commandHandler = new CommandHandler(counters, saveCounters);
 //Crear instancia del sistema de economia
 const economy = new EconomySystem();
 
+// Events
+const events = new EventsSystem(economy);
+
 //Crear instancia del sistema de Minijuegos
 const minigames = new MinigamesSystem(economy, events);
 
 //Instancia de sistemas extra
 const achievements = new AchievementsSystem(economy);
 const shop = new ShopSystem(economy);
-const events = new EventsSystem(economy);
 const betting = new BettingSystem(economy);
 
 // Instancia del sistema de comandos mejorados
