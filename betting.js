@@ -369,8 +369,8 @@ class BettingSystem {
             .setTitle('🎲 Sistema de Apuestas')
             .setDescription('Crea apuestas contra otros usuarios!')
             .addFields(
-                { name: '📝 Uso', value: '`!bet @usuario <cantidad> <descripción>`', inline: false },
-                { name: '💡 Ejemplo', value: '`!bet @Juan 1000 coinflip cara`', inline: false },
+                { name: '📝 Uso', value: '`mon!bet @usuario <cantidad> <descripción>`', inline: false },
+                { name: '💡 Ejemplo', value: '`mon!bet @usuario 1000 coinflip cara`', inline: false },
                 { name: '💰 Límites', value: `Min: ${this.formatNumber(this.config.minBet)} C$\nMax: ${this.formatNumber(this.config.maxBet)} C$`, inline: false },
                 { name: '📊 Comisión', value: `${this.config.houseFee * 100}% del total`, inline: false }
             )

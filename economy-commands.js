@@ -220,11 +220,11 @@ class EconomyCommands {
                 .setDescription('Transfiere Clarence Dolars a otro usuario')
                 .addFields({
                     name: '📝 Uso',
-                    value: '`!pay @usuario <cantidad>`',
+                    value: '`mon!pay @usuario <cantidad>`',
                     inline: false
                 }, {
                     name: '💡 Ejemplo',
-                    value: '`!pay @Juan 500`',
+                    value: '`mon!pay @usuario 500`',
                     inline: false
                 })
                 .setColor('#17a2b8');

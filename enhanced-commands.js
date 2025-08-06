@@ -139,8 +139,14 @@ class EnhancedCommands {
                 // Shop
                 { name: '🛒 Tienda', value: '`mon!shop [categoría]`\n`mon!buy <item> [cantidad]`\n`mon!use <item>`\n`mon!inventory [@usuario]`\n`mon!sell <item> [cantidad]`\n`mon!shophelp`', inline: false },
                 // Betting
-                { name: '🎲 Apuestas', value: '`mon!bet @usuario <cantidad> <descripción>` - Crear apuesta\n`mon!mybets` - Ver tus apuestas activas\n`mon!betstats [@usuario]` - Ver estadísticas de apuestas', inline: false }
-            )
+                { name: '🎲 Apuestas', value: '`mon!bet @usuario <cantidad> <descripción>` - Crear apuesta\n`mon!mybets` - Ver tus apuestas activas\n`mon!betstats [@usuario]` - Ver estadísticas de apuestas', inline: false },
+                //Economy
+                { name: '📋 Economía', value: '`mon!economyhelp` - Muestra los comandos de economía'},
+                // Minijuegos
+                { name: '🎮 Minijuegos', value: '`mon!coinflip <cara/cruz> <cantidad>` - Juega cara o cruz\n`mon!dice <1-6/alto/bajo> <cantidad>` - Juega a los dados\n`mon!games` - Ver lista de minijuegos', inline: false },
+                // Eventos
+                { name: '🎉 Eventos', value: '`mon!events` - Ver eventos activos\n`mon!createevent <tipo> [duración]` - Crear evento manual (admin)\n`mon!eventstats` - Estadísticas de eventos (admin)', inline: false }
+           )
             .setFooter({ text: 'Usa los comandos para interactuar con el bot.' })
             .setTimestamp();
         await message.reply({ embeds: [embed] });
