@@ -477,7 +477,7 @@ class AllCommands {
 
         // Realizar transferencia
         if (targetUser.balance < amount) {
-            await message.reply('❌ El Usuario no Tiene esa Cantidad de π-b Coins.');
+            await message.reply(`❌ El Usuario no Tiene esa Cantidad de π-b Coins. (${this.formatNumber(targetUser.balance)} < ${this.formatNumber(amount)})`);
             return;
         }
 
@@ -895,7 +895,7 @@ class AllCommands {
                 // Betting
                 { name: '🎲 Apuestas', value: '`mon!bet [@usuario] <cantidad> <descripción>` - Crear apuesta\n`mon!mybets` - Ver tus apuestas activas\n`mon!betstats [@usuario]` - Ver estadísticas de apuestas', inline: false },
                 //Economy
-                { name: '📋 Economía', value: '`mon!balance [@usuario]` - Ver tu dinero y nivel (o el de otro usuario)\n`mon!daily` - Reclamar ${this.economy.config.dailyAmount}±${this.economy.config.dailyVariation} ${this.economy.config.currencySymbol} diarios\n`mon!work [tipo]` - Trabajar para ganar dinero (delivery, programmer, doctor, criminal)\n`mon!level [@usuario]` - Ver información detallada de nivel\n`mon!pay @usuario <cantidad>` - Transferir dinero a otro usuario\n`mon!top [money/level]` - Ver los rankings del servidor', inline: false},
+                { name: '📋 Economía', value: '`mon!balance [@usuario]` - Ver tu dinero y nivel (o el de otro usuario)\n`mon!daily` - Reclamar' + `(${this.economy.config.dailyAmount}±${this.economy.config.dailyVariation} ${this.economy.config.currencySymbol})` + 'diarios\n`mon!work [tipo]` - Trabajar para ganar dinero (delivery, programmer, doctor, criminal)\n`mon!level [@usuario]` - Ver información detallada de nivel\n`mon!pay @usuario <cantidad>` - Transferir dinero a otro usuario\n`mon!top [money/level]` - Ver los rankings del servidor', inline: false},
                 // Minijuegos
                 { name: '🎮 Minijuegos', value: '`mon!coinflip <cara/cruz> <cantidad>` - Juega cara o cruz\n`mon!dice <1-6/alto/bajo> <cantidad>` - Juega a los dados\n`mon!games` - Ver lista de minijuegos', inline: false },
                 // Eventos
