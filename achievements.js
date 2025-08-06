@@ -489,6 +489,10 @@ class AchievementsSystem {
         
         for (const achievementId of achievementIds) {
             const achievement = this.achievements[achievementId];
+            if (!achievement) {
+                await message.reply(`❌ El logro con ID \`${achievementId}\` no existe.`);
+                continue;
+            }
             const rarityColor = this.rarityColors[achievement.rarity];
             const rarityEmoji = this.rarityEmojis[achievement.rarity];
             
