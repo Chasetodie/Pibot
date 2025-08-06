@@ -58,24 +58,24 @@ let counters = loadCounters();
 // Crear instancia del manejador de comandos
 const commandHandler = new CommandHandler(counters, saveCounters);
 
-// Crear instancia de eventos
-const events = new EventsSystem(economy);
 
 //Crear instancia del sistema de economia
 const economy = new EconomySystem();
-economy.events = events;
 
 //Crear instancia del sistema de Minijuegos
 const minigames = new MinigamesSystem(economy);
-minigames.events = events;
 
 //Instancia de sistemas extra
 const achievements = new AchievementsSystem(economy);
 const shop = new ShopSystem(economy);
+const events = new EventsSystem(economy);
 const betting = new BettingSystem(economy);
 
 // Instancia del sistema de comandos mejorados
 const allCommands = new AllCommands(economy, achievements, shop, betting, events);
+
+economy.events = events;
+minigames.events = events;
 
 // Rutas del servidor web
 app.get('/', (req, res) => {
