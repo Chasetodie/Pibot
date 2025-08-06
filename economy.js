@@ -16,7 +16,7 @@ class EconomySystem {
             dailyAmount: 300,  // Cantidad base del daily
             dailyVariation: 150, // Variación del daily
             levelUpReward: 50, // π-b Coins por subir de nivel
-            xpPerLevel: 30,   // XP base necesaria para nivel 1
+            xpPerLevel: 100,   // XP base necesaria para nivel 1
             levelMultiplier: 1.5 // Multiplicador de XP por nivel
         };
         

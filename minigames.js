@@ -1,8 +1,9 @@
 const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 
 class MinigamesSystem {
-    constructor(economySystem) {
+    constructor(economySystem, eventsSystem) {
         this.economy = economySystem;
+        this.events = eventsSystem;
         this.activeGames = new Map(); // Para manejar juegos en progreso
         
         // Configuración de minijuegos
@@ -98,8 +99,8 @@ class MinigamesSystem {
                 .setTitle('🪙 Coinflip - Cara o Cruz')
                 .setDescription('Apuesta a cara o cruz y duplica tu dinero!')
                 .addFields(
-                    { name: '📝 Uso', value: '`!coinflip <cara/cruz> <cantidad>`', inline: false },
-                    { name: '💡 Ejemplos', value: '`!coinflip cara 500`\n`!coinflip cruz 1000`', inline: false },
+                    { name: '📝 Uso', value: '`mon!coinflip <cara/cruz> <cantidad>`', inline: false },
+                    { name: '💡 Ejemplos', value: '`mon!coinflip cara 500`\n`,mon!coinflip cruz 1000`', inline: false },
                     { name: '💰 Apuesta', value: `Min: ${this.formatNumber(this.config.coinflip.minBet)} π-b$\nMax: ${this.formatNumber(this.config.coinflip.maxBet)} π-b$`, inline: false },
                     { name: '🎯 Probabilidad', value: '50% de ganar\nGanancia: x1.95', inline: false }
                 )
@@ -200,7 +201,7 @@ class MinigamesSystem {
                 .setDescription('Predice el resultado del dado y gana!')
                 .addFields(
                     { name: '📝 Opciones de Apuesta', value: '• `1-6`: Número exacto (x5.8)\n• `alto`: 4, 5 o 6 (x1.9)\n• `bajo`: 1, 2 o 3 (x1.9)', inline: false },
-                    { name: '💡 Ejemplos', value: '`!dice 6 500` - Apostar al 6\n`!dice alto 1000` - Apostar alto\n`!dice bajo 750` - Apostar bajo', inline: false },
+                    { name: '💡 Ejemplos', value: '`mon!dice 6 500` - Apostar al 6\n`mon!dice alto 1000` - Apostar alto\n`mon!dice bajo 750` - Apostar bajo', inline: false },
                     { name: '💰 Límites', value: `Min: ${this.formatNumber(this.config.dice.minBet)} π-b$\nMax: ${this.formatNumber(this.config.dice.maxBet)} π-b$`, inline: false }
                 )
                 .setColor('#FF6B6B');

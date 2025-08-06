@@ -63,7 +63,7 @@ const commandHandler = new CommandHandler(counters, saveCounters);
 const economy = new EconomySystem();
 
 //Crear instancia del sistema de Minijuegos
-const minigames = new MinigamesSystem(economy);
+const minigames = new MinigamesSystem(economy, events);
 
 //Instancia de sistemas extra
 const achievements = new AchievementsSystem(economy);
