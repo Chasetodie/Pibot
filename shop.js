@@ -156,7 +156,7 @@ class ShopSystem {
         const user = this.economy.getUser(message.author.id);
         if (!category) {
             const embed = new EmbedBuilder()
-                .setTitle('🛒 Tienda de Clarence')
+                .setTitle('🛒 Tienda del Server')
                 .setDescription('¡Bienvenido a la tienda! Selecciona una categoría:')
                 .setColor('#9932CC')
                 .setTimestamp();
@@ -165,7 +165,7 @@ class ShopSystem {
                 const itemsInCategory = Object.values(this.shopItems).filter(item => item.category === catId);
                 embed.addFields({
                     name: `${catInfo.emoji} ${catInfo.name}`,
-                    value: `${itemsInCategory.length} items disponibles\nUsa \`!shop ${catId}\``,
+                    value: `${itemsInCategory.length} items disponibles\nUsa \`mon!shop ${catId}\``,
                     inline: true
                 });
             }
@@ -179,7 +179,7 @@ class ShopSystem {
         }
 
         if (!this.categories[category]) {
-            await message.reply('❌ Categoría no válida. Usa `!shop` para ver todas las categorías.');
+            await message.reply('❌ Categoría no válida. Usa `mon!shop` para ver todas las categorías.');
             return;
         }
 
@@ -249,7 +249,7 @@ class ShopSystem {
             .setTimestamp();
 
         if (item.type === 'boost') {
-            embed.addFields({ name: '📝 Nota', value: `Usa \`!use ${itemId}\` para activar tu boost`, inline: false });
+            embed.addFields({ name: '📝 Nota', value: `Usa \`mon!use ${itemId}\` para activar tu boost`, inline: false });
         }
         await message.reply({ embeds: [embed] });
     }
@@ -292,7 +292,7 @@ class ShopSystem {
         const user = this.economy.getUser(userId);
 
         if (!user.inventory || Object.keys(user.inventory).length === 0) {
-            await message.reply(`${targetUser ? displayName : 'Tu'} inventario está vacío. Usa \`!shop\` para comprar items.`);
+            await message.reply(`${targetUser ? displayName : 'Tu'} inventario está vacío. Usa \`mon!shop\` para comprar items.`);
             return;
         }
 

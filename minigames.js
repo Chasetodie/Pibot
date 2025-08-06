@@ -124,7 +124,7 @@ class MinigamesSystem {
 
         // Verificar fondos
         if (user.balance < betAmount) {
-            await message.reply(`❌ No tienes suficientes Clarence Dolars. Tu balance: ${this.formatNumber(user.balance)} C$`);
+            await message.reply(`❌ No tienes suficientes π-b Coins. Tu balance: ${this.formatNumber(user.balance)} C$`);
             return;
         }
 
@@ -218,7 +218,7 @@ class MinigamesSystem {
 
         // Verificar fondos
         if (user.balance < betAmount) {
-            await message.reply(`❌ No tienes suficientes Clarence Dolars. Tu balance: ${this.formatNumber(user.balance)} C$`);
+            await message.reply(`❌ No tienes suficientes π-b Coins. Tu balance: ${this.formatNumber(user.balance)} C$`);
             return;
         }
 
@@ -334,7 +334,7 @@ class MinigamesSystem {
     async showGamesList(message) {
         const embed = new EmbedBuilder()
             .setTitle('🎮 Minijuegos Disponibles')
-            .setDescription('¡Diviértete y gana Clarence Dolars!')
+            .setDescription('¡Diviértete y gana π-b Coins!')
             .setColor('#9932CC')
             .addFields(
                 { 

@@ -1,8 +1,12 @@
 const { EmbedBuilder } = require('discord.js');
 
-class EconomyCommands {
-    constructor(economySystem) {
+class AllCommands {
+    constructor(economySystem, achievementsSystem, shopSystem, bettingSystem, eventsSystem) {
         this.economy = economySystem;
+        this.achievements = achievementsSystem;
+        this.shop = shopSystem;
+        this.betting = bettingSystem;
+        this.events = eventsSystem;
     }
 
     // Formatear tiempo restante para daily
@@ -51,13 +55,16 @@ class EconomyCommands {
         const progressBar = this.createProgressBar(xpProgress, xpForNextLevel, 15);
         const progressPercentage = ((xpProgress / xpForNextLevel) * 100).toFixed(1);
 
+        // Avatar
+        const avatarUrl = targetUser ? targetUser.displayAvatarURL({ dynamic: true }) : message.author.displayAvatarURL({ dynamic: true });
+
         const embed = new EmbedBuilder()
             .setTitle(`💰 ${displayName}`)
             .setColor('#FFD700')
-            .setThumbnail(message.author.displayAvatarURL({ dynamic: true }))
+            .setThumbnail(avatarUrl)
             .addFields(
                 { 
-                    name: `${this.economy.config.currencySymbol} Clarence Dolars`, 
+                    name: `${this.economy.config.currencySymbol} π-b Coins`, 
                     value: `**${this.formatNumber(user.balance)}**`, 
                     inline: true 
                 },
@@ -115,8 +122,8 @@ class EconomyCommands {
                     inline: false
                 })
                 .setColor('#FF6B6B')
-                .setFooter({ text: 'Vuelve mañana para más Clarence Dolars!' });
-            
+                .setFooter({ text: 'Vuelve mañana para más π-b Coins!' });
+
             await message.reply({ embeds: [embed] });
             return;
         }
@@ -217,7 +224,7 @@ class EconomyCommands {
         if (args.length < 3) {
             const embed = new EmbedBuilder()
                 .setTitle('💸 Comando Pay')
-                .setDescription('Transfiere Clarence Dolars a otro usuario')
+                .setDescription('Transfiere π-b Coins a otro usuario')
                 .addFields({
                     name: '📝 Uso',
                     value: '`mon!pay @usuario <cantidad>`',
@@ -258,7 +265,7 @@ class EconomyCommands {
         }
         
         if (amount < 10) {
-            await message.reply('❌ La cantidad mínima a transferir es 10 Clarence Dolars.');
+            await message.reply('❌ La cantidad mínima a transferir es 10 π-b Coins.');
             return;
         }
         
@@ -270,7 +277,7 @@ class EconomyCommands {
                 const userBalance = this.economy.getUser(message.author.id).balance;
                 const embed = new EmbedBuilder()
                     .setTitle('❌ Fondos Insuficientes')
-                    .setDescription(`No tienes suficientes Clarence Dolars`)
+                    .setDescription(`No tienes suficientes π-b Coins para transferir.`)
                     .addFields(
                         { name: '💰 Tu Balance', value: `${this.formatNumber(userBalance)} ${this.economy.config.currencySymbol}`, inline: true },
                         { name: '💸 Intentaste Enviar', value: `${this.formatNumber(amount)} ${this.economy.config.currencySymbol}`, inline: true },
@@ -309,7 +316,7 @@ class EconomyCommands {
             emoji = '📊';
         } else {
             leaderboard = this.economy.getMoneyLeaderboard(10);
-            title = '🏆 Top 10 - Clarence Dolars';
+            title = '🏆 Top 10 - π-b Coin';
             emoji = '💰';
         }
         
@@ -349,9 +356,9 @@ class EconomyCommands {
         embed.setDescription(description);
         
         if (type === 'level' || type === 'levels' || type === 'lvl') {
-            embed.setFooter({ text: 'Usa !top money para ver el ranking de dinero' });
+            embed.setFooter({ text: 'Usa mon!top money para ver el ranking de dinero' });
         } else {
-            embed.setFooter({ text: 'Usa !top level para ver el ranking de niveles' });
+            embed.setFooter({ text: 'Usa mon!top level para ver el ranking de niveles' });
         }
         
         await message.reply({ embeds: [embed] });
@@ -370,7 +377,7 @@ class EconomyCommands {
             
             const embed = new EmbedBuilder()
                 .setTitle('🛠️ Trabajos Disponibles')
-                .setDescription('Elige un trabajo para ganar Clarence Dolars')
+                .setDescription('Elige un trabajo para ganar π-b Coins')
                 .setColor('#28a745');
             
             for (const [key, job] of Object.entries(jobs)) {
@@ -389,7 +396,7 @@ class EconomyCommands {
             
             embed.addFields({
                 name: '💡 Uso',
-                value: '`!work <tipo>`\nEjemplo: `!work delivery`',
+                value: '`mon!work <tipo>`\nEjemplo: `mon!work delivery`',
                 inline: false
             });
             
@@ -473,35 +480,13 @@ class EconomyCommands {
             .setTimestamp();
         
         await message.reply({ embeds: [embed] });
-    }
+    }    
 
-    // Comando !ecohelp - Ayuda de comandos de economía
-    async handleEcoHelp(message) {
-        const embed = new EmbedBuilder()
-            .setTitle('📋 Comandos de Economía')
-            .setDescription(`Sistema de **${this.economy.config.currency}** y Niveles`)
-            .setColor('#17a2b8')
-            .addFields(
-                { name: '💰 mon!balance [@usuario]', value: 'Ver tu dinero y nivel (o el de otro usuario)', inline: false },
-                { name: '🎁 mon!daily', value: `Reclamar ${this.economy.config.dailyAmount}±${this.economy.config.dailyVariation} ${this.economy.config.currencySymbol} diarios`, inline: false },
-                { name: '🛠️ mon!work [tipo]', value: 'Trabajar para ganar dinero (delivery, programmer, doctor, criminal)', inline: false },
-                { name: '📊 mon!level [@usuario]', value: 'Ver información detallada de nivel', inline: false },
-                { name: '💸 mon!pay @usuario <cantidad>', value: 'Transferir dinero a otro usuario', inline: false },
-                { name: '🏆 mon!top [money/level]', value: 'Ver los rankings del servidor', inline: false },
-                { name: '📈 Sistema de XP', value: `Ganas ${this.economy.config.xpPerMessage}±${this.economy.config.xpVariation} XP por mensaje\nCada nivel te da ${this.economy.config.levelUpReward} ${this.economy.config.currencySymbol}`, inline: false }
-            )
-            .setFooter({ text: 'Próximamente: minijuegos, apuestas, tienda y más!' })
-            .setTimestamp();
-
-        await message.reply({ embeds: [embed] });
-    }
-
-    // Procesador principal de comandos de economía
     async processCommand(message) {
-        // Ignorar mensajes de bots
         if (message.author.bot) return;
 
-        const command = message.content.toLowerCase().split(' ')[0];
+        const args = message.content.trim().split(/ +/g);
+        const command = args[0].toLowerCase();
 
         try {
             switch (command) {
@@ -548,11 +533,158 @@ class EconomyCommands {
                     // No es un comando de economía
                     break;
             }
+
+            // Achievements
+            if (command === 'mon!achievements' || command === 'mon!logros') {
+                const achievementTarget = message.mentions.members?.first();
+                await this.achievements.showUserAchievements(message, achievementTarget);
+                return;
+            }
+            if (command === 'mon!allachievements' || command === 'mon!todoslogros') {
+                await this.achievements.showAllAchievements(message);
+                return;
+            }
+            if (command === 'mon!notifyachievements') {
+                const achievementIds = args.slice(1);
+                await this.achievements.notifyAchievements(message, achievementIds);
+                return;
+            }
+
+            // Shop
+            if (command === 'mon!shop' || command === 'mon!tienda') {
+                const category = args[1];
+                await this.shop.showShop(message, category);
+                return;
+            }
+            if (command === 'mon!buy' || command === 'mon!comprar') {
+                if (args.length < 2) {
+                    await message.reply('❌ Uso: `mon!buy <item> [cantidad]`');
+                    return;
+                }
+                const itemId = args[1];
+                const quantity = parseInt(args[2]) || 1;
+                await this.shop.buyItem(message, itemId, quantity);
+                return;
+            }
+            if (command === 'mon!use' || command === 'mon!usar') {
+                if (args.length < 2) {
+                    await message.reply('❌ Uso: `mon!use <item>`');
+                    return;
+                }
+                const itemId = args[1];
+                await this.shop.useItem(message, itemId);
+                return;
+            }
+            if (command === 'mon!inventory' || command === 'mon!inv' || command === 'mon!inventario') {
+                const targetUser = message.mentions.members?.first();
+                await this.shop.showInventory(message, targetUser);
+                return;
+            }
+            if (command === 'mon!sell' || command === 'mon!vender') {
+                if (args.length < 2) {
+                    await message.reply('❌ Uso: `mon!sell <item> [cantidad]`');
+                    return;
+                }
+                const itemId = args[1];
+                const quantity = parseInt(args[2]) || 1;
+                await this.shop.sellItem(message, itemId, quantity);
+                return;
+            }
+            if (command === 'mon!shophelp' || command === 'mon!ayudatienda') {
+                await this.shopHelp(message);
+                return;
+            }
+
+            // Betting
+            if (command === 'mon!bet' || command === 'mon!apuesta') {
+                await this.betting.createBet(message, args);
+                return;
+            }
+            if (command === 'mon!mybets' || command === 'mon!misapuestas') {
+                await this.betting.showActiveBets(message);
+                return;
+            }
+            if (command === 'mon!betstats' || command === 'mon!estadisticasapuestas') {
+                const targetUser = message.mentions.members?.first();
+                await this.betting.showBetStats(message, targetUser);
+                return;
+            }
+            if (command === 'mon!resolve') {
+                if (args.length < 3) {
+                    await message.reply('❌ Uso: `mon!resolve <betId> <ganador: challenger|opponent>`');
+                    return;
+                }
+                await message.reply('❌ Resolución manual por comando no implementada, usa los botones.');
+                return;
+            }
+
+            // Events
+            if (command === 'mon!events') {
+                await this.events.showActiveEvents(message);
+                return;
+            }
+            if (command === 'mon!createevent') {
+                // mon!createevent <tipo> [duración]
+                const eventType = args[1];
+                const duration = args[2] ? parseInt(args[2]) : null; // duración en minutos
+                await this.events.createManualEvent(message, eventType, duration);
+                return;
+            }
+            if (command === 'mon!eventstats') {
+                await this.events.showEventStats(message);
+                return;
+            }            
+
+            // Help
+            if (command === 'mon!help') {
+                await this.showHelp(message);
+                return;
+            }
+
         } catch (error) {
-            console.error('❌ Error procesando comando de economía:', error);
+            console.error('❌ Error procesando comando:', error);
             await message.reply('❌ Ocurrió un error al procesar el comando. Intenta de nuevo.');
         }
     }
+
+    async shopHelp(message) {
+        const embed = new EmbedBuilder()
+            .setTitle('🛒 Comandos de la Tienda')
+            .setColor('#9932CC')
+            .addFields(
+                { name: '🛒 mon!shop [categoría]', value: 'Ver la tienda y sus categorías', inline: false },
+                { name: '💸 mon!buy <itemId> [cantidad]', value: 'Comprar un item de la tienda', inline: false },
+                { name: '⚡ mon!use <itemId>', value: 'Usar un boost/cosmético', inline: false },
+                { name: '🎒 mon!inventory [@usuario]', value: 'Ver tu inventario o el de otro usuario', inline: false },
+                { name: '💰 mon!sell <itemId> [cantidad]', value: 'Vender items de tu inventario', inline: false }
+            )
+            .setFooter({ text: '¡Colecciona, mejora y presume tus objetos!' })
+            .setTimestamp();
+        await message.reply({ embeds: [embed] });
+    }
+
+    async showHelp(message) {
+        const embed = new EmbedBuilder()
+            .setTitle('📖 Ayuda - Comandos Principales')
+            .setColor('#00BFFF')
+            .addFields(
+                // Achievements
+                { name: '🏆 Logros', value: '`mon!achievements [@usuario]` - Ver logros\n`mon!allachievements` - Ver todos los logros', inline: false },
+                // Shop
+                { name: '🛒 Tienda', value: '`mon!shop [categoría]`\n`mon!buy <item> [cantidad]`\n`mon!use <item>`\n`mon!inventory [@usuario]`\n`mon!sell <item> [cantidad]`\n`mon!shophelp`', inline: false },
+                // Betting
+                { name: '🎲 Apuestas', value: '`mon!bet [@usuario] <cantidad> <descripción>` - Crear apuesta\n`mon!mybets` - Ver tus apuestas activas\n`mon!betstats [@usuario]` - Ver estadísticas de apuestas', inline: false },
+                //Economy
+                { name: '📋 Economía', value: '`mon!balance [@usuario]` - Ver tu dinero y nivel (o el de otro usuario)\n`mon!daily` - Reclamar ${this.economy.config.dailyAmount}±${this.economy.config.dailyVariation} ${this.economy.config.currencySymbol} diarios\n`mon!work [tipo]` - Trabajar para ganar dinero (delivery, programmer, doctor, criminal)\n`mon!level [@usuario]` - Ver información detallada de nivel\n`mon!pay @usuario <cantidad>` - Transferir dinero a otro usuario\n`mon!top [money/level]` - Ver los rankings del servidor', inline: false},
+                // Minijuegos
+                { name: '🎮 Minijuegos', value: '`mon!coinflip <cara/cruz> <cantidad>` - Juega cara o cruz\n`mon!dice <1-6/alto/bajo> <cantidad>` - Juega a los dados\n`mon!games` - Ver lista de minijuegos', inline: false },
+                // Eventos
+                { name: '🎉 Eventos', value: '`mon!events` - Ver eventos activos\n`mon!createevent <tipo> [duración]` - Crear evento manual (admin)\n`mon!eventstats` - Estadísticas de eventos (admin)', inline: false }
+           )
+            .setFooter({ text: 'Usa los comandos para interactuar con el bot.' })
+            .setTimestamp();
+        await message.reply({ embeds: [embed] });
+    }
 }
 
-module.exports = EconomyCommands;
+module.exports = AllCommands;

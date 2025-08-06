@@ -36,13 +36,13 @@ class BettingSystem {
         }
 
         if (user.balance < amount) {
-            await message.reply(`❌ No tienes suficientes Clarence Dolars. Tu balance: ${this.formatNumber(user.balance)} C$`);
+            await message.reply(`❌ No tienes suficientes π-b Coins. Tu balance: ${this.formatNumber(user.balance)} C$`);
             return;
         }
 
         const targetUserData = this.economy.getUser(targetUser.id);
         if (targetUserData.balance < amount) {
-            await message.reply(`❌ ${targetUser.displayName} no tiene suficientes Clarence Dolars para esta apuesta.`);
+            await message.reply(`❌ ${targetUser.displayName} no tiene suficientes π-b Coins para esta apuesta.`);
             return;
         }
 

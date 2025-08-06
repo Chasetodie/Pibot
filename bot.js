@@ -4,13 +4,12 @@ const fs = require('fs');
 const path = require('path');
 const CommandHandler = require('./commands'); // Importar el manejador de comandos
 const EconomySystem = require('./economy'); // Importar el sistema de economia
-const EconomyCommands = require('./economy-commands'); // Importar el sistema de comandos de economia
 const MinigamesSystem = require('./minigames'); // Importar el sistema de minijuegos
 const AchievementsSystem = require('./achievements');
 const ShopSystem = require('./shop');
 const BettingSystem = require('./betting');
 const EventsSystem = require('./events');
-const EnhancedCommands = require('./enhanced-commands');
+const AllCommands = require('./all-commands');
 
 // Configuración del servidor web para mantener activo el bot
 const app = express();
@@ -61,7 +60,6 @@ const commandHandler = new CommandHandler(counters, saveCounters);
 
 //Crear instancia del sistema de economia
 const economy = new EconomySystem();
-const economyCommands = new EconomyCommands(economy);
 
 //Crear instancia del sistema de Minijuegos
 const minigames = new MinigamesSystem(economy);
@@ -73,7 +71,7 @@ const betting = new BettingSystem(economy);
 const events = new EventsSystem(economy);
 
 // Instancia del sistema de comandos mejorados
-const enhancedCommands = new EnhancedCommands(economy, achievements, shop, betting, events);
+const allCommands = new AllCommands(economy, achievements, shop, betting, events);
 
 // Rutas del servidor web
 app.get('/', (req, res) => {
@@ -378,15 +376,12 @@ client.on('messageCreate', async (message) => {
             await message.channel.send({ embeds: [levelUpEmbed] });
         }
     }
-    
-    // Procesar comandos de economía PRIMERO
-    await economyCommands.processCommand(message);
-
-    //Procesar comandos de minijuegos
-    await minigames.processCommand(message);
 
     // Procesar comandos mejorados (shop, betting, achievements, etc.)
-    await enhancedCommands.processCommand(message);
+    await allCommands.processCommand(message);
+    
+    //Procesar comandos de minijuegos
+    await minigames.processCommand(message);
     
     // Luego procesar comandos normales (como !contadores, !reset, etc.)
     await commandHandler.processCommand(message);

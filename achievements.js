@@ -9,7 +9,7 @@ class AchievementsSystem {
             // Logros de dinero
             'first_dollar': {
                 name: '💰 Primer Dólar',
-                description: 'Gana tu primer Clarence Dólar',
+                description: 'Gana tu primer π-b Coin',
                 requirement: { type: 'money_earned', value: 1 },
                 reward: { money: 100, xp: 50 },
                 rarity: 'common',
@@ -17,7 +17,7 @@ class AchievementsSystem {
             },
             'rich_starter': {
                 name: '💸 Emprendedor',
-                description: 'Acumula 10,000 Clarence Dólares',
+                description: 'Acumula 10,000 π-b Coins',
                 requirement: { type: 'money_balance', value: 10000 },
                 reward: { money: 1000, xp: 200 },
                 rarity: 'uncommon',
@@ -25,7 +25,7 @@ class AchievementsSystem {
             },
             'millionaire': {
                 name: '🏆 Millonario',
-                description: 'Acumula 1,000,000 Clarence Dólares',
+                description: 'Acumula 1,000,000 π-b Coins',
                 requirement: { type: 'money_balance', value: 1000000 },
                 reward: { money: 50000, xp: 5000 },
                 rarity: 'legendary',

@@ -8,14 +8,14 @@ class EconomySystem {
         
         // Configuración del sistema
         this.config = {
-            currency: 'Clarence Dolar',
+            currency: 'π-b Coins',
             currencySymbol: 'C$',
             xpPerMessage: 15, // XP base por mensaje
             xpVariation: 10,  // Variación aleatoria del XP
             xpCooldown: 15000, // 1 minuto entre mensajes que dan XP
             dailyAmount: 500,  // Cantidad base del daily
             dailyVariation: 200, // Variación del daily
-            levelUpReward: 100, // Clarence Dolars por subir de nivel
+            levelUpReward: 100, // π-b Coins por subir de nivel
             xpPerLevel: 100,   // XP base necesaria para nivel 1
             levelMultiplier: 1.5 // Multiplicador de XP por nivel
         };
@@ -54,7 +54,7 @@ class EconomySystem {
     getUser(userId) {
         if (!this.users[userId]) {
             this.users[userId] = {
-                balance: 1000, // Clarence Dolars iniciales
+                balance: 0, // π-b Coins iniciales
                 level: 1,
                 xp: 0,
                 totalXp: 0,
@@ -63,7 +63,7 @@ class EconomySystem {
                 messagesCount: 0,
                 items: {},
                 stats: {
-                    totalEarned: 1000, // Incluir los iniciales
+                    totalEarned: 0, // Incluir los iniciales
                     totalSpent: 0,
                     dailyClaims: 0,
                     workCount: 0

@@ -453,7 +453,7 @@ class EventsSystem {
                 inline: true
             })
             .setColor(event.color)
-            .setFooter({ text: 'Usa !events para ver todos los eventos activos' })
+            .setFooter({ text: 'Usa mon!events para ver todos los eventos activos' })
             .setTimestamp();
         
         await message.channel.send({ embeds: [announcement] });
