@@ -282,8 +282,8 @@ class MinigamesSystem {
             
             embed.setDescription(`💸 **Perdiste...**`)
                 .addFields(
-                    { name: '💸 Perdiste', value: `${this.formatNumber(user.balance - betAmount)} C$`, inline: false },
-                    { name: '💳 Dinero Apostado', value: `${this.formatNumber(betAmount)} C$`, inline: false }
+                    { name: '💳 Dinero Apostado', value: `${this.formatNumber(betAmount)} C$`, inline: false },
+                    { name: '💸 Dinero Restante', value: `${this.formatNumber(user.balance - betAmount)} C$`, inline: false },
                 );
         }
 
