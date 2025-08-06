@@ -64,7 +64,7 @@ class AllCommands {
             .setThumbnail(avatarUrl)
             .addFields(
                 { 
-                    name: `${this.economy.config.currencySymbol} π-b Coins`, 
+                    name: `π-b Coins`, 
                     value: `**${this.formatNumber(user.balance)}**`, 
                     inline: true 
                 },
@@ -548,6 +548,7 @@ class AllCommands {
             )
             .setColor('#00FF00')
             .setTimestamp();
+        await message.channel.send({ embeds: [embed] });
 
         // Si subió de nivel, notificar
         if (xpResult && xpResult.levelUp) {
