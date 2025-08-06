@@ -476,7 +476,7 @@ class AllCommands {
         const reason = message.content.split(' ').slice(3).join(' ') || 'No Especificada';        
 
         // Realizar transferencia
-        if (this.formatNumber(result) < amount) {
+        if (targetUser.balance < amount) {
             await message.reply('❌ El Usuario no Tiene esa Cantidad de π-b Coins.');
             return;
         }
