@@ -98,6 +98,29 @@ class CommandHandler {
         await message.reply({ embeds: [embed] });
     }
 
+    async handleClear(message) {
+        if (!message.member?.permissions.has('Administrator')) {
+            await message.reply('❌ No tienes permisos de administrador para usar este comando.');
+            return;
+        }
+
+        const args = message.content.split(' ');
+        const amount = parseInt(args[1]);
+
+        if (isNaN(amount) || amount < 1 || amount > 100) {
+            await message.reply('❌ Especifica un número válido entre 1 y 100. Ejemplo: `mon!clear 10`');
+            return;
+        }
+
+        try {
+            await message.channel.bulkDelete(amount, true);
+            await message.channel.send(`✅ Se han borrado ${amount} mensajes.`)
+                .then(msg => setTimeout(() => msg.delete(), 3000));
+        } catch (error) {
+            await message.reply('❌ No se pudieron borrar los mensajes. Puede que sean muy antiguos.');
+        }
+    }    
+
     // Comando de ayuda
     async handleHelp(message) {
         const embed = new EmbedBuilder()
@@ -107,6 +130,7 @@ class CommandHandler {
                 { name: 'mon!contadores', value: 'Muestra los contadores actuales', inline: false },
                 { name: 'mon!reset <pibes> <pibas>', value: 'Actualiza los contadores manualmente', inline: false },
                 { name: 'mon!reload', value: 'Recarga contadores desde variables de entorno', inline: false },
+                { name: 'mon!clear <cantidad>', value: 'Borra la cantidad de mensajes indicada en el canal', inline: false },
                 { name: 'mon!help-admin', value: 'Muestra todos los comandos', inline: false },
             )
             .setColor('#FF6B6B')
@@ -133,6 +157,9 @@ class CommandHandler {
                     break;
                 case 'mon!reload':
                     await this.handleReload(message);
+                    break;
+                case 'mon!clear':
+                    await this.handleClear(message);
                     break;
                 case 'mon!help-admin':
                     await this.handleHelp(message);
