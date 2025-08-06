@@ -60,9 +60,11 @@ const commandHandler = new CommandHandler(counters, saveCounters);
 
 //Crear instancia del sistema de economia
 const economy = new EconomySystem();
+economy.events = events;
 
 //Crear instancia del sistema de Minijuegos
 const minigames = new MinigamesSystem(economy);
+minigames.events = events;
 
 //Instancia de sistemas extra
 const achievements = new AchievementsSystem(economy);
@@ -357,8 +359,10 @@ client.on('messageCreate', async (message) => {
     
     // Procesar XP por mensaje (solo en servidores, no en DMs)
     if (message.guild) {
-        const xpResult = economy.processMessageXp(message.author.id);
-        
+        // Aplicar modificadores de eventos a XP
+        const xpMod = events.applyEventModifiers(message.author.id, economy.config.xpPerMessage, 'message');
+        const xpResult = economy.addXp(message.author.id, xpMod.finalXp);
+
         // Si subió de nivel, notificar
         if (xpResult && xpResult.levelUp) {
             const levelUpEmbed = new EmbedBuilder()
@@ -366,13 +370,11 @@ client.on('messageCreate', async (message) => {
                 .setDescription(`${message.author} alcanzó el **Nivel ${xpResult.newLevel}**`)
                 .addFields(
                     { name: '📈 XP Ganada', value: `+${xpResult.xpGained} XP`, inline: true },
-                    { name: '🎁 Recompensa', value: `+${xpResult.reward} C$`, inline: true },
+                    { name: '🎁 Recompensa', value: `+${xpResult.reward} π-b$`, inline: true },
                     { name: '🏆 Niveles Subidos', value: `${xpResult.levelsGained}`, inline: true }
                 )
                 .setColor('#FFD700')
                 .setTimestamp();
-            
-            // Enviar notificación de subida de nivel
             await message.channel.send({ embeds: [levelUpEmbed] });
         }
     }

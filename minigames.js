@@ -84,6 +84,11 @@ class MinigamesSystem {
     // ===================
     
     async handleCoinflip(message, args) {
+        // Al inicio de handleCoinflip y handleDice
+        if (this.events) {
+            this.events.applyEventModifiers(userId, 0, 'games');
+        }
+
         const userId = message.author.id;
         const user = this.economy.getUser(userId);
         
@@ -95,7 +100,7 @@ class MinigamesSystem {
                 .addFields(
                     { name: '📝 Uso', value: '`!coinflip <cara/cruz> <cantidad>`', inline: false },
                     { name: '💡 Ejemplos', value: '`!coinflip cara 500`\n`!coinflip cruz 1000`', inline: false },
-                    { name: '💰 Apuesta', value: `Min: ${this.formatNumber(this.config.coinflip.minBet)} C$\nMax: ${this.formatNumber(this.config.coinflip.maxBet)} C$`, inline: false },
+                    { name: '💰 Apuesta', value: `Min: ${this.formatNumber(this.config.coinflip.minBet)} π-b$\nMax: ${this.formatNumber(this.config.coinflip.maxBet)} π-b$`, inline: false },
                     { name: '🎯 Probabilidad', value: '50% de ganar\nGanancia: x1.95', inline: false }
                 )
                 .setColor('#FFD700');
@@ -118,13 +123,13 @@ class MinigamesSystem {
 
         // Validar cantidad
         if (isNaN(betAmount) || betAmount < this.config.coinflip.minBet || betAmount > this.config.coinflip.maxBet) {
-            await message.reply(`❌ La apuesta debe ser entre ${this.formatNumber(this.config.coinflip.minBet)} y ${this.formatNumber(this.config.coinflip.maxBet)} C$`);
+            await message.reply(`❌ La apuesta debe ser entre ${this.formatNumber(this.config.coinflip.minBet)} y ${this.formatNumber(this.config.coinflip.maxBet)} π-b$`);
             return;
         }
 
         // Verificar fondos
         if (user.balance < betAmount) {
-            await message.reply(`❌ No tienes suficientes π-b Coins. Tu balance: ${this.formatNumber(user.balance)} C$`);
+            await message.reply(`❌ No tienes suficientes π-b Coins. Tu balance: ${this.formatNumber(user.balance)} π-b$`);
             return;
         }
 
@@ -158,8 +163,8 @@ class MinigamesSystem {
                 .addFields(
                     { name: '🪙 Resultado', value: result === 'cara' ? '🟡 Cara' : '⚪ Cruz', inline: true },
                     { name: '🎯 Tu Elección', value: normalizedChoice === 'cara' ? '🟡 Cara' : '⚪ Cruz', inline: true },
-                    { name: '💰 Ganancia', value: `+${this.formatNumber(profit)} C$`, inline: true },
-                    { name: '💳 Nuevo Balance', value: `${this.formatNumber(user.balance + profit)} C$`, inline: false }
+                    { name: '💰 Ganancia', value: `+${this.formatNumber(profit)} π-b$`, inline: true },
+                    { name: '💳 Nuevo Balance', value: `${this.formatNumber(user.balance + profit)} π-b$`, inline: false }
                 );
         } else {
             this.economy.removeMoney(userId, betAmount, 'coinflip_loss');
@@ -168,8 +173,8 @@ class MinigamesSystem {
                 .addFields(
                     { name: '🪙 Resultado', value: result === 'cara' ? '🟡 Cara' : '⚪ Cruz', inline: true },
                     { name: '🎯 Tu Elección', value: normalizedChoice === 'cara' ? '🟡 Cara' : '⚪ Cruz', inline: true },
-                    { name: '💸 Perdiste', value: `${this.formatNumber(betAmount)} C$`, inline: true },
-                    { name: '💳 Nuevo Balance', value: `${this.formatNumber(user.balance - betAmount)} C$`, inline: false }
+                    { name: '💸 Perdiste', value: `${this.formatNumber(betAmount)} π-b$`, inline: true },
+                    { name: '💳 Nuevo Balance', value: `${this.formatNumber(user.balance - betAmount)} π-b$`, inline: false }
                 );
         }
 
@@ -181,6 +186,11 @@ class MinigamesSystem {
     // ===================
     
     async handleDice(message, args) {
+        // Al inicio de handleCoinflip y handleDice
+        if (this.events) {
+            this.events.applyEventModifiers(userId, 0, 'games');
+        }
+
         const userId = message.author.id;
         const user = this.economy.getUser(userId);
         
@@ -192,7 +202,7 @@ class MinigamesSystem {
                 .addFields(
                     { name: '📝 Opciones de Apuesta', value: '• `1-6`: Número exacto (x5.8)\n• `alto`: 4, 5 o 6 (x1.9)\n• `bajo`: 1, 2 o 3 (x1.9)', inline: false },
                     { name: '💡 Ejemplos', value: '`!dice 6 500` - Apostar al 6\n`!dice alto 1000` - Apostar alto\n`!dice bajo 750` - Apostar bajo', inline: false },
-                    { name: '💰 Límites', value: `Min: ${this.formatNumber(this.config.dice.minBet)} C$\nMax: ${this.formatNumber(this.config.dice.maxBet)} C$`, inline: false }
+                    { name: '💰 Límites', value: `Min: ${this.formatNumber(this.config.dice.minBet)} π-b$\nMax: ${this.formatNumber(this.config.dice.maxBet)} π-b$`, inline: false }
                 )
                 .setColor('#FF6B6B');
             
@@ -212,13 +222,13 @@ class MinigamesSystem {
 
         // Validar cantidad
         if (isNaN(betAmount) || betAmount < this.config.dice.minBet || betAmount > this.config.dice.maxBet) {
-            await message.reply(`❌ La apuesta debe ser entre ${this.formatNumber(this.config.dice.minBet)} y ${this.formatNumber(this.config.dice.maxBet)} C$`);
+            await message.reply(`❌ La apuesta debe ser entre ${this.formatNumber(this.config.dice.minBet)} y ${this.formatNumber(this.config.dice.maxBet)} π-b$`);
             return;
         }
 
         // Verificar fondos
         if (user.balance < betAmount) {
-            await message.reply(`❌ No tienes suficientes π-b Coins. Tu balance: ${this.formatNumber(user.balance)} C$`);
+            await message.reply(`❌ No tienes suficientes π-b Coins. Tu balance: ${this.formatNumber(user.balance)} π-b$`);
             return;
         }
 
@@ -274,16 +284,16 @@ class MinigamesSystem {
             embed.setDescription(`🎉 **¡GANASTE!**`)
                 .addFields(
                     { name: '💰 Multiplicador', value: `x${multiplier}`, inline: true },
-                    { name: '💰 Ganancia', value: `+${this.formatNumber(profit)} C$`, inline: false },
-                    { name: '💳 Nuevo Balance', value: `${this.formatNumber(user.balance + profit)} C$`, inline: false }
+                    { name: '💰 Ganancia', value: `+${this.formatNumber(profit)} π-b$`, inline: false },
+                    { name: '💳 Nuevo Balance', value: `${this.formatNumber(user.balance + profit)} π-b$`, inline: false }
                 );
         } else {
             this.economy.removeMoney(userId, betAmount, 'dice_loss');
             
             embed.setDescription(`💸 **Perdiste...**`)
                 .addFields(
-                    { name: '💳 Dinero Apostado', value: `${this.formatNumber(betAmount)} C$`, inline: false },
-                    { name: '💸 Dinero Restante', value: `${this.formatNumber(user.balance - betAmount)} C$`, inline: false },
+                    { name: '💳 Dinero Apostado', value: `${this.formatNumber(betAmount)} π-b$`, inline: false },
+                    { name: '💸 Dinero Restante', value: `${this.formatNumber(user.balance - betAmount)} π-b$`, inline: false },
                 );
         }
 
@@ -339,12 +349,12 @@ class MinigamesSystem {
             .addFields(
                 { 
                     name: '🪙 Coinflip', 
-                    value: '`mon!coinflip <cara/cruz> <cantidad>`\nApuesta: 50-10,000 C$\nGanancia: x1.95', 
+                    value: '`mon!coinflip <cara/cruz> <cantidad>`\nApuesta: 50-10,000 π-b$\nGanancia: x1.95', 
                     inline: false 
                 },
                 { 
                     name: '🎲 Dados', 
-                    value: '`mon!dice <1-6/alto/bajo> <cantidad>`\nApuesta: 50-10,000 C$\nGanancia: x1.9 - x5.8', 
+                    value: '`mon!dice <1-6/alto/bajo> <cantidad>`\nApuesta: 50-10,000 π-b$\nGanancia: x1.9 - x5.8', 
                     inline: false 
                 },
                 { 

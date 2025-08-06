@@ -155,7 +155,7 @@ class AchievementsSystem {
             },
             'high_roller': {
                 name: '💎 Apostador VIP',
-                description: 'Apuesta más de 50,000 C$ en total',
+                description: 'Apuesta más de 50,000 π-b$ en total',
                 requirement: { type: 'total_bet', value: 50000 },
                 reward: { money: 10000, xp: 2000 },
                 rarity: 'epic',
@@ -165,7 +165,7 @@ class AchievementsSystem {
             // Logros especiales
             'generous': {
                 name: '❤️ Generoso',
-                description: 'Transfiere 10,000 C$ a otros usuarios',
+                description: 'Transfiere 10,000 π-b$ a otros usuarios',
                 requirement: { type: 'money_given', value: 10000 },
                 reward: { money: 2000, xp: 500 },
                 rarity: 'rare',
@@ -447,7 +447,7 @@ class AchievementsSystem {
             
             let text = '';
             for (const achievement of achievements) {
-                const moneyReward = achievement.reward.money ? `${this.formatNumber(achievement.reward.money)} C$` : '';
+                const moneyReward = achievement.reward.money ? `${this.formatNumber(achievement.reward.money)} π-b$` : '';
                 const xpReward = achievement.reward.xp ? `${this.formatNumber(achievement.reward.xp)} XP` : '';
                 const rewards = [moneyReward, xpReward].filter(r => r).join(' + ');
                 
@@ -503,7 +503,7 @@ class AchievementsSystem {
                 .setThumbnail(message.author.displayAvatarURL({ dynamic: true }))
                 .addFields({
                     name: '🎁 Recompensa',
-                    value: `${achievement.reward.money ? `+${this.formatNumber(achievement.reward.money)} C$` : ''}\n${achievement.reward.xp ? `+${this.formatNumber(achievement.reward.xp)} XP` : ''}`.trim(),
+                    value: `${achievement.reward.money ? `+${this.formatNumber(achievement.reward.money)} π-b$` : ''}\n${achievement.reward.xp ? `+${this.formatNumber(achievement.reward.xp)} XP` : ''}`.trim(),
                     inline: true
                 })
                 .setTimestamp();

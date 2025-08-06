@@ -171,7 +171,7 @@ class ShopSystem {
             }
             embed.addFields({
                 name: '💰 Tu Balance',
-                value: `${this.formatNumber(user.balance)} C$`,
+                value: `${this.formatNumber(user.balance)} π-b$`,
                 inline: false
             });
             await message.reply({ embeds: [embed] });
@@ -201,7 +201,7 @@ class ShopSystem {
             const canAfford = user.balance >= item.price ? '✅' : '❌';
             embed.addFields({
                 name: `${canAfford} ${item.emoji} ${item.name}`,
-                value: `${item.description}\n**Precio:** ${this.formatNumber(item.price)} C${ownedText}\n*Usa: \`mon!buy ${itemId}\`*`,
+                value: `${item.description}\n**Precio:** ${this.formatNumber(item.price)} π-b${ownedText}\n*Usa: \`mon!buy ${itemId}\`*`,
                 inline: true
             });
         }
@@ -216,7 +216,7 @@ class ShopSystem {
         if (!item.stackable && quantity > 1) return message.reply('❌ Este item no se puede comprar en cantidades mayores a 1.');
 
         const totalPrice = item.price * quantity;
-        if (user.balance < totalPrice) return message.reply(`❌ No tienes suficiente dinero. Te faltan ${this.formatNumber(totalPrice - user.balance)} C$`);
+        if (user.balance < totalPrice) return message.reply(`❌ No tienes suficiente dinero. Te faltan ${this.formatNumber(totalPrice - user.balance)} π-b$`);
 
         if (item.stackable && item.maxStack) {
             const currentAmount = (user.inventory && user.inventory[itemId]) || 0;
@@ -242,8 +242,8 @@ class ShopSystem {
             .setTitle('✅ Compra Exitosa')
             .setDescription(`Has comprado **${quantity}x ${item.emoji} ${item.name}**`)
             .addFields(
-                { name: '💸 Gastado', value: `${this.formatNumber(totalPrice)} C$`, inline: true },
-                { name: '💰 Balance Restante', value: `${this.formatNumber(user.balance)} C$`, inline: true }
+                { name: '💸 Gastado', value: `${this.formatNumber(totalPrice)} π-b$`, inline: true },
+                { name: '💰 Balance Restante', value: `${this.formatNumber(user.balance)} π-b$`, inline: true }
             )
             .setColor('#00FF00')
             .setTimestamp();
@@ -317,11 +317,11 @@ class ShopSystem {
             for (const { item, quantity } of items) {
                 const value = item.price * quantity;
                 totalValue += value;
-                text += `${item.emoji} **${item.name}** x${quantity}\nValor: ${this.formatNumber(value)} C$\n\n`;
+                text += `${item.emoji} **${item.name}** x${quantity}\nValor: ${this.formatNumber(value)} π-b$\n\n`;
             }
             embed.addFields({ name: `${categoryInfo.emoji} ${categoryInfo.name}`, value: text, inline: true });
         }
-        embed.addFields({ name: '💰 Valor Total del Inventario', value: `${this.formatNumber(totalValue)} C$`, inline: false });
+        embed.addFields({ name: '💰 Valor Total del Inventario', value: `${this.formatNumber(totalValue)} π-b$`, inline: false });
 
         // Boosts activos
         if (user.activeBoosts) {
@@ -360,8 +360,8 @@ class ShopSystem {
             .setTitle('✅ Venta Exitosa')
             .setDescription(`Has vendido **${quantity}x ${item.emoji} ${item.name}**`)
             .addFields(
-                { name: '💰 Ganado', value: `${this.formatNumber(totalEarned)} C$`, inline: true },
-                { name: '💳 Nuevo Balance', value: `${this.formatNumber(user.balance)} C$`, inline: true }
+                { name: '💰 Ganado', value: `${this.formatNumber(totalEarned)} π-b$`, inline: true },
+                { name: '💳 Nuevo Balance', value: `${this.formatNumber(user.balance)} π-b$`, inline: true }
             )
             .setColor('#00FF00')
             .setTimestamp();

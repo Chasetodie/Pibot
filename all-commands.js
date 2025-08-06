@@ -389,7 +389,7 @@ class AllCommands {
                 
                 embed.addFields({
                     name: `${available} ${job.name}`,
-                    value: `**Pago:** ${job.baseReward}±${job.variation} C$\n**Cooldown:** ${cooldownText}${levelText}${job.failChance ? `\n**Riesgo:** ${(job.failChance * 100)}% de fallar` : ''}`,
+                    value: `**Pago:** ${job.baseReward}±${job.variation} π-b$\n**Cooldown:** ${cooldownText}${levelText}${job.failChance ? `\n**Riesgo:** ${(job.failChance * 100)}% de fallar` : ''}`,
                     inline: true
                 });
             }
@@ -458,8 +458,8 @@ class AllCommands {
                 .setTitle('💥 ¡El trabajo salió mal!')
                 .setDescription(`**${jobs[jobType].name}**\n\n${result.message}`)
                 .addFields(
-                    { name: '💸 Perdiste', value: `${this.formatNumber(result.penalty)} C$`, inline: true },
-                    { name: '💰 Balance Actual', value: `${this.formatNumber(result.newBalance)} C$`, inline: true }
+                    { name: '💸 Perdiste', value: `${this.formatNumber(result.penalty)} π-b$`, inline: true },
+                    { name: '💰 Balance Actual', value: `${this.formatNumber(result.newBalance)} π-b$`, inline: true }
                 )
                 .setColor('#dc3545')
                 .setTimestamp();
@@ -473,8 +473,8 @@ class AllCommands {
             .setTitle('✅ ¡Trabajo Completado!')
             .setDescription(`**${result.jobName}**\n\n${result.message}`)
             .addFields(
-                { name: '💰 Ganaste', value: `+${this.formatNumber(result.amount)} C$`, inline: true },
-                { name: '💳 Balance Total', value: `${this.formatNumber(result.newBalance)} C$`, inline: true }
+                { name: '💰 Ganaste', value: `+${this.formatNumber(result.amount)} π-b$`, inline: true },
+                { name: '💳 Balance Total', value: `${this.formatNumber(result.newBalance)} π-b$`, inline: true }
             )
             .setColor('#28a745')
             .setTimestamp();
@@ -679,7 +679,7 @@ class AllCommands {
                 // Minijuegos
                 { name: '🎮 Minijuegos', value: '`mon!coinflip <cara/cruz> <cantidad>` - Juega cara o cruz\n`mon!dice <1-6/alto/bajo> <cantidad>` - Juega a los dados\n`mon!games` - Ver lista de minijuegos', inline: false },
                 // Eventos
-                { name: '🎉 Eventos', value: '`mon!events` - Ver eventos activos\n`mon!createevent <tipo> [duración]` - Crear evento manual (admin)\n`mon!eventstats` - Estadísticas de eventos (admin)', inline: false }
+                { name: '🎉 Eventos', value: '`mon!events` - Ver eventos activos', inline: false }
            )
             .setFooter({ text: 'Usa los comandos para interactuar con el bot.' })
             .setTimestamp();

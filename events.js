@@ -335,7 +335,7 @@ class EventsSystem {
         
         for (const event of this.getActiveEvents()) {
             if (event.type === 'treasure_hunt' && Math.random() < 0.15) { // 15% chance
-                const treasureReward = Math.floor(Math.random() * 2000) + 500; // 500-2500 C$
+                const treasureReward = Math.floor(Math.random() * 2000) + 500; // 500-2500 π-b$
                 this.economy.addMoney(userId, treasureReward, 'treasure_found');
                 rewards.push({
                     type: 'treasure',

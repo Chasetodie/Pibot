@@ -31,12 +31,12 @@ class BettingSystem {
 
         const amount = parseInt(args[2]);
         if (isNaN(amount) || amount < this.config.minBet || amount > this.config.maxBet) {
-            await message.reply(`❌ La cantidad debe ser entre ${this.formatNumber(this.config.minBet)} y ${this.formatNumber(this.config.maxBet)} C$`);
+            await message.reply(`❌ La cantidad debe ser entre ${this.formatNumber(this.config.minBet)} y ${this.formatNumber(this.config.maxBet)} π-b$`);
             return;
         }
 
         if (user.balance < amount) {
-            await message.reply(`❌ No tienes suficientes π-b Coins. Tu balance: ${this.formatNumber(user.balance)} C$`);
+            await message.reply(`❌ No tienes suficientes π-b Coins. Tu balance: ${this.formatNumber(user.balance)} π-b$`);
             return;
         }
 
@@ -79,9 +79,9 @@ class BettingSystem {
             .setTitle('🎲 Nueva Apuesta Creada')
             .setDescription(`${message.author} desafía a ${targetUser} a una apuesta!`)
             .addFields(
-                { name: '💰 Cantidad', value: `${this.formatNumber(amount)} C$`, inline: true },
+                { name: '💰 Cantidad', value: `${this.formatNumber(amount)} π-b$`, inline: true },
                 { name: '🎯 Descripción', value: description, inline: true },
-                { name: '💸 Comisión', value: `${this.formatNumber(Math.floor(amount * 2 * this.config.houseFee))} C$`, inline: true },
+                { name: '💸 Comisión', value: `${this.formatNumber(Math.floor(amount * 2 * this.config.houseFee))} π-b$`, inline: true },
                 { name: '⏰ Expira en', value: `${this.config.betTimeout / 60000} minutos`, inline: false }
             )
             .setColor('#FFA500')
@@ -155,7 +155,7 @@ class BettingSystem {
             .addFields(
                 { name: '⚔️ Retador', value: `<@${bet.challenger}>`, inline: true },
                 { name: '🛡️ Oponente', value: `<@${bet.opponent}>`, inline: true },
-                { name: '💰 Cantidad', value: `${this.formatNumber(bet.amount)} C$ cada uno`, inline: true },
+                { name: '💰 Cantidad', value: `${this.formatNumber(bet.amount)} π-b$ cada uno`, inline: true },
                 { name: '🎯 Descripción', value: bet.description, inline: false },
                 { name: '📝 Estado', value: 'Esperando resultado...', inline: false }
             )
@@ -228,8 +228,8 @@ class BettingSystem {
             .addFields(
                 { name: '🏆 Ganador', value: `<@${winnerId}>`, inline: true },
                 { name: '💸 Perdedor', value: `<@${loserId}>`, inline: true },
-                { name: '💰 Premio', value: `${this.formatNumber(winnerAmount)} C$`, inline: true },
-                { name: '🏛️ Comisión', value: `${this.formatNumber(houseFee)} C$`, inline: true },
+                { name: '💰 Premio', value: `${this.formatNumber(winnerAmount)} π-b$`, inline: true },
+                { name: '🏛️ Comisión', value: `${this.formatNumber(houseFee)} π-b$`, inline: true },
                 { name: '🎯 Descripción', value: bet.description, inline: false }
             )
             .setColor('#FFD700')
@@ -260,7 +260,7 @@ class BettingSystem {
             .setTitle('🔄 Apuesta Cancelada')
             .setDescription('La apuesta fue cancelada por mutuo acuerdo')
             .addFields(
-                { name: '💰 Fondos Devueltos', value: `${this.formatNumber(bet.amount)} C$ a cada participante`, inline: false }
+                { name: '💰 Fondos Devueltos', value: `${this.formatNumber(bet.amount)} π-b$ a cada participante`, inline: false }
             )
             .setColor('#808080')
             .setTimestamp();
@@ -303,7 +303,7 @@ class BettingSystem {
 
             embed.addFields({
                 name: `${role} vs <@${opponent}>`,
-                value: `**Cantidad:** ${this.formatNumber(bet.amount)} C$\n**Descripción:** ${bet.description}\n**Estado:** ${statusText}\n**ID:** \`${bet.id}\``,
+                value: `**Cantidad:** ${this.formatNumber(bet.amount)} π-b$\n**Descripción:** ${bet.description}\n**Estado:** ${statusText}\n**ID:** \`${bet.id}\``,
                 inline: false
             });
         }
@@ -329,9 +329,9 @@ class BettingSystem {
                 { name: '🏆 Victorias', value: stats.wins.toString(), inline: true },
                 { name: '💸 Derrotas', value: stats.losses.toString(), inline: true },
                 { name: '📊 Tasa de Victoria', value: `${winRate}%`, inline: true },
-                { name: '💰 Total Ganado', value: `${this.formatNumber(stats.totalWon)} C$`, inline: true },
-                { name: '💸 Total Perdido', value: `${this.formatNumber(stats.totalLost)} C$`, inline: true },
-                { name: '📈 Ganancia Neta', value: `${stats.netProfit >= 0 ? '+' : ''}${this.formatNumber(stats.netProfit)} C$`, inline: true }
+                { name: '💰 Total Ganado', value: `${this.formatNumber(stats.totalWon)} π-b$`, inline: true },
+                { name: '💸 Total Perdido', value: `${this.formatNumber(stats.totalLost)} π-b$`, inline: true },
+                { name: '📈 Ganancia Neta', value: `${stats.netProfit >= 0 ? '+' : ''}${this.formatNumber(stats.netProfit)} π-b$`, inline: true }
             )
             .setTimestamp();
 
@@ -371,7 +371,7 @@ class BettingSystem {
             .addFields(
                 { name: '📝 Uso', value: '`mon!bet @usuario <cantidad> <descripción>`', inline: false },
                 { name: '💡 Ejemplo', value: '`mon!bet @usuario 1000 coinflip cara`', inline: false },
-                { name: '💰 Límites', value: `Min: ${this.formatNumber(this.config.minBet)} C$\nMax: ${this.formatNumber(this.config.maxBet)} C$`, inline: false },
+                { name: '💰 Límites', value: `Min: ${this.formatNumber(this.config.minBet)} π-b$\nMax: ${this.formatNumber(this.config.maxBet)} π-b$`, inline: false },
                 { name: '📊 Comisión', value: `${this.config.houseFee * 100}% del total`, inline: false }
             )
             .setColor('#FF6B6B');

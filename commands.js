@@ -133,6 +133,8 @@ class CommandHandler {
                 { name: 'mon!reload', value: 'Recarga contadores desde variables de entorno', inline: false },
                 { name: 'mon!clear <cantidad>', value: 'Borra la cantidad de mensajes indicada en el canal', inline: false },
                 { name: 'mon!help-admin', value: 'Muestra todos los comandos', inline: false },
+                { name: 'mon!createevent <tipo> [duración]', value: 'Crear evento manual', inline: false },
+                { name: 'mon!eventstats', value: 'Estadísticas de eventos', inline: false }
             )
             .setColor('#FF6B6B')
             .setTimestamp()

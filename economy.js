@@ -9,14 +9,14 @@ class EconomySystem {
         // Configuración del sistema
         this.config = {
             currency: 'π-b Coins',
-            currencySymbol: 'C$',
-            xpPerMessage: 15, // XP base por mensaje
-            xpVariation: 10,  // Variación aleatoria del XP
-            xpCooldown: 15000, // 1 minuto entre mensajes que dan XP
-            dailyAmount: 500,  // Cantidad base del daily
-            dailyVariation: 200, // Variación del daily
-            levelUpReward: 100, // π-b Coins por subir de nivel
-            xpPerLevel: 100,   // XP base necesaria para nivel 1
+            currencySymbol: 'π-b$',
+            xpPerMessage: 10, // XP base por mensaje
+            xpVariation: 5,  // Variación aleatoria del XP
+            xpCooldown: 30000, // 1 minuto entre mensajes que dan XP
+            dailyAmount: 300,  // Cantidad base del daily
+            dailyVariation: 150, // Variación del daily
+            levelUpReward: 50, // π-b Coins por subir de nivel
+            xpPerLevel: 30,   // XP base necesaria para nivel 1
             levelMultiplier: 1.5 // Multiplicador de XP por nivel
         };
         
@@ -273,8 +273,14 @@ class EconomySystem {
         
         const user = this.getUser(userId);
         const variation = Math.floor(Math.random() * (this.config.dailyVariation * 2)) - this.config.dailyVariation;
-        const amount = Math.max(100, this.config.dailyAmount + variation);
-        
+        let amount = Math.max(100, this.config.dailyAmount + variation);
+       
+        // Aplicar modificadores de eventos a dinero de daily
+        if (this.events) {
+            const mod = this.events.applyMoneyModifiers(userId, amount, 'daily');
+            amount = mod.finalAmount;
+        }
+
         user.lastDaily = Date.now();
         user.balance += amount;
         user.stats.totalEarned += amount;
@@ -432,9 +438,15 @@ class EconomySystem {
         
         // Trabajo exitoso
         const variation = Math.floor(Math.random() * (job.variation * 2)) - job.variation;
-        const amount = Math.max(50, job.baseReward + variation);
+        let amount = Math.max(50, job.baseReward + variation);
         const message = job.messages[Math.floor(Math.random() * job.messages.length)];
-        
+
+        // === INTEGRAR EVENTOS AQUÍ ===
+        if (this.events) {
+            const mod = this.events.applyMoneyModifiers(userId, amount, 'work');
+            amount = mod.finalAmount;
+        }
+        // =============================        
         user.balance += amount;
         user.stats.totalEarned += amount;
         
