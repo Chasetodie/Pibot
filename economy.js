@@ -12,7 +12,7 @@ class EconomySystem {
             currencySymbol: 'C$',
             xpPerMessage: 15, // XP base por mensaje
             xpVariation: 10,  // Variación aleatoria del XP
-            xpCooldown: 60000, // 1 minuto entre mensajes que dan XP
+            xpCooldown: 15000, // 1 minuto entre mensajes que dan XP
             dailyAmount: 500,  // Cantidad base del daily
             dailyVariation: 200, // Variación del daily
             levelUpReward: 100, // Clarence Dolars por subir de nivel
