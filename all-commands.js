@@ -378,11 +378,11 @@ class AllCommands {
                 .setDescription('Da π-b Coins a otro usuario')
                 .addFields({
                     name: '📝 Uso',
-                    value: '`mon!add @usuario <cantidad>`',
+                    value: '`mon!add @usuario <cantidad> <razon>`',
                     inline: false
                 }, {
                     name: '💡 Ejemplo',
-                    value: '`mon!add @usuario 500`',
+                    value: '`mon!add @usuario 500 "Por ganar el concurso"`',
                     inline: false
                 })
                 .setColor('#17a2b8');
@@ -417,9 +417,9 @@ class AllCommands {
         
         const embed = new EmbedBuilder()
             .setTitle('✅ Se ha Entregado Exitosamente el Dinero')
-            .setDescription(`Has dado **${this.formatNumber(amount)}** ${this.economy.config.currencySymbol} a ${targetUser}`)
+            .setDescription(`Has dado **${this.formatNumber(amount)}** ${this.economy.config.currencySymbol} a ${targetUser}. Razón: ${reason}`)
             .addFields(
-                { name: '💰 Balance de Destino', value: `${this.formatNumber(result.balance)} ${this.economy.config.currencySymbol}`, inline: true }
+                { name: '💰 Balance de Destino', value: `${this.formatNumber(result)} ${this.economy.config.currencySymbol}`, inline: true }
             )
             .setColor('#00FF00')
             .setTimestamp();
@@ -441,11 +441,11 @@ class AllCommands {
                 .setDescription('Quita π-b Coins a otro usuario')
                 .addFields({
                     name: '📝 Uso',
-                    value: '`mon!remove @usuario <cantidad>`',
+                    value: '`mon!remove @usuario <cantidad> <razon>`',
                     inline: false
                 }, {
                     name: '💡 Ejemplo',
-                    value: '`mon!remove @usuario 500`',
+                    value: '`mon!remove @usuario 500 "Por mal comportamiento"`',
                     inline: false
                 })
                 .setColor('#17a2b8');
@@ -478,9 +478,9 @@ class AllCommands {
         
         const embed = new EmbedBuilder()
             .setTitle('✅ Se ha Quitado Exitosamente el Dinero')
-            .setDescription(`Has quitado **${this.formatNumber(amount)}** ${this.economy.config.currencySymbol} a ${targetUser}`)
+            .setDescription(`Has quitado **${this.formatNumber(amount)}** ${this.economy.config.currencySymbol} a ${targetUser}. Razón: ${reason}`)
             .addFields(
-                { name: '💰 Balance de Destino', value: `${this.formatNumber(result.balance)} ${this.economy.config.currencySymbol}`, inline: true }
+                { name: '💰 Balance de Destino', value: `${this.formatNumber(result)} ${this.economy.config.currencySymbol}`, inline: true }
             )
             .setColor('#00FF00')
             .setTimestamp();
@@ -491,6 +491,27 @@ class AllCommands {
     async handleAddXp(message) {
         if (!message.member?.permissions.has('Administrator')) {
             await message.reply('❌ No tienes permisos de administrador para usar este comando.');
+            return;
+        }
+
+        const args = message.content.split(' ');
+        
+        if (args.length < 3) {
+            const embed = new EmbedBuilder()
+                .setTitle('💸 Comando Remove')
+                .setDescription('Quita π-b Coins a otro usuario')
+                .addFields({
+                    name: '📝 Uso',
+                    value: '`mon!addxp @usuario <cantidad> <razon>`',
+                    inline: false
+                }, {
+                    name: '💡 Ejemplo',
+                    value: '`mon!addxp @usuario 500 "Por ganar el concurso"`',
+                    inline: false
+                })
+                .setColor('#17a2b8');
+            
+            await message.reply({ embeds: [embed] });
             return;
         }
 
