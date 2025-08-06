@@ -72,7 +72,7 @@ const events = new EventsSystem(economy);
 const betting = new BettingSystem(economy);*/
 
 // Instancia del sistema de comandos mejorados
-const allCommands = new AllCommands(economy, achievements, shop, betting, events);
+const allCommands = new AllCommands(economy/*, achievements, shop, betting, events*/);
 
 /*economy.events = events;
 minigames.events = events;*/
