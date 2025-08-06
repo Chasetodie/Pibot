@@ -3,6 +3,14 @@ const express = require('express');
 const fs = require('fs');
 const path = require('path');
 const CommandHandler = require('./commands'); // Importar el manejador de comandos
+const EconomySystem = require('./economy'); // Importar el sistema de economia
+const EconomyCommands = require('./economy-commands'); // Importar el sistema de comandos de economia
+const MinigamesSystem = require('./minigames'); // Importar el sistema de minijuegos
+const AchievementsSystem = require('./achievements');
+const ShopSystem = require('./shop');
+const BettingSystem = require('./betting');
+const EventsSystem = require('./events');
+const EnhancedCommands = require('./enhanced-commands');
 
 // Configuración del servidor web para mantener activo el bot
 const app = express();
@@ -50,6 +58,22 @@ let counters = loadCounters();
 
 // Crear instancia del manejador de comandos
 const commandHandler = new CommandHandler(counters, saveCounters);
+
+//Crear instancia del sistema de economia
+const economy = new EconomySystem();
+const economyCommands = new EconomyCommands(economy);
+
+//Crear instancia del sistema de Minijuegos
+const minigames = new MinigamesSystem(economy);
+
+//Instancia de sistemas extra
+const achievements = new AchievementsSystem(economy);
+const shop = new ShopSystem(economy);
+const betting = new BettingSystem(economy);
+const events = new EventsSystem(economy);
+
+// Instancia del sistema de comandos mejorados
+const enhancedCommands = new EnhancedCommands(economy, achievements, shop, betting, events);
 
 // Rutas del servidor web
 app.get('/', (req, res) => {
@@ -328,9 +352,43 @@ client.on('interactionCreate', async (interaction) => {
     }
 });
 
-// Manejar mensajes (AHORA CON EL SISTEMA DE COMANDOS SEPARADO)
+// Manejar mensajes (COMANDOS + XP + ECONOMÍA)
 client.on('messageCreate', async (message) => {
-    // Procesar comandos con el nuevo sistema
+    // Ignorar mensajes de bots
+    if (message.author.bot) return;
+    
+    // Procesar XP por mensaje (solo en servidores, no en DMs)
+    if (message.guild) {
+        const xpResult = economy.processMessageXp(message.author.id);
+        
+        // Si subió de nivel, notificar
+        if (xpResult && xpResult.levelUp) {
+            const levelUpEmbed = new EmbedBuilder()
+                .setTitle('🎉 ¡Subiste de Nivel!')
+                .setDescription(`${message.author} alcanzó el **Nivel ${xpResult.newLevel}**`)
+                .addFields(
+                    { name: '📈 XP Ganada', value: `+${xpResult.xpGained} XP`, inline: true },
+                    { name: '🎁 Recompensa', value: `+${xpResult.reward} C$`, inline: true },
+                    { name: '🏆 Niveles Subidos', value: `${xpResult.levelsGained}`, inline: true }
+                )
+                .setColor('#FFD700')
+                .setTimestamp();
+            
+            // Enviar notificación de subida de nivel
+            await message.channel.send({ embeds: [levelUpEmbed] });
+        }
+    }
+    
+    // Procesar comandos de economía PRIMERO
+    await economyCommands.processCommand(message);
+
+    //Procesar comandos de minijuegos
+    await minigames.processCommand(message);
+
+    // Procesar comandos mejorados (shop, betting, achievements, etc.)
+    await enhancedCommands.processCommand(message);
+    
+    // Luego procesar comandos normales (como !contadores, !reset, etc.)
     await commandHandler.processCommand(message);
 });
 
