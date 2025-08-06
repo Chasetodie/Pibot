@@ -217,7 +217,7 @@ class AllCommands {
         await message.reply({ embeds: [embed] });
     }
 
-    // Comando !pay - Transferir dinero a otro usuario
+/*    // Comando !pay - Transferir dinero a otro usuario
     async handlePay(message) {
         const args = message.content.split(' ');
         
@@ -301,10 +301,10 @@ class AllCommands {
             .setTimestamp();
         
         await message.reply({ embeds: [embed] });
-    }
+    }*/
 
     // Comando !top - Leaderboards
-    async handleTop(message) {
+/*    async handleTop(message) {
         const args = message.content.split(' ');
         const type = args[1]?.toLowerCase() || 'money';
         
@@ -362,10 +362,158 @@ class AllCommands {
         }
         
         await message.reply({ embeds: [embed] });
+    }*/
+
+    async handleAddMoney(message) {
+        if (!message.member?.permissions.has('Administrator')) {
+            await message.reply('❌ No tienes permisos de administrador para usar este comando.');
+            return;
+        }
+
+        const args = message.content.split(' ');
+        
+        if (args.length < 3) {
+            const embed = new EmbedBuilder()
+                .setTitle('💸 Comando Add')
+                .setDescription('Da π-b Coins a otro usuario')
+                .addFields({
+                    name: '📝 Uso',
+                    value: '`mon!add @usuario <cantidad>`',
+                    inline: false
+                }, {
+                    name: '💡 Ejemplo',
+                    value: '`mon!add @usuario 500`',
+                    inline: false
+                })
+                .setColor('#17a2b8');
+            
+            await message.reply({ embeds: [embed] });
+            return;
+        }
+        
+        // Obtener usuario mencionado
+        const targetUser = message.mentions.users.first();
+        if (!targetUser) {
+            await message.reply('❌ Debes mencionar a un usuario válido.');
+            return;
+        }
+              
+        if (targetUser.bot) {
+            await message.reply('❌ No puedes dar dinero a bots.');
+            return;
+        }
+        
+        // Obtener cantidad
+        const amount = parseInt(args[2]);
+        if (isNaN(amount) || amount <= 0) {
+            await message.reply('❌ La cantidad debe ser un número positivo.');
+            return;
+        }
+        
+        // Realizar transferencia
+        const result = this.economy.addMoney(targetUser.id, amount, reason);
+        
+        const embed = new EmbedBuilder()
+            .setTitle('✅ Se ha Entregado Exitosamente el Dinero')
+            .setDescription(`Has dado **${this.formatNumber(amount)}** ${this.economy.config.currencySymbol} a ${targetUser}`)
+            .addFields(
+                { name: '💰 Balance de Destino', value: `${this.formatNumber(result.balance)} ${this.economy.config.currencySymbol}`, inline: true }
+            )
+            .setColor('#00FF00')
+            .setTimestamp();
+        
+        await message.reply({ embeds: [embed] });
     }
 
+    async handleRemoveMoney(message) {
+        if (!message.member?.permissions.has('Administrator')) {
+            await message.reply('❌ No tienes permisos de administrador para usar este comando.');
+            return;
+        }
+
+        const args = message.content.split(' ');
+        
+        if (args.length < 3) {
+            const embed = new EmbedBuilder()
+                .setTitle('💸 Comando Remove')
+                .setDescription('Quita π-b Coins a otro usuario')
+                .addFields({
+                    name: '📝 Uso',
+                    value: '`mon!remove @usuario <cantidad>`',
+                    inline: false
+                }, {
+                    name: '💡 Ejemplo',
+                    value: '`mon!remove @usuario 500`',
+                    inline: false
+                })
+                .setColor('#17a2b8');
+            
+            await message.reply({ embeds: [embed] });
+            return;
+        }
+        
+        // Obtener usuario mencionado
+        const targetUser = message.mentions.users.first();
+        if (!targetUser) {
+            await message.reply('❌ Debes mencionar a un usuario válido.');
+            return;
+        }
+              
+        if (targetUser.bot) {
+            await message.reply('❌ No puedes quitar dinero a bots.');
+            return;
+        }
+        
+        // Obtener cantidad
+        const amount = parseInt(args[2]);
+        if (isNaN(amount) || amount <= 0) {
+            await message.reply('❌ La cantidad debe ser un número positivo.');
+            return;
+        }
+        
+        // Realizar transferencia
+        const result = this.economy.removeMoney(targetUser.id, amount, reason);
+        
+        const embed = new EmbedBuilder()
+            .setTitle('✅ Se ha Quitado Exitosamente el Dinero')
+            .setDescription(`Has quitado **${this.formatNumber(amount)}** ${this.economy.config.currencySymbol} a ${targetUser}`)
+            .addFields(
+                { name: '💰 Balance de Destino', value: `${this.formatNumber(result.balance)} ${this.economy.config.currencySymbol}`, inline: true }
+            )
+            .setColor('#00FF00')
+            .setTimestamp();
+        
+        await message.reply({ embeds: [embed] });
+    }
+
+    async handleAddXp(message) {
+        if (!message.member?.permissions.has('Administrator')) {
+            await message.reply('❌ No tienes permisos de administrador para usar este comando.');
+            return;
+        }
+        
+        const xpResult = economy.addXp(targetUser.id, baseXP);
+
+        // Si subió de nivel, notificar
+        if (xpResult && xpResult.levelUp) {
+            const levelUpEmbed = new EmbedBuilder()
+                .setTitle('🎉 ¡Subiste de Nivel!')
+                .setDescription(`${message.author} alcanzó el **Nivel ${xpResult.newLevel}**`)
+                .addFields(
+                    { name: '📈 XP Ganada', value: `+${xpResult.xpGained} XP`, inline: true },
+                    { name: '🎁 Recompensa', value: `+${xpResult.reward} π-b$`, inline: true },
+                    { name: '🏆 Niveles Subidos', value: `${xpResult.levelsGained}`, inline: true }
+                )
+                .setColor('#FFD700')
+                .setTimestamp();
+            await message.channel.send({ embeds: [levelUpEmbed] });
+        }
+    }
+
+
+
     // Comando !work - Sistema de trabajos
-    async handleWork(message) {
+/*    async handleWork(message) {
         const args = message.content.split(' ');
         const jobType = args[1]?.toLowerCase();
         
@@ -480,7 +628,7 @@ class AllCommands {
             .setTimestamp();
         
         await message.reply({ embeds: [embed] });
-    }    
+    }    */
 
     async processCommand(message) {
         if (message.author.bot) return;
@@ -508,33 +656,28 @@ class AllCommands {
                     await this.handleLevel(message, levelTargetUser);
                     break;
 
-                case 'mon!pay':
+/*                case 'mon!pay':
                 case 'mon!transfer':
                     await this.handlePay(message);
-                    break;
+                    break;*/
 
-                case 'mon!top':
+/*                case 'mon!top':
                 case 'mon!leaderboard':
                 case 'mon!lb':
                     await this.handleTop(message);
-                    break;
+                    break;*/
 
-                case 'mon!work':
+/*                case 'mon!work':
                 case 'mon!job':
                     await this.handleWork(message);
-                    break;
-
-                case 'mon!ecohelp':
-                case 'mon!economyhelp':
-                    await this.handleEcoHelp(message);
-                    break;
+                    break;*/
 
                 default:
                     // No es un comando de economía
                     break;
             }
 
-            // Achievements
+/*            // Achievements
             if (command === 'mon!achievements' || command === 'mon!logros') {
                 const achievementTarget = message.mentions.members?.first();
                 await this.achievements.showUserAchievements(message, achievementTarget);
@@ -639,7 +782,7 @@ class AllCommands {
             if (command === 'mon!help') {
                 await this.showHelp(message);
                 return;
-            }
+            }*/
 
         } catch (error) {
             console.error('❌ Error procesando comando:', error);
@@ -647,7 +790,7 @@ class AllCommands {
         }
     }
 
-    async shopHelp(message) {
+/*    async shopHelp(message) {
         const embed = new EmbedBuilder()
             .setTitle('🛒 Comandos de la Tienda')
             .setColor('#9932CC')
@@ -661,7 +804,7 @@ class AllCommands {
             .setFooter({ text: '¡Colecciona, mejora y presume tus objetos!' })
             .setTimestamp();
         await message.reply({ embeds: [embed] });
-    }
+    }*/
 
     async showHelp(message) {
         const embed = new EmbedBuilder()

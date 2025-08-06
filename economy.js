@@ -102,7 +102,7 @@ class EconomySystem {
     }
 
     // Transferir dinero entre usuarios
-    transferMoney(fromUserId, toUserId, amount) {
+/*    transferMoney(fromUserId, toUserId, amount) {
         const fromUser = this.getUser(fromUserId);
         const toUser = this.getUser(toUserId);
         
@@ -129,7 +129,7 @@ class EconomySystem {
             fromBalance: fromUser.balance, 
             toBalance: toUser.balance 
         };
-    }
+    }*/
 
     // Calcular XP necesaria para un nivel específico
     getXpForLevel(level) {
@@ -190,7 +190,7 @@ class EconomySystem {
         };
     }
 
-    // Procesar XP por mensaje (con cooldown)
+/*    // Procesar XP por mensaje (con cooldown)
     processMessageXp(userId) {
         const now = Date.now();
         const lastXp = this.userCooldowns.get(userId) || 0;
@@ -205,10 +205,10 @@ class EconomySystem {
         user.messagesCount++;
         
         return this.addXp(userId, this.config.xpPerMessage);
-    }
+    }*/
 
     // Obtener estadísticas de un usuario
-    getUserStats(userId) {
+    /*getUserStats(userId) {
         const user = this.getUser(userId);
         const xpForNextLevel = this.getXpForLevel(user.level + 1);
         const xpForCurrentLevel = this.getXpForLevel(user.level);
@@ -221,7 +221,7 @@ class EconomySystem {
             xpProgress: xpProgress,
             xpNeeded: Math.max(0, xpNeeded - xpProgress)
         };
-    }
+    }*/
 
     // Calcular XP total necesaria para alcanzar un nivel
     getXpNeededForLevel(level) {
@@ -233,15 +233,15 @@ class EconomySystem {
     }
 
     // Obtener leaderboard de dinero
-    getMoneyLeaderboard(limit = 10) {
+/*    getMoneyLeaderboard(limit = 10) {
         return Object.entries(this.users)
             .map(([userId, userData]) => ({ userId, ...userData }))
             .sort((a, b) => b.balance - a.balance)
             .slice(0, limit);
-    }
+    }*/
 
     // Obtener leaderboard de niveles
-    getLevelLeaderboard(limit = 10) {
+/*    getLevelLeaderboard(limit = 10) {
         return Object.entries(this.users)
             .map(([userId, userData]) => ({ userId, ...userData }))
             .sort((a, b) => {
@@ -249,7 +249,7 @@ class EconomySystem {
                 return b.totalXp - a.totalXp;
             })
             .slice(0, limit);
-    }
+    }*/
 
     // Verificar si puede usar daily
     canUseDaily(userId) {
@@ -296,7 +296,7 @@ class EconomySystem {
     }
 
     // Sistema de trabajos
-    getWorkJobs() {
+/*    getWorkJobs() {
         return {
             'delivery': {
                 name: '🚚 Delivery',
@@ -400,10 +400,10 @@ class EconomySystem {
         }
         
         return { canWork: true };
-    }
+    }*/
 
     // Ejecutar trabajo
-    doWork(userId, jobType) {
+/*    doWork(userId, jobType) {
         const canWorkResult = this.canWork(userId, jobType);
         if (!canWorkResult.canWork) return canWorkResult;
         
@@ -459,7 +459,7 @@ class EconomySystem {
             newBalance: user.balance,
             jobName: job.name
         };
-    }
+    }*/
 }
 
 module.exports = EconomySystem;

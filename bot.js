@@ -8,8 +8,8 @@ const MinigamesSystem = require('./minigames'); // Importar el sistema de miniju
 const AchievementsSystem = require('./achievements');
 const ShopSystem = require('./shop');
 const BettingSystem = require('./betting');
-const EventsSystem = require('./events');
-const AllCommands = require('./all-commands');*/
+const EventsSystem = require('./events');*/
+const AllCommands = require('./all-commands');
 
 // Configuración del servidor web para mantener activo el bot
 const app = express();
@@ -69,12 +69,12 @@ const minigames = new MinigamesSystem(economy);
 const achievements = new AchievementsSystem(economy);
 const shop = new ShopSystem(economy);
 const events = new EventsSystem(economy);
-const betting = new BettingSystem(economy);
+const betting = new BettingSystem(economy);*/
 
 // Instancia del sistema de comandos mejorados
 const allCommands = new AllCommands(economy, achievements, shop, betting, events);
 
-economy.events = events;
+/*economy.events = events;
 minigames.events = events;*/
 
 // Rutas del servidor web
@@ -379,12 +379,12 @@ client.on('messageCreate', async (message) => {
                 .setTimestamp();
             await message.channel.send({ embeds: [levelUpEmbed] });
         }
-    }
+    }*/
 
     // Procesar comandos mejorados (shop, betting, achievements, etc.)
     await allCommands.processCommand(message);
     
-    //Procesar comandos de minijuegos
+/*    //Procesar comandos de minijuegos
     await minigames.processCommand(message);*/
     
     // Luego procesar comandos normales (como !contadores, !reset, etc.)
