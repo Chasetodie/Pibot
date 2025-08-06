@@ -411,15 +411,7 @@ class AllCommands {
         }
 
         const reason = args[3];
-        if (reason.length > 100) {
-            await message.reply('❌ La razón no puede tener más de 100 caracteres.');
-            return;
-        }
-        else if (reason.length === 0) {
-            await message.reply('❌ La razón no puede estar vacía.');
-            return;
-        }
-        else if (reason === '') {
+        if (reason === '') {
             reason = "No Especificada";
         }
 
@@ -502,6 +494,18 @@ class AllCommands {
     async handleAddXp(message) {
         if (!message.member?.permissions.has('Administrator')) {
             await message.reply('❌ No tienes permisos de administrador para usar este comando.');
+            return;
+        }
+
+        // Obtener usuario mencionado
+        const targetUser = message.mentions.users.first();
+        if (!targetUser) {
+            await message.reply('❌ Debes mencionar a un usuario válido.');
+            return;
+        }
+              
+        if (targetUser.bot) {
+            await message.reply('❌ No puedes dar dinero a bots.');
             return;
         }
         
