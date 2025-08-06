@@ -354,12 +354,12 @@ client.on('interactionCreate', async (interaction) => {
     }
 });
 
-/*// Manejar mensajes (COMANDOS + XP + ECONOMÍA)
+// Manejar mensajes (COMANDOS + XP + ECONOMÍA)
 client.on('messageCreate', async (message) => {
     // Ignorar mensajes de bots
     if (message.author.bot) return;
     
-    // Procesar XP por mensaje (solo en servidores, no en DMs)
+    /*// Procesar XP por mensaje (solo en servidores, no en DMs)
     if (message.guild) {
         // Aplicar modificadores de eventos a XP
         const xpMod = events.applyEventModifiers(message.author.id, economy.config.xpPerMessage, 'message');
@@ -385,11 +385,11 @@ client.on('messageCreate', async (message) => {
     await allCommands.processCommand(message);
     
     //Procesar comandos de minijuegos
-    await minigames.processCommand(message);
+    await minigames.processCommand(message);*/
     
     // Luego procesar comandos normales (como !contadores, !reset, etc.)
     await commandHandler.processCommand(message);
-});*/
+});
 
 // Manejo de errores
 client.on('error', (error) => {
