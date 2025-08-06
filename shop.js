@@ -201,7 +201,7 @@ class ShopSystem {
             const canAfford = user.balance >= item.price ? '✅' : '❌';
             embed.addFields({
                 name: `${canAfford} ${item.emoji} ${item.name}`,
-                value: `${item.description}\n**Precio:** ${this.formatNumber(item.price)} C${ownedText}\n*Usa: \`!buy ${itemId}\`*`,
+                value: `${item.description}\n**Precio:** ${this.formatNumber(item.price)} C${ownedText}\n*Usa: \`mon!buy ${itemId}\`*`,
                 inline: true
             });
         }
