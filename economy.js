@@ -102,7 +102,7 @@ class EconomySystem {
     }
 
     // Transferir dinero entre usuarios
-/*    transferMoney(fromUserId, toUserId, amount) {
+    transferMoney(fromUserId, toUserId, amount) {
         const fromUser = this.getUser(fromUserId);
         const toUser = this.getUser(toUserId);
         
@@ -129,7 +129,7 @@ class EconomySystem {
             fromBalance: fromUser.balance, 
             toBalance: toUser.balance 
         };
-    }*/
+    }
 
     // Calcular XP necesaria para un nivel específico
     getXpForLevel(level) {

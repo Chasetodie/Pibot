@@ -217,7 +217,7 @@ class AllCommands {
         await message.reply({ embeds: [embed] });
     }*/
 
-/*    // Comando !pay - Transferir dinero a otro usuario
+    // Comando !pay - Transferir dinero a otro usuario
     async handlePay(message) {
         const args = message.content.split(' ');
         
@@ -301,7 +301,7 @@ class AllCommands {
             .setTimestamp();
         
         await message.reply({ embeds: [embed] });
-    }*/
+    }
 
     // Comando !top - Leaderboards
 /*    async handleTop(message) {
@@ -712,10 +712,10 @@ class AllCommands {
                     await this.handleLevel(message, levelTargetUser);
                     break;*/
 
-/*                case 'mon!pay':
+                case 'mon!pay':
                 case 'mon!transfer':
                     await this.handlePay(message);
-                    break;*/
+                    break;
 
 /*                case 'mon!top':
                 case 'mon!leaderboard':
@@ -729,10 +729,14 @@ class AllCommands {
                     break;*/
                 
                 case 'mon!addmoney':
+                case 'mon!givemoney':
+                case 'mon!givem':
+                case 'mon!addm':
                     await this.handleAddMoney(message);
                     break;
                 
                 case 'mon!removemoney':
+                case 'mon!removem':
                     await this.handleRemoveMoney(message);
                     break;
 
