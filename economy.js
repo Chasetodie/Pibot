@@ -357,7 +357,7 @@ class EconomySystem {
                 if (userData && typeof userData.totalXp === 'number') {
                     leaderboard.push({
                         userId: doc.id,
-                        level: this.calculateLevel(userData.totalXp),
+                        level: this.getLevelFromXp(userData.totalXp),
                         totalXp: userData.totalXp,
                         balance: userData.balance || 0,
                         ...userData
