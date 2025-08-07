@@ -456,7 +456,7 @@ async processMessageXp(userId) {
         user.stats.totalEarned += amount;
         user.stats.dailyClaims++;*/
         
-        await.this.updateUser(userId, updateData);
+        await this.updateUser(userId, updateData);
         
         return {
             success: true,
