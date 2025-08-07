@@ -125,11 +125,11 @@ class EconomySystem {
 
     // Agregar dinero a un usuario
     async addMoney(userId, amount, reason = 'unknown') {
-        const user = this.getUser(userId);
+        const user = await this.getUser(userId);
 
         const updateData = {
             balance: user.balance + amount,
-            'stats.totalEarned': user.stats.totalEarned + amount
+            'stats.totalEarned': (user.stats.totalEarned || 0) + amount
         }
 
 /*        user.balance += amount;
@@ -142,14 +142,14 @@ class EconomySystem {
 
     // Quitar dinero a un usuario
     async removeMoney(userId, amount, reason = 'unknown') {
-        const user = this.getUser(userId);
+        const user = await this.getUser(userId);
         if (user.balance < amount) {
             return false; // No tiene suficiente dinero
         }
 
         const updateData = {
             balance: user.balance - amount,
-            'stats.totalSpent': user.stats.totalSpent + amount
+            'stats.totalSpent': (user.stats.totalSpent || 0) + amount
         }
         
         /*user.balance -= amount;
@@ -162,8 +162,8 @@ class EconomySystem {
 
     // Transferir dinero entre usuarios
     async transferMoney(fromUserId, toUserId, amount) {
-        const fromUser = this.getUser(fromUserId);
-        const toUser = this.getUser(toUserId);
+        const fromUser = await this.getUser(fromUserId);
+        const toUser = await this.getUser(toUserId);
         
         if (fromUser.balance < amount) {
             return { success: false, reason: 'insufficient_funds' };
@@ -175,9 +175,9 @@ class EconomySystem {
 
         const updateData = {
             balance: fromUser.balance - amount,
-            'stats.totalSpent': fromUser.stats.totalSpent + amount,
+            'stats.totalSpent': (fromUser.stats.totalSpent || 0) + amount,
             toBalance: toUser.balance + amount,
-            'stats.totalEarned': toUser.stats.totalEarned + amount
+            'stats.totalEarned': (toUser.stats.totalEarned || 0) + amount
         };
 
 /*        fromUser.balance -= amount;
@@ -426,7 +426,7 @@ async processMessageXp(userId) {
     // Usar comando daily
     useDaily(userId) {
         if (!this.canUseDaily(userId)) {
-            const user = this.getUser(userId);
+            const user = await this.getUser(userId);
             const timeLeft = 24 * 60 * 60 * 1000 - (Date.now() - user.lastDaily);
             return {
                 success: false,
@@ -434,7 +434,7 @@ async processMessageXp(userId) {
             };
         }
         
-        const user = this.getUser(userId);
+        const user = await this.getUser(userId);
         const variation = Math.floor(Math.random() * (this.config.dailyVariation * 2)) - this.config.dailyVariation;
         let amount = Math.max(100, this.config.dailyAmount + variation);
        
