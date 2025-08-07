@@ -242,21 +242,22 @@ class MusicHandler {
             });
 
             player.on(AudioPlayerStatus.Idle, () => {
-                if (connection && !connection.destroyed) {
-                    console.log('fuck1');
-                    connection.destroy();
+                try{
+                    if (connection && !connection.destroyed) {
+                        console.log('fuck1');
+                        connection.destroy();
+                    }
+                    this.connections.delete(message.guild.id);
+                    message.channel.send('🏁 **Reproducción terminada.**');
+                } catch (error) {
+                    console.error('Intento de destruir la conexion ya destruida');
                 }
-                this.connections.delete(message.guild.id);
-                message.channel.send('🏁 **Reproducción terminada.**');
             });
 
             player.on('error', (error) => {
                 console.error('Error del reproductor:', error);
                 message.channel.send('❌ Error reproduciendo la música.');
-                if (connection && !connection.destroyed) {
-                    console.log('fuck2');
-                    connection.destroy();
-                }
+                connection.destroy();
                 this.connections.delete(message.guild.id);
             });
 
