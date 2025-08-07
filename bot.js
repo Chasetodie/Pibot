@@ -371,12 +371,13 @@ client.on('messageCreate', async (message) => {
         const channelId = '1402824824971067442'; // ID del canal de XP (puedes cambiarlo)
         const channel = message.guild.channels.cache.get(channelId);
 
-        const xpResult = this.economy.processMessageXp(message.author.id/*, economy.config.xpPerMessage*/);
-
+        const xpResult = await economy.processMessageXp(message.author.id/*, economy.config.xpPerMessage*/);
+        
         // Si subió de nivel, notificar
         if (xpResult && xpResult.levelUp && channel) {
             const levelUpEmbed = new EmbedBuilder()
                 .setTitle('🎉 ¡Nuevo Nivel!')
+                .setThumbnail(message.author.displayAvatarURL({ dynamic: true }))
                 .setDescription(`${message.author} alcanzó el **Nivel ${xpResult.newLevel}**`)
                 .addFields(
                     { name: '📈 XP Ganada', value: `+${xpResult.xpGained} XP`, inline: true },
@@ -385,7 +386,11 @@ client.on('messageCreate', async (message) => {
                 )
                 .setColor('#FFD700')
                 .setTimestamp();
-            await channel.send({ embeds: [levelUpEmbed] });
+                await channel.send({ 
+                    content: `<@${message.author.id}>`,
+                    embeds: [levelUpEmbed],
+                    allowedMentions: { users: [message.author.id] }
+                });
         }
     }
 
@@ -424,4 +429,11 @@ client.login(process.env.TOKEN).then(() => {
     console.log('🚀 Proceso de login iniciado...');
 }).catch(error => {
     console.error('❌ Error en el login:', error);
+
 });
+
+
+
+
+
+

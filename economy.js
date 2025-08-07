@@ -125,11 +125,11 @@ class EconomySystem {
 
     // Agregar dinero a un usuario
     async addMoney(userId, amount, reason = 'unknown') {
-        const user = this.getUser(userId);
+        const user = await this.getUser(userId);
 
         const updateData = {
             balance: user.balance + amount,
-            'stats.totalEarned': user.stats.totalEarned + amount
+            'stats.totalEarned': (user.stats.totalEarned || 0) + amount
         }
 
 /*        user.balance += amount;
@@ -142,14 +142,14 @@ class EconomySystem {
 
     // Quitar dinero a un usuario
     async removeMoney(userId, amount, reason = 'unknown') {
-        const user = this.getUser(userId);
+        const user = await this.getUser(userId);
         if (user.balance < amount) {
             return false; // No tiene suficiente dinero
         }
 
         const updateData = {
             balance: user.balance - amount,
-            'stats.totalSpent': user.stats.totalSpent + amount
+            'stats.totalSpent': (user.stats.totalSpent || 0) + amount
         }
         
         /*user.balance -= amount;
@@ -162,8 +162,8 @@ class EconomySystem {
 
     // Transferir dinero entre usuarios
     async transferMoney(fromUserId, toUserId, amount) {
-        const fromUser = this.getUser(fromUserId);
-        const toUser = this.getUser(toUserId);
+        const fromUser = await this.getUser(fromUserId);
+        const toUser = await this.getUser(toUserId);
         
         if (fromUser.balance < amount) {
             return { success: false, reason: 'insufficient_funds' };
@@ -175,9 +175,9 @@ class EconomySystem {
 
         const updateData = {
             balance: fromUser.balance - amount,
-            'stats.totalSpent': fromUser.stats.totalSpent + amount,
+            'stats.totalSpent': (fromUser.stats.totalSpent || 0) + amount,
             toBalance: toUser.balance + amount,
-            'stats.totalEarned': toUser.stats.totalEarned + amount
+            'stats.totalEarned': (toUser.stats.totalEarned || 0) + amount
         };
 
 /*        fromUser.balance -= amount;
@@ -267,8 +267,48 @@ class EconomySystem {
         };
     }
 
+    // Procesar XP por mensaje (con cooldown) - VERSIÓN FIREBASE
+async processMessageXp(userId) {
+    const now = Date.now();
+    const lastXp = this.userCooldowns.get(userId) || 0;
+    // Obtener usuario (ahora async)
+    const user = await this.getUser(userId);
+    
+    // Verificar cooldown
+    if (now - lastXp < this.config.xpCooldown) {
+        // Actualizar contador de mensajes
+        const updateData = {
+            messagesCount: (user.messagesCount || 0) + 1
+        };
+        await this.updateUser(userId, updateData);
+        
+        return null; // Aún en cooldown
+    }
+    
+    try {
+        this.userCooldowns.set(userId, now);
+                
+        // Agregar XP (ahora async)
+        const result = await this.addXp(userId, this.config.xpPerMessage);
+        
+        return {
+            levelUp: result.levelUp,
+            levelsGained: result.levelsGained,
+            newLevel: result.newLevel,
+            xpGained: result.xpGained,
+            reward: result.reward,
+            result: result
+        };
+    } catch (error) {
+        console.error('❌ Error procesando XP del mensaje:', error);
+        // Remover del cooldown si hubo error
+        this.userCooldowns.delete(userId);
+        return null;
+    }
+}
+
     // Procesar XP por mensaje (con cooldown)
-    processMessageXp(userId) {
+/*    processMessageXp(userId) {
         const now = Date.now();
         const lastXp = this.userCooldowns.get(userId) || 0;
         
@@ -282,7 +322,7 @@ class EconomySystem {
         user.messagesCount++;
         
         return this.addXp(userId, this.config.xpPerMessage);
-    }
+    }*/
 
     // Obtener estadísticas de un usuario
     getUserStats(userId) {
@@ -374,8 +414,8 @@ class EconomySystem {
     }
 
     // Verificar si puede usar daily
-    canUseDaily(userId) {
-        const user = this.getUser(userId);
+    async canUseDaily(userId) {
+        const user = await this.getUser(userId);
         const now = Date.now();
         const dayInMs = 24 * 60 * 60 * 1000;
         
@@ -383,9 +423,9 @@ class EconomySystem {
     }
 
     // Usar comando daily
-    useDaily(userId) {
-        if (!this.canUseDaily(userId)) {
-            const user = this.getUser(userId);
+    async useDaily(userId) {
+        if (!await this.canUseDaily(userId)) {
+            const user = await this.getUser(userId);
             const timeLeft = 24 * 60 * 60 * 1000 - (Date.now() - user.lastDaily);
             return {
                 success: false,
@@ -393,7 +433,7 @@ class EconomySystem {
             };
         }
         
-        const user = this.getUser(userId);
+        const user = await this.getUser(userId);
         const variation = Math.floor(Math.random() * (this.config.dailyVariation * 2)) - this.config.dailyVariation;
         let amount = Math.max(100, this.config.dailyAmount + variation);
        
@@ -405,7 +445,7 @@ class EconomySystem {
 
         const updateData = {
             lastDaily: Date.now(),
-            balance: user.balance,
+            balance: user.balance + amount,
             'stats.totalEarned': user.stats.totalEarned + amount,
             'stats.dailyClaims': user.stats.dailyClaims + 1
         }
@@ -415,7 +455,7 @@ class EconomySystem {
         user.stats.totalEarned += amount;
         user.stats.dailyClaims++;*/
         
-        await.this.updateUser(userId, updateData);
+        await this.updateUser(userId, updateData);
         
         return {
             success: true,

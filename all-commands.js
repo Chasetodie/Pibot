@@ -111,7 +111,7 @@ class AllCommands {
     // Comando !daily - Reclamar dinero diario
     async handleDaily(message) {
         const userId = message.author.id;
-        const result = this.economy.useDaily(userId);
+        const result = await this.economy.useDaily(userId);
         
         if (!result.success) {
             const timeLeft = this.formatTimeLeft(result.timeLeft);
@@ -172,11 +172,14 @@ class AllCommands {
         // Barra de progreso más detallada
         const progressBar = this.createProgressBar(xpProgress, xpForNextLevel, 20);
         const progressPercentage = ((xpProgress / xpForNextLevel) * 100).toFixed(2);
+
+        // Avatar
+        const avatarUrl = targetUser ? targetUser.displayAvatarURL({ dynamic: true }) : message.author.displayAvatarURL({ dynamic: true });
         
         const embed = new EmbedBuilder()
             .setTitle(`📊 Estadísticas de Nivel - ${displayName}`)
             .setColor('#9932CC')
-            .setThumbnail(message.author.displayAvatarURL({ dynamic: true }))
+            .setThumbnail(avatarUrl)
             .addFields(
                 { 
                     name: '🏆 Nivel Actual', 
@@ -273,7 +276,7 @@ class AllCommands {
         }
         
         // Realizar transferencia
-        const result = this.economy.transferMoney(message.author.id, targetUser.id, amount);
+        const result = await this.economy.transferMoney(message.author.id, targetUser.id, amount);
         
         if (!result.success) {
             if (result.reason === 'insufficient_funds') {
@@ -318,7 +321,7 @@ class AllCommands {
             title = '🏆 Top 10 - Niveles';
             emoji = '📊';
         } else {
-            leaderboard = await this.economy.getMoneyLeaderboard(10);
+            leaderboard = await this.economy.getBalanceLeaderboard(10);
             title = '🏆 Top 10 - π-b Coin';
             emoji = '💰';
         }
@@ -381,11 +384,11 @@ class AllCommands {
                 .setDescription('Da π-b Coins a otro usuario')
                 .addFields({
                     name: '📝 Uso',
-                    value: '`mon!add @usuario <cantidad> <razon>`',
+                    value: '`mon!addmoney @usuario <cantidad> <razon>`',
                     inline: false
                 }, {
                     name: '💡 Ejemplo',
-                    value: '`mon!add @usuario 500 "Por ganar el concurso"`',
+                    value: '`mon!addmoney @usuario 500 "Por ganar el concurso"`',
                     inline: false
                 })
                 .setColor('#17a2b8');
@@ -416,7 +419,7 @@ class AllCommands {
         const reason = message.content.split(' ').slice(3).join(' ') || 'No Especificada';
 
         // Realizar transferencia
-        const result = this.economy.addMoney(targetUser.id, amount, reason);
+        const result = await this.economy.addMoney(targetUser.id, amount, reason);
         
         const embed = new EmbedBuilder()
             .setTitle('✅ Se ha Entregado Exitosamente el Dinero')
@@ -444,11 +447,11 @@ class AllCommands {
                 .setDescription('Quita π-b Coins a otro usuario')
                 .addFields({
                     name: '📝 Uso',
-                    value: '`mon!remove @usuario <cantidad> <razon>`',
+                    value: '`mon!removemoney @usuario <cantidad> <razon>`',
                     inline: false
                 }, {
                     name: '💡 Ejemplo',
-                    value: '`mon!remove @usuario 500 "Por mal comportamiento"`',
+                    value: '`mon!removemoney @usuario 500 "Por mal comportamiento"`',
                     inline: false
                 })
                 .setColor('#17a2b8');
@@ -478,7 +481,7 @@ class AllCommands {
 
         const reason = message.content.split(' ').slice(3).join(' ') || 'No Especificada';        
 
-        const result = this.economy.removeMoney(targetUser.id, amount, reason);
+        const result = await this.economy.removeMoney(targetUser.id, amount, reason);
 
         if( result === false ) 
         {
@@ -508,8 +511,8 @@ class AllCommands {
         
         if (args.length < 3) {
             const embed = new EmbedBuilder()
-                .setTitle('💸 Comando Remove')
-                .setDescription('Quita π-b Coins a otro usuario')
+                .setTitle('💸 Comando AddXP')
+                .setDescription('Añade Xp a otro usuario')
                 .addFields({
                     name: '📝 Uso',
                     value: '`mon!addxp @usuario <cantidad> <razon>`',
@@ -546,13 +549,13 @@ class AllCommands {
         
         const reason = message.content.split(' ').slice(3).join(' ') || 'No Especificada';
 
-        const xpResult = this.economy.addXp(targetUser.id, baseXP, reason);
+        const xpResult = await this.economy.addXp(targetUser.id, baseXP, reason);
 
         const embed = new EmbedBuilder()
             .setTitle('✅ Se Aumentado Exitosamente el XP')
             .setDescription(`Has Aumentado **${this.formatNumber(baseXP)}** de XP a ${targetUser}\nRazón: ${reason}`)
             .addFields(
-                { name: 'XP Total', value: `${this.formatNumber(xpResult)}`, inline: true }
+                { name: 'XP Total', value: `${this.formatNumber(xpResult.xpGained)}`, inline: true }
             )
             .setColor('#00FF00')
             .setTimestamp();
