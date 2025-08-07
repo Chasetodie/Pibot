@@ -4,28 +4,14 @@
   "description": "Bot de Discord para asignar apodos",
   "main": "bot.js",
   "scripts": {
-    "start": "node bot.js",
-    "dev": "nodemon bot.js"
+    "start": "node bot.js"
   },
-  "keywords": [
-    "discord",
-    "bot",
-    "music",
-    "youtube"
-  ],
-  "author": "Chasetodie10",
   "dependencies": {
-    "@discordjs/voice": "^0.16.1",
     "discord.js": "^14.14.1",
     "dotenv": "^17.2.1",
     "express": "^4.21.2",
     "firebase-admin": "^13.4.0",
-    "play-dl": "^1.9.7"
-  },
-  "devDependencies": {
-    "nodemon": "^3.1.10"
-  },
-  "engines": {
-    "node": ">=16.0.0"
+    "play-dl": "^1.9.7",
+    "prism-media": "^1.3.5"
   }
 }
