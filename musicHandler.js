@@ -226,7 +226,10 @@ class MusicHandler {
         return message.reply('❌ URL inválida para el stream.');
     }
 
-    const stream = await playdl.stream(url);
+    const info = await playdl.video_info(url);
+    const stream = await playdl.stream_from_info(info);
+
+    //const stream = await playdl.stream(url);
 
     // Crear recurso de audio
     const resource = createAudioResource(stream.stream, {
