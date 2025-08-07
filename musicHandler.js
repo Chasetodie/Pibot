@@ -1,5 +1,8 @@
 //const playdl = require('play-dl');
-const ytdl = require('ytdl-core');
+const { joinVoiceChannel, createAudioPlayer, createAudioResource, AudioPlayerStatus } = require('@discordjs/voice');
+const playdl = require('play-dl');
+const ffmpegPath = require('ffmpeg-static');
+playdl.setFfmpegPath(ffmpegPath);
 const fetch = require('node-fetch');
 
 class MusicHandler {
@@ -181,6 +184,68 @@ class MusicHandler {
         }
     }
 
+    async playMusic(message, query) {
+    if (!message.member.voice.channel) {
+        return message.reply("❌ Necesitas estar en un canal de voz.");
+    }
+    const voiceChannel = message.member.voice.channel;
+    const permissions = voiceChannel.permissionsFor(message.client.user);
+    if (!permissions.has("Connect") || !permissions.has("Speak")) {
+        return message.reply("❌ No tengo permisos para unirme o hablar en tu canal.");
+    }
+
+    // Buscar video o usar URL
+    let video;
+    if (playdl.yt_validate(query) === 'video') {
+        // Es URL directa
+        video = { url: query };
+    } else {
+        // Buscar con play-dl
+        const results = await playdl.search(query, { limit: 1 });
+        if (!results.length) return message.reply("❌ No se encontraron resultados.");
+        video = results[0];
+    }
+
+    // Unirse al canal
+    const connection = joinVoiceChannel({
+        channelId: voiceChannel.id,
+        guildId: message.guild.id,
+        adapterCreator: message.guild.voiceAdapterCreator,
+    });
+
+    // Crear reproductor
+    const player = createAudioPlayer();
+
+    // Obtener stream
+    const stream = await playdl.stream(video.url);
+
+    // Crear recurso de audio
+    const resource = createAudioResource(stream.stream, {
+        inputType: stream.type,
+        inlineVolume: true
+    });
+    if (resource.volume) resource.volume.setVolume(0.5);
+
+    // Reproducir
+    player.play(resource);
+    connection.subscribe(player);
+
+    // Eventos
+    player.on(AudioPlayerStatus.Idle, () => {
+        connection.destroy();
+        message.channel.send("🏁 **Reproducción terminada.**");
+    });
+
+    player.on('error', error => {
+        console.error('Error en reproductor:', error);
+        message.channel.send('❌ Error reproduciendo la música.');
+        connection.destroy();
+    });
+
+    // Mensaje informativo
+    message.channel.send(`▶️ Reproduciendo: **${video.title || video.url}**`);
+    }    
+
     // Método de reproducción usando @discordjs/voice
     async playBasic(message, song) {
         const voiceChannel = message.member.voice.channel;
@@ -338,10 +403,10 @@ class MusicHandler {
                 case 'mon!play':
                 case 'mon!p':
                     try {
-                        await this.execute(message, args);
+                        await this.playMusic(message, args);
                     } catch (error) {
-                        console.error('Error ejecutando comando play:', error);
-                        message.reply('❌ Hubo un error ejecutando ese comando!');
+                        console.error(error);
+                        message.reply('❌ Ocurrio un error al reproducir la musica');
                     }
                     break;
 
