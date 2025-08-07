@@ -415,8 +415,8 @@ async processMessageXp(userId) {
     }
 
     // Verificar si puede usar daily
-    canUseDaily(userId) {
-        const user = this.getUser(userId);
+    async canUseDaily(userId) {
+        const user = await this.getUser(userId);
         const now = Date.now();
         const dayInMs = 24 * 60 * 60 * 1000;
         
@@ -424,7 +424,7 @@ async processMessageXp(userId) {
     }
 
     // Usar comando daily
-    useDaily(userId) {
+    async useDaily(userId) {
         if (!this.canUseDaily(userId)) {
             const user = await this.getUser(userId);
             const timeLeft = 24 * 60 * 60 * 1000 - (Date.now() - user.lastDaily);
