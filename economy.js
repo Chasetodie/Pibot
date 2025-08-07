@@ -105,12 +105,13 @@ class EconomySystem {
         }
     }
 
-    // Obtener todos los usuarios (para rankings, etc.)
     async getAllUsers() {
         try {
             const snapshot = await this.usersCollection.get();
-            const users = {};
             
+            if (snapshot.empty) return {};
+            
+            const users = {};
             snapshot.forEach(doc => {
                 users[doc.id] = doc.data();
             });
@@ -118,9 +119,9 @@ class EconomySystem {
             return users;
         } catch (error) {
             console.error('❌ Error obteniendo todos los usuarios:', error);
-            throw error;
+            return {};
         }
-    }    
+    }  
 
     // Agregar dinero a un usuario
     async addMoney(userId, amount, reason = 'unknown') {
@@ -309,22 +310,67 @@ class EconomySystem {
     }
 
     // Obtener leaderboard de dinero
-    getMoneyLeaderboard(limit = 10) {
-        return Object.entries(this.users)
-            .map(([userId, userData]) => ({ userId, ...userData }))
-            .sort((a, b) => b.balance - a.balance)
-            .slice(0, limit);
+    async getBalanceLeaderboard(limit = 10) {
+        try {
+            const snapshot = await this.usersCollection
+                .orderBy('balance', 'desc')
+                .limit(limit)
+                .get();
+            
+            if (snapshot.empty) return [];
+            
+            const leaderboard = [];
+            snapshot.forEach(doc => {
+                const userData = doc.data();
+                if (userData && typeof userData.balance === 'number') {
+                    leaderboard.push({
+                        userId: doc.id,
+                        ...userData
+                    });
+                }
+            });
+            
+            return leaderboard;
+        } catch (error) {
+            console.error('❌ Error obteniendo ranking de balance:', error);
+            return [];
+        }
     }
 
     // Obtener leaderboard de niveles
-    getLevelLeaderboard(limit = 10) {
-        return Object.entries(this.users)
-            .map(([userId, userData]) => ({ userId, ...userData }))
-            .sort((a, b) => {
-                if (b.level !== a.level) return b.level - a.level;
-                return b.totalXp - a.totalXp;
-            })
-            .slice(0, limit);
+    async getLevelLeaderboard(limit = 10) {
+        try {
+            const snapshot = await this.usersCollection
+                .orderBy('totalXp', 'desc')
+                .limit(limit)
+                .get();
+            
+            if (snapshot.empty) {
+                console.log('📊 No hay usuarios en la base de datos');
+                return [];
+            }
+            
+            const leaderboard = [];
+            snapshot.forEach(doc => {
+                const userData = doc.data();
+                // Validar que userData existe y tiene propiedades necesarias
+                if (userData && typeof userData.totalXp === 'number') {
+                    leaderboard.push({
+                        userId: doc.id,
+                        level: this.calculateLevel(userData.totalXp),
+                        totalXp: userData.totalXp,
+                        balance: userData.balance || 0,
+                        ...userData
+                    });
+                }
+            });
+            
+            return leaderboard;
+        } catch (error) {
+            console.error('❌ Error obteniendo ranking de niveles:', error);
+            // Retornar array vacío en caso de error para evitar crashes
+            return [];
+        }
     }
 
     // Verificar si puede usar daily
