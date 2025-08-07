@@ -1,0 +1,9 @@
+# Credenciales
+.env
+
+# Archivos del sistema
+node_modules/
+users.json
+
+# Logs
+*.log

@@ -1,0 +1,355 @@
+const admin = require('firebase-admin');
+
+class UserSystem {
+    constructor() {
+        // Inicializar Firebase Admin
+        this.initializeFirebase();
+        
+        // Configuración del sistema (mantienes la misma)
+        this.config = {
+            currency: 'π-b Coins',
+            currencySymbol: 'π-b$',
+            xpPerMessage: 10,
+            xpVariation: 5,
+            xpCooldown: 15000,
+            dailyAmount: 300,
+            dailyVariation: 150,
+            levelUpReward: 50,
+            xpPerLevel: 100,
+            levelMultiplier: 1.5
+        };
+        
+        this.userCooldowns = new Map();
+        
+        // Referencia a la colección de usuarios
+        this.usersCollection = admin.firestore().collection('users');
+    }
+
+    // Inicializar Firebase
+    initializeFirebase() {
+        try {
+            // Opción 1: Usando archivo de credenciales
+            const serviceAccount = require('./firebase-service-account.json');
+            
+            admin.initializeApp({
+                credential: admin.credential.cert(serviceAccount),
+                databaseURL: "https://tu-proyecto-firebase-default-rtdb.firebaseio.com"
+            });
+
+            /* Opción 2: Usando variables de entorno (más seguro)
+            admin.initializeApp({
+                credential: admin.credential.cert({
+                    projectId: process.env.FIREBASE_PROJECT_ID,
+                    clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+                    privateKey: process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n'),
+                }),
+                databaseURL: process.env.FIREBASE_DATABASE_URL
+            });
+            */
+
+            console.log('🔥 Firebase inicializado correctamente');
+        } catch (error) {
+            console.error('❌ Error inicializando Firebase:', error);
+        }
+    }
+
+    // Obtener o crear datos de un usuario (ahora asíncrono)
+    async getUser(userId) {
+        try {
+            const userDoc = await this.usersCollection.doc(userId).get();
+            
+            if (!userDoc.exists) {
+                // Crear nuevo usuario
+                const newUser = {
+                    balance: 0,
+                    level: 1,
+                    xp: 0,
+                    totalXp: 0,
+                    lastDaily: 0,
+                    lastWork: 0,
+                    messagesCount: 0,
+                    items: {},
+                    stats: {
+                        totalEarned: 0,
+                        totalSpent: 0,
+                        dailyClaims: 0,
+                        workCount: 0
+                    },
+                    createdAt: admin.firestore.FieldValue.serverTimestamp(),
+                    updatedAt: admin.firestore.FieldValue.serverTimestamp()
+                };
+                
+                await this.usersCollection.doc(userId).set(newUser);
+                console.log(`👤 Nuevo usuario creado en Firebase: ${userId}`);
+                return newUser;
+            }
+            
+            return userDoc.data();
+        } catch (error) {
+            console.error('❌ Error obteniendo usuario:', error);
+            throw error;
+        }
+    }
+
+    // Actualizar datos de usuario
+    async updateUser(userId, updateData) {
+        try {
+            const updateWithTimestamp = {
+                ...updateData,
+                updatedAt: admin.firestore.FieldValue.serverTimestamp()
+            };
+            
+            await this.usersCollection.doc(userId).update(updateWithTimestamp);
+            console.log(`💾 Usuario ${userId} actualizado en Firebase`);
+        } catch (error) {
+            console.error('❌ Error actualizando usuario:', error);
+            throw error;
+        }
+    }
+
+    // Obtener todos los usuarios (para rankings, etc.)
+    async getAllUsers() {
+        try {
+            const snapshot = await this.usersCollection.get();
+            const users = {};
+            
+            snapshot.forEach(doc => {
+                users[doc.id] = doc.data();
+            });
+            
+            return users;
+        } catch (error) {
+            console.error('❌ Error obteniendo todos los usuarios:', error);
+            throw error;
+        }
+    }
+
+    // Método para dar XP (ejemplo de uso)
+    async giveXP(userId, amount) {
+        try {
+            const user = await this.getUser(userId);
+            const newXP = user.xp + amount;
+            const newTotalXP = user.totalXp + amount;
+            
+            // Calcular si sube de nivel
+            const currentLevel = this.calculateLevel(user.totalXp);
+            const newLevel = this.calculateLevel(newTotalXP);
+            
+            const updateData = {
+                xp: newXP,
+                totalXp: newTotalXP,
+                messagesCount: (user.messagesCount || 0) + 1
+            };
+            
+            // Si sube de nivel
+            if (newLevel > currentLevel) {
+                updateData.level = newLevel;
+                updateData.balance = user.balance + this.config.levelUpReward;
+                updateData['stats.totalEarned'] = user.stats.totalEarned + this.config.levelUpReward;
+                
+                console.log(`🎉 ${userId} subió al nivel ${newLevel}!`);
+            }
+            
+            await this.updateUser(userId, updateData);
+            return { levelUp: newLevel > currentLevel, newLevel };
+        } catch (error) {
+            console.error('❌ Error dando XP:', error);
+            throw error;
+        }
+    }
+
+    // Método para daily reward
+    async claimDaily(userId) {
+        try {
+            const user = await this.getUser(userId);
+            const now = Date.now();
+            const lastDaily = user.lastDaily || 0;
+            
+            // Verificar si puede reclamar (24 horas = 86400000 ms)
+            if (now - lastDaily < 86400000) {
+                const timeLeft = 86400000 - (now - lastDaily);
+                return { 
+                    success: false, 
+                    timeLeft: Math.ceil(timeLeft / 1000 / 60 / 60) // horas restantes
+                };
+            }
+            
+            // Calcular cantidad del daily
+            const baseAmount = this.config.dailyAmount;
+            const variation = Math.floor(Math.random() * this.config.dailyVariation);
+            const dailyAmount = baseAmount + variation;
+            
+            // Actualizar usuario
+            const updateData = {
+                balance: user.balance + dailyAmount,
+                lastDaily: now,
+                'stats.totalEarned': user.stats.totalEarned + dailyAmount,
+                'stats.dailyClaims': user.stats.dailyClaims + 1
+            };
+            
+            await this.updateUser(userId, updateData);
+            
+            return { 
+                success: true, 
+                amount: dailyAmount,
+                newBalance: user.balance + dailyAmount
+            };
+        } catch (error) {
+            console.error('❌ Error en daily:', error);
+            throw error;
+        }
+    }
+
+    // Método para transferir dinero entre usuarios
+    async transferMoney(fromUserId, toUserId, amount) {
+        try {
+            // Usar transacción para asegurar consistencia
+            const db = admin.firestore();
+            
+            return await db.runTransaction(async (transaction) => {
+                const fromUserRef = this.usersCollection.doc(fromUserId);
+                const toUserRef = this.usersCollection.doc(toUserId);
+                
+                const fromUserDoc = await transaction.get(fromUserRef);
+                const toUserDoc = await transaction.get(toUserRef);
+                
+                if (!fromUserDoc.exists || !toUserDoc.exists) {
+                    throw new Error('Usuario no encontrado');
+                }
+                
+                const fromUser = fromUserDoc.data();
+                const toUser = toUserDoc.data();
+                
+                if (fromUser.balance < amount) {
+                    throw new Error('Saldo insuficiente');
+                }
+                
+                // Actualizar balances
+                transaction.update(fromUserRef, {
+                    balance: fromUser.balance - amount,
+                    'stats.totalSpent': fromUser.stats.totalSpent + amount,
+                    updatedAt: admin.firestore.FieldValue.serverTimestamp()
+                });
+                
+                transaction.update(toUserRef, {
+                    balance: toUser.balance + amount,
+                    'stats.totalEarned': toUser.stats.totalEarned + amount,
+                    updatedAt: admin.firestore.FieldValue.serverTimestamp()
+                });
+                
+                return { success: true };
+            });
+        } catch (error) {
+            console.error('❌ Error en transferencia:', error);
+            throw error;
+        }
+    }
+
+    // Calcular nivel basado en XP total
+    calculateLevel(totalXp) {
+        let level = 1;
+        let xpRequired = this.config.xpPerLevel;
+        let currentXp = 0;
+        
+        while (currentXp + xpRequired <= totalXp) {
+            currentXp += xpRequired;
+            level++;
+            xpRequired = Math.floor(xpRequired * this.config.levelMultiplier);
+        }
+        
+        return level;
+    }
+
+    // Obtener ranking de usuarios por balance
+    async getBalanceLeaderboard(limit = 10) {
+        try {
+            const snapshot = await this.usersCollection
+                .orderBy('balance', 'desc')
+                .limit(limit)
+                .get();
+            
+            const leaderboard = [];
+            snapshot.forEach(doc => {
+                leaderboard.push({
+                    userId: doc.id,
+                    ...doc.data()
+                });
+            });
+            
+            return leaderboard;
+        } catch (error) {
+            console.error('❌ Error obteniendo ranking:', error);
+            throw error;
+        }
+    }
+
+    // Obtener ranking por nivel
+    async getLevelLeaderboard(limit = 10) {
+        try {
+            const snapshot = await this.usersCollection
+                .orderBy('totalXp', 'desc')
+                .limit(limit)
+                .get();
+            
+            const leaderboard = [];
+            snapshot.forEach(doc => {
+                const userData = doc.data();
+                leaderboard.push({
+                    userId: doc.id,
+                    level: this.calculateLevel(userData.totalXp),
+                    ...userData
+                });
+            });
+            
+            return leaderboard;
+        } catch (error) {
+            console.error('❌ Error obteniendo ranking de niveles:', error);
+            throw error;
+        }
+    }
+
+    // Migrar datos desde JSON (útil para migración única)
+    async migrateFromJSON(jsonFilePath) {
+        try {
+            const fs = require('fs');
+            if (!fs.existsSync(jsonFilePath)) {
+                console.log('❌ Archivo JSON no encontrado');
+                return;
+            }
+            
+            const data = JSON.parse(fs.readFileSync(jsonFilePath, 'utf8'));
+            const batch = admin.firestore().batch();
+            
+            let count = 0;
+            for (const [userId, userData] of Object.entries(data)) {
+                const userRef = this.usersCollection.doc(userId);
+                const userDataWithTimestamp = {
+                    ...userData,
+                    createdAt: admin.firestore.FieldValue.serverTimestamp(),
+                    updatedAt: admin.firestore.FieldValue.serverTimestamp()
+                };
+                
+                batch.set(userRef, userDataWithTimestamp);
+                count++;
+                
+                // Firestore tiene límite de 500 operaciones por batch
+                if (count % 500 === 0) {
+                    await batch.commit();
+                    console.log(`📦 Migrados ${count} usuarios...`);
+                }
+            }
+            
+            // Commit final
+            if (count % 500 !== 0) {
+                await batch.commit();
+            }
+            
+            console.log(`✅ Migración completada: ${count} usuarios migrados a Firebase`);
+        } catch (error) {
+            console.error('❌ Error en migración:', error);
+            throw error;
+        }
+    }
+}
+
+module.exports = UserSystem;

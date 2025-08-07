@@ -1,10 +1,11 @@
+require('dotenv').config();
 const fs = require('fs');
 const path = require('path');
+const admin = require('firebase-admin');
 
 class EconomySystem {
     constructor() {
-        this.usersFile = path.join(__dirname, 'users.json');
-        this.users = this.loadUsers();
+        this.initializeFirebase();
         
         // Configuración del sistema
         this.config = {
@@ -21,88 +22,145 @@ class EconomySystem {
         };
         
         this.userCooldowns = new Map(); // Para controlar cooldowns de XP
+
+        // Referencia a la colección de usuarios
+        this.usersCollection = admin.firestore().collection('users');    
     }
 
-    // Cargar usuarios desde el archivo JSON
-    loadUsers() {
+    // Inicializar Firebase
+    initializeFirebase() {
         try {
-            if (fs.existsSync(this.usersFile)) {
-                const data = fs.readFileSync(this.usersFile, 'utf8');
-                const users = JSON.parse(data);
-                console.log(`💾 Datos de ${Object.keys(users).length} usuarios cargados`);
-                return users;
+            // Verificar que las variables de entorno existan
+            if (!process.env.FIREBASE_PROJECT_ID || !process.env.FIREBASE_CLIENT_EMAIL || !process.env.FIREBASE_PRIVATE_KEY) {
+                throw new Error('❌ Variables de entorno de Firebase no configuradas. Revisa tu archivo .env');
             }
-        } catch (error) {
-            console.error('❌ Error cargando usuarios:', error);
-        }
-        
-        console.log('🆕 Creando nueva base de datos de usuarios');
-        return {};
-    }
 
-    // Guardar usuarios en el archivo JSON
-    saveUsers() {
-        try {
-            fs.writeFileSync(this.usersFile, JSON.stringify(this.users, null, 2));
-            console.log(`💾 Datos de ${Object.keys(this.users).length} usuarios guardados`);
+            admin.initializeApp({
+                credential: admin.credential.cert({
+                    projectId: process.env.FIREBASE_PROJECT_ID,
+                    clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+                    privateKey: process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n'),
+                }),
+            });
+
+            console.log('🔥 Firebase inicializado correctamente');
+            console.log(`📊 Proyecto: ${process.env.FIREBASE_PROJECT_ID}`);
         } catch (error) {
-            console.error('❌ Error guardando usuarios:', error);
+            console.error('❌ Error inicializando Firebase:', error);
+            console.error('💡 Asegúrate de que tu archivo .env esté configurado correctamente');
         }
     }
 
     // Obtener o crear datos de un usuario
-    getUser(userId) {
-        if (!this.users[userId]) {
-            this.users[userId] = {
-                balance: 0, // π-b Coins iniciales
-                level: 1,
-                xp: 0,
-                totalXp: 0,
-                lastDaily: 0,
-                lastWork: 0,
-                messagesCount: 0,
-                items: {},
-                stats: {
-                    totalEarned: 0, // Incluir los iniciales
-                    totalSpent: 0,
-                    dailyClaims: 0,
-                    workCount: 0
-                }
-            };
-            this.saveUsers();
-            console.log(`👤 Nuevo usuario creado: ${userId}`);
+    async getUser(userId) {
+        try {
+            const userDoc = await this.usersCollection.doc(userId).get();
+            
+            if (!userDoc.exists) {
+                // Crear nuevo usuario
+                const newUser = {
+                    balance: 0, // π-b Coins iniciales
+                    level: 1,
+                    xp: 0,
+                    totalXp: 0,
+                    lastDaily: 0,
+                    lastWork: 0,
+                    messagesCount: 0,
+                    items: {},
+                    stats: {
+                        totalEarned: 0, // Incluir los iniciales
+                        totalSpent: 0,
+                        dailyClaims: 0,
+                        workCount: 0
+                    },
+                    createdAt: admin.firestore.FieldValue.serverTimestamp(),
+                    updatedAt: admin.firestore.FieldValue.serverTimestamp()
+                };
+                
+                await this.usersCollection.doc(userId).set(newUser);
+                console.log(`👤 Nuevo usuario creado en Firebase: ${userId}`);
+                return newUser;
+            }
+            
+            return userDoc.data();
+        } catch (error) {
+            console.error('❌ Error obteniendo usuario:', error);
+            throw error;
         }
-        return this.users[userId];
     }
 
+    // Actualizar datos de usuario
+    async updateUser(userId, updateData) {
+        try {
+            const updateWithTimestamp = {
+                ...updateData,
+                updatedAt: admin.firestore.FieldValue.serverTimestamp()
+            };
+            
+            await this.usersCollection.doc(userId).update(updateWithTimestamp);
+            console.log(`💾 Usuario ${userId} actualizado en Firebase`);
+        } catch (error) {
+            console.error('❌ Error actualizando usuario:', error);
+            throw error;
+        }
+    }
+
+    // Obtener todos los usuarios (para rankings, etc.)
+    async getAllUsers() {
+        try {
+            const snapshot = await this.usersCollection.get();
+            const users = {};
+            
+            snapshot.forEach(doc => {
+                users[doc.id] = doc.data();
+            });
+            
+            return users;
+        } catch (error) {
+            console.error('❌ Error obteniendo todos los usuarios:', error);
+            throw error;
+        }
+    }    
+
     // Agregar dinero a un usuario
-    addMoney(userId, amount, reason = 'unknown') {
+    async addMoney(userId, amount, reason = 'unknown') {
         const user = this.getUser(userId);
-        user.balance += amount;
-        user.stats.totalEarned += amount;
+
+        const updateData = {
+            balance: user.balance + amount,
+            'stats.totalEarned': user.stats.totalEarned + amount
+        }
+
+/*        user.balance += amount;
+        user.stats.totalEarned += amount;*/
         
         console.log(`💰 +${amount} ${this.config.currencySymbol} para ${userId} (${reason})`);
-        this.saveUsers();
+        await this.updateUser(userId, updateData);
         return user.balance;
     }
 
     // Quitar dinero a un usuario
-    removeMoney(userId, amount, reason = 'unknown') {
+    async removeMoney(userId, amount, reason = 'unknown') {
         const user = this.getUser(userId);
         if (user.balance < amount) {
             return false; // No tiene suficiente dinero
         }
+
+        const updateData = {
+            balance: user.balance - amount,
+            'stats.totalSpent': user.stats.totalSpent + amount
+        }
         
-        user.balance -= amount;
-        user.stats.totalSpent += amount;
+        /*user.balance -= amount;
+        user.stats.totalSpent += amount;*/
         
         console.log(`💸 -${amount} ${this.config.currencySymbol} para ${userId} (${reason})`);
-        this.saveUsers();
+        await this.updateUser(userId, updateData);
         return user.balance;
     }
 
     // Transferir dinero entre usuarios
-    transferMoney(fromUserId, toUserId, amount) {
+    async transferMoney(fromUserId, toUserId, amount) {
         const fromUser = this.getUser(fromUserId);
         const toUser = this.getUser(toUserId);
         
@@ -113,15 +171,23 @@ class EconomySystem {
         if (amount <= 0) {
             return { success: false, reason: 'invalid_amount' };
         }
-        
-        fromUser.balance -= amount;
+
+        const updateData = {
+            balance: fromUser.balance - amount,
+            'stats.totalSpent': fromUser.stats.totalSpent + amount,
+            toBalance: toUser.balance + amount,
+            'stats.totalEarned': toUser.stats.totalEarned + amount
+        };
+
+/*        fromUser.balance -= amount;
         fromUser.stats.totalSpent += amount;
         
         toUser.balance += amount;
-        toUser.stats.totalEarned += amount;
-        
-        this.saveUsers();
-        
+        toUser.stats.totalEarned += amount;*/
+
+        await this.updateUser(fromUserId, updateData);
+        await this.updateUser(toUserId, updateData);
+
         console.log(`💸 Transferencia: ${fromUserId} -> ${toUserId}, ${amount} ${this.config.currencySymbol}`);
         
         return { 
@@ -151,28 +217,37 @@ class EconomySystem {
     }
 
     // Agregar XP a un usuario y verificar subida de nivel
-    addXp(userId, baseXp) {
-        const user = this.getUser(userId);
+    async addXp(userId, baseXp) {
+        const user = await this.getUser(userId); // ← Ahora async
         const variation = Math.floor(Math.random() * (this.config.xpVariation * 2)) - this.config.xpVariation;
         const xpGained = Math.max(1, baseXp + variation);
         
         const oldLevel = user.level;
-        user.xp += xpGained;
-        user.totalXp += xpGained;
+        const newXp = user.xp + xpGained;
+        const newTotalXp = user.totalXp + xpGained;
         
         // Calcular nuevo nivel
-        const newLevel = this.getLevelFromXp(user.totalXp);
+        const newLevel = this.getLevelFromXp(newTotalXp);
         const levelUps = newLevel - oldLevel;
         
+        // Preparar datos para actualizar
+        const updateData = {
+            xp: newXp,
+            totalXp: newTotalXp
+        };
+        
         if (levelUps > 0) {
-            user.level = newLevel;
             const reward = levelUps * this.config.levelUpReward;
-            user.balance += reward;
-            user.stats.totalEarned += reward;
+            
+            // Agregar campos de level up
+            updateData.level = newLevel;
+            updateData.balance = user.balance + reward;
+            updateData['stats.totalEarned'] = user.stats.totalEarned + reward;
             
             console.log(`🎉 ${userId} subió ${levelUps} nivel(es)! Nuevo nivel: ${newLevel}, Recompensa: ${reward} ${this.config.currencySymbol}`);
             
-            this.saveUsers();
+            await this.updateUser(userId, updateData); // ← Reemplaza saveUsers()
+            
             return {
                 levelUp: true,
                 levelsGained: levelUps,
@@ -182,7 +257,8 @@ class EconomySystem {
             };
         }
         
-        this.saveUsers();
+        await this.updateUser(userId, updateData); // ← Reemplaza saveUsers()
+        
         return {
             levelUp: false,
             xpGained: xpGained,
@@ -281,12 +357,19 @@ class EconomySystem {
             amount = mod.finalAmount;
         }*/
 
-        user.lastDaily = Date.now();
+        const updateData = {
+            lastDaily: Date.now(),
+            balance: user.balance,
+            'stats.totalEarned': user.stats.totalEarned + amount,
+            'stats.dailyClaims': user.stats.dailyClaims + 1
+        }
+
+        /*user.lastDaily = Date.now();
         user.balance += amount;
         user.stats.totalEarned += amount;
-        user.stats.dailyClaims++;
+        user.stats.dailyClaims++;*/
         
-        this.saveUsers();
+        await.this.updateUser(userId, updateData);
         
         return {
             success: true,
