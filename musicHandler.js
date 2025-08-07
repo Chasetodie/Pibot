@@ -2,7 +2,6 @@
 const { joinVoiceChannel, createAudioPlayer, createAudioResource, AudioPlayerStatus } = require('@discordjs/voice');
 const playdl = require('play-dl');
 const ffmpegPath = require('ffmpeg-static');
-playdl.setFfmpegPath(ffmpegPath);
 const fetch = require('node-fetch');
 
 class MusicHandler {
