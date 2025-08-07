@@ -22,8 +22,11 @@ class AllCommands {
     }
 
     // Formatear números con comas
-    formatNumber(num) {
-        return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+    formatNumber(number) {
+        if (number === undefined || number === null || isNaN(number)) {
+            return "0"; // Valor por defecto
+        }
+        return number.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
     }
 
     // Crear barra de progreso visual
@@ -42,7 +45,7 @@ class AllCommands {
     async handleBalance(message, targetUser = null) {
         const userId = targetUser ? targetUser.id : message.author.id;
         const displayName = targetUser ? targetUser.displayName : message.author.displayName;
-        const user = this.economy.getUser(userId);
+        const user = await this.economy.getUser(userId);
         
         // Calcular información de nivel
         const xpForNextLevel = this.economy.getXpForLevel(user.level + 1);
@@ -154,7 +157,7 @@ class AllCommands {
     async handleLevel(message, targetUser = null) {
         const userId = targetUser ? targetUser.id : message.author.id;
         const displayName = targetUser ? targetUser.displayName : message.author.displayName;
-        const user = this.economy.getUser(userId);
+        const user = await this.economy.getUser(userId);
         
         // Calcular ranking de nivel
         const leaderboard = this.economy.getLevelLeaderboard(1000);
@@ -274,7 +277,7 @@ class AllCommands {
         
         if (!result.success) {
             if (result.reason === 'insufficient_funds') {
-                const userBalance = this.economy.getUser(message.author.id).balance;
+                const userBalance = await this.economy.getUser(message.author.id).balance;
                 const embed = new EmbedBuilder()
                     .setTitle('❌ Fondos Insuficientes')
                     .setDescription(`No tienes suficientes π-b Coins para transferir.`)
