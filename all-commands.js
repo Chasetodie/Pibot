@@ -1,8 +1,9 @@
 const { EmbedBuilder } = require('discord.js');
 
 class AllCommands {
-    constructor(economySystem/*, achievementsSystem, shopSystem, bettingSystem, eventsSystem*/) {
+    constructor(economySystem, musicHandler/*, achievementsSystem, shopSystem, bettingSystem, eventsSystem*/) {
         this.economy = economySystem;
+        this.music = musicHandler;
 /*        this.achievements = achievementsSystem;
         this.shop = shopSystem;
         this.betting = bettingSystem;
@@ -705,6 +706,61 @@ class AllCommands {
 
         try {
             switch (command) {
+                case 'mon!play':
+                case 'mon!p':
+                    try {
+                        await this.musicHandler.execute(message, args);
+                    } catch (error) {
+                        console.error('Error ejecutando comando play:', error);
+                        message.reply('❌ Hubo un error ejecutando ese comando!');
+                    }
+                    break;
+
+                case 'stop':
+                    try {
+                        this.musicHandler.stop(message);
+                    } catch (error) {
+                        console.error('Error ejecutando comando stop:', error);
+                        message.reply('❌ Hubo un error ejecutando ese comando!');
+                    }
+                    break;
+
+                case 'skip':
+                    try {
+                        this.musicHandler.skip(message);
+                    } catch (error) {
+                        console.error('Error ejecutando comando skip:', error);
+                        message.reply('❌ Hubo un error ejecutando ese comando!');
+                    }
+                    break;
+
+                case 'queue':
+                case 'q':
+                    try {
+                        this.musicHandler.showQueue(message);
+                    } catch (error) {
+                        console.error('Error ejecutando comando queue:', error);
+                        message.reply('❌ Hubo un error ejecutando ese comando!');
+                    }
+                    break;
+
+                case 'pause':
+                    try {
+                        this.musicHandler.pause(message);
+                    } catch (error) {
+                        console.error('Error ejecutando comando pause:', error);
+                        message.reply('❌ Hubo un error ejecutando ese comando!');
+                    }
+                    break;
+
+                case 'resume':
+                    try {
+                        this.musicHandler.resume(message);
+                    } catch (error) {
+                        console.error('Error ejecutando comando resume:', error);
+                        message.reply('❌ Hubo un error ejecutando ese comando!');
+                    }
+                    break;
                 case 'mon!balance':
                 case 'mon!bal':
                 case 'mon!money':
