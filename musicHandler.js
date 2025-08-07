@@ -219,11 +219,13 @@ class MusicHandler {
     // Crear reproductor
     const player = createAudioPlayer();
 
-    console.log('Video obtenido:', video);
+    const rawUrl = video.url;
+    let url = rawUrl ? rawUrl.trim() : null;
 
-    const url = video.url || video.link;
-    if (!url) {
-    return message.reply('❌ No se pudo obtener una URL válida para reproducir.');
+    if (!url) return message.reply('❌ No se pudo obtener URL válida.');
+
+    if (url.endsWith(';')) {
+    url = url.slice(0, -1);
     }
 
     const stream = await playdl.stream(url);
