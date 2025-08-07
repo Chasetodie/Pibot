@@ -1,22 +1,23 @@
-const playdl = require('play-dl');
+//const playdl = require('play-dl');
+const ytdl = require('ytdl-core');
 
 class MusicHandler {
     constructor() {
         this.queue = new Map();
         this.connections = new Map();
-        this.initializePlayDl();
+//        this.initializePlayDl();
     }
 
-    async initializePlayDl() {
+/*    async initializePlayDl() {
         try {
             console.log('🎵 Iniciando sistema de música...');
         } catch (error) {
             console.log('⚠️ Advertencia al inicializar play-dl:', error.message);
         }
-    }
+    }*/
 
     // Búsqueda en YouTube
-    async searchYoutube(query) {
+/*    async searchYoutube(query) {
         try {
             const searched = await playdl.search(query, {
                 limit: 1,
@@ -43,19 +44,19 @@ class MusicHandler {
             console.error('Error buscando en YouTube:', error);
             return null;
         }
-    }
+    }*/
 
     // Validar URL de YouTube
-    isValidYouTubeUrl(url) {
+/*    isValidYouTubeUrl(url) {
         try {
             return playdl.yt_validate(url) === 'video';
         } catch {
             return false;
         }
-    }
+    }*/
 
     // Obtener información del video
-    async getVideoInfo(url) {
+ /*   async getVideoInfo(url) {
         try {
             const info = await playdl.video_info(url);
             const video = info?.video_details;
@@ -76,7 +77,7 @@ class MusicHandler {
             console.error('Error obteniendo info del video:', error);
             return null;
         }
-    }
+    }*/
 
     // Formatear duración
     formatDuration(seconds) {
@@ -157,23 +158,15 @@ class MusicHandler {
     // Método de reproducción usando @discordjs/voice
     async playBasic(message, song) {
         const voiceChannel = message.member.voice.channel;
-        
-        try {
-            // Importar @discordjs/voice dinámicamente
-            let joinVoiceChannel, createAudioPlayer, createAudioResource, AudioPlayerStatus;
-            
-            try {
-                const voice = require('@discordjs/voice');
-                joinVoiceChannel = voice.joinVoiceChannel;
-                createAudioPlayer = voice.createAudioPlayer;
-                createAudioResource = voice.createAudioResource;
-                AudioPlayerStatus = voice.AudioPlayerStatus;
-            } catch (importError) {
-                console.error('@discordjs/voice no disponible, usando método alternativo');
-                return this.playAlternative(message, song);
-            }
 
-            // Conectar al canal usando @discordjs/voice
+        try {
+            const {
+                joinVoiceChannel,
+                createAudioPlayer,
+                createAudioResource,
+                AudioPlayerStatus
+            } = require('@discordjs/voice');
+
             const connection = joinVoiceChannel({
                 channelId: voiceChannel.id,
                 guildId: message.guild.id,
@@ -182,34 +175,27 @@ class MusicHandler {
 
             this.connections.set(message.guild.id, connection);
 
-            song.url = song.url?.trim().replace(/[;,]+$/, ''); // Asegurarse de que la URL esté limpia
-            console.log('🧪 URL limpia para playdl:', song.url);
+            // ✅ Usar ytdl-core para el stream de audio
+            const stream = ytdl(song.url, {
+                filter: 'audioonly',
+                quality: 'highestaudio',
+                highWaterMark: 1 << 25 // más buffer para evitar cortes
+            });
 
-            let search = await playdl.search(song.url, { limit: 1 });
-            if (!search || !search[0]) {
-                return message.reply('❌ No se pudo obtener información de la canción.');
-            }
-
-            const info = await playdl.video_basic_info(search[0].url);
-            const stream = await playdl.stream_from_info(info, { quality: 2 });
-            
-            // Crear recurso de audio
-            const resource = createAudioResource(stream.stream, {
-                inputType: stream.type,
+            const resource = createAudioResource(stream, {
+                inputType: stream.type || undefined,
                 inlineVolume: true
             });
 
-            // Crear y configurar reproductor
-            const player = createAudioPlayer();
-            
             if (resource.volume) {
                 resource.volume.setVolume(0.5);
             }
 
+            const player = createAudioPlayer();
             player.play(resource);
             connection.subscribe(player);
 
-            // Embed de reproducción
+            // Enviar embed de reproducción
             const embed = {
                 color: 0x00ff00,
                 title: '🎵 Reproduciendo Ahora',
@@ -226,7 +212,7 @@ class MusicHandler {
 
             // Eventos del reproductor
             player.on(AudioPlayerStatus.Playing, () => {
-                console.log('🎵 Reproduciendo:', song.title);
+                console.log('🎵 Reproduciendo con ytdl-core:', song.title);
             });
 
             player.on(AudioPlayerStatus.Idle, () => {
@@ -236,14 +222,14 @@ class MusicHandler {
             });
 
             player.on('error', (error) => {
-                console.error('Error del player:', error);
+                console.error('Error del reproductor:', error);
                 message.channel.send('❌ Error reproduciendo la música.');
                 connection.destroy();
                 this.connections.delete(message.guild.id);
             });
 
         } catch (error) {
-            console.error('Error en playBasic:', error);
+            console.error('Error en playBasic (ytdl):', error);
             message.channel.send('❌ Error conectando al canal de voz o reproduciendo la música.');
         }
     }
