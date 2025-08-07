@@ -477,7 +477,7 @@ class AllCommands {
 
         const result = this.economy.removeMoney(targetUser.id, amount, reason);
 
-        if( result < false ) 
+        if( result === false ) 
         {
             await message.reply('❌ El usuario no tiene esa cantidad de dinero.');
             return;
