@@ -256,10 +256,7 @@ class EconomySystem {
                 xpGained: xpGained,
                 reward: reward
             };
-            console.log("i do it");
         }
-
-        console.log("sex");
         
         await this.updateUser(userId, updateData); // ← Reemplaza saveUsers()
         
