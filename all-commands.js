@@ -548,7 +548,7 @@ class AllCommands {
 
         const xpResult = await this.economy.addXp(targetUser.id, baseXP, reason);
 
-        console.log(`1: ${xpResult.levelUp} 2: ${xpResult.levelsGained} 3: ${xpResult.newLevel} 4: ${xpResult.xpGained} 5: ${xpResult.reward}`);
+        console.log(`Og: ${xpResult} 1: ${xpResult.levelUp} 2: ${xpResult.levelsGained} 3: ${xpResult.newLevel} 4: ${xpResult.xpGained} 5: ${xpResult.reward}`);
 
         const embed = new EmbedBuilder()
             .setTitle('✅ Se Aumentado Exitosamente el XP')
