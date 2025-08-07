@@ -312,37 +312,37 @@ client.on('messageCreate', async (message) => {
             break;
         case 'mon!skip':
         case 'mon!s':
-            await musicBot.handleSkip(message);
+            musicBot.handleSkip(message);
             break;
         case 'mon!stop':
-            await musicBot.handleStop(message);
+            musicBot.handleStop(message);
             break;
         case 'mon!pause':
-            await musicBot.handlePause(message);
+            musicBot.handlePause(message);
             break;
         case 'mon!resume':
         case 'mon!r':
-            await musicBot.handleResume(message);
+            musicBot.handleResume(message);
             break;
         case 'mon!queue':
         case 'mon!q':
-            await musicBot.handleQueue(message);
+            musicBot.handleQueue(message);
             break;
         case 'mon!volume':
         case 'mon!v':
-            await musicBot.handleVolume(message, args);
+            musicBot.handleVolume(message, args);
             break;
         case 'mon!loop':
         case 'mon!l':
-            await musicBot.handleLoop(message);
+            musicBot.handleLoop(message);
             break;
         case 'mon!np':
         case 'mon!nowplaying':
-            await musicBot.handleNowPlaying(message);
+            musicBot.handleNowPlaying(message);
             break;
         case 'mon!clearmusic':
         case 'mon!cmsc':
-            await musicBot.handleClear(message);
+            musicBot.handleClear(message);
             break;
     }
 });
