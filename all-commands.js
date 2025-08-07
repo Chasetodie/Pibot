@@ -722,11 +722,11 @@ class AllCommands {
                     await this.handlePay(message);
                     break;
 
-/*                case 'mon!top':
+                case 'mon!top':
                 case 'mon!leaderboard':
                 case 'mon!lb':
                     await this.handleTop(message);
-                    break;*/
+                    break;
 
 /*                case 'mon!work':
                 case 'mon!job':
