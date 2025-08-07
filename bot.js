@@ -368,15 +368,12 @@ client.on('messageCreate', async (message) => {
         const channel = message.guild.channels.cache.get(channelId);
 
         const xpResult = await economy.processMessageXp(message.author.id/*, economy.config.xpPerMessage*/);
-
-        // Avatar
-        const avatarUrl = targetUser ? targetUser.displayAvatarURL({ dynamic: true }) : message.author.displayAvatarURL({ dynamic: true });
         
         // Si subió de nivel, notificar
         if (xpResult && xpResult.levelUp && channel) {
             const levelUpEmbed = new EmbedBuilder()
                 .setTitle('🎉 ¡Nuevo Nivel!')
-                .setThumbnail(avatarUrl)
+                .setThumbnail(message.author.displayAvatarURL({ dynamic: true }))
                 .setDescription(`${message.author} alcanzó el **Nivel ${xpResult.newLevel}**`)
                 .addFields(
                     { name: '📈 XP Ganada', value: `+${xpResult.xpGained} XP`, inline: true },
@@ -423,6 +420,7 @@ client.login(process.env.TOKEN).then(() => {
     console.error('❌ Error en el login:', error);
 
 });
+
 
 
 
