@@ -219,8 +219,12 @@ class MusicHandler {
     // Crear reproductor
     const player = createAudioPlayer();
 
-    // Obtener stream
-    const stream = await playdl.stream(video.url);
+    const url = video.url || video.link;
+    if (!url) {
+    return message.reply('❌ No se pudo obtener una URL válida para reproducir.');
+    }
+
+    const stream = await playdl.stream(url);
 
     // Crear recurso de audio
     const resource = createAudioResource(stream.stream, {
