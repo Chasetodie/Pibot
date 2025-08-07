@@ -271,24 +271,23 @@ class EconomySystem {
 async processMessageXp(userId) {
     const now = Date.now();
     const lastXp = this.userCooldowns.get(userId) || 0;
+    // Obtener usuario (ahora async)
+    const user = await this.getUser(userId);
     
     // Verificar cooldown
     if (now - lastXp < this.config.xpCooldown) {
-        return null; // Aún en cooldown
-    }
-    
-    try {
-        this.userCooldowns.set(userId, now);
-        
-        // Obtener usuario (ahora async)
-        const user = await this.getUser(userId);
-        
         // Actualizar contador de mensajes
         const updateData = {
             messagesCount: (user.messagesCount || 0) + 1
         };
         await this.updateUser(userId, updateData);
         
+        return null; // Aún en cooldown
+    }
+    
+    try {
+        this.userCooldowns.set(userId, now);
+                
         // Agregar XP (ahora async)
         const result = await this.addXp(userId, this.config.xpPerMessage);
         
