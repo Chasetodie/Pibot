@@ -306,43 +306,43 @@ client.on('messageCreate', async (message) => {
     const command = args.shift().toLowerCase();
 
     switch (command) {
-        case 'play':
-        case 'p':
+        case 'mon!play':
+        case 'mon!p':
             await musicBot.handlePlay(message, args);
             break;
-        case 'skip':
-        case 's':
-            musicBot.handleSkip(message);
+        case 'mon!skip':
+        case 'mon!s':
+            await musicBot.handleSkip(message);
             break;
-        case 'stop':
-            musicBot.handleStop(message);
+        case 'mon!stop':
+            await musicBot.handleStop(message);
             break;
-        case 'pause':
-            musicBot.handlePause(message);
+        case 'mon!pause':
+            await musicBot.handlePause(message);
             break;
-        case 'resume':
-        case 'r':
-            musicBot.handleResume(message);
+        case 'mon!resume':
+        case 'mon!r':
+            await musicBot.handleResume(message);
             break;
-        case 'queue':
-        case 'q':
-            musicBot.handleQueue(message);
+        case 'mon!queue':
+        case 'mon!q':
+            await musicBot.handleQueue(message);
             break;
-        case 'volume':
-        case 'v':
-            musicBot.handleVolume(message, args);
+        case 'mon!volume':
+        case 'mon!v':
+            await musicBot.handleVolume(message, args);
             break;
-        case 'loop':
-        case 'l':
-            musicBot.handleLoop(message);
+        case 'mon!loop':
+        case 'mon!l':
+            await musicBot.handleLoop(message);
             break;
-        case 'np':
-        case 'nowplaying':
-            musicBot.handleNowPlaying(message);
+        case 'mon!np':
+        case 'mon!nowplaying':
+            await musicBot.handleNowPlaying(message);
             break;
-        case 'clear':
-        case 'c':
-            musicBot.handleClear(message);
+        case 'mon!clearmusic':
+        case 'mon!cmsc':
+            await musicBot.handleClear(message);
             break;
     }
 });
