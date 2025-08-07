@@ -2,7 +2,7 @@
 nixPkgs = ['nodejs_18', 'ffmpeg']
 
 [phases.install] 
-cmds = ['npm ci']
+cmds = ['npm install --production']
 
 [start]
 cmd = 'npm start'
