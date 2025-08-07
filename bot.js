@@ -367,7 +367,7 @@ client.on('messageCreate', async (message) => {
         const channelId = '1402824824971067442'; // ID del canal de XP (puedes cambiarlo)
         const channel = message.guild.channels.cache.get(channelId);
 
-        const xpResult = this.economy.processMessageXp(message.author.id/*, economy.config.xpPerMessage*/);
+        const xpResult = await economy.processMessageXp(message.author.id/*, economy.config.xpPerMessage*/);
 
         // Si subió de nivel, notificar
         if (xpResult && xpResult.levelUp && channel) {
@@ -417,4 +417,5 @@ client.login(process.env.TOKEN).then(() => {
     console.log('🚀 Proceso de login iniciado...');
 }).catch(error => {
     console.error('❌ Error en el login:', error);
+
 });
