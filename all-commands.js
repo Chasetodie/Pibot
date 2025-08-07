@@ -546,7 +546,7 @@ class AllCommands {
         
         const reason = message.content.split(' ').slice(3).join(' ') || 'No Especificada';
 
-        const xpResult = this.economy.addXp(targetUser.id, baseXP, reason);
+        const xpResult = await this.economy.addXp(targetUser.id, baseXP, reason);
 
         const embed = new EmbedBuilder()
             .setTitle('✅ Se Aumentado Exitosamente el XP')
