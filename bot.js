@@ -19,6 +19,15 @@ const PORT = process.env.PORT || 3000;
 // Archivo para guardar los contadores
 const countersFile = path.join(__dirname, 'counters.json');
 
+if (typeof File === 'undefined') {
+  global.File = class File {
+    constructor() {
+      throw new Error('File is not supported in this environment.');
+    }
+  };
+}
+
+
 // Función para cargar contadores (con variables de entorno como respaldo)
 function loadCounters() {
     try {
