@@ -63,21 +63,6 @@ function saveCounters(counters) {
     }
 }
 
-// Configuración del bot de Discord con TODOS los intents necesarios
-const client = new Client({
-    intents: [
-        GatewayIntentBits.Guilds,
-        GatewayIntentBits.GuildMembers,
-        GatewayIntentBits.GuildMessages,
-        GatewayIntentBits.DirectMessages,
-        GatewayIntentBits.MessageContent,
-        GatewayIntentBits.GuildVoiceStates,
-        Intents.FLAGS.GUILDS,
-        Intents.FLAGS.GUILD_VOICE_STATES,
-        Intents.FLAGS.GUILD_MESSAGES
-    ]
-});
-
 // Cargar contadores al iniciar
 let counters = loadCounters();
 
@@ -89,7 +74,7 @@ const commandHandler = new CommandHandler(counters, saveCounters);
 const economy = new EconomySystem();
 
 //Crear instancia del bot de música
-const musicBot = new MusicHandler(client);
+const musicBot = new MusicHandler();
 
 /*//Crear instancia del sistema de Minijuegos
 const minigames = new MinigamesSystem(economy);
@@ -162,9 +147,24 @@ app.listen(PORT, () => {
     console.log(`URL del bot: ${process.env.RAILWAY_PUBLIC_DOMAIN ? `https://${process.env.RAILWAY_PUBLIC_DOMAIN}` : `http://localhost:${PORT}`}`);
 });
 
+// Configuración del bot de Discord con TODOS los intents necesarios
+const client = new Client({
+    intents: [
+        GatewayIntentBits.Guilds,
+        GatewayIntentBits.GuildMembers,
+        GatewayIntentBits.GuildMessages,
+        GatewayIntentBits.DirectMessages,
+        GatewayIntentBits.MessageContent,
+        GatewayIntentBits.GuildVoiceStates,
+        Intents.FLAGS.GUILDS,
+        Intents.FLAGS.GUILD_VOICE_STATES,
+        Intents.FLAGS.GUILD_MESSAGES
+    ]
+});
+
 // Evento cuando el bot está listo
 client.once('ready', () => {
-    //musicBot.init();
+    musicBot.init();
     console.log(`✅ Bot conectado como ${client.user.tag}`);
     console.log(`📊 Contadores actuales: Pibe ${counters.pibe}, Piba ${counters.piba}`);
     console.log(`🌍 Variables de entorno: PIBE_COUNT=${process.env.PIBE_COUNT || 'no definida'}, PIBA_COUNT=${process.env.PIBA_COUNT || 'no definida'}`);
