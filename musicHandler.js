@@ -237,10 +237,10 @@ class MusicHandler {
 
         try{
             switch (command){
-                                case 'mon!play':
+                case 'mon!play':
                 case 'mon!p':
                     try {
-                        await execute(message, args);
+                        await this.execute(message, args);
                     } catch (error) {
                         console.error('Error ejecutando comando play:', error);
                         message.reply('❌ Hubo un error ejecutando ese comando!');
@@ -249,7 +249,7 @@ class MusicHandler {
 
                 case 'mon!stop':
                     try {
-                        await stop(message);
+                        await this.stop(message);
                     } catch (error) {
                         console.error('Error ejecutando comando stop:', error);
                         message.reply('❌ Hubo un error ejecutando ese comando!');
@@ -258,7 +258,7 @@ class MusicHandler {
 
                 case 'mon!skip':
                     try {
-                        await skip(message);
+                        await this.skip(message);
                     } catch (error) {
                         console.error('Error ejecutando comando skip:', error);
                         message.reply('❌ Hubo un error ejecutando ese comando!');
@@ -268,7 +268,7 @@ class MusicHandler {
                 case 'mon!queue':
                 case 'mon!q':
                     try {
-                        await showQueue(message);
+                        await this.showQueue(message);
                     } catch (error) {
                         console.error('Error ejecutando comando queue:', error);
                         message.reply('❌ Hubo un error ejecutando ese comando!');
@@ -277,7 +277,7 @@ class MusicHandler {
 
                 case 'mon!pause':
                     try {
-                        await pause(message);
+                        await this.pause(message);
                     } catch (error) {
                         console.error('Error ejecutando comando pause:', error);
                         message.reply('❌ Hubo un error ejecutando ese comando!');
@@ -286,7 +286,7 @@ class MusicHandler {
 
                 case 'mon!resume':
                     try {
-                        await resume(message);
+                        await this.resume(message);
                     } catch (error) {
                         console.error('Error ejecutando comando resume:', error);
                         message.reply('❌ Hubo un error ejecutando ese comando!');
@@ -296,7 +296,7 @@ class MusicHandler {
                 case 'mon!np':
                 case 'mon!nowplaying':
                     try {
-                        await nowPlaying(message);
+                        await this.nowPlaying(message);
                     } catch (error) {
                         console.error('Error ejecutando comando nowplaying:', error);
                         message.reply('❌ Hubo un error ejecutando ese comando!');
