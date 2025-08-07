@@ -186,7 +186,20 @@ class MusicHandler {
             console.log('🧪 URL limpia para playdl:', song.url);
 
             // Obtener stream
-            const stream = await playdl.stream(song.url, { quality: 2 });
+            if (!song || typeof song.url !== 'string' || !song.url.startsWith('http')) {
+                console.error('❌ URL no válida en playBasic:', song?.url);
+                return message.reply('❌ No se pudo reproducir la canción. La URL parece inválida.');
+            }
+
+            console.log('🧪 Reproduciendo URL:', song.url);
+
+            let stream;
+            try {
+                stream = await playdl.stream(song.url, { quality: 2 });
+            } catch (streamError) {
+                console.error('❌ Error al obtener stream:', streamError);
+                return message.reply('❌ No se pudo obtener el stream de audio.');
+            }
             
             // Crear recurso de audio
             const resource = createAudioResource(stream.stream, {
