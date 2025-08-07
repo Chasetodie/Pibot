@@ -382,7 +382,11 @@ client.on('messageCreate', async (message) => {
                 )
                 .setColor('#FFD700')
                 .setTimestamp();
-            await channel.send({ embeds: [levelUpEmbed] });
+                await channel.send({ 
+                    content: `<@${message.author.id}>`,
+                    embeds: [levelUpEmbed],
+                    allowedMentions: { users: [message.author.id] }
+                });
         }
     }
 
@@ -420,6 +424,7 @@ client.login(process.env.TOKEN).then(() => {
     console.error('❌ Error en el login:', error);
 
 });
+
 
 
 
