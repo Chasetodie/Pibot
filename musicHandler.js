@@ -94,7 +94,7 @@ class MusicHandler {
     }
 
     async searchYoutubeAPI(query) {
-        const YOUTUBE_API_KEY = 'AIzaSyAXUYdYZ_WY-_E0Jlh2WzW7gHeQ5QCzwVg';
+        const YOUTUBE_API_KEY = 'AIzaSyDmZKzH1g1A3ppZ_ViNy0Hlm8AfqgcAv3Q';
         const url = `https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&maxResults=1&q=${encodeURIComponent(query)}&key=${YOUTUBE_API_KEY}`;
         try {
             const response = await fetch(url);
