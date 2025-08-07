@@ -710,12 +710,12 @@ class AllCommands {
                     await this.handleDaily(message);
                     break;
 
-/*                case 'mon!level':
+                case 'mon!level':
                 case 'mon!lvl':
                 case 'mon!rank':
                     const levelTargetUser = message.mentions.members.first();
                     await this.handleLevel(message, levelTargetUser);
-                    break;*/
+                    break;
 
                 case 'mon!pay':
                 case 'mon!transfer':
