@@ -242,7 +242,10 @@ class MusicHandler {
             });
 
             player.on(AudioPlayerStatus.Idle, () => {
-                connection.destroy();
+                if (connection && !connection.destroyed) {
+                    console.log('fuck1');
+                    connection.destroy();
+                }
                 this.connections.delete(message.guild.id);
                 message.channel.send('🏁 **Reproducción terminada.**');
             });
@@ -250,7 +253,10 @@ class MusicHandler {
             player.on('error', (error) => {
                 console.error('Error del reproductor:', error);
                 message.channel.send('❌ Error reproduciendo la música.');
-                connection.destroy();
+                if (connection && !connection.destroyed) {
+                    console.log('fuck2');
+                    connection.destroy();
+                }
                 this.connections.delete(message.guild.id);
             });
 
