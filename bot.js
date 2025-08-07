@@ -368,18 +368,9 @@ client.on('messageCreate', async (message) => {
         const channel = message.guild.channels.cache.get(channelId);
 
         const xpResult = await economy.processMessageXp(message.author.id/*, economy.config.xpPerMessage*/);
-
-if (xpResult)
-    console.log("result");
-
-if (xpResult.levelUp)
-    console.log("levelup");
-
-if (channel)
-    console.log("channel");
         
         // Si subió de nivel, notificar
-        if (xpResult && xpResult.levelUp && channel) {
+        if (xpResult.levelUp && channel) {
             const levelUpEmbed = new EmbedBuilder()
                 .setTitle('🎉 ¡Nuevo Nivel!')
                 .setDescription(`${message.author} alcanzó el **Nivel ${xpResult.newLevel}**`)
@@ -428,4 +419,5 @@ client.login(process.env.TOKEN).then(() => {
     console.error('❌ Error en el login:', error);
 
 });
+
 
