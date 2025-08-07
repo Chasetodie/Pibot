@@ -219,6 +219,8 @@ class MusicHandler {
     // Crear reproductor
     const player = createAudioPlayer();
 
+    console.log('Video obtenido:', video);
+
     const url = video.url || video.link;
     if (!url) {
     return message.reply('❌ No se pudo obtener una URL válida para reproducir.');
