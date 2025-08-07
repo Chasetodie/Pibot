@@ -294,13 +294,18 @@ async processMessageXp(userId) {
 
         console.log(`1: ${result.levelUp} 2: ${result.levelsGained} 3: ${result.newLevel} 4: ${result.xpGained} 5: ${result.reward}`);
         
-        return {
+/*        return {
             result.levelUp,
             result.levelsGained,
             result.newLevel,
             result.xpGained,
             result.reward
-        };      
+        };      */
+
+        console.log(`result: ${result}`);
+        
+        return result;
+
     } catch (error) {
         console.error('❌ Error procesando XP del mensaje:', error);
         // Remover del cooldown si hubo error
