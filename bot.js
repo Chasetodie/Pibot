@@ -1,11 +1,10 @@
-const { Client, Intents, GatewayIntentBits, ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder } = require('discord.js');
-const { Manager } = require('erela.js');
+const { Client, GatewayIntentBits, ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder } = require('discord.js');
 const express = require('express');
 const fs = require('fs');
 const path = require('path');
 const CommandHandler = require('./commands'); // Importar el manejador de comandos
 const EconomySystem = require('./economy'); // Importar el sistema de economia
-const MusicHandler = require('./musicHandler'); // Importar el bot de música
+//const MusicHandler = require('./musicHandler.js'); // Importar el bot de música
 /*const MinigamesSystem = require('./minigames'); // Importar el sistema de minijuegos
 const AchievementsSystem = require('./achievements');
 const ShopSystem = require('./shop');
@@ -74,7 +73,7 @@ const commandHandler = new CommandHandler(counters, saveCounters);
 const economy = new EconomySystem();
 
 //Crear instancia del bot de música
-const musicBot = new MusicHandler();
+//const musicBot = new MusicHandler();
 
 /*//Crear instancia del sistema de Minijuegos
 const minigames = new MinigamesSystem(economy);
@@ -156,15 +155,11 @@ const client = new Client({
         GatewayIntentBits.DirectMessages,
         GatewayIntentBits.MessageContent,
         GatewayIntentBits.GuildVoiceStates,
-        Intents.FLAGS.GUILDS,
-        Intents.FLAGS.GUILD_VOICE_STATES,
-        Intents.FLAGS.GUILD_MESSAGES
     ]
 });
 
 // Evento cuando el bot está listo
 client.once('ready', () => {
-    musicBot.init();
     console.log(`✅ Bot conectado como ${client.user.tag}`);
     console.log(`📊 Contadores actuales: Pibe ${counters.pibe}, Piba ${counters.piba}`);
     console.log(`🌍 Variables de entorno: PIBE_COUNT=${process.env.PIBE_COUNT || 'no definida'}, PIBA_COUNT=${process.env.PIBA_COUNT || 'no definida'}`);
