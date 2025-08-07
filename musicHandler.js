@@ -25,6 +25,11 @@ class MusicHandler {
             
             if (searched.length > 0) {
                 const video = searched[0];
+                if (!video || !video.url) {
+                    console.error('⚠️ Resultado de búsqueda inválido o sin URL');
+                    return null;
+                }
+
                 return {
                     title: video.title,
                     url: video.url,
@@ -53,8 +58,13 @@ class MusicHandler {
     async getVideoInfo(url) {
         try {
             const info = await playdl.video_info(url);
-            const video = info.video_details;
-            
+            const video = info?.video_details;
+
+            if (!video || !video.url) {
+                console.error('⚠️ Video inválido o sin URL');
+                return null;
+            }
+
             return {
                 title: video.title,
                 url: video.url,
@@ -130,12 +140,12 @@ class MusicHandler {
 
             await searchMessage.delete().catch(() => {});
 
-            if(!song || !song.url) {
-                console.log('🔍 Canción obtenida:', song);
-                return message.reply('❌ No se pudo obtener la información de la canción.');
+            if (!song || !song.url) {
+                return message.reply('❌ No se pudo obtener una URL válida para la canción. Intenta con otra búsqueda o revisa la URL.');
             }
 
-            // Reproducir usando el método básico de Discord.js
+            console.log('✅ Canción obtenida:', song); // Ayuda para depurar
+
             await this.playBasic(message, song);
 
         } catch (error) {
