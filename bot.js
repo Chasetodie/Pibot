@@ -164,7 +164,7 @@ app.listen(PORT, () => {
 
 // Evento cuando el bot está listo
 client.once('ready', () => {
-    musicBot.init();
+    //musicBot.init();
     console.log(`✅ Bot conectado como ${client.user.tag}`);
     console.log(`📊 Contadores actuales: Pibe ${counters.pibe}, Piba ${counters.piba}`);
     console.log(`🌍 Variables de entorno: PIBE_COUNT=${process.env.PIBE_COUNT || 'no definida'}, PIBA_COUNT=${process.env.PIBA_COUNT || 'no definida'}`);
