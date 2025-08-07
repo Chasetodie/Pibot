@@ -78,7 +78,12 @@ class MusicHandler {
 
     // MÉTODO PRINCIPAL - Compatible con tu sistema
     async execute(message, args) {
-        return this.playCommand(message, args);
+        return await this.playCommand(message, args);
+    }
+
+    // Método alternativo si hay problemas con execute
+    async processCommand(message, args) {
+        return await this.playCommand(message, args);
     }
 
     // Comando PLAY
@@ -134,23 +139,52 @@ class MusicHandler {
         }
     }
 
-    // Método de reproducción básico (sin @discordjs/voice)
+    // Método de reproducción usando @discordjs/voice
     async playBasic(message, song) {
         const voiceChannel = message.member.voice.channel;
         
         try {
-            // Conectar al canal
-            const connection = await voiceChannel.join();
+            // Importar @discordjs/voice dinámicamente
+            let joinVoiceChannel, createAudioPlayer, createAudioResource, AudioPlayerStatus;
+            
+            try {
+                const voice = require('@discordjs/voice');
+                joinVoiceChannel = voice.joinVoiceChannel;
+                createAudioPlayer = voice.createAudioPlayer;
+                createAudioResource = voice.createAudioResource;
+                AudioPlayerStatus = voice.AudioPlayerStatus;
+            } catch (importError) {
+                console.error('@discordjs/voice no disponible, usando método alternativo');
+                return this.playAlternative(message, song);
+            }
+
+            // Conectar al canal usando @discordjs/voice
+            const connection = joinVoiceChannel({
+                channelId: voiceChannel.id,
+                guildId: message.guild.id,
+                adapterCreator: message.guild.voiceAdapterCreator,
+            });
+
             this.connections.set(message.guild.id, connection);
 
             // Obtener stream
             const stream = await playdl.stream(song.url, { quality: 2 });
-
-            // Reproducir
-            const dispatcher = connection.play(stream.stream, {
-                type: 'opus',
-                volume: 0.5
+            
+            // Crear recurso de audio
+            const resource = createAudioResource(stream.stream, {
+                inputType: stream.type,
+                inlineVolume: true
             });
+
+            // Crear y configurar reproductor
+            const player = createAudioPlayer();
+            
+            if (resource.volume) {
+                resource.volume.setVolume(0.5);
+            }
+
+            player.play(resource);
+            connection.subscribe(player);
 
             // Embed de reproducción
             const embed = {
@@ -167,42 +201,64 @@ class MusicHandler {
 
             message.channel.send({ embeds: [embed] });
 
-            // Eventos del dispatcher
-            dispatcher.on('finish', () => {
-                voiceChannel.leave();
+            // Eventos del reproductor
+            player.on(AudioPlayerStatus.Playing, () => {
+                console.log('🎵 Reproduciendo:', song.title);
+            });
+
+            player.on(AudioPlayerStatus.Idle, () => {
+                connection.destroy();
                 this.connections.delete(message.guild.id);
                 message.channel.send('🏁 **Reproducción terminada.**');
             });
 
-            dispatcher.on('error', (error) => {
-                console.error('Error del dispatcher:', error);
+            player.on('error', (error) => {
+                console.error('Error del player:', error);
                 message.channel.send('❌ Error reproduciendo la música.');
-                voiceChannel.leave();
+                connection.destroy();
                 this.connections.delete(message.guild.id);
             });
 
         } catch (error) {
             console.error('Error en playBasic:', error);
             message.channel.send('❌ Error conectando al canal de voz o reproduciendo la música.');
-            if (voiceChannel.connection) {
-                voiceChannel.leave();
-            }
         }
     }
 
-    // Método STOP
+    // Método alternativo si @discordjs/voice no está disponible
+    async playAlternative(message, song) {
+        // Crear un embed informativo ya que no podemos reproducir sin @discordjs/voice
+        const embed = {
+            color: 0xff9900,
+            title: '🎵 Canción Encontrada',
+            description: `**${song.title}**`,
+            fields: [
+                { name: '📺 Canal', value: song.channel, inline: true },
+                { name: '⏱️ Duración', value: this.formatDuration(song.duration), inline: true },
+                { name: '🔗 Enlace', value: `[Ver en YouTube](${song.url})`, inline: false }
+            ],
+            thumbnail: { url: song.thumbnail },
+            footer: { text: 'Para reproducir música, instala las dependencias necesarias.' },
+            timestamp: new Date()
+        };
+
+        return message.channel.send({ 
+            content: '⚠️ **Sistema de reproducción no disponible.** Aquí está la información de la canción:',
+            embeds: [embed] 
+        });
+    }
+
+    // Método STOP actualizado
     async stopCommand(message) {
         const connection = this.connections.get(message.guild.id);
-        const voiceChannel = message.member.voice.channel;
 
-        if (!connection && !voiceChannel?.connection) {
+        if (!connection) {
             return message.reply('❌ No estoy reproduciendo música!');
         }
 
         try {
-            if (voiceChannel?.connection) {
-                voiceChannel.leave();
-            }
+            // Destruir la conexión usando @discordjs/voice
+            connection.destroy();
             this.connections.delete(message.guild.id);
             message.reply('⏹️ **Música detenida y desconectado!**');
         } catch (error) {
