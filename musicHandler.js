@@ -1,5 +1,6 @@
 //const playdl = require('play-dl');
 const ytdl = require('ytdl-core');
+const yts = require('yt-search');
 
 class MusicHandler {
     constructor() {
@@ -96,6 +97,27 @@ class MusicHandler {
     async processCommand(message, args) {
         return await this.playCommand(message, args);
     }
+
+    async searchYoutube(query) {
+        try {
+            const result = await yts(query);
+            const video = result.videos.length > 0 ? result.videos[0] : null;
+
+            if (!video) return null;
+
+            return {
+                title: video.title,
+                url: video.url,
+                duration: video.seconds,
+                thumbnail: video.thumbnail,
+                channel: video.author.name
+            };
+        } catch (error) {
+            console.error('Error buscando en YouTube:', error);
+            return null;
+        }
+    }
+  
 
     // Comando PLAY
     async playCommand(message, args) {
