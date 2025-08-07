@@ -1,9 +1,8 @@
 const { EmbedBuilder } = require('discord.js');
 
 class AllCommands {
-    constructor(economySystem, musicHandler/*, achievementsSystem, shopSystem, bettingSystem, eventsSystem*/) {
+    constructor(economySystem/*, achievementsSystem, shopSystem, bettingSystem, eventsSystem*/) {
         this.economy = economySystem;
-        this.music = musicHandler;
 /*        this.achievements = achievementsSystem;
         this.shop = shopSystem;
         this.betting = bettingSystem;
@@ -706,71 +705,6 @@ class AllCommands {
 
         try {
             switch (command) {
-                case 'mon!play':
-                case 'mon!p':
-                    try {
-                        await this.musicHandler.execute(message, args);
-                    } catch (error) {
-                        console.error('Error ejecutando comando play:', error);
-                        message.reply('❌ Hubo un error ejecutando ese comando!');
-                    }
-                    break;
-
-                case 'mon!stop':
-                    try {
-                        this.musicHandler.stop(message);
-                    } catch (error) {
-                        console.error('Error ejecutando comando stop:', error);
-                        message.reply('❌ Hubo un error ejecutando ese comando!');
-                    }
-                    break;
-
-                case 'mon!skip':
-                    try {
-                        this.musicHandler.skip(message);
-                    } catch (error) {
-                        console.error('Error ejecutando comando skip:', error);
-                        message.reply('❌ Hubo un error ejecutando ese comando!');
-                    }
-                    break;
-
-                case 'mon!queue':
-                case 'mon!q':
-                    try {
-                        thismusicHandler.showQueue(message);
-                    } catch (error) {
-                        console.error('Error ejecutando comando queue:', error);
-                        message.reply('❌ Hubo un error ejecutando ese comando!');
-                    }
-                    break;
-
-                case 'mon!pause':
-                    try {
-                        this.musicHandler.pause(message);
-                    } catch (error) {
-                        console.error('Error ejecutando comando pause:', error);
-                        message.reply('❌ Hubo un error ejecutando ese comando!');
-                    }
-                    break;
-
-                case 'mon!resume':
-                    try {
-                        musicHandler.resume(message);
-                    } catch (error) {
-                        console.error('Error ejecutando comando resume:', error);
-                        message.reply('❌ Hubo un error ejecutando ese comando!');
-                    }
-                    break;
-
-                case 'mon!np':
-                case 'mon!nowplaying':
-                    try {
-                        musicHandler.nowPlaying(message);
-                    } catch (error) {
-                        console.error('Error ejecutando comando nowplaying:', error);
-                        message.reply('❌ Hubo un error ejecutando ese comando!');
-                    }
-                    break;
                 case 'mon!balance':
                 case 'mon!bal':
                 case 'mon!money':
