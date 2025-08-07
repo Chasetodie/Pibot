@@ -122,7 +122,7 @@ class MusicHandler {
             // Determinar si es URL o búsqueda
             const query = Array.isArray(args) ? args.join(' ') : args.toString();
             
-            if (this.isValidYouTubeUrl(query) || this.isValidYouTubeUrl(args[0])) {
+            if (ytdl.validateURL(query) || ytdl.validateURL(args[0])) {
                 const videoInfo = await this.getVideoInfo(query || args[0]);
                 if (!videoInfo) {
                     await searchMessage.edit('❌ No se pudo obtener información del video. Verifica que la URL sea válida.');
