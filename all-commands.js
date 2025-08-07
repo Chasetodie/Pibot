@@ -111,7 +111,7 @@ class AllCommands {
     // Comando !daily - Reclamar dinero diario
     async handleDaily(message) {
         const userId = message.author.id;
-        const result = this.economy.useDaily(userId);
+        const result = await this.economy.useDaily(userId);
         
         if (!result.success) {
             const timeLeft = this.formatTimeLeft(result.timeLeft);
@@ -384,11 +384,11 @@ class AllCommands {
                 .setDescription('Da π-b Coins a otro usuario')
                 .addFields({
                     name: '📝 Uso',
-                    value: '`mon!add @usuario <cantidad> <razon>`',
+                    value: '`mon!addmoney @usuario <cantidad> <razon>`',
                     inline: false
                 }, {
                     name: '💡 Ejemplo',
-                    value: '`mon!add @usuario 500 "Por ganar el concurso"`',
+                    value: '`mon!addmoney @usuario 500 "Por ganar el concurso"`',
                     inline: false
                 })
                 .setColor('#17a2b8');
@@ -447,11 +447,11 @@ class AllCommands {
                 .setDescription('Quita π-b Coins a otro usuario')
                 .addFields({
                     name: '📝 Uso',
-                    value: '`mon!remove @usuario <cantidad> <razon>`',
+                    value: '`mon!removemoney @usuario <cantidad> <razon>`',
                     inline: false
                 }, {
                     name: '💡 Ejemplo',
-                    value: '`mon!remove @usuario 500 "Por mal comportamiento"`',
+                    value: '`mon!removemoney @usuario 500 "Por mal comportamiento"`',
                     inline: false
                 })
                 .setColor('#17a2b8');
