@@ -193,6 +193,10 @@ class MusicHandler {
         return message.reply("❌ No tengo permisos para unirme o hablar en tu canal.");
     }
 
+    if (typeof query !== 'string') {
+        return message.reply('❌ El término de búsqueda o URL debe ser un texto válido.');
+    }
+
     // Buscar video o usar URL
     let video;
     if (playdl.yt_validate(query) === 'video') {
@@ -402,7 +406,10 @@ class MusicHandler {
                 case 'mon!play':
                 case 'mon!p':
                     try {
-                        await this.playMusic(message, args);
+                        const args = message.content.split(' ');
+                        const query = args.slice(1).join(' '); // Unir todo después del comando
+                        
+                        await this.playMusic(message, query);
                     } catch (error) {
                         console.error(error);
                         message.reply('❌ Ocurrio un error al reproducir la musica');
