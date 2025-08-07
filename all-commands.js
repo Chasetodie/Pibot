@@ -508,8 +508,8 @@ class AllCommands {
         
         if (args.length < 3) {
             const embed = new EmbedBuilder()
-                .setTitle('💸 Comando Remove')
-                .setDescription('Quita π-b Coins a otro usuario')
+                .setTitle('💸 Comando AddXP')
+                .setDescription('Añade Xp a otro usuario')
                 .addFields({
                     name: '📝 Uso',
                     value: '`mon!addxp @usuario <cantidad> <razon>`',
