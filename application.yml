@@ -1,5 +1,6 @@
 server:
   port: ${PORT:2333}
+  address: 0.0.0.0
 
 lavalink:
   server:
@@ -18,3 +19,7 @@ lavalink:
     youtubeSearchEnabled: true
     searchEnabled: true
     soundcloudSearchEnabled: true
+
+logging:
+  level:
+    root: INFO
