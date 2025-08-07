@@ -1,10 +1,23 @@
 const { joinVoiceChannel, createAudioPlayer, createAudioResource, AudioPlayerStatus, VoiceConnectionStatus } = require('@discordjs/voice');
-const ytdl = require('ytdl-core');
-const ytSearch = require('yt-search');
+const playdl = require('play-dl');
 
 class MusicHandler {
     constructor() {
         this.queue = new Map();
+        this.initializePlayDl();
+    }
+
+    async initializePlayDl() {
+        // Configurar play-dl si es necesario
+        try {
+            await playdl.getFreeClientID().then((clientID) => playdl.setToken({
+                soundcloud : {
+                    client_id : clientID
+                }
+            }));
+        } catch (error) {
+            console.log('SoundCloud token no configurado, solo funcionará YouTube');
+        }
     }
 
     // Estructura de datos para cada servidor
@@ -23,9 +36,19 @@ class MusicHandler {
     // Buscar videos en YouTube
     async searchYoutube(query) {
         try {
-            const videoResult = await ytSearch(query);
-            if (videoResult && videoResult.videos.length > 0) {
-                return videoResult.videos[0];
+            const searched = await playdl.search(query, {
+                limit: 1,
+                source: { youtube: "video" }
+            });
+            
+            if (searched.length > 0) {
+                const video = searched[0];
+                return {
+                    title: video.title,
+                    url: video.url,
+                    duration: video.durationInSec,
+                    thumbnail: video.thumbnails[0]?.url || null
+                };
             }
             return null;
         } catch (error) {
@@ -36,18 +59,20 @@ class MusicHandler {
 
     // Validar URL de YouTube
     isValidYouTubeUrl(url) {
-        return ytdl.validateURL(url);
+        return playdl.yt_validate(url) === 'video';
     }
 
     // Obtener información del video
     async getVideoInfo(url) {
         try {
-            const info = await ytdl.getInfo(url);
+            const info = await playdl.video_info(url);
+            const video = info.video_details;
+            
             return {
-                title: info.videoDetails.title,
-                url: info.videoDetails.video_url,
-                duration: info.videoDetails.lengthSeconds,
-                thumbnail: info.videoDetails.thumbnails[0]?.url
+                title: video.title,
+                url: video.url,
+                duration: video.durationInSec,
+                thumbnail: video.thumbnails[0]?.url || null
             };
         } catch (error) {
             console.error('Error obteniendo info del video:', error);
@@ -66,13 +91,10 @@ class MusicHandler {
         }
 
         try {
-            const stream = ytdl(song.url, {
-                filter: 'audioonly',
-                highWaterMark: 1 << 25,
-                quality: 'highestaudio'
+            const stream = await playdl.stream(song.url);
+            const resource = createAudioResource(stream.stream, {
+                inputType: stream.type
             });
-
-            const resource = createAudioResource(stream);
             
             queue.player.play(resource);
             queue.connection.subscribe(queue.player);
@@ -109,7 +131,7 @@ class MusicHandler {
         }
 
         const permissions = voiceChannel.permissionsFor(message.client.user);
-        if (!permissions.has('CONNECT') || !permissions.has('SPEAK')) {
+        if (!permissions.has('Connect') || !permissions.has('Speak')) {
             return message.channel.send('❌ No tengo permisos para unirme o hablar en tu canal de voz!');
         }
 
@@ -120,27 +142,28 @@ class MusicHandler {
         const serverQueue = this.queue.get(message.guild.id);
         let song = {};
 
+        // Mostrar mensaje de "buscando..."
+        const searchMessage = await message.channel.send('🔍 Buscando...');
+
         // Determinar si es URL o búsqueda
         if (this.isValidYouTubeUrl(args[0])) {
             const videoInfo = await this.getVideoInfo(args[0]);
             if (!videoInfo) {
-                return message.channel.send('❌ No se pudo obtener información del video.');
+                await searchMessage.edit('❌ No se pudo obtener información del video.');
+                return;
             }
             song = videoInfo;
         } else {
             // Buscar en YouTube
-            const video = await this.searchYoutube(args.join(' '));
-            if (!video) {
-                return message.channel.send('❌ No se encontraron resultados para tu búsqueda.');
+            const searchResult = await this.searchYoutube(args.join(' '));
+            if (!searchResult) {
+                await searchMessage.edit('❌ No se encontraron resultados para tu búsqueda.');
+                return;
             }
-            
-            song = {
-                title: video.title,
-                url: video.url,
-                duration: video.duration.seconds,
-                thumbnail: video.thumbnail
-            };
+            song = searchResult;
         }
+
+        await searchMessage.delete();
 
         // Si no hay cola, crear una nueva
         if (!serverQueue) {
@@ -207,16 +230,37 @@ class MusicHandler {
     // Mostrar cola de reproducción
     showQueue(message) {
         const serverQueue = this.queue.get(message.guild.id);
-        if (!serverQueue) {
+        if (!serverQueue || !serverQueue.songs.length) {
             return message.channel.send('❌ No hay música en cola!');
         }
 
-        let queueString = '**Cola de Reproducción:**\n';
-        serverQueue.songs.forEach((song, index) => {
-            queueString += `${index + 1}. ${song.title}\n`;
+        const embed = {
+            color: 0x0099FF,
+            title: '🎵 Cola de Reproducción',
+            fields: [],
+            timestamp: new Date(),
+        };
+
+        serverQueue.songs.slice(0, 10).forEach((song, index) => {
+            embed.fields.push({
+                name: `${index + 1}. ${song.title}`,
+                value: `Duración: ${this.formatDuration(song.duration)}`,
+                inline: false
+            });
         });
 
-        return message.channel.send(queueString);
+        if (serverQueue.songs.length > 10) {
+            embed.description = `... y ${serverQueue.songs.length - 10} más`;
+        }
+
+        return message.channel.send({ embeds: [embed] });
+    }
+
+    // Formatear duración
+    formatDuration(seconds) {
+        const minutes = Math.floor(seconds / 60);
+        const remainingSeconds = seconds % 60;
+        return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
     }
 
     // Pausar música
@@ -247,6 +291,39 @@ class MusicHandler {
         } else {
             return message.channel.send('❌ La música no está pausada!');
         }
+    }
+
+    // Obtener información actual
+    nowPlaying(message) {
+        const serverQueue = this.queue.get(message.guild.id);
+        if (!serverQueue || !serverQueue.songs.length) {
+            return message.channel.send('❌ No hay música reproduciéndose!');
+        }
+
+        const song = serverQueue.songs[0];
+        const embed = {
+            color: 0x0099FF,
+            title: '🎵 Reproduciendo Ahora',
+            description: `**${song.title}**`,
+            thumbnail: {
+                url: song.thumbnail || ''
+            },
+            fields: [
+                {
+                    name: 'Duración',
+                    value: this.formatDuration(song.duration),
+                    inline: true
+                },
+                {
+                    name: 'Cola',
+                    value: `${serverQueue.songs.length} canción(es)`,
+                    inline: true
+                }
+            ],
+            timestamp: new Date(),
+        };
+
+        return message.channel.send({ embeds: [embed] });
     }
 }
 

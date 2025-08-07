@@ -716,7 +716,7 @@ class AllCommands {
                     }
                     break;
 
-                case 'stop':
+                case 'mon!stop':
                     try {
                         this.musicHandler.stop(message);
                     } catch (error) {
@@ -725,7 +725,7 @@ class AllCommands {
                     }
                     break;
 
-                case 'skip':
+                case 'mon!skip':
                     try {
                         this.musicHandler.skip(message);
                     } catch (error) {
@@ -734,17 +734,17 @@ class AllCommands {
                     }
                     break;
 
-                case 'queue':
-                case 'q':
+                case 'mon!queue':
+                case 'mon!q':
                     try {
-                        this.musicHandler.showQueue(message);
+                        thismusicHandler.showQueue(message);
                     } catch (error) {
                         console.error('Error ejecutando comando queue:', error);
                         message.reply('❌ Hubo un error ejecutando ese comando!');
                     }
                     break;
 
-                case 'pause':
+                case 'mon!pause':
                     try {
                         this.musicHandler.pause(message);
                     } catch (error) {
@@ -753,11 +753,21 @@ class AllCommands {
                     }
                     break;
 
-                case 'resume':
+                case 'mon!resume':
                     try {
-                        this.musicHandler.resume(message);
+                        musicHandler.resume(message);
                     } catch (error) {
                         console.error('Error ejecutando comando resume:', error);
+                        message.reply('❌ Hubo un error ejecutando ese comando!');
+                    }
+                    break;
+
+                case 'mon!np':
+                case 'mon!nowplaying':
+                    try {
+                        musicHandler.nowPlaying(message);
+                    } catch (error) {
+                        console.error('Error ejecutando comando nowplaying:', error);
                         message.reply('❌ Hubo un error ejecutando ese comando!');
                     }
                     break;
