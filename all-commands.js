@@ -475,17 +475,17 @@ class AllCommands {
 
         const reason = message.content.split(' ').slice(3).join(' ') || 'No Especificada';        
 
-        // Realizar transferencia
-        if (targetUser.balance < amount) {
-            await message.reply(`❌ El Usuario no Tiene esa Cantidad de π-b Coins.`);
+        const result = this.economy.removeMoney(targetUser.id, amount, reason);
+
+        if( result < false ) 
+        {
+            await message.reply('❌ El usuario no tiene esa cantidad de dinero.');
             return;
         }
 
-        const result = this.economy.removeMoney(targetUser.id, amount, reason);
-
         const embed = new EmbedBuilder()
             .setTitle('✅ Se ha Quitado Exitosamente el Dinero')
-            .setDescription(`Has quitado **${this.formatNumber(amount)}** ${this.economy.config.currencySymbol} a ${targetUser}\nRazón: ${reason}\n(${this.formatNumber(targetUser.balance)} < ${this.formatNumber(amount)})`)
+            .setDescription(`Has quitado **${this.formatNumber(amount)}** ${this.economy.config.currencySymbol} a ${targetUser}\nRazón: ${reason}`)
             .addFields(
                 { name: '💰 Balance de Destino', value: `${this.formatNumber(result)} ${this.economy.config.currencySymbol}`, inline: true }
             )
