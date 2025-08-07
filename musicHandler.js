@@ -131,12 +131,12 @@ class MusicHandler {
                 song = videoInfo;
             } else {
                 // Buscar en YouTube
-                const searchResult = await this.searchYoutube(query);
-                if (!searchResult) {
+              /*  const searchResult = await this.searchYoutube(query);
+                if (!searchResult) {*/
                     await searchMessage.edit('❌ No se encontraron resultados para tu búsqueda. Intenta con otros términos.');
                     return;
-                }
-                song = searchResult;
+/*                }
+                song = searchResult;*/
             }
 
             await searchMessage.delete().catch(() => {});
