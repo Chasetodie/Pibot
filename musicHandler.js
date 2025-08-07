@@ -182,8 +182,8 @@ class MusicHandler {
 
             this.connections.set(message.guild.id, connection);
 
-            song.url = song.url?.trim().replace(/;$/, ''); // Asegurarse de que la URL esté limpia
-            console.log('🔗 URL final para reproducir:', song.url);
+            song.url = song.url?.trim().replace(/[;,]+$/, ''); // Asegurarse de que la URL esté limpia
+            console.log('🧪 URL limpia para playdl:', song.url);
 
             // Obtener stream
             const stream = await playdl.stream(song.url, { quality: 2 });
