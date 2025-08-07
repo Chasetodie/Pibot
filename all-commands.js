@@ -160,7 +160,7 @@ class AllCommands {
         const user = await this.economy.getUser(userId);
         
         // Calcular ranking de nivel
-        const leaderboard = this.economy.getLevelLeaderboard(1000);
+        const leaderboard = await this.economy.getLevelLeaderboard(1000);
         const userRank = leaderboard.findIndex(u => u.userId === userId) + 1;
         
         // Información de XP
@@ -314,11 +314,11 @@ class AllCommands {
         let leaderboard, title, emoji;
         
         if (type === 'level' || type === 'levels' || type === 'lvl') {
-            leaderboard = this.economy.getLevelLeaderboard(10);
+            leaderboard = await this.economy.getLevelLeaderboard(10);
             title = '🏆 Top 10 - Niveles';
             emoji = '📊';
         } else {
-            leaderboard = this.economy.getMoneyLeaderboard(10);
+            leaderboard = await this.economy.getMoneyLeaderboard(10);
             title = '🏆 Top 10 - π-b Coin';
             emoji = '💰';
         }
