@@ -291,9 +291,16 @@ async processMessageXp(userId) {
         
         // Agregar XP (ahora async)
         const result = await this.addXp(userId, this.config.xpPerMessage);
+
+        console.log(`1: ${result.levelUp} 2: ${result.levelsGained} 3: ${result.newLevel} 4: ${result.xpGained} 5: ${result.reward}`);
         
-        return result;
-        
+        return {
+            result.levelUp,
+            result.levelsGained,
+            result.newLevel,
+            result.xpGained,
+            result.reward
+        };      
     } catch (error) {
         console.error('❌ Error procesando XP del mensaje:', error);
         // Remover del cooldown si hubo error
