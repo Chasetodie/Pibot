@@ -1,25 +1,6 @@
 //const playdl = require('play-dl');
 const ytdl = require('ytdl-core');
 const fetch = require('node-fetch');
-const YOUTUBE_API_KEY = 'AIzaSyAXUYdYZ_WY-_E0Jlh2WzW7gHeQ5QCzwVg';
-
-async function searchYoutubeAPI(query) {
-    const url = `https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&maxResults=1&q=${encodeURIComponent(query)}&key=${YOUTUBE_API_KEY}`;
-    const response = await fetch(url);
-    const data = await response.json();
-
-    if (!data.items || data.items.length === 0) return null;
-
-    const video = data.items[0];
-    return {
-        title: video.snippet.title,
-        url: `https://www.youtube.com/watch?v=${video.id.videoId}`,
-        channel: video.snippet.channelTitle,
-        thumbnail: video.snippet.thumbnails.default.url,
-        duration: null // Para obtener duración, necesitarías otra llamada a videos API
-    };
-}
-
 
 class MusicHandler {
     constructor() {
@@ -111,6 +92,24 @@ class MusicHandler {
     async execute(message, args) {
         return await this.playCommand(message, args);
     }
+
+    async searchYoutubeAPI(query) {
+        const YOUTUBE_API_KEY = 'AIzaSyAXUYdYZ_WY-_E0Jlh2WzW7gHeQ5QCzwVg';
+        const url = `https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&maxResults=1&q=${encodeURIComponent(query)}&key=${YOUTUBE_API_KEY}`;
+        const response = await fetch(url);
+        const data = await response.json();
+
+        if (!data.items || data.items.length === 0) return null;
+
+        const video = data.items[0];
+        return {
+            title: video.snippet.title,
+            url: `https://www.youtube.com/watch?v=${video.id.videoId}`,
+            channel: video.snippet.channelTitle,
+            thumbnail: video.snippet.thumbnails.default.url,
+            duration: null // Para obtener duración, necesitarías otra llamada a videos API
+        };
+    }    
 
     // Método alternativo si hay problemas con execute
     async processCommand(message, args) {
