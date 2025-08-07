@@ -273,7 +273,7 @@ class AllCommands {
         }
         
         // Realizar transferencia
-        const result = this.economy.transferMoney(message.author.id, targetUser.id, amount);
+        const result = await this.economy.transferMoney(message.author.id, targetUser.id, amount);
         
         if (!result.success) {
             if (result.reason === 'insufficient_funds') {
@@ -318,7 +318,7 @@ class AllCommands {
             title = '🏆 Top 10 - Niveles';
             emoji = '📊';
         } else {
-            leaderboard = await this.economy.getMoneyLeaderboard(10);
+            leaderboard = await this.economy.getBalanceLeaderboard(10);
             title = '🏆 Top 10 - π-b Coin';
             emoji = '💰';
         }
@@ -416,7 +416,7 @@ class AllCommands {
         const reason = message.content.split(' ').slice(3).join(' ') || 'No Especificada';
 
         // Realizar transferencia
-        const result = this.economy.addMoney(targetUser.id, amount, reason);
+        const result = await this.economy.addMoney(targetUser.id, amount, reason);
         
         const embed = new EmbedBuilder()
             .setTitle('✅ Se ha Entregado Exitosamente el Dinero')
@@ -478,7 +478,7 @@ class AllCommands {
 
         const reason = message.content.split(' ').slice(3).join(' ') || 'No Especificada';        
 
-        const result = this.economy.removeMoney(targetUser.id, amount, reason);
+        const result = await this.economy.removeMoney(targetUser.id, amount, reason);
 
         if( result === false ) 
         {
