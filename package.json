@@ -4,7 +4,7 @@
   "description": "Bot de Discord para asignar apodos",
   "main": "bot.js",
   "scripts": {
-    "start": "node bot.js"
+    "start": "./start.sh"
   },
   "dependencies": {
     "@discordjs/voice": "^0.18.0",
