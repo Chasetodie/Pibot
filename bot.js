@@ -363,10 +363,14 @@ client.on('messageCreate', async (message) => {
     if (message.guild) {
         // Aplicar modificadores de eventos a XP
         //const xpMod = events.applyEventModifiers(message.author.id, economy.config.xpPerMessage, 'message');
+        
+        const channelId = '1402824824971067442'; // ID del canal de XP (puedes cambiarlo)
+        const channel = message.guild.channels.cache.get(channelId);
+
         const xpResult = economy.addXp(message.author.id, economy.config.xpPerMessage);
 
         // Si subió de nivel, notificar
-        if (xpResult && xpResult.levelUp) {
+        if (xpResult && xpResult.levelUp && channel) {
             const levelUpEmbed = new EmbedBuilder()
                 .setTitle('🎉 ¡Subiste de Nivel!')
                 .setDescription(`${message.author} alcanzó el **Nivel ${xpResult.newLevel}**`)
@@ -377,7 +381,7 @@ client.on('messageCreate', async (message) => {
                 )
                 .setColor('#FFD700')
                 .setTimestamp();
-            await message.channel.send({ embeds: [levelUpEmbed] });
+            await channel.send({ embeds: [levelUpEmbed] });
         }
     }
 
