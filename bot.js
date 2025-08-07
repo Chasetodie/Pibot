@@ -138,7 +138,7 @@ const client = new Client({
     intents: [
         GatewayIntentBits.Guilds,
         GatewayIntentBits.GuildMembers,
-        GatewayIntentBits.GuildMessages, // ¡ESTE ERA EL INTENT FALTANTE!
+        GatewayIntentBits.GuildMessages,
         GatewayIntentBits.DirectMessages,
         GatewayIntentBits.MessageContent
     ]
@@ -359,11 +359,11 @@ client.on('messageCreate', async (message) => {
     // Ignorar mensajes de bots
     if (message.author.bot) return;
     
-    /*// Procesar XP por mensaje (solo en servidores, no en DMs)
+    // Procesar XP por mensaje (solo en servidores, no en DMs)
     if (message.guild) {
         // Aplicar modificadores de eventos a XP
-        const xpMod = events.applyEventModifiers(message.author.id, economy.config.xpPerMessage, 'message');
-        const xpResult = economy.addXp(message.author.id, xpMod.finalXp);
+        //const xpMod = events.applyEventModifiers(message.author.id, economy.config.xpPerMessage, 'message');
+        const xpResult = economy.addXp(message.author.id, economy.config.xpPerMessage);
 
         // Si subió de nivel, notificar
         if (xpResult && xpResult.levelUp) {
@@ -379,7 +379,7 @@ client.on('messageCreate', async (message) => {
                 .setTimestamp();
             await message.channel.send({ embeds: [levelUpEmbed] });
         }
-    }*/
+    }
 
     // Procesar comandos mejorados (shop, betting, achievements, etc.)
     await allCommands.processCommand(message);

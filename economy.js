@@ -190,7 +190,7 @@ class EconomySystem {
         };
     }
 
-/*    // Procesar XP por mensaje (con cooldown)
+    // Procesar XP por mensaje (con cooldown)
     processMessageXp(userId) {
         const now = Date.now();
         const lastXp = this.userCooldowns.get(userId) || 0;
@@ -205,7 +205,7 @@ class EconomySystem {
         user.messagesCount++;
         
         return this.addXp(userId, this.config.xpPerMessage);
-    }*/
+    }
 
     // Obtener estadísticas de un usuario
     /*getUserStats(userId) {
