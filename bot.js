@@ -370,7 +370,7 @@ client.on('messageCreate', async (message) => {
         const xpResult = await economy.processMessageXp(message.author.id/*, economy.config.xpPerMessage*/);
         
         // Si subió de nivel, notificar
-        if (xpResult.levelUp && channel) {
+        if (xpResult && xpResult.levelUp && channel) {
             const levelUpEmbed = new EmbedBuilder()
                 .setTitle('🎉 ¡Nuevo Nivel!')
                 .setDescription(`${message.author} alcanzó el **Nivel ${xpResult.newLevel}**`)
@@ -419,5 +419,6 @@ client.login(process.env.TOKEN).then(() => {
     console.error('❌ Error en el login:', error);
 
 });
+
 
 
