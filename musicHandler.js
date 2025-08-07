@@ -130,6 +130,11 @@ class MusicHandler {
 
             await searchMessage.delete().catch(() => {});
 
+            if(!song || !song.url) {
+                console.log('🔍 Canción obtenida:', song);
+                return message.reply('❌ No se pudo obtener la información de la canción.');
+            }
+
             // Reproducir usando el método básico de Discord.js
             await this.playBasic(message, song);
 
