@@ -172,11 +172,14 @@ class AllCommands {
         // Barra de progreso más detallada
         const progressBar = this.createProgressBar(xpProgress, xpForNextLevel, 20);
         const progressPercentage = ((xpProgress / xpForNextLevel) * 100).toFixed(2);
+
+        // Avatar
+        const avatarUrl = targetUser ? targetUser.displayAvatarURL({ dynamic: true }) : message.author.displayAvatarURL({ dynamic: true });
         
         const embed = new EmbedBuilder()
             .setTitle(`📊 Estadísticas de Nivel - ${displayName}`)
             .setColor('#9932CC')
-            .setThumbnail(message.author.displayAvatarURL({ dynamic: true }))
+            .setThumbnail(avatarUrl)
             .addFields(
                 { 
                     name: '🏆 Nivel Actual', 
