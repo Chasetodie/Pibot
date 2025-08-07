@@ -151,7 +151,7 @@ class AllCommands {
     }
 
     // Comando !level - Ver información detallada de nivel
-/*    async handleLevel(message, targetUser = null) {
+    async handleLevel(message, targetUser = null) {
         const userId = targetUser ? targetUser.id : message.author.id;
         const displayName = targetUser ? targetUser.displayName : message.author.displayName;
         const user = this.economy.getUser(userId);
@@ -215,7 +215,7 @@ class AllCommands {
             .setTimestamp();
 
         await message.reply({ embeds: [embed] });
-    }*/
+    }
 
     // Comando !pay - Transferir dinero a otro usuario
     async handlePay(message) {
