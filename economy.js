@@ -297,7 +297,8 @@ async processMessageXp(userId) {
             levelsGained: result.levelsGained,
             newLevel: result.newLevel,
             xpGained: result.xpGained,
-            reward: result.reward
+            reward: result.reward,
+            result: result
         };
     } catch (error) {
         console.error('❌ Error procesando XP del mensaje:', error);
