@@ -425,7 +425,7 @@ async processMessageXp(userId) {
 
     // Usar comando daily
     async useDaily(userId) {
-        if (!this.canUseDaily(userId)) {
+        if (!await this.canUseDaily(userId)) {
             const user = await this.getUser(userId);
             const timeLeft = 24 * 60 * 60 * 1000 - (Date.now() - user.lastDaily);
             return {
@@ -446,7 +446,7 @@ async processMessageXp(userId) {
 
         const updateData = {
             lastDaily: Date.now(),
-            balance: user.balance,
+            balance: user.balance + amount,
             'stats.totalEarned': user.stats.totalEarned + amount,
             'stats.dailyClaims': user.stats.dailyClaims + 1
         }
