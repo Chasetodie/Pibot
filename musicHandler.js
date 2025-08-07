@@ -219,7 +219,7 @@ class MusicHandler {
     // Crear reproductor
     const player = createAudioPlayer();
 
-    let url = video.url || video.link;
+    let url = video.url ?? video.link;
 
     console.log('URL a reproducir:', url);
 
