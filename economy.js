@@ -12,7 +12,7 @@ class EconomySystem {
             currencySymbol: 'π-b$',
             xpPerMessage: 10, // XP base por mensaje
             xpVariation: 5,  // Variación aleatoria del XP
-            xpCooldown: 30000, // 1 minuto entre mensajes que dan XP
+            xpCooldown: 15000, // 15 segundos entre mensajes que dan XP
             dailyAmount: 300,  // Cantidad base del daily
             dailyVariation: 150, // Variación del daily
             levelUpReward: 50, // π-b Coins por subir de nivel
