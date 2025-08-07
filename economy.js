@@ -233,15 +233,15 @@ class EconomySystem {
     }
 
     // Obtener leaderboard de dinero
-/*    getMoneyLeaderboard(limit = 10) {
+    getMoneyLeaderboard(limit = 10) {
         return Object.entries(this.users)
             .map(([userId, userData]) => ({ userId, ...userData }))
             .sort((a, b) => b.balance - a.balance)
             .slice(0, limit);
-    }*/
+    }
 
     // Obtener leaderboard de niveles
-/*    getLevelLeaderboard(limit = 10) {
+    getLevelLeaderboard(limit = 10) {
         return Object.entries(this.users)
             .map(([userId, userData]) => ({ userId, ...userData }))
             .sort((a, b) => {
@@ -249,7 +249,7 @@ class EconomySystem {
                 return b.totalXp - a.totalXp;
             })
             .slice(0, limit);
-    }*/
+    }
 
     // Verificar si puede usar daily
     canUseDaily(userId) {

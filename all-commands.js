@@ -304,7 +304,7 @@ class AllCommands {
     }
 
     // Comando !top - Leaderboards
-/*    async handleTop(message) {
+    async handleTop(message) {
         const args = message.content.split(' ');
         const type = args[1]?.toLowerCase() || 'money';
         
@@ -362,7 +362,7 @@ class AllCommands {
         }
         
         await message.reply({ embeds: [embed] });
-    }*/
+    }
 
     async handleAddMoney(message) {
         if (!message.member?.permissions.has('Administrator')) {
