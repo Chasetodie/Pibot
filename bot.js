@@ -367,12 +367,12 @@ client.on('messageCreate', async (message) => {
         const channelId = '1402824824971067442'; // ID del canal de XP (puedes cambiarlo)
         const channel = message.guild.channels.cache.get(channelId);
 
-        const xpResult = economy.addXp(message.author.id, economy.config.xpPerMessage);
+        const xpResult = economy.processMessageXp(message.author.id/*, economy.config.xpPerMessage*/);
 
         // Si subió de nivel, notificar
         if (xpResult && xpResult.levelUp && channel) {
             const levelUpEmbed = new EmbedBuilder()
-                .setTitle('🎉 ¡Subiste de Nivel!')
+                .setTitle('🎉 ¡Nuevo Nivel!')
                 .setDescription(`${message.author} alcanzó el **Nivel ${xpResult.newLevel}**`)
                 .addFields(
                     { name: '📈 XP Ganada', value: `+${xpResult.xpGained} XP`, inline: true },

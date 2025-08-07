@@ -208,7 +208,7 @@ class EconomySystem {
     }
 
     // Obtener estadísticas de un usuario
-    /*getUserStats(userId) {
+    getUserStats(userId) {
         const user = this.getUser(userId);
         const xpForNextLevel = this.getXpForLevel(user.level + 1);
         const xpForCurrentLevel = this.getXpForLevel(user.level);
@@ -221,7 +221,7 @@ class EconomySystem {
             xpProgress: xpProgress,
             xpNeeded: Math.max(0, xpNeeded - xpProgress)
         };
-    }*/
+    }
 
     // Calcular XP total necesaria para alcanzar un nivel
     getXpNeededForLevel(level) {
@@ -276,10 +276,10 @@ class EconomySystem {
         let amount = Math.max(100, this.config.dailyAmount + variation);
        
         // Aplicar modificadores de eventos a dinero de daily
-        if (this.events) {
+/*        if (this.events) {
             const mod = this.events.applyMoneyModifiers(userId, amount, 'daily');
             amount = mod.finalAmount;
-        }
+        }*/
 
         user.lastDaily = Date.now();
         user.balance += amount;
