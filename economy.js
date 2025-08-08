@@ -186,8 +186,8 @@ class EconomySystem {
         toUser.balance += amount;
         toUser.stats.totalEarned += amount;*/
 
-        await this.updateUser(fromUserId, updateData);
-        await this.updateUser(toUserId, updateData);
+        /*await this.updateUser(fromUserId, updateData);
+        await this.updateUser(toUserId, updateData);*/
 
         console.log(`💸 Transferencia: ${fromUserId} -> ${toUserId}, ${amount} ${this.config.currencySymbol}`);
         
@@ -496,7 +496,7 @@ async processMessageXp(userId) {
                 baseReward: 250,
                 variation: 150,
                 levelRequirement: 5,
-                failChance: 1.0, // 100% de fallar
+                failChance: 0.1, // 10% de fallar
                 messages: [
                     'Desarrollaste una app exitosa',
                     'Solucionaste un bug crítico',
@@ -623,7 +623,7 @@ async processMessageXp(userId) {
 
         const updateData = {
             lastWork: Date.now(),
-            workCount: user.stats.workCount + 1
+            'stats.workCount': user.stats.workCount + 1
         }
         
 /*        user.lastWork = Date.now();
@@ -635,9 +635,7 @@ async processMessageXp(userId) {
             const penalty = Math.floor(job.baseReward * 0.2); // Pierde 20% del reward base
             
             updateData.balance = Math.max(0, user.balance - penalty);
-            updateData.totalSpent = user.stats.totalSpent + penalty;
-
-            console.log(`Penalty ${penalty}\nLastWork ${updateData.lastWork}\nworkCount ${updateData.workCount}\nBalance ${updateData.balance} TotalSpent ${updateData.totalSpent}`);
+            updateData['stats.totalSpent'] = user.stats.totalSpent + penalty;
 
 /*            user.balance = Math.max(0, user.balance - penalty);
             user.stats.totalSpent += penalty;*/

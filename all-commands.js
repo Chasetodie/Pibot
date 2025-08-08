@@ -696,7 +696,7 @@ class AllCommands {
                 
                 const embed = new EmbedBuilder()
                     .setTitle('⏰ En Cooldown')
-                    .setDescription(`Ya trabajaste como **${job.name}** recientemente`)
+                    .setDescription(`Ya trabajaste como **${job.name}** recientemente, espera un momento para volver a trabajar en otra profesión`)
                     .addFields({
                         name: '🕐 Tiempo restante',
                         value: `**${timeLeft}**`,
