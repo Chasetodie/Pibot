@@ -1,6 +1,8 @@
 const { EmbedBuilder } = require('discord.js');
 require('dotenv').config();
 const admin = require('firebase-admin');
+const fs = require('fs');
+const path = require('path');
 
 class BettingSystem {
     constructor(economySystem) {
@@ -17,7 +19,7 @@ class BettingSystem {
         this.betsCollection = admin.firestore().collection('bets');
     }
 
-/*    // Inicializar Firebase
+    // Inicializar Firebase
     initializeFirebase() {
         try {
             // Verificar que las variables de entorno existan
@@ -33,13 +35,13 @@ class BettingSystem {
                 }),
             });
     
-            console.log('🔥 Firebase inicializado correctamente');
+            console.log('🔥 Firebase inicializado correctamente en bets');
             console.log(`📊 Proyecto: ${process.env.FIREBASE_PROJECT_ID}`);
         } catch (error) {
             console.error('❌ Error inicializando Firebase:', error);
             console.error('💡 Asegúrate de que tu archivo .env esté configurado correctamente');
         }
-    }*/
+    }
 
     // Obtener o crear datos de una apuesta
     async getBet(betId) {
@@ -56,7 +58,7 @@ class BettingSystem {
                     description: "",
                     status: "",
                     createdAt: admin.firestore.FieldValue.serverTimestamp(),
-                    expiresAt: admin.firestore.FieldValue.serverTimestamp() + this.config.betTimeout,
+                    expiresAt: Date.now() + this.config.betTimeout,
                     updatedAt: admin.firestore.FieldValue.serverTimestamp(),
                     channelId: 0
                 };
