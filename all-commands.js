@@ -581,7 +581,9 @@ class AllCommands {
     // Funciones para manejar comandos
 
     async handlePlay(message) {      
-        const query = message.options.getString('cancion');
+        const query = message.content.split(' ').slice(1);
+
+        console.log(query);
         
         // Unirse al canal de voz
         const joinResult = await this.musicBot.joinVoice(message);
