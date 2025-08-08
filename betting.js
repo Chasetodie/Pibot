@@ -165,7 +165,7 @@ class BettingSystem {
             return;
         }
 
-        const idForBet = userId.slice(3).join(' ') + targetUser.id.slice(3).join(' ') + Date.now();
+        const idForBet = userId.slice(9) + targetUser.id.slice(9) + Date.now().toString().slice(7);
         const baseId = userId + targetUser.id + Date.now();
         const betId = await this.getBet(baseId);
 
