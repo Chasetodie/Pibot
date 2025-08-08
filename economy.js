@@ -190,8 +190,8 @@ class EconomySystem {
         toUser.balance += amount;
         toUser.stats.totalEarned += amount;*/
 
-        /*await this.updateUser(fromUserId, updateData);
-        await this.updateUser(toUserId, updateData);*/
+        await this.updateUser(fromUserId, updateDataFrom);
+        await this.updateUser(toUserId, updateDataTo);
 
         console.log(`💸 Transferencia: ${fromUserId} -> ${toUserId}, ${amount} ${this.config.currencySymbol}`);
         console.log(`💸 TotalEarned: ${updateDataTo['stats.totalEarned']} && TotalSpent: ${updateDataFrom['stats.totalSpent']}`);
