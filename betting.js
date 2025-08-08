@@ -19,7 +19,7 @@ class BettingSystem {
         this.betsCollection = admin.firestore().collection('bets');
     }
 
-    // Inicializar Firebase
+/*    // Inicializar Firebase
     initializeFirebase() {
         try {
             // Verificar que las variables de entorno existan
@@ -41,7 +41,7 @@ class BettingSystem {
             console.error('❌ Error inicializando Firebase:', error);
             console.error('💡 Asegúrate de que tu archivo .env esté configurado correctamente');
         }
-    }
+    }*/
 
     // Obtener o crear datos de una apuesta
     async getBet(betId) {
@@ -57,8 +57,8 @@ class BettingSystem {
                     amount: 0,
                     description: "",
                     status: "",
-                    createdAt: admin.firestore.FieldValue.serverTimestamp(),
-                    expiresAt: Date.now() + this.config.betTimeout,
+                    createdAt: 0,
+                    expiresAt: 0,
                     updatedAt: admin.firestore.FieldValue.serverTimestamp(),
                     channelId: 0
                 };
@@ -153,11 +153,11 @@ class BettingSystem {
             return;
         }
 
-        const userActiveBets = await this.getBet(userId);
+/*        const userActiveBets = await this.getBet(userId);
         if (userActiveBets.challenger.length >= this.config.maxActiveBets || userActiveBets.opponent.length >= this.config.maxActiveBets) {
             await message.reply(`❌ Ya tienes ${this.config.maxActiveBets} apuestas activas. Espera a que se resuelvan.`);
             return;
-        }
+        }*/
 
         const description = args.slice(3).join(' ');
         if (description.length > 100) {
@@ -172,7 +172,7 @@ class BettingSystem {
             opponent: targetUser.id,
             amount: amount,
             description: description,
-            status: 'pending',
+            status: "pending",
             createdAt: Date.now(),
             expiresAt: Date.now() + this.config.betTimeout,
             channelId: message.channel.id
