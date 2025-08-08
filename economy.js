@@ -624,7 +624,8 @@ async processMessageXp(userId) {
                 failed: true,
                 message: failMessage,
                 penalty: penalty,
-                newBalance: user.balance,
+                oldBalance: user.balance,
+                newBalance: Math.max(0, user.balance - penalty),
 
                 canWork: canWorkResult.canWork,
                 reason: canWorkResult.reason,
@@ -661,7 +662,8 @@ async processMessageXp(userId) {
             success: true,
             amount: amount,
             message: message,
-            newBalance: user.balance,
+            oldBalance: user.balance,
+            newBalance: user.balance + amount,
             jobName: job.name,
 
             canWork: canWorkResult.canWork,
