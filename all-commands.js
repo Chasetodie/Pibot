@@ -670,7 +670,9 @@ class AllCommands {
         
         // Intentar trabajar
         const result = await this.economy.doWork(message.author.id, jobType);
-        
+
+        console.log(`canWork: ${result.canWork}\nreason: ${result.reason}\nrequiredLevel: ${result.requiredLevel}\ncanWorkResult: ${result.canWorkResult}`);
+
         if (!result.canWork) {
             if (result.reason === 'level_too_low') {
                 const embed = new EmbedBuilder()
@@ -678,7 +680,7 @@ class AllCommands {
                     .setDescription(`Necesitas ser **Nivel ${result.requiredLevel}** para este trabajo`)
                     .addFields({
                         name: '📊 Tu Nivel Actual',
-                        value: `**${this.economy.getUser(message.author.id).level}**`,
+                        value: `**${await this.economy.getUser(message.author.id).level}**`,
                         inline: true
                     })
                     .setColor('#dc3545');
