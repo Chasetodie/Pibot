@@ -627,11 +627,11 @@ class AllCommands {
         const args = message.content.split(' ');
         const jobType = args[1]?.toLowerCase();
         
-        const jobs = this.economy.getWorkJobs();
+        const jobs = await this.economy.getWorkJobs();
         
         // Si no especificó trabajo, mostrar lista
         if (!jobType) {
-            const user = this.economy.getUser(message.author.id);
+            const user = await this.economy.getUser(message.author.id);
             
             const embed = new EmbedBuilder()
                 .setTitle('🛠️ Trabajos Disponibles')
@@ -670,7 +670,7 @@ class AllCommands {
         }
         
         // Intentar trabajar
-        const result = this.economy.doWork(message.author.id, jobType);
+        const result = await this.economy.doWork(message.author.id, jobType);
         
         if (!result.canWork) {
             if (result.reason === 'level_too_low') {
