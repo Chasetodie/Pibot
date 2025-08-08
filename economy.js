@@ -603,7 +603,7 @@ async processMessageXp(userId) {
             updateData.balance = Math.max(0, user.balance - penalty);
             updateData.totalSpent = user.stats.totalSpent + penalty;
 
-            console.log(`LastWork ${updateData.lastWork}\nworkCount ${updateData.workCount}\nBalance ${updateData.balance} TotalSpent ${updateData.totalSpent}`);
+            console.log(`Amount ${amount}\nLastWork ${updateData.lastWork}\nworkCount ${updateData.workCount}\nBalance ${updateData.balance} TotalSpent ${updateData.totalSpent}`);
 
 /*            user.balance = Math.max(0, user.balance - penalty);
             user.stats.totalSpent += penalty;*/
@@ -635,7 +635,7 @@ async processMessageXp(userId) {
         updateData.balance = user.balance + amount;
         updateData['stats.totalEarned'] = (user.stats.totalEarned || 0) + amount;
 
-        console.log(`Balance ${updateData.balance}\nStats.TotalEarned ${updateData['stats.totalEarned']}`);
+        console.log(`Amount ${amount}\nLastWork ${updateData.lastWork}\nworkCount ${updateData.workCount}\nBalance ${updateData.balance}\nStats.TotalEarned ${updateData['stats.totalEarned']}`);
 
 /*        user.balance += amount;
         user.stats.totalEarned += amount;*/
