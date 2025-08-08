@@ -307,7 +307,7 @@ class AllCommands {
             .setDescription(`Has enviado **${this.formatNumber(amount)}** ${this.economy.config.currencySymbol} a ${targetUser}`)
             .addFields(
                 { name: '💰 Balance Anterior', value: `${this.formatNumber(userBalance.balance)} ${this.economy.config.currencySymbol}`, inline: true },
-                { name: '💰 Tu Balance Actual', value: `${this.formatNumber(result.balance)} ${this.economy.config.currencySymbol}`, inline: true },
+                { name: '💰 Tu Balance Actual', value: `${this.formatNumber(result.fromBalance)} ${this.economy.config.currencySymbol}`, inline: true },
                 { name: '💸 Dinero Enviado', value: `${this.formatNumber(amount)} ${this.economy.config.currencySymbol}`, inline: true },
                 { name: '💰 Balance Anterior del Destinatario', value: `${this.formatNumber(otherUserBalance.balance)} ${this.economy.config.currencySymbol}`, inline: true },
                 { name: '💰 Balance Actual del Destinatario', value: `${this.formatNumber(result.toBalance)} ${this.economy.config.currencySymbol}`, inline: true }
