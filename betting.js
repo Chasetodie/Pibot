@@ -165,7 +165,8 @@ class BettingSystem {
             return;
         }
 
-        const betId = await this.getBet(userId + targetUser.id + Date.now());
+        const betId = userId + targetUser.id + Date.now();
+
         const betData = {
             id: betId,
             challenger: userId,
@@ -190,7 +191,7 @@ class BettingSystem {
                 { name: '⏰ Expira en', value: `${this.config.betTimeout / 60000} minutos`, inline: false }
             )
             .setColor('#FFA500')
-            .setFooter({ text: `ID: ${betId}` })
+            .setFooter({ text: `ID: ${betData.id}` })
             .setTimestamp();
 
         await message.reply({
