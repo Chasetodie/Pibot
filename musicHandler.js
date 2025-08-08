@@ -601,8 +601,10 @@ class MusicHandler {
     async processCommand(message) {
         if (message.author.bot) return;
 
-        const args = message.content.trim().split(/ +/g);
+        const args = message.content.slice(3).trim().split(/ +/);
         const command = args[0].toLowerCase();
+
+        console.log(`🎵 Comando recibido: ${command} | Args: ${args.join(' ')} | Usuario: ${message.author.tag}`);
 
         try {
             switch (command) {
