@@ -1,8 +1,9 @@
 const { EmbedBuilder } = require('discord.js');
 
 class AllCommands {
-    constructor(economySystem/*, achievementsSystem, shopSystem, bettingSystem, eventsSystem*/) {
+    constructor(economySystem, musicHandler/*, achievementsSystem, shopSystem, bettingSystem, eventsSystem*/) {
         this.economy = economySystem;
+        this.musicBot = musicHandler;
 /*        this.achievements = achievementsSystem;
         this.shop = shopSystem;
         this.betting = bettingSystem;
@@ -579,81 +580,79 @@ class AllCommands {
 
     // Funciones para manejar comandos
 
-    async handlePlay(interaction) {
-        await interaction.deferReply();
-        
-        const query = interaction.options.getString('cancion');
+    async handlePlay(message) {      
+        const query = message.options.getString('cancion');
         
         // Unirse al canal de voz
-        const joinResult = await musicHandler.joinVoice(interaction);
+        const joinResult = await this.musicBot.joinVoice(message);
         if (!joinResult.success) {
-            return await interaction.editReply(joinResult.message);
+            return await message.editReply(joinResult.message);
         }
         
         // Añadir a la cola
-        const queueResult = await musicHandler.addToQueue(interaction, query);
+        const queueResult = await this.musicBot.addToQueue(message, query);
         if (!queueResult.success) {
-            return await interaction.editReply(queueResult.message);
+            return await message.editReply(queueResult.message);
         }
         
         // Si es la primera canción, reproducir inmediatamente
-        const queue = musicHandler.queues.get(interaction.guild.id);
+        const queue = this.musicBot.queues.get(message.guild.id);
         const isFirst = queue.length === 1;
         
         if (isFirst) {
-            const playResult = await musicHandler.play(interaction.guild.id);
+            const playResult = await this.musicBot.play(message.guild.id);
             if (playResult.success) {
-                const embed = musicHandler.createSongEmbed(playResult.song, 'nowPlaying');
-                await interaction.editReply({ embeds: [embed] });
+                const embed = this.musicBot.createSongEmbed(playResult.song, 'nowPlaying');
+                await message.editReply({ embeds: [embed] });
             } else {
-                await interaction.editReply('❌ Error al reproducir la canción.');
+                await message.editReply('❌ Error al reproducir la canción.');
             }
         } else {
-            const embed = musicHandler.createSongEmbed(queueResult.song, 'added');
+            const embed = this.musicBot.createSongEmbed(queueResult.song, 'added');
             embed.addFields({
                 name: '📋 Posición en cola',
                 value: `${queue.length}`,
                 inline: true
             });
-            await interaction.editReply({ embeds: [embed] });
+            await message.editReply({ embeds: [embed] });
         }
     }
 
-    async handleSkip(interaction) {
-        const result = musicHandler.skip(interaction.guild.id);
+    async handleSkip(message) {
+        const result = this.musicBot.skip(message.guild.id);
         
         const embed = new EmbedBuilder()
             .setColor(result.success ? '#FFA500' : '#FF0000')
             .setTitle(result.success ? '⏭️ Canción saltada' : '❌ Error')
             .setDescription(result.message);
         
-        await interaction.reply({ embeds: [embed] });
+        await message.reply({ embeds: [embed] });
     }
 
-    async handlePause(interaction) {
-        const result = musicHandler.pause(interaction.guild.id);
+    async handlePause(message) {
+        const result = this.musicBot.pause(message.guild.id);
         
         const embed = new EmbedBuilder()
             .setColor(result.success ? '#FFA500' : '#FF0000')
             .setTitle(result.success ? '⏸️ Música pausada' : '❌ Error')
             .setDescription(result.message);
         
-        await interaction.reply({ embeds: [embed] });
+        await message.reply({ embeds: [embed] });
     }
 
-    async handleResume(interaction) {
-        const result = musicHandler.resume(interaction.guild.id);
+    async handleResume(message) {
+        const result = this.musicBot.resume(message.guild.id);
         
         const embed = new EmbedBuilder()
             .setColor(result.success ? '#00FF00' : '#FF0000')
             .setTitle(result.success ? '▶️ Música reanudada' : '❌ Error')
             .setDescription(result.message);
         
-        await interaction.reply({ embeds: [embed] });
+        await message.reply({ embeds: [embed] });
     }
 
-    async handleQueue(interaction) {
-        const result = musicHandler.showQueue(interaction.guild.id);
+    async handleQueue(message) {
+        const result = this.musicBot.showQueue(message.guild.id);
         
         if (!result.success) {
             const embed = new EmbedBuilder()
@@ -661,7 +660,7 @@ class AllCommands {
                 .setTitle('📋 Cola de reproducción')
                 .setDescription(result.message);
             
-            return await interaction.reply({ embeds: [embed] });
+            return await message.reply({ embeds: [embed] });
         }
         
         const embed = new EmbedBuilder()
@@ -692,11 +691,11 @@ class AllCommands {
             });
         }
         
-        await interaction.reply({ embeds: [embed] });
+        await message.reply({ embeds: [embed] });
     }
 
-    async handleNowPlaying(interaction) {
-        const nowPlaying = musicHandler.nowPlaying.get(interaction.guild.id);
+    async handleNowPlaying(message) {
+        const nowPlaying = this.musicBot.nowPlaying.get(message.guild.id);
         
         if (!nowPlaying) {
             const embed = new EmbedBuilder()
@@ -704,43 +703,41 @@ class AllCommands {
                 .setTitle('❌ Error')
                 .setDescription('No hay música reproduciéndose.');
             
-            return await interaction.reply({ embeds: [embed] });
+            return await message.reply({ embeds: [embed] });
         }
         
-        const embed = musicHandler.createSongEmbed(nowPlaying, 'nowPlaying');
-        await interaction.reply({ embeds: [embed] });
+        const embed = this.musicBot.createSongEmbed(nowPlaying, 'nowPlaying');
+        await message.reply({ embeds: [embed] });
     }
 
-    async handleClear(interaction) {
-        const result = musicHandler.clearQueue(interaction.guild.id);
+    async handleClear(message) {
+        const result = this.musicBot.clearQueue(message.guild.id);
         
         const embed = new EmbedBuilder()
             .setColor('#FFA500')
             .setTitle('🗑️ Cola limpiada')
             .setDescription(result.message);
         
-        await interaction.reply({ embeds: [embed] });
+        await message.reply({ embeds: [embed] });
     }
 
-    async handleStop(interaction) {
-        const result = musicHandler.disconnect(interaction.guild.id);
+    async handleStop(message) {
+        const result = this.musicBot.disconnect(message.guild.id);
         
         const embed = new EmbedBuilder()
             .setColor('#FF0000')
             .setTitle('⏹️ Música detenida')
             .setDescription(result.message);
         
-        await interaction.reply({ embeds: [embed] });
+        await message.reply({ embeds: [embed] });
     }
 
-    async handleSearch(interaction) {
-        await interaction.deferReply();
-        
-        const query = interaction.options.getString('query');
-        const results = await musicHandler.searchDeezer(query, 5);
+    async handleSearch(message) {
+        const query = message.options.getString('query');
+        const results = await this.musicBot.searchDeezer(query, 5);
         
         if (results.length === 0) {
-            return await interaction.editReply('❌ No se encontraron resultados.');
+            return await message.editReply('❌ No se encontraron resultados.');
         }
         
         const embed = new EmbedBuilder()
@@ -751,7 +748,7 @@ class AllCommands {
         results.forEach((track, index) => {
             embed.addFields({
                 name: `${index + 1}. ${track.title}`,
-                value: `👨‍🎤 **Artista:** ${track.artist}\n💿 **Álbum:** ${track.album}\n⏱️ **Duración:** ${musicHandler.formatDuration(track.duration)}`,
+                value: `👨‍🎤 **Artista:** ${track.artist}\n💿 **Álbum:** ${track.album}\n⏱️ **Duración:** ${this.musicBot.formatDuration(track.duration)}`,
                 inline: true
             });
         });
@@ -760,7 +757,7 @@ class AllCommands {
             text: 'Usa /play <nombre de canción> para reproducir una canción'
         });
         
-        await interaction.editReply({ embeds: [embed] });
+        await message.editReply({ embeds: [embed] });
     }    
 
 
