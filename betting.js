@@ -167,6 +167,10 @@ class BettingSystem {
 
         const idForBet = userId + targetUser + Date.now();
         const baseId = userId.slice(9) + targetUser.id.slice(9);
+        
+        //Create The Bet
+            await this.getBet(idForBet);
+        //Create The Bet
 
         const betData = {
             id: idForBet,
