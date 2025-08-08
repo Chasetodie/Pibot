@@ -580,14 +580,14 @@ class AllCommands {
 
     // Funciones para manejar comandos
     
-    async handlePlay(message, args) {
+    async handlePlay(message, args) {  
         if (args.length === 0) {
             const embed = new EmbedBuilder()
                 .setColor('#FF6B35')
                 .setTitle('❌ Error')
-                .setDescription(`Uso: mon!play <nombre de la canción>`)
+                .setDescription(`Uso: \`${PREFIX}play <nombre de la canción>\``)
                 .addFields(
-                    { name: 'Ejemplos:', value: `mon!play despacito\n``mon!p bad bunny safaera` }
+                    { name: 'Ejemplos:', value: `\`${PREFIX}play despacito\`\n\`${PREFIX}p bad bunny safaera\`` }
                 );
             return message.reply({ embeds: [embed] });
         }
@@ -601,50 +601,62 @@ class AllCommands {
     
         const query = args.join(' ');
         
-        // Unirse al canal de voz
-        const joinResult = await this.musicBot.joinVoice(message);
-        if (!joinResult.success) {
-            const errorEmbed = new EmbedBuilder()
-                .setColor('#FF0000')
-                .setTitle('❌ Error')
-                .setDescription(joinResult.message);
-            return loadingMsg.edit({ embeds: [errorEmbed] });
-        }
-        
-        // Añadir a la cola
-        const queueResult = await this.musicBot.addToQueue(message, query);
-        if (!queueResult.success) {
-            const errorEmbed = new EmbedBuilder()
-                .setColor('#FF0000')
-                .setTitle('❌ Error')
-                .setDescription(queueResult.message);
-            return loadingMsg.edit({ embeds: [errorEmbed] });
-        }
-        
-        // Si es la primera canción, reproducir inmediatamente
-        const queue = this.musicBot.queues.get(message.guild.id);
-        const isFirst = queue.length === 1;
-        
-        if (isFirst) {
-            const playResult = await this.musicBot.play(message.guild.id);
-            if (playResult.success) {
-                const embed = this.musicBot.createSongEmbed(playResult.song, 'nowPlaying');
-                await loadingMsg.edit({ embeds: [embed] });
-            } else {
+        try {
+            // Unirse al canal de voz
+            console.log('🔗 Intentando unirse al canal de voz...');
+            const joinResult = await this.musicBot.joinVoice(message);
+            if (!joinResult.success) {
                 const errorEmbed = new EmbedBuilder()
                     .setColor('#FF0000')
                     .setTitle('❌ Error')
-                    .setDescription('Error al reproducir la canción.');
-                await loadingMsg.edit({ embeds: [errorEmbed] });
+                    .setDescription(joinResult.message);
+                return loadingMsg.edit({ embeds: [errorEmbed] });
             }
-        } else {
-            const embed = this.musicBot.createSongEmbed(queueResult.song, 'added');
-            embed.addFields({
-                name: '📋 Posición en cola',
-                value: `${queue.length}`,
-                inline: true
-            });
-            await loadingMsg.edit({ embeds: [embed] });
+            
+            console.log('🎵 Añadiendo a la cola...');
+            // Añadir a la cola
+            const queueResult = await this.musicBot.addToQueue(message, query);
+            if (!queueResult.success) {
+                const errorEmbed = new EmbedBuilder()
+                    .setColor('#FF0000')
+                    .setTitle('❌ Error')
+                    .setDescription(queueResult.message);
+                return loadingMsg.edit({ embeds: [errorEmbed] });
+            }
+            
+            // Si es la primera canción, reproducir inmediatamente
+            const queue = this.musicBot.queues.get(message.guild.id);
+            const isFirst = queue.length === 1;
+            
+            if (isFirst) {
+                console.log('▶️ Reproduciendo primera canción...');
+                const playResult = await this.musicBot.play(message.guild.id);
+                if (playResult.success) {
+                    const embed = this.musicBot.createSongEmbed(playResult.song, 'nowPlaying');
+                    await loadingMsg.edit({ embeds: [embed] });
+                } else {
+                    const errorEmbed = new EmbedBuilder()
+                        .setColor('#FF0000')
+                        .setTitle('❌ Error')
+                        .setDescription('Error al reproducir la canción.');
+                    await loadingMsg.edit({ embeds: [errorEmbed] });
+                }
+            } else {
+                const embed = this.musicBot.createSongEmbed(queueResult.song, 'added');
+                embed.addFields({
+                    name: '📋 Posición en cola',
+                    value: `${queue.length}`,
+                    inline: true
+                });
+                await loadingMsg.edit({ embeds: [embed] });
+            }
+        } catch (error) {
+            console.error('Error en handlePlay:', error);
+            const errorEmbed = new EmbedBuilder()
+                .setColor('#FF0000')
+                .setTitle('❌ Error')
+                .setDescription(`Error procesando la canción: ${error.message}`);
+            await loadingMsg.edit({ embeds: [errorEmbed] });
         }
     }
     
