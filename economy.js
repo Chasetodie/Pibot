@@ -191,11 +191,12 @@ class EconomySystem {
         await this.updateUser(toUserId, updateData);*/
 
         console.log(`💸 Transferencia: ${fromUserId} -> ${toUserId}, ${amount} ${this.config.currencySymbol}`);
-        
-        return { 
-            success: true, 
-            fromBalance: fromUser.balance, 
-            toBalance: toUser.balance 
+        console.log(`💸 TotalEarned: ${updateData['stats.totalEarned']} && TotalSpent: ${updateData['stats.totalSpent']}`);
+
+        return {
+            success: true,
+            fromBalance: balance,
+            toBalanceF: toBalance
         };
     }
 
