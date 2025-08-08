@@ -165,10 +165,12 @@ class BettingSystem {
             return;
         }
 
-        const betId = await this.getBet(userId.slice(3).join(' ') + targetUser.id.slice(3).join(' '));
+        const idForBet = userId.slice(3).join(' ') + targetUser.id.slice(3).join(' ') + Date.now();
+        const baseId = userId + targetUser.id + Date.now();
+        const betId = await this.getBet(baseId);
 
         const betData = {
-            id: userId + targetUser.id + Date.now(),
+            id: idForBet,
             challenger: userId,
             opponent: targetUser.id,
             amount: amount,
@@ -179,7 +181,7 @@ class BettingSystem {
             channelId: message.channel.id
         };
 
-        this.updateBet(userId.slice(3).join(' ') + targetUser.id.slice(3).join(' '), betData)
+        this.updateBet(baseId, betData)
 
         const embed = new EmbedBuilder()
             .setTitle('🎲 Nueva Apuesta Creada')
