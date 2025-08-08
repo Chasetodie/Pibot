@@ -282,17 +282,18 @@ class AllCommands {
         
         // Realizar transferencia
         const result = await this.economy.transferMoney(message.author.id, targetUser.id, amount);
+        const userBalance = await this.economy.getUser(message.author.id);
+        const otherUserBalance = await this.economy.getUser(targetUser);
         
         if (!result.success) {
             if (result.reason === 'insufficient_funds') {
-                const userBalance = await this.economy.getUser(message.author.id).balance;
                 const embed = new EmbedBuilder()
                     .setTitle('❌ Fondos Insuficientes')
                     .setDescription(`No tienes suficientes π-b Coins para transferir.`)
                     .addFields(
-                        { name: '💰 Tu Balance', value: `${this.formatNumber(userBalance)} ${this.economy.config.currencySymbol}`, inline: true },
+                        { name: '💰 Tu Balance', value: `${this.formatNumber(userBalance.balance)} ${this.economy.config.currencySymbol}`, inline: true },
                         { name: '💸 Intentaste Enviar', value: `${this.formatNumber(amount)} ${this.economy.config.currencySymbol}`, inline: true },
-                        { name: '❌ Te Faltan', value: `${this.formatNumber(amount - userBalance)} ${this.economy.config.currencySymbol}`, inline: true }
+                        { name: '❌ Te Faltan', value: `${this.formatNumber(amount - userBalance.balance)} ${this.economy.config.currencySymbol}`, inline: true }
                     )
                     .setColor('#FF6B6B');
                 
@@ -305,8 +306,11 @@ class AllCommands {
             .setTitle('✅ Transferencia Exitosa')
             .setDescription(`Has enviado **${this.formatNumber(amount)}** ${this.economy.config.currencySymbol} a ${targetUser}`)
             .addFields(
-                { name: '💰 Tu Nuevo Balance', value: `${this.formatNumber(result.fromBalance)} ${this.economy.config.currencySymbol}`, inline: true },
-                { name: '💰 Balance de Destino', value: `${this.formatNumber(result.toBalance)} ${this.economy.config.currencySymbol}`, inline: true }
+                { name: '💰 Balance Anterior', value: `${this.formatNumber(userBalance.balance)} ${this.economy.config.currencySymbol}`, inline: true },
+                { name: '💰 Tu Balance Actual', value: `${this.formatNumber(result.fromBalance)} ${this.economy.config.currencySymbol}`, inline: true },
+                { name: '💸 Dinero Enviado', value: `${this.formatNumber(amount)} ${this.economy.config.currencySymbol}`, inline: true },
+                { name: '💰 Balance Anterior del Destinatario', value: `${this.formatNumber(otherUserBalance.balance)} ${this.economy.config.currencySymbol}`, inline: true },
+                { name: '💰 Balance Actual del Destinatario', value: `${this.formatNumber(result.toBalance)} ${this.economy.config.currencySymbol}`, inline: true }
             )
             .setColor('#00FF00')
             .setTimestamp();
@@ -692,11 +696,11 @@ class AllCommands {
             
             if (result.reason === 'cooldown') {
                 const timeLeft = this.formatTimeLeft(result.timeLeft);
-                const job = jobs[jobType];
+                const userJob = await this.economy.getUser(message.author.id);
                 
                 const embed = new EmbedBuilder()
                     .setTitle('⏰ En Cooldown')
-                    .setDescription(`Ya trabajaste como **${job.name}** recientemente, espera un momento para volver a trabajar en otra profesión`)
+                    .setDescription(`Ya trabajaste como **${userJob.lastNameWork}** recientemente, espera un momento para volver a trabajar en otra profesión`)
                     .addFields({
                         name: '🕐 Tiempo restante',
                         value: `**${timeLeft}**`,

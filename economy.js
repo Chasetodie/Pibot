@@ -65,6 +65,7 @@ class EconomySystem {
                     totalXp: 0,
                     lastDaily: 0,
                     lastWork: 0,
+                    lastNameWork: "",
                     messagesCount: 0,
                     items: {},
                     stats: {
@@ -636,6 +637,7 @@ async processMessageXp(userId) {
             
             updateData.balance = Math.max(0, user.balance - penalty);
             updateData['stats.totalSpent'] = user.stats.totalSpent + penalty;
+            updateData.lastNameWork = job.name; // Para mostrar en el embed el nombre del trabajo hecho
 
 /*            user.balance = Math.max(0, user.balance - penalty);
             user.stats.totalSpent += penalty;*/
@@ -673,6 +675,7 @@ async processMessageXp(userId) {
         
         updateData.balance = user.balance + amount;
         updateData['stats.totalEarned'] = (user.stats.totalEarned || 0) + amount;
+        updateData.lastNameWork = job.name; // Para mostrar en el embed el nombre del trabajo hecho
 
         console.log(`Amount ${amount}\nLastWork ${updateData.lastWork}\nworkCount ${updateData.workCount}\nBalance ${updateData.balance}\nStats.TotalEarned ${updateData['stats.totalEarned']}`);
 
