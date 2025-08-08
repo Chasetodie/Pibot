@@ -72,7 +72,8 @@ class EconomySystem {
                         totalEarned: 0, // Incluir los iniciales
                         totalSpent: 0,
                         dailyClaims: 0,
-                        workCount: 0
+                        workCount: 0,
+                        gamesPlayed: 0
                     },
                     createdAt: admin.firestore.FieldValue.serverTimestamp(),
                     updatedAt: admin.firestore.FieldValue.serverTimestamp()

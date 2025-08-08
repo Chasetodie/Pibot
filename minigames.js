@@ -143,6 +143,10 @@ class MinigamesSystem {
         // Establecer cooldown
         this.setCooldown(userId, 'coinflip');
 
+        const updateData = {
+            'stats.gamesPlayed': user.stats.gamesPlayed + 1
+        }
+
         // Crear embed del resultado
         const embed = new EmbedBuilder()
             .setTitle('🪙 Coinflip - Resultado')
@@ -154,6 +158,7 @@ class MinigamesSystem {
             const profit = winAmount - betAmount;
             
             await this.economy.addMoney(userId, profit, 'coinflip_win');
+            await this.updateUser(userId, updateData);
             
             embed.setDescription(`🎉 **¡GANASTE!**`)
                 .addFields(
@@ -165,7 +170,8 @@ class MinigamesSystem {
                 );
         } else {
             await this.economy.removeMoney(userId, betAmount, 'coinflip_loss');
-            
+            await this.updateUser(userId, updateData);
+
             embed.setDescription(`💸 **Perdiste...**`)
                 .addFields(
                     { name: '🪙 Resultado', value: result === 'cara' ? '🟡 Cara' : '⚪ Cruz', inline: true },
@@ -254,6 +260,10 @@ class MinigamesSystem {
 
         // Establecer cooldown
         this.setCooldown(userId, 'dice');
+        
+        const updateData = {
+            'stats.gamesPlayed': user.stats.gamesPlayed + 1
+        }
 
         // Emojis del dado
         const diceEmojis = ['', '⚀', '⚁', '⚂', '⚃', '⚄', '⚅'];
@@ -273,6 +283,7 @@ class MinigamesSystem {
             const profit = winAmount - betAmount;
             
             await this.economy.addMoney(userId, profit, 'dice_win');
+            await this.updateUser(userId, updateData);
             
             embed.setDescription(`🎉 **¡GANASTE!**`)
                 .addFields(
@@ -283,6 +294,7 @@ class MinigamesSystem {
                 );
         } else {
             await this.economy.removeMoney(userId, betAmount, 'dice_loss');
+            await this.updateUser(userId, updateData);
             
             embed.setDescription(`💸 **Perdiste...**`)
                 .addFields(
