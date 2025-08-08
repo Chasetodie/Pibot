@@ -675,13 +675,13 @@ class AllCommands {
 
         if (!result.canWork) {
             if (result.reason === 'level_too_low') {
-                const userLevel = await this.economy.getUser(message.author.id).level;
+                const userLevel = await this.economy.getUser(message.author.id);
                 const embed = new EmbedBuilder()
                     .setTitle('🔒 Nivel Insuficiente')
                     .setDescription(`Necesitas ser **Nivel ${result.requiredLevel}** para este trabajo`)
                     .addFields({
                         name: '📊 Tu Nivel Actual',
-                        value: `**${userLevel}**`,
+                        value: `**${userLevel.level}**`,
                         inline: true
                     })
                     .setColor('#dc3545');

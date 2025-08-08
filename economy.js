@@ -584,6 +584,7 @@ async processMessageXp(userId) {
                 canWork: canWorkResult.canWork,
                 reason: canWorkResult.reason,
                 requiredLevel: canWorkResult.requiredLevel,
+                timeLeft: canWorkResult.timeLeft || 0, // Solo si es cooldown
                 canWorkResult: canWorkResult               
             }; 
         }
@@ -628,6 +629,7 @@ async processMessageXp(userId) {
                 canWork: canWorkResult.canWork,
                 reason: canWorkResult.reason,
                 requiredLevel: canWorkResult.requiredLevel,
+                timeLeft: canWorkResult.timeLeft || 0, // Solo si es cooldown
                 canWorkResult: canWorkResult  
             };
         }
@@ -665,6 +667,7 @@ async processMessageXp(userId) {
             canWork: canWorkResult.canWork,
             reason: canWorkResult.reason,
             requiredLevel: canWorkResult.requiredLevel,
+            timeLeft: canWorkResult.timeLeft || 0, // Solo si es cooldown
             canWorkResult: canWorkResult               
         };
     }
