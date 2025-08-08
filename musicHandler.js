@@ -679,8 +679,10 @@ class MusicHandler {
             .setDescription(`Término: **${args.join(' ')}**`);
         
         const loadingMsg = await message.reply({ embeds: [loadingEmbed] });
-    
+
+        args = message.content.slice(8).trim().split(/ +/);
         const query = args.join(' ');
+        console.log(`🎵 Search Args: ${args.join(' ')} | Usuario: ${message.author.tag}`);
         const results = await this.searchDeezer(query, 5);
         
         if (results.length === 0) {
