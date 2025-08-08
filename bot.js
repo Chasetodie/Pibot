@@ -5,8 +5,8 @@ const path = require('path');
 const CommandHandler = require('./commands'); // Importar el manejador de comandos
 const EconomySystem = require('./economy'); // Importar el sistema de economia
 const MusicHandler = require('./musicHandler.js'); // Importar el bot de música
-/*const MinigamesSystem = require('./minigames'); // Importar el sistema de minijuegos
-const AchievementsSystem = require('./achievements');
+const MinigamesSystem = require('./minigames'); // Importar el sistema de minijuegos
+/*const AchievementsSystem = require('./achievements');
 const ShopSystem = require('./shop');
 const BettingSystem = require('./betting');
 const EventsSystem = require('./events');*/
@@ -75,10 +75,10 @@ const economy = new EconomySystem();
 //Crear instancia del bot de música
 const musicBot = new MusicHandler();
 
-/*//Crear instancia del sistema de Minijuegos
+//Crear instancia del sistema de Minijuegos
 const minigames = new MinigamesSystem(economy);
 
-//Instancia de sistemas extra
+/*//Instancia de sistemas extra
 const achievements = new AchievementsSystem(economy);
 const shop = new ShopSystem(economy);
 const events = new EventsSystem(economy);
@@ -410,8 +410,8 @@ client.on('messageCreate', async (message) => {
     // Procesar comandos de música
     await musicBot.processCommand(message);
     
-/*    //Procesar comandos de minijuegos
-    await minigames.processCommand(message);*/
+    //Procesar comandos de minijuegos
+    await minigames.processCommand(message);
     
     // Luego procesar comandos normales (como !contadores, !reset, etc.)
     await commandHandler.processCommand(message);
