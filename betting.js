@@ -50,8 +50,8 @@ class BettingSystem {
                 // Crear nueva apuesta
                 const newBet = {
                     id: betId,
-                    challenger: userId,
-                    opponent: targetUser.id,
+                    challenger: 0,
+                    opponent: 0,
                     amount: 0,
                     description: "",
                     status: 'pending',
