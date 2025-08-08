@@ -109,8 +109,8 @@ class MusicHandler {
     }
 
     // Unirse al canal de voz
-    async joinVoice(interaction) {
-        const member = interaction.member;
+    async joinVoice(message) {
+        const member = message.member;
         const voiceChannel = member.voice.channel;
 
         if (!voiceChannel) {
@@ -120,26 +120,26 @@ class MusicHandler {
         try {
             const connection = joinVoiceChannel({
                 channelId: voiceChannel.id,
-                guildId: interaction.guild.id,
-                adapterCreator: interaction.guild.voiceAdapterCreator,
+                guildId: message.guild.id,
+                adapterCreator: message.guild.voiceAdapterCreator,
             });
 
-            this.connections.set(interaction.guild.id, connection);
+            this.connections.set(message.guild.id, connection);
             
             // Crear player si no existe
-            if (!this.players.has(interaction.guild.id)) {
+            if (!this.players.has(message.guild.id)) {
                 const player = createAudioPlayer();
-                this.players.set(interaction.guild.id, player);
+                this.players.set(message.guild.id, player);
                 connection.subscribe(player);
 
                 // Manejar eventos del player
                 player.on(AudioPlayerStatus.Idle, () => {
-                    this.playNext(interaction.guild.id);
+                    this.playNext(message.guild.id);
                 });
 
                 player.on('error', (error) => {
                     console.error('Error en el reproductor:', error);
-                    this.playNext(interaction.guild.id);
+                    this.playNext(message.guild.id);
                 });
             }
 
@@ -151,7 +151,7 @@ class MusicHandler {
     }
 
     // Añadir canción a la cola
-    async addToQueue(interaction, query) {
+    async addToQueue(message, query) {
         // Buscar en Deezer
         const deezerResults = await this.searchDeezer(query, 1);
         
@@ -172,12 +172,12 @@ class MusicHandler {
         const song = {
             deezer: deezerTrack,
             soundcloud: soundcloudTrack,
-            requestedBy: interaction.user,
+            requestedBy: message.author,
             url: soundcloudTrack.permalink_url
         };
 
         // Añadir a la cola
-        const guildId = interaction.guild.id;
+        const guildId = message.guild.id;
         if (!this.queues.has(guildId)) {
             this.queues.set(guildId, []);
         }
