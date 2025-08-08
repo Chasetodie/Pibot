@@ -945,7 +945,7 @@ class AllCommands {
 /*                // Eventos
                 { name: '🎉 Eventos', value: '`mon!events` - Ver eventos activos', inline: false },*/
                 // Musica
-                { name: '🎵 Música', value: '`mon!play <url>` - Reproducir música\n`mon!skip` - Saltar canción actual\n`mon!stop` - Detener reproducción\n`mon!pause` - Pausar reproducción\n`mon!resume` - Reanudar reproducción\n`mon!queue` - Ver cola de reproducción\n`mon!volume` - Ajustar volumen\n`mon!loop` - Repetir canción actual\n`mon!nowplaying` - Ver canción actual\n`mon!clear` - Limpiar cola de reproducción', inline: false }
+                { name: '🎵 Música', value: '`mon!play <url>` - Reproducir música\n`mon!skip` - Saltar canción actual\n`mon!stop` - Detener reproducción\n`mon!pause` - Pausar reproducción\n`mon!resume` - Reanudar reproducción\n`mon!queue` - Ver cola de reproducción\n`mon!search` - Busca una canción junto a sus datos\n`mon!nowplaying` - Ver canción actual\n`mon!clearmusic` - Limpiar cola de reproducción', inline: false }
             )
             .setFooter({ text: 'Usa los comandos para interactuar con el bot.' })
             .setTimestamp();
