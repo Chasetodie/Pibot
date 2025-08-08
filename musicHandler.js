@@ -649,6 +649,9 @@ class MusicHandler {
                 case 'mon!search':
                     await this.handleSearch(message, args);
                     break;
+                default:
+                    break;
+            }
         } catch (error) {
             console.error('❌ Error procesando comando:', error);
             await message.reply('❌ Ocurrió un error al procesar el comando. Intenta de nuevo.');
