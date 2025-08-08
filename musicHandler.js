@@ -1,6 +1,5 @@
 const { joinVoiceChannel, createAudioPlayer, createAudioResource, AudioPlayerStatus, VoiceConnectionStatus } = require('@discordjs/voice');
 const { EmbedBuilder } = require('discord.js');
-const ytdl = require('ytdl-core');
 const scdl = require('soundcloud-downloader').default;
 const axios = require('axios');
 
