@@ -1,4 +1,4 @@
-const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
+const { EmbedBuilder } = require('discord.js');
 
 class BettingSystem {
     constructor(economySystem) {
@@ -16,7 +16,7 @@ class BettingSystem {
     // Crear apuesta
     async createBet(message, args) {
         const userId = message.author.id;
-        const user = this.economy.getUser(userId);
+        const user = await this.economy.getUser(userId);
 
         if (args.length < 4) {
             await message.reply({ embeds: [this.getUsageEmbed()] });
@@ -40,7 +40,7 @@ class BettingSystem {
             return;
         }
 
-        const targetUserData = this.economy.getUser(targetUser.id);
+        const targetUserData = await this.economy.getUser(targetUser.id);
         if (targetUserData.balance < amount) {
             await message.reply(`❌ ${targetUser.displayName} no tiene suficientes π-b Coins para esta apuesta.`);
             return;
@@ -88,41 +88,12 @@ class BettingSystem {
             .setFooter({ text: `ID: ${betId}` })
             .setTimestamp();
 
-        const row = new ActionRowBuilder()
-            .addComponents(
-                new ButtonBuilder()
-                    .setCustomId(`accept_bet_${betId}`)
-                    .setLabel('✅ Aceptar')
-                    .setStyle(ButtonStyle.Success),
-                new ButtonBuilder()
-                    .setCustomId(`decline_bet_${betId}`)
-                    .setLabel('❌ Rechazar')
-                    .setStyle(ButtonStyle.Danger)
-            );
-
         await message.reply({
             content: `${targetUser}, tienes una nueva apuesta!`,
-            embeds: [embed],
-            components: [row]
+            embeds: [embed]
         });
 
         setTimeout(() => this.expireBet(betId), this.config.betTimeout);
-    }
-
-    // Manejar interacciones de botones
-    async handleBetInteraction(interaction) {
-        const customId = interaction.customId;
-        if (customId.startsWith('accept_bet_')) {
-            await this.acceptBet(interaction, customId.replace('accept_bet_', ''));
-        } else if (customId.startsWith('decline_bet_')) {
-            await this.declineBet(interaction, customId.replace('decline_bet_', ''));
-        } else if (customId.startsWith('resolve_bet_')) {
-            const betId = customId.replace(/resolve_bet_/, '').replace(/_(challenger|opponent)/, '');
-            const winner = customId.includes('challenger') ? 'challenger' : 'opponent';
-            await this.resolveBet(interaction, betId, winner);
-        } else if (customId.startsWith('cancel_bet_')) {
-            await this.cancelBet(interaction, customId.replace('cancel_bet_', ''));
-        }
     }
 
     // Aceptar apuesta
@@ -132,8 +103,8 @@ class BettingSystem {
         if (interaction.user.id !== bet.opponent) return interaction.reply({ content: '❌ Esta apuesta no es para ti.', ephemeral: true });
         if (bet.status !== 'pending') return interaction.reply({ content: '❌ Esta apuesta ya fue procesada.', ephemeral: true });
 
-        const challengerData = this.economy.getUser(bet.challenger);
-        const opponentData = this.economy.getUser(bet.opponent);
+        const challengerData = await this.economy.getUser(bet.challenger);
+        const opponentData = await this.economy.getUser(bet.opponent);
 
         if (challengerData.balance < bet.amount) {
             this.activeBets.delete(betId);
@@ -143,8 +114,8 @@ class BettingSystem {
             return interaction.reply({ content: '❌ No tienes suficientes fondos para esta apuesta.', ephemeral: true });
         }
 
-        this.economy.removeMoney(bet.challenger, bet.amount, 'bet_escrow');
-        this.economy.removeMoney(bet.opponent, bet.amount, 'bet_escrow');
+        await this.economy.removeMoney(bet.challenger, bet.amount, 'bet_escrow');
+        await this.economy.removeMoney(bet.opponent, bet.amount, 'bet_escrow');
 
         bet.status = 'active';
         bet.acceptedAt = Date.now();
@@ -163,23 +134,7 @@ class BettingSystem {
             .setFooter({ text: `Usen !resolve ${betId} <ganador> para resolver` })
             .setTimestamp();
 
-        const row = new ActionRowBuilder()
-            .addComponents(
-                new ButtonBuilder()
-                    .setCustomId(`resolve_bet_${betId}_challenger`)
-                    .setLabel('Ganó Retador')
-                    .setStyle(ButtonStyle.Primary),
-                new ButtonBuilder()
-                    .setCustomId(`resolve_bet_${betId}_opponent`)
-                    .setLabel('Ganó Oponente')
-                    .setStyle(ButtonStyle.Primary),
-                new ButtonBuilder()
-                    .setCustomId(`cancel_bet_${betId}`)
-                    .setLabel('Cancelar Apuesta')
-                    .setStyle(ButtonStyle.Secondary)
-            );
-
-        await interaction.update({ embeds: [embed], components: [row] });
+        await interaction.update({ embeds: [embed] });
     }
 
     // Rechazar apuesta
@@ -214,8 +169,8 @@ class BettingSystem {
         const winnerId = winner === 'challenger' ? bet.challenger : bet.opponent;
         const loserId = winner === 'challenger' ? bet.opponent : bet.challenger;
 
-        this.economy.addMoney(winnerId, winnerAmount, 'bet_win');
-        this.updateBetStats(winnerId, loserId, bet.amount);
+        await this.economy.addMoney(winnerId, winnerAmount, 'bet_win');
+        await this.updateBetStats(winnerId, loserId, bet.amount);
 
         bet.status = 'resolved';
         bet.winner = winnerId;
@@ -249,8 +204,8 @@ class BettingSystem {
             return interaction.reply({ content: '❌ Solo los participantes pueden cancelar esta apuesta.', ephemeral: true });
         }
 
-        this.economy.addMoney(bet.challenger, bet.amount, 'bet_refund');
-        this.economy.addMoney(bet.opponent, bet.amount, 'bet_refund');
+        await this.economy.addMoney(bet.challenger, bet.amount, 'bet_refund');
+        await this.economy.addMoney(bet.opponent, bet.amount, 'bet_refund');
 
         bet.status = 'cancelled';
         bet.cancelledAt = Date.now();
@@ -339,9 +294,9 @@ class BettingSystem {
     }
 
     // Actualizar estadísticas de apuestas
-    updateBetStats(winnerId, loserId, amount) {
-        const winner = this.economy.getUser(winnerId);
-        const loser = this.economy.getUser(loserId);
+    async updateBetStats(winnerId, loserId, amount) {
+        const winner = await this.economy.getUser(winnerId);
+        const loser = await this.economy.getUser(loserId);
 
         if (!winner.betStats) winner.betStats = { wins: 0, losses: 0, totalWon: 0, totalLost: 0, netProfit: 0 };
         if (!loser.betStats) loser.betStats = { wins: 0, losses: 0, totalWon: 0, totalLost: 0, netProfit: 0 };

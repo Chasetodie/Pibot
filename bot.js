@@ -7,9 +7,9 @@ const EconomySystem = require('./economy'); // Importar el sistema de economia
 const MusicHandler = require('./musicHandler.js'); // Importar el bot de música
 const MinigamesSystem = require('./minigames'); // Importar el sistema de minijuegos
 /*const AchievementsSystem = require('./achievements');
-const ShopSystem = require('./shop');
+const ShopSystem = require('./shop');*/
 const BettingSystem = require('./betting');
-const EventsSystem = require('./events');*/
+/*const EventsSystem = require('./events');*/
 const AllCommands = require('./all-commands');
 
 // Configuración del servidor web para mantener activo el bot
@@ -81,11 +81,11 @@ const minigames = new MinigamesSystem(economy);
 /*//Instancia de sistemas extra
 const achievements = new AchievementsSystem(economy);
 const shop = new ShopSystem(economy);
-const events = new EventsSystem(economy);
-const betting = new BettingSystem(economy);*/
+const events = new EventsSystem(economy);*/
+const betting = new BettingSystem(economy);
 
 // Instancia del sistema de comandos mejorados
-const allCommands = new AllCommands(economy/*, achievements, shop, betting, events*/);
+const allCommands = new AllCommands(economy/*, achievements, shop*/, betting/*, events*/);
 
 /*economy.events = events;
 minigames.events = events;*/

@@ -1,12 +1,12 @@
 const { EmbedBuilder } = require('discord.js');
 
 class AllCommands {
-    constructor(economySystem/*, achievementsSystem, shopSystem, bettingSystem, eventsSystem*/) {
+    constructor(economySystem/*, achievementsSystem, shopSystem*/, bettingSystem/*, eventsSystem*/) {
         this.economy = economySystem;
 /*        this.achievements = achievementsSystem;
-        this.shop = shopSystem;
+        this.shop = shopSystem;*/
         this.betting = bettingSystem;
-        this.events = eventsSystem;*/
+/*        this.events = eventsSystem;*/
     }
 
     // Formatear tiempo restante para daily
@@ -735,8 +735,8 @@ class AllCommands {
                 case 'mon!balance':
                 case 'mon!bal':
                 case 'mon!money':
-                    const targetUser = message.mentions.members.first();
-                    await this.handleBalance(message, targetUser);
+                    const targetUserm = message.mentions.members.first();
+                    await this.handleBalance(message, targetUserm);
                     break;
                 case 'mon!daily':
                     await this.handleDaily(message);
@@ -772,7 +772,36 @@ class AllCommands {
                     break;
                 case 'mon!addxp':
                     await this.handleAddXp(message);
-                    break;               
+                    break;          
+
+                // Betting
+                case 'mon!bet':
+                case 'mon!apuesta':
+                    await this.betting.createBet(message, args);
+                    break;
+                case 'mon!acceptbet':
+                    await this.betting.acceptBet(message, args);
+                    break;
+                case 'mon!declinebet':
+                    await this.betting.declineBet(message, args);
+                    break;
+                case 'mon!resolvebet':
+                    const betId = args[1];
+                    const winner = args[2];
+                    await this.betting.resolveBet(message, betId, winner);
+                    break;
+                case 'mon!cancelbet':
+                    await this.betting.cancelBet(message, args);
+                    break;
+                case 'mon!mybets':
+                case 'mon!misapuestas':
+                    await this.betting.showActiveBets(message);
+                    break;
+                case 'mon!betstats':
+                case 'mon!estadisticasapuestas':
+                    const targetUserb = message.mentions.members?.first();
+                    await this.betting.showBetStats(message, targetUserb);
+                    break;
                 case 'mon!help':
                     await this.showHelp(message);
                     break;
@@ -842,29 +871,6 @@ class AllCommands {
                 return;
             }
 
-            // Betting
-            if (command === 'mon!bet' || command === 'mon!apuesta') {
-                await this.betting.createBet(message, args);
-                return;
-            }
-            if (command === 'mon!mybets' || command === 'mon!misapuestas') {
-                await this.betting.showActiveBets(message);
-                return;
-            }
-            if (command === 'mon!betstats' || command === 'mon!estadisticasapuestas') {
-                const targetUser = message.mentions.members?.first();
-                await this.betting.showBetStats(message, targetUser);
-                return;
-            }
-            if (command === 'mon!resolve') {
-                if (args.length < 3) {
-                    await message.reply('❌ Uso: `mon!resolve <betId> <ganador: challenger|opponent>`');
-                    return;
-                }
-                await message.reply('❌ Resolución manual por comando no implementada, usa los botones.');
-                return;
-            }
-
             // Events
             if (command === 'mon!events') {
                 await this.events.showActiveEvents(message);
@@ -914,9 +920,9 @@ class AllCommands {
 /*                // Achievements
                 { name: '🏆 Logros', value: '`mon!achievements [@usuario]` - Ver logros\n`mon!allachievements` - Ver todos los logros', inline: false },
                 // Shop
-                { name: '🛒 Tienda', value: '`mon!shop [categoría]`\n`mon!buy <item> [cantidad]`\n`mon!use <item>`\n`mon!inventory [@usuario]`\n`mon!sell <item> [cantidad]`\n`mon!shophelp`', inline: false },
+                { name: '🛒 Tienda', value: '`mon!shop [categoría]`\n`mon!buy <item> [cantidad]`\n`mon!use <item>`\n`mon!inventory [@usuario]`\n`mon!sell <item> [cantidad]`\n`mon!shophelp`', inline: false },*/
                 // Betting
-                { name: '🎲 Apuestas', value: '`mon!bet [@usuario] <cantidad> <descripción>` - Crear apuesta\n`mon!mybets` - Ver tus apuestas activas\n`mon!betstats [@usuario]` - Ver estadísticas de apuestas', inline: false },*/
+                { name: '🎲 Apuestas', value: '`mon!bet [@usuario] <cantidad> <descripción>` - Crear apuesta\n`mon!mybets` - Ver tus apuestas activas\n`mon!betstats [@usuario]` - Ver estadísticas de apuestas', inline: false },
                 //Economy
                 { name: '📋 Economía', value: '`mon!balance [@usuario]` - Ver tu dinero y nivel (o el de otro usuario)\n`mon!daily` - Reclamar' + `(${this.economy.config.dailyAmount}±${this.economy.config.dailyVariation} ${this.economy.config.currencySymbol})` + 'diarios\n`mon!work [tipo]` - Trabajar para ganar dinero (delivery, programmer, doctor, criminal)\n`mon!level [@usuario]` - Ver información detallada de nivel\n`mon!pay @usuario <cantidad>` - Transferir dinero a otro usuario\n`mon!top [money/level]` - Ver los rankings del servidor', inline: false},
                 // Minijuegos

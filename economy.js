@@ -138,7 +138,7 @@ class EconomySystem {
         user.stats.totalEarned += amount;*/
         
         console.log(`💰 +${amount} ${this.config.currencySymbol} para ${userId} (${reason})`);
-        await this.updateUser(userId, updateData);
+        //await this.updateUser(userId, updateData);
         return user.balance;
     }
 
@@ -158,7 +158,7 @@ class EconomySystem {
         user.stats.totalSpent += amount;*/
         
         console.log(`💸 -${amount} ${this.config.currencySymbol} para ${userId} (${reason})`);
-        await this.updateUser(userId, updateData);
+        //await this.updateUser(userId, updateData);
         return user.balance;
     }
 
