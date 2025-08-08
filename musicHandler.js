@@ -341,6 +341,319 @@ class MusicHandler {
         const secs = seconds % 60;
         return `${mins}:${secs.toString().padStart(2, '0')}`;
     }
+
+    // Funciones para manejar comandos
+    
+    async handlePlay(message, args) {  
+        if (args.length === 0) {
+            const embed = new EmbedBuilder()
+                .setColor('#FF6B35')
+                .setTitle('❌ Error')
+                .setDescription(`Uso: \`${PREFIX}play <nombre de la canción>\``)
+                .addFields(
+                    { name: 'Ejemplos:', value: `\`${PREFIX}play despacito\`\n\`${PREFIX}p bad bunny safaera\`` }
+                );
+            return message.reply({ embeds: [embed] });
+        }
+    
+        const loadingEmbed = new EmbedBuilder()
+            .setColor('#FFA500')
+            .setTitle('🔍 Buscando...')
+            .setDescription(`Buscando: **${args.join(' ')}**`);
+        
+        const loadingMsg = await message.reply({ embeds: [loadingEmbed] });
+    
+        const query = args.join(' ');
+        
+        try {
+            // Unirse al canal de voz
+            console.log('🔗 Intentando unirse al canal de voz...');
+            const joinResult = await this.joinVoice(message);
+            if (!joinResult.success) {
+                const errorEmbed = new EmbedBuilder()
+                    .setColor('#FF0000')
+                    .setTitle('❌ Error')
+                    .setDescription(joinResult.message);
+                return loadingMsg.edit({ embeds: [errorEmbed] });
+            }
+            
+            console.log('🎵 Añadiendo a la cola...');
+            // Añadir a la cola
+            const queueResult = await this.addToQueue(message, query);
+            if (!queueResult.success) {
+                const errorEmbed = new EmbedBuilder()
+                    .setColor('#FF0000')
+                    .setTitle('❌ Error')
+                    .setDescription(queueResult.message);
+                return loadingMsg.edit({ embeds: [errorEmbed] });
+            }
+            
+            // Si es la primera canción, reproducir inmediatamente
+            const queue = this.queues.get(message.guild.id);
+            const isFirst = queue.length === 1;
+            
+            if (isFirst) {
+                console.log('▶️ Reproduciendo primera canción...');
+                const playResult = await this.play(message.guild.id);
+                if (playResult.success) {
+                    const embed = this.createSongEmbed(playResult.song, 'nowPlaying');
+                    await loadingMsg.edit({ embeds: [embed] });
+                } else {
+                    const errorEmbed = new EmbedBuilder()
+                        .setColor('#FF0000')
+                        .setTitle('❌ Error')
+                        .setDescription('Error al reproducir la canción.');
+                    await loadingMsg.edit({ embeds: [errorEmbed] });
+                }
+            } else {
+                const embed = this.createSongEmbed(queueResult.song, 'added');
+                embed.addFields({
+                    name: '📋 Posición en cola',
+                    value: `${queue.length}`,
+                    inline: true
+                });
+                await loadingMsg.edit({ embeds: [embed] });
+            }
+        } catch (error) {
+            console.error('Error en handlePlay:', error);
+            const errorEmbed = new EmbedBuilder()
+                .setColor('#FF0000')
+                .setTitle('❌ Error')
+                .setDescription(`Error procesando la canción: ${error.message}`);
+            await loadingMsg.edit({ embeds: [errorEmbed] });
+        }
+    }
+    
+    async handleSkip(message) {
+        const result = this.skip(message.guild.id);
+        
+        const embed = new EmbedBuilder()
+            .setColor(result.success ? '#FFA500' : '#FF0000')
+            .setTitle(result.success ? '⏭️ Canción saltada' : '❌ Error')
+            .setDescription(result.message)
+            .setTimestamp();
+        
+        message.reply({ embeds: [embed] });
+    }
+    
+    async handlePause(message) {
+        const result = this.pause(message.guild.id);
+        
+        const embed = new EmbedBuilder()
+            .setColor(result.success ? '#FFA500' : '#FF0000')
+            .setTitle(result.success ? '⏸️ Música pausada' : '❌ Error')
+            .setDescription(result.message)
+            .setTimestamp();
+        
+        message.reply({ embeds: [embed] });
+    }
+    
+    async handleResume(message) {
+        const result = this.resume(message.guild.id);
+        
+        const embed = new EmbedBuilder()
+            .setColor(result.success ? '#00FF00' : '#FF0000')
+            .setTitle(result.success ? '▶️ Música reanudada' : '❌ Error')
+            .setDescription(result.message)
+            .setTimestamp();
+        
+        message.reply({ embeds: [embed] });
+    }
+    
+    async handleQueue(message) {
+        const result = this.showQueue(message.guild.id);
+        
+        if (!result.success) {
+            const embed = new EmbedBuilder()
+                .setColor('#FF0000')
+                .setTitle('📋 Cola de reproducción')
+                .setDescription(result.message)
+                .setTimestamp();
+            
+            return message.reply({ embeds: [embed] });
+        }
+        
+        const embed = new EmbedBuilder()
+            .setColor('#1DB954')
+            .setTitle('📋 Cola de reproducción')
+            .setTimestamp();
+        
+        if (result.nowPlaying) {
+            embed.addFields({
+                name: '🎶 Reproduciendo ahora',
+                value: `**${result.nowPlaying.deezer.title}** - ${result.nowPlaying.deezer.artist}`,
+                inline: false
+            });
+        }
+        
+        if (result.queue.length > 0) {
+            const queueList = result.queue.map((song, index) => 
+                `${index + 1}. **${song.deezer.title}** - ${song.deezer.artist}`
+            ).join('\n');
+            
+            embed.addFields({
+                name: '⏳ Siguiente(s)',
+                value: queueList.length > 1024 ? queueList.substring(0, 1021) + '...' : queueList,
+                inline: false
+            });
+            
+            embed.setFooter({
+                text: `Total: ${result.queue.length} canción(es) en cola`
+            });
+        }
+        
+        message.reply({ embeds: [embed] });
+    }
+    
+    async handleNowPlaying(message) {
+        const nowPlaying = this.nowPlaying.get(message.guild.id);
+        
+        if (!nowPlaying) {
+            const embed = new EmbedBuilder()
+                .setColor('#FF0000')
+                .setTitle('❌ Error')
+                .setDescription('No hay música reproduciéndose.')
+                .setTimestamp();
+            
+            return message.reply({ embeds: [embed] });
+        }
+        
+        const embed = this.createSongEmbed(nowPlaying, 'nowPlaying');
+        message.reply({ embeds: [embed] });
+    }
+    
+    async handleClear(message) {
+        const result = this.clearQueue(message.guild.id);
+        
+        const embed = new EmbedBuilder()
+            .setColor('#FFA500')
+            .setTitle('🗑️ Cola limpiada')
+            .setDescription(result.message)
+            .setTimestamp();
+        
+        message.reply({ embeds: [embed] });
+    }
+    
+    async handleStop(message) {
+        const result = this.disconnect(message.guild.id);
+        
+        const embed = new EmbedBuilder()
+            .setColor('#FF0000')
+            .setTitle('⏹️ Música detenida')
+            .setDescription(result.message)
+            .setTimestamp();
+        
+        message.reply({ embeds: [embed] });
+    }
+    
+    async handleSearch(message, args) {
+        if (args.length === 0) {
+            const embed = new EmbedBuilder()
+                .setColor('#FF6B35')
+                .setTitle('❌ Error')
+                .setDescription(`Uso: mon!search <término de búsqueda>`)
+                .addFields(
+                    { name: 'Ejemplo:', value: `mon!search bad bunny` }
+                );
+            return message.reply({ embeds: [embed] });
+        }
+    
+        const loadingEmbed = new EmbedBuilder()
+            .setColor('#FFA500')
+            .setTitle('🔍 Buscando en Deezer...')
+            .setDescription(`Término: **${args.join(' ')}**`);
+        
+        const loadingMsg = await message.reply({ embeds: [loadingEmbed] });
+    
+        const query = args.join(' ');
+        const results = await this.searchDeezer(query, 5);
+        
+        if (results.length === 0) {
+            const errorEmbed = new EmbedBuilder()
+                .setColor('#FF0000')
+                .setTitle('❌ Sin resultados')
+                .setDescription('No se encontraron resultados en Deezer.')
+                .setTimestamp();
+            return loadingMsg.edit({ embeds: [errorEmbed] });
+        }
+        
+        const embed = new EmbedBuilder()
+            .setColor('#FF6B35')
+            .setTitle('🔍 Resultados de búsqueda en Deezer')
+            .setDescription(`Resultados para: **${query}**`)
+            .setTimestamp();
+        
+        results.forEach((track, index) => {
+            embed.addFields({
+                name: `${index + 1}. ${track.title}`,
+                value: `👨‍🎤 **Artista:** ${track.artist}\n💿 **Álbum:** ${track.album}\n⏱️ **Duración:** ${this.formatDuration(track.duration)}`,
+                inline: true
+            });
+        });
+        
+        embed.setFooter({
+            text: `Usa mon!play <nombre de canción> para reproducir`
+        });
+        
+        loadingMsg.edit({ embeds: [embed] });
+    }
+
+    async processCommand(message) {
+        if (message.author.bot) return;
+
+        const args = message.content.trim().split(/ +/g);
+        const command = args[0].toLowerCase();
+
+        try {
+            switch (command) {
+                case 'mon!play':
+                case 'mon!p':
+                    await this.handlePlay(message, args);
+                    break;
+                
+                case 'mon!skip':
+                case 'mon!s':
+                    await this.handleSkip(message);
+                    break;
+                
+                case 'mon!pause':
+                    await this.handlePause(message);
+                    break;
+                
+                case 'mon!resume':
+                case 'mon!r':
+                    await this.handleResume(message);
+                    break;
+                
+                case 'mon!queue':
+                case 'mon!q':
+                    await this.handleQueue(message);
+                    break;
+                
+                case 'mon!nowplaying':
+                case 'mon!np':
+                    await this.handleNowPlaying(message);
+                    break;
+                
+                case 'mon!clearmusic':
+                case 'mon!cm':
+                    await this.handleClear(message);
+                    break;
+                
+                case 'mon!stop':
+                case 'mon!disconnect':
+                case 'mon!dc':
+                    await this.handleStop(message);
+                    break;
+    
+                case 'mon!search':
+                    await this.handleSearch(message, args);
+                    break;
+        } catch (error) {
+            console.error('❌ Error procesando comando:', error);
+            await message.reply('❌ Ocurrió un error al procesar el comando. Intenta de nuevo.');
+        }
+    }    
 }
 
 module.exports = MusicHandler;
