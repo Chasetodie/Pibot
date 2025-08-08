@@ -623,7 +623,12 @@ async processMessageXp(userId) {
                 failed: true,
                 message: failMessage,
                 penalty: penalty,
-                newBalance: user.balance
+                newBalance: user.balance,
+
+                canWork: canWorkResult.canWork,
+                reason: canWorkResult.reason,
+                requiredLevel: canWorkResult.requiredLevel,
+                canWorkResult: canWorkResult  
             };
         }
         
@@ -655,7 +660,12 @@ async processMessageXp(userId) {
             amount: amount,
             message: message,
             newBalance: user.balance,
-            jobName: job.name
+            jobName: job.name,
+
+            canWork: canWorkResult.canWork,
+            reason: canWorkResult.reason,
+            requiredLevel: canWorkResult.requiredLevel,
+            canWorkResult: canWorkResult               
         };
     }
 }
