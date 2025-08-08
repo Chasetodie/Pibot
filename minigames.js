@@ -16,7 +16,7 @@ class MinigamesSystem {
             dice: {
                 minBet: 50,
                 maxBet: 10000,
-                cooldown: 15000,
+                cooldown: 30000, // 30 segundos entre juegos
                 payouts: {
                     exact: 3.8, // Adivinar número exacto: x5.8
                     high: 1.9,  // 4-6: x1.9
