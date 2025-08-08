@@ -647,7 +647,7 @@ class AllCommands {
                 
                 embed.addFields({
                     name: `${available} ${job.name}`,
-                    value: `**Pago:** ${job.baseReward}±${job.variation} π-b$\n**Cooldown:** ${cooldownText}${levelText}${job.failChance ? `\n**Riesgo:** ${(job.failChance * 100)}% de fallar` : ''}`,
+                    value: `**Pago:** ${job.baseReward} - ${job.variation} π-b$\n**Cooldown:** ${cooldownText}${levelText}${job.failChance ? `\n**Riesgo:** ${(job.failChance * 100)}% de fallar` : ''}`,
                     inline: true
                 });
             }
@@ -664,8 +664,7 @@ class AllCommands {
         
         // Verificar si el trabajo existe
         if (!jobs[jobType]) {
-            const availableJobs = Object.keys(jobs).join(', ');
-            await message.reply(`❌ Trabajo no válido. Trabajos disponibles: ${availableJobs}`);
+            await message.reply('❌ Trabajo no válido.\nEscribe \`mon!work\` para ver los Trabajos Disponibles');
             return;
         }
         
