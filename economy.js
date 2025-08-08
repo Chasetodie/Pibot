@@ -174,10 +174,13 @@ class EconomySystem {
             return { success: false, reason: 'invalid_amount' };
         }
 
-        const updateData = {
+        const updateDataFrom = {
             balance: fromUser.balance - amount,
             'stats.totalSpent': (fromUser.stats.totalSpent || 0) + amount,
-            toBalance: toUser.balance + amount,
+        };
+
+        const updateDataTo = {
+            balance: toUser.balance + amount,
             'stats.totalEarned': (toUser.stats.totalEarned || 0) + amount
         };
 
@@ -191,12 +194,12 @@ class EconomySystem {
         await this.updateUser(toUserId, updateData);*/
 
         console.log(`💸 Transferencia: ${fromUserId} -> ${toUserId}, ${amount} ${this.config.currencySymbol}`);
-        console.log(`💸 TotalEarned: ${updateData['stats.totalEarned']} && TotalSpent: ${updateData['stats.totalSpent']}`);
+        console.log(`💸 TotalEarned: ${updateDataTo['stats.totalEarned']} && TotalSpent: ${updateDataFrom['stats.totalSpent']}`);
 
         return {
             success: true,
-            fromBalance: updateData.balance,
-            toBalance: updateData.toBalance
+            fromBalance: updateDataFrom.balance,
+            toBalance: updateDataTo.balance
         };
     }
 
