@@ -578,8 +578,15 @@ async processMessageXp(userId) {
     // Ejecutar trabajo
     async doWork(userId, jobType) {
         const canWorkResult = await this.canWork(userId, jobType);
-        if (!canWorkResult.canWork) return canWorkResult;
-        
+        if (!canWorkResult.canWork) 
+        {
+            return{
+                canWork: canWorkResult.canWork,
+                reason: canWorkResult.reason,
+                requiredLevel: canWorkResult.requiredLevel,
+                canWorkResult: canWorkResult               
+            }; 
+        }
         const user = await this.getUser(userId);
         const jobs = await this.getWorkJobs();
         const job = jobs[jobType];
