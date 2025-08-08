@@ -1,9 +1,8 @@
 const { EmbedBuilder } = require('discord.js');
 
 class AllCommands {
-    constructor(economySystem, musicHandler/*, achievementsSystem, shopSystem, bettingSystem, eventsSystem*/) {
+    constructor(economySystem/*, achievementsSystem, shopSystem, bettingSystem, eventsSystem*/) {
         this.economy = economySystem;
-        this.musicBot = musicHandler;
 /*        this.achievements = achievementsSystem;
         this.shop = shopSystem;
         this.betting = bettingSystem;
@@ -582,189 +581,46 @@ class AllCommands {
             await message.channel.send({ embeds: [levelUpEmbed] });
         }
     }
-
-    // Funciones para manejar comandos
-
-    async handlePlay(message) {      
-        const query = message.options.getString('cancion');
-        
-        // Unirse al canal de voz
-        const joinResult = await this.musicBot.joinVoice(message);
-        if (!joinResult.success) {
-            return await message.editReply(joinResult.message);
-        }
-        
-        // Añadir a la cola
-        const queueResult = await this.musicBot.addToQueue(message, query);
-        if (!queueResult.success) {
-            return await message.editReply(queueResult.message);
-        }
-        
-        // Si es la primera canción, reproducir inmediatamente
-        const queue = this.musicBot.queues.get(message.guild.id);
-        const isFirst = queue.length === 1;
-        
-        if (isFirst) {
-            const playResult = await this.musicBot.play(message.guild.id);
-            if (playResult.success) {
-                const embed = this.musicBot.createSongEmbed(playResult.song, 'nowPlaying');
-                await message.editReply({ embeds: [embed] });
-            } else {
-                await message.editReply('❌ Error al reproducir la canción.');
-            }
-        } else {
-            const embed = this.musicBot.createSongEmbed(queueResult.song, 'added');
-            embed.addFields({
-                name: '📋 Posición en cola',
-                value: `${queue.length}`,
-                inline: true
-            });
-            await message.editReply({ embeds: [embed] });
-        }
-    }
-
-    async handleSkip(message) {
-        const result = this.musicBot.skip(message.guild.id);
-        
-        const embed = new EmbedBuilder()
-            .setColor(result.success ? '#FFA500' : '#FF0000')
-            .setTitle(result.success ? '⏭️ Canción saltada' : '❌ Error')
-            .setDescription(result.message);
-        
-        await message.reply({ embeds: [embed] });
-    }
-
-    async handlePause(message) {
-        const result = this.musicBot.pause(message.guild.id);
-        
-        const embed = new EmbedBuilder()
-            .setColor(result.success ? '#FFA500' : '#FF0000')
-            .setTitle(result.success ? '⏸️ Música pausada' : '❌ Error')
-            .setDescription(result.message);
-        
-        await message.reply({ embeds: [embed] });
-    }
-
-    async handleResume(message) {
-        const result = this.musicBot.resume(message.guild.id);
-        
-        const embed = new EmbedBuilder()
-            .setColor(result.success ? '#00FF00' : '#FF0000')
-            .setTitle(result.success ? '▶️ Música reanudada' : '❌ Error')
-            .setDescription(result.message);
-        
-        await message.reply({ embeds: [embed] });
-    }
-
-    async handleQueue(message) {
-        const result = this.musicBot.showQueue(message.guild.id);
-        
-        if (!result.success) {
-            const embed = new EmbedBuilder()
-                .setColor('#FF0000')
-                .setTitle('📋 Cola de reproducción')
-                .setDescription(result.message);
-            
-            return await message.reply({ embeds: [embed] });
-        }
-        
+    
+/*    async function handleHelp(message) {
         const embed = new EmbedBuilder()
             .setColor('#1DB954')
-            .setTitle('📋 Cola de reproducción');
-        
-        if (result.nowPlaying) {
-            embed.addFields({
-                name: '🎶 Reproduciendo ahora',
-                value: `**${result.nowPlaying.deezer.title}** - ${result.nowPlaying.deezer.artist}`,
+            .setTitle('🎵 Comandos de Música')
+            .setDescription(`Prefijo: \`${PREFIX}\``)
+            .addFields(
+                {
+                    name: '🎵 Reproducción',
+                    value: `\`${PREFIX}play <canción>\` - Reproduce una canción\n\`${PREFIX}p <canción>\` - Atajo para play`,
+                    inline: false
+                },
+                {
+                    name: '⏯️ Control',
+                    value: `\`${PREFIX}pause\` - Pausa la música\n\`${PREFIX}resume\` - Reanuda la música\n\`${PREFIX}skip\` - Salta la canción actual\n\`${PREFIX}stop\` - Para y desconecta`,
+                    inline: false
+                },
+                {
+                    name: '📋 Información',
+                    value: `\`${PREFIX}queue\` - Muestra la cola\n\`${PREFIX}nowplaying\` - Canción actual\n\`${PREFIX}search <término>\` - Busca en Deezer`,
+                    inline: false
+                },
+                {
+                    name: '🔧 Utilidad',
+                    value: `\`${PREFIX}clear\` - Limpia la cola\n\`${PREFIX}help\` - Muestra esta ayuda`,
+                    inline: false
+                }
+            )
+            .addFields({
+                name: '📝 Ejemplos',
+                value: `\`${PREFIX}play despacito\`\n\`${PREFIX}p bad bunny safaera\`\n\`${PREFIX}search reggaeton\``,
                 inline: false
-            });
-        }
+            })
+            .setFooter({
+                text: '💡 Tip: Necesitas estar en un canal de voz para usar comandos de música'
+            })
+            .setTimestamp();
         
-        if (result.queue.length > 0) {
-            const queueList = result.queue.map((song, index) => 
-                `${index + 1}. **${song.deezer.title}** - ${song.deezer.artist}`
-            ).join('\n');
-            
-            embed.addFields({
-                name: '⏳ Siguiente(s)',
-                value: queueList,
-                inline: false
-            });
-            
-            embed.setFooter({
-                text: `Total: ${result.queue.length} canción(es) en cola`
-            });
-        }
-        
-        await message.reply({ embeds: [embed] });
-    }
-
-    async handleNowPlaying(message) {
-        const nowPlaying = this.musicBot.nowPlaying.get(message.guild.id);
-        
-        if (!nowPlaying) {
-            const embed = new EmbedBuilder()
-                .setColor('#FF0000')
-                .setTitle('❌ Error')
-                .setDescription('No hay música reproduciéndose.');
-            
-            return await message.reply({ embeds: [embed] });
-        }
-        
-        const embed = this.musicBot.createSongEmbed(nowPlaying, 'nowPlaying');
-        await message.reply({ embeds: [embed] });
-    }
-
-    async handleClear(message) {
-        const result = this.musicBot.clearQueue(message.guild.id);
-        
-        const embed = new EmbedBuilder()
-            .setColor('#FFA500')
-            .setTitle('🗑️ Cola limpiada')
-            .setDescription(result.message);
-        
-        await message.reply({ embeds: [embed] });
-    }
-
-    async handleStop(message) {
-        const result = this.musicBot.disconnect(message.guild.id);
-        
-        const embed = new EmbedBuilder()
-            .setColor('#FF0000')
-            .setTitle('⏹️ Música detenida')
-            .setDescription(result.message);
-        
-        await message.reply({ embeds: [embed] });
-    }
-
-    async handleSearch(message) {
-        const query = message.options.getString('query');
-        const results = await this.musicBot.searchDeezer(query, 5);
-        
-        if (results.length === 0) {
-            return await message.editReply('❌ No se encontraron resultados.');
-        }
-        
-        const embed = new EmbedBuilder()
-            .setColor('#FF6B35')
-            .setTitle('🔍 Resultados de búsqueda en Deezer')
-            .setDescription(`Resultados para: **${query}**`);
-        
-        results.forEach((track, index) => {
-            embed.addFields({
-                name: `${index + 1}. ${track.title}`,
-                value: `👨‍🎤 **Artista:** ${track.artist}\n💿 **Álbum:** ${track.album}\n⏱️ **Duración:** ${this.musicBot.formatDuration(track.duration)}`,
-                inline: true
-            });
-        });
-        
-        embed.setFooter({
-            text: 'Usa /play <nombre de canción> para reproducir una canción'
-        });
-        
-        await message.editReply({ embeds: [embed] });
-    }    
-
+        message.reply({ embeds: [embed] });
+    }*/
 
     // Comando !work - Sistema de trabajos
     async handleWork(message) {
@@ -892,33 +748,6 @@ class AllCommands {
 
         try {
             switch (command) {
-                case 'mon!play':
-                    await this.handlePlay(message);
-                    break;
-                case 'mon!skip':
-                    await this.handleSkip(message);
-                    break;
-                case 'mon!pause':
-                    await this.handlePause(message);
-                    break;
-                case 'mon!resume':
-                    await this.handleResume(message);
-                    break;
-                case 'mon!queue':
-                    await this.handleQueue(message);
-                    break;
-                case 'mon!nowplaying':
-                    await this.handleNowPlaying(message);
-                    break;
-                case 'mon!clear':
-                    await this.handleClear(message);
-                    break;
-                case 'mon!stop':
-                    await this.handleStop(message);
-                    break;
-                case 'mon!search':
-                    await this.handleSearch(message);
-                    break;                
                 case 'mon!balance':
                 case 'mon!bal':
                 case 'mon!money':
@@ -1120,7 +949,7 @@ class AllCommands {
 /*                // Eventos
                 { name: '🎉 Eventos', value: '`mon!events` - Ver eventos activos', inline: false },*/
                 // Musica
-                { name: '🎵 Música', value: '`mon!play <url>` - Reproducir música\n`mon!skip` - Saltar canción actual\n`mon!stop` - Detener reproducción\n`mon!pause` - Pausar reproducción\n`mon!resume` - Reanudar reproducción\n`mon!queue` - Ver cola de reproducción\n`mon!volume` - Ajustar volumen\n`mon!loop` - Repetir canción actual\n`mon!nowplaying` - Ver canción actual\n`mon!clear` - Limpiar cola de reproducción', inline: false }
+                { name: '🎵 Música', value: '`mon!play <url>` - Reproducir música\n`mon!skip` - Saltar canción actual\n`mon!stop` - Detener reproducción\n`mon!pause` - Pausar reproducción\n`mon!resume` - Reanudar reproducción\n`mon!queue` - Ver cola de reproducción\n`mon!search` - Busca una canción junto a sus datos\n`mon!nowplaying` - Ver canción actual\n`mon!clearmusic` - Limpiar cola de reproducción', inline: false }
             )
             .setFooter({ text: 'Usa los comandos para interactuar con el bot.' })
             .setTimestamp();

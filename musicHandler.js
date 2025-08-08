@@ -44,58 +44,131 @@ class MusicHandler {
     async findOnSoundCloud(deezerTrack) {
         try {
             const searchQuery = `${deezerTrack.artist} ${deezerTrack.title}`;
+
+            console.log(`🔍 Buscando en SoundCloud: "${searchQuery}"`);
             
             // soundcloud-downloader maneja automáticamente el client_id
             const tracks = await scdl.search({
                 query: searchQuery,
-                limit: 5,
+                limit: 10, // Aumentar límite para más opciones
                 offset: 0
             });
 
             if (tracks && tracks.collection && tracks.collection.length > 0) {
+                console.log(`✅ Encontradas ${tracks.collection.length} canciones en SoundCloud`);
+                
+                // Filtrar tracks que no se pueden reproducir
+                const playableTracks = tracks.collection.filter(track => 
+                    track && track.streamable && !track.policy_disabled
+                );
+                
+                if (playableTracks.length === 0) {
+                    console.log('❌ No hay tracks reproducibles encontrados');
+                    // Intentar búsqueda alternativa
+                    return await this.alternativeSearch(deezerTrack);
+                }
+                
                 // Buscar la mejor coincidencia
-                const bestMatch = this.findBestMatch(deezerTrack, tracks.collection);
+                const bestMatch = this.findBestMatch(deezerTrack, playableTracks);
+                console.log(`🎯 Mejor coincidencia: "${bestMatch.title}" por ${bestMatch.user?.username || 'Unknown'}`);
                 return bestMatch;
             }
-            return null;
+
+            console.log('❌ No se encontraron tracks en SoundCloud');
+            return await this.alternativeSearch(deezerTrack);
         } catch (error) {
-            console.error('Error buscando en SoundCloud:', error);
+            console.error('❌ Error buscando en SoundCloud:', error);
             // Fallback: intentar búsqueda más simple
+            return await this.alternativeSearch(deezerTrack);
+        }
+    }
+
+    // Búsqueda alternativa con diferentes estrategias
+    async alternativeSearch(deezerTrack) {
+        const searchStrategies = [
+            // Solo título
+            deezerTrack.title,
+            // Solo artista + título (sin álbum)
+            `${deezerTrack.artist} ${deezerTrack.title}`,
+            // Título + artista (orden inverso)
+            `${deezerTrack.title} ${deezerTrack.artist}`,
+            // Solo palabras clave del título
+            deezerTrack.title.split(' ').slice(0, 2).join(' ')
+        ];
+
+        for (const strategy of searchStrategies) {
             try {
-                const simpleSearch = await scdl.search(searchQuery);
-                return simpleSearch && simpleSearch.length > 0 ? simpleSearch[0] : null;
-            } catch (fallbackError) {
-                console.error('Error en búsqueda fallback:', fallbackError);
-                return null;
+                console.log(`🔄 Intentando búsqueda alternativa: "${strategy}"`);
+                
+                const tracks = await scdl.search({
+                    query: strategy,
+                    limit: 5,
+                    offset: 0
+                });
+
+                if (tracks && tracks.collection && tracks.collection.length > 0) {
+                    const playableTracks = tracks.collection.filter(track => 
+                        track && track.streamable && !track.policy_disabled
+                    );
+                    
+                    if (playableTracks.length > 0) {
+                        console.log(`✅ Encontrado con estrategia alternativa: "${playableTracks[0].title}"`);
+                        return playableTracks[0];
+                    }
+                }
+            } catch (error) {
+                console.log(`❌ Error con estrategia "${strategy}":`, error.message);
+                continue;
             }
         }
+
+        console.log('❌ Todas las estrategias de búsqueda fallaron');
+        return null;
     }
 
     // Encontrar la mejor coincidencia entre Deezer y SoundCloud
     findBestMatch(deezerTrack, soundcloudTracks) {
-        const deezerTitle = deezerTrack.title.toLowerCase();
-        const deezerArtist = deezerTrack.artist.toLowerCase();
+        const deezerTitle = this.normalizeString(deezerTrack.title);
+        const deezerArtist = this.normalizeString(deezerTrack.artist);
         
         let bestScore = 0;
         let bestTrack = soundcloudTracks[0];
 
         soundcloudTracks.forEach(track => {
-            const scTitle = track.title.toLowerCase();
+            const scTitle = this.normalizeString(track.title);
             let score = 0;
 
-            // Puntuación por coincidencia en título
+            // Puntuación por coincidencia en título (más flexible)
             if (scTitle.includes(deezerTitle) || deezerTitle.includes(scTitle.split(' ')[0])) {
-                score += 3;
+                score += 5;
             }
+            
+            // Puntuación por palabras clave del título
+            const deezerWords = deezerTitle.split(' ');
+            const scWords = scTitle.split(' ');
+            const commonWords = deezerWords.filter(word => 
+                word.length > 3 && scWords.some(scWord => scWord.includes(word))
+            );
+            score += commonWords.length * 2;
 
             // Puntuación por coincidencia en artista
             if (scTitle.includes(deezerArtist)) {
+                score += 3;
+            }
+
+            // Puntuación por duración similar (±45 segundos - más flexible)
+            const durationDiff = Math.abs(track.duration - (deezerTrack.duration * 1000));
+            if (durationDiff < 45000) {
                 score += 2;
             }
 
-            // Puntuación por duración similar (±30 segundos)
-            const durationDiff = Math.abs(track.duration - (deezerTrack.duration * 1000));
-            if (durationDiff < 30000) {
+            // Penalización por tracks muy cortos (probablemente previews)
+            if (track.duration < 30000) {
+                score -= 2;
+            }
+
+            // Bonus por popularidad (si tiene más likes/plays)
+            if (track.playback_count > 10000) {
                 score += 1;
             }
 
@@ -105,12 +178,26 @@ class MusicHandler {
             }
         });
 
+        console.log(`🎯 Mejor coincidencia encontrada con score: ${bestScore}`);
         return bestTrack;
     }
 
+    // Normalizar strings para mejor comparación
+    normalizeString(str) {
+        return str.toLowerCase()
+            .replace(/[áàäâ]/g, 'a')
+            .replace(/[éèëê]/g, 'e')
+            .replace(/[íìïî]/g, 'i')
+            .replace(/[óòöô]/g, 'o')
+            .replace(/[úùüû]/g, 'u')
+            .replace(/[ñ]/g, 'n')
+            .replace(/[^\w\s]/g, '') // Remover caracteres especiales
+            .trim();
+    }
+   
     // Unirse al canal de voz
-    async joinVoice(interaction) {
-        const member = interaction.member;
+    async joinVoice(message) {
+        const member = message.member;
         const voiceChannel = member.voice.channel;
 
         if (!voiceChannel) {
@@ -120,26 +207,26 @@ class MusicHandler {
         try {
             const connection = joinVoiceChannel({
                 channelId: voiceChannel.id,
-                guildId: interaction.guild.id,
-                adapterCreator: interaction.guild.voiceAdapterCreator,
+                guildId: message.guild.id,
+                adapterCreator: message.guild.voiceAdapterCreator,
             });
 
-            this.connections.set(interaction.guild.id, connection);
+            this.connections.set(message.guild.id, connection);
             
             // Crear player si no existe
-            if (!this.players.has(interaction.guild.id)) {
+            if (!this.players.has(message.guild.id)) {
                 const player = createAudioPlayer();
-                this.players.set(interaction.guild.id, player);
+                this.players.set(message.guild.id, player);
                 connection.subscribe(player);
 
                 // Manejar eventos del player
                 player.on(AudioPlayerStatus.Idle, () => {
-                    this.playNext(interaction.guild.id);
+                    this.playNext(message.guild.id);
                 });
 
                 player.on('error', (error) => {
                     console.error('Error en el reproductor:', error);
-                    this.playNext(interaction.guild.id);
+                    this.playNext(message.guild.id);
                 });
             }
 
@@ -151,7 +238,7 @@ class MusicHandler {
     }
 
     // Añadir canción a la cola
-    async addToQueue(interaction, query) {
+    async addToQueue(message, query) {
         // Buscar en Deezer
         const deezerResults = await this.searchDeezer(query, 1);
         
@@ -172,12 +259,12 @@ class MusicHandler {
         const song = {
             deezer: deezerTrack,
             soundcloud: soundcloudTrack,
-            requestedBy: interaction.user,
+            requestedBy: message.author,
             url: soundcloudTrack.permalink_url
         };
 
         // Añadir a la cola
-        const guildId = interaction.guild.id;
+        const guildId = message.guild.id;
         if (!this.queues.has(guildId)) {
             this.queues.set(guildId, []);
         }
@@ -203,27 +290,53 @@ class MusicHandler {
         const song = queue[0];
         
         try {
+            console.log(`🎵 Intentando reproducir: "${song.deezer.title}" desde ${song.soundcloud.permalink_url}`);
+            
+            // Verificar que la canción sea reproducible
+            if (!song.soundcloud.streamable) {
+                console.log('❌ Track no es streamable, saltando...');
+                queue.shift();
+                return this.playNext(guildId);
+            }
+
             // Crear stream de audio desde SoundCloud
-            const stream = await scdl.download(song.soundcloud.permalink_url);
+            const stream = await scdl.download(song.soundcloud.permalink_url, {
+                clientID: this.soundcloudClientId,
+                format: scdl.FORMATS.OPUS // Mejor formato para Discord
+            });
+            
             const resource = createAudioResource(stream, {
                 metadata: {
                     title: song.deezer.title,
                     artist: song.deezer.artist
-                }
+                },
+                inputType: 'opus' // Especificar tipo de input
             });
 
             player.play(resource);
             this.nowPlaying.set(guildId, song);
-
+            
+            console.log(`✅ Reproduciendo: "${song.deezer.title}"`);
             return { success: true, song: song };
         } catch (error) {
-            console.error('Error reproduciendo canción:', error);
+            console.error(`❌ Error reproduciendo canción "${song.deezer.title}":`, error);
+            
             // Remover canción problemática y continuar
             queue.shift();
-            return this.playNext(guildId);
+            
+            // Si hay más canciones en la cola, intentar la siguiente
+            if (queue.length > 0) {
+                console.log('🔄 Intentando siguiente canción...');
+                return this.playNext(guildId);
+            }
+            
+            return { 
+                success: false, 
+                message: `No se pudo reproducir "${song.deezer.title}". ${queue.length > 0 ? 'Intentando siguiente...' : 'Cola vacía.'}` 
+            };
         }
     }
-
+    
     // Reproducir siguiente canción
     async playNext(guildId) {
         const queue = this.queues.get(guildId);
@@ -341,6 +454,326 @@ class MusicHandler {
         const secs = seconds % 60;
         return `${mins}:${secs.toString().padStart(2, '0')}`;
     }
+
+    // Funciones para manejar comandos
+    
+    async handlePlay(message, args) {  
+        if (args.length === 0) {
+            const embed = new EmbedBuilder()
+                .setColor('#FF6B35')
+                .setTitle('❌ Error')
+                .setDescription(`Uso: \`${PREFIX}play <nombre de la canción>\``)
+                .addFields(
+                    { name: 'Ejemplos:', value: `'play despacito\n p bad bunny safaera'` }
+                );
+            return message.reply({ embeds: [embed] });
+        }
+    
+        const loadingEmbed = new EmbedBuilder()
+            .setColor('#FFA500')
+            .setTitle('🔍 Buscando...')
+            .setDescription(`Buscando: **${args.join(' ')}**`);
+        
+        const loadingMsg = await message.reply({ embeds: [loadingEmbed] });
+    
+        args = message.content.slice(8).trim().split(/ +/);
+        const query = args.join(' ');
+        console.log(`🎵 Args: ${args.join(' ')} | Usuario: ${message.author.tag}`);
+        
+        try {
+            // Unirse al canal de voz
+            console.log('🔗 Intentando unirse al canal de voz...');
+            const joinResult = await this.joinVoice(message);
+            if (!joinResult.success) {
+                const errorEmbed = new EmbedBuilder()
+                    .setColor('#FF0000')
+                    .setTitle('❌ Error')
+                    .setDescription(joinResult.message);
+                return loadingMsg.edit({ embeds: [errorEmbed] });
+            }
+            
+            console.log('🎵 Añadiendo a la cola...');
+            // Añadir a la cola
+            const queueResult = await this.addToQueue(message, query);
+            if (!queueResult.success) {
+                const errorEmbed = new EmbedBuilder()
+                    .setColor('#FF0000')
+                    .setTitle('❌ Error')
+                    .setDescription(queueResult.message);
+                return loadingMsg.edit({ embeds: [errorEmbed] });
+            }
+            
+            // Si es la primera canción, reproducir inmediatamente
+            const queue = this.queues.get(message.guild.id);
+            const isFirst = queue.length === 1;
+            
+            if (isFirst) {
+                console.log('▶️ Reproduciendo primera canción...');
+                const playResult = await this.play(message.guild.id);
+                if (playResult.success) {
+                    const embed = this.createSongEmbed(playResult.song, 'nowPlaying');
+                    await loadingMsg.edit({ embeds: [embed] });
+                } else {
+                    const errorEmbed = new EmbedBuilder()
+                        .setColor('#FF0000')
+                        .setTitle('❌ Error')
+                        .setDescription('Error al reproducir la canción.');
+                    await loadingMsg.edit({ embeds: [errorEmbed] });
+                }
+            } else {
+                const embed = this.createSongEmbed(queueResult.song, 'added');
+                embed.addFields({
+                    name: '📋 Posición en cola',
+                    value: `${queue.length}`,
+                    inline: true
+                });
+                await loadingMsg.edit({ embeds: [embed] });
+            }
+        } catch (error) {
+            console.error('Error en handlePlay:', error);
+            const errorEmbed = new EmbedBuilder()
+                .setColor('#FF0000')
+                .setTitle('❌ Error')
+                .setDescription(`Error procesando la canción: ${error.message}`);
+            await loadingMsg.edit({ embeds: [errorEmbed] });
+        }
+    }
+    
+    async handleSkip(message) {
+        const result = this.skip(message.guild.id);
+        
+        const embed = new EmbedBuilder()
+            .setColor(result.success ? '#FFA500' : '#FF0000')
+            .setTitle(result.success ? '⏭️ Canción saltada' : '❌ Error')
+            .setDescription(result.message)
+            .setTimestamp();
+        
+        message.reply({ embeds: [embed] });
+    }
+    
+    async handlePause(message) {
+        const result = this.pause(message.guild.id);
+        
+        const embed = new EmbedBuilder()
+            .setColor(result.success ? '#FFA500' : '#FF0000')
+            .setTitle(result.success ? '⏸️ Música pausada' : '❌ Error')
+            .setDescription(result.message)
+            .setTimestamp();
+        
+        message.reply({ embeds: [embed] });
+    }
+    
+    async handleResume(message) {
+        const result = this.resume(message.guild.id);
+        
+        const embed = new EmbedBuilder()
+            .setColor(result.success ? '#00FF00' : '#FF0000')
+            .setTitle(result.success ? '▶️ Música reanudada' : '❌ Error')
+            .setDescription(result.message)
+            .setTimestamp();
+        
+        message.reply({ embeds: [embed] });
+    }
+    
+    async handleQueue(message) {
+        const result = this.showQueue(message.guild.id);
+        
+        if (!result.success) {
+            const embed = new EmbedBuilder()
+                .setColor('#FF0000')
+                .setTitle('📋 Cola de reproducción')
+                .setDescription(result.message)
+                .setTimestamp();
+            
+            return message.reply({ embeds: [embed] });
+        }
+        
+        const embed = new EmbedBuilder()
+            .setColor('#1DB954')
+            .setTitle('📋 Cola de reproducción')
+            .setTimestamp();
+        
+        if (result.nowPlaying) {
+            embed.addFields({
+                name: '🎶 Reproduciendo ahora',
+                value: `**${result.nowPlaying.deezer.title}** - ${result.nowPlaying.deezer.artist}`,
+                inline: false
+            });
+        }
+        
+        if (result.queue.length > 0) {
+            const queueList = result.queue.map((song, index) => 
+                `${index + 1}. **${song.deezer.title}** - ${song.deezer.artist}`
+            ).join('\n');
+            
+            embed.addFields({
+                name: '⏳ Siguiente(s)',
+                value: queueList.length > 1024 ? queueList.substring(0, 1021) + '...' : queueList,
+                inline: false
+            });
+            
+            embed.setFooter({
+                text: `Total: ${result.queue.length} canción(es) en cola`
+            });
+        }
+        
+        message.reply({ embeds: [embed] });
+    }
+    
+    async handleNowPlaying(message) {
+        const nowPlaying = this.nowPlaying.get(message.guild.id);
+        
+        if (!nowPlaying) {
+            const embed = new EmbedBuilder()
+                .setColor('#FF0000')
+                .setTitle('❌ Error')
+                .setDescription('No hay música reproduciéndose.')
+                .setTimestamp();
+            
+            return message.reply({ embeds: [embed] });
+        }
+        
+        const embed = this.createSongEmbed(nowPlaying, 'nowPlaying');
+        message.reply({ embeds: [embed] });
+    }
+    
+    async handleClear(message) {
+        const result = this.clearQueue(message.guild.id);
+        
+        const embed = new EmbedBuilder()
+            .setColor('#FFA500')
+            .setTitle('🗑️ Cola limpiada')
+            .setDescription(result.message)
+            .setTimestamp();
+        
+        message.reply({ embeds: [embed] });
+    }
+    
+    async handleStop(message) {
+        const result = this.disconnect(message.guild.id);
+        
+        const embed = new EmbedBuilder()
+            .setColor('#FF0000')
+            .setTitle('⏹️ Música detenida')
+            .setDescription(result.message)
+            .setTimestamp();
+        
+        message.reply({ embeds: [embed] });
+    }
+    
+    async handleSearch(message, args) {
+        if (args.length === 0) {
+            const embed = new EmbedBuilder()
+                .setColor('#FF6B35')
+                .setTitle('❌ Error')
+                .setDescription(`Uso: mon!search <término de búsqueda>`)
+                .addFields(
+                    { name: 'Ejemplo:', value: `mon!search bad bunny` }
+                );
+            return message.reply({ embeds: [embed] });
+        }
+    
+        const loadingEmbed = new EmbedBuilder()
+            .setColor('#FFA500')
+            .setTitle('🔍 Buscando en Deezer...')
+            .setDescription(`Término: **${args.join(' ')}**`);
+        
+        const loadingMsg = await message.reply({ embeds: [loadingEmbed] });
+
+        args = message.content.slice(11).trim().split(/ +/);
+        const query = args.join(' ');
+        console.log(`🎵 Search Args: ${args.join(' ')} | Usuario: ${message.author.tag}`);
+        const results = await this.searchDeezer(query, 5);
+        
+        if (results.length === 0) {
+            const errorEmbed = new EmbedBuilder()
+                .setColor('#FF0000')
+                .setTitle('❌ Sin resultados')
+                .setDescription('No se encontraron resultados en Deezer.')
+                .setTimestamp();
+            return loadingMsg.edit({ embeds: [errorEmbed] });
+        }
+        
+        const embed = new EmbedBuilder()
+            .setColor('#FF6B35')
+            .setTitle('🔍 Resultados de búsqueda en Deezer')
+            .setDescription(`Resultados para: **${query}**`)
+            .setTimestamp();
+        
+        results.forEach((track, index) => {
+            embed.addFields({
+                name: `${index + 1}. ${track.title}`,
+                value: `👨‍🎤 **Artista:** ${track.artist}\n💿 **Álbum:** ${track.album}\n⏱️ **Duración:** ${this.formatDuration(track.duration)}`,
+                inline: true
+            });
+        });
+        
+        embed.setFooter({
+            text: `Usa mon!play <nombre de canción> para reproducir`
+        });
+        
+        loadingMsg.edit({ embeds: [embed] });
+    }
+
+    async processCommand(message) {
+        if (message.author.bot) return;
+
+        const args = message.content.trim().split(/ +/g);
+        const command = args[0].toLowerCase();
+
+        try {
+            switch (command) {
+                case 'mon!play':
+                case 'mon!p':
+                    await this.handlePlay(message, args);
+                    break;
+                
+                case 'mon!skip':
+                case 'mon!s':
+                    await this.handleSkip(message);
+                    break;
+                
+                case 'mon!pause':
+                    await this.handlePause(message);
+                    break;
+                
+                case 'mon!resume':
+                case 'mon!r':
+                    await this.handleResume(message);
+                    break;
+                
+                case 'mon!queue':
+                case 'mon!q':
+                    await this.handleQueue(message);
+                    break;
+                
+                case 'mon!nowplaying':
+                case 'mon!np':
+                    await this.handleNowPlaying(message);
+                    break;
+                
+                case 'mon!clearmusic':
+                case 'mon!cm':
+                    await this.handleClear(message);
+                    break;
+                
+                case 'mon!stop':
+                case 'mon!disconnect':
+                case 'mon!dc':
+                    await this.handleStop(message);
+                    break;
+    
+                case 'mon!search':
+                    await this.handleSearch(message, args);
+                    break;
+                default:
+                    break;
+            }
+        } catch (error) {
+            console.error('❌ Error procesando comando:', error);
+            await message.reply('❌ Ocurrió un error al procesar el comando. Intenta de nuevo.');
+        }
+    }    
 }
 
 module.exports = MusicHandler;
