@@ -577,6 +577,191 @@ class AllCommands {
         }
     }
 
+    // Funciones para manejar comandos
+
+    async handlePlay(interaction) {
+        await interaction.deferReply();
+        
+        const query = interaction.options.getString('cancion');
+        
+        // Unirse al canal de voz
+        const joinResult = await musicHandler.joinVoice(interaction);
+        if (!joinResult.success) {
+            return await interaction.editReply(joinResult.message);
+        }
+        
+        // Añadir a la cola
+        const queueResult = await musicHandler.addToQueue(interaction, query);
+        if (!queueResult.success) {
+            return await interaction.editReply(queueResult.message);
+        }
+        
+        // Si es la primera canción, reproducir inmediatamente
+        const queue = musicHandler.queues.get(interaction.guild.id);
+        const isFirst = queue.length === 1;
+        
+        if (isFirst) {
+            const playResult = await musicHandler.play(interaction.guild.id);
+            if (playResult.success) {
+                const embed = musicHandler.createSongEmbed(playResult.song, 'nowPlaying');
+                await interaction.editReply({ embeds: [embed] });
+            } else {
+                await interaction.editReply('❌ Error al reproducir la canción.');
+            }
+        } else {
+            const embed = musicHandler.createSongEmbed(queueResult.song, 'added');
+            embed.addFields({
+                name: '📋 Posición en cola',
+                value: `${queue.length}`,
+                inline: true
+            });
+            await interaction.editReply({ embeds: [embed] });
+        }
+    }
+
+    async handleSkip(interaction) {
+        const result = musicHandler.skip(interaction.guild.id);
+        
+        const embed = new EmbedBuilder()
+            .setColor(result.success ? '#FFA500' : '#FF0000')
+            .setTitle(result.success ? '⏭️ Canción saltada' : '❌ Error')
+            .setDescription(result.message);
+        
+        await interaction.reply({ embeds: [embed] });
+    }
+
+    async handlePause(interaction) {
+        const result = musicHandler.pause(interaction.guild.id);
+        
+        const embed = new EmbedBuilder()
+            .setColor(result.success ? '#FFA500' : '#FF0000')
+            .setTitle(result.success ? '⏸️ Música pausada' : '❌ Error')
+            .setDescription(result.message);
+        
+        await interaction.reply({ embeds: [embed] });
+    }
+
+    async handleResume(interaction) {
+        const result = musicHandler.resume(interaction.guild.id);
+        
+        const embed = new EmbedBuilder()
+            .setColor(result.success ? '#00FF00' : '#FF0000')
+            .setTitle(result.success ? '▶️ Música reanudada' : '❌ Error')
+            .setDescription(result.message);
+        
+        await interaction.reply({ embeds: [embed] });
+    }
+
+    async handleQueue(interaction) {
+        const result = musicHandler.showQueue(interaction.guild.id);
+        
+        if (!result.success) {
+            const embed = new EmbedBuilder()
+                .setColor('#FF0000')
+                .setTitle('📋 Cola de reproducción')
+                .setDescription(result.message);
+            
+            return await interaction.reply({ embeds: [embed] });
+        }
+        
+        const embed = new EmbedBuilder()
+            .setColor('#1DB954')
+            .setTitle('📋 Cola de reproducción');
+        
+        if (result.nowPlaying) {
+            embed.addFields({
+                name: '🎶 Reproduciendo ahora',
+                value: `**${result.nowPlaying.deezer.title}** - ${result.nowPlaying.deezer.artist}`,
+                inline: false
+            });
+        }
+        
+        if (result.queue.length > 0) {
+            const queueList = result.queue.map((song, index) => 
+                `${index + 1}. **${song.deezer.title}** - ${song.deezer.artist}`
+            ).join('\n');
+            
+            embed.addFields({
+                name: '⏳ Siguiente(s)',
+                value: queueList,
+                inline: false
+            });
+            
+            embed.setFooter({
+                text: `Total: ${result.queue.length} canción(es) en cola`
+            });
+        }
+        
+        await interaction.reply({ embeds: [embed] });
+    }
+
+    async handleNowPlaying(interaction) {
+        const nowPlaying = musicHandler.nowPlaying.get(interaction.guild.id);
+        
+        if (!nowPlaying) {
+            const embed = new EmbedBuilder()
+                .setColor('#FF0000')
+                .setTitle('❌ Error')
+                .setDescription('No hay música reproduciéndose.');
+            
+            return await interaction.reply({ embeds: [embed] });
+        }
+        
+        const embed = musicHandler.createSongEmbed(nowPlaying, 'nowPlaying');
+        await interaction.reply({ embeds: [embed] });
+    }
+
+    async handleClear(interaction) {
+        const result = musicHandler.clearQueue(interaction.guild.id);
+        
+        const embed = new EmbedBuilder()
+            .setColor('#FFA500')
+            .setTitle('🗑️ Cola limpiada')
+            .setDescription(result.message);
+        
+        await interaction.reply({ embeds: [embed] });
+    }
+
+    async handleStop(interaction) {
+        const result = musicHandler.disconnect(interaction.guild.id);
+        
+        const embed = new EmbedBuilder()
+            .setColor('#FF0000')
+            .setTitle('⏹️ Música detenida')
+            .setDescription(result.message);
+        
+        await interaction.reply({ embeds: [embed] });
+    }
+
+    async handleSearch(interaction) {
+        await interaction.deferReply();
+        
+        const query = interaction.options.getString('query');
+        const results = await musicHandler.searchDeezer(query, 5);
+        
+        if (results.length === 0) {
+            return await interaction.editReply('❌ No se encontraron resultados.');
+        }
+        
+        const embed = new EmbedBuilder()
+            .setColor('#FF6B35')
+            .setTitle('🔍 Resultados de búsqueda en Deezer')
+            .setDescription(`Resultados para: **${query}**`);
+        
+        results.forEach((track, index) => {
+            embed.addFields({
+                name: `${index + 1}. ${track.title}`,
+                value: `👨‍🎤 **Artista:** ${track.artist}\n💿 **Álbum:** ${track.album}\n⏱️ **Duración:** ${musicHandler.formatDuration(track.duration)}`,
+                inline: true
+            });
+        });
+        
+        embed.setFooter({
+            text: 'Usa /play <nombre de canción> para reproducir una canción'
+        });
+        
+        await interaction.editReply({ embeds: [embed] });
+    }    
 
 
     // Comando !work - Sistema de trabajos
@@ -705,6 +890,33 @@ class AllCommands {
 
         try {
             switch (command) {
+                case 'mon!play':
+                    await this.handlePlay(interaction);
+                    break;
+                case 'mon!skip':
+                    await this.handleSkip(interaction);
+                    break;
+                case 'mon!pause':
+                    await this.handlePause(interaction);
+                    break;
+                case 'mon!resume':
+                    await this.handleResume(interaction);
+                    break;
+                case 'mon!queue':
+                    await this.handleQueue(interaction);
+                    break;
+                case 'mon!nowplaying':
+                    await this.handleNowPlaying(interaction);
+                    break;
+                case 'mon!clear':
+                    await this.handleClear(interaction);
+                    break;
+                case 'mon!stop':
+                    await this.handleStop(interaction);
+                    break;
+                case 'mon!search':
+                    await this.handleSearch(interaction);
+                    break;                
                 case 'mon!balance':
                 case 'mon!bal':
                 case 'mon!money':
