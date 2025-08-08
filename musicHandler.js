@@ -44,58 +44,131 @@ class MusicHandler {
     async findOnSoundCloud(deezerTrack) {
         try {
             const searchQuery = `${deezerTrack.artist} ${deezerTrack.title}`;
+
+            console.log(`🔍 Buscando en SoundCloud: "${searchQuery}"`);
             
             // soundcloud-downloader maneja automáticamente el client_id
             const tracks = await scdl.search({
                 query: searchQuery,
-                limit: 5,
+                limit: 10, // Aumentar límite para más opciones
                 offset: 0
             });
 
             if (tracks && tracks.collection && tracks.collection.length > 0) {
+                console.log(`✅ Encontradas ${tracks.collection.length} canciones en SoundCloud`);
+                
+                // Filtrar tracks que no se pueden reproducir
+                const playableTracks = tracks.collection.filter(track => 
+                    track && track.streamable && !track.policy_disabled
+                );
+                
+                if (playableTracks.length === 0) {
+                    console.log('❌ No hay tracks reproducibles encontrados');
+                    // Intentar búsqueda alternativa
+                    return await this.alternativeSearch(deezerTrack);
+                }
+                
                 // Buscar la mejor coincidencia
-                const bestMatch = this.findBestMatch(deezerTrack, tracks.collection);
+                const bestMatch = this.findBestMatch(deezerTrack, playableTracks);
+                console.log(`🎯 Mejor coincidencia: "${bestMatch.title}" por ${bestMatch.user?.username || 'Unknown'}`);
                 return bestMatch;
             }
-            return null;
+
+            console.log('❌ No se encontraron tracks en SoundCloud');
+            return await this.alternativeSearch(deezerTrack);
         } catch (error) {
-            console.error('Error buscando en SoundCloud:', error);
+            console.error('❌ Error buscando en SoundCloud:', error);
             // Fallback: intentar búsqueda más simple
+            return await this.alternativeSearch(deezerTrack);
+        }
+    }
+
+    // Búsqueda alternativa con diferentes estrategias
+    async alternativeSearch(deezerTrack) {
+        const searchStrategies = [
+            // Solo título
+            deezerTrack.title,
+            // Solo artista + título (sin álbum)
+            `${deezerTrack.artist} ${deezerTrack.title}`,
+            // Título + artista (orden inverso)
+            `${deezerTrack.title} ${deezerTrack.artist}`,
+            // Solo palabras clave del título
+            deezerTrack.title.split(' ').slice(0, 2).join(' ')
+        ];
+
+        for (const strategy of searchStrategies) {
             try {
-                const simpleSearch = await scdl.search(searchQuery);
-                return simpleSearch && simpleSearch.length > 0 ? simpleSearch[0] : null;
-            } catch (fallbackError) {
-                console.error('Error en búsqueda fallback:', fallbackError);
-                return null;
+                console.log(`🔄 Intentando búsqueda alternativa: "${strategy}"`);
+                
+                const tracks = await scdl.search({
+                    query: strategy,
+                    limit: 5,
+                    offset: 0
+                });
+
+                if (tracks && tracks.collection && tracks.collection.length > 0) {
+                    const playableTracks = tracks.collection.filter(track => 
+                        track && track.streamable && !track.policy_disabled
+                    );
+                    
+                    if (playableTracks.length > 0) {
+                        console.log(`✅ Encontrado con estrategia alternativa: "${playableTracks[0].title}"`);
+                        return playableTracks[0];
+                    }
+                }
+            } catch (error) {
+                console.log(`❌ Error con estrategia "${strategy}":`, error.message);
+                continue;
             }
         }
+
+        console.log('❌ Todas las estrategias de búsqueda fallaron');
+        return null;
     }
 
     // Encontrar la mejor coincidencia entre Deezer y SoundCloud
     findBestMatch(deezerTrack, soundcloudTracks) {
-        const deezerTitle = deezerTrack.title.toLowerCase();
-        const deezerArtist = deezerTrack.artist.toLowerCase();
+        const deezerTitle = this.normalizeString(deezerTrack.title);
+        const deezerArtist = this.normalizeString(deezerTrack.artist);
         
         let bestScore = 0;
         let bestTrack = soundcloudTracks[0];
 
         soundcloudTracks.forEach(track => {
-            const scTitle = track.title.toLowerCase();
+            const scTitle = this.normalizeString(track.title);
             let score = 0;
 
-            // Puntuación por coincidencia en título
+            // Puntuación por coincidencia en título (más flexible)
             if (scTitle.includes(deezerTitle) || deezerTitle.includes(scTitle.split(' ')[0])) {
-                score += 3;
+                score += 5;
             }
+            
+            // Puntuación por palabras clave del título
+            const deezerWords = deezerTitle.split(' ');
+            const scWords = scTitle.split(' ');
+            const commonWords = deezerWords.filter(word => 
+                word.length > 3 && scWords.some(scWord => scWord.includes(word))
+            );
+            score += commonWords.length * 2;
 
             // Puntuación por coincidencia en artista
             if (scTitle.includes(deezerArtist)) {
+                score += 3;
+            }
+
+            // Puntuación por duración similar (±45 segundos - más flexible)
+            const durationDiff = Math.abs(track.duration - (deezerTrack.duration * 1000));
+            if (durationDiff < 45000) {
                 score += 2;
             }
 
-            // Puntuación por duración similar (±30 segundos)
-            const durationDiff = Math.abs(track.duration - (deezerTrack.duration * 1000));
-            if (durationDiff < 30000) {
+            // Penalización por tracks muy cortos (probablemente previews)
+            if (track.duration < 30000) {
+                score -= 2;
+            }
+
+            // Bonus por popularidad (si tiene más likes/plays)
+            if (track.playback_count > 10000) {
                 score += 1;
             }
 
@@ -105,9 +178,23 @@ class MusicHandler {
             }
         });
 
+        console.log(`🎯 Mejor coincidencia encontrada con score: ${bestScore}`);
         return bestTrack;
     }
 
+    // Normalizar strings para mejor comparación
+    normalizeString(str) {
+        return str.toLowerCase()
+            .replace(/[áàäâ]/g, 'a')
+            .replace(/[éèëê]/g, 'e')
+            .replace(/[íìïî]/g, 'i')
+            .replace(/[óòöô]/g, 'o')
+            .replace(/[úùüû]/g, 'u')
+            .replace(/[ñ]/g, 'n')
+            .replace(/[^\w\s]/g, '') // Remover caracteres especiales
+            .trim();
+    }
+   
     // Unirse al canal de voz
     async joinVoice(message) {
         const member = message.member;
@@ -203,27 +290,53 @@ class MusicHandler {
         const song = queue[0];
         
         try {
+            console.log(`🎵 Intentando reproducir: "${song.deezer.title}" desde ${song.soundcloud.permalink_url}`);
+            
+            // Verificar que la canción sea reproducible
+            if (!song.soundcloud.streamable) {
+                console.log('❌ Track no es streamable, saltando...');
+                queue.shift();
+                return this.playNext(guildId);
+            }
+
             // Crear stream de audio desde SoundCloud
-            const stream = await scdl.download(song.soundcloud.permalink_url);
+            const stream = await scdl.download(song.soundcloud.permalink_url, {
+                clientID: this.soundcloudClientId,
+                format: scdl.FORMATS.OPUS // Mejor formato para Discord
+            });
+            
             const resource = createAudioResource(stream, {
                 metadata: {
                     title: song.deezer.title,
                     artist: song.deezer.artist
-                }
+                },
+                inputType: 'opus' // Especificar tipo de input
             });
 
             player.play(resource);
             this.nowPlaying.set(guildId, song);
-
+            
+            console.log(`✅ Reproduciendo: "${song.deezer.title}"`);
             return { success: true, song: song };
         } catch (error) {
-            console.error('Error reproduciendo canción:', error);
+            console.error(`❌ Error reproduciendo canción "${song.deezer.title}":`, error);
+            
             // Remover canción problemática y continuar
             queue.shift();
-            return this.playNext(guildId);
+            
+            // Si hay más canciones en la cola, intentar la siguiente
+            if (queue.length > 0) {
+                console.log('🔄 Intentando siguiente canción...');
+                return this.playNext(guildId);
+            }
+            
+            return { 
+                success: false, 
+                message: `No se pudo reproducir "${song.deezer.title}". ${queue.length > 0 ? 'Intentando siguiente...' : 'Cola vacía.'}` 
+            };
         }
     }
-
+    
     // Reproducir siguiente canción
     async playNext(guildId) {
         const queue = this.queues.get(guildId);
