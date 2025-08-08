@@ -10,15 +10,15 @@ class MinigamesSystem {
             coinflip: {
                 minBet: 50,
                 maxBet: 10000,
-                cooldown: 5000, // 5 segundos entre juegos
+                cooldown: 15000, // 15 segundos entre juegos
                 winMultiplier: 1.95 // Ganas 95% adicional (casa gana 5%)
             },
             dice: {
                 minBet: 50,
                 maxBet: 10000,
-                cooldown: 5000,
+                cooldown: 15000,
                 payouts: {
-                    exact: 5.8, // Adivinar número exacto: x5.8
+                    exact: 3.8, // Adivinar número exacto: x5.8
                     high: 1.9,  // 4-6: x1.9
                     low: 1.9    // 1-3: x1.9
                 }
@@ -26,7 +26,7 @@ class MinigamesSystem {
             guess: {
                 minBet: 100,
                 maxBet: 5000,
-                cooldown: 10000, // 10 segundos
+                cooldown: 15000, // 10 segundos
                 payouts: {
                     exact: 50,    // Número exacto: x50
                     close5: 10,   // ±5: x10
@@ -36,7 +36,7 @@ class MinigamesSystem {
             },
             blackjack: {
                 minBet: 100,
-                maxBet: 10000,
+                maxBet: 15000,
                 cooldown: 10000,
                 blackjackMultiplier: 2.5,
                 winMultiplier: 2
@@ -160,7 +160,8 @@ class MinigamesSystem {
                     { name: '🪙 Resultado', value: result === 'cara' ? '🟡 Cara' : '⚪ Cruz', inline: true },
                     { name: '🎯 Tu Elección', value: normalizedChoice === 'cara' ? '🟡 Cara' : '⚪ Cruz', inline: true },
                     { name: '💰 Ganancia', value: `+${this.formatNumber(profit)} π-b$`, inline: true },
-                    { name: '💳 Nuevo Balance', value: `${this.formatNumber(user.balance + profit)} π-b$`, inline: false }
+                    { name: '💸 Balance Antiguo', value: `${this.formatNumber(user.balance)} π-b$`, inline: false },
+                    { name: '💳 Balance Actual', value: `${this.formatNumber(user.balance + profit)} π-b$`, inline: false }
                 );
         } else {
             await this.economy.removeMoney(userId, betAmount, 'coinflip_loss');
@@ -170,7 +171,8 @@ class MinigamesSystem {
                     { name: '🪙 Resultado', value: result === 'cara' ? '🟡 Cara' : '⚪ Cruz', inline: true },
                     { name: '🎯 Tu Elección', value: normalizedChoice === 'cara' ? '🟡 Cara' : '⚪ Cruz', inline: true },
                     { name: '💸 Perdiste', value: `${this.formatNumber(betAmount)} π-b$`, inline: true },
-                    { name: '💳 Nuevo Balance', value: `${this.formatNumber(user.balance - betAmount)} π-b$`, inline: false }
+                    { name: '💸 Balance Antiguo', value: `${this.formatNumber(user.balance)} π-b$`, inline: false },
+                    { name: '💳 Balance Actual', value: `${this.formatNumber(user.balance - betAmount)} π-b$`, inline: false }
                 );
         }
 
@@ -276,7 +278,8 @@ class MinigamesSystem {
                 .addFields(
                     { name: '💰 Multiplicador', value: `x${multiplier}`, inline: true },
                     { name: '💰 Ganancia', value: `+${this.formatNumber(profit)} π-b$`, inline: false },
-                    { name: '💳 Nuevo Balance', value: `${this.formatNumber(user.balance + profit)} π-b$`, inline: false }
+                    { name: '💸 Balance Antiguo', value: `${this.formatNumber(user.balance)} π-b$`, inline: false },
+                    { name: '💳 Balance Actual', value: `${this.formatNumber(user.balance + profit)} π-b$`, inline: false }
                 );
         } else {
             await this.economy.removeMoney(userId, betAmount, 'dice_loss');
