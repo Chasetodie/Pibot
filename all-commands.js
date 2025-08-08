@@ -283,7 +283,7 @@ class AllCommands {
         // Realizar transferencia
         const result = await this.economy.transferMoney(message.author.id, targetUser.id, amount);
         const userBalance = await this.economy.getUser(message.author.id);
-        const otherUserBalance = await this.economy.getUser(targetUser);
+        const otherUserBalance = await this.economy.getUser(targetUser.id);
         
         if (!result.success) {
             if (result.reason === 'insufficient_funds') {
