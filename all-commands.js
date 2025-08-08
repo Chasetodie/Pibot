@@ -647,7 +647,7 @@ class AllCommands {
                 
                 embed.addFields({
                     name: `${available} ${job.name}`,
-                    value: `**Pago:** ${job.baseReward} - ${job.variation} π-b$\n**Cooldown:** ${cooldownText}${levelText}${job.failChance ? `\n**Riesgo:** ${(job.failChance * 100)}% de fallar` : ''}`,
+                    value: `**Pago:** ${job.baseReward} - ${job.variation} π-b$\n**Cooldown:** ${cooldownText}${levelText}${job.failChance ? `\n**Riesgo:** ${(job.failChance * 100)}% de fallar` : ''}\n**Comando:** mon!work ${job.codeName}`,
                     inline: true
                 });
             }

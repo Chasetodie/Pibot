@@ -471,6 +471,7 @@ async processMessageXp(userId) {
             'delivery': {
                 name: '🚚 Delivery',
                 cooldown: 60 * 60 * 1000, // 1 hora
+                codeName: 'delivery',
                 baseReward: 150,
                 variation: 100,
                 levelRequirement: 1,
@@ -491,6 +492,7 @@ async processMessageXp(userId) {
             'programmer': {
                 name: '💻 Programador',
                 cooldown: 60 * 60 * 1000, // 1 hora
+                codeName: 'programmer',
                 baseReward: 250,
                 variation: 150,
                 levelRequirement: 5,
@@ -511,6 +513,7 @@ async processMessageXp(userId) {
             'doctor': {
                 name: '👨‍⚕️ Doctor',
                 cooldown: 60 * 60 * 1000, // 1 hora
+                codeName: 'doctor',
                 baseReward: 400,
                 variation: 200,
                 levelRequirement: 10,
@@ -531,6 +534,7 @@ async processMessageXp(userId) {
             'criminal': {
                 name: '🕵️ Actividad Sospechosa',
                 cooldown: 60 * 60 * 1000, // 1 hora
+                codeName: 'criminal',
                 baseReward: 600,
                 variation: 400,
                 levelRequirement: 15,
@@ -547,6 +551,28 @@ async processMessageXp(userId) {
                     'El negocio salió mal',
                     'Te estafaron a ti primero',
                     'Tuviste que huir sin nada'
+                ]
+            },
+            'ofseller': {
+                name: '👙 Vendedora de Nudes',
+                cooldown: 60 * 60 * 1000, // 1 hora
+                codeName: 'ofseller',
+                baseReward: 1000,
+                variation: 800,
+                levelRequirement: 20,
+                failChance: 0.2, // 20% de fallar
+                messages: [
+                    'Vendiste contenido exclusivo a un cliente',
+                    'Recibiste una propina generosa',
+                    'Tuviste una sesión privada muy exitosa',
+                    'Te contrataron para un evento especial',
+                    'Recibiste elogios por tu trabajo'
+                ],
+                failMessages: [
+                    'Un cliente se quejó de la calidad',
+                    'Tuviste problemas técnicos durante la sesión',
+                    'Un rival intentó sabotearte',
+                    'Te quedaste dormida y el cliente se fue sin pagar'
                 ]
             }
         };
