@@ -1,4 +1,6 @@
 const { EmbedBuilder } = require('discord.js');
+require('dotenv').config();
+const admin = require('firebase-admin');
 
 class BettingSystem {
     constructor(economySystem) {
