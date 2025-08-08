@@ -345,13 +345,13 @@ class MusicHandler {
     // Funciones para manejar comandos
     
     async handlePlay(message, args) {  
-        if (args.length === 7) {
+        if (args.length === 0) {
             const embed = new EmbedBuilder()
                 .setColor('#FF6B35')
                 .setTitle('❌ Error')
                 .setDescription(`Uso: \`${PREFIX}play <nombre de la canción>\``)
                 .addFields(
-                    { name: 'Ejemplos:', value: `\`${PREFIX}play despacito\`\n\`${PREFIX}p bad bunny safaera\`` }
+                    { name: 'Ejemplos:', value: `'play despacito\n p bad bunny safaera'` }
                 );
             return message.reply({ embeds: [embed] });
         }
@@ -363,7 +363,7 @@ class MusicHandler {
         
         const loadingMsg = await message.reply({ embeds: [loadingEmbed] });
     
-        args = message.content.slice(7).trim().split(/ +/);
+        args = message.content.slice(8).trim().split(/ +/);
         const query = args.join(' ');
         console.log(`🎵 Args: ${args.join(' ')} | Usuario: ${message.author.tag}`);
         
