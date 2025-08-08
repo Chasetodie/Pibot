@@ -18,7 +18,7 @@ class MinigamesSystem {
                 maxBet: 10000,
                 cooldown: 30000, // 30 segundos entre juegos
                 payouts: {
-                    exact: 3.8, // Adivinar número exacto: x5.8
+                    exact: 4.8, // Adivinar número exacto: x5.8
                     high: 1.9,  // 4-6: x1.9
                     low: 1.9    // 1-3: x1.9
                 }
@@ -144,7 +144,7 @@ class MinigamesSystem {
         this.setCooldown(userId, 'coinflip');
 
         const updateData = {
-            'stats.gamesPlayed': user.stats.gamesPlayed + 1
+            'stats.gamesPlayed': (user.stats.gamesPlayed || 0) + 1
         }
 
         // Crear embed del resultado
@@ -262,7 +262,7 @@ class MinigamesSystem {
         this.setCooldown(userId, 'dice');
         
         const updateData = {
-            'stats.gamesPlayed': user.stats.gamesPlayed + 1
+            'stats.gamesPlayed': (user.stats.gamesPlayed || 0) + 1
         }
 
         // Emojis del dado
