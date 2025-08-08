@@ -179,7 +179,7 @@ class BettingSystem {
             channelId: message.channel.id
         };
 
-        this.updateBet(userId + targetUser.id, betData)
+        this.updateBet(userId + targetUser.id + Date.now(), betData)
 
         const embed = new EmbedBuilder()
             .setTitle('🎲 Nueva Apuesta Creada')
