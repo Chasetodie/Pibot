@@ -611,7 +611,7 @@ async processMessageXp(userId) {
             updateData.balance = Math.max(0, user.balance - penalty);
             updateData.totalSpent = user.stats.totalSpent + penalty;
 
-            console.log(`Amount ${amount}\nLastWork ${updateData.lastWork}\nworkCount ${updateData.workCount}\nBalance ${updateData.balance} TotalSpent ${updateData.totalSpent}`);
+            console.log(`Penalty ${penalty}\nLastWork ${updateData.lastWork}\nworkCount ${updateData.workCount}\nBalance ${updateData.balance} TotalSpent ${updateData.totalSpent}`);
 
 /*            user.balance = Math.max(0, user.balance - penalty);
             user.stats.totalSpent += penalty;*/
