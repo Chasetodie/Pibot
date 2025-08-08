@@ -743,49 +743,6 @@ class AllCommands {
 
         try {
             switch (command) {
-                case 'mon!play':
-                case 'mon!p':
-                    await this.handlePlay(message, args);
-                    break;
-                
-                case 'mon!skip':
-                case 'mon!s':
-                    await this.handleSkip(message);
-                    break;
-                
-                case 'mon!pause':
-                    await this.handlePause(message);
-                    break;
-                
-                case 'mon!resume':
-                case 'mon!r':
-                    await this.handleResume(message);
-                    break;
-                
-                case 'mon!queue':
-                case 'mon!q':
-                    await this.handleQueue(message);
-                    break;
-                
-                case 'mon!nowplaying':
-                case 'mon!np':
-                    await this.handleNowPlaying(message);
-                    break;
-                
-                case 'mon!clearmusic':
-                case 'mon!cm':
-                    await this.handleClear(message);
-                    break;
-                
-                case 'mon!stop':
-                case 'mon!disconnect':
-                case 'mon!dc':
-                    await this.handleStop(message);
-                    break;
-    
-                case 'mon!search':
-                    await this.handleSearch(message, args);
-                    break;
                 case 'mon!balance':
                 case 'mon!bal':
                 case 'mon!money':
