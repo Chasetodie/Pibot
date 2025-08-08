@@ -719,7 +719,16 @@ class AllCommands {
                 .setDescription(`**${jobs[jobType].name}**\n\n${result.message}`)
                 .addFields(
                     { name: '💸 Perdiste', value: `${this.formatNumber(result.penalty)} π-b$`, inline: true },
-                    { name: '💰 Balance Actual', value: `${this.formatNumber(result.newBalance)} π-b$`, inline: true }
+                    {
+                        name: '💸 Balance Anterior',
+                        value: `${this.formatNumber(result.oldBalance)} π-b$`,
+                        inline: true
+                    },
+                    {
+                        name: '💳 Balance Actual',
+                        value: `${this.formatNumber(result.newBalance)} π-b$`,
+                        inline: true
+                    }
                 )
                 .setColor('#dc3545')
                 .setTimestamp();
@@ -734,7 +743,16 @@ class AllCommands {
             .setDescription(`**${result.jobName}**\n\n${result.message}`)
             .addFields(
                 { name: '💰 Ganaste', value: `+${this.formatNumber(result.amount)} π-b$`, inline: true },
-                { name: '💳 Balance Total', value: `${this.formatNumber(result.newBalance)} π-b$`, inline: true }
+                {
+                    name: '💸 Balance Anterior',
+                    value: `${this.formatNumber(result.oldBalance)} π-b$`,
+                    inline: true
+                },
+                {
+                    name: '💳 Balance Actual',
+                    value: `${this.formatNumber(result.newBalance)} π-b$`,
+                    inline: true
+                }
             )
             .setColor('#28a745')
             .setTimestamp();

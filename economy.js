@@ -470,7 +470,7 @@ async processMessageXp(userId) {
         return {
             'delivery': {
                 name: '🚚 Delivery',
-                cooldown: 30 * 60 * 1000, // 30 minutos
+                cooldown: 60 * 60 * 1000, // 1 hora
                 baseReward: 150,
                 variation: 100,
                 levelRequirement: 1,
@@ -490,11 +490,11 @@ async processMessageXp(userId) {
             },
             'programmer': {
                 name: '💻 Programador',
-                cooldown: 45 * 60 * 1000, // 45 minutos
+                cooldown: 60 * 60 * 1000, // 1 hora
                 baseReward: 250,
                 variation: 150,
                 levelRequirement: 5,
-                failChance: 0.1, // 10% de fallar
+                failChance: 1.0, // 100% de fallar
                 messages: [
                     'Desarrollaste una app exitosa',
                     'Solucionaste un bug crítico',
@@ -530,7 +530,7 @@ async processMessageXp(userId) {
             },
             'criminal': {
                 name: '🕵️ Actividad Sospechosa',
-                cooldown: 90 * 60 * 1000, // 1.5 horas
+                cooldown: 60 * 60 * 1000, // 1 hora
                 baseReward: 600,
                 variation: 400,
                 levelRequirement: 15,
