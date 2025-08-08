@@ -142,7 +142,12 @@ class AllCommands {
                     inline: true
                 },
                 {
-                    name: '💳 Balance Total',
+                    name: '💸 Balance Anterior',
+                    value: `**${this.formatNumber(result.oldBalance)}** ${this.economy.config.currencySymbol}`,
+                    inline: true
+                },
+                {
+                    name: '💳 Balance Actual',
                     value: `**${this.formatNumber(result.newBalance)}** ${this.economy.config.currencySymbol}`,
                     inline: true
                 }
@@ -762,7 +767,7 @@ class AllCommands {
 
 
     // Comando !work - Sistema de trabajos
-/*    async handleWork(message) {
+    async handleWork(message) {
         const args = message.content.split(' ');
         const jobType = args[1]?.toLowerCase();
         
@@ -877,7 +882,7 @@ class AllCommands {
             .setTimestamp();
         
         await message.reply({ embeds: [embed] });
-    }    */
+    }    
 
     async processCommand(message) {
         if (message.author.bot) return;
@@ -943,11 +948,10 @@ class AllCommands {
                     await this.handleTop(message);
                     break;
 
-/*                case 'mon!work':
+                case 'mon!work':
                 case 'mon!job':
                     await this.handleWork(message);
-                    break;*/
-                
+                    break;               
                 case 'mon!addmoney':
                 case 'mon!givemoney':
                 case 'mon!givem':

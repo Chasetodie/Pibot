@@ -460,12 +460,13 @@ async processMessageXp(userId) {
         return {
             success: true,
             amount: amount,
-            newBalance: user.balance
+            oldBalance: user.balance,
+            newBalance: user.balance + amount
         };
     }
 
     // Sistema de trabajos
-/*    getWorkJobs() {
+    async getWorkJobs() {
         return {
             'delivery': {
                 name: '🚚 Delivery',
@@ -473,6 +474,7 @@ async processMessageXp(userId) {
                 baseReward: 150,
                 variation: 100,
                 levelRequirement: 1,
+                failChance: 0.05, // 5% de fallar
                 messages: [
                     'Entregaste pizzas por toda la ciudad',
                     'Llevaste paquetes de Amazon sin perder ninguno',
@@ -492,6 +494,7 @@ async processMessageXp(userId) {
                 baseReward: 250,
                 variation: 150,
                 levelRequirement: 5,
+                failChance: 0.1, // 10% de fallar
                 messages: [
                     'Desarrollaste una app exitosa',
                     'Solucionaste un bug crítico',
@@ -511,6 +514,7 @@ async processMessageXp(userId) {
                 baseReward: 400,
                 variation: 200,
                 levelRequirement: 10,
+                failChance: 0.15, // 15% de fallar
                 messages: [
                     'Salvaste vidas en el hospital',
                     'Realizaste una cirugía exitosa',
@@ -549,9 +553,9 @@ async processMessageXp(userId) {
     }
 
     // Verificar si puede trabajar
-    canWork(userId, jobType) {
-        const user = this.getUser(userId);
-        const jobs = this.getWorkJobs();
+    async canWork(userId, jobType) {
+        const user = await this.getUser(userId);
+        const jobs = await this.getWorkJobs();
         const job = jobs[jobType];
         
         if (!job) return { canWork: false, reason: 'invalid_job' };
@@ -569,33 +573,44 @@ async processMessageXp(userId) {
         }
         
         return { canWork: true };
-    }*/
+    }
 
     // Ejecutar trabajo
-/*    doWork(userId, jobType) {
-        const canWorkResult = this.canWork(userId, jobType);
+    async doWork(userId, jobType) {
+        const canWorkResult = await this.canWork(userId, jobType);
         if (!canWorkResult.canWork) return canWorkResult;
         
-        const user = this.getUser(userId);
-        const jobs = this.getWorkJobs();
+        const user = await this.getUser(userId);
+        const jobs = await this.getWorkJobs();
         const job = jobs[jobType];
         
         // Verificar si falla (solo algunos trabajos tienen chance de fallar)
         const failed = job.failChance && Math.random() < job.failChance;
+
+        const updateData = {
+            lastWork: Date.now(),
+            workCount: user.stats.workCount + 1
+        }
         
-        user.lastWork = Date.now();
-        user.stats.workCount++;
+/*        user.lastWork = Date.now();
+        user.stats.workCount++;*/
         
         if (failed) {
             // Trabajo falló
             const failMessage = job.failMessages[Math.floor(Math.random() * job.failMessages.length)];
             const penalty = Math.floor(job.baseReward * 0.2); // Pierde 20% del reward base
             
-            user.balance = Math.max(0, user.balance - penalty);
-            user.stats.totalSpent += penalty;
+            updateData.balance = Math.max(0, user.balance - penalty);
+            updateData.totalSpent = user.stats.totalSpent + penalty;
+
+            console.log(`LastWork ${updateData.lastWork}\nworkCount ${updateData.workCount}\nBalance ${updateData.balance} TotalSpent ${updateData.totalSpent}`);
+
+/*            user.balance = Math.max(0, user.balance - penalty);
+            user.stats.totalSpent += penalty;*/
             
-            this.saveUsers();
-            
+//            this.saveUsers();
+            await this.updateUser(userId, updateData); // ← Reemplaza saveUsers()
+ 
             return {
                 success: false,
                 failed: true,
@@ -611,16 +626,23 @@ async processMessageXp(userId) {
         const message = job.messages[Math.floor(Math.random() * job.messages.length)];
 
         // === INTEGRAR EVENTOS AQUÍ ===
-        if (this.events) {
+/*        if (this.events) {
             const mod = this.events.applyMoneyModifiers(userId, amount, 'work');
             amount = mod.finalAmount;
-        }
-        // =============================        
-        user.balance += amount;
-        user.stats.totalEarned += amount;
+        }*/
+        // =============================  
         
-        this.saveUsers();
+        updateData.balance = user.balance + amount;
+        updateData['stats.totalEarned'] = (user.stats.totalEarned || 0) + amount;
+
+        console.log(`Balance ${updateData.balance}\nStats.TotalEarned ${updateData['stats.totalEarned']}`);
+
+/*        user.balance += amount;
+        user.stats.totalEarned += amount;*/
         
+//        this.saveUsers();
+        await this.updateUser(userId, updateData); // ← Reemplaza saveUsers()
+
         return {
             success: true,
             amount: amount,
@@ -628,7 +650,7 @@ async processMessageXp(userId) {
             newBalance: user.balance,
             jobName: job.name
         };
-    }*/
+    }
 }
 
 module.exports = EconomySystem;
