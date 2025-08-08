@@ -51,7 +51,7 @@ class BettingSystem {
             if (!betDoc.exists) {
                 // Crear nueva apuesta
                 const newBet = {
-                    id: betId,
+                    id: 0,
                     challenger: 0,
                     opponent: 0,
                     amount: 0,
@@ -153,11 +153,11 @@ class BettingSystem {
             return;
         }
 
-/*        const userActiveBets = await this.getBet(userId);
+        const userActiveBets = await this.getBet(userId);
         if (userActiveBets.challenger.length >= this.config.maxActiveBets || userActiveBets.opponent.length >= this.config.maxActiveBets) {
             await message.reply(`❌ Ya tienes ${this.config.maxActiveBets} apuestas activas. Espera a que se resuelvan.`);
             return;
-        }*/
+        }
 
         const description = args.slice(3).join(' ');
         if (description.length > 100) {
