@@ -153,11 +153,11 @@ class BettingSystem {
             return;
         }
 
-        const userActiveBets = await this.getBet(userId);
+/*        const userActiveBets = await this.getBet(userId);
         if (userActiveBets.challenger.length >= this.config.maxActiveBets || userActiveBets.opponent.length >= this.config.maxActiveBets) {
             await message.reply(`❌ Ya tienes ${this.config.maxActiveBets} apuestas activas. Espera a que se resuelvan.`);
             return;
-        }
+        }*/
 
         const description = args.slice(3).join(' ');
         if (description.length > 100) {
@@ -165,10 +165,10 @@ class BettingSystem {
             return;
         }
 
-        const betId = userId + targetUser.id + Date.now();
+        const betId = await this.getBet(userId.slice(3).join(' ') + targetUser.id.slice(3).join(' '));
 
         const betData = {
-            id: betId,
+            id: userId + targetUser.id + Date.now(),
             challenger: userId,
             opponent: targetUser.id,
             amount: amount,
@@ -179,7 +179,7 @@ class BettingSystem {
             channelId: message.channel.id
         };
 
-        this.updateBet(userId + targetUser.id + Date.now(), betData)
+        this.updateBet(userId.slice(3).join(' ') + targetUser.id.slice(3).join(' '), betData)
 
         const embed = new EmbedBuilder()
             .setTitle('🎲 Nueva Apuesta Creada')
