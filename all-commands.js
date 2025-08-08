@@ -586,46 +586,6 @@ class AllCommands {
         }
     }
     
-/*    async function handleHelp(message) {
-        const embed = new EmbedBuilder()
-            .setColor('#1DB954')
-            .setTitle('🎵 Comandos de Música')
-            .setDescription(`Prefijo: \`${PREFIX}\``)
-            .addFields(
-                {
-                    name: '🎵 Reproducción',
-                    value: `\`${PREFIX}play <canción>\` - Reproduce una canción\n\`${PREFIX}p <canción>\` - Atajo para play`,
-                    inline: false
-                },
-                {
-                    name: '⏯️ Control',
-                    value: `\`${PREFIX}pause\` - Pausa la música\n\`${PREFIX}resume\` - Reanuda la música\n\`${PREFIX}skip\` - Salta la canción actual\n\`${PREFIX}stop\` - Para y desconecta`,
-                    inline: false
-                },
-                {
-                    name: '📋 Información',
-                    value: `\`${PREFIX}queue\` - Muestra la cola\n\`${PREFIX}nowplaying\` - Canción actual\n\`${PREFIX}search <término>\` - Busca en Deezer`,
-                    inline: false
-                },
-                {
-                    name: '🔧 Utilidad',
-                    value: `\`${PREFIX}clear\` - Limpia la cola\n\`${PREFIX}help\` - Muestra esta ayuda`,
-                    inline: false
-                }
-            )
-            .addFields({
-                name: '📝 Ejemplos',
-                value: `\`${PREFIX}play despacito\`\n\`${PREFIX}p bad bunny safaera\`\n\`${PREFIX}search reggaeton\``,
-                inline: false
-            })
-            .setFooter({
-                text: '💡 Tip: Necesitas estar en un canal de voz para usar comandos de música'
-            })
-            .setTimestamp();
-        
-        message.reply({ embeds: [embed] });
-    }*/
-
     // Comando !work - Sistema de trabajos
     async handleWork(message) {
         const args = message.content.split(' ');
@@ -778,29 +738,24 @@ class AllCommands {
                     const targetUser = message.mentions.members.first();
                     await this.handleBalance(message, targetUser);
                     break;
-
                 case 'mon!daily':
                     await this.handleDaily(message);
                     break;
-
                 case 'mon!level':
                 case 'mon!lvl':
                 case 'mon!rank':
                     const levelTargetUser = message.mentions.members.first();
                     await this.handleLevel(message, levelTargetUser);
                     break;
-
                 case 'mon!pay':
                 case 'mon!transfer':
                     await this.handlePay(message);
                     break;
-
                 case 'mon!top':
                 case 'mon!leaderboard':
                 case 'mon!lb':
                     await this.handleTop(message);
                     break;
-
                 case 'mon!work':
                 case 'mon!job':
                     await this.handleWork(message);
@@ -811,17 +766,13 @@ class AllCommands {
                 case 'mon!addm':
                     await this.handleAddMoney(message);
                     break;
-                
                 case 'mon!removemoney':
                 case 'mon!removem':
                     await this.handleRemoveMoney(message);
                     break;
-
                 case 'mon!addxp':
                     await this.handleAddXp(message);
-                    break;
-                
-                // Help
+                    break;               
                 case 'mon!help':
                     await this.showHelp(message);
                     break;
@@ -969,11 +920,11 @@ class AllCommands {
                 //Economy
                 { name: '📋 Economía', value: '`mon!balance [@usuario]` - Ver tu dinero y nivel (o el de otro usuario)\n`mon!daily` - Reclamar' + `(${this.economy.config.dailyAmount}±${this.economy.config.dailyVariation} ${this.economy.config.currencySymbol})` + 'diarios\n`mon!work [tipo]` - Trabajar para ganar dinero (delivery, programmer, doctor, criminal)\n`mon!level [@usuario]` - Ver información detallada de nivel\n`mon!pay @usuario <cantidad>` - Transferir dinero a otro usuario\n`mon!top [money/level]` - Ver los rankings del servidor', inline: false},
                 // Minijuegos
-                { name: '🎮 Minijuegos', value: '`mon!coinflip <cara/cruz> <cantidad>` - Juega cara o cruz\n`mon!dice <1-6/alto/bajo> <cantidad>` - Juega a los dados\n`mon!games` - Ver lista de minijuegos', inline: false },
+//                { name: '🎮 Minijuegos', value: '`mon!coinflip <cara/cruz> <cantidad>` - Juega cara o cruz\n`mon!dice <1-6/alto/bajo> <cantidad>` - Juega a los dados\n`mon!games` - Ver lista de minijuegos', inline: false },
 /*                // Eventos
                 { name: '🎉 Eventos', value: '`mon!events` - Ver eventos activos', inline: false },*/
                 // Musica
-                { name: '🎵 Música', value: '`mon!play <url>` - Reproducir música\n`mon!skip` - Saltar canción actual\n`mon!stop` - Detener reproducción\n`mon!pause` - Pausar reproducción\n`mon!resume` - Reanudar reproducción\n`mon!queue` - Ver cola de reproducción\n`mon!search` - Busca una canción junto a sus datos\n`mon!nowplaying` - Ver canción actual\n`mon!clearmusic` - Limpiar cola de reproducción', inline: false }
+//                { name: '🎵 Música', value: '`mon!play <url>` - Reproducir música\n`mon!skip` - Saltar canción actual\n`mon!stop` - Detener reproducción\n`mon!pause` - Pausar reproducción\n`mon!resume` - Reanudar reproducción\n`mon!queue` - Ver cola de reproducción\n`mon!search` - Busca una canción junto a sus datos\n`mon!nowplaying` - Ver canción actual\n`mon!clearmusic` - Limpiar cola de reproducción', inline: false }
             )
             .setFooter({ text: 'Usa los comandos para interactuar con el bot.' })
             .setTimestamp();
