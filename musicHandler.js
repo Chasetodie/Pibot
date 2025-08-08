@@ -345,7 +345,7 @@ class MusicHandler {
     // Funciones para manejar comandos
     
     async handlePlay(message, args) {  
-        if (args.length === 0) {
+        if (args.length === 7) {
             const embed = new EmbedBuilder()
                 .setColor('#FF6B35')
                 .setTitle('❌ Error')
@@ -363,7 +363,9 @@ class MusicHandler {
         
         const loadingMsg = await message.reply({ embeds: [loadingEmbed] });
     
+        args = message.content.slice(7).trim().split(/ +/);
         const query = args.join(' ');
+        console.log(`🎵 Args: ${args.join(' ')} | Usuario: ${message.author.tag}`);
         
         try {
             // Unirse al canal de voz
@@ -601,10 +603,8 @@ class MusicHandler {
     async processCommand(message) {
         if (message.author.bot) return;
 
-        const args = message.content.slice(3).trim().split(/ +/);
+        const args = message.content.trim().split(/ +/g);
         const command = args[0].toLowerCase();
-
-        console.log(`🎵 Comando recibido: ${command} | Args: ${args.join(' ')} | Usuario: ${message.author.tag}`);
 
         try {
             switch (command) {
