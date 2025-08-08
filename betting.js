@@ -165,9 +165,8 @@ class BettingSystem {
             return;
         }
 
-        const idForBet = userId.slice(9) + targetUser.id.slice(9) + Date.now().toString().slice(7);
-        const baseId = userId + targetUser.id + Date.now();
-        const betId = await this.getBet(baseId);
+        const idForBet = userId + targetUser + Date.now();
+        const baseId = userId.slice(9) + targetUser.id.slice(9);
 
         const betData = {
             id: idForBet,
@@ -181,7 +180,7 @@ class BettingSystem {
             channelId: message.channel.id
         };
 
-        this.updateBet(baseId, betData)
+        this.updateBet(baseId, betData);
 
         const embed = new EmbedBuilder()
             .setTitle('🎲 Nueva Apuesta Creada')
@@ -201,12 +200,13 @@ class BettingSystem {
             embeds: [embed]
         });
 
-        setTimeout(async () => await this.expireBet(betId), this.config.betTimeout);
+        setTimeout(async () => await this.expireBet(baseId), this.config.betTimeout);
     }
 
     // Aceptar apuesta
-    async acceptBet(message, betId) {
-        const bet = await this.getBet(betId);
+    async acceptBet(message, targetUser) {
+        const baseId = targetUser.id.slice(9) + message.author.id.slice(9);
+        const bet = await this.getBet(baseId);
         if (!bet) return message.reply({ content: '❌ Esta apuesta ya no existe.', ephemeral: true });
         if (message.user.id !== bet.opponent) return message.reply({ content: '❌ Esta apuesta no es para ti.', ephemeral: true });
         if (bet.status !== 'pending') return message.reply({ content: '❌ Esta apuesta ya fue procesada.', ephemeral: true });
