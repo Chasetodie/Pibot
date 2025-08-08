@@ -54,11 +54,11 @@ class BettingSystem {
                     opponent: 0,
                     amount: 0,
                     description: "",
-                    status: 'pending',
+                    status: "",
                     createdAt: admin.firestore.FieldValue.serverTimestamp(),
                     expiresAt: admin.firestore.FieldValue.serverTimestamp() + this.config.betTimeout,
                     updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-                    channelId: message.channel.id
+                    channelId: 0
                 };
 
                 await this.betsCollection.doc(betId).set(newBet);
