@@ -137,7 +137,7 @@ class EconomySystem {
         user.stats.totalEarned += amount;*/
         
         console.log(`💰 +${amount} ${this.config.currencySymbol} para ${userId} (${reason})`);
-        await this.updateUser(userId, updateData);
+        //await this.updateUser(userId, updateData);
         return user.balance;
     }
 
@@ -157,7 +157,7 @@ class EconomySystem {
         user.stats.totalSpent += amount;*/
         
         console.log(`💸 -${amount} ${this.config.currencySymbol} para ${userId} (${reason})`);
-        await this.updateUser(userId, updateData);
+        //await this.updateUser(userId, updateData);
         return user.balance;
     }
 
@@ -273,61 +273,44 @@ class EconomySystem {
     }
 
     // Procesar XP por mensaje (con cooldown) - VERSIÓN FIREBASE
-async processMessageXp(userId) {
-    const now = Date.now();
-    const lastXp = this.userCooldowns.get(userId) || 0;
-    // Obtener usuario (ahora async)
-    const user = await this.getUser(userId);
-    
-    // Verificar cooldown
-    if (now - lastXp < this.config.xpCooldown) {
-        // Actualizar contador de mensajes
-        const updateData = {
-            messagesCount: (user.messagesCount || 0) + 1
-        };
-        await this.updateUser(userId, updateData);
-        
-        return null; // Aún en cooldown
-    }
-    
-    try {
-        this.userCooldowns.set(userId, now);
-                
-        // Agregar XP (ahora async)
-        const result = await this.addXp(userId, this.config.xpPerMessage);
-        
-        return {
-            levelUp: result.levelUp,
-            levelsGained: result.levelsGained,
-            newLevel: result.newLevel,
-            xpGained: result.xpGained,
-            reward: result.reward,
-            result: result
-        };
-    } catch (error) {
-        console.error('❌ Error procesando XP del mensaje:', error);
-        // Remover del cooldown si hubo error
-        this.userCooldowns.delete(userId);
-        return null;
-    }
-}
-
-    // Procesar XP por mensaje (con cooldown)
-/*    processMessageXp(userId) {
+    async processMessageXp(userId) {
         const now = Date.now();
         const lastXp = this.userCooldowns.get(userId) || 0;
+        // Obtener usuario (ahora async)
+        const user = await this.getUser(userId);
         
         // Verificar cooldown
         if (now - lastXp < this.config.xpCooldown) {
+            // Actualizar contador de mensajes
+            const updateData = {
+                messagesCount: (user.messagesCount || 0) + 1
+            };
+            await this.updateUser(userId, updateData);
+            
             return null; // Aún en cooldown
         }
         
-        this.userCooldowns.set(userId, now);
-        const user = this.getUser(userId);
-        user.messagesCount++;
-        
-        return this.addXp(userId, this.config.xpPerMessage);
-    }*/
+        try {
+            this.userCooldowns.set(userId, now);
+                    
+            // Agregar XP (ahora async)
+            const result = await this.addXp(userId, this.config.xpPerMessage);
+            
+            return {
+                levelUp: result.levelUp,
+                levelsGained: result.levelsGained,
+                newLevel: result.newLevel,
+                xpGained: result.xpGained,
+                reward: result.reward,
+                result: result
+            };
+        } catch (error) {
+            console.error('❌ Error procesando XP del mensaje:', error);
+            // Remover del cooldown si hubo error
+            this.userCooldowns.delete(userId);
+            return null;
+        }
+    }
 
     // Obtener estadísticas de un usuario
     getUserStats(userId) {

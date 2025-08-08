@@ -78,19 +78,15 @@ class MinigamesSystem {
     formatNumber(num) {
         return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
     }
-
-    // ===================
-    // COINFLIP
-    // ===================
-    
+   
     async handleCoinflip(message, args) {
         const userId = message.author.id;
-        const user = this.economy.getUser(userId);
+        const user = await this.economy.getUser(userId);
         
         // Al inicio de handleCoinflip y handleDice
-        if (this.events) {
+/*        if (this.events) {
             this.events.applyEventModifiers(userId, 0, 'games');
-        }
+        }*/
 
         // Verificar argumentos
         if (args.length < 3) {
@@ -157,7 +153,7 @@ class MinigamesSystem {
             const winAmount = Math.floor(betAmount * this.config.coinflip.winMultiplier);
             const profit = winAmount - betAmount;
             
-            this.economy.addMoney(userId, profit, 'coinflip_win');
+            await this.economy.addMoney(userId, profit, 'coinflip_win');
             
             embed.setDescription(`🎉 **¡GANASTE!**`)
                 .addFields(
@@ -167,7 +163,7 @@ class MinigamesSystem {
                     { name: '💳 Nuevo Balance', value: `${this.formatNumber(user.balance + profit)} π-b$`, inline: false }
                 );
         } else {
-            this.economy.removeMoney(userId, betAmount, 'coinflip_loss');
+            await this.economy.removeMoney(userId, betAmount, 'coinflip_loss');
             
             embed.setDescription(`💸 **Perdiste...**`)
                 .addFields(
@@ -181,17 +177,13 @@ class MinigamesSystem {
         await message.reply({ embeds: [embed] });
     }
 
-    // ===================
-    // DADOS
-    // ===================
-    
     async handleDice(message, args) {
         const userId = message.author.id;
-        const user = this.economy.getUser(userId);
+        const user = await this.economy.getUser(userId);
 
-        if (this.events) {
+/*        if (this.events) {
             this.events.applyEventModifiers(userId, 0, 'games');
-        }
+        }*/
 
         // Si no hay argumentos, mostrar ayuda
         if (args.length < 3) {
@@ -278,7 +270,7 @@ class MinigamesSystem {
             const winAmount = Math.floor(betAmount * multiplier);
             const profit = winAmount - betAmount;
             
-            this.economy.addMoney(userId, profit, 'dice_win');
+            await this.economy.addMoney(userId, profit, 'dice_win');
             
             embed.setDescription(`🎉 **¡GANASTE!**`)
                 .addFields(
@@ -287,7 +279,7 @@ class MinigamesSystem {
                     { name: '💳 Nuevo Balance', value: `${this.formatNumber(user.balance + profit)} π-b$`, inline: false }
                 );
         } else {
-            this.economy.removeMoney(userId, betAmount, 'dice_loss');
+            await this.economy.removeMoney(userId, betAmount, 'dice_loss');
             
             embed.setDescription(`💸 **Perdiste...**`)
                 .addFields(
@@ -298,11 +290,7 @@ class MinigamesSystem {
 
         await message.reply({ embeds: [embed] });
     }
-
-    // ===================
-    // PROCESADOR PRINCIPAL
-    // ===================
-    
+   
     async processCommand(message) {
         if (message.author.bot) return;
 
@@ -316,19 +304,16 @@ class MinigamesSystem {
                 case 'mon!coin':
                     await this.handleCoinflip(message, args);
                     break;
-
                 case 'mon!dice':
                 case 'mon!dado':
                 case 'mon!d':
                     await this.handleDice(message, args);
                     break;
-
                 case 'mon!games':
                 case 'mon!minigames':
                 case 'mon!juegos':
                     await this.showGamesList(message);
                     break;
-
                 default:
                     // No es un comando de minijuegos
                     break;

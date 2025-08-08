@@ -920,7 +920,7 @@ class AllCommands {
                 //Economy
                 { name: '📋 Economía', value: '`mon!balance [@usuario]` - Ver tu dinero y nivel (o el de otro usuario)\n`mon!daily` - Reclamar' + `(${this.economy.config.dailyAmount}±${this.economy.config.dailyVariation} ${this.economy.config.currencySymbol})` + 'diarios\n`mon!work [tipo]` - Trabajar para ganar dinero (delivery, programmer, doctor, criminal)\n`mon!level [@usuario]` - Ver información detallada de nivel\n`mon!pay @usuario <cantidad>` - Transferir dinero a otro usuario\n`mon!top [money/level]` - Ver los rankings del servidor', inline: false},
                 // Minijuegos
-//                { name: '🎮 Minijuegos', value: '`mon!coinflip <cara/cruz> <cantidad>` - Juega cara o cruz\n`mon!dice <1-6/alto/bajo> <cantidad>` - Juega a los dados\n`mon!games` - Ver lista de minijuegos', inline: false },
+                { name: '🎮 Minijuegos', value: '`mon!coinflip <cara/cruz> <cantidad>` - Juega cara o cruz\n`mon!dice <1-6/alto/bajo> <cantidad>` - Juega a los dados\n`mon!games` - Ver lista de minijuegos', inline: false },
 /*                // Eventos
                 { name: '🎉 Eventos', value: '`mon!events` - Ver eventos activos', inline: false },*/
                 // Musica
