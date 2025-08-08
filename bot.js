@@ -408,7 +408,7 @@ client.on('messageCreate', async (message) => {
     await allCommands.processCommand(message);
 
     // Procesar comandos de música
-    await musicBot.processCommand(message);
+//    await musicBot.processCommand(message);
     
 /*    //Procesar comandos de minijuegos
     await minigames.processCommand(message);*/
