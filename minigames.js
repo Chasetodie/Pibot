@@ -158,7 +158,7 @@ class MinigamesSystem {
             const profit = winAmount - betAmount;
             
             await this.economy.addMoney(userId, profit, 'coinflip_win');
-            await this.updateUser(userId, updateData);
+            await this.economy.updateUser(userId, updateData);
             
             embed.setDescription(`🎉 **¡GANASTE!**`)
                 .addFields(
@@ -170,7 +170,7 @@ class MinigamesSystem {
                 );
         } else {
             await this.economy.removeMoney(userId, betAmount, 'coinflip_loss');
-            await this.updateUser(userId, updateData);
+            await this.economy.updateUser(userId, updateData);
 
             embed.setDescription(`💸 **Perdiste...**`)
                 .addFields(
@@ -283,7 +283,7 @@ class MinigamesSystem {
             const profit = winAmount - betAmount;
             
             await this.economy.addMoney(userId, profit, 'dice_win');
-            await this.updateUser(userId, updateData);
+            await this.economy.updateUser(userId, updateData);
             
             embed.setDescription(`🎉 **¡GANASTE!**`)
                 .addFields(
@@ -294,7 +294,7 @@ class MinigamesSystem {
                 );
         } else {
             await this.economy.removeMoney(userId, betAmount, 'dice_loss');
-            await this.updateUser(userId, updateData);
+            await this.economy.updateUser(userId, updateData);
             
             embed.setDescription(`💸 **Perdiste...**`)
                 .addFields(
