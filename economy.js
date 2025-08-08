@@ -195,8 +195,8 @@ class EconomySystem {
 
         return {
             success: true,
-            fromBalance: balance,
-            toBalanceF: toBalance
+            fromBalance: updateData.balance,
+            toBalance: updateData.toBalance
         };
     }
 

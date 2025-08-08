@@ -310,7 +310,7 @@ class AllCommands {
                 { name: '💰 Tu Balance Actual', value: `${this.formatNumber(result.balance)} ${this.economy.config.currencySymbol}`, inline: true },
                 { name: '💸 Dinero Enviado', value: `${this.formatNumber(amount)} ${this.economy.config.currencySymbol}`, inline: true },
                 { name: '💰 Balance Anterior del Destinatario', value: `${this.formatNumber(otherUserBalance.balance)} ${this.economy.config.currencySymbol}`, inline: true },
-                { name: '💰 Balance Actual del Destinatario', value: `${this.formatNumber(result.toBalanceF)} ${this.economy.config.currencySymbol}`, inline: true }
+                { name: '💰 Balance Actual del Destinatario', value: `${this.formatNumber(result.toBalance)} ${this.economy.config.currencySymbol}`, inline: true }
             )
             .setColor('#00FF00')
             .setTimestamp();
