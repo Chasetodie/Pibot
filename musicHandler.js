@@ -680,7 +680,7 @@ class MusicHandler {
         
         const loadingMsg = await message.reply({ embeds: [loadingEmbed] });
 
-        args = message.content.slice(8).trim().split(/ +/);
+        args = message.content.slice(11).trim().split(/ +/);
         const query = args.join(' ');
         console.log(`🎵 Search Args: ${args.join(' ')} | Usuario: ${message.author.tag}`);
         const results = await this.searchDeezer(query, 5);
