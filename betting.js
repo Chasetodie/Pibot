@@ -3,7 +3,7 @@ const { EmbedBuilder } = require('discord.js');
 class BettingSystem {
     constructor(economySystem) {
         this.economy = economySystem;
-        this.activeBets = new Map();
+
         this.config = {
             minBet: 100,
             maxBet: 100000,
@@ -11,6 +11,109 @@ class BettingSystem {
             maxActiveBets: 3,
             houseFee: 0.05
         };
+
+        this.betsCollection = admin.firestore().collection('bets');
+    }
+
+/*    // Inicializar Firebase
+    initializeFirebase() {
+        try {
+            // Verificar que las variables de entorno existan
+            if (!process.env.FIREBASE_PROJECT_ID || !process.env.FIREBASE_CLIENT_EMAIL || !process.env.FIREBASE_PRIVATE_KEY) {
+                throw new Error('❌ Variables de entorno de Firebase no configuradas. Revisa tu archivo .env');
+            }
+    
+            admin.initializeApp({
+                credential: admin.credential.cert({
+                    projectId: process.env.FIREBASE_PROJECT_ID,
+                    clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+                    privateKey: process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n'),
+                }),
+            });
+    
+            console.log('🔥 Firebase inicializado correctamente');
+            console.log(`📊 Proyecto: ${process.env.FIREBASE_PROJECT_ID}`);
+        } catch (error) {
+            console.error('❌ Error inicializando Firebase:', error);
+            console.error('💡 Asegúrate de que tu archivo .env esté configurado correctamente');
+        }
+    }*/
+
+    // Obtener o crear datos de una apuesta
+    async getBet(betId) {
+        try {
+            const betDoc = await this.betsCollection.doc(betId).get();
+
+            if (!betDoc.exists) {
+                // Crear nueva apuesta
+                const newBet = {
+                    id: betId,
+                    challenger: userId,
+                    opponent: targetUser.id,
+                    amount: 0,
+                    description: "",
+                    status: 'pending',
+                    createdAt: admin.firestore.FieldValue.serverTimestamp(),
+                    expiresAt: admin.firestore.FieldValue.serverTimestamp() + this.config.betTimeout,
+                    updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+                    channelId: message.channel.id
+                };
+
+                await this.betsCollection.doc(betId).set(newBet);
+                console.log(`🎲 Nueva apuesta creada en Firebase: ${betId}`);
+                return newBet;
+            }
+
+            return betDoc.data();
+        } catch (error) {
+            console.error('❌ Error obteniendo apuesta:', error);
+            throw error;
+        }
+    }
+
+    // Actualizar datos de apuesta
+    async updateBet(betId, updateData) {
+        try {
+            const updateWithTimestamp = {
+                ...updateData,
+                updatedAt: admin.firestore.FieldValue.serverTimestamp()
+            };
+
+            await this.betsCollection.doc(betId).update(updateWithTimestamp);
+            console.log(`💾 Apuesta ${betId} actualizada en Firebase`);
+        } catch (error) {
+            console.error('❌ Error actualizando apuesta:', error);
+            throw error;
+        }
+    }
+
+    async getAllBets() {
+        try {
+            const snapshot = await this.betsCollection.get();
+
+            if (snapshot.empty) return {};
+
+            const bets = {};
+            snapshot.forEach(doc => {
+                bets[doc.id] = doc.data();
+            });
+
+            return bets;
+        } catch (error) {
+            console.error('❌ Error obteniendo todas las apuestas:', error);
+            return {};
+        }
+    }  
+
+    // Eliminar una apuesta
+    async deleteBet(betId) {
+        try {
+            await this.betsCollection.doc(betId).delete();
+            console.log(`🗑️ Apuesta ${betId} eliminada de Firebase`);
+        } catch (error) {
+            console.error('❌ Error eliminando apuesta:', error);
+            throw error;
+        }
     }
 
     // Crear apuesta
@@ -46,10 +149,8 @@ class BettingSystem {
             return;
         }
 
-        const userActiveBets = Array.from(this.activeBets.values()).filter(bet =>
-            bet.challenger === userId || bet.opponent === userId
-        );
-        if (userActiveBets.length >= this.config.maxActiveBets) {
+        const userActiveBets = await this.getBet(userId);
+        if (userActiveBets.challenger.length >= this.config.maxActiveBets || userActiveBets.opponent.length >= this.config.maxActiveBets) {
             await message.reply(`❌ Ya tienes ${this.config.maxActiveBets} apuestas activas. Espera a que se resuelvan.`);
             return;
         }
@@ -60,20 +161,20 @@ class BettingSystem {
             return;
         }
 
-        const betId = `${userId}`;
+        const betId = await this.getBet(userId + targetUser.id + Date.now());
         const betData = {
             id: betId,
             challenger: userId,
             opponent: targetUser.id,
-            amount,
-            description,
+            amount: amount,
+            description: description,
             status: 'pending',
             createdAt: Date.now(),
             expiresAt: Date.now() + this.config.betTimeout,
             channelId: message.channel.id
         };
 
-        this.activeBets.set(betId, betData);
+        this.updateBet(betId, betData)
 
         const embed = new EmbedBuilder()
             .setTitle('🎲 Nueva Apuesta Creada')
@@ -93,25 +194,25 @@ class BettingSystem {
             embeds: [embed]
         });
 
-        setTimeout(() => this.expireBet(betId), this.config.betTimeout);
+        setTimeout(async () => await this.expireBet(betId), this.config.betTimeout);
     }
 
     // Aceptar apuesta
-    async acceptBet(interaction, betId) {
-        const bet = this.activeBets.get(betId);
-        if (!bet) return interaction.reply({ content: '❌ Esta apuesta ya no existe.', ephemeral: true });
-        if (interaction.user.id !== bet.opponent) return interaction.reply({ content: '❌ Esta apuesta no es para ti.', ephemeral: true });
-        if (bet.status !== 'pending') return interaction.reply({ content: '❌ Esta apuesta ya fue procesada.', ephemeral: true });
+    async acceptBet(message, betId) {
+        const bet = await this.getBet(betId);
+        if (!bet) return message.reply({ content: '❌ Esta apuesta ya no existe.', ephemeral: true });
+        if (message.user.id !== bet.opponent) return message.reply({ content: '❌ Esta apuesta no es para ti.', ephemeral: true });
+        if (bet.status !== 'pending') return message.reply({ content: '❌ Esta apuesta ya fue procesada.', ephemeral: true });
 
         const challengerData = await this.economy.getUser(bet.challenger);
         const opponentData = await this.economy.getUser(bet.opponent);
 
         if (challengerData.balance < bet.amount) {
-            this.activeBets.delete(betId);
-            return interaction.reply({ content: '❌ El retador ya no tiene suficientes fondos.', ephemeral: true });
+            await this.deleteBet(betId);
+            return message.reply({ content: '❌ El retador ya no tiene suficientes fondos.', ephemeral: true });
         }
         if (opponentData.balance < bet.amount) {
-            return interaction.reply({ content: '❌ No tienes suficientes fondos para esta apuesta.', ephemeral: true });
+            return message.reply({ content: '❌ No tienes suficientes fondos para esta apuesta.', ephemeral: true });
         }
 
         await this.economy.removeMoney(bet.challenger, bet.amount, 'bet_escrow');
@@ -134,16 +235,16 @@ class BettingSystem {
             .setFooter({ text: `Usen !resolve ${betId} <ganador> para resolver` })
             .setTimestamp();
 
-        await interaction.update({ embeds: [embed] });
+        await message.update({ embeds: [embed] });
     }
 
     // Rechazar apuesta
-    async declineBet(interaction, betId) {
-        const bet = this.activeBets.get(betId);
-        if (!bet) return interaction.reply({ content: '❌ Esta apuesta ya no existe.', ephemeral: true });
-        if (interaction.user.id !== bet.opponent) return interaction.reply({ content: '❌ Esta apuesta no es para ti.', ephemeral: true });
+    async declineBet(message, betId) {
+        const bet = await this.getBet(betId);
+        if (!bet) return message.reply({ content: '❌ Esta apuesta ya no existe.', ephemeral: true });
+        if (message.user.id !== bet.opponent) return message.reply({ content: '❌ Esta apuesta no es para ti.', ephemeral: true });
 
-        this.activeBets.delete(betId);
+        await this.deleteBet(betId);
 
         const embed = new EmbedBuilder()
             .setTitle('❌ Apuesta Rechazada')
@@ -151,16 +252,16 @@ class BettingSystem {
             .setColor('#FF0000')
             .setTimestamp();
 
-        await interaction.update({ embeds: [embed], components: [] });
+        await message.update({ embeds: [embed], components: [] });
     }
 
     // Resolver apuesta
-    async resolveBet(interaction, betId, winner) {
-        const bet = this.activeBets.get(betId);
-        if (!bet) return interaction.reply({ content: '❌ Esta apuesta ya no existe.', ephemeral: true });
-        if (bet.status !== 'active') return interaction.reply({ content: '❌ Esta apuesta no está activa.', ephemeral: true });
-        if (interaction.user.id !== bet.challenger && interaction.user.id !== bet.opponent) {
-            return interaction.reply({ content: '❌ Solo los participantes pueden resolver esta apuesta.', ephemeral: true });
+    async resolveBet(message, betId, winner) {
+        const bet = await this.getBet(betId);
+        if (!bet) return message.reply({ content: '❌ Esta apuesta ya no existe.', ephemeral: true });
+        if (bet.status !== 'active') return message.reply({ content: '❌ Esta apuesta no está activa.', ephemeral: true });
+        if (message.user.id !== bet.challenger && message.user.id !== bet.opponent) {
+            return message.reply({ content: '❌ Solo los participantes pueden resolver esta apuesta.', ephemeral: true });
         }
 
         const totalPot = bet.amount * 2;
@@ -172,10 +273,10 @@ class BettingSystem {
         await this.economy.addMoney(winnerId, winnerAmount, 'bet_win');
         await this.updateBetStats(winnerId, loserId, bet.amount);
 
-        bet.status = 'resolved';
+/*        bet.status = 'resolved';
         bet.winner = winnerId;
         bet.resolvedAt = Date.now();
-        bet.resolvedBy = interaction.user.id;
+        bet.resolvedBy = message.user.id;*/
 
         const embed = new EmbedBuilder()
             .setTitle('🏆 Apuesta Resuelta')
@@ -190,26 +291,26 @@ class BettingSystem {
             .setColor('#FFD700')
             .setTimestamp();
 
-        this.activeBets.delete(betId);
+        await this.deleteBet(betId);
 
-        await interaction.update({ embeds: [embed], components: [] });
+        await message.update({ embeds: [embed], components: [] });
     }
 
     // Cancelar apuesta activa
-    async cancelBet(interaction, betId) {
-        const bet = this.activeBets.get(betId);
-        if (!bet) return interaction.reply({ content: '❌ Esta apuesta ya no existe.', ephemeral: true });
-        if (bet.status !== 'active') return interaction.reply({ content: '❌ Esta apuesta no está activa.', ephemeral: true });
-        if (interaction.user.id !== bet.challenger && interaction.user.id !== bet.opponent) {
-            return interaction.reply({ content: '❌ Solo los participantes pueden cancelar esta apuesta.', ephemeral: true });
+    async cancelBet(message, betId) {
+        const bet = await this.getBet(betId);
+        if (!bet) return message.reply({ content: '❌ Esta apuesta ya no existe.', ephemeral: true });
+        if (bet.status !== 'active') return message.reply({ content: '❌ Esta apuesta no está activa.', ephemeral: true });
+        if (message.user.id !== bet.challenger && message.user.id !== bet.opponent) {
+            return message.reply({ content: '❌ Solo los participantes pueden cancelar esta apuesta.', ephemeral: true });
         }
 
         await this.economy.addMoney(bet.challenger, bet.amount, 'bet_refund');
         await this.economy.addMoney(bet.opponent, bet.amount, 'bet_refund');
 
-        bet.status = 'cancelled';
+/*        bet.status = 'cancelled';
         bet.cancelledAt = Date.now();
-        bet.cancelledBy = interaction.user.id;
+        bet.cancelledBy = message.user.id;*/
 
         const embed = new EmbedBuilder()
             .setTitle('🔄 Apuesta Cancelada')
@@ -220,27 +321,27 @@ class BettingSystem {
             .setColor('#808080')
             .setTimestamp();
 
-        this.activeBets.delete(betId);
+        await this.deleteBet(betId);
 
-        await interaction.update({ embeds: [embed], components: [] });
+        await message.update({ embeds: [embed], components: [] });
     }
 
     // Expirar apuesta
-    expireBet(betId) {
-        const bet = this.activeBets.get(betId);
+    async expireBet(betId) {
+        const bet = await this.getBet(betId);
+
         if (!bet || bet.status !== 'pending') return;
-        this.activeBets.delete(betId);
-        // Aquí podrías notificar en el canal si tienes acceso al cliente
+        await this.deleteBet(betId);
+
         console.log(`Apuesta ${betId} expiró`);
+        await message.reply('❌ La apuesta ha expirado, vuelve a intentarlo mas tarde!.');
     }
 
     // Mostrar apuestas activas
     async showActiveBets(message) {
-        const userBets = Array.from(this.activeBets.values()).filter(bet =>
-            bet.challenger === message.author.id || bet.opponent === message.author.id
-        );
+        const userBets = await this.getBet(message.author.id);
 
-        if (userBets.length === 0) {
+        if (!userBets || (userBets.challenger.length === 0 && userBets.opponent.length === 0)) {     
             await message.reply('❌ No tienes apuestas activas.');
             return;
         }
