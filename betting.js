@@ -60,7 +60,7 @@ class BettingSystem {
             return;
         }
 
-        const betId = `${userId}-${Date.now()}`;
+        const betId = `${userId}`;
         const betData = {
             id: betId,
             challenger: userId,
