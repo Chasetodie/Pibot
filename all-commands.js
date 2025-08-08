@@ -891,31 +891,31 @@ class AllCommands {
         try {
             switch (command) {
                 case 'mon!play':
-                    await this.handlePlay(interaction);
+                    await this.handlePlay(message);
                     break;
                 case 'mon!skip':
-                    await this.handleSkip(interaction);
+                    await this.handleSkip(message);
                     break;
                 case 'mon!pause':
-                    await this.handlePause(interaction);
+                    await this.handlePause(message);
                     break;
                 case 'mon!resume':
-                    await this.handleResume(interaction);
+                    await this.handleResume(message);
                     break;
                 case 'mon!queue':
-                    await this.handleQueue(interaction);
+                    await this.handleQueue(message);
                     break;
                 case 'mon!nowplaying':
-                    await this.handleNowPlaying(interaction);
+                    await this.handleNowPlaying(message);
                     break;
                 case 'mon!clear':
-                    await this.handleClear(interaction);
+                    await this.handleClear(message);
                     break;
                 case 'mon!stop':
-                    await this.handleStop(interaction);
+                    await this.handleStop(message);
                     break;
                 case 'mon!search':
-                    await this.handleSearch(interaction);
+                    await this.handleSearch(message);
                     break;                
                 case 'mon!balance':
                 case 'mon!bal':
