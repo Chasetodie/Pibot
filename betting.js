@@ -209,8 +209,11 @@ class BettingSystem {
 
     // Aceptar apuesta
     async acceptBet(message, targetUser) {
-        const baseId = targetUser.id.slice(9) + message.author.id.slice(9);
+        const userId = message.author.id;
+        const targetId = targetUser.id;
+        const baseId = targetId.slice(9) + userId.slice(9);
         const bet = await this.getBet(baseId);
+
         if (!bet) return message.reply({ content: '❌ Esta apuesta ya no existe.', ephemeral: true });
         if (message.user.id !== bet.opponent) return message.reply({ content: '❌ Esta apuesta no es para ti.', ephemeral: true });
         if (bet.status !== 'pending') return message.reply({ content: '❌ Esta apuesta ya fue procesada.', ephemeral: true });
@@ -345,7 +348,14 @@ class BettingSystem {
         await this.deleteBet(betId);
 
         console.log(`Apuesta ${betId} expiró`);
-        await message.reply('❌ La apuesta ha expirado, vuelve a intentarlo mas tarde!.');
+
+        const embed = new EmbedBuilder()
+            .setTitle('🔄 Apuesta Expirada')
+            .setDescription('La apuesta no fue aceptada, vuelve a intentarlo más tarde')
+            .setColor('#808080')
+            .setTimestamp();
+
+        await message.update({ embeds: [embed], components: [] });
     }
 
     // Mostrar apuestas activas
