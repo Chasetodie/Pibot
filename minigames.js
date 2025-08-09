@@ -34,6 +34,14 @@ class MinigamesSystem {
                     close20: 2    // ±20: x2
                 }
             },
+            lottery: {
+                minBet: 500,
+                maxBet: 5000,
+                cooldown: 1800000, // 30 minutos (30 * 60 * 1000)
+                winMultiplier: 100, // Gana x100 si acierta
+                minNumber: 1,
+                maxNumber: 100
+            },
             blackjack: {
                 minBet: 100,
                 maxBet: 15000,
@@ -306,6 +314,142 @@ class MinigamesSystem {
 
         await message.reply({ embeds: [embed] });
     }
+
+    // Método para manejar la lotería (agregar a la clase MinigamesSystem)
+    async handleLottery(message, args) {
+        const userId = message.author.id;
+        const user = await this.economy.getUser(userId);
+    
+        // Si no hay argumentos suficientes, mostrar ayuda
+        if (args.length < 3) {
+            const embed = new EmbedBuilder()
+                .setTitle('🎰 Lotería - Juego de la Suerte')
+                .setDescription('¡Predice el número ganador y multiplica tu dinero x100!')
+                .addFields(
+                    { name: '📝 Uso', value: '`mon!lottery <número> <cantidad>`', inline: false },
+                    { name: '💡 Ejemplos', value: '`mon!lottery 50 1000`\n`mon!lottery 25 2500`', inline: false },
+                    { name: '🎯 Rango de Números', value: `${this.config.lottery.minNumber} - ${this.config.lottery.maxNumber}`, inline: true },
+                    { name: '💰 Apuesta', value: `Min: ${this.formatNumber(this.config.lottery.minBet)} π-b$\nMax: ${this.formatNumber(this.config.lottery.maxBet)} π-b$`, inline: true },
+                    { name: '🏆 Ganancia', value: `x${this.config.lottery.winMultiplier} si aciertas\n(Probabilidad: 1%)`, inline: true },
+                    { name: '⏰ Cooldown', value: '30 minutos', inline: false }
+                )
+                .setColor('#FF1493')
+                .setFooter({ text: '¡Un juego de pura suerte! ¿Te sientes con suerte?' });
+            
+            await message.reply({ embeds: [embed] });
+            return;
+        }
+    
+        const predictedNumber = parseInt(args[1]);
+        const betAmount = parseInt(args[2]);
+    
+        // Validar número predicho
+        if (isNaN(predictedNumber) || predictedNumber < this.config.lottery.minNumber || predictedNumber > this.config.lottery.maxNumber) {
+            await message.reply(`❌ El número debe ser entre ${this.config.lottery.minNumber} y ${this.config.lottery.maxNumber}`);
+            return;
+        }
+    
+        // Validar cantidad de apuesta
+        if (isNaN(betAmount) || betAmount < this.config.lottery.minBet || betAmount > this.config.lottery.maxBet) {
+            await message.reply(`❌ La apuesta debe ser entre ${this.formatNumber(this.config.lottery.minBet)} y ${this.formatNumber(this.config.lottery.maxBet)} π-b$`);
+            return;
+        }
+    
+        // Verificar fondos
+        if (user.balance < betAmount) {
+            await message.reply(`❌ No tienes suficientes π-b Coins. Tu balance: ${this.formatNumber(user.balance)} π-b$`);
+            return;
+        }
+    
+        // Verificar cooldown
+        const cooldownCheck = this.checkCooldown(userId, 'lottery');
+        if (cooldownCheck.onCooldown) {
+            const timeLeft = Math.ceil(cooldownCheck.timeLeft / 60000); // Convertir a minutos
+            await message.reply(`⏰ Debes esperar ${timeLeft} minutos antes de jugar la lotería otra vez`);
+            return;
+        }
+    
+        // Generar número ganador
+        const winningNumber = Math.floor(Math.random() * this.config.lottery.maxNumber) + this.config.lottery.minNumber;
+        const won = winningNumber === predictedNumber;
+        
+        // Establecer cooldown
+        this.setCooldown(userId, 'lottery');
+    
+        const updateData = {
+            'stats.gamesPlayed': (user.stats.gamesPlayed || 0) + 1
+        };
+    
+        // Crear embed del resultado con animación
+        const loadingEmbed = new EmbedBuilder()
+            .setTitle('🎰 Lotería - Sorteando...')
+            .setDescription('🎲 **Generando número ganador...**\n\n🔄 Espera un momento...')
+            .addFields(
+                { name: '🎯 Tu Número', value: `**${predictedNumber}**`, inline: true },
+                { name: '💰 Apuesta', value: `${this.formatNumber(betAmount)} π-b$`, inline: true }
+            )
+            .setColor('#FFD700');
+    
+        const reply = await message.reply({ embeds: [loadingEmbed] });
+    
+        // Simular suspense con un delay
+        await new Promise(resolve => setTimeout(resolve, 3000));
+    
+        // Crear embed del resultado final
+        const resultEmbed = new EmbedBuilder()
+            .setTitle('🎰 Lotería - Resultado')
+            .setColor(won ? '#00FF00' : '#FF0000')
+            .addFields(
+                { name: '🎯 Tu Número', value: `**${predictedNumber}**`, inline: true },
+                { name: '🏆 Número Ganador', value: `**${winningNumber}**`, inline: true },
+                { name: '💰 Apuesta', value: `${this.formatNumber(betAmount)} π-b$`, inline: true }
+            )
+            .setTimestamp();
+    
+        if (won) {
+            const winAmount = betAmount * this.config.lottery.winMultiplier;
+            const profit = winAmount - betAmount;
+            
+            await this.economy.addMoney(userId, profit, 'lottery_win');
+            await this.economy.updateUser(userId, updateData);
+            
+            resultEmbed.setDescription(`🎉 **¡JACKPOT! ¡GANASTE LA LOTERÍA!** 🎉`)
+                .addFields(
+                    { name: '🎊 ¡Increíble!', value: `¡Acertaste el número exacto!`, inline: false },
+                    { name: '💎 Multiplicador', value: `x${this.config.lottery.winMultiplier}`, inline: true },
+                    { name: '🤑 Ganancia Total', value: `+${this.formatNumber(profit)} π-b$`, inline: true },
+                    { name: '💸 Balance Anterior', value: `${this.formatNumber(user.balance)} π-b$`, inline: false },
+                    { name: '💳 Balance Actual', value: `${this.formatNumber(user.balance + profit)} π-b$ 🚀`, inline: false }
+                );
+        } else {
+            await this.economy.removeMoney(userId, betAmount, 'lottery_loss');
+            await this.economy.updateUser(userId, updateData);
+            
+            const difference = Math.abs(winningNumber - predictedNumber);
+            let encouragement = '';
+            
+            if (difference === 1) {
+                encouragement = '😱 ¡Por solo 1 número! ¡Tan cerca!';
+            } else if (difference <= 5) {
+                encouragement = '😔 ¡Muy cerca! Solo te faltaron unos números';
+            } else if (difference <= 10) {
+                encouragement = '🤔 No estuvo mal, ¡sigue intentando!';
+            } else {
+                encouragement = '🎯 ¡La próxima será tu momento de suerte!';
+            }
+            
+            resultEmbed.setDescription(`💸 **No ganaste esta vez...** ${encouragement}`)
+                .addFields(
+                    { name: '📊 Diferencia', value: `${difference} números`, inline: true },
+                    { name: '💸 Perdiste', value: `${this.formatNumber(betAmount)} π-b$`, inline: true },
+                    { name: '💸 Balance Anterior', value: `${this.formatNumber(user.balance)} π-b$`, inline: false },
+                    { name: '💳 Balance Actual', value: `${this.formatNumber(user.balance - betAmount)} π-b$`, inline: false },
+                    { name: '💡 Consejo', value: 'La lotería es pura suerte. ¡Cada número tiene la misma probabilidad!', inline: false }
+                );
+        }
+    
+        await reply.edit({ embeds: [resultEmbed] });
+    }
    
     async processCommand(message) {
         if (message.author.bot) return;
@@ -324,6 +468,11 @@ class MinigamesSystem {
                 case 'mon!dado':
                 case 'mon!d':
                     await this.handleDice(message, args);
+                    break;
+                case 'mon!lottery':
+                case 'mon!loteria':
+                case 'mon!lotto':
+                    await this.handleLottery(message, args);
                     break;
                 case 'mon!games':
                 case 'mon!minigames':
@@ -358,8 +507,13 @@ class MinigamesSystem {
                     inline: false 
                 },
                 { 
+                    name: '🎰 Lotería', 
+                    value: '`mon!lottery <número> <cantidad>`\nApuesta: 500-5,000 π-b$\nGanancia: x100 (¡Si aciertas!)\nCooldown: 30 min', 
+                    inline: false 
+                },
+                { 
                     name: '🔮 Próximamente', 
-                    value: '• Adivinanza (1-100)\n• Blackjack Simple\n• Ruleta\n• Slots', 
+                    value: '• Blackjack Simple\n• Ruleta\n• Slots', 
                     inline: false 
                 }
             )
