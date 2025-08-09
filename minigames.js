@@ -45,7 +45,7 @@ class MinigamesSystem {
             blackjack: {
                 minBet: 100,
                 maxBet: 15000,
-                cooldown: 180000,
+                cooldown: 90000,
                 blackjackMultiplier: 2.5,
                 winMultiplier: 2
             }
