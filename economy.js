@@ -75,6 +75,13 @@ class EconomySystem {
                         workCount: 0,
                         gamesPlayed: 0
                     },
+                    betStats: {
+                        wins: 0,
+                        losses: 0,
+                        totalWon: 0,
+                        totalLost: 0,
+                        netProfit: 0
+                    },
                     createdAt: admin.firestore.FieldValue.serverTimestamp(),
                     updatedAt: admin.firestore.FieldValue.serverTimestamp()
                 };

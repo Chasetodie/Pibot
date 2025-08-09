@@ -729,6 +729,7 @@ class AllCommands {
 
         const args = message.content.trim().split(/ +/g);
         const command = args[0].toLowerCase();
+        const betId = args[1];
 
         try {
             switch (command) {
@@ -786,12 +787,11 @@ class AllCommands {
                     await this.betting.declineBet(message, args);
                     break;
                 case 'mon!resolvebet':
-                    const betId = args[1];
                     const winner = args[2];
                     await this.betting.resolveBet(message, betId, winner);
                     break;
                 case 'mon!cancelbet':
-                    await this.betting.cancelBet(message, args);
+                    await this.betting.cancelBet(message, betId);
                     break;
                 case 'mon!mybets':
                 case 'mon!misapuestas':

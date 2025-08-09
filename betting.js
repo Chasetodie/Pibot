@@ -495,16 +495,22 @@ class BettingSystem {
         if (!winner.betStats) winner.betStats = { wins: 0, losses: 0, totalWon: 0, totalLost: 0, netProfit: 0 };
         if (!loser.betStats) loser.betStats = { wins: 0, losses: 0, totalWon: 0, totalLost: 0, netProfit: 0 };
 
-        winner.betStats.wins++;
         const winAmount = amount * 2 - Math.floor(amount * 2 * this.config.houseFee);
-        winner.betStats.totalWon += winAmount;
-        winner.betStats.netProfit += (winAmount - amount);
 
-        loser.betStats.losses++;
-        loser.betStats.totalLost += amount;
-        loser.betStats.netProfit -= amount;
+        const updateDataWinner = {
+            'betStats.wins': (winner.betStats.wins || 0) + 1,
+            'betStats.totalWon': (winner.betStats.totalWon || 0) + winAmount,
+            'betStats.netProfit': (winner.betStats.netProfit || 0) + (winAmount - amount)
+        }
+        
+        const updateDataLoser = {
+            'betStats.losses': (loser.betStats.losses || 0) + 1,
+            'betStats.totalLost': (loser.betStats.totalLost || 0) + amount,
+            'betStats.netProfit': (loser.betStats.netProfit || 0) - amount
+        }
 
-        this.economy.saveUsers();
+        await this.updateUser(winnerId, updateDataWinner);
+        await this.updateUser(loserId, updateDataLoser);
     }
 
     // Utilidad: formatear números
