@@ -232,6 +232,7 @@ class AchievementsSystem {
         await this.initializeUserAchievements(userId);
         const user = await this.economy.getUser(userId);
         const completedAchievements = [];
+        const unlockedAchievements = [];
         
         for (const [achievementId, achievement] of Object.entries(this.achievements)) {
             // Si ya está completado, saltarlo
@@ -751,8 +752,9 @@ class AchievementsSystem {
                     inline: true
                 })
                 .setTimestamp();
-            
-            await message.channel.send({ embeds: [embed] });
+
+            console.log("Logro Desbloqueado:", achievement.name);
+            //await message.channel.send({ embeds: [embed] });
         }
     }
     
