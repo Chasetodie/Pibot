@@ -979,7 +979,7 @@ class AllCommands {
             .setColor('#00BFFF')
             .addFields(
                 // Achievements
-                { name: '🏆 Logros', value: '`mon!achievements [@usuario]` - Ver logros\n`mon!allachievements` - Ver todos los logros', inline: false },
+                { name: '🏆 Logros', value: '`mon!achievements [@usuario]` - Ver logros\n`mon!allachievements` - Ver todos los logros\n`mon!detectachievements` - Detectar logros desbloqueados\n`mon!detectall` - Detectar todos los logros desbloqueados', inline: false },
 /*                // Shop
                 { name: '🛒 Tienda', value: '`mon!shop [categoría]`\n`mon!buy <item> [cantidad]`\n`mon!use <item>`\n`mon!inventory [@usuario]`\n`mon!sell <item> [cantidad]`\n`mon!shophelp`', inline: false },*/
                 // Betting
