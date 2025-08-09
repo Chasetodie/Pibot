@@ -208,8 +208,8 @@ class BettingSystem {
                 { name: '🎯 Descripción', value: description, inline: true },
                 { name: '💸 Comisión', value: `${this.formatNumber(Math.floor(amount * 2 * this.config.houseFee))} π-b$`, inline: true },
                 { name: '⏰ Expira en', value: `${this.config.betTimeout / 60000} minutos`, inline: false },
-                { name: '✅ Aceptar', value: `\`mon!accept @${message.author.username}\``, inline: true },
-                { name: '❌ Rechazar', value: `\`mon!decline @${message.author.username}\``, inline: true }
+                { name: '✅ Aceptar', value: `\`mon!acceptbet @${message.author.username}\``, inline: true },
+                { name: '❌ Rechazar', value: `\`mon!declinebet @${message.author.username}\``, inline: true }
             )
             .setColor('#FFA500')
             .setFooter({ text: `ID: ${betId}` })
@@ -232,7 +232,7 @@ class BettingSystem {
         const opponentId = message.author.id;
 
         if (!challengerUser) {
-            await message.reply('❌ Debes mencionar al usuario que te retó. Ejemplo: `mon!accept @usuario`');
+            await message.reply('❌ Debes mencionar al usuario que te retó. Ejemplo: `mon!acceptbet @usuario`');
             return;
         }
         
@@ -292,13 +292,17 @@ class BettingSystem {
                 { name: '🛡️ Oponente', value: `<@${bet.opponent}>`, inline: true },
                 { name: '💰 Cantidad', value: `${this.formatNumber(bet.amount)} π-b$ cada uno`, inline: true },
                 { name: '🎯 Descripción', value: bet.description, inline: false },
-                { name: '📝 Resolución', value: `\`mon!resolve ${betId} challenger\` o \`mon!resolve ${betId} opponent\``, inline: false }
+                { name: '📝 Resolución', value: `\`mon!resolvebet ${betId} challenger\` o \`mon!resolvebet ${betId} opponent\``, inline: false },
+                { name: '🔄 Cancelar', value: `\`mon!cancelbet ${betId}\``, inline: false }
             )
             .setColor('#00FF00')
             .setFooter({ text: `ID: ${betId}` })
             .setTimestamp();
 
-        await message.reply({ embeds: [embed] });
+        await message.reply({ 
+            content: `ID: ${betId}`,
+            embeds: [embed],
+        });
     }
 
     // ✅ CORREGIDO: Rechazar apuesta
@@ -307,7 +311,7 @@ class BettingSystem {
         const opponentId = message.author.id;
 
         if (!challengerUser) {
-            await message.reply('❌ Debes mencionar al usuario que te retó. Ejemplo: `mon!decline @usuario`');
+            await message.reply('❌ Debes mencionar al usuario que te retó. Ejemplo: `mon!declinebet @usuario`');
             return;
         }
         
