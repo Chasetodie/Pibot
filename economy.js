@@ -137,12 +137,12 @@ class EconomySystem {
         const user = await this.getUser(userId);
 
         const updateData = {
-            balance: user.balance + amount,
-                'stats.totalEarned': (user.stats.totalEarned || 0) + amount
+            balance: user.balance + amount
+//                'stats.totalEarned': (user.stats.totalEarned || 0) + amount
         }
 
         if (['work', 'daily', 'coinflip_win', 'dice_win', 'lottery_win', 'achievement_reward'].includes(reason)) {
-            updateData['stats.totalEarned'] = (user.stats.totalEarned || 0) + reward;
+            updateData['stats.totalEarned'] = (user.stats.totalEarned || 0) + amount;
         }
 
 /*        user.balance += amount;
