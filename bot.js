@@ -305,6 +305,12 @@ client.on('interactionCreate', async (interaction) => {
                 return;
             }
         }
+
+        // AGREGAR ESTO: Manejo de botones del blackjack
+        if (interaction.customId.startsWith('bj_')) {
+            await minigamesSystem.handleBlackjackButtons(interaction);
+            return; // Importante: return para no continuar con otros botones
+        }
         
         if (interaction.customId === 'select_pibe') {
             // Incrementar contador de pibes
@@ -452,6 +458,7 @@ client.login(process.env.TOKEN).then(() => {
     console.error('❌ Error en el login:', error);
 
 });
+
 
 
 
