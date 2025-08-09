@@ -265,7 +265,7 @@ class BettingSystem {
             .setFooter({ text: `Usen !resolve ${bet.id} <ganador> para resolver` })
             .setTimestamp();
 
-        await message.update({ embeds: [embed] });
+        await message.reply({ embeds: [embed] });
     }
 
     // Rechazar apuesta
@@ -282,7 +282,7 @@ class BettingSystem {
             .setColor('#FF0000')
             .setTimestamp();
 
-        await message.update({ embeds: [embed], components: [] });
+        await message.reply({ embeds: [embed], components: [] });
     }
 
     // Resolver apuesta
@@ -323,7 +323,7 @@ class BettingSystem {
 
         await this.deleteBet(betId);
 
-        await message.update({ embeds: [embed], components: [] });
+        await message.reply({ embeds: [embed], components: [] });
     }
 
     // Cancelar apuesta activa
@@ -353,7 +353,7 @@ class BettingSystem {
 
         await this.deleteBet(betId);
 
-        await message.update({ embeds: [embed], components: [] });
+        await message.reply({ embeds: [embed], components: [] });
     }
 
     // Expirar apuesta
