@@ -525,7 +525,7 @@ class EconomySystem {
                     'No abriste posible abrir las puertas del OXXO',
                     'Las puertas del OXXO permanecieron cerradas por falla del sistema'
                 ]
-            }
+            },
             'doctor': {
                 name: '👨‍⚕️ Doctor',
                 cooldown: 60 * 60 * 1000, // 1 hora
