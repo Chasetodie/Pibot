@@ -138,7 +138,11 @@ class EconomySystem {
 
         const updateData = {
             balance: user.balance + amount,
-            'stats.totalEarned': (user.stats.totalEarned || 0) + amount
+                'stats.totalEarned': (user.stats.totalEarned || 0) + amount
+        }
+
+        if (['work', 'daily', 'coinflip_win', 'dice_win', 'lottery_win', 'achievement_reward'].includes(reason)) {
+            updateData['stats.totalEarned'] = (user.stats.totalEarned || 0) + reward;
         }
 
 /*        user.balance += amount;
@@ -146,6 +150,12 @@ class EconomySystem {
         
         console.log(`💰 +${amount} ${this.config.currencySymbol} para ${userId} (${reason})`);
         await this.updateUser(userId, updateData);
+
+        // AGREGAR ESTO:
+        if (this.achievements) {
+            await this.achievements.checkAchievements(userId);
+        }        
+        
         return user.balance;
     }
 
@@ -181,6 +191,12 @@ class EconomySystem {
         if (amount <= 0) {
             return { success: false, reason: 'invalid_amount' };
         }
+
+        if (this.achievements) {
+            await this.achievements.updateStats(fromUserId, 'money_given', amount);
+            await this.achievements.checkAchievements(fromUserId, message);
+            await this.achievements.checkAchievements(toUserId, message);
+        }        
 
         const updateDataFrom = {
             balance: fromUser.balance - amount,
@@ -261,6 +277,11 @@ class EconomySystem {
             console.log(`🎉 ${userId} subió ${levelUps} nivel(es)! Nuevo nivel: ${newLevel}, Recompensa: ${reward} ${this.config.currencySymbol}`);
             
             await this.updateUser(userId, updateData); // ← Reemplaza saveUsers()
+
+            // AGREGAR ESTO:
+            if (this.achievements && user.level > oldLevel) {
+                await this.achievements.checkAchievements(userId);
+            }
             
             return {
                 levelUp: true,
@@ -272,6 +293,11 @@ class EconomySystem {
         }
         
         await this.updateUser(userId, updateData); // ← Reemplaza saveUsers()
+
+        // AGREGAR ESTO:
+        if (this.achievements && user.level > oldLevel) {
+            await this.achievements.checkAchievements(userId);
+        }
         
         return {
             levelUp: false,
@@ -439,6 +465,12 @@ class EconomySystem {
             amount = mod.finalAmount;
         }*/
 
+        // AGREGAR ESTO:
+        if (this.achievements) {
+            await this.achievements.updateStats(userId, 'daily_claimed');
+            await this.achievements.checkAchievements(userId, message);
+        }
+        
         const updateData = {
             lastDaily: Date.now(),
             balance: user.balance + amount,
@@ -670,6 +702,12 @@ class EconomySystem {
             // Trabajo falló
             const failMessage = job.failMessages[Math.floor(Math.random() * job.failMessages.length)];
             const penalty = Math.floor(job.baseReward * 0.2); // Pierde 20% del reward base
+
+            // AGREGAR ESTO:
+            if (this.achievements) {
+                await this.achievements.updateStats(userId, 'work_done');
+                await this.achievements.checkAchievements(userId, message);
+            }
             
             updateData.balance = Math.max(0, user.balance - penalty);
             updateData['stats.totalSpent'] = user.stats.totalSpent + penalty;
@@ -707,7 +745,13 @@ class EconomySystem {
             const mod = this.events.applyMoneyModifiers(userId, amount, 'work');
             amount = mod.finalAmount;
         }*/
-        // =============================  
+        // =============================
+
+        // AGREGAR ESTO:
+        if (this.achievements) {
+            await this.achievements.updateStats(userId, 'work_done');
+            await this.achievements.checkAchievements(userId, message);
+        }
         
         updateData.balance = user.balance + amount;
         updateData['stats.totalEarned'] = (user.stats.totalEarned || 0) + amount;
