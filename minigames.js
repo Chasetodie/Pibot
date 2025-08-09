@@ -37,7 +37,7 @@ class MinigamesSystem {
             lottery: {
                 minBet: 500,
                 maxBet: 5000,
-                cooldown: 1800000, // 30 minutos (30 * 60 * 1000)
+                cooldown: /*1800000*/, // 30 minutos (30 * 60 * 1000)
                 winMultiplier: 100, // Gana x100 si acierta
                 minNumber: 1,
                 maxNumber: 100
@@ -498,17 +498,17 @@ class MinigamesSystem {
             .addFields(
                 { 
                     name: '🪙 Coinflip', 
-                    value: '`mon!coinflip <cara/cruz> <cantidad>`\nApuesta: 50-10,000 π-b$\nGanancia: x1.95', 
+                    value: '`mon!coinflip <cara/cruz> <cantidad>`\nApuesta: 50-10,000 π-b$\nGanancia: x1.95\nCooldown: 15 segundos', 
                     inline: false 
                 },
                 { 
                     name: '🎲 Dados', 
-                    value: '`mon!dice <1-6/alto/bajo> <cantidad>`\nApuesta: 50-10,000 π-b$\nGanancia: x1.9 - x5.8', 
+                    value: '`mon!dice <1-6/alto/bajo> <cantidad>`\nApuesta: 50-10,000 π-b$\nGanancia: x1.9 - x5.8\nCooldown: 30 segundos', 
                     inline: false 
                 },
                 { 
                     name: '🎰 Lotería', 
-                    value: '`mon!lottery <número> <cantidad>`\nApuesta: 500-5,000 π-b$\nGanancia: x100 (¡Si aciertas!)\nCooldown: 30 min', 
+                    value: '`mon!lottery <número> <cantidad>`\nApuesta: 500-5,000 π-b$\nGanancia: x100 (¡Si aciertas!)\nCooldown: 30 minutos', 
                     inline: false 
                 },
                 { 
