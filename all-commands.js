@@ -901,9 +901,9 @@ class AllCommands {
             .setTitle('📖 Ayuda - Comandos Principales')
             .setColor('#00BFFF')
             .addFields(
-                // Achievements
+/*                // Achievements
                 { name: '🏆 Logros', value: '`mon!achievements [@usuario]` - Ver logros\n`mon!allachievements` - Ver todos los logros', inline: false },
-/*                // Shop
+                // Shop
                 { name: '🛒 Tienda', value: '`mon!shop [categoría]`\n`mon!buy <item> [cantidad]`\n`mon!use <item>`\n`mon!inventory [@usuario]`\n`mon!sell <item> [cantidad]`\n`mon!shophelp`', inline: false },*/
                 // Betting
                 { name: '🎲 Apuestas', value: '`mon!bet [@usuario] <cantidad> <descripción>` - Crear apuesta\n`mon!mybets` - Ver tus apuestas activas\n`mon!betstats [@usuario]` - Ver estadísticas de apuestas', inline: false },
