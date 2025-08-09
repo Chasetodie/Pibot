@@ -512,20 +512,24 @@ class BettingSystem {
         const winAmount = amount * 2 - Math.floor(amount * 2 * this.config.houseFee);
 
         const updateDataWinner = {
+            'stats.totalEarned': (winner.stats.totalEarned || 0) + winAmount,
             'betStats.wins': (winner.betStats.wins || 0) + 1,
             'betStats.totalWon': (winner.betStats.totalWon || 0) + winAmount,
             'betStats.netProfit': (winner.betStats.netProfit || 0) + (winAmount - amount),
 
+            'stats.totalSpent': (winner.stats.totalSpent || 0),
             'betStats.losses': (winner.betStats.losses || 0),
             'betStats.totalLost': (winner.betStats.totalLost || 0),
             'betStats.netProfit': (winner.betStats.netProfit || 0)
         }
         
         const updateDataLoser = {
+            'stats.totalSpent': (winner.stats.totalSpent || 0) + amount,
             'betStats.losses': (loser.betStats.losses || 0) + 1,
             'betStats.totalLost': (loser.betStats.totalLost || 0) + amount,
             'betStats.netProfit': (loser.betStats.netProfit || 0) - amount,
 
+            'stats.totalEarned': (winner.stats.totalEarned || 0),
             'betStats.wins': (loser.betStats.wins || 0),
             'betStats.totalWon': (loser.betStats.totalWon || 0),
             'betStats.netProfit': (loser.betStats.netProfit || 0)
