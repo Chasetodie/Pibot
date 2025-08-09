@@ -332,10 +332,30 @@ class BettingSystem {
 
     // Cancelar apuesta activa
     async cancelBet(message, betId) {
-        const bet = await this.getBet(betId);
+        const targetUser = message.mentions.users.first();
+        const userId = message.author.id;
+
+        if (!targetUser) {
+            await message.reply('❌ Debes mencionar a un usuario válido.');
+            return;
+        }
+        
+        if (targetUser.id === message.author.id) {
+            await message.reply('❌ No puedes transferirte dinero a ti mismo.');
+            return;
+        }
+        
+        if (targetUser.bot) {
+            await message.reply('❌ No puedes transferir dinero a bots.');
+            return;
+        }
+        
+        const baseId = userId.slice(9) + targetUser.id.slice(9);
+        const bet = await this.getBet(baseId);
+
         if (!bet) return message.reply({ content: '❌ Esta apuesta ya no existe.', ephemeral: true });
         if (bet.status !== 'active') return message.reply({ content: '❌ Esta apuesta no está activa.', ephemeral: true });
-        if (message.user.id !== bet.challenger && message.user.id !== bet.opponent) {
+        if (message.author.id !== bet.challenger && message.author.id !== bet.opponent) {
             return message.reply({ content: '❌ Solo los participantes pueden cancelar esta apuesta.', ephemeral: true });
         }
 
@@ -344,7 +364,7 @@ class BettingSystem {
 
 /*        bet.status = 'cancelled';
         bet.cancelledAt = Date.now();
-        bet.cancelledBy = message.user.id;*/
+        bet.cancelledBy = message.author.id;*/
 
         const embed = new EmbedBuilder()
             .setTitle('🔄 Apuesta Cancelada')
