@@ -381,8 +381,8 @@ client.on('messageCreate', async (message) => {
     const user = await economy.getUser(userId);
 
     // Verificar logros ocasionalmente (cada 10 mensajes para no sobrecargar)
-    if (user.messagesCount % 10 === 0 && achievementsSystem) {
-        await achievementsSystem.checkAchievements(userId, message);
+    if (user.messagesCount % 10 === 0 && achievements) {
+        await achievements.checkAchievements(userId, message);
     }
     
     // Procesar XP por mensaje (solo en servidores, no en DMs)
@@ -426,7 +426,7 @@ client.on('messageCreate', async (message) => {
     await minigames.processCommand(message);
 
     //Procesar logros
-    await achievementsSystem.processCommand(message);
+    await achievements.processCommand(message);
     
     // Luego procesar comandos normales (como !contadores, !reset, etc.)
     await commandHandler.processCommand(message);
@@ -456,6 +456,7 @@ client.login(process.env.TOKEN).then(() => {
     console.error('❌ Error en el login:', error);
 
 });
+
 
 
 
