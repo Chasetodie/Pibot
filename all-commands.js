@@ -732,22 +732,7 @@ class AllCommands {
         const betId = args[1];
 
         try {
-            switch (command) {
-                // Achievements
-                case 'mon!achievements':
-                case 'mon!logros':
-                    const achievementTarget = message.mentions.members?.first();
-                    await this.achievements.showUserAchievements(message, achievementTarget);
-                    break;
-                case 'mon!allachievements':
-                case 'mon!todoslogros':
-                    await this.achievements.showAllAchievements(message);
-                    break;
-                case 'mon!notifyachievements':
-                    const achievementIds = args.slice(1);
-                    await this.achievements.notifyAchievements(message, achievementIds);
-                    break;
-                    
+            switch (command) {                    
                 case 'mon!balance':
                 case 'mon!bal':
                 case 'mon!money':
