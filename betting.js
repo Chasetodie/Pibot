@@ -333,7 +333,7 @@ class BettingSystem {
     // Cancelar apuesta activa
     async cancelBet(message, betId) {
         const targetUser = message.mentions.users.first();
-        const userId = message.author.id;
+        const userId = message.author.id;     
 
         if (!targetUser) {
             await message.reply('❌ Debes mencionar a un usuario válido.');
@@ -351,6 +351,13 @@ class BettingSystem {
         }
         
         const baseId = userId.slice(9) + targetUser.id.slice(9);
+        
+        if ((targetUser.id.slice(9) + userId.slice(9)) !== baseId)
+        {
+            await message.reply('❌ Solo la persona que inicio la apuesta puede cancelarla.');
+            return;
+        }
+
         const bet = await this.getBet(baseId);
 
         if (!bet) return message.reply({ content: '❌ Esta apuesta ya no existe.', ephemeral: true });
