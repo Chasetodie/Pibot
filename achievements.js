@@ -294,15 +294,12 @@ class AchievementsSystem {
                     updateData.balance = user.balance + achievement.reward.money;
                     updateData['stats.totalEarned'] = (user.stats?.totalEarned || 0) + achievement.reward.money;
                 }
-                
-                console.log(`🏆 ${userId} completó logro: ${achievement.name}\nRecompensa: ${achievement.reward.money} balance: ${updateData.balance} totalEarned: ${updateData['stats.totalEarned']}`);
-                
-                //await this.economy.updateUser(userId, updateData);
+                               
+                await this.economy.updateUser(userId, updateData);
                 
                 // Agregar XP por separado
                 if (achievement.reward.xp) {
-                    console.log("Recompensa por XP");
-//                    await this.economy.addXp(userId, achievement.reward.xp);
+                    await this.economy.addXp(userId, achievement.reward.xp);
                 }
                 
                 completedAchievements.push(achievementId);
@@ -379,12 +376,11 @@ class AchievementsSystem {
 
                 console.log(`🏆 ${userId} completó logro: ${achievement.name}\nRecompensa: ${achievement.reward.money} balance: ${updateData.balance} totalEarned: ${updateData['stats.totalEarned']}`);
 
-                //await this.economy.updateUser(userId, updateData);
+                await this.economy.updateUser(userId, updateData);
                 
                 // Agregar XP por separado
                 if (achievement.reward.xp) {
-                    console.log("Recompensa por XP");
-//                    await this.economy.addXp(userId, achievement.reward.xp);
+                    await this.economy.addXp(userId, achievement.reward.xp);
                 }
                 
                 unlockedAchievements.push(achievementId);
@@ -753,8 +749,7 @@ class AchievementsSystem {
                 })
                 .setTimestamp();
 
-            console.log("Logro Desbloqueado:", achievement.name);
-            //await message.channel.send({ embeds: [embed] });
+            await message.channel.send({ embeds: [embed] });
         }
     }
     
