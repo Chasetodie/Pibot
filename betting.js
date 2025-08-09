@@ -478,19 +478,19 @@ class BettingSystem {
 
         const stats = user.betStats || { wins: 0, losses: 0, totalWon: 0, totalLost: 0, netProfit: 0 };
         const totalBets = stats.wins + stats.losses;
-        const winRate = totalBets > 0 ? ((stats.wins / totalBets) * 100).toFixed(1) : 0;
+        const winRate = totalBets > 0 ? (((stats.wins || 0) / totalBets) * 100).toFixed(1) : 0;
 
         const embed = new EmbedBuilder()
             .setTitle(`🎲 Estadísticas de Apuestas - ${displayName}`)
             .setColor(stats.netProfit >= 0 ? '#00FF00' : '#FF0000')
             .setThumbnail(message.author.displayAvatarURL({ dynamic: true }))
             .addFields(
-                { name: '🏆 Victorias', value: stats.wins.toString(), inline: true },
-                { name: '💸 Derrotas', value: stats.losses.toString(), inline: true },
+                { name: '🏆 Victorias', value: (stats.wins.toString() || 0), inline: true },
+                { name: '💸 Derrotas', value: (stats.losses.toString() || 0), inline: true },
                 { name: '📊 Tasa de Victoria', value: `${winRate}%`, inline: true },
-                { name: '💰 Total Ganado', value: `${this.formatNumber(stats.totalWon)} π-b$`, inline: true },
-                { name: '💸 Total Perdido', value: `${this.formatNumber(stats.totalLost)} π-b$`, inline: true },
-                { name: '📈 Ganancia Neta', value: `${stats.netProfit >= 0 ? '+' : ''}${this.formatNumber(stats.netProfit)} π-b$`, inline: true }
+                { name: '💰 Total Ganado', value: `${this.formatNumber((stats.totalWon || 0))} π-b$`, inline: true },
+                { name: '💸 Total Perdido', value: `${this.formatNumber((stats.totalLost || 0))} π-b$`, inline: true },
+                { name: '📈 Ganancia Neta', value: `${stats.netProfit >= 0 ? '+' : ''}${this.formatNumber((stats.netProfit || 0))} π-b$`, inline: true }
             )
             .setTimestamp();
 
@@ -510,13 +510,21 @@ class BettingSystem {
         const updateDataWinner = {
             'betStats.wins': (winner.betStats.wins || 0) + 1,
             'betStats.totalWon': (winner.betStats.totalWon || 0) + winAmount,
-            'betStats.netProfit': (winner.betStats.netProfit || 0) + (winAmount - amount)
+            'betStats.netProfit': (winner.betStats.netProfit || 0) + (winAmount - amount),
+
+            'betStats.losses': (winner.betStats.losses || 0),
+            'betStats.totalLost': (winner.betStats.totalLost || 0),
+            'betStats.netProfit': (winner.betStats.netProfit || 0)
         }
         
         const updateDataLoser = {
             'betStats.losses': (loser.betStats.losses || 0) + 1,
             'betStats.totalLost': (loser.betStats.totalLost || 0) + amount,
-            'betStats.netProfit': (loser.betStats.netProfit || 0) - amount
+            'betStats.netProfit': (loser.betStats.netProfit || 0) - amount,
+
+            'betStats.wins': (loser.betStats.wins || 0),
+            'betStats.totalWon': (loser.betStats.totalWon || 0),
+            'betStats.netProfit': (loser.betStats.netProfit || 0)
         }
 
         await this.economy.updateUser(winnerId, updateDataWinner);
