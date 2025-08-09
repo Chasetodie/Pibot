@@ -375,7 +375,7 @@ class BettingSystem {
             .setColor('#808080')
             .setTimestamp();
 
-        await this.deleteBet(betId);
+        await this.deleteBet(baseId);
 
         await message.reply({ embeds: [embed], components: [] });
     }
