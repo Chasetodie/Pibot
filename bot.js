@@ -308,7 +308,7 @@ client.on('interactionCreate', async (interaction) => {
 
         // AGREGAR ESTO: Manejo de botones del blackjack
         if (interaction.customId.startsWith('bj_')) {
-            await minijuegos.handleBlackjackButtons(interaction);
+            await minigames.handleBlackjackButtons(interaction);
             return; // Importante: return para no continuar con otros botones
         }
         
@@ -458,6 +458,7 @@ client.login(process.env.TOKEN).then(() => {
     console.error('❌ Error en el login:', error);
 
 });
+
 
 
 
