@@ -733,6 +733,21 @@ class AllCommands {
 
         try {
             switch (command) {
+                // Achievements
+                case 'mon!achievements':
+                case 'mon!logros':
+                    const achievementTarget = message.mentions.members?.first();
+                    await this.achievements.showUserAchievements(message, achievementTarget);
+                    break;
+                case 'mon!allachievements':
+                case 'mon!todoslogros':
+                    await this.achievements.showAllAchievements(message);
+                    break;
+                case 'mon!notifyachievements':
+                    const achievementIds = args.slice(1);
+                    await this.achievements.notifyAchievements(message, achievementIds);
+                    break;
+                    
                 case 'mon!balance':
                 case 'mon!bal':
                 case 'mon!money':
@@ -810,23 +825,7 @@ class AllCommands {
                     break;
             }
 
-/*            // Achievements
-            if (command === 'mon!achievements' || command === 'mon!logros') {
-                const achievementTarget = message.mentions.members?.first();
-                await this.achievements.showUserAchievements(message, achievementTarget);
-                return;
-            }
-            if (command === 'mon!allachievements' || command === 'mon!todoslogros') {
-                await this.achievements.showAllAchievements(message);
-                return;
-            }
-            if (command === 'mon!notifyachievements') {
-                const achievementIds = args.slice(1);
-                await this.achievements.notifyAchievements(message, achievementIds);
-                return;
-            }
-
-            // Shop
+/*          // Shop
             if (command === 'mon!shop' || command === 'mon!tienda') {
                 const category = args[1];
                 await this.shop.showShop(message, category);
@@ -917,9 +916,9 @@ class AllCommands {
             .setTitle('📖 Ayuda - Comandos Principales')
             .setColor('#00BFFF')
             .addFields(
-/*                // Achievements
+                // Achievements
                 { name: '🏆 Logros', value: '`mon!achievements [@usuario]` - Ver logros\n`mon!allachievements` - Ver todos los logros', inline: false },
-                // Shop
+/*                // Shop
                 { name: '🛒 Tienda', value: '`mon!shop [categoría]`\n`mon!buy <item> [cantidad]`\n`mon!use <item>`\n`mon!inventory [@usuario]`\n`mon!sell <item> [cantidad]`\n`mon!shophelp`', inline: false },*/
                 // Betting
                 { name: '🎲 Apuestas', value: '`mon!bet [@usuario] <cantidad> <descripción>` - Crear apuesta\n`mon!mybets` - Ver tus apuestas activas\n`mon!betstats [@usuario]` - Ver estadísticas de apuestas', inline: false },
