@@ -484,10 +484,13 @@ class BettingSystem {
         const totalBets = stats.wins + stats.losses;
         const winRate = totalBets > 0 ? (((stats.wins || 0) / totalBets) * 100).toFixed(1) : 0;
 
+        // Avatar
+        const avatarUrl = targetUser ? targetUser.displayAvatarURL({ dynamic: true }) : message.author.displayAvatarURL({ dynamic: true });
+        
         const embed = new EmbedBuilder()
             .setTitle(`🎲 Estadísticas de Apuestas - ${displayName}`)
             .setColor(stats.netProfit >= 0 ? '#00FF00' : '#FF0000')
-            .setThumbnail(message.author.displayAvatarURL({ dynamic: true }))
+            .setThumbnail(avatarUrl)
             .addFields(
                 { name: '🏆 Victorias', value: (stats.wins.toString() || 0), inline: true },
                 { name: '💸 Derrotas', value: (stats.losses.toString() || 0), inline: true },
