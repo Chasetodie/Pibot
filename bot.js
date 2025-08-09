@@ -378,7 +378,7 @@ client.on('messageCreate', async (message) => {
 
     // AGREGAR ESTO AL INICIO:
     const userId = message.author.id;
-    const user = await this.economySystem.getUser(userId);
+    const user = await this.economy.getUser(userId);
 
     // Verificar logros ocasionalmente (cada 10 mensajes para no sobrecargar)
     if (user.messagesCount % 10 === 0 && achievementsSystem) {
@@ -456,6 +456,7 @@ client.login(process.env.TOKEN).then(() => {
     console.error('❌ Error en el login:', error);
 
 });
+
 
 
 
