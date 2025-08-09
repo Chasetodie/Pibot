@@ -494,7 +494,7 @@ class MinigamesSystem {
         const cooldownCheck = this.checkCooldown(userId, 'blackjack');
         if (cooldownCheck.onCooldown) {
             const timeLeft = Math.ceil(cooldownCheck.timeLeft / 60000); // Convertir a minutos
-            await message.reply(`⏰ Debes esperar ${timeLeft} antes de jugar otra vez`);
+            await message.reply(`⏰ Debes esperar ${timeLeft} minutos antes de jugar otra vez`);
             return;
         }
     
