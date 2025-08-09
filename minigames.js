@@ -451,6 +451,8 @@ class MinigamesSystem {
         await reply.edit({ embeds: [resultEmbed] });
     }
 
+    // Agregar este método a tu clase MinigamesSystem
+    
     async handleBlackjack(message, args) {
         const userId = message.author.id;
         const user = await this.economy.getUser(userId);
@@ -538,7 +540,7 @@ class MinigamesSystem {
         // Mostrar el juego y botones
         await this.showBlackjackGame(message, gameState, true);
     }
-
+    
     // Crear mazo de cartas
     createDeck() {
         const suits = ['♠️', '♥️', '♦️', '♣️'];
@@ -559,12 +561,12 @@ class MinigamesSystem {
     
         return deck;
     }
-
+    
     // Sacar carta del mazo
     drawCard(deck) {
         return deck.pop();
     }
-
+    
     // Calcular valor de la mano
     calculateHandValue(hand) {
         let value = 0;
@@ -597,7 +599,7 @@ class MinigamesSystem {
         }
         return hand.map(card => `${card.rank}${card.suit}`).join(' ');
     }
-
+    
     // Mostrar estado del juego
     async showBlackjackGame(message, gameState, showButtons = false) {
         const { playerHand, dealerHand, betAmount, doubled } = gameState;
