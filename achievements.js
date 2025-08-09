@@ -210,7 +210,7 @@ class AchievementsSystem {
 
     // Verificar logros para un usuario
     checkAchievements(userId) {
-        const user = this.economy.getUser(userId);
+        const user = await this.economy.getUser(userId);
         const unlockedAchievements = [];
         
         // Si el usuario no tiene logros inicializados
@@ -285,7 +285,7 @@ class AchievementsSystem {
                     user.stats.totalEarned += achievement.reward.money;
                 }
                 if (achievement.reward.xp) {
-                    this.economy.addXp(userId, achievement.reward.xp);
+                    await this.economy.addXp(userId, achievement.reward.xp);
                 }
                 
                 console.log(`🏆 ${userId} desbloqueó logro: ${achievement.name}`);
@@ -298,7 +298,7 @@ class AchievementsSystem {
 
     // Actualizar estadísticas específicas para logros
     updateStats(userId, statType, value) {
-        const user = this.economy.getUser(userId);
+        const user = await this.economy.getUser(userId);
         
         if (!user.stats) user.stats = {};
         
@@ -343,7 +343,7 @@ class AchievementsSystem {
     async showUserAchievements(message, targetUser = null) {
         const userId = targetUser ? targetUser.id : message.author.id;
         const displayName = targetUser ? targetUser.displayName : message.author.displayName;
-        const user = this.economy.getUser(userId);
+        const user = await this.economy.getUser(userId);
         
         if (!user.achievements) {
             user.achievements = { unlocked: [], progress: {}, unlockedCount: 0 };
