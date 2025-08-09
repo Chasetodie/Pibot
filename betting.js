@@ -208,10 +208,25 @@ class BettingSystem {
     }
 
     // Aceptar apuesta
-    async acceptBet(message, targetUser) {
+    async acceptBet(message) {
         const targetUser = message.mentions.users.first();
         const userId = message.author.id;
         const targetId = targetUser.id;
+
+        if (!targetUser) {
+            await message.reply('❌ Debes mencionar a un usuario válido.');
+            return;
+        }
+        
+        if (targetUser.id === message.author.id) {
+            await message.reply('❌ No puedes transferirte dinero a ti mismo.');
+            return;
+        }
+        
+        if (targetUser.bot) {
+            await message.reply('❌ No puedes transferir dinero a bots.');
+            return;
+        }
         
         const baseId = targetId.slice(9) + userId.slice(9);
         const bet = await this.getBet(baseId);

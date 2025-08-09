@@ -780,7 +780,7 @@ class AllCommands {
                     await this.betting.createBet(message, args);
                     break;
                 case 'mon!acceptbet':
-                    await this.betting.acceptBet(message, args);
+                    await this.betting.acceptBet(message);
                     break;
                 case 'mon!declinebet':
                     await this.betting.declineBet(message, args);
