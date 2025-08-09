@@ -446,12 +446,22 @@ class BettingSystem {
 
         for (const bet of userBets) {
             const isChallenger = bet.challenger === message.author.id;
-            const opponent = isChallenger ? bet.opponent : bet.challenger;
+            const opponentId = isChallenger ? bet.opponent : bet.challenger;
             const role = isChallenger ? 'Retador' : 'Oponente';
             let statusText = bet.status === 'pending' ? '⏳ Esperando respuesta' : '🔴 Activa - Esperando resolución';
 
+            // ✅ OBTENER NOMBRE DEL USUARIO
+            let opponentName = 'Usuario desconocido';
+            try {
+                const opponentUser = await message.client.users.fetch(opponentId);
+                opponentName = opponentUser.displayName || opponentUser.username;
+            } catch (error) {
+                console.log(`No se pudo obtener información del usuario ${opponentId}`);
+                opponentName = `<@${opponentId}>`; // Fallback a mención
+            }
+
             embed.addFields({
-                name: `${role} vs <@${opponent}>`,
+                name: `${role} vs ${opponentName}`,
                 value: `**Cantidad:** ${this.formatNumber(bet.amount)} π-b$\n**Descripción:** ${bet.description}\n**Estado:** ${statusText}\n**ID:** \`${bet.id}\``,
                 inline: false
             });
