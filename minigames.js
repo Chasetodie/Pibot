@@ -411,7 +411,7 @@ class MinigamesSystem {
             const profit = winAmount - betAmount;
             
             await this.economy.addMoney(userId, profit, 'lottery_win');
-            await this.economy.updateUser(userId, updateData);
+            //await this.economy.updateUser(userId, updateData);
             
             resultEmbed.setDescription(`🎉 **¡JACKPOT! ¡GANASTE LA LOTERÍA!** 🎉`)
                 .addFields(
@@ -423,7 +423,7 @@ class MinigamesSystem {
                 );
         } else {
             await this.economy.removeMoney(userId, betAmount, 'lottery_loss');
-            await this.economy.updateUser(userId, updateData);
+            //await this.economy.updateUser(userId, updateData);
             
             const difference = Math.abs(winningNumber - predictedNumber);
             let encouragement = '';
