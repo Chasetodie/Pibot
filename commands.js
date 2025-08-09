@@ -132,7 +132,7 @@ class CommandHandler {
                 // Eventos
                 { name: 'Eventos', value: '`mon!createevent <tipo> [duración]` - Crear evento manual\n`mon!eventstats` - Estadísticas de eventos', inline: false },
                 // Logros
-                { name: 'Logros', value: '`mon!notifyachievements <id1> <id2>` - Notifica logros desbloqueados', inline: false },               
+                { name: 'Logros', value: '`mon!detectall` - Detectar todos los logros desbloqueados', inline: false },               
                 // Basicos
                 { name: 'Basicos', value: '`mon!clear <cantidad>` - Borra la cantidad de mensajes indicada en el canal\n`mon!help-admin` - Muestra todos los comandos de Administrador', inline: false },
            )
