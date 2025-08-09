@@ -11,7 +11,7 @@ class BettingSystem {
         this.config = {
             minBet: 100,
             maxBet: 100000,
-            betTimeout: 180000,
+            betTimeout: 180000, // 3 minutos
             maxActiveBets: 3,
             houseFee: 0.05
         };
@@ -19,58 +19,36 @@ class BettingSystem {
         this.betsCollection = admin.firestore().collection('bets');
     }
 
-/*    // Inicializar Firebase
-    initializeFirebase() {
-        try {
-            // Verificar que las variables de entorno existan
-            if (!process.env.FIREBASE_PROJECT_ID || !process.env.FIREBASE_CLIENT_EMAIL || !process.env.FIREBASE_PRIVATE_KEY) {
-                throw new Error('❌ Variables de entorno de Firebase no configuradas. Revisa tu archivo .env');
-            }
-    
-            admin.initializeApp({
-                credential: admin.credential.cert({
-                    projectId: process.env.FIREBASE_PROJECT_ID,
-                    clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-                    privateKey: process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n'),
-                }),
-            });
-    
-            console.log('🔥 Firebase inicializado correctamente en bets');
-            console.log(`📊 Proyecto: ${process.env.FIREBASE_PROJECT_ID}`);
-        } catch (error) {
-            console.error('❌ Error inicializando Firebase:', error);
-            console.error('💡 Asegúrate de que tu archivo .env esté configurado correctamente');
-        }
-    }*/
-
-    // Obtener o crear datos de una apuesta
+    // ✅ CORREGIDO: Solo obtener apuesta existente, no crear una vacía
     async getBet(betId) {
         try {
             const betDoc = await this.betsCollection.doc(betId).get();
-
+            
             if (!betDoc.exists) {
-                // Crear nueva apuesta
-                const newBet = {
-                    id: 0,
-                    challenger: 0,
-                    opponent: 0,
-                    amount: 0,
-                    description: "",
-                    status: "",
-                    createdAt: 0,
-                    expiresAt: 0,
-                    updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-                    channelId: 0
-                };
-
-                await this.betsCollection.doc(betId).set(newBet);
-                console.log(`🎲 Nueva apuesta creada en Firebase: ${betId}`);
-                return newBet;
+                return null; // Retornar null si no existe
             }
 
             return betDoc.data();
         } catch (error) {
             console.error('❌ Error obteniendo apuesta:', error);
+            return null;
+        }
+    }
+
+    // ✅ NUEVO: Crear apuesta específicamente
+    async createBetInDB(betId, betData) {
+        try {
+            const betWithTimestamp = {
+                ...betData,
+                createdAt: admin.firestore.FieldValue.serverTimestamp(),
+                updatedAt: admin.firestore.FieldValue.serverTimestamp()
+            };
+
+            await this.betsCollection.doc(betId).set(betWithTimestamp);
+            console.log(`🎲 Nueva apuesta creada en Firebase: ${betId}`);
+            return betWithTimestamp;
+        } catch (error) {
+            console.error('❌ Error creando apuesta:', error);
             throw error;
         }
     }
@@ -91,6 +69,38 @@ class BettingSystem {
         }
     }
 
+    // ✅ CORREGIDO: Obtener apuestas activas de un usuario específico
+    async getUserActiveBets(userId) {
+        try {
+            const userBets = [];
+            
+            // Buscar apuestas donde el usuario es challenger
+            const challengerQuery = await this.betsCollection
+                .where('challenger', '==', userId)
+                .where('status', 'in', ['pending', 'active'])
+                .get();
+            
+            challengerQuery.forEach(doc => {
+                userBets.push({ id: doc.id, ...doc.data() });
+            });
+
+            // Buscar apuestas donde el usuario es opponent
+            const opponentQuery = await this.betsCollection
+                .where('opponent', '==', userId)
+                .where('status', 'in', ['pending', 'active'])
+                .get();
+            
+            opponentQuery.forEach(doc => {
+                userBets.push({ id: doc.id, ...doc.data() });
+            });
+
+            return userBets;
+        } catch (error) {
+            console.error('❌ Error obteniendo apuestas del usuario:', error);
+            return [];
+        }
+    }
+
     async getAllBets() {
         try {
             const snapshot = await this.betsCollection.get();
@@ -107,7 +117,7 @@ class BettingSystem {
             console.error('❌ Error obteniendo todas las apuestas:', error);
             return {};
         }
-    }  
+    }
 
     // Eliminar una apuesta
     async deleteBet(betId) {
@@ -120,7 +130,14 @@ class BettingSystem {
         }
     }
 
-    // Crear apuesta
+    // ✅ CORREGIDO: Generar ID único para apuesta
+    generateBetId(challengerId, opponentId) {
+        // Ordenar IDs para que siempre sea el mismo ID sin importar quién inicie
+        const sortedIds = [challengerId, opponentId].sort();
+        return `${sortedIds[0].slice(-6)}_${sortedIds[1].slice(-6)}_${Date.now()}`;
+    }
+
+    // ✅ CORREGIDO: Crear apuesta
     async createBet(message, args) {
         const userId = message.author.id;
         const user = await this.economy.getUser(userId);
@@ -153,11 +170,12 @@ class BettingSystem {
             return;
         }
 
-/*        const userActiveBets = await this.getBet(userId);
-        if (userActiveBets.challenger.length >= this.config.maxActiveBets || userActiveBets.opponent.length >= this.config.maxActiveBets) {
+        // ✅ CORREGIDO: Verificar apuestas activas del usuario
+        const userActiveBets = await this.getUserActiveBets(userId);
+        if (userActiveBets.length >= this.config.maxActiveBets) {
             await message.reply(`❌ Ya tienes ${this.config.maxActiveBets} apuestas activas. Espera a que se resuelvan.`);
             return;
-        }*/
+        }
 
         const description = args.slice(3).join(' ');
         if (description.length > 100) {
@@ -165,26 +183,22 @@ class BettingSystem {
             return;
         }
 
-        const idForBet = userId + targetUser + Date.now();
-        const baseId = userId.slice(9) + targetUser.id.slice(9);
+        // ✅ CORREGIDO: Generar ID único
+        const betId = this.generateBetId(userId, targetUser.id);
         
-        //Create The Bet
-            await this.getBet(baseId);
-        //Create The Bet
-
         const betData = {
-            id: idForBet,
+            id: betId,
             challenger: userId,
             opponent: targetUser.id,
             amount: amount,
             description: description,
             status: "pending",
-            createdAt: Date.now(),
             expiresAt: Date.now() + this.config.betTimeout,
             channelId: message.channel.id
         };
 
-        this.updateBet(baseId, betData);
+        // ✅ CORREGIDO: Crear la apuesta en la base de datos
+        await this.createBetInDB(betId, betData);
 
         const embed = new EmbedBuilder()
             .setTitle('🎲 Nueva Apuesta Creada')
@@ -193,10 +207,12 @@ class BettingSystem {
                 { name: '💰 Cantidad', value: `${this.formatNumber(amount)} π-b$`, inline: true },
                 { name: '🎯 Descripción', value: description, inline: true },
                 { name: '💸 Comisión', value: `${this.formatNumber(Math.floor(amount * 2 * this.config.houseFee))} π-b$`, inline: true },
-                { name: '⏰ Expira en', value: `${this.config.betTimeout / 60000} minutos`, inline: false }
+                { name: '⏰ Expira en', value: `${this.config.betTimeout / 60000} minutos`, inline: false },
+                { name: '✅ Aceptar', value: `\`mon!accept @${message.author.username}\``, inline: true },
+                { name: '❌ Rechazar', value: `\`mon!decline @${message.author.username}\``, inline: true }
             )
             .setColor('#FFA500')
-            .setFooter({ text: `ID: ${betData.id}` })
+            .setFooter({ text: `ID: ${betId}` })
             .setTimestamp();
 
         await message.reply({
@@ -204,56 +220,69 @@ class BettingSystem {
             embeds: [embed]
         });
 
-        setTimeout(async () => await this.expireBet(message, baseId), this.config.betTimeout);
+        // ✅ CORREGIDO: Configurar expiración
+        setTimeout(async () => {
+            await this.expireBet(betId);
+        }, this.config.betTimeout);
     }
 
-    // Aceptar apuesta
+    // ✅ CORREGIDO: Aceptar apuesta
     async acceptBet(message) {
-        const targetUser = message.mentions.users.first();
-        const userId = message.author.id;
+        const challengerUser = message.mentions.users.first();
+        const opponentId = message.author.id;
 
-        if (!targetUser) {
-            await message.reply('❌ Debes mencionar a un usuario válido.');
+        if (!challengerUser) {
+            await message.reply('❌ Debes mencionar al usuario que te retó. Ejemplo: `mon!accept @usuario`');
             return;
         }
         
-        if (targetUser.id === message.author.id) {
-            await message.reply('❌ No puedes transferirte dinero a ti mismo.');
+        if (challengerUser.id === message.author.id) {
+            await message.reply('❌ No puedes aceptar tu propia apuesta.');
             return;
         }
         
-        if (targetUser.bot) {
-            await message.reply('❌ No puedes transferir dinero a bots.');
+        if (challengerUser.bot) {
+            await message.reply('❌ Los bots no pueden hacer apuestas.');
             return;
         }
         
-        const baseId = targetUser.id.slice(9) + userId.slice(9);
-        const bet = await this.getBet(baseId);
+        // ✅ CORREGIDO: Buscar apuesta pendiente entre estos usuarios
+        const pendingBets = await this.betsCollection
+            .where('challenger', '==', challengerUser.id)
+            .where('opponent', '==', opponentId)
+            .where('status', '==', 'pending')
+            .get();
 
-        if (!bet) return message.reply({ content: '❌ Esta apuesta ya no existe.', ephemeral: true });
-        if (message.author.id !== bet.opponent) return message.reply({ content: '❌ Esta apuesta no es para ti.', ephemeral: true });
-        if (bet.status !== 'pending') return message.reply({ content: '❌ Esta apuesta ya fue procesada.', ephemeral: true });
+        if (pendingBets.empty) {
+            await message.reply('❌ No hay apuestas pendientes de este usuario hacia ti.');
+            return;
+        }
+
+        // Tomar la primera apuesta pendiente
+        const betDoc = pendingBets.docs[0];
+        const bet = betDoc.data();
+        const betId = betDoc.id;
 
         const challengerData = await this.economy.getUser(bet.challenger);
         const opponentData = await this.economy.getUser(bet.opponent);
 
         if (challengerData.balance < bet.amount) {
-            await this.deleteBet(bet.id);
-            return message.reply({ content: '❌ El retador ya no tiene suficientes fondos.', ephemeral: true });
+            await this.deleteBet(betId);
+            return message.reply('❌ El retador ya no tiene suficientes fondos.');
         }
         if (opponentData.balance < bet.amount) {
-            return message.reply({ content: '❌ No tienes suficientes fondos para esta apuesta.', ephemeral: true });
+            return message.reply('❌ No tienes suficientes fondos para esta apuesta.');
         }
 
+        // Retirar dinero de ambos usuarios
         await this.economy.removeMoney(bet.challenger, bet.amount, 'bet_escrow');
         await this.economy.removeMoney(bet.opponent, bet.amount, 'bet_escrow');
 
-        const betData = {
+        // Actualizar estado de la apuesta
+        await this.updateBet(betId, {
             status: 'active',
-            acceptedAt: Date.now(),
-        };
-
-        this.updateBet(baseId, betData);
+            acceptedAt: Date.now()
+        });
 
         const embed = new EmbedBuilder()
             .setTitle('✅ Apuesta Aceptada')
@@ -263,42 +292,42 @@ class BettingSystem {
                 { name: '🛡️ Oponente', value: `<@${bet.opponent}>`, inline: true },
                 { name: '💰 Cantidad', value: `${this.formatNumber(bet.amount)} π-b$ cada uno`, inline: true },
                 { name: '🎯 Descripción', value: bet.description, inline: false },
-                { name: '📝 Estado', value: 'Esperando resultado...', inline: false }
+                { name: '📝 Resolución', value: `\`mon!resolve ${betId} challenger\` o \`mon!resolve ${betId} opponent\``, inline: false }
             )
             .setColor('#00FF00')
-            .setFooter({ text: `Usen !resolve ${bet.id} <ganador> para resolver` })
+            .setFooter({ text: `ID: ${betId}` })
             .setTimestamp();
 
         await message.reply({ embeds: [embed] });
     }
 
-    // Rechazar apuesta
-    async declineBet(message, betId) {
-        const targetUser = message.mentions.users.first();
-        const userId = message.author.id;
+    // ✅ CORREGIDO: Rechazar apuesta
+    async declineBet(message) {
+        const challengerUser = message.mentions.users.first();
+        const opponentId = message.author.id;
 
-        if (!targetUser) {
-            await message.reply('❌ Debes mencionar a un usuario válido.');
+        if (!challengerUser) {
+            await message.reply('❌ Debes mencionar al usuario que te retó. Ejemplo: `mon!decline @usuario`');
             return;
         }
         
-        if (targetUser.id === message.author.id) {
-            await message.reply('❌ No puedes transferirte dinero a ti mismo.');
-            return;
-        }
-        
-        if (targetUser.bot) {
-            await message.reply('❌ No puedes transferir dinero a bots.');
-            return;
-        }
-        
-        const baseId = targetUser.id.slice(9) + userId.slice(9);
-        const bet = await this.getBet(baseId);
-        
-        if (!bet) return message.reply({ content: '❌ Esta apuesta ya no existe.', ephemeral: true });
-        if (message.author.id !== bet.opponent) return message.reply({ content: '❌ Esta apuesta no es para ti.', ephemeral: true });
+        // Buscar apuesta pendiente
+        const pendingBets = await this.betsCollection
+            .where('challenger', '==', challengerUser.id)
+            .where('opponent', '==', opponentId)
+            .where('status', '==', 'pending')
+            .get();
 
-        await this.deleteBet(baseId);
+        if (pendingBets.empty) {
+            await message.reply('❌ No hay apuestas pendientes de este usuario hacia ti.');
+            return;
+        }
+
+        const betDoc = pendingBets.docs[0];
+        const bet = betDoc.data();
+        const betId = betDoc.id;
+
+        await this.deleteBet(betId);
 
         const embed = new EmbedBuilder()
             .setTitle('❌ Apuesta Rechazada')
@@ -306,16 +335,27 @@ class BettingSystem {
             .setColor('#FF0000')
             .setTimestamp();
 
-        await message.reply({ embeds: [embed], components: [] });
+        await message.reply({ embeds: [embed] });
     }
 
-    // Resolver apuesta
+    // ✅ CORREGIDO: Resolver apuesta
     async resolveBet(message, betId, winner) {
         const bet = await this.getBet(betId);
-        if (!bet) return message.reply({ content: '❌ Esta apuesta ya no existe.', ephemeral: true });
-        if (bet.status !== 'active') return message.reply({ content: '❌ Esta apuesta no está activa.', ephemeral: true });
-        if (message.user.id !== bet.challenger && message.user.id !== bet.opponent) {
-            return message.reply({ content: '❌ Solo los participantes pueden resolver esta apuesta.', ephemeral: true });
+        
+        if (!bet) {
+            return message.reply('❌ Esta apuesta no existe.');
+        }
+        
+        if (bet.status !== 'active') {
+            return message.reply('❌ Esta apuesta no está activa.');
+        }
+        
+        if (message.author.id !== bet.challenger && message.author.id !== bet.opponent) {
+            return message.reply('❌ Solo los participantes pueden resolver esta apuesta.');
+        }
+
+        if (winner !== 'challenger' && winner !== 'opponent') {
+            return message.reply('❌ El ganador debe ser "challenger" o "opponent".');
         }
 
         const totalPot = bet.amount * 2;
@@ -324,13 +364,11 @@ class BettingSystem {
         const winnerId = winner === 'challenger' ? bet.challenger : bet.opponent;
         const loserId = winner === 'challenger' ? bet.opponent : bet.challenger;
 
+        // Dar premio al ganador
         await this.economy.addMoney(winnerId, winnerAmount, 'bet_win');
+        
+        // Actualizar estadísticas
         await this.updateBetStats(winnerId, loserId, bet.amount);
-
-/*        bet.status = 'resolved';
-        bet.winner = winnerId;
-        bet.resolvedAt = Date.now();
-        bet.resolvedBy = message.user.id;*/
 
         const embed = new EmbedBuilder()
             .setTitle('🏆 Apuesta Resuelta')
@@ -346,85 +384,57 @@ class BettingSystem {
             .setTimestamp();
 
         await this.deleteBet(betId);
-
-        await message.reply({ embeds: [embed], components: [] });
+        await message.reply({ embeds: [embed] });
     }
 
-    // Cancelar apuesta activa
+    // ✅ CORREGIDO: Cancelar apuesta
     async cancelBet(message, betId) {
-        const targetUser = message.mentions.users.first();
-        const userId = message.author.id;     
+        const bet = await this.getBet(betId);
 
-        if (!targetUser) {
-            await message.reply('❌ Debes mencionar a un usuario válido.');
-            return;
+        if (!bet) {
+            return message.reply('❌ Esta apuesta no existe.');
         }
         
-        if (targetUser.id === message.author.id) {
-            await message.reply('❌ No puedes transferirte dinero a ti mismo.');
-            return;
+        if (bet.status !== 'active') {
+            return message.reply('❌ Esta apuesta no está activa.');
         }
         
-        if (targetUser.bot) {
-            await message.reply('❌ No puedes transferir dinero a bots.');
-            return;
-        }
-        
-        const baseId = userId.slice(9) + targetUser.id.slice(9);
-        
-        if ((targetUser.id.slice(9) + userId.slice(9)) === baseId)
-        {
-            console.log(`targetUser ${targetUser.id} userId ${userId}\nBaseId ${baseId} Custom ${targetUser.id.slice(9) + userId.slice(9)}`)
-            await message.reply('❌ Solo la persona que inicio la apuesta puede cancelarla.');
-            return;
-        }
-
-        const bet = await this.getBet(baseId);
-
-        if (!bet) return message.reply({ content: '❌ Esta apuesta ya no existe.', ephemeral: true });
-        if (bet.status !== 'active') return message.reply({ content: '❌ Esta apuesta no está activa.', ephemeral: true });
         if (message.author.id !== bet.challenger && message.author.id !== bet.opponent) {
-            return message.reply({ content: '❌ Solo los participantes pueden cancelar esta apuesta.', ephemeral: true });
+            return message.reply('❌ Solo los participantes pueden cancelar esta apuesta.');
         }
 
+        // Devolver dinero a ambos participantes
         await this.economy.addMoney(bet.challenger, bet.amount, 'bet_refund');
         await this.economy.addMoney(bet.opponent, bet.amount, 'bet_refund');
 
-/*        bet.status = 'cancelled';
-        bet.cancelledAt = Date.now();
-        bet.cancelledBy = message.author.id;*/
-
         const embed = new EmbedBuilder()
             .setTitle('🔄 Apuesta Cancelada')
-            .setDescription('La apuesta fue cancelada por mutuo acuerdo')
+            .setDescription('La apuesta fue cancelada y los fondos devueltos')
             .addFields(
                 { name: '💰 Fondos Devueltos', value: `${this.formatNumber(bet.amount)} π-b$ a cada participante`, inline: false }
             )
             .setColor('#808080')
             .setTimestamp();
 
-        await this.deleteBet(baseId);
-
-        await message.reply({ embeds: [embed], components: [] });
+        await this.deleteBet(betId);
+        await message.reply({ embeds: [embed] });
     }
 
-    // Expirar apuesta
-    async expireBet(message, betId) {
+    // ✅ CORREGIDO: Expirar apuesta
+    async expireBet(betId) {
         const bet = await this.getBet(betId);
 
         if (!bet || bet.status !== 'pending') return;
+        
         await this.deleteBet(betId);
-
-        console.log(`Apuesta ${betId} expiró`);
-
-        await message.reply('❌ Esta Apuesta ha Expirado, Vuelvan a Intentarlo mas Tarde.');
+        console.log(`🕒 Apuesta ${betId} expiró`);
     }
 
-    // Mostrar apuestas activas
+    // ✅ CORREGIDO: Mostrar apuestas activas
     async showActiveBets(message) {
-        const userBets = await this.getBet(message.author.id);
+        const userBets = await this.getUserActiveBets(message.author.id);
 
-        if (!userBets || (userBets.challenger.length === 0 && userBets.opponent.length === 0)) {     
+        if (userBets.length === 0) {
             await message.reply('❌ No tienes apuestas activas.');
             return;
         }
@@ -454,7 +464,7 @@ class BettingSystem {
     async showBetStats(message, targetUser = null) {
         const userId = targetUser ? targetUser.id : message.author.id;
         const displayName = targetUser ? targetUser.displayName : message.author.displayName;
-        const user = this.economy.getUser(userId);
+        const user = await this.economy.getUser(userId);
 
         const stats = user.betStats || { wins: 0, losses: 0, totalWon: 0, totalLost: 0, netProfit: 0 };
         const totalBets = stats.wins + stats.losses;
@@ -508,8 +518,13 @@ class BettingSystem {
             .setTitle('🎲 Sistema de Apuestas')
             .setDescription('Crea apuestas contra otros usuarios!')
             .addFields(
-                { name: '📝 Uso', value: '`mon!bet @usuario <cantidad> <descripción>`', inline: false },
-                { name: '💡 Ejemplo', value: '`mon!bet @usuario 1000 coinflip cara`', inline: false },
+                { name: '📝 Crear Apuesta', value: '`mon!bet @usuario <cantidad> <descripción>`', inline: false },
+                { name: '✅ Aceptar Apuesta', value: '`mon!accept @usuario`', inline: false },
+                { name: '❌ Rechazar Apuesta', value: '`mon!decline @usuario`', inline: false },
+                { name: '🏆 Resolver Apuesta', value: '`mon!resolve <ID> challenger/opponent`', inline: false },
+                { name: '🔄 Cancelar Apuesta', value: '`mon!cancel <ID>`', inline: false },
+                { name: '📊 Ver Apuestas Activas', value: '`mon!bets`', inline: false },
+                { name: '📈 Ver Estadísticas', value: '`mon!betstats [@usuario]`', inline: false },
                 { name: '💰 Límites', value: `Min: ${this.formatNumber(this.config.minBet)} π-b$\nMax: ${this.formatNumber(this.config.maxBet)} π-b$`, inline: false },
                 { name: '📊 Comisión', value: `${this.config.houseFee * 100}% del total`, inline: false }
             )
