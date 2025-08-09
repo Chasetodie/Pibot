@@ -425,12 +425,13 @@ class BettingSystem {
     }
 
     // ✅ CORREGIDO: Expirar apuesta
-    async expireBet(betId) {
+    async expireBet(message, betId) {
         const bet = await this.getBet(betId);
 
         if (!bet || bet.status !== 'pending') return;
         
         await this.deleteBet(betId);
+        await message.reply(`❌ Tu Apuesta Ha Expirado, vuelve a intentarlo mas tarde!`);
         console.log(`🕒 Apuesta ${betId} expiró`);
     }
 
