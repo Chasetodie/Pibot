@@ -250,11 +250,11 @@ class AllCommands {
                 .setDescription('Transfiere π-b Coins a otro usuario')
                 .addFields({
                     name: '📝 Uso',
-                    value: '`mon!pay @usuario <cantidad>`',
+                    value: '`>pay @usuario <cantidad>`',
                     inline: false
                 }, {
                     name: '💡 Ejemplo',
-                    value: '`mon!pay @usuario 500`',
+                    value: '`>pay @usuario 500`',
                     inline: false
                 })
                 .setColor('#17a2b8');
@@ -422,9 +422,9 @@ class AllCommands {
         embed.setDescription(description);
         
         if (type === 'level' || type === 'levels' || type === 'lvl') {
-            embed.setFooter({ text: 'Usa mon!top money para ver el ranking de dinero' });
+            embed.setFooter({ text: 'Usa >top money para ver el ranking de dinero' });
         } else {
-            embed.setFooter({ text: 'Usa mon!top level para ver el ranking de niveles' });
+            embed.setFooter({ text: 'Usa >top level para ver el ranking de niveles' });
         }
         
         await message.reply({ embeds: [embed] });
@@ -444,11 +444,11 @@ class AllCommands {
                 .setDescription('Da π-b Coins a otro usuario')
                 .addFields({
                     name: '📝 Uso',
-                    value: '`mon!addmoney @usuario <cantidad> <razon>`',
+                    value: '`>addmoney @usuario <cantidad> <razon>`',
                     inline: false
                 }, {
                     name: '💡 Ejemplo',
-                    value: '`mon!addmoney @usuario 500 "Por ganar el concurso"`',
+                    value: '`>addmoney @usuario 500 "Por ganar el concurso"`',
                     inline: false
                 })
                 .setColor('#17a2b8');
@@ -507,11 +507,11 @@ class AllCommands {
                 .setDescription('Quita π-b Coins a otro usuario')
                 .addFields({
                     name: '📝 Uso',
-                    value: '`mon!removemoney @usuario <cantidad> <razon>`',
+                    value: '`>removemoney @usuario <cantidad> <razon>`',
                     inline: false
                 }, {
                     name: '💡 Ejemplo',
-                    value: '`mon!removemoney @usuario 500 "Por mal comportamiento"`',
+                    value: '`>removemoney @usuario 500 "Por mal comportamiento"`',
                     inline: false
                 })
                 .setColor('#17a2b8');
@@ -575,11 +575,11 @@ class AllCommands {
                 .setDescription('Añade Xp a otro usuario')
                 .addFields({
                     name: '📝 Uso',
-                    value: '`mon!addxp @usuario <cantidad> <razon>`',
+                    value: '`>addxp @usuario <cantidad> <razon>`',
                     inline: false
                 }, {
                     name: '💡 Ejemplo',
-                    value: '`mon!addxp @usuario 500 "Por ganar el concurso"`',
+                    value: '`>addxp @usuario 500 "Por ganar el concurso"`',
                     inline: false
                 })
                 .setColor('#17a2b8');
@@ -663,14 +663,14 @@ class AllCommands {
                 
                 embed.addFields({
                     name: `${available} ${job.name}`,
-                    value: `**Pago:** ${job.baseReward} - ${job.variation} π-b$\n**Cooldown:** ${cooldownText}${levelText}${job.failChance ? `\n**Riesgo:** ${(job.failChance * 100)}% de fallar` : ''}\n**Comando:** mon!work ${job.codeName}`,
+                    value: `**Pago:** ${job.baseReward} - ${job.variation} π-b$\n**Cooldown:** ${cooldownText}${levelText}${job.failChance ? `\n**Riesgo:** ${(job.failChance * 100)}% de fallar` : ''}\n**Comando:** >work ${job.codeName}`,
                     inline: true
                 });
             }
             
             embed.addFields({
                 name: '💡 Uso',
-                value: '`mon!work <tipo>`\nEjemplo: `mon!work delivery`',
+                value: '`>work <tipo>`\nEjemplo: `>work delivery`',
                 inline: false
             });
             
@@ -680,7 +680,7 @@ class AllCommands {
         
         // Verificar si el trabajo existe
         if (!jobs[jobType]) {
-            await message.reply('❌ Trabajo no válido.\nEscribe \`mon!work\` para ver los Trabajos Disponibles');
+            await message.reply('❌ Trabajo no válido.\nEscribe \`>work\` para ver los Trabajos Disponibles');
             return;
         }
         
@@ -810,76 +810,76 @@ class AllCommands {
 
         try {
             switch (command) {                    
-                case 'mon!balance':
-                case 'mon!bal':
-                case 'mon!money':
+                case '>balance':
+                case '>bal':
+                case '>money':
                     const targetUserm = message.mentions.members.first();
                     await this.handleBalance(message, targetUserm);
                     break;
-                case 'mon!daily':
+                case '>daily':
                     await this.handleDaily(message);
                     break;
-                case 'mon!level':
-                case 'mon!lvl':
-                case 'mon!rank':
+                case '>level':
+                case '>lvl':
+                case '>rank':
                     const levelTargetUser = message.mentions.members.first();
                     await this.handleLevel(message, levelTargetUser);
                     break;
-                case 'mon!pay':
-                case 'mon!transfer':
+                case '>pay':
+                case '>transfer':
                     await this.handlePay(message);
                     break;
-                case 'mon!top':
-                case 'mon!leaderboard':
-                case 'mon!lb':
+                case '>top':
+                case '>leaderboard':
+                case '>lb':
                     await this.handleTop(message);
                     break;
-                case 'mon!work':
-                case 'mon!job':
+                case '>work':
+                case '>job':
                     await this.handleWork(message);
                     break;               
-                case 'mon!addmoney':
-                case 'mon!givemoney':
-                case 'mon!givem':
-                case 'mon!addm':
+                case '>addmoney':
+                case '>givemoney':
+                case '>givem':
+                case '>addm':
                     await this.handleAddMoney(message);
                     break;
-                case 'mon!removemoney':
-                case 'mon!removem':
+                case '>removemoney':
+                case '>removem':
                     await this.handleRemoveMoney(message);
                     break;
-                case 'mon!addxp':
+                case '>addxp':
                     await this.handleAddXp(message);
                     break;          
 
                 // Betting
-                case 'mon!bet':
-                case 'mon!apuesta':
+                case '>bet':
+                case '>apuesta':
                     await this.betting.createBet(message, args);
                     break;
-                case 'mon!acceptbet':
+                case '>acceptbet':
                     await this.betting.acceptBet(message);
                     break;
-                case 'mon!declinebet':
+                case '>declinebet':
                     await this.betting.declineBet(message, args);
                     break;
-                case 'mon!resolvebet':
+                case '>resolvebet':
                     const winner = args[2];
                     await this.betting.resolveBet(message, betId, winner);
                     break;
-                case 'mon!cancelbet':
+                case '>cancelbet':
                     await this.betting.cancelBet(message, betId);
                     break;
-                case 'mon!mybets':
-                case 'mon!misapuestas':
+                case '>mybets':
+                case '>misapuestas':
                     await this.betting.showActiveBets(message);
                     break;
-                case 'mon!betstats':
-                case 'mon!estadisticasapuestas':
+                case '>betstats':
+                case '>estadisticasapuestas':
                     const targetUserb = message.mentions.members?.first();
                     await this.betting.showBetStats(message, targetUserb);
                     break;
-                case 'mon!help':
+                case '>help':
                     await this.showHelp(message);
                     break;
                 default:
@@ -888,14 +888,14 @@ class AllCommands {
             }
 
 /*          // Shop
-            if (command === 'mon!shop' || command === 'mon!tienda') {
+            if (command === '>shop' || command === '>tienda') {
                 const category = args[1];
                 await this.shop.showShop(message, category);
                 return;
             }
-            if (command === 'mon!buy' || command === 'mon!comprar') {
+            if (command === '>buy' || command === '>comprar') {
                 if (args.length < 2) {
-                    await message.reply('❌ Uso: `mon!buy <item> [cantidad]`');
+                    await message.reply('❌ Uso: `>buy <item> [cantidad]`');
                     return;
                 }
                 const itemId = args[1];
@@ -903,23 +903,23 @@ class AllCommands {
                 await this.shop.buyItem(message, itemId, quantity);
                 return;
             }
-            if (command === 'mon!use' || command === 'mon!usar') {
+            if (command === '>use' || command === '>usar') {
                 if (args.length < 2) {
-                    await message.reply('❌ Uso: `mon!use <item>`');
+                    await message.reply('❌ Uso: `>use <item>`');
                     return;
                 }
                 const itemId = args[1];
                 await this.shop.useItem(message, itemId);
                 return;
             }
-            if (command === 'mon!inventory' || command === 'mon!inv' || command === 'mon!inventario') {
+            if (command === '>inventory' || command === '>inv' || command === '>inventario') {
                 const targetUser = message.mentions.members?.first();
                 await this.shop.showInventory(message, targetUser);
                 return;
             }
-            if (command === 'mon!sell' || command === 'mon!vender') {
+            if (command === '>sell' || command === '>vender') {
                 if (args.length < 2) {
-                    await message.reply('❌ Uso: `mon!sell <item> [cantidad]`');
+                    await message.reply('❌ Uso: `>sell <item> [cantidad]`');
                     return;
                 }
                 const itemId = args[1];
@@ -927,24 +927,24 @@ class AllCommands {
                 await this.shop.sellItem(message, itemId, quantity);
                 return;
             }
-            if (command === 'mon!shophelp' || command === 'mon!ayudatienda') {
+            if (command === '>shophelp' || command === '>ayudatienda') {
                 await this.shopHelp(message);
                 return;
             }
 
             // Events
-            if (command === 'mon!events') {
+            if (command === '>events') {
                 await this.events.showActiveEvents(message);
                 return;
             }
-            if (command === 'mon!createevent') {
-                // mon!createevent <tipo> [duración]
+            if (command === '>createevent') {
+                // >createevent <tipo> [duración]
                 const eventType = args[1];
                 const duration = args[2] ? parseInt(args[2]) : null; // duración en minutos
                 await this.events.createManualEvent(message, eventType, duration);
                 return;
             }
-            if (command === 'mon!eventstats') {
+            if (command === '>eventstats') {
                 await this.events.showEventStats(message);
                 return;
             }            */
@@ -962,11 +962,11 @@ class AllCommands {
             .setTitle('🛒 Comandos de la Tienda')
             .setColor('#9932CC')
             .addFields(
-                { name: '🛒 mon!shop [categoría]', value: 'Ver la tienda y sus categorías', inline: false },
-                { name: '💸 mon!buy <itemId> [cantidad]', value: 'Comprar un item de la tienda', inline: false },
-                { name: '⚡ mon!use <itemId>', value: 'Usar un boost/cosmético', inline: false },
-                { name: '🎒 mon!inventory [@usuario]', value: 'Ver tu inventario o el de otro usuario', inline: false },
-                { name: '💰 mon!sell <itemId> [cantidad]', value: 'Vender items de tu inventario', inline: false }
+                { name: '🛒 >shop [categoría]', value: 'Ver la tienda y sus categorías', inline: false },
+                { name: '💸 >buy <itemId> [cantidad]', value: 'Comprar un item de la tienda', inline: false },
+                { name: '⚡ >use <itemId>', value: 'Usar un boost/cosmético', inline: false },
+                { name: '🎒 >inventory [@usuario]', value: 'Ver tu inventario o el de otro usuario', inline: false },
+                { name: '💰 >sell <itemId> [cantidad]', value: 'Vender items de tu inventario', inline: false }
             )
             .setFooter({ text: '¡Colecciona, mejora y presume tus objetos!' })
             .setTimestamp();
@@ -979,19 +979,19 @@ class AllCommands {
             .setColor('#00BFFF')
             .addFields(
                 // Achievements
-                { name: '🏆 Logros', value: '`mon!achievements [@usuario]` - Ver logros\n`mon!allachievements` - Ver todos los logros\n`mon!detectachievements` - Detectar logros desbloqueados', inline: false },
+                { name: '🏆 Logros', value: '`>achievements [@usuario]` - Ver logros\n`>allachievements` - Ver todos los logros\n`>detectachievements` - Detectar logros desbloqueados', inline: false },
 /*                // Shop
-                { name: '🛒 Tienda', value: '`mon!shop [categoría]`\n`mon!buy <item> [cantidad]`\n`mon!use <item>`\n`mon!inventory [@usuario]`\n`mon!sell <item> [cantidad]`\n`mon!shophelp`', inline: false },*/
+                { name: '🛒 Tienda', value: '`>shop [categoría]`\n`>buy <item> [cantidad]`\n`>use <item>`\n`>inventory [@usuario]`\n`>sell <item> [cantidad]`\n`>shophelp`', inline: false },*/
                 // Betting
-                { name: '🎲 Apuestas', value: '`mon!bet [@usuario] <cantidad> <descripción>` - Crear apuesta\n`mon!mybets` - Ver tus apuestas activas\n`mon!betstats [@usuario]` - Ver estadísticas de apuestas', inline: false },
+                { name: '🎲 Apuestas', value: '`>bet [@usuario] <cantidad> <descripción>` - Crear apuesta\n`>mybets` - Ver tus apuestas activas\n`>betstats [@usuario]` - Ver estadísticas de apuestas', inline: false },
                 //Economy
-                { name: '📋 Economía', value: '`mon!balance [@usuario]` - Ver tu dinero y nivel (o el de otro usuario)\n`mon!daily` - Reclamar' + `(${this.economy.config.dailyAmount}±${this.economy.config.dailyVariation} ${this.economy.config.currencySymbol})` + 'diarios\n`mon!work [tipo]` - Trabajar para ganar dinero (delivery, programmer, doctor, criminal)\n`mon!level [@usuario]` - Ver información detallada de nivel\n`mon!pay @usuario <cantidad>` - Transferir dinero a otro usuario\n`mon!top [money/level]` - Ver los rankings del servidor', inline: false},
+                { name: '📋 Economía', value: '`>balance [@usuario]` - Ver tu dinero y nivel (o el de otro usuario)\n`>daily` - Reclamar' + `(${this.economy.config.dailyAmount}±${this.economy.config.dailyVariation} ${this.economy.config.currencySymbol})` + 'diarios\n`>work [tipo]` - Trabajar para ganar dinero (delivery, programmer, doctor, criminal)\n`>level [@usuario]` - Ver información detallada de nivel\n`>pay @usuario <cantidad>` - Transferir dinero a otro usuario\n`>top [money/level]` - Ver los rankings del servidor', inline: false},
                 // Minijuegos
-                { name: '🎮 Minijuegos', value: '`mon!games` - Ver lista de minijuegos', inline: false },
+                { name: '🎮 Minijuegos', value: '`>games` - Ver lista de minijuegos', inline: false },
 /*                // Eventos
-                { name: '🎉 Eventos', value: '`mon!events` - Ver eventos activos', inline: false },*/
+                { name: '🎉 Eventos', value: '`>events` - Ver eventos activos', inline: false },*/
                 // Musica
-//                { name: '🎵 Música', value: '`mon!play <url>` - Reproducir música\n`mon!skip` - Saltar canción actual\n`mon!stop` - Detener reproducción\n`mon!pause` - Pausar reproducción\n`mon!resume` - Reanudar reproducción\n`mon!queue` - Ver cola de reproducción\n`mon!search` - Busca una canción junto a sus datos\n`mon!nowplaying` - Ver canción actual\n`mon!clearmusic` - Limpiar cola de reproducción', inline: false }
+//                { name: '🎵 Música', value: '`>play <url>` - Reproducir música\n`>skip` - Saltar canción actual\n`>stop` - Detener reproducción\n`>pause` - Pausar reproducción\n`>resume` - Reanudar reproducción\n`>queue` - Ver cola de reproducción\n`>search` - Busca una canción junto a sus datos\n`>nowplaying` - Ver canción actual\n`>clearmusic` - Limpiar cola de reproducción', inline: false }
             )
             .setFooter({ text: 'Usa los comandos para interactuar con el bot.' })
             .setTimestamp();

@@ -208,8 +208,8 @@ class BettingSystem {
                 { name: '🎯 Descripción', value: description, inline: true },
                 { name: '💸 Comisión', value: `${this.formatNumber(Math.floor(amount * 2 * this.config.houseFee))} π-b$`, inline: true },
                 { name: '⏰ Expira en', value: `${this.config.betTimeout / 60000} minutos`, inline: false },
-                { name: '✅ Aceptar', value: `\`mon!acceptbet @${message.author.username}\``, inline: true },
-                { name: '❌ Rechazar', value: `\`mon!declinebet @${message.author.username}\``, inline: true }
+                { name: '✅ Aceptar', value: `\`>acceptbet @${message.author.username}\``, inline: true },
+                { name: '❌ Rechazar', value: `\`>declinebet @${message.author.username}\``, inline: true }
             )
             .setColor('#FFA500')
             .setFooter({ text: `ID: ${betId}` })
@@ -232,7 +232,7 @@ class BettingSystem {
         const opponentId = message.author.id;
 
         if (!challengerUser) {
-            await message.reply('❌ Debes mencionar al usuario que te retó. Ejemplo: `mon!acceptbet @usuario`');
+            await message.reply('❌ Debes mencionar al usuario que te retó. Ejemplo: `>acceptbet @usuario`');
             return;
         }
         
@@ -292,8 +292,8 @@ class BettingSystem {
                 { name: '🛡️ Oponente', value: `<@${bet.opponent}>`, inline: true },
                 { name: '💰 Cantidad', value: `${this.formatNumber(bet.amount)} π-b$ cada uno`, inline: true },
                 { name: '🎯 Descripción', value: bet.description, inline: false },
-                { name: '📝 Resolución', value: `\`mon!resolvebet ${betId} challenger\` o \`mon!resolvebet ${betId} opponent\``, inline: false },
-                { name: '🔄 Cancelar', value: `\`mon!cancelbet ${betId}\``, inline: false }
+                { name: '📝 Resolución', value: `\`>resolvebet ${betId} challenger\` o \`>resolvebet ${betId} opponent\``, inline: false },
+                { name: '🔄 Cancelar', value: `\`>cancelbet ${betId}\``, inline: false }
             )
             .setColor('#00FF00')
             .setFooter({ text: `ID: ${betId}` })
@@ -311,7 +311,7 @@ class BettingSystem {
         const opponentId = message.author.id;
 
         if (!challengerUser) {
-            await message.reply('❌ Debes mencionar al usuario que te retó. Ejemplo: `mon!declinebet @usuario`');
+            await message.reply('❌ Debes mencionar al usuario que te retó. Ejemplo: `>declinebet @usuario`');
             return;
         }
         
@@ -550,13 +550,13 @@ class BettingSystem {
             .setTitle('🎲 Sistema de Apuestas')
             .setDescription('Crea apuestas contra otros usuarios!')
             .addFields(
-                { name: '📝 Crear Apuesta', value: '`mon!bet @usuario <cantidad> <descripción>`', inline: false },
-                { name: '✅ Aceptar Apuesta', value: '`mon!accept @usuario`', inline: false },
-                { name: '❌ Rechazar Apuesta', value: '`mon!decline @usuario`', inline: false },
-                { name: '🏆 Resolver Apuesta', value: '`mon!resolve <ID> challenger/opponent`', inline: false },
-                { name: '🔄 Cancelar Apuesta', value: '`mon!cancel <ID>`', inline: false },
-                { name: '📊 Ver Apuestas Activas', value: '`mon!bets`', inline: false },
-                { name: '📈 Ver Estadísticas', value: '`mon!betstats [@usuario]`', inline: false },
+                { name: '📝 Crear Apuesta', value: '`>bet @usuario <cantidad> <descripción>`', inline: false },
+                { name: '✅ Aceptar Apuesta', value: '`>accept @usuario`', inline: false },
+                { name: '❌ Rechazar Apuesta', value: '`>decline @usuario`', inline: false },
+                { name: '🏆 Resolver Apuesta', value: '`>resolve <ID> challenger/opponent`', inline: false },
+                { name: '🔄 Cancelar Apuesta', value: '`>cancel <ID>`', inline: false },
+                { name: '📊 Ver Apuestas Activas', value: '`>bets`', inline: false },
+                { name: '📈 Ver Estadísticas', value: '`>betstats [@usuario]`', inline: false },
                 { name: '💰 Límites', value: `Min: ${this.formatNumber(this.config.minBet)} π-b$\nMax: ${this.formatNumber(this.config.maxBet)} π-b$`, inline: false },
                 { name: '📊 Comisión', value: `${this.config.houseFee * 100}% del total`, inline: false }
             )

@@ -102,8 +102,8 @@ class MinigamesSystem {
                 .setTitle('🪙 Coinflip - Cara o Cruz')
                 .setDescription('Apuesta a cara o cruz y duplica tu dinero!')
                 .addFields(
-                    { name: '📝 Uso', value: '`mon!coinflip <cara/cruz> <cantidad>`', inline: false },
-                    { name: '💡 Ejemplos', value: '`mon!coinflip cara 500`\n`,mon!coinflip cruz 1000`', inline: false },
+                    { name: '📝 Uso', value: '`>coinflip <cara/cruz> <cantidad>`', inline: false },
+                    { name: '💡 Ejemplos', value: '`>coinflip cara 500`\n`,>coinflip cruz 1000`', inline: false },
                     { name: '💰 Apuesta', value: `Min: ${this.formatNumber(this.config.coinflip.minBet)} π-b$\nMax: ${this.formatNumber(this.config.coinflip.maxBet)} π-b$`, inline: false },
                     { name: '🎯 Probabilidad', value: '50% de ganar\nGanancia: x1.95', inline: false }
                 )
@@ -222,7 +222,7 @@ class MinigamesSystem {
                 .setDescription('Predice el resultado del dado y gana!')
                 .addFields(
                     { name: '📝 Opciones de Apuesta', value: '• `1-6`: Número exacto (x5.8)\n• `alto`: 4, 5 o 6 (x1.9)\n• `bajo`: 1, 2 o 3 (x1.9)', inline: false },
-                    { name: '💡 Ejemplos', value: '`mon!dice 6 500` - Apostar al 6\n`mon!dice alto 1000` - Apostar alto\n`mon!dice bajo 750` - Apostar bajo', inline: false },
+                    { name: '💡 Ejemplos', value: '`>dice 6 500` - Apostar al 6\n`>dice alto 1000` - Apostar alto\n`>dice bajo 750` - Apostar bajo', inline: false },
                     { name: '💰 Límites', value: `Min: ${this.formatNumber(this.config.dice.minBet)} π-b$\nMax: ${this.formatNumber(this.config.dice.maxBet)} π-b$`, inline: false }
                 )
                 .setColor('#FF6B6B');
@@ -354,8 +354,8 @@ class MinigamesSystem {
                 .setTitle('🎰 Lotería - Juego de la Suerte')
                 .setDescription('¡Predice el número ganador y multiplica tu dinero x100!')
                 .addFields(
-                    { name: '📝 Uso', value: '`mon!lottery <número> <cantidad>`', inline: false },
-                    { name: '💡 Ejemplos', value: '`mon!lottery 50 1000`\n`mon!lottery 25 2500`', inline: false },
+                    { name: '📝 Uso', value: '`>lottery <número> <cantidad>`', inline: false },
+                    { name: '💡 Ejemplos', value: '`>lottery 50 1000`\n`>lottery 25 2500`', inline: false },
                     { name: '🎯 Rango de Números', value: `${this.config.lottery.minNumber} - ${this.config.lottery.maxNumber}`, inline: true },
                     { name: '💰 Apuesta', value: `Min: ${this.formatNumber(this.config.lottery.minBet)} π-b$\nMax: ${this.formatNumber(this.config.lottery.maxBet)} π-b$`, inline: true },
                     { name: '🏆 Ganancia', value: `x${this.config.lottery.winMultiplier} si aciertas\n(Probabilidad: 1%)`, inline: true },
@@ -438,10 +438,14 @@ class MinigamesSystem {
             const winAmount = betAmount * this.config.lottery.winMultiplier;
             const profit = winAmount - betAmount;
             
-            await this.economy.addMoney(userId, profit, 'lottery_win');            
+            await this.economy.addMoney(userId, profit, 'lottery_win');     
+            // AGREGAR ESTAS LÍNEAS:
+            const updateDataLottery = {
+                'stats.lotteryWins': (user.stats.lotteryWins || 0) + 1  // ← NUEVA LÍNEA
+            };       
             await this.economy.updateUser(userId, updateData);
 
-            // *** NUEVO: ACTUALIZAR ESTADÍSTICAS DE ACHIEVEMENTS ***
+            // *** ACTUALIZAR ESTADÍSTICAS DE ACHIEVEMENTS ***
             if (this.achievements) {
                 await this.achievements.updateStats(userId, 'game_played');
                 await this.achievements.updateStats(userId, 'game_won');
@@ -505,8 +509,8 @@ class MinigamesSystem {
                 .setTitle('♠️ Blackjack - Vence al Dealer')
                 .setDescription('¡Llega lo más cerca posible a 21 sin pasarte!')
                 .addFields(
-                    { name: '📝 Uso', value: '`mon!blackjack <cantidad>`', inline: false },
-                    { name: '💡 Ejemplos', value: '`mon!blackjack 500`\n`mon!blackjack 2000`', inline: false },
+                    { name: '📝 Uso', value: '`>blackjack <cantidad>`', inline: false },
+                    { name: '💡 Ejemplos', value: '`>blackjack 500`\n`>blackjack 2000`', inline: false },
                     { name: '💰 Apuesta', value: `Min: ${this.formatNumber(this.config.blackjack.minBet)} π-b$\nMax: ${this.formatNumber(this.config.blackjack.maxBet)} π-b$`, inline: false },
                     { name: '🎯 Reglas', value: '• Llega a 21 o cerca sin pasarte\n• As vale 1 u 11\n• Figuras valen 10\n• Blackjack natural: x2.5\n• Victoria normal: x2', inline: false },
                     { name: '🎮 Controles', value: '🎯 **Hit** - Pedir carta\n🛑 **Stand** - Plantarse\n🔄 **Double** - Doblar apuesta', inline: false }
@@ -1001,29 +1005,29 @@ class MinigamesSystem {
 
         try {
             switch (command) {
-                case 'mon!coinflip':
-                case 'mon!cf':
-                case 'mon!coin':
+                case '>coinflip':
+                case '>cf':
+                case '>coin':
                     await this.handleCoinflip(message, args);
                     break;
-                case 'mon!dice':
-                case 'mon!dado':
-                case 'mon!d':
+                case '>dice':
+                case '>dado':
+                case '>d':
                     await this.handleDice(message, args);
                     break;
-                case 'mon!lottery':
-                case 'mon!loteria':
-                case 'mon!lotto':
+                case '>lottery':
+                case '>loteria':
+                case '>lotto':
                     await this.handleLottery(message, args);
                     break;
-                case 'mon!blackjack':
-                case 'mon!bj':
-                case 'mon!21':
+                case '>blackjack':
+                case '>bj':
+                case '>21':
                     await this.handleBlackjack(message, args);
                     break;
-                case 'mon!games':
-                case 'mon!minigames':
-                case 'mon!juegos':
+                case '>games':
+                case '>minigames':
+                case '>juegos':
                     await this.showGamesList(message);
                     break;
                 default:
@@ -1045,22 +1049,22 @@ class MinigamesSystem {
             .addFields(
                 { 
                     name: '🪙 Coinflip', 
-                    value: '`mon!coinflip <cara/cruz> <cantidad>`\nApuesta: 50-10,000 π-b$\nGanancia: x1.95\nCooldown: 15 segundos', 
+                    value: '`>coinflip <cara/cruz> <cantidad>`\nApuesta: 50-10,000 π-b$\nGanancia: x1.95\nCooldown: 15 segundos', 
                     inline: false 
                 },
                 { 
                     name: '🎲 Dados', 
-                    value: '`mon!dice <1-6/alto/bajo> <cantidad>`\nApuesta: 50-10,000 π-b$\nGanancia: x1.9 - x5.8\nCooldown: 30 segundos', 
+                    value: '`>dice <1-6/alto/bajo> <cantidad>`\nApuesta: 50-10,000 π-b$\nGanancia: x1.9 - x5.8\nCooldown: 30 segundos', 
                     inline: false 
                 },
                 { 
                     name: '🎰 Lotería', 
-                    value: '`mon!lottery <número> <cantidad>`\nApuesta: 500-5,000 π-b$\nGanancia: x100 (¡Si aciertas!)\nCooldown: 30 minutos', 
+                    value: '`>lottery <número> <cantidad>`\nApuesta: 500-5,000 π-b$\nGanancia: x100 (¡Si aciertas!)\nCooldown: 30 minutos', 
                     inline: false 
                 },
                 { 
                     name: '♠️ Blackjack', 
-                    value: '`mon!blackjack <cantidad>`\nApuesta: 100-15,000 π-b$\nGanancia: x2 (x2.5 con Blackjack natural)\nCooldown: 3 minutos', 
+                    value: '`>blackjack <cantidad>`\nApuesta: 100-15,000 π-b$\nGanancia: x2 (x2.5 con Blackjack natural)\nCooldown: 3 minutos', 
                     inline: false 
                 },
                 { 

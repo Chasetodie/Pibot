@@ -161,7 +161,23 @@ class AchievementsSystem {
                 rarity: 'epic',
                 emoji: '💎'
             },           
+            'lottery_winner': {
+                name: '🎰 Ganador de Lotería',
+                description: 'Gana al menos una vez en la lotería',
+                requirement: { type: 'lottery_wins', value: 1 },
+                reward: { money: 1000, xp: 5000 },
+                rarity: 'rare',
+                emoji: '🎰'
+            },
             // Logros especiales
+            'ascetic': {
+                name: '🧘 Asceta',
+                description: 'No uses Work ni Daily por 7 días consecutivos',
+                requirement: { type: 'inactive_streak', value: 7 },
+                reward: { money: 5000, xp: 1500 },
+                rarity: 'epic',
+                emoji: '🧘'
+            },
             'generous': {
                 name: '❤️ Generoso',
                 description: 'Transfiere 5,000 π-b$ a otros usuarios',
@@ -181,7 +197,7 @@ class AchievementsSystem {
             'completionist': {
                 name: '🏅 Completista',
                 description: 'Obtén todos los logros disponibles',
-                requirement: { type: 'achievements_count', value: 20 }, // Actualizar según total
+                requirement: { type: 'achievements_count', value: 22 }, // Actualizar según total
                 reward: { money: 100000, xp: 10000 },
                 rarity: 'legendary',
                 emoji: '🏅'
@@ -277,6 +293,25 @@ class AchievementsSystem {
                     // Contar achievements completados
                     currentValue = Object.values(user.achievements || {}).filter(status => status === 'completed').length;
                     break;
+                case 'lottery_wins':
+                    currentValue = user.stats?.lotteryWins || 0;
+                    break;
+                case 'inactive_streak':
+                    // Calcular días sin usar work ni daily
+                    const now = Date.now();
+                    const dayInMs = 24 * 60 * 60 * 1000;
+                    const lastWork = user.lastWork || 0;
+                    const lastDaily = user.lastDaily || 0;
+                    const lastActivity = Math.max(lastWork, lastDaily);
+                    
+                    if (lastActivity === 0) {
+                        // Si nunca ha usado work ni daily, no cuenta como inactivo
+                        currentValue = 0;
+                    } else {
+                        const daysInactive = Math.floor((now - lastActivity) / dayInMs);
+                        currentValue = daysInactive;
+                    }
+                    break;
             }
             
             // Verificar si completó el logro
@@ -358,6 +393,25 @@ class AchievementsSystem {
                 case 'achievements_count':
                     // Contar achievements completados
                     currentValue = Object.values(user.achievements || {}).filter(status => status === 'completed').length;
+                    break;
+                case 'lottery_wins':
+                    currentValue = user.stats?.lotteryWins || 0;
+                    break;
+                case 'inactive_streak':
+                    // Calcular días sin usar work ni daily
+                    const now = Date.now();
+                    const dayInMs = 24 * 60 * 60 * 1000;
+                    const lastWork = user.lastWork || 0;
+                    const lastDaily = user.lastDaily || 0;
+                    const lastActivity = Math.max(lastWork, lastDaily);
+                    
+                    if (lastActivity === 0) {
+                        // Si nunca ha usado work ni daily, no cuenta como inactivo
+                        currentValue = 0;
+                    } else {
+                        const daysInactive = Math.floor((now - lastActivity) / dayInMs);
+                        currentValue = daysInactive;
+                    }
                     break;
             }
             
@@ -752,7 +806,7 @@ class AchievementsSystem {
             await message.channel.send({ embeds: [embed] });
         }
     }
-    
+   
     // NUEVO: Procesador de comandos
     async processCommand(message) {
         if (message.author.bot) return;
@@ -762,25 +816,25 @@ class AchievementsSystem {
 
         try {
             switch (command) {
-                case 'mon!achievements':
-                case 'mon!logros':
-                case 'mon!ach':
+                case '>achievements':
+                case '>logros':
+                case '>ach':
                     await this.handleUserAchievements(message, args);
                     break;
                 
-                case 'mon!allachievements':
-                case 'mon!alllogros':
-                case 'mon!todoslogros':
+                case '>allachievements':
+                case '>alllogros':
+                case '>todoslogros':
                     await this.handleAllAchievements(message);
                     break;
                 
-                case 'mon!detectachievements':
-                case 'mon!detectlogros':
-                case 'mon!detect':
+                case '>detectachievements':
+                case '>detectlogros':
+                case '>detect':
                     await this.handleDetectAchievements(message);
                     break;
                 
-                case 'mon!detectall':
+                case '>detectall':
                     await this.handleDetectAllAchievements(message);
                     break;
                 

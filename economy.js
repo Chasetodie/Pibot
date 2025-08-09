@@ -73,7 +73,8 @@ class EconomySystem {
                         totalSpent: 0,
                         dailyClaims: 0,
                         workCount: 0,
-                        gamesPlayed: 0
+                        gamesPlayed: 0,
+                        lotteryWins: 0,
                     },
                     betStats: {
                         wins: 0,

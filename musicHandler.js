@@ -666,9 +666,9 @@ class MusicHandler {
             const embed = new EmbedBuilder()
                 .setColor('#FF6B35')
                 .setTitle('❌ Error')
-                .setDescription(`Uso: mon!search <término de búsqueda>`)
+                .setDescription(`Uso: >search <término de búsqueda>`)
                 .addFields(
-                    { name: 'Ejemplo:', value: `mon!search bad bunny` }
+                    { name: 'Ejemplo:', value: `>search bad bunny` }
                 );
             return message.reply({ embeds: [embed] });
         }
@@ -709,7 +709,7 @@ class MusicHandler {
         });
         
         embed.setFooter({
-            text: `Usa mon!play <nombre de canción> para reproducir`
+            text: `Usa >play <nombre de canción> para reproducir`
         });
         
         loadingMsg.edit({ embeds: [embed] });
@@ -723,47 +723,47 @@ class MusicHandler {
 
         try {
             switch (command) {
-                case 'mon!play':
-                case 'mon!p':
+                case '>play':
+                case '>p':
                     await this.handlePlay(message, args);
                     break;
                 
-                case 'mon!skip':
-                case 'mon!s':
+                case '>skip':
+                case '>s':
                     await this.handleSkip(message);
                     break;
                 
-                case 'mon!pause':
+                case '>pause':
                     await this.handlePause(message);
                     break;
                 
-                case 'mon!resume':
-                case 'mon!r':
+                case '>resume':
+                case '>r':
                     await this.handleResume(message);
                     break;
                 
-                case 'mon!queue':
-                case 'mon!q':
+                case '>queue':
+                case '>q':
                     await this.handleQueue(message);
                     break;
                 
-                case 'mon!nowplaying':
-                case 'mon!np':
+                case '>nowplaying':
+                case '>np':
                     await this.handleNowPlaying(message);
                     break;
                 
-                case 'mon!clearmusic':
-                case 'mon!cm':
+                case '>clearmusic':
+                case '>cm':
                     await this.handleClear(message);
                     break;
                 
-                case 'mon!stop':
-                case 'mon!disconnect':
-                case 'mon!dc':
+                case '>stop':
+                case '>disconnect':
+                case '>dc':
                     await this.handleStop(message);
                     break;
     
-                case 'mon!search':
+                case '>search':
                     await this.handleSearch(message, args);
                     break;
                 default:

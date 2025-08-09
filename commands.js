@@ -108,7 +108,7 @@ class CommandHandler {
         const amount = parseInt(args[1]);
 
         if (isNaN(amount) || amount < 1 || amount > 100) {
-            await message.reply('❌ Especifica un número válido entre 1 y 100. Ejemplo: `mon!clear 10`');
+            await message.reply('❌ Especifica un número válido entre 1 y 100. Ejemplo: `>clear 10`');
             return;
         }
 
@@ -128,13 +128,13 @@ class CommandHandler {
             .setDescription('Lista de comandos del bot (solo administradores)')
             .addFields(
                 // Apodos
-                { name: 'Comandos Para Los Apodos', value: '`mon!contadores` - Muestra los contadores actuales\n`mon!reset <pibes> <pibas>` - Actualiza los contadores manualmente\n`mon!reload` - Recarga contadores desde variables de entorno', inline: false },
+                { name: 'Comandos Para Los Apodos', value: '`>contadores` - Muestra los contadores actuales\n`>reset <pibes> <pibas>` - Actualiza los contadores manualmente\n`>reload` - Recarga contadores desde variables de entorno', inline: false },
                 // Eventos
-                { name: 'Eventos', value: '`mon!createevent <tipo> [duración]` - Crear evento manual\n`mon!eventstats` - Estadísticas de eventos', inline: false },
+                { name: 'Eventos', value: '`>createevent <tipo> [duración]` - Crear evento manual\n`>eventstats` - Estadísticas de eventos', inline: false },
                 // Logros
-                { name: 'Logros', value: '`mon!detectall` - Detectar todos los logros desbloqueados', inline: false },               
+                { name: 'Logros', value: '`>detectall` - Detectar todos los logros desbloqueados', inline: false },               
                 // Basicos
-                { name: 'Basicos', value: '`mon!clear <cantidad>` - Borra la cantidad de mensajes indicada en el canal\n`mon!help-admin` - Muestra todos los comandos de Administrador', inline: false },
+                { name: 'Basicos', value: '`>clear <cantidad>` - Borra la cantidad de mensajes indicada en el canal\n`>help-admin` - Muestra todos los comandos de Administrador', inline: false },
            )
             .setColor('#FF6B6B')
             .setTimestamp()
@@ -152,19 +152,19 @@ class CommandHandler {
 
         try {
             switch (command) {
-                case 'mon!contadores':
+                case '>contadores':
                     await this.handleContadores(message);
                     break;
-                case 'mon!reset':
+                case '>reset':
                     await this.handleReset(message);
                     break;
-                case 'mon!reload':
+                case '>reload':
                     await this.handleReload(message);
                     break;
-                case 'mon!clear':
+                case '>clear':
                     await this.handleClear(message);
                     break;
-                case 'mon!help-admin':
+                case '>help-admin':
                     await this.handleHelp(message);
                     break;
                 default:
