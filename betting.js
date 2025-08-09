@@ -350,7 +350,7 @@ class BettingSystem {
             return;
         }
         
-        const baseId = userId.slice(9) + targetUser.id.slice(9);
+        const baseId = targetUser.id.slice(9) + userId.slice(9);
         const bet = await this.getBet(baseId);
 
         if (!bet) return message.reply({ content: '❌ Esta apuesta ya no existe.', ephemeral: true });
