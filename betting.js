@@ -211,7 +211,6 @@ class BettingSystem {
     async acceptBet(message) {
         const targetUser = message.mentions.users.first();
         const userId = message.author.id;
-        const targetId = targetUser.id;
 
         if (!targetUser) {
             await message.reply('❌ Debes mencionar a un usuario válido.');
@@ -228,7 +227,7 @@ class BettingSystem {
             return;
         }
         
-        const baseId = targetId.slice(9) + userId.slice(9);
+        const baseId = targetUser.id.slice(9) + userId.slice(9);
         const bet = await this.getBet(baseId);
 
         if (!bet) return message.reply({ content: '❌ Esta apuesta ya no existe.', ephemeral: true });
