@@ -151,12 +151,6 @@ class MinigamesSystem {
         // Establecer cooldown
         this.setCooldown(userId, 'coinflip');
 
-        // AGREGAR ESTO:
-        if (this.achievements) {
-            await this.achievements.updateStats(userId, 'game_played');
-            await this.achievements.updateStats(userId, 'money_bet', betAmount);
-        }
-
         const updateData = {
             'stats.gamesPlayed': (user.stats.gamesPlayed || 0) + 1
         }
@@ -171,14 +165,7 @@ class MinigamesSystem {
             const winAmount = Math.floor(betAmount * this.config.coinflip.winMultiplier);
             const profit = winAmount - betAmount;
             
-            await this.economy.addMoney(userId, profit, 'coinflip_win');
-
-            // AGREGAR ESTO:
-            if (this.achievements) {
-                await this.achievements.updateStats(userId, 'game_won');
-                await this.achievements.checkAchievements(userId, message);
-            }
-            
+            await this.economy.addMoney(userId, profit, 'coinflip_win');            
             await this.economy.updateUser(userId, updateData);
             
             embed.setDescription(`🎉 **¡GANASTE!**`)
@@ -190,14 +177,7 @@ class MinigamesSystem {
                     { name: '💳 Balance Actual', value: `${this.formatNumber(user.balance + profit)} π-b$`, inline: false }
                 );
         } else {
-            await this.economy.removeMoney(userId, betAmount, 'coinflip_loss');
-
-            // AGREGAR ESTO:
-            if (this.achievements) {
-                await this.achievements.updateStats(userId, 'game_lost');
-                await this.achievements.checkAchievements(userId, message);
-            }
-            
+            await this.economy.removeMoney(userId, betAmount, 'coinflip_loss');            
             await this.economy.updateUser(userId, updateData);
 
             embed.setDescription(`💸 **Perdiste...**`)
@@ -395,13 +375,6 @@ class MinigamesSystem {
         
         // Establecer cooldown
         this.setCooldown(userId, 'lottery');
-
-        // AGREGAR ESTO:
-        if (this.achievements) {
-            await this.achievements.updateStats(userId, 'lottery_played');
-            await this.achievements.updateStats(userId, 'game_played');
-            await this.achievements.updateStats(userId, 'money_bet', betAmount);
-        }
         
         const updateData = {
             'stats.gamesPlayed': (user.stats.gamesPlayed || 0) + 1
@@ -437,14 +410,7 @@ class MinigamesSystem {
             const winAmount = betAmount * this.config.lottery.winMultiplier;
             const profit = winAmount - betAmount;
             
-            await this.economy.addMoney(userId, profit, 'lottery_win');
-
-            // AGREGAR ESTO:
-            if (this.achievements) {
-                await this.achievements.updateStats(userId, 'lottery_won');
-                await this.achievements.checkAchievements(userId, message);
-            }            
-            
+            await this.economy.addMoney(userId, profit, 'lottery_win');            
             await this.economy.updateUser(userId, updateData);
             
             resultEmbed.setDescription(`🎉 **¡JACKPOT! ¡GANASTE LA LOTERÍA!** 🎉`)
@@ -457,13 +423,6 @@ class MinigamesSystem {
                 );
         } else {
             await this.economy.removeMoney(userId, betAmount, 'lottery_loss');
-
-            // AGREGAR ESTO:
-            if (this.achievements) {
-                await this.achievements.updateStats(userId, 'game_lost');
-                await this.achievements.checkAchievements(userId, message);
-            }
-            
             await this.economy.updateUser(userId, updateData);
             
             const difference = Math.abs(winningNumber - predictedNumber);
