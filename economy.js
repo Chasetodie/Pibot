@@ -154,7 +154,15 @@ class EconomySystem {
     async removeMoney(userId, amount, reason = 'unknown') {
         const user = await this.getUser(userId);
         if (user.balance < amount) {
-            return false; // No tiene suficiente dinero
+            const updateDataWithout = {
+                balance: 0,
+                'stats.totalSpent': (user.stats.totalSpent || 0) + amount
+            }
+
+            console.log(`💸 -${amount} ${this.config.currencySymbol} para ${userId} (${reason})`);
+            await this.updateUser(userId, updateDataWithout);
+            
+            return user.balance; // No tiene suficiente dinero
         }
 
         const updateData = {
