@@ -210,6 +210,11 @@ class EconomySystem {
         await this.updateUser(fromUserId, updateDataFrom);
         await this.updateUser(toUserId, updateDataTo);
 
+        // *** NUEVO: ACTUALIZAR ESTADÍSTICAS DE ACHIEVEMENTS ***
+        if (this.achievements) {
+            await this.achievements.updateStats(fromUserId, 'money_given', amount);
+        }
+
         console.log(`💸 Transferencia: ${fromUserId} -> ${toUserId}, ${amount} ${this.config.currencySymbol}`);
         console.log(`💸 TotalEarned: ${updateDataTo['stats.totalEarned']} && TotalSpent: ${updateDataFrom['stats.totalSpent']}`);
 
@@ -461,6 +466,11 @@ class EconomySystem {
         user.stats.dailyClaims++;*/
         
         await this.updateUser(userId, updateData);
+
+        // *** NUEVO: ACTUALIZAR ESTADÍSTICAS DE ACHIEVEMENTS ***
+        if (this.achievements) {
+            await this.achievements.updateStats(userId, 'daily_claimed');
+        }
         
         return {
             success: true,
@@ -647,7 +657,6 @@ class EconomySystem {
         return { canWork: true };
     }
 
-    // Ejecutar trabajo
     async doWork(userId, jobType) {
         const canWorkResult = await this.canWork(userId, jobType);
         if (!canWorkResult.canWork) 
@@ -687,7 +696,6 @@ class EconomySystem {
 /*            user.balance = Math.max(0, user.balance - penalty);
             user.stats.totalSpent += penalty;*/
             
-//            this.saveUsers();
             await this.updateUser(userId, updateData); // ← Reemplaza saveUsers()
  
             return {
@@ -727,7 +735,6 @@ class EconomySystem {
 /*        user.balance += amount;
         user.stats.totalEarned += amount;*/
         
-//        this.saveUsers();
         await this.updateUser(userId, updateData); // ← Reemplaza saveUsers()
 
         return {

@@ -6,10 +6,10 @@ const CommandHandler = require('./commands'); // Importar el manejador de comand
 const EconomySystem = require('./economy'); // Importar el sistema de economia
 const MusicHandler = require('./musicHandler.js'); // Importar el bot de música
 const MinigamesSystem = require('./minigames'); // Importar el sistema de minijuegos
-/*const AchievementsSystem = require('./achievements');
-const ShopSystem = require('./shop');*/
+const AchievementsSystem = require('./achievements');
 const BettingSystem = require('./betting');
-/*const EventsSystem = require('./events');*/
+/*const ShopSystem = require('./shop');
+const EventsSystem = require('./events');*/
 const AllCommands = require('./all-commands');
 
 // Configuración del servidor web para mantener activo el bot
@@ -68,7 +68,6 @@ let counters = loadCounters();
 // Crear instancia del manejador de comandos
 const commandHandler = new CommandHandler(counters, saveCounters);
 
-
 //Crear instancia del sistema de economia
 const economy = new EconomySystem();
 
@@ -79,16 +78,16 @@ const musicBot = new MusicHandler();
 const minigames = new MinigamesSystem(economy);
 
 //Instancia de sistemas extra
-/*const achievements = new AchievementsSystem(economy);
-const shop = new ShopSystem(economy);
+const achievements = new AchievementsSystem(economy);
+/*const shop = new ShopSystem(economy);
 const events = new EventsSystem(economy);*/
 const betting = new BettingSystem(economy);
 
 // Instancia del sistema de comandos mejorados
 const allCommands = new AllCommands(economy/*, achievements, shop*/, betting/*, events*/);
 
-//economy.achievements = achievements;
-//minigames.achievements = achievements;
+economy.achievements = achievements;
+minigames.achievements = achievements;
 
 /*economy.events = events;
 minigames.events = events;*/
@@ -419,9 +418,22 @@ client.on('messageCreate', async (message) => {
                     allowedMentions: { users: [message.author.id] }
                 });
         }
+
+        // *** NUEVO: VERIFICAR ACHIEVEMENTS DESPUÉS DE GANAR XP ***
+        try {
+            const newAchievements = await achievements.checkAchievements(userId);
+            if (newAchievements.length > 0) {
+                await achievements.notifyAchievements(message, newAchievements);
+            }
+        } catch (error) {
+            console.error('❌ Error verificando logros:', error);
+        }
     }
 
-    // Procesar comandos mejorados (shop, betting, achievements, etc.)
+    // Procesar comandos de logros
+    await achievements.processCommand(message);
+
+    // Procesar comandos mejorados (shop, betting, etc.)
     await allCommands.processCommand(message);
 
     // Procesar comandos de música

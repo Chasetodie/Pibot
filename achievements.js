@@ -1,5 +1,3 @@
-// PASO 1: Corrección del sistema de logros (achievements.js)
-
 const { EmbedBuilder } = require('discord.js');
 
 class AchievementsSystem {
@@ -162,26 +160,7 @@ class AchievementsSystem {
                 reward: { money: 10000, xp: 2000 },
                 rarity: 'epic',
                 emoji: '💎'
-            },
-            
-            // Logros de lotería (NUEVO)
-            'lottery_first': {
-                name: '🎰 Primer Boleto',
-                description: 'Juega la lotería por primera vez',
-                requirement: { type: 'lottery_played', value: 1 },
-                reward: { money: 200, xp: 100 },
-                rarity: 'common',
-                emoji: '🎰'
-            },
-            'jackpot_winner': {
-                name: '💰 Ganador del Jackpot',
-                description: 'Gana la lotería al menos una vez',
-                requirement: { type: 'lottery_wins', value: 1 },
-                reward: { money: 10000, xp: 2000 },
-                rarity: 'epic',
-                emoji: '💰'
-            },
-            
+            },           
             // Logros especiales
             'generous': {
                 name: '❤️ Generoso',
@@ -198,17 +177,15 @@ class AchievementsSystem {
                 reward: { money: 5000, xp: 1000 },
                 rarity: 'epic',
                 emoji: '📦'
+            },
+            'completionist': {
+                name: '🏅 Completista',
+                description: 'Obtén todos los logros disponibles',
+                requirement: { type: 'achievements_count', value: 20 }, // Actualizar según total
+                reward: { money: 100000, xp: 10000 },
+                rarity: 'legendary',
+                emoji: '🏅'
             }
-        };
-        
-        // Actualizar el completista con el número real de logros
-        this.achievements['completionist'] = {
-            name: '🏅 Completista',
-            description: 'Obtén todos los logros disponibles',
-            requirement: { type: 'achievements_count', value: Object.keys(this.achievements).length },
-            reward: { money: 100000, xp: 10000 },
-            rarity: 'legendary',
-            emoji: '🏅'
         };
         
         // Colores por rareza
@@ -230,40 +207,35 @@ class AchievementsSystem {
         };
     }
 
-    // ✅ FUNCIÓN PRINCIPAL: Verificar y otorgar logros (CORREGIDA)
-    async checkAchievements(userId, message = null) {
+    // NUEVO: Inicializar achievements de un usuario existente
+    async initializeUserAchievements(userId) {
         const user = await this.economy.getUser(userId);
-        const unlockedAchievements = [];
         
-        // Inicializar logros si no existen
         if (!user.achievements) {
-            user.achievements = {
-                unlocked: [],
-                progress: {},
-                unlockedCount: 0
+            const achievements = {};
+            // Inicializar todos los achievements como 'not_completed'
+            for (const achievementId of Object.keys(this.achievements)) {
+                achievements[achievementId] = 'not_completed';
+            }
+            
+            const updateData = {
+                achievements: achievements
             };
+            
+            await this.economy.updateUser(userId, updateData);
+            console.log(`🏆 Achievements inicializados para usuario ${userId}`);
         }
+    }
 
-        // Inicializar stats si no existen
-        if (!user.stats) {
-            user.stats = {
-                totalEarned: 0,
-                workCount: 0,
-                dailyStreak: 0,
-                gamesPlayed: 0,
-                gamesWon: 0,
-                currentWinStreak: 0,
-                bestWinStreak: 0,
-                totalBet: 0,
-                moneyGiven: 0,
-                lotteryPlayed: 0,
-                lotteryWins: 0
-            };
-        }
-
+    // NUEVO: Detectar y completar logros ya cumplidos
+    async detectExistingAchievements(userId, silent = false) {
+        await this.initializeUserAchievements(userId);
+        const user = await this.economy.getUser(userId);
+        const completedAchievements = [];
+        
         for (const [achievementId, achievement] of Object.entries(this.achievements)) {
-            // Si ya tiene este logro, saltarlo
-            if (user.achievements.unlocked.includes(achievementId)) continue;
+            // Si ya está completado, saltarlo
+            if (user.achievements[achievementId] === 'completed') continue;
             
             let currentValue = 0;
             const req = achievement.requirement;
@@ -271,7 +243,7 @@ class AchievementsSystem {
             // Obtener valor actual según el tipo de logro
             switch (req.type) {
                 case 'money_earned':
-                    currentValue = user.stats.totalEarned || 0;
+                    currentValue = user.stats?.totalEarned || 0;
                     break;
                 case 'money_balance':
                     currentValue = user.balance || 0;
@@ -283,148 +255,168 @@ class AchievementsSystem {
                     currentValue = user.messagesCount || 0;
                     break;
                 case 'work_count':
-                    currentValue = user.stats.workCount || 0;
+                    currentValue = user.stats?.workCount || 0;
                     break;
                 case 'daily_streak':
-                    currentValue = user.stats.dailyStreak || 0;
+                    currentValue = user.stats?.dailyStreak || 0;
                     break;
                 case 'games_played':
-                    currentValue = user.stats.gamesPlayed || 0;
+                    currentValue = user.stats?.gamesPlayed || 0;
                     break;
                 case 'win_streak':
-                    currentValue = user.stats.bestWinStreak || 0; // Usar la mejor racha
+                    currentValue = user.stats?.currentWinStreak || 0;
                     break;
                 case 'total_bet':
-                    currentValue = user.stats.totalBet || 0;
+                    currentValue = user.stats?.totalBet || 0;
                     break;
                 case 'money_given':
-                    currentValue = user.stats.moneyGiven || 0;
-                    break;
-                case 'lottery_played':
-                    currentValue = user.stats.lotteryPlayed || 0;
-                    break;
-                case 'lottery_wins':
-                    currentValue = user.stats.lotteryWins || 0;
+                    currentValue = user.stats?.moneyGiven || 0;
                     break;
                 case 'achievements_count':
-                    currentValue = user.achievements.unlockedCount || 0;
+                    // Contar achievements completados
+                    currentValue = Object.values(user.achievements || {}).filter(status => status === 'completed').length;
                     break;
             }
-            
-            // Actualizar progreso
-            user.achievements.progress[achievementId] = {
-                current: currentValue,
-                required: req.value,
-                percentage: Math.min(100, (currentValue / req.value) * 100)
-            };
             
             // Verificar si completó el logro
             if (currentValue >= req.value) {
-                user.achievements.unlocked.push(achievementId);
-                user.achievements.unlockedCount++;
+                // Marcar como completado en la base de datos
+                const updateData = {
+                    [`achievements.${achievementId}`]: 'completed'
+                };
+                
                 unlockedAchievements.push(achievementId);
+                console.log(`🏆 ${userId} desbloqueó logro: ${achievement.name}`);
                 
                 // Dar recompensas
                 if (achievement.reward.money) {
-                    await this.economy.addMoney(userId, achievement.reward.money, 'achievement_reward');
-                }
-                if (achievement.reward.xp) {
-                    await this.economy.addXp(userId, achievement.reward.xp);
+                    updateData.balance = user.balance + achievement.reward.money;
+                    updateData['stats.totalEarned'] = (user.stats?.totalEarned || 0) + achievement.reward.money;
                 }
                 
-                console.log(`🏆 ${userId} desbloqueó logro: ${achievement.name}`);
+                console.log(`🏆 ${userId} completó logro: ${achievement.name}\nRecompensa: ${achievement.reward.money} balance: ${updateData.balance} totalEarned: ${updateData['stats.totalEarned']}`);
+                
+                //await this.economy.updateUser(userId, updateData);
+                
+                // Agregar XP por separado
+                if (achievement.reward.xp) {
+                    console.log("Recompensa por XP");
+//                    await this.economy.addXp(userId, achievement.reward.xp);
+                }
+                
+                completedAchievements.push(achievementId);
+                console.log(`🏆 ${userId} completó logro existente: ${achievement.name}`);
             }
         }
         
-        // Guardar cambios
-        await this.economy.saveUsers();
-        
-        // Notificar logros si hay un mensaje y logros desbloqueados
-        if (message && unlockedAchievements.length > 0) {
-            await this.notifyAchievements(message, unlockedAchievements);
+        return { completedAchievements, silent };
+    }
+
+    // Verificar logros para un usuario (VERSION MEJORADA)
+    async checkAchievements(userId) {
+        await this.initializeUserAchievements(userId);
+        const user = await this.economy.getUser(userId);
+        const unlockedAchievements = [];
+
+        for (const [achievementId, achievement] of Object.entries(this.achievements)) {
+            // Si ya está completado, saltarlo
+            if (user.achievements[achievementId] === 'completed') continue;
+            
+            let currentValue = 0;
+            const req = achievement.requirement;
+            
+            // Obtener valor actual según el tipo de logro
+            switch (req.type) {
+                case 'money_earned':
+                    currentValue = user.stats?.totalEarned || 0;
+                    break;
+                case 'money_balance':
+                    currentValue = user.balance || 0;
+                    break;
+                case 'level':
+                    currentValue = user.level || 1;
+                    break;
+                case 'messages':
+                    currentValue = user.messagesCount || 0;
+                    break;
+                case 'work_count':
+                    currentValue = user.stats?.workCount || 0;
+                    break;
+                case 'daily_streak':
+                    currentValue = user.stats?.dailyStreak || 0;
+                    break;
+                case 'games_played':
+                    currentValue = user.stats?.gamesPlayed || 0;
+                    break;
+                case 'win_streak':
+                    currentValue = user.stats?.currentWinStreak || 0;
+                    break;
+                case 'total_bet':
+                    currentValue = user.stats?.totalBet || 0;
+                    break;
+                case 'money_given':
+                    currentValue = user.stats?.moneyGiven || 0;
+                    break;
+                case 'achievements_count':
+                    // Contar achievements completados
+                    currentValue = Object.values(user.achievements || {}).filter(status => status === 'completed').length;
+                    break;
+            }
+            
+            // Verificar si completó el logro
+            if (currentValue >= req.value) {
+                // Marcar como completado en la base de datos
+                const updateData = {
+                    [`achievements.${achievementId}`]: 'completed'
+                };
+                
+                // Dar recompensas
+                if (achievement.reward.money) {
+                    updateData.balance = user.balance + achievement.reward.money;
+                    updateData['stats.totalEarned'] = (user.stats?.totalEarned || 0) + achievement.reward.money;
+                }
+
+                console.log(`🏆 ${userId} completó logro: ${achievement.name}\nRecompensa: ${achievement.reward.money} balance: ${updateData.balance} totalEarned: ${updateData['stats.totalEarned']}`);
+
+                //await this.economy.updateUser(userId, updateData);
+                
+                // Agregar XP por separado
+                if (achievement.reward.xp) {
+                    console.log("Recompensa por XP");
+//                    await this.economy.addXp(userId, achievement.reward.xp);
+                }
+                
+                unlockedAchievements.push(achievementId);
+                console.log(`🏆 ${userId} desbloqueó logro: ${achievement.name}`);
+            }
         }
         
         return unlockedAchievements;
     }
 
-    // ✅ FUNCIÓN PARA VERIFICAR LOGROS RETROACTIVOS
-    async checkRetroactiveAchievements(userId, message = null) {
-        console.log(`🔄 Verificando logros retroactivos para usuario: ${userId}`);
-        return await this.checkAchievements(userId, message);
-    }
-
-    // ✅ FUNCIÓN PARA VERIFICAR TODOS LOS USUARIOS (ADMINISTRADOR)
-    async checkAllUsersRetroactive() {
-        const users = this.economy.getAllUsers();
-        let totalUnlocked = 0;
-        
-        console.log(`🔄 Iniciando verificación retroactiva para ${Object.keys(users).length} usuarios...`);
-        
-        for (const [userId, userData] of Object.entries(users)) {
-            const unlocked = await this.checkAchievements(userId, null);
-            totalUnlocked += unlocked.length;
-            
-            if (unlocked.length > 0) {
-                console.log(`✅ Usuario ${userId}: ${unlocked.length} logros desbloqueados`);
-            }
-        }
-        
-        console.log(`🏆 Verificación completada: ${totalUnlocked} logros otorgados en total`);
-        return totalUnlocked;
-    }
-
-    // Actualizar estadísticas específicas para logros
+    // Actualizar estadísticas específicas para logros (VERSION MEJORADA)
     async updateStats(userId, statType, value = 1) {
         const user = await this.economy.getUser(userId);
-        
-        if (!user.stats) {
-            user.stats = {
-                totalEarned: 0,
-                workCount: 0,
-                dailyStreak: 0,
-                gamesPlayed: 0,
-                gamesWon: 0,
-                gamesLost: 0,
-                currentWinStreak: 0,
-                bestWinStreak: 0,
-                totalBet: 0,
-                moneyGiven: 0,
-                lotteryPlayed: 0,
-                lotteryWins: 0
-            };
-        }
+        const updateData = {};
         
         switch (statType) {
             case 'game_played':
-                user.stats.gamesPlayed = (user.stats.gamesPlayed || 0) + 1;
-                break;
-            case 'lottery_played':
-                user.stats.lotteryPlayed = (user.stats.lotteryPlayed || 0) + 1;
-                break;
-            case 'lottery_won':
-                user.stats.lotteryWins = (user.stats.lotteryWins || 0) + 1;
-                // También cuenta como juego ganado
-                user.stats.gamesWon = (user.stats.gamesWon || 0) + 1;
-                user.stats.currentWinStreak = (user.stats.currentWinStreak || 0) + 1;
-                user.stats.bestWinStreak = Math.max(user.stats.bestWinStreak || 0, user.stats.currentWinStreak);
+                updateData['stats.gamesPlayed'] = (user.stats?.gamesPlayed || 0) + 1;
                 break;
             case 'game_won':
-                user.stats.gamesWon = (user.stats.gamesWon || 0) + 1;
-                user.stats.currentWinStreak = (user.stats.currentWinStreak || 0) + 1;
-                user.stats.bestWinStreak = Math.max(user.stats.bestWinStreak || 0, user.stats.currentWinStreak);
+                updateData['stats.gamesWon'] = (user.stats?.gamesWon || 0) + 1;
+                updateData['stats.currentWinStreak'] = (user.stats?.currentWinStreak || 0) + 1;
+                updateData['stats.bestWinStreak'] = Math.max(user.stats?.bestWinStreak || 0, updateData['stats.currentWinStreak']);
                 break;
             case 'game_lost':
-                user.stats.gamesLost = (user.stats.gamesLost || 0) + 1;
-                user.stats.currentWinStreak = 0;
+                updateData['stats.gamesLost'] = (user.stats?.gamesLost || 0) + 1;
+                updateData['stats.currentWinStreak'] = 0;
                 break;
             case 'money_bet':
-                user.stats.totalBet = (user.stats.totalBet || 0) + value;
+                updateData['stats.totalBet'] = (user.stats?.totalBet || 0) + value;
                 break;
             case 'money_given':
-                user.stats.moneyGiven = (user.stats.moneyGiven || 0) + value;
-                break;
-            case 'work_done':
-                user.stats.workCount = (user.stats.workCount || 0) + 1;
+                updateData['stats.moneyGiven'] = (user.stats?.moneyGiven || 0) + value;
                 break;
             case 'daily_claimed':
                 const lastDaily = user.lastDaily;
@@ -433,46 +425,144 @@ class AchievementsSystem {
                 
                 // Verificar si es consecutivo (dentro de 48 horas de la última)
                 if (lastDaily && (now - lastDaily) <= (dayInMs * 2)) {
-                    user.stats.dailyStreak = (user.stats.dailyStreak || 0) + 1;
+                    updateData['stats.dailyStreak'] = (user.stats?.dailyStreak || 0) + 1;
                 } else {
-                    user.stats.dailyStreak = 1;
+                    updateData['stats.dailyStreak'] = 1;
                 }
-                user.stats.bestDailyStreak = Math.max(user.stats.bestDailyStreak || 0, user.stats.dailyStreak);
+                updateData['stats.bestDailyStreak'] = Math.max(user.stats?.bestDailyStreak || 0, updateData['stats.dailyStreak']);
                 break;
         }
         
-        await this.economy.saveUsers();
+        await this.economy.updateUser(userId, updateData);
     }
 
-    // Resto de métodos (sin cambios)...
+    // NUEVO: Comando para mostrar logros del usuario
+    async handleUserAchievements(message, args) {
+        let targetUser = null;
+        
+        // Verificar si mencionó a alguien
+        if (message.mentions.users.size > 0) {
+            targetUser = message.mentions.users.first();
+        } else if (args.length > 1) {
+            // Buscar por ID
+            try {
+                targetUser = await message.client.users.fetch(args[1]);
+            } catch (error) {
+                await message.reply('❌ Usuario no encontrado.');
+                return;
+            }
+        }
+        
+        await this.showUserAchievements(message, targetUser);
+    }
+
+    // NUEVO: Comando para mostrar todos los logros
+    async handleAllAchievements(message) {
+        await this.showAllAchievements(message);
+    }
+
+    // NUEVO: Comando para detectar logros existentes
+    async handleDetectAchievements(message) {
+        const userId = message.author.id;
+        
+        await message.reply('🔍 Detectando logros existentes...');
+        
+        const result = await this.detectExistingAchievements(userId);
+        
+        if (result.completedAchievements.length > 0) {
+            await message.reply(`✅ Se detectaron **${result.completedAchievements.length}** logros ya cumplidos y se agregaron a tu perfil. ¡Revisa tus recompensas!`);
+            
+            // Mostrar los logros completados
+            for (const achievementId of result.completedAchievements) {
+                await this.notifyAchievements(message, [achievementId]);
+            }
+        } else {
+            await message.reply('📊 No se encontraron logros pendientes por detectar.');
+        }
+    }
+
+    // NUEVO: Comando para admin - detectar logros de todos los usuarios
+    async handleDetectAllAchievements(message) {
+        // Verificar permisos de admin (puedes personalizar esto)
+        if (!message.member.permissions.has('ADMINISTRATOR')) {
+            await message.reply('❌ Solo los administradores pueden usar este comando.');
+            return;
+        }
+        
+        await message.reply('🔍 Detectando logros para todos los usuarios...');
+        
+        try {
+            const allUsers = await this.economy.getAllUsers();
+            let totalDetected = 0;
+            let usersProcessed = 0;
+            
+            for (const userId of Object.keys(allUsers)) {
+                try {
+                    const result = await this.detectExistingAchievements(userId, true);
+                    totalDetected += result.completedAchievements.length;
+                    usersProcessed++;
+                } catch (error) {
+                    console.error(`Error detectando logros para ${userId}:`, error);
+                }
+            }
+            
+            await message.reply(`✅ Proceso completado:\n• **${usersProcessed}** usuarios procesados\n• **${totalDetected}** logros detectados en total`);
+        } catch (error) {
+            console.error('Error en detectar todos los logros:', error);
+            await message.reply('❌ Error procesando usuarios.');
+        }
+    }
+
+    // Mostrar logros de un usuario (VERSION MEJORADA)
     async showUserAchievements(message, targetUser = null) {
         const userId = targetUser ? targetUser.id : message.author.id;
         const displayName = targetUser ? targetUser.displayName : message.author.displayName;
+        
+        await this.initializeUserAchievements(userId);
         const user = await this.economy.getUser(userId);
         
         if (!user.achievements) {
-            user.achievements = { unlocked: [], progress: {}, unlockedCount: 0 };
+            await message.reply('❌ Error cargando logros del usuario.');
+            return;
         }
         
+        const completedAchievements = Object.entries(user.achievements).filter(([id, status]) => status === 'completed');
         const totalAchievements = Object.keys(this.achievements).length;
-        const unlockedCount = user.achievements.unlocked.length;
+        const unlockedCount = completedAchievements.length;
         const progressPercentage = ((unlockedCount / totalAchievements) * 100).toFixed(1);
         
         const embed = new EmbedBuilder()
             .setTitle(`🏆 Logros de ${displayName}`)
             .setDescription(`**${unlockedCount}/${totalAchievements}** logros desbloqueados (${progressPercentage}%)`)
             .setColor('#FFD700')
-            .setThumbnail(message.author.displayAvatarURL({ dynamic: true }))
+            .setThumbnail((targetUser || message.author).displayAvatarURL({ dynamic: true }))
             .setTimestamp();
         
-        // Mostrar logros desbloqueados
+        // Mostrar logros desbloqueados por rareza
         if (unlockedCount > 0) {
-            let unlockedText = '';
-            for (const achievementId of user.achievements.unlocked) {
+            const rarityGroups = {
+                'legendary': [],
+                'epic': [],
+                'rare': [],
+                'uncommon': [],
+                'common': []
+            };
+            
+            // Agrupar por rareza
+            for (const [achievementId] of completedAchievements) {
                 const achievement = this.achievements[achievementId];
                 if (achievement) {
-                    const rarityEmoji = this.rarityEmojis[achievement.rarity];
-                    unlockedText += `${rarityEmoji} ${achievement.emoji} **${achievement.name}**\n`;
+                    rarityGroups[achievement.rarity].push(achievement);
+                }
+            }
+            
+            let unlockedText = '';
+            for (const [rarity, achievements] of Object.entries(rarityGroups)) {
+                if (achievements.length > 0) {
+                    const rarityEmoji = this.rarityEmojis[rarity];
+                    for (const achievement of achievements) {
+                        unlockedText += `${rarityEmoji} ${achievement.emoji} **${achievement.name}**\n`;
+                    }
                 }
             }
             
@@ -486,9 +576,9 @@ class AchievementsSystem {
         // Mostrar progreso de logros cercanos
         const nearCompletion = [];
         for (const [achievementId, achievement] of Object.entries(this.achievements)) {
-            if (user.achievements.unlocked.includes(achievementId)) continue;
+            if (user.achievements[achievementId] === 'completed') continue;
             
-            const progress = user.achievements.progress[achievementId];
+            const progress = this.calculateProgress(user, achievement);
             if (progress && progress.percentage >= 25) {
                 nearCompletion.push({
                     id: achievementId,
@@ -523,6 +613,55 @@ class AchievementsSystem {
         await message.reply({ embeds: [embed] });
     }
 
+    // NUEVO: Calcular progreso de un logro
+    calculateProgress(user, achievement) {
+        let currentValue = 0;
+        const req = achievement.requirement;
+        
+        switch (req.type) {
+            case 'money_earned':
+                currentValue = user.stats?.totalEarned || 0;
+                break;
+            case 'money_balance':
+                currentValue = user.balance || 0;
+                break;
+            case 'level':
+                currentValue = user.level || 1;
+                break;
+            case 'messages':
+                currentValue = user.messagesCount || 0;
+                break;
+            case 'work_count':
+                currentValue = user.stats?.workCount || 0;
+                break;
+            case 'daily_streak':
+                currentValue = user.stats?.dailyStreak || 0;
+                break;
+            case 'games_played':
+                currentValue = user.stats?.gamesPlayed || 0;
+                break;
+            case 'win_streak':
+                currentValue = user.stats?.currentWinStreak || 0;
+                break;
+            case 'total_bet':
+                currentValue = user.stats?.totalBet || 0;
+                break;
+            case 'money_given':
+                currentValue = user.stats?.moneyGiven || 0;
+                break;
+            case 'achievements_count':
+                currentValue = Object.values(user.achievements || {}).filter(status => status === 'completed').length;
+                break;
+        }
+        
+        return {
+            current: currentValue,
+            required: req.value,
+            percentage: Math.min(100, (currentValue / req.value) * 100)
+        };
+    }
+
+    // Mostrar todos los logros disponibles (sin cambios)
     async showAllAchievements(message) {
         const rarityGroups = {
             'common': [],
@@ -532,6 +671,7 @@ class AchievementsSystem {
             'legendary': []
         };
         
+        // Agrupar logros por rareza
         for (const [id, achievement] of Object.entries(this.achievements)) {
             rarityGroups[achievement.rarity].push({ id, ...achievement });
         }
@@ -542,6 +682,7 @@ class AchievementsSystem {
             .setColor('#FFD700')
             .setTimestamp();
         
+        // Añadir cada grupo de rareza
         for (const [rarity, achievements] of Object.entries(rarityGroups)) {
             if (achievements.length === 0) continue;
             
@@ -569,6 +710,7 @@ class AchievementsSystem {
         await message.reply({ embeds: [embed] });
     }
 
+    // Crear barra de progreso
     createProgressBar(current, max, length = 10) {
         const percentage = Math.max(0, Math.min(1, current / max));
         const filledLength = Math.floor(percentage * length);
@@ -580,27 +722,31 @@ class AchievementsSystem {
         return filledChar.repeat(filledLength) + emptyChar.repeat(emptyLength);
     }
 
+    // Formatear números
     formatNumber(num) {
         return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
     }
 
+    // Notificar logros desbloqueados (sin cambios)
     async notifyAchievements(message, achievementIds) {
         if (achievementIds.length === 0) return;
         
         for (const achievementId of achievementIds) {
             const achievement = this.achievements[achievementId];
-            if (!achievement) continue;
-            
+            if (!achievement) {
+                await message.reply(`❌ El logro con ID \`${achievementId}\` no existe.`);
+                continue;
+            }
             const rarityColor = this.rarityColors[achievement.rarity];
             const rarityEmoji = this.rarityEmojis[achievement.rarity];
-            
+
             const embed = new EmbedBuilder()
                 .setTitle('🎉 ¡Logro Desbloqueado!')
                 .setDescription(`${rarityEmoji} ${achievement.emoji} **${achievement.name}**\n\n*${achievement.description}*`)
                 .setColor(rarityColor)
-                .setThumbnail(message.author.displayAvatarURL({ dynamic: true }))
+                .setThumbnail(achievement.emoji)
                 .addFields({
-                    name: '🎁 Recompensa',
+                    name: 'Recompensas',
                     value: `${achievement.reward.money ? `+${this.formatNumber(achievement.reward.money)} π-b$` : ''}\n${achievement.reward.xp ? `+${this.formatNumber(achievement.reward.xp)} XP` : ''}`.trim(),
                     inline: true
                 })
@@ -609,8 +755,8 @@ class AchievementsSystem {
             await message.channel.send({ embeds: [embed] });
         }
     }
-
-    // Procesar comandos de logros
+    
+    // NUEVO: Procesador de comandos
     async processCommand(message) {
         if (message.author.bot) return;
 
@@ -621,31 +767,33 @@ class AchievementsSystem {
             switch (command) {
                 case 'mon!achievements':
                 case 'mon!logros':
-                case 'mon!achieve':
-                    await this.showUserAchievements(message);
+                case 'mon!ach':
+                    await this.handleUserAchievements(message, args);
                     break;
+                
                 case 'mon!allachievements':
+                case 'mon!alllogros':
                 case 'mon!todoslogros':
-                    await this.showAllAchievements(message);
+                    await this.handleAllAchievements(message);
                     break;
-                case 'mon!checkachievements':
-                    // Solo para administradores
-                    if (message.author.id === 'TU_USER_ID_AQUI') { // Cambia por tu ID
-                        await this.checkRetroactiveAchievements(message.author.id, message);
-                        await message.reply('✅ Verificación de logros completada');
-                    }
+                
+                case 'mon!detectachievements':
+                case 'mon!detectlogros':
+                case 'mon!detect':
+                    await this.handleDetectAchievements(message);
                     break;
-                case 'mon!checkallachievements':
-                    // Solo para administradores
-                    if (message.author.id === 'TU_USER_ID_AQUI') { // Cambia por tu ID
-                        const total = await this.checkAllUsersRetroactive();
-                        await message.reply(`✅ Verificación masiva completada. ${total} logros otorgados.`);
-                    }
+                
+                case 'mon!detectall':
+                    await this.handleDetectAllAchievements(message);
+                    break;
+                
+                default:
+                    // No es un comando de achievements
                     break;
             }
         } catch (error) {
             console.error('❌ Error en sistema de logros:', error);
-            await message.reply('❌ Ocurrió un error con los logros.');
+            await message.reply('❌ Ocurrió un error en el sistema de logros. Intenta de nuevo.');
         }
     }
 }

@@ -167,6 +167,13 @@ class MinigamesSystem {
             
             await this.economy.addMoney(userId, profit, 'coinflip_win');            
             await this.economy.updateUser(userId, updateData);
+
+            // *** NUEVO: ACTUALIZAR ESTADÍSTICAS DE ACHIEVEMENTS ***
+            if (this.achievements) {
+                await this.achievements.updateStats(userId, 'game_played');
+                await this.achievements.updateStats(userId, 'game_won');
+                await this.achievements.updateStats(userId, 'money_bet', betAmount);
+            }            
             
             embed.setDescription(`🎉 **¡GANASTE!**`)
                 .addFields(
@@ -179,6 +186,13 @@ class MinigamesSystem {
         } else {
             await this.economy.removeMoney(userId, betAmount, 'coinflip_loss');            
             await this.economy.updateUser(userId, updateData);
+        
+            // *** NUEVO: ACTUALIZAR ESTADÍSTICAS DE ACHIEVEMENTS ***
+            if (this.achievements) {
+                await this.achievements.updateStats(userId, 'game_played');
+                await this.achievements.updateStats(userId, 'game_lost');
+                await this.achievements.updateStats(userId, 'money_bet', betAmount);
+            }
 
             embed.setDescription(`💸 **Perdiste...**`)
                 .addFields(
@@ -292,6 +306,13 @@ class MinigamesSystem {
             
             await this.economy.addMoney(userId, profit, 'dice_win');
             await this.economy.updateUser(userId, updateData);
+
+            // *** NUEVO: ACTUALIZAR ESTADÍSTICAS DE ACHIEVEMENTS ***
+            if (this.achievements) {
+                await this.achievements.updateStats(userId, 'game_played');
+                await this.achievements.updateStats(userId, 'game_won');
+                await this.achievements.updateStats(userId, 'money_bet', betAmount);
+            }
             
             embed.setDescription(`🎉 **¡GANASTE!**`)
                 .addFields(
@@ -304,6 +325,13 @@ class MinigamesSystem {
             await this.economy.removeMoney(userId, betAmount, 'dice_loss');
             await this.economy.updateUser(userId, updateData);
             
+            // *** NUEVO: ACTUALIZAR ESTADÍSTICAS DE ACHIEVEMENTS ***
+            if (this.achievements) {
+                await this.achievements.updateStats(userId, 'game_played');
+                await this.achievements.updateStats(userId, 'game_lost');
+                await this.achievements.updateStats(userId, 'money_bet', betAmount);
+            }
+
             embed.setDescription(`💸 **Perdiste...**`)
                 .addFields(
                     { name: '💰 Dinero Apostado', value: `${this.formatNumber(betAmount)} π-b$`, inline: false },
@@ -412,6 +440,13 @@ class MinigamesSystem {
             
             await this.economy.addMoney(userId, profit, 'lottery_win');            
             await this.economy.updateUser(userId, updateData);
+
+            // *** NUEVO: ACTUALIZAR ESTADÍSTICAS DE ACHIEVEMENTS ***
+            if (this.achievements) {
+                await this.achievements.updateStats(userId, 'game_played');
+                await this.achievements.updateStats(userId, 'game_won');
+                await this.achievements.updateStats(userId, 'money_bet', betAmount);
+            }
             
             resultEmbed.setDescription(`🎉 **¡JACKPOT! ¡GANASTE LA LOTERÍA!** 🎉`)
                 .addFields(
@@ -424,6 +459,13 @@ class MinigamesSystem {
         } else {
             await this.economy.removeMoney(userId, betAmount, 'lottery_loss');
             await this.economy.updateUser(userId, updateData);
+
+            // *** NUEVO: ACTUALIZAR ESTADÍSTICAS DE ACHIEVEMENTS ***
+            if (this.achievements) {
+                await this.achievements.updateStats(userId, 'game_played');
+                await this.achievements.updateStats(userId, 'game_lost');
+                await this.achievements.updateStats(userId, 'money_bet', betAmount);
+            }
             
             const difference = Math.abs(winningNumber - predictedNumber);
             let encouragement = '';
@@ -770,6 +812,13 @@ class MinigamesSystem {
                 resultText = '🎉 **¡BLACKJACK NATURAL!**';
                 color = '#00FF00';
                 await this.economy.addMoney(userId, profit, 'blackjack_win');
+
+                // *** NUEVO: ACTUALIZAR ESTADÍSTICAS DE ACHIEVEMENTS ***
+                if (this.achievements) {
+                    await this.achievements.updateStats(userId, 'game_played');
+                    await this.achievements.updateStats(userId, 'game_won');
+                    await this.achievements.updateStats(userId, 'money_bet', finalBet);
+                }
                 break;
             case 'win':
             case 'dealer_bust':
@@ -778,20 +827,47 @@ class MinigamesSystem {
                 resultText = result === 'dealer_bust' ? '🎉 **¡DEALER SE PASÓ!**' : '🎉 **¡GANASTE!**';
                 color = '#00FF00';
                 await this.economy.addMoney(userId, profit, 'blackjack_win');
+
+                // *** NUEVO: ACTUALIZAR ESTADÍSTICAS DE ACHIEVEMENTS ***
+                if (this.achievements) {
+                    await this.achievements.updateStats(userId, 'game_played');
+                    await this.achievements.updateStats(userId, 'game_won');
+                    await this.achievements.updateStats(userId, 'money_bet', finalBet);
+                }
                 break;
             case 'push':
                 resultText = '🤝 **¡EMPATE!**';
                 color = '#FFD700';
+
+                // *** NUEVO: ACTUALIZAR ESTADÍSTICAS DE ACHIEVEMENTS ***
+                if (this.achievements) {
+                    await this.achievements.updateStats(userId, 'game_played');
+                    await this.achievements.updateStats(userId, 'money_bet', finalBet);
+                }
                 break;
             case 'bust':
                 resultText = '💥 **¡TE PASASTE!**';
                 profit = -finalBet;
                 await this.economy.removeMoney(userId, finalBet, 'blackjack_loss');
+
+                // *** NUEVO: ACTUALIZAR ESTADÍSTICAS DE ACHIEVEMENTS ***
+                if (this.achievements) {
+                    await this.achievements.updateStats(userId, 'game_played');
+                    await this.achievements.updateStats(userId, 'game_lost');
+                    await this.achievements.updateStats(userId, 'money_bet', finalBet);
+                }
                 break;
             case 'lose':
                 resultText = '💸 **Perdiste...**';
                 profit = -finalBet;
                 await this.economy.removeMoney(userId, finalBet, 'blackjack_loss');
+
+                // *** NUEVO: ACTUALIZAR ESTADÍSTICAS DE ACHIEVEMENTS ***
+                if (this.achievements) {
+                    await this.achievements.updateStats(userId, 'game_played');
+                    await this.achievements.updateStats(userId, 'game_lost');
+                    await this.achievements.updateStats(userId, 'money_bet', finalBet);
+                }
                 break;
         }
         

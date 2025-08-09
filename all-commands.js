@@ -1,10 +1,10 @@
 const { EmbedBuilder } = require('discord.js');
 
 class AllCommands {
-    constructor(economySystem/*, achievementsSystem, shopSystem*/, bettingSystem/*, eventsSystem*/) {
+    constructor(economySystem, achievementsSystem/*, shopSystem*/, bettingSystem/*, eventsSystem*/) {
         this.economy = economySystem;
-/*        this.achievements = achievementsSystem;
-        this.shop = shopSystem;*/
+        this.achievements = achievementsSystem;
+/*        this.shop = shopSystem;*/
         this.betting = bettingSystem;
 /*        this.events = eventsSystem;*/
     }
@@ -156,6 +156,18 @@ class AllCommands {
             .setTimestamp();
         
         await message.reply({ embeds: [embed] });
+    
+        // *** NUEVO: VERIFICAR ACHIEVEMENTS DESPUÉS DEL DAILY ***
+        if (this.achievements) {
+            try {
+                const newAchievements = await this.achievements.checkAchievements(userId);
+                if (newAchievements.length > 0) {
+                    await this.achievements.notifyAchievements(message, newAchievements);
+                }
+            } catch (error) {
+                console.error('❌ Error verificando logros después del daily:', error);
+            }
+        }
     }
 
     // Comando !level - Ver información detallada de nivel
@@ -316,6 +328,45 @@ class AllCommands {
             .setTimestamp();
         
         await message.reply({ embeds: [embed] });
+
+        // *** NUEVO: VERIFICAR ACHIEVEMENTS DESPUÉS DE TRANSFERIR ***
+        if (this.achievements) {
+            try {
+                // Verificar logros para quien envía (por dinero dado)
+                const senderAchievements = await this.achievements.checkAchievements(fromUserId);
+                if (senderAchievements.length > 0) {
+                    await this.achievements.notifyAchievements(message, senderAchievements);
+                }
+
+                // Verificar logros para quien recibe (por dinero ganado)
+                const receiverAchievements = await this.achievements.checkAchievements(toUserId);
+                if (receiverAchievements.length > 0) {
+                    // Notificar en el mismo canal pero mencionando al receptor
+                    for (const achievementId of receiverAchievements) {
+                        const achievement = this.achievements.achievements[achievementId];
+                        if (achievement) {
+                            const rarityColor = this.achievements.rarityColors[achievement.rarity];
+                            const rarityEmoji = this.achievements.rarityEmojis[achievement.rarity];
+                            
+                            const embed = new EmbedBuilder()
+                                .setTitle('🎉 ¡Logro Desbloqueado!')
+                                .setDescription(`${rarityEmoji} ${achievement.emoji} **${achievement.name}**\n\n*${achievement.description}*\n\n<@${toUserId}> desbloqueó este logro!`)
+                                .setColor(rarityColor)
+                                .addFields({
+                                    name: '🎁 Recompensa',
+                                    value: `${achievement.reward.money ? `+${this.achievements.formatNumber(achievement.reward.money)} π-b$` : ''}\n${achievement.reward.xp ? `+${this.achievements.formatNumber(achievement.reward.xp)} XP` : ''}`.trim(),
+                                    inline: true
+                                })
+                                .setTimestamp();
+                            
+                            await message.channel.send({ embeds: [embed] });
+                        }
+                    }
+                }
+            } catch (error) {
+                console.error('❌ Error verificando logros después de la transferencia:', error);
+            }
+        }
     }
 
     // Comando !top - Leaderboards
@@ -588,6 +639,7 @@ class AllCommands {
     
     // Comando !work - Sistema de trabajos
     async handleWork(message) {
+        const userId = message.author.id;
         const args = message.content.split(' ');
         const jobType = args[1]?.toLowerCase();
         
@@ -633,13 +685,13 @@ class AllCommands {
         }
         
         // Intentar trabajar
-        const result = await this.economy.doWork(message.author.id, jobType);
+        const result = await this.economy.doWork(userId, jobType);
 
         console.log(`canWork: ${result.canWork}\nreason: ${result.reason}\nrequiredLevel: ${result.requiredLevel}\ncanWorkResult: ${result.canWorkResult}`);
 
         if (!result.canWork) {
             if (result.reason === 'level_too_low') {
-                const userLevel = await this.economy.getUser(message.author.id);
+                const userLevel = await this.economy.getUser(userId);
                 const embed = new EmbedBuilder()
                     .setTitle('🔒 Nivel Insuficiente')
                     .setDescription(`Necesitas ser **Nivel ${result.requiredLevel}** para este trabajo`)
@@ -656,8 +708,8 @@ class AllCommands {
             
             if (result.reason === 'cooldown') {
                 const timeLeft = this.formatTimeLeft(result.timeLeft);
-                const userJob = await this.economy.getUser(message.author.id);
-                
+                const userJob = await this.economy.getUser(userId);
+
                 const embed = new EmbedBuilder()
                     .setTitle('⏰ En Cooldown')
                     .setDescription(`Ya trabajaste como **${userJob.lastNameWork}** recientemente, espera un momento para volver a trabajar en otra profesión`)
@@ -698,6 +750,19 @@ class AllCommands {
                 .setTimestamp();
             
             await message.reply({ embeds: [embed] });
+
+            // *** NUEVO: VERIFICAR ACHIEVEMENTS DESPUÉS DE TRABAJAR ***
+            if (result.success && this.achievements) {
+                try {
+                    const newAchievements = await this.achievements.checkAchievements(userId);
+                    if (newAchievements.length > 0) {
+                        await this.achievements.notifyAchievements(message, newAchievements);
+                    }
+                } catch (error) {
+                    console.error('❌ Error verificando logros después del trabajo:', error);
+                }
+            }
+
             return;
         }
         
@@ -722,6 +787,18 @@ class AllCommands {
             .setTimestamp();
         
         await message.reply({ embeds: [embed] });
+
+        // *** NUEVO: VERIFICAR ACHIEVEMENTS DESPUÉS DE TRABAJAR ***
+        if (result.success && this.achievements) {
+            try {
+                const newAchievements = await this.achievements.checkAchievements(userId);
+                if (newAchievements.length > 0) {
+                    await this.achievements.notifyAchievements(message, newAchievements);
+                }
+            } catch (error) {
+                console.error('❌ Error verificando logros después del trabajo:', error);
+            }
+        }
     }    
 
     async processCommand(message) {
@@ -901,9 +978,9 @@ class AllCommands {
             .setTitle('📖 Ayuda - Comandos Principales')
             .setColor('#00BFFF')
             .addFields(
-/*                // Achievements
+                // Achievements
                 { name: '🏆 Logros', value: '`mon!achievements [@usuario]` - Ver logros\n`mon!allachievements` - Ver todos los logros', inline: false },
-                // Shop
+/*                // Shop
                 { name: '🛒 Tienda', value: '`mon!shop [categoría]`\n`mon!buy <item> [cantidad]`\n`mon!use <item>`\n`mon!inventory [@usuario]`\n`mon!sell <item> [cantidad]`\n`mon!shophelp`', inline: false },*/
                 // Betting
                 { name: '🎲 Apuestas', value: '`mon!bet [@usuario] <cantidad> <descripción>` - Crear apuesta\n`mon!mybets` - Ver tus apuestas activas\n`mon!betstats [@usuario]` - Ver estadísticas de apuestas', inline: false },
