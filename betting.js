@@ -372,7 +372,7 @@ class BettingSystem {
         
         const baseId = userId.slice(9) + targetUser.id.slice(9);
         
-        if ((targetUser.id.slice(9) + userId.slice(9)) !== baseId)
+        if ((targetUser.id.slice(9) + userId.slice(9)) === baseId)
         {
             console.log(`targetUser ${targetUser.id} userId ${userId}\nBaseId ${baseId} Custom ${targetUser.id.slice(9) + userId.slice(9)}`)
             await message.reply('❌ Solo la persona que inicio la apuesta puede cancelarla.');
