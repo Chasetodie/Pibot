@@ -6,8 +6,8 @@ const CommandHandler = require('./commands'); // Importar el manejador de comand
 const EconomySystem = require('./economy'); // Importar el sistema de economia
 const MusicHandler = require('./musicHandler.js'); // Importar el bot de música
 const MinigamesSystem = require('./minigames'); // Importar el sistema de minijuegos
-const AchievementsSystem = require('./achievements');
-/*const ShopSystem = require('./shop');*/
+/*const AchievementsSystem = require('./achievements');
+const ShopSystem = require('./shop');*/
 const BettingSystem = require('./betting');
 /*const EventsSystem = require('./events');*/
 const AllCommands = require('./all-commands');
@@ -79,16 +79,16 @@ const musicBot = new MusicHandler();
 const minigames = new MinigamesSystem(economy);
 
 //Instancia de sistemas extra
-const achievements = new AchievementsSystem(economy);
-/*const shop = new ShopSystem(economy);
+/*const achievements = new AchievementsSystem(economy);
+const shop = new ShopSystem(economy);
 const events = new EventsSystem(economy);*/
 const betting = new BettingSystem(economy);
 
 // Instancia del sistema de comandos mejorados
 const allCommands = new AllCommands(economy/*, achievements, shop*/, betting/*, events*/);
 
-economy.achievements = achievements;
-minigames.achievements = achievements;
+//economy.achievements = achievements;
+//minigames.achievements = achievements;
 
 /*economy.events = events;
 minigames.events = events;*/
@@ -379,11 +379,6 @@ client.on('messageCreate', async (message) => {
     // AGREGAR ESTO AL INICIO:
     const userId = message.author.id;
     const user = await economy.getUser(userId);
-
-    // Verificar logros ocasionalmente (cada 10 mensajes para no sobrecargar)
-    if (user.messagesCount % 10 === 0 && achievements) {
-        await achievements.checkAchievements(userId, message);
-    }
     
     // Procesar XP por mensaje (solo en servidores, no en DMs)
     if (message.guild) {
@@ -424,9 +419,6 @@ client.on('messageCreate', async (message) => {
     
     //Procesar comandos de minijuegos
     await minigames.processCommand(message);
-
-    //Procesar logros
-    await achievements.processCommand(message);
     
     // Luego procesar comandos normales (como !contadores, !reset, etc.)
     await commandHandler.processCommand(message);
@@ -456,6 +448,7 @@ client.login(process.env.TOKEN).then(() => {
     console.error('❌ Error en el login:', error);
 
 });
+
 
 
 
