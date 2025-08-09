@@ -11,7 +11,7 @@ class BettingSystem {
         this.config = {
             minBet: 100,
             maxBet: 100000,
-            betTimeout: 300000,
+            betTimeout: 180000,
             maxActiveBets: 3,
             houseFee: 0.05
         };
@@ -231,14 +231,14 @@ class BettingSystem {
         const bet = await this.getBet(baseId);
 
         if (!bet) return message.reply({ content: '❌ Esta apuesta ya no existe.', ephemeral: true });
-        if (message.user.id !== bet.opponent) return message.reply({ content: '❌ Esta apuesta no es para ti.', ephemeral: true });
+        if (message.author.id !== bet.opponent) return message.reply({ content: '❌ Esta apuesta no es para ti.', ephemeral: true });
         if (bet.status !== 'pending') return message.reply({ content: '❌ Esta apuesta ya fue procesada.', ephemeral: true });
 
         const challengerData = await this.economy.getUser(bet.challenger);
         const opponentData = await this.economy.getUser(bet.opponent);
 
         if (challengerData.balance < bet.amount) {
-            await this.deleteBet(betId);
+            await this.deleteBet(bet.id);
             return message.reply({ content: '❌ El retador ya no tiene suficientes fondos.', ephemeral: true });
         }
         if (opponentData.balance < bet.amount) {
@@ -262,7 +262,7 @@ class BettingSystem {
                 { name: '📝 Estado', value: 'Esperando resultado...', inline: false }
             )
             .setColor('#00FF00')
-            .setFooter({ text: `Usen !resolve ${betId} <ganador> para resolver` })
+            .setFooter({ text: `Usen !resolve ${bet.id} <ganador> para resolver` })
             .setTimestamp();
 
         await message.update({ embeds: [embed] });
