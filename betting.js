@@ -274,11 +274,31 @@ class BettingSystem {
 
     // Rechazar apuesta
     async declineBet(message, betId) {
-        const bet = await this.getBet(betId);
-        if (!bet) return message.reply({ content: '❌ Esta apuesta ya no existe.', ephemeral: true });
-        if (message.user.id !== bet.opponent) return message.reply({ content: '❌ Esta apuesta no es para ti.', ephemeral: true });
+        const targetUser = message.mentions.users.first();
+        const userId = message.author.id;
 
-        await this.deleteBet(betId);
+        if (!targetUser) {
+            await message.reply('❌ Debes mencionar a un usuario válido.');
+            return;
+        }
+        
+        if (targetUser.id === message.author.id) {
+            await message.reply('❌ No puedes transferirte dinero a ti mismo.');
+            return;
+        }
+        
+        if (targetUser.bot) {
+            await message.reply('❌ No puedes transferir dinero a bots.');
+            return;
+        }
+        
+        const baseId = targetUser.id.slice(9) + userId.slice(9);
+        const bet = await this.getBet(baseId);
+        
+        if (!bet) return message.reply({ content: '❌ Esta apuesta ya no existe.', ephemeral: true });
+        if (message.author.id !== bet.opponent) return message.reply({ content: '❌ Esta apuesta no es para ti.', ephemeral: true });
+
+        await this.deleteBet(baseId);
 
         const embed = new EmbedBuilder()
             .setTitle('❌ Apuesta Rechazada')
@@ -354,6 +374,7 @@ class BettingSystem {
         
         if ((targetUser.id.slice(9) + userId.slice(9)) !== baseId)
         {
+            console.log(`targetUser ${targetUser.id} userId ${userId}\nBaseId ${baseId} Custom ${targetUser.id.slice(9) + userId.slice(9)}`)
             await message.reply('❌ Solo la persona que inicio la apuesta puede cancelarla.');
             return;
         }
