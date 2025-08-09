@@ -164,9 +164,9 @@ class AchievementsSystem {
             // Logros especiales
             'generous': {
                 name: '❤️ Generoso',
-                description: 'Transfiere 10,000 π-b$ a otros usuarios',
-                requirement: { type: 'money_given', value: 10000 },
-                reward: { money: 2000, xp: 500 },
+                description: 'Transfiere 5,000 π-b$ a otros usuarios',
+                requirement: { type: 'money_given', value: 5000 },
+                reward: { money: 3000, xp: 500 },
                 rarity: 'rare',
                 emoji: '❤️'
             },
