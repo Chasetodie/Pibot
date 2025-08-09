@@ -470,7 +470,7 @@ class MinigamesSystem {
                     { name: '🎮 Controles', value: '🎯 **Hit** - Pedir carta\n🛑 **Stand** - Plantarse\n🔄 **Double** - Doblar apuesta', inline: false }
                 )
                 .setColor('#000000')
-                .setFooter({ text: 'Cooldown: 10 segundos' });
+                .setFooter({ text: 'Cooldown: 3 minutos' });
             
             await message.reply({ embeds: [embed] });
             return;
@@ -984,7 +984,7 @@ class MinigamesSystem {
                 },
                 { 
                     name: '♠️ Blackjack', 
-                    value: '`mon!blackjack <cantidad>`\nApuesta: 100-15,000 π-b$\nGanancia: x2 (x2.5 con Blackjack natural)\nCooldown: 10 segundos', 
+                    value: '`mon!blackjack <cantidad>`\nApuesta: 100-15,000 π-b$\nGanancia: x2 (x2.5 con Blackjack natural)\nCooldown: 3 minutos', 
                     inline: false 
                 },
                 { 
