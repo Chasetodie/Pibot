@@ -45,7 +45,7 @@ class MinigamesSystem {
             blackjack: {
                 minBet: 100,
                 maxBet: 15000,
-                cooldown: 900000,
+                cooldown: /*900000*/0,
                 blackjackMultiplier: 2.5,
                 winMultiplier: 2
             }
@@ -493,7 +493,8 @@ class MinigamesSystem {
         // Verificar cooldown
         const cooldownCheck = this.checkCooldown(userId, 'blackjack');
         if (cooldownCheck.onCooldown) {
-            await message.reply(`⏰ Debes esperar ${this.formatTime(cooldownCheck.timeLeft)} antes de jugar otra vez`);
+            const timeLeft = Math.ceil(cooldownCheck.timeLeft / 60000); // Convertir a minutos
+            await message.reply(`⏰ Debes esperar ${timeLeft} antes de jugar otra vez`);
             return;
         }
     
