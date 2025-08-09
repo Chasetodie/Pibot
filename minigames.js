@@ -37,7 +37,7 @@ class MinigamesSystem {
             lottery: {
                 minBet: 500,
                 maxBet: 5000,
-                cooldown: 0/*1800000*/, // 30 minutos (30 * 60 * 1000)
+                cooldown: 1800000, // 30 minutos (30 * 60 * 1000)
                 winMultiplier: 100, // Gana x100 si acierta
                 minNumber: 1,
                 maxNumber: 100
@@ -411,7 +411,7 @@ class MinigamesSystem {
             const profit = winAmount - betAmount;
             
             await this.economy.addMoney(userId, profit, 'lottery_win');
-            //await this.economy.updateUser(userId, updateData);
+            await this.economy.updateUser(userId, updateData);
             
             resultEmbed.setDescription(`🎉 **¡JACKPOT! ¡GANASTE LA LOTERÍA!** 🎉`)
                 .addFields(
@@ -423,7 +423,7 @@ class MinigamesSystem {
                 );
         } else {
             await this.economy.removeMoney(userId, betAmount, 'lottery_loss');
-            //await this.economy.updateUser(userId, updateData);
+            await this.economy.updateUser(userId, updateData);
             
             const difference = Math.abs(winningNumber - predictedNumber);
             let encouragement = '';
