@@ -509,8 +509,8 @@ class BettingSystem {
             'betStats.netProfit': (loser.betStats.netProfit || 0) - amount
         }
 
-        await this.updateUser(winnerId, updateDataWinner);
-        await this.updateUser(loserId, updateDataLoser);
+        await this.economy.updateUser(winnerId, updateDataWinner);
+        await this.economy.updateUser(loserId, updateDataLoser);
     }
 
     // Utilidad: formatear números
