@@ -222,7 +222,7 @@ class BettingSystem {
 
         // ✅ CORREGIDO: Configurar expiración
         setTimeout(async () => {
-            await this.expireBet(betId);
+            await this.expireBet(message, betId);
         }, this.config.betTimeout);
     }
 
