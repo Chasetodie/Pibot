@@ -356,6 +356,10 @@ client.on('interactionCreate', async (interaction) => {
             
             console.log(`✅ ${interaction.user.tag} eligió Piba y ahora es ${nickname}`);
         }
+
+        if (interaction.customId.startsWith('bj_')) {
+          await minigamesSystem.handleBlackjackButton(interaction);
+        }
         
     } catch (error) {
         console.error('❌ Error procesando selección:', error);
@@ -448,6 +452,7 @@ client.login(process.env.TOKEN).then(() => {
     console.error('❌ Error en el login:', error);
 
 });
+
 
 
 
