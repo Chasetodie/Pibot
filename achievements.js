@@ -744,7 +744,7 @@ class AchievementsSystem {
                 .setTitle('🎉 ¡Logro Desbloqueado!')
                 .setDescription(`${rarityEmoji} ${achievement.emoji} **${achievement.name}**\n\n*${achievement.description}*`)
                 .setColor(rarityColor)
-                .setThumbnail(achievement.emoji)
+//                .setThumbnail(achievement.emoji)
                 .addFields({
                     name: 'Recompensas',
                     value: `${achievement.reward.money ? `+${this.formatNumber(achievement.reward.money)} π-b$` : ''}\n${achievement.reward.xp ? `+${this.formatNumber(achievement.reward.xp)} XP` : ''}`.trim(),
