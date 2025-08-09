@@ -451,7 +451,7 @@ class MinigamesSystem {
         await reply.edit({ embeds: [resultEmbed] });
     }
 
-    // Agregar este método a tu clase MinigamesSystem
+    // Agregar estos métodos a tu clase MinigamesSystem
     
     async handleBlackjack(message, args) {
         const userId = message.author.id;
@@ -467,7 +467,7 @@ class MinigamesSystem {
                     { name: '💡 Ejemplos', value: '`mon!blackjack 500`\n`mon!blackjack 2000`', inline: false },
                     { name: '💰 Apuesta', value: `Min: ${this.formatNumber(this.config.blackjack.minBet)} π-b$\nMax: ${this.formatNumber(this.config.blackjack.maxBet)} π-b$`, inline: false },
                     { name: '🎯 Reglas', value: '• Llega a 21 o cerca sin pasarte\n• As vale 1 u 11\n• Figuras valen 10\n• Blackjack natural: x2.5\n• Victoria normal: x2', inline: false },
-                    { name: '🎮 Controles', value: '🎯 **Hit** - Pedir carta\n🛑 **Stand** - Plantarse\n🔄 **Double** - Doblar (si tienes fondos)', inline: false }
+                    { name: '🎮 Controles', value: '🎯 **Hit** - Pedir carta\n🛑 **Stand** - Plantarse\n🔄 **Double** - Doblar apuesta', inline: false }
                 )
                 .setColor('#000000')
                 .setFooter({ text: 'Cooldown: 10 segundos' });
@@ -503,7 +503,12 @@ class MinigamesSystem {
             return;
         }
     
-        // Crear mazo y repartir cartas iniciales
+        // Crear nuevo juego
+        await this.startBlackjackGame(message, userId, betAmount);
+    }
+    
+    async startBlackjackGame(message, userId, betAmount) {
+        // Crear mazo y repartir cartas
         const deck = this.createDeck();
         const playerHand = [this.drawCard(deck), this.drawCard(deck)];
         const dealerHand = [this.drawCard(deck), this.drawCard(deck)];
@@ -518,95 +523,28 @@ class MinigamesSystem {
             finished: false
         };
     
-        // Guardar juego activo
         this.activeGames.set(`blackjack_${userId}`, gameState);
     
-        // Verificar Blackjack natural del jugador
+        // Verificar Blackjack natural
         const playerValue = this.calculateHandValue(playerHand);
         const dealerValue = this.calculateHandValue(dealerHand);
     
         if (playerValue === 21) {
-            // Blackjack natural del jugador
             if (dealerValue === 21) {
-                // Empate con blackjack
-                await this.endBlackjackGame(message, gameState, 'push');
+                await this.finishBlackjack(message, gameState, 'push');
             } else {
-                // Blackjack del jugador gana
-                await this.endBlackjackGame(message, gameState, 'blackjack');
+                await this.finishBlackjack(message, gameState, 'blackjack');
             }
             return;
         }
     
-        // Mostrar el juego y botones
-        await this.showBlackjackGame(message, gameState, true);
+        // Mostrar juego con botones
+        await this.showBlackjackState(message, gameState);
     }
     
-    // Crear mazo de cartas
-    createDeck() {
-        const suits = ['♠️', '♥️', '♦️', '♣️'];
-        const ranks = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
-        const deck = [];
-    
-        for (const suit of suits) {
-            for (const rank of ranks) {
-                deck.push({ suit, rank });
-            }
-        }
-    
-        // Mezclar mazo
-        for (let i = deck.length - 1; i > 0; i--) {
-            const j = Math.floor(Math.random() * (i + 1));
-            [deck[i], deck[j]] = [deck[j], deck[i]];
-        }
-    
-        return deck;
-    }
-    
-    // Sacar carta del mazo
-    drawCard(deck) {
-        return deck.pop();
-    }
-    
-    // Calcular valor de la mano
-    calculateHandValue(hand) {
-        let value = 0;
-        let aces = 0;
-    
-        for (const card of hand) {
-            if (card.rank === 'A') {
-                aces++;
-                value += 11;
-            } else if (['J', 'Q', 'K'].includes(card.rank)) {
-                value += 10;
-            } else {
-                value += parseInt(card.rank);
-            }
-        }
-    
-        // Ajustar ases si es necesario
-        while (value > 21 && aces > 0) {
-            value -= 10;
-            aces--;
-        }
-    
-        return value;
-    }
-    
-    // Formatear cartas para mostrar
-    formatHand(hand, hideFirst = false) {
-        if (hideFirst) {
-            return `🎴 ${hand.slice(1).map(card => `${card.rank}${card.suit}`).join(' ')}`;
-        }
-        return hand.map(card => `${card.rank}${card.suit}`).join(' ');
-    }
-    
-    // Mostrar estado del juego
-    async showBlackjackGame(message, gameState, showButtons = false) {
+    async showBlackjackState(message, gameState) {
         const { playerHand, dealerHand, betAmount, doubled } = gameState;
-        
         const playerValue = this.calculateHandValue(playerHand);
-        const dealerValue = this.calculateHandValue(dealerHand);
-        const hideDealer = !gameState.finished;
     
         const embed = new EmbedBuilder()
             .setTitle('♠️ Blackjack - En Juego')
@@ -614,7 +552,7 @@ class MinigamesSystem {
             .addFields(
                 { 
                     name: '🎴 Dealer', 
-                    value: `${this.formatHand(dealerHand, hideDealer)}\nValor: ${hideDealer ? '?' : dealerValue}`, 
+                    value: `${this.formatHand(dealerHand, true)}\nValor: ?`, 
                     inline: false 
                 },
                 { 
@@ -630,20 +568,14 @@ class MinigamesSystem {
             )
             .setTimestamp();
     
-        // Si el jugador se pasó
+        // Verificar si se pasó
         if (playerValue > 21) {
-            embed.setColor('#FF0000');
-            await this.endBlackjackGame(message, gameState, 'bust');
-            return;
-        }
-    
-        if (!showButtons) {
-            await message.reply({ embeds: [embed] });
+            await this.finishBlackjack(message, gameState, 'bust');
             return;
         }
     
         // Crear botones
-        const row = new ActionRowBuilder()
+        const buttons = new ActionRowBuilder()
             .addComponents(
                 new ButtonBuilder()
                     .setCustomId(`bj_hit_${gameState.userId}`)
@@ -655,10 +587,10 @@ class MinigamesSystem {
                     .setStyle(ButtonStyle.Secondary)
             );
     
-        // Agregar botón de doblar si es posible
+        // Botón doblar si es posible
         const user = await this.economy.getUser(gameState.userId);
         if (playerHand.length === 2 && !doubled && user.balance >= betAmount) {
-            row.addComponents(
+            buttons.addComponents(
                 new ButtonBuilder()
                     .setCustomId(`bj_double_${gameState.userId}`)
                     .setLabel('🔄 Double')
@@ -666,72 +598,65 @@ class MinigamesSystem {
             );
         }
     
-        const reply = await message.reply({ embeds: [embed], components: [row] });
-        
-        // Configurar timeout para el juego
+        const reply = await message.reply({ embeds: [embed], components: [buttons] });
+        gameState.messageId = reply.id;
+        gameState.channelId = reply.channel.id;
+    
+        // Timeout automático
         setTimeout(() => {
             if (this.activeGames.has(`blackjack_${gameState.userId}`)) {
-                this.endBlackjackGame(message, gameState, 'timeout');
+                this.handleBlackjackAction(null, gameState.userId, 'stand');
             }
-        }, 60000); // 60 segundos timeout
+        }, 60000);
     }
     
-    // Manejar interacciones de botones
-    async handleBlackjackButton(interaction) {
-        if (!interaction.customId.startsWith('bj_')) return;
-    
-        const [, action, userId] = interaction.customId.split('_');
-        
-        if (interaction.user.id !== userId) {
-            await interaction.reply({ content: '❌ Este no es tu juego.', ephemeral: true });
-            return;
-        }
-    
+    async handleBlackjackAction(interaction, userId, action) {
         const gameState = this.activeGames.get(`blackjack_${userId}`);
         if (!gameState || gameState.finished) {
-            await interaction.reply({ content: '❌ Este juego ya terminó.', ephemeral: true });
+            if (interaction) {
+                await interaction.reply({ content: '❌ Este juego ya terminó.', ephemeral: true });
+            }
             return;
         }
     
-        await interaction.deferUpdate();
+        if (interaction) {
+            await interaction.deferUpdate();
+        }
     
         switch (action) {
             case 'hit':
-                await this.handleBlackjackHit(interaction, gameState);
+                await this.blackjackHit(interaction, gameState);
                 break;
             case 'stand':
-                await this.handleBlackjackStand(interaction, gameState);
+                await this.blackjackStand(interaction, gameState);
                 break;
             case 'double':
-                await this.handleBlackjackDouble(interaction, gameState);
+                await this.blackjackDouble(interaction, gameState);
                 break;
         }
     }
     
-    // Manejar "Hit"
-    async handleBlackjackHit(interaction, gameState) {
+    async blackjackHit(interaction, gameState) {
         const newCard = this.drawCard(gameState.deck);
         gameState.playerHand.push(newCard);
         
         const playerValue = this.calculateHandValue(gameState.playerHand);
         
         if (playerValue > 21) {
-            await this.endBlackjackGame(interaction, gameState, 'bust');
+            await this.finishBlackjack(interaction, gameState, 'bust');
         } else if (playerValue === 21) {
-            await this.handleBlackjackStand(interaction, gameState);
+            await this.blackjackStand(interaction, gameState);
         } else {
-            await this.showBlackjackGame(interaction, gameState, true);
+            await this.updateBlackjackMessage(interaction, gameState);
         }
     }
     
-    // Manejar "Stand"
-    async handleBlackjackStand(interaction, gameState) {
+    async blackjackStand(interaction, gameState) {
         gameState.finished = true;
         
-        // Jugar turno del dealer
+        // Dealer juega
         while (this.calculateHandValue(gameState.dealerHand) < 17) {
-            const newCard = this.drawCard(gameState.deck);
-            gameState.dealerHand.push(newCard);
+            gameState.dealerHand.push(this.drawCard(gameState.deck));
         }
         
         const dealerValue = this.calculateHandValue(gameState.dealerHand);
@@ -748,35 +673,75 @@ class MinigamesSystem {
             result = 'push';
         }
         
-        await this.endBlackjackGame(interaction, gameState, result);
+        await this.finishBlackjack(interaction, gameState, result);
     }
     
-    // Manejar "Double"
-    async handleBlackjackDouble(interaction, gameState) {
+    async blackjackDouble(interaction, gameState) {
         const user = await this.economy.getUser(gameState.userId);
         
         if (user.balance < gameState.betAmount) {
-            await interaction.followUp({ content: '❌ No tienes suficiente dinero para doblar.', ephemeral: true });
+            if (interaction) {
+                await interaction.followUp({ content: '❌ No tienes suficiente dinero para doblar.', ephemeral: true });
+            }
             return;
         }
         
         gameState.doubled = true;
-        
-        // Dar una carta y terminar automáticamente
-        const newCard = this.drawCard(gameState.deck);
-        gameState.playerHand.push(newCard);
+        gameState.playerHand.push(this.drawCard(gameState.deck));
         
         const playerValue = this.calculateHandValue(gameState.playerHand);
         
         if (playerValue > 21) {
-            await this.endBlackjackGame(interaction, gameState, 'bust');
+            await this.finishBlackjack(interaction, gameState, 'bust');
         } else {
-            await this.handleBlackjackStand(interaction, gameState);
+            await this.blackjackStand(interaction, gameState);
         }
     }
     
-    // Terminar juego de blackjack
-    async endBlackjackGame(messageOrInteraction, gameState, result) {
+    async updateBlackjackMessage(interaction, gameState) {
+        const { playerHand, dealerHand, betAmount, doubled } = gameState;
+        const playerValue = this.calculateHandValue(playerHand);
+    
+        const embed = new EmbedBuilder()
+            .setTitle('♠️ Blackjack - En Juego')
+            .setColor('#FFD700')
+            .addFields(
+                { 
+                    name: '🎴 Dealer', 
+                    value: `${this.formatHand(dealerHand, true)}\nValor: ?`, 
+                    inline: false 
+                },
+                { 
+                    name: '👤 Tu Mano', 
+                    value: `${this.formatHand(playerHand)}\nValor: **${playerValue}**`, 
+                    inline: false 
+                },
+                { 
+                    name: '💰 Apuesta', 
+                    value: `${this.formatNumber(doubled ? betAmount * 2 : betAmount)} π-b$`, 
+                    inline: true 
+                }
+            )
+            .setTimestamp();
+    
+        const buttons = new ActionRowBuilder()
+            .addComponents(
+                new ButtonBuilder()
+                    .setCustomId(`bj_hit_${gameState.userId}`)
+                    .setLabel('🎯 Hit')
+                    .setStyle(ButtonStyle.Primary),
+                new ButtonBuilder()
+                    .setCustomId(`bj_stand_${gameState.userId}`)
+                    .setLabel('🛑 Stand')
+                    .setStyle(ButtonStyle.Secondary)
+            );
+    
+        if (interaction && interaction.editReply) {
+            await interaction.editReply({ embeds: [embed], components: [buttons] });
+        }
+    }
+    
+    async finishBlackjack(messageOrInteraction, gameState, result) {
         gameState.finished = true;
         this.activeGames.delete(`blackjack_${gameState.userId}`);
         
@@ -787,51 +752,46 @@ class MinigamesSystem {
         const playerValue = this.calculateHandValue(playerHand);
         const dealerValue = this.calculateHandValue(dealerHand);
         
-        // Establecer cooldown
         this.setCooldown(userId, 'blackjack');
         
         const updateData = {
             'stats.gamesPlayed': (user.stats.gamesPlayed || 0) + 1
         };
         
-        let winAmount = 0;
         let profit = 0;
         let resultText = '';
         let color = '#FF0000';
         
         switch (result) {
             case 'blackjack':
-                winAmount = Math.floor(betAmount * this.config.blackjack.blackjackMultiplier);
-                profit = winAmount - betAmount;
+                const blackjackWin = Math.floor(betAmount * this.config.blackjack.blackjackMultiplier);
+                profit = blackjackWin - betAmount;
                 resultText = '🎉 **¡BLACKJACK NATURAL!**';
                 color = '#00FF00';
                 await this.economy.addMoney(userId, profit, 'blackjack_win');
                 break;
             case 'win':
             case 'dealer_bust':
-                winAmount = finalBet * this.config.blackjack.winMultiplier;
-                profit = winAmount - finalBet;
-                resultText = result === 'dealer_bust' ? '🎉 **¡DEALER SE PASÓ! ¡GANASTE!**' : '🎉 **¡GANASTE!**';
+                const normalWin = finalBet * this.config.blackjack.winMultiplier;
+                profit = normalWin - finalBet;
+                resultText = result === 'dealer_bust' ? '🎉 **¡DEALER SE PASÓ!**' : '🎉 **¡GANASTE!**';
                 color = '#00FF00';
                 await this.economy.addMoney(userId, profit, 'blackjack_win');
                 break;
             case 'push':
                 resultText = '🤝 **¡EMPATE!**';
                 color = '#FFD700';
-                // No se pierde ni se gana dinero
                 break;
             case 'bust':
-                resultText = '💥 **¡TE PASASTE DE 21!**';
+                resultText = '💥 **¡TE PASASTE!**';
+                profit = -finalBet;
                 await this.economy.removeMoney(userId, finalBet, 'blackjack_loss');
                 break;
             case 'lose':
                 resultText = '💸 **Perdiste...**';
+                profit = -finalBet;
                 await this.economy.removeMoney(userId, finalBet, 'blackjack_loss');
                 break;
-            case 'timeout':
-                resultText = '⏰ **Tiempo agotado - Automáticamente Stand**';
-                await this.handleBlackjackStand(messageOrInteraction, gameState);
-                return;
         }
         
         await this.economy.updateUser(userId, updateData);
@@ -856,9 +816,8 @@ class MinigamesSystem {
                     value: `${this.formatNumber(finalBet)} π-b$`, 
                     inline: true 
                 }
-            )
-            .setTimestamp();
-        
+            );
+    
         if (profit > 0) {
             embed.addFields(
                 { name: '💰 Ganancia', value: `+${this.formatNumber(profit)} π-b$`, inline: true },
@@ -876,19 +835,87 @@ class MinigamesSystem {
         }
         
         if (doubled) {
-            embed.addFields(
-                { name: '🔄 Especial', value: 'Apuesta doblada', inline: true }
-            );
+            embed.addFields({ name: '🔄 Especial', value: 'Apuesta doblada', inline: true });
         }
-        
-        // Actualizar el mensaje
-        if (messageOrInteraction.edit) {
-            await messageOrInteraction.edit({ embeds: [embed], components: [] });
-        } else {
+    
+        embed.setTimestamp();
+    
+        // Enviar resultado
+        if (messageOrInteraction && messageOrInteraction.editReply) {
+            await messageOrInteraction.editReply({ embeds: [embed], components: [] });
+        } else if (messageOrInteraction && messageOrInteraction.reply) {
             await messageOrInteraction.reply({ embeds: [embed] });
         }
     }
     
+    // Métodos auxiliares
+    createDeck() {
+        const suits = ['♠️', '♥️', '♦️', '♣️'];
+        const ranks = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
+        const deck = [];
+    
+        for (const suit of suits) {
+            for (const rank of ranks) {
+                deck.push({ suit, rank });
+            }
+        }
+    
+        // Mezclar
+        for (let i = deck.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [deck[i], deck[j]] = [deck[j], deck[i]];
+        }
+    
+        return deck;
+    }
+    
+    drawCard(deck) {
+        return deck.pop();
+    }
+    
+    calculateHandValue(hand) {
+        let value = 0;
+        let aces = 0;
+    
+        for (const card of hand) {
+            if (card.rank === 'A') {
+                aces++;
+                value += 11;
+            } else if (['J', 'Q', 'K'].includes(card.rank)) {
+                value += 10;
+            } else {
+                value += parseInt(card.rank);
+            }
+        }
+    
+        while (value > 21 && aces > 0) {
+            value -= 10;
+            aces--;
+        }
+    
+        return value;
+    }
+    
+    formatHand(hand, hideFirst = false) {
+        if (hideFirst) {
+            return `🎴 ${hand.slice(1).map(card => `${card.rank}${card.suit}`).join(' ')}`;
+        }
+        return hand.map(card => `${card.rank}${card.suit}`).join(' ');
+    }
+    
+    // Manejador de botones (agregar a tu sistema principal)
+    async handleBlackjackButtons(interaction) {
+        if (!interaction.customId.startsWith('bj_')) return;
+    
+        const [, action, userId] = interaction.customId.split('_');
+        
+        if (interaction.user.id !== userId) {
+            await interaction.reply({ content: '❌ Este no es tu juego.', ephemeral: true });
+            return;
+        }
+    
+        await this.handleBlackjackAction(interaction, userId, action);
+    }    
     async processCommand(message) {
         if (message.author.bot) return;
 
