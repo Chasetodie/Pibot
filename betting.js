@@ -204,13 +204,15 @@ class BettingSystem {
             embeds: [embed]
         });
 
-        setTimeout(async () => await this.expireBet(baseId), this.config.betTimeout);
+        setTimeout(async () => await this.expireBet(message, baseId), this.config.betTimeout);
     }
 
     // Aceptar apuesta
     async acceptBet(message, targetUser) {
+        const targetUser = message.mentions.users.first();
         const userId = message.author.id;
         const targetId = targetUser.id;
+        
         const baseId = targetId.slice(9) + userId.slice(9);
         const bet = await this.getBet(baseId);
 
@@ -341,7 +343,7 @@ class BettingSystem {
     }
 
     // Expirar apuesta
-    async expireBet(betId) {
+    async expireBet(message, betId) {
         const bet = await this.getBet(betId);
 
         if (!bet || bet.status !== 'pending') return;
@@ -349,13 +351,7 @@ class BettingSystem {
 
         console.log(`Apuesta ${betId} expiró`);
 
-        const embed = new EmbedBuilder()
-            .setTitle('🔄 Apuesta Expirada')
-            .setDescription('La apuesta no fue aceptada, vuelve a intentarlo más tarde')
-            .setColor('#808080')
-            .setTimestamp();
-
-        await message.update({ embeds: [embed], components: [] });
+        await message.reply('❌ Esta apuesta ha expirado, vuelvan a intentarlo mas tarde.');
     }
 
     // Mostrar apuestas activas
