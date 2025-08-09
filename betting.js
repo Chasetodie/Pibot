@@ -248,8 +248,12 @@ class BettingSystem {
         await this.economy.removeMoney(bet.challenger, bet.amount, 'bet_escrow');
         await this.economy.removeMoney(bet.opponent, bet.amount, 'bet_escrow');
 
-        bet.status = 'active';
-        bet.acceptedAt = Date.now();
+        const betData = {
+            status: 'active',
+            acceptedAt: Date.now(),
+        };
+
+        this.updateBet(baseId, betData);
 
         const embed = new EmbedBuilder()
             .setTitle('✅ Apuesta Aceptada')
@@ -365,7 +369,7 @@ class BettingSystem {
 
         console.log(`Apuesta ${betId} expiró`);
 
-        await message.reply('❌ Esta apuesta ha expirado, vuelvan a intentarlo mas tarde.');
+        await message.reply('❌ Esta Apuesta ha Expirado, Vuelvan a Intentarlo mas Tarde.');
     }
 
     // Mostrar apuestas activas
