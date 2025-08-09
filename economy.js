@@ -506,6 +506,26 @@ class EconomySystem {
                     'El cliente odiló tu diseño'
                 ]
             },
+            'abrepuertasoxxo': {
+                name: '🚪 Abre Puertas Oxxo',
+                cooldown: 60 * 60 * 1000, // 1 hora
+                codeName: 'abrepuertasoxxo',
+                baseReward: 1200,
+                variation: 900,
+                levelRequirement: 9,
+                failChance: 0.75, // 75% de fallar
+                messages: [
+                    'Abriste las puertas correctamente',
+                    'Apertura de puertas sin contratiempos',
+                    'El mecanismo de apertura funcionó perfectamente.',
+                    'Puertas abiertas y funcionamiento verificado'
+                ],
+                failMessages: [
+                    'Abriste mal la puerta, ahora te llevaran los narcos',
+                    'No abriste posible abrir las puertas del OXXO',
+                    'Las puertas del OXXO permanecieron cerradas por falla del sistema'
+                ]
+            }
             'doctor': {
                 name: '👨‍⚕️ Doctor',
                 cooldown: 60 * 60 * 1000, // 1 hora
@@ -527,6 +547,27 @@ class EconomySystem {
                     'Hubo complicaciones menores'
                 ]
             },
+            'botargadrsimi': {
+                name: '🥼 Botarga de Doctor Simi',
+                cooldown: 60 * 60 * 1000, // 1 hora
+                codeName: 'botargadrsimi',
+                baseReward: 700,
+                variation: 500,
+                levelRequirement: 12,
+                failChance: 0.2, // 20% de fallar
+                messages: [
+                    'Animaste al público como estaba previsto',
+                    'Presentación con la botarga realizada sin inconvenientes',
+                    'La botarga de Doctor Simi estuvo en funcionamiento todo el evento',
+                    'La botarga cumplió con el objetivo de animación y presencia'
+                ],
+                failMessages: [
+                    'No se pudo realizar la presentación con la botarga de Doctor Simi por inconvenientes imprevistos',
+                    'La botarga no estuvo disponible para el evento',
+                    'La presentación con la botarga fue cancelada por problemas técnicos',
+                    'No cumpliste el objetivo con la botarga de Doctor Simi'
+                ]
+            },        
             'criminal': {
                 name: '🕵️ Actividad Sospechosa',
                 cooldown: 60 * 60 * 1000, // 1 hora
