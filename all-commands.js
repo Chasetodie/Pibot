@@ -961,6 +961,7 @@ class AllCommands {
             
             if (!clickResult.success) {
                 console.log(`⚠️ Click falló - Razón: ${clickResult.reason}`);
+            }
                 
             if (clickResult.reason === 'time_expired') {
                 // Tiempo expirado, finalizar robo AQUÍ
