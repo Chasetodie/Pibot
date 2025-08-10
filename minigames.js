@@ -1743,7 +1743,7 @@ class MinigamesSystem {
             this.setCooldown(playerId, 'russianRoulette');
     
             // Actualizar estadísticas
-            const user await this.economy.getUser(playerId);
+            const user = await this.economy.getUser(playerId);
             const updateData = { 'stats.gamesPlayed': (user.stats.gamesPlayed || 0) + 1 };
             await this.economy.updateUser(playerId, updateData);
             
