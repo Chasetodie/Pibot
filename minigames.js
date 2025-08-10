@@ -2013,7 +2013,7 @@ class MinigamesSystem {
                     await this.handleStartRussian(message);
                     break;
                 case '>cancel':
-                case '>cancelar:
+                case '>cancelar':
                     await this.cancelRussianRoulette(message, args);
                     break;
                 case '>games':
