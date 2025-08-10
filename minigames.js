@@ -1703,9 +1703,16 @@ class MinigamesSystem {
         }
 
         console.log('alive in 2');
+
+        if (game.processing) {
+            return;
+        }
+
+        game.processing = true;
     
         if (game.turnTimeout) {
             clearTimeout(game.turnTimeout);
+            game.turnTimeout = null;
         }
 
         console.log('alive in 3');
@@ -1794,6 +1801,8 @@ class MinigamesSystem {
         }
 
         console.log('ez4');
+
+        game.processing = false;
     
         // VERIFICAR SI EL JUEGO DEBE TERMINAR
         const alivePlayers = game.players.filter(p => p.alive);
@@ -1859,6 +1868,12 @@ class MinigamesSystem {
     }
     
     async forceShoot(game, playerId, client) {
+        if (game.processing) {
+            return;
+        }
+
+        game.processing = true;
+        
         const currentPlayer = game.players.find(p => p.id === playerId);
         if (!currentPlayer) return;
     
