@@ -967,7 +967,7 @@ class AllCommands {
                 // Tiempo expirado, finalizar robo AQUÍ
                 console.log('⏰ Finalizando robo por tiempo expirado en click handler');
                 
-                const finalResult = await economySystem.finishRobbery(robberId);
+                const finalResult = await this.economy.finishRobbery(robberId);
                 
                 if (finalResult && finalResult.success) {
                     // Crear embed de resultado inmediatamente
@@ -979,10 +979,10 @@ class AllCommands {
                             .setTitle('🎉 ¡ROBO EXITOSO!')
                             .setDescription(`**${message.author.username}** robó exitosamente a **${targetUser.username}**!`)
                             .addFields([
-                                { name: '💰 Dinero robado', value: `${finalResult.stolenAmount} ${economySystem.config.currencySymbol}`, inline: true },
-                                { name: '👆 Clicks realizados', value: `${finalResult.clicks}/${economySystem.robberyConfig.maxClicks}`, inline: true },
+                                { name: '💰 Dinero robado', value: `${finalResult.stolenAmount} ${this.economy.config.currencySymbol}`, inline: true },
+                                { name: '👆 Clicks realizados', value: `${finalResult.clicks}/${this.economy.robberyConfig.maxClicks}`, inline: true },
                                 { name: '⚡ Eficiencia', value: `${finalResult.efficiency}%`, inline: true },
-                                { name: '💳 Tu nuevo balance', value: `${finalResult.robberNewBalance} ${economySystem.config.currencySymbol}`, inline: false }
+                                { name: '💳 Tu nuevo balance', value: `${finalResult.robberNewBalance} ${this.economy.config.currencySymbol}`, inline: false }
                             ])
                             .setFooter({ text: 'El crimen sí paga... a veces' })
                             .setTimestamp();
@@ -992,10 +992,10 @@ class AllCommands {
                             .setTitle('🚨 ¡ROBO FALLIDO!')
                             .setDescription(`**${message.author.username}** fue atrapado intentando robar a **${targetUser.username}**!`)
                             .addFields([
-                                { name: '💸 Penalización', value: `${finalResult.penalty} ${economySystem.config.currencySymbol}`, inline: true },
-                                { name: '👆 Clicks realizados', value: `${finalResult.clicks}/${economySystem.robberyConfig.maxClicks}`, inline: true },
+                                { name: '💸 Penalización', value: `${finalResult.penalty} ${this.economy.config.currencySymbol}`, inline: true },
+                                { name: '👆 Clicks realizados', value: `${finalResult.clicks}/${this.economy.robberyConfig.maxClicks}`, inline: true },
                                 { name: '⚡ Eficiencia', value: `${finalResult.efficiency}%`, inline: true },
-                                { name: '💳 Tu nuevo balance', value: `${finalResult.robberNewBalance} ${economySystem.config.currencySymbol}`, inline: false }
+                                { name: '💳 Tu nuevo balance', value: `${finalResult.robberNewBalance} ${this.economy.config.currencySymbol}`, inline: false }
                             ])
                             .setFooter({ text: 'La policía te multó por intento de robo' })
                             .setTimestamp();
