@@ -1793,11 +1793,13 @@ class MinigamesSystem {
         } catch (error) {
             console.error('Error actualizando mensaje del juego: ', error);
         }
+
+        console.log('ez4');
     
         // VERIFICAR SI EL JUEGO DEBE TERMINAR
         const alivePlayers = game.players.filter(p => p.alive);
 
-        console.log('ez4');
+        console.log('ez5');
         
         // Si solo queda 1 jugador vivo, terminar
         if (alivePlayers.length <= 1) {
@@ -1807,7 +1809,7 @@ class MinigamesSystem {
             return;
         }
 
-        console.log('ez5');
+        console.log('ez6');
         
         // Si llegamos al 6to disparo y hay 2+ jugadores, recargar revólver
         if (game.currentShot === 6 && alivePlayers.length > 1) {
@@ -1817,7 +1819,7 @@ class MinigamesSystem {
             return;
         }
 
-        console.log('ez6');
+        console.log('ez7');
     }
 
     async reloadRevolver(game, client) {
