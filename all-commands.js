@@ -962,16 +962,49 @@ class AllCommands {
             if (!clickResult.success) {
                 console.log(`⚠️ Click falló - Razón: ${clickResult.reason}`);
                 
-                if (clickResult.reason === 'time_expired') {
-                    // Tiempo expirado, finalizar robo
-                    const finalResult = await this.economy.finishRobbery(robberId);
-                    collector.stop('finished');
-                    return;
-                } else {
-                    // Robo terminado o expirado
-                    collector.stop('finished');
-                    return;
+            if (clickResult.reason === 'time_expired') {
+                // Tiempo expirado, finalizar robo AQUÍ
+                console.log('⏰ Finalizando robo por tiempo expirado en click handler');
+                
+                const finalResult = await economySystem.finishRobbery(robberId);
+                
+                if (finalResult && finalResult.success) {
+                    // Crear embed de resultado inmediatamente
+                    let resultEmbed;
+                    
+                    if (finalResult.robberySuccess) {
+                        resultEmbed = new EmbedBuilder()
+                            .setColor('#00ff44')
+                            .setTitle('🎉 ¡ROBO EXITOSO!')
+                            .setDescription(`**${message.author.username}** robó exitosamente a **${targetUser.username}**!`)
+                            .addFields([
+                                { name: '💰 Dinero robado', value: `${finalResult.stolenAmount} ${economySystem.config.currencySymbol}`, inline: true },
+                                { name: '👆 Clicks realizados', value: `${finalResult.clicks}/${economySystem.robberyConfig.maxClicks}`, inline: true },
+                                { name: '⚡ Eficiencia', value: `${finalResult.efficiency}%`, inline: true },
+                                { name: '💳 Tu nuevo balance', value: `${finalResult.robberNewBalance} ${economySystem.config.currencySymbol}`, inline: false }
+                            ])
+                            .setFooter({ text: 'El crimen sí paga... a veces' })
+                            .setTimestamp();
+                    } else {
+                        resultEmbed = new EmbedBuilder()
+                            .setColor('#ff4444')
+                            .setTitle('🚨 ¡ROBO FALLIDO!')
+                            .setDescription(`**${message.author.username}** fue atrapado intentando robar a **${targetUser.username}**!`)
+                            .addFields([
+                                { name: '💸 Penalización', value: `${finalResult.penalty} ${economySystem.config.currencySymbol}`, inline: true },
+                                { name: '👆 Clicks realizados', value: `${finalResult.clicks}/${economySystem.robberyConfig.maxClicks}`, inline: true },
+                                { name: '⚡ Eficiencia', value: `${finalResult.efficiency}%`, inline: true },
+                                { name: '💳 Tu nuevo balance', value: `${finalResult.robberNewBalance} ${economySystem.config.currencySymbol}`, inline: false }
+                            ])
+                            .setFooter({ text: 'La policía te multó por intento de robo' })
+                            .setTimestamp();
+                    }
+                    
+                    await robberyMessage.edit({ embeds: [resultEmbed], components: [] });
                 }
+                
+                collector.stop('finished');
+                return;
             }
             
             // Actualizar embed cada 5 clicks o cada 3 segundos para no saturar
@@ -1007,118 +1040,8 @@ class AllCommands {
         });
         
         collector.on('end', async (collected, reason) => {
-            try {
-                console.log(`🔍 Finalizando robo - Razón: ${reason}, Collector: ${collected.size} interactions`);
-                
-                // Verificar si el robo aún existe antes de finalizarlo
-                const robberyStats = this.economy.getRobberyStats(robberId);
-                console.log(`📊 Stats del robo antes de finalizar:`, robberyStats);
-
-                let finalResult;
-                
-                if (robberyStats && (reason === 'max_clicks' || reason === 'time')) {
-                    // Finalizar robo normalmente
-                    finalResult = await this.economy.finishRobbery(robberId);
-                } else if (reason === 'finished') {
-                    // El robo ya fue finalizado en el click handler
-                    console.log('⚠️ Robo ya finalizado previamente');
-                    return; // No hacer nada más
-                } else {
-                    // Timeout o cancelación - finalizar manualmente
-                    console.log('⏰ Finalizando robo por timeout');
-                    finalResult = await this.economy.finishRobbery(robberId);
-                }
-                
-                if (!finalResult || !finalResult.success) {
-                    console.error('❌ Error en finalResult:', finalResult);
-                    const errorEmbed = new EmbedBuilder()
-                        .setColor('#ff4444')
-                        .setTitle('❌ Robo Cancelado')
-                        .setDescription('El robo fue cancelado o expiró el tiempo límite')
-                        .setTimestamp();
-                    
-                    await robberyMessage.edit({ embeds: [errorEmbed], components: [] });
-                    return;
-                }
-                
-                // Crear embed de resultado
-                let resultEmbed;
-                
-                if (finalResult.robberySuccess) {
-                    // ÉXITO
-                    resultEmbed = new EmbedBuilder()
-                        .setColor('#00ff44')
-                        .setTitle('🎉 ¡ROBO EXITOSO!')
-                        .setDescription(`**${message.author.username}** robó exitosamente a **${targetUser.username}**!`)
-                        .addFields([
-                            {
-                                name: '💰 Dinero robado',
-                                value: `${finalResult.stolenAmount} ${this.economy.config.currencySymbol}`,
-                                inline: true
-                            },
-                            {
-                                name: '👆 Clicks realizados',
-                                value: `${finalResult.clicks}/${this.economy.robberyConfig.maxClicks}`,
-                                inline: true
-                            },
-                            {
-                                name: '⚡ Eficiencia',
-                                value: `${finalResult.efficiency}%`,
-                                inline: true
-                            },
-                            {
-                                name: '💳 Tu nuevo balance',
-                                value: `${finalResult.robberNewBalance} ${this.economy.config.currencySymbol}`,
-                                inline: false
-                            }
-                        ])
-                        .setFooter({ text: 'El crimen sí paga... a veces' })
-                        .setTimestamp();
-                        
-                } else {
-                    // FRACASO
-                    resultEmbed = new EmbedBuilder()
-                        .setColor('#ff4444')
-                        .setTitle('🚨 ¡ROBO FALLIDO!')
-                        .setDescription(`**${message.author.username}** fue atrapado intentando robar a **${targetUser.username}**!`)
-                        .addFields([
-                            {
-                                name: '💸 Penalización',
-                                value: `${finalResult.penalty} ${this.economy.config.currencySymbol}`,
-                                inline: true
-                            },
-                            {
-                                name: '👆 Clicks realizados',
-                                value: `${finalResult.clicks}/${this.economy.robberyConfig.maxClicks}`,
-                                inline: true
-                            },
-                            {
-                                name: '⚡ Eficiencia',
-                                value: `${finalResult.efficiency}%`,
-                                inline: true
-                            },
-                            {
-                                name: '💳 Tu nuevo balance',
-                                value: `${finalResult.robberNewBalance} ${this.economy.config.currencySymbol}`,
-                                inline: false
-                            }
-                        ])
-                        .setFooter({ text: 'La policía te mulió por intento de robo' })
-                        .setTimestamp();
-                }
-                
-                await robberyMessage.edit({ embeds: [resultEmbed], components: [] });
-                
-            } catch (error) {
-                console.error('Error finalizando robo:', error);
-                const errorEmbed = new EmbedBuilder()
-                    .setColor('#ff4444')
-                    .setTitle('❌ Error')
-                    .setDescription('Hubo un problema al finalizar el robo')
-                    .setTimestamp();
-                
-                await robberyMessage.edit({ embeds: [errorEmbed], components: [] });
-            }
+            // No hacer nada, el resultado ya se procesó en el click handler
+            console.log(`🔍 Collector terminado - Razón: ${reason}`);
         });
     }
     
