@@ -48,7 +48,27 @@ class MinigamesSystem {
                 cooldown: 90000,
                 blackjackMultiplier: 2.5,
                 winMultiplier: 2
-            }
+            },
+            roulette: {
+                minBet: 100,
+                maxBet: 20000,
+                cooldown: 45000, // 45 segundos entre juegos
+                payouts: {
+                    straight: 35,    // Número exacto: x35
+                    red: 1.95,       // Rojo: x1.95
+                    black: 1.95,     // Negro: x1.95
+                    odd: 1.95,       // Impar: x1.95
+                    even: 1.95,      // Par: x1.95
+                    low: 1.95,       // 1-18: x1.95
+                    high: 1.95,      // 19-36: x1.95
+                    dozen1: 2.9,     // 1era docena (1-12): x2.9
+                    dozen2: 2.9,     // 2da docena (13-24): x2.9
+                    dozen3: 2.9,     // 3era docena (25-36): x2.9
+                    column1: 2.9,    // 1era columna: x2.9
+                    column2: 2.9,    // 2da columna: x2.9
+                    column3: 2.9     // 3era columna: x2.9
+                }
+            },
         };
         
         this.cooldowns = new Map(); // Para cooldowns por usuario
@@ -997,6 +1017,296 @@ class MinigamesSystem {
     
         await this.handleBlackjackAction(interaction, userId, action);
     }    
+
+    // Método principal para manejar la ruleta
+    async handleRoulette(message, args) {
+        const userId = message.author.id;
+        const user = await this.economy.getUser(userId);
+    
+        // Si no hay argumentos suficientes, mostrar ayuda
+        if (args.length < 3) {
+            const embed = new EmbedBuilder()
+                .setTitle('🎰 Ruleta - Casino Européo')
+                .setDescription('¡Apuesta en la ruleta y gana grandes premios!')
+                .addFields(
+                    { name: '📝 Uso', value: '`>roulette <tipo> <cantidad>`', inline: false },
+                    { 
+                        name: '🎯 Tipos de Apuesta', 
+                        value: '**Números:** `0-36` (x35)\n**Colores:** `rojo`, `negro` (x1.95)\n**Paridad:** `par`, `impar` (x1.95)\n**Rango:** `bajo` (1-18), `alto` (19-36) (x1.95)\n**Docenas:** `1era`, `2da`, `3era` (x2.9)\n**Columnas:** `col1`, `col2`, `col3` (x2.9)', 
+                        inline: false 
+                    },
+                    { 
+                        name: '💡 Ejemplos', 
+                        value: '`>roulette 7 1000` - Apostar al 7\n`>roulette rojo 500` - Apostar al rojo\n`>roulette par 750` - Apostar a números pares\n`>roulette 1era 2000` - Apostar 1era docena', 
+                        inline: false 
+                    },
+                    { 
+                        name: '💰 Límites', 
+                        value: `Min: ${this.formatNumber(this.config.roulette.minBet)} π-b$\nMax: ${this.formatNumber(this.config.roulette.maxBet)} π-b$`, 
+                        inline: true 
+                    },
+                    { 
+                        name: '⏰ Cooldown', 
+                        value: '45 segundos', 
+                        inline: true 
+                    }
+                )
+                .setColor('#8B0000')
+                .setFooter({ text: '🍀 La suerte está en tus manos' });
+            
+            await message.reply({ embeds: [embed] });
+            return;
+        }
+    
+        const betType = args[1].toLowerCase();
+        const betAmount = parseInt(args[2]);
+    
+        // Validar cantidad de apuesta
+        if (isNaN(betAmount) || betAmount < this.config.roulette.minBet || betAmount > this.config.roulette.maxBet) {
+            await message.reply(`❌ La apuesta debe ser entre ${this.formatNumber(this.config.roulette.minBet)} y ${this.formatNumber(this.config.roulette.maxBet)} π-b$`);
+            return;
+        }
+    
+        // Verificar fondos
+        if (user.balance < betAmount) {
+            await message.reply(`❌ No tienes suficientes π-b Coins. Tu balance: ${this.formatNumber(user.balance)} π-b$`);
+            return;
+        }
+    
+        // Verificar cooldown
+        const cooldownCheck = this.checkCooldown(userId, 'roulette');
+        if (cooldownCheck.onCooldown) {
+            const timeLeft = Math.ceil(cooldownCheck.timeLeft / 1000);
+            await message.reply(`⏰ Debes esperar ${timeLeft} segundos antes de jugar otra vez`);
+            return;
+        }
+    
+        // Validar tipo de apuesta
+        const validBet = this.validateRouletteBet(betType);
+        if (!validBet.isValid) {
+            await message.reply(`❌ Tipo de apuesta inválido: \`${betType}\`\n💡 Usa: números (0-36), rojo, negro, par, impar, bajo, alto, 1era, 2da, 3era, col1, col2, col3`);
+            return;
+        }
+    
+        // Girar la ruleta
+        const spinResult = this.spinRoulette();
+        const won = this.checkRouletteWin(validBet, spinResult);
+        
+        // Establecer cooldown
+        this.setCooldown(userId, 'roulette');
+    
+        const updateData = {
+            'stats.gamesPlayed': (user.stats.gamesPlayed || 0) + 1
+        };
+    
+        // Crear embed con animación de giro
+        const loadingEmbed = new EmbedBuilder()
+            .setTitle('🎰 Ruleta - Girando...')
+            .setDescription('🌀 **La ruleta está girando...**\n\n🎯 Esperando el resultado...')
+            .addFields(
+                { name: '🎲 Tu Apuesta', value: `**${validBet.displayName}**`, inline: true },
+                { name: '💰 Cantidad', value: `${this.formatNumber(betAmount)} π-b$`, inline: true }
+            )
+            .setColor('#FFD700');
+    
+        const reply = await message.reply({ embeds: [loadingEmbed] });
+    
+        // Simular suspense
+        await new Promise(resolve => setTimeout(resolve, 4000));
+    
+        // Crear embed del resultado
+        const resultEmbed = new EmbedBuilder()
+            .setTitle('🎰 Ruleta - Resultado')
+            .setColor(won ? '#00FF00' : '#FF0000')
+            .addFields(
+                { name: '🎯 Tu Apuesta', value: `**${validBet.displayName}**`, inline: true },
+                { name: '🎰 Número Ganador', value: `${this.formatRouletteNumber(spinResult)}`, inline: true },
+                { name: '💰 Apuesta', value: `${this.formatNumber(betAmount)} π-b$`, inline: true }
+            )
+            .setTimestamp();
+    
+        if (won) {
+            const multiplier = this.config.roulette.payouts[validBet.type];
+            const winAmount = Math.floor(betAmount * multiplier);
+            const profit = winAmount - betAmount;
+            
+            await this.economy.addMoney(userId, profit, 'roulette_win');
+            await this.economy.updateUser(userId, updateData);
+    
+            // *** ACTUALIZAR ESTADÍSTICAS DE ACHIEVEMENTS ***
+            if (this.achievements) {
+                await this.achievements.updateStats(userId, 'game_played');
+                await this.achievements.updateStats(userId, 'game_won');
+                await this.achievements.updateStats(userId, 'money_bet', betAmount);
+            }
+            
+            resultEmbed.setDescription(`🎉 **¡GANASTE!**`)
+                .addFields(
+                    { name: '🎊 ¡Felicidades!', value: `¡Tu apuesta fue correcta!`, inline: false },
+                    { name: '💎 Multiplicador', value: `x${multiplier}`, inline: true },
+                    { name: '🤑 Ganancia Total', value: `+${this.formatNumber(profit)} π-b$`, inline: true },
+                    { name: '💸 Balance Anterior', value: `${this.formatNumber(user.balance)} π-b$`, inline: false },
+                    { name: '💳 Balance Actual', value: `${this.formatNumber(user.balance + profit)} π-b$ 🚀`, inline: false }
+                );
+    
+            // Mensaje especial para números exactos
+            if (validBet.type === 'straight') {
+                resultEmbed.addFields({ 
+                    name: '🌟 ¡Número Exacto!', 
+                    value: '¡Increíble suerte! Acertaste el número exacto.', 
+                    inline: false 
+                });
+            }
+        } else {
+            await this.economy.removeMoney(userId, betAmount, 'roulette_loss');
+            await this.economy.updateUser(userId, updateData);
+    
+            // *** ACTUALIZAR ESTADÍSTICAS DE ACHIEVEMENTS ***
+            if (this.achievements) {
+                await this.achievements.updateStats(userId, 'game_played');
+                await this.achievements.updateStats(userId, 'game_lost');
+                await this.achievements.updateStats(userId, 'money_bet', betAmount);
+            }
+            
+            let encouragement = '🎯 ¡La próxima será tu momento de suerte!';
+            
+            // Mensajes especiales según el número
+            if (spinResult.number === 0) {
+                encouragement = '😱 ¡Salió el 0! La casa siempre gana en este número.';
+            } else if (validBet.type === 'straight') {
+                const difference = Math.abs(parseInt(betType) - spinResult.number);
+                if (difference <= 2) {
+                    encouragement = '😔 ¡Muy cerca! Solo te faltaron unos números.';
+                }
+            }
+            
+            resultEmbed.setDescription(`💸 **No ganaste esta vez...** ${encouragement}`)
+                .addFields(
+                    { name: '💸 Perdiste', value: `${this.formatNumber(betAmount)} π-b$`, inline: true },
+                    { name: '💸 Balance Anterior', value: `${this.formatNumber(user.balance)} π-b$`, inline: false },
+                    { name: '💳 Balance Actual', value: `${this.formatNumber(user.balance - betAmount)} π-b$`, inline: false },
+                    { name: '💡 Consejo', value: 'En la ruleta, cada giro es independiente. ¡No te rindas!', inline: false }
+                );
+        }
+    
+        await reply.edit({ embeds: [resultEmbed] });
+    }
+    
+    // Métodos auxiliares para la ruleta
+    validateRouletteBet(betType) {
+        // Números directos (0-36)
+        const num = parseInt(betType);
+        if (!isNaN(num) && num >= 0 && num <= 36) {
+            return { isValid: true, type: 'straight', value: num, displayName: `Número ${num}` };
+        }
+    
+        // Tipos de apuesta especiales
+        const betTypes = {
+            // Colores
+            'rojo': { type: 'red', displayName: '🔴 Rojo' },
+            'red': { type: 'red', displayName: '🔴 Rojo' },
+            'negro': { type: 'black', displayName: '⚫ Negro' },
+            'black': { type: 'black', displayName: '⚫ Negro' },
+            
+            // Paridad
+            'par': { type: 'even', displayName: '🟦 Par' },
+            'even': { type: 'even', displayName: '🟦 Par' },
+            'impar': { type: 'odd', displayName: '🟨 Impar' },
+            'odd': { type: 'odd', displayName: '🟨 Impar' },
+            
+            // Rangos
+            'bajo': { type: 'low', displayName: '📉 Bajo (1-18)' },
+            'low': { type: 'low', displayName: '📉 Bajo (1-18)' },
+            'alto': { type: 'high', displayName: '📈 Alto (19-36)' },
+            'high': { type: 'high', displayName: '📈 Alto (19-36)' },
+            
+            // Docenas
+            '1era': { type: 'dozen1', displayName: '1️⃣ Primera Docena (1-12)' },
+            'primera': { type: 'dozen1', displayName: '1️⃣ Primera Docena (1-12)' },
+            '1st': { type: 'dozen1', displayName: '1️⃣ Primera Docena (1-12)' },
+            '2da': { type: 'dozen2', displayName: '2️⃣ Segunda Docena (13-24)' },
+            'segunda': { type: 'dozen2', displayName: '2️⃣ Segunda Docena (13-24)' },
+            '2nd': { type: 'dozen2', displayName: '2️⃣ Segunda Docena (13-24)' },
+            '3era': { type: 'dozen3', displayName: '3️⃣ Tercera Docena (25-36)' },
+            'tercera': { type: 'dozen3', displayName: '3️⃣ Tercera Docena (25-36)' },
+            '3rd': { type: 'dozen3', displayName: '3️⃣ Tercera Docena (25-36)' },
+            
+            // Columnas
+            'col1': { type: 'column1', displayName: '📊 Columna 1' },
+            'columna1': { type: 'column1', displayName: '📊 Columna 1' },
+            'col2': { type: 'column2', displayName: '📊 Columna 2' },
+            'columna2': { type: 'column2', displayName: '📊 Columna 2' },
+            'col3': { type: 'column3', displayName: '📊 Columna 3' },
+            'columna3': { type: 'column3', displayName: '📊 Columna 3' }
+        };
+    
+        if (betTypes[betType]) {
+            return { isValid: true, ...betTypes[betType] };
+        }
+    
+        return { isValid: false };
+    }
+    
+    spinRoulette() {
+        const number = Math.floor(Math.random() * 37); // 0-36
+        
+        // Definir colores (ruleta europea)
+        const redNumbers = [1, 3, 5, 7, 9, 12, 14, 16, 18, 19, 21, 23, 25, 27, 30, 32, 34, 36];
+        const isRed = redNumbers.includes(number);
+        const color = number === 0 ? 'green' : (isRed ? 'red' : 'black');
+        
+        return { number, color };
+    }
+    
+    checkRouletteWin(bet, result) {
+        const { type, value } = bet;
+        const { number, color } = result;
+    
+        switch (type) {
+            case 'straight':
+                return number === value;
+            case 'red':
+                return color === 'red';
+            case 'black':
+                return color === 'black';
+            case 'even':
+                return number !== 0 && number % 2 === 0;
+            case 'odd':
+                return number !== 0 && number % 2 === 1;
+            case 'low':
+                return number >= 1 && number <= 18;
+            case 'high':
+                return number >= 19 && number <= 36;
+            case 'dozen1':
+                return number >= 1 && number <= 12;
+            case 'dozen2':
+                return number >= 13 && number <= 24;
+            case 'dozen3':
+                return number >= 25 && number <= 36;
+            case 'column1':
+                return number > 0 && (number - 1) % 3 === 0;
+            case 'column2':
+                return number > 0 && (number - 2) % 3 === 0;
+            case 'column3':
+                return number > 0 && number % 3 === 0;
+            default:
+                return false;
+        }
+    }
+    
+    formatRouletteNumber(result) {
+        const { number, color } = result;
+        
+        if (number === 0) {
+            return '🟢 **0** (Verde)';
+        }
+        
+        const colorEmoji = color === 'red' ? '🔴' : '⚫';
+        const colorName = color === 'red' ? 'Rojo' : 'Negro';
+        
+        return `${colorEmoji} **${number}** (${colorName})`;
+    }
+    
     async processCommand(message) {
         if (message.author.bot) return;
 
@@ -1024,6 +1334,11 @@ class MinigamesSystem {
                 case '>bj':
                 case '>21':
                     await this.handleBlackjack(message, args);
+                    break;
+                case '>roulette':
+                case '>ruleta':
+                case '>wheel':
+                    await this.handleRoulette(message, args);
                     break;
                 case '>games':
                 case '>minigames':
@@ -1068,8 +1383,13 @@ class MinigamesSystem {
                     inline: false 
                 },
                 { 
+                    name: '🎰 Ruleta', 
+                    value: '`>roulette <tipo> <cantidad>`\nApuesta: 100-20,000 π-b$\nGanancia: x1.95 - x35\nCooldown: 45 segundos', 
+                    inline: false 
+                },
+                { 
                     name: '🔮 Próximamente', 
-                    value: '• Ruleta\n• Slots', 
+                    value: '\n• Slots', 
                     inline: false 
                 }
             )
