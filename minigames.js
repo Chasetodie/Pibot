@@ -1683,6 +1683,11 @@ class MinigamesSystem {
     }
     
     async handleShoot(message, gameKey) {
+        console.log('🔫 handleShoot llamado:');
+        console.log('- gameKey:', gameKey);
+        console.log('- Juego existe:', !!this.activeGames.get(gameKey));
+        console.log('- Usuario:', message.author.id);
+        
         const game = this.activeGames.get(gameKey);
         if (!game || game.phase !== 'playing') {
             await message.reply('❌ No hay ninguna partida activa o no es tu turno.');
