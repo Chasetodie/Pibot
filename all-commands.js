@@ -956,11 +956,22 @@ class AllCommands {
             
             // Procesar click
             const clickResult = await this.economy.processRobberyClick(robberId);
+
+            console.log(`🖱️ Click procesado:`, clickResult);
             
             if (!clickResult.success) {
-                // Robo terminado o expirado
-                collector.stop('finished');
-                return;
+                console.log(`⚠️ Click falló - Razón: ${clickResult.reason}`);
+                
+                if (clickResult.reason === 'time_expired') {
+                    // Tiempo expirado, finalizar robo
+                    const finalResult = await this.economy.finishRobbery(robberId);
+                    collector.stop('finished');
+                    return;
+                } else {
+                    // Robo terminado o expirado
+                    collector.stop('finished');
+                    return;
+                }
             }
             
             // Actualizar embed cada 5 clicks o cada 3 segundos para no saturar
@@ -989,21 +1000,44 @@ class AllCommands {
             }
             
             // Auto-finalizar si llegó al máximo
-            if (clickResult.clicks >= this.economy.robberyConfig.maxClicks) {
+            if (clickResult.maxReached) {
+                console.log(`🎯 Máximo de clicks alcanzado, finalizando...`);
                 collector.stop('max_clicks');
             }
         });
         
         collector.on('end', async (collected, reason) => {
             try {
+                console.log(`🔍 Finalizando robo - Razón: ${reason}, Collector: ${collected.size} interactions`);
+
                 // Finalizar robo y obtener resultado
                 const finalResult = await this.economy.finishRobbery(robberId);
                 
-                if (!finalResult.success) {
+                // Verificar si el robo aún existe antes de finalizarlo
+                const robberyStats = this.economy.getRobberyStats(robberId);
+                console.log(`📊 Stats del robo antes de finalizar:`, robberyStats);
+
+                let finalResult;
+                
+                if (robberyStats && (reason === 'max_clicks' || reason === 'time')) {
+                    // Finalizar robo normalmente
+                    finalResult = await economySystem.finishRobbery(robberId);
+                } else if (reason === 'finished') {
+                    // El robo ya fue finalizado en el click handler
+                    console.log('⚠️ Robo ya finalizado previamente');
+                    return; // No hacer nada más
+                } else {
+                    // Timeout o cancelación - finalizar manualmente
+                    console.log('⏰ Finalizando robo por timeout');
+                    finalResult = await economySystem.finishRobbery(robberId);
+                }
+                
+                if (!finalResult || !finalResult.success) {
+                    console.error('❌ Error en finalResult:', finalResult);
                     const errorEmbed = new EmbedBuilder()
                         .setColor('#ff4444')
-                        .setTitle('❌ Error')
-                        .setDescription('Hubo un problema al finalizar el robo')
+                        .setTitle('❌ Robo Cancelado')
+                        .setDescription('El robo fue cancelado o expiró el tiempo límite')
                         .setTimestamp();
                     
                     await robberyMessage.edit({ embeds: [errorEmbed], components: [] });
