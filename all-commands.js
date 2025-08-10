@@ -801,6 +801,296 @@ class AllCommands {
         }
     }    
 
+    async function handleRobberyCommand(message, args) {
+        const robberId = message.author.id;
+        
+        // Verificar que se mencionó a alguien
+        if (!message.mentions.users.first() && !args[0]) {
+            const errorEmbed = new EmbedBuilder()
+                .setColor('#ff4444')
+                .setTitle('❌ Error')
+                .setDescription('Debes mencionar a un usuario para robar\n**Uso:** `>robar @usuario`')
+                .setTimestamp();
+            
+            return message.reply({ embeds: [errorEmbed] });
+        }
+        
+        // Obtener usuario objetivo
+        let targetUser = message.mentions.users.first();
+        if (!targetUser && args[0]) {
+            try {
+                targetUser = await message.client.users.fetch(args[0]);
+            } catch (error) {
+                const errorEmbed = new EmbedBuilder()
+                    .setColor('#ff4444')
+                    .setTitle('❌ Usuario no encontrado')
+                    .setDescription('No se pudo encontrar al usuario especificado')
+                    .setTimestamp();
+                
+                return message.reply({ embeds: [errorEmbed] });
+            }
+        }
+        
+        const targetId = targetUser.id;
+        
+        // Verificar que no sea un bot
+        if (targetUser.bot) {
+            const errorEmbed = new EmbedBuilder()
+                .setColor('#ff4444')
+                .setTitle('🤖 Error')
+                .setDescription('No puedes robar a un bot')
+                .setTimestamp();
+            
+            return message.reply({ embeds: [errorEmbed] });
+        }
+        
+        // Verificar si puede robar
+        const canRobResult = await this.economy.canRob(robberId, targetId);
+        
+        if (!canRobResult.canRob) {
+            let errorMessage = '';
+            
+            switch (canRobResult.reason) {
+                case 'self_target':
+                    errorMessage = 'No puedes robarte a ti mismo 🙄';
+                    break;
+                case 'level_too_low':
+                    errorMessage = `Necesitas ser nivel **${canRobResult.requiredLevel}** para robar`;
+                    break;
+                case 'target_too_poor':
+                    errorMessage = `${targetUser.username} necesita tener al menos **${canRobResult.minBalance}** ${economySystem.config.currencySymbol}`;
+                    break;
+                case 'cooldown':
+                    const timeLeft = Math.ceil(canRobResult.timeLeft / (1000 * 60 * 60));
+                    errorMessage = `Debes esperar **${timeLeft}h** antes de robar de nuevo`;
+                    break;
+                case 'already_robbing':
+                    errorMessage = 'Ya tienes un robo en progreso';
+                    break;
+                default:
+                    errorMessage = 'No puedes robar en este momento';
+            }
+            
+            const errorEmbed = new EmbedBuilder()
+                .setColor('#ff4444')
+                .setTitle('🚫 No puedes robar')
+                .setDescription(errorMessage)
+                .setTimestamp();
+            
+            return message.reply({ embeds: [errorEmbed] });
+        }
+        
+        // Iniciar el robo
+        const robberyResult = await this.economy.startRobbery(robberId, targetId);
+        
+        if (!robberyResult.success) {
+            const errorEmbed = new EmbedBuilder()
+                .setColor('#ff4444')
+                .setTitle('❌ Error al iniciar robo')
+                .setDescription('Hubo un problema al iniciar el robo. Inténtalo de nuevo.')
+                .setTimestamp();
+            
+            return message.reply({ embeds: [errorEmbed] });
+        }
+        
+        // Crear embed inicial del robo
+        const robberyEmbed = new EmbedBuilder()
+            .setColor('#ffaa00')
+            .setTitle('🦹‍♂️ ROBO EN PROGRESO')
+            .setDescription(`**${message.author.username}** está intentando robar a **${targetUser.username}**!`)
+            .addFields([
+                {
+                    name: '🎯 Objetivo',
+                    value: `${targetUser.username}`,
+                    inline: true
+                },
+                {
+                    name: '⏱️ Tiempo límite',
+                    value: '30 segundos',
+                    inline: true
+                },
+                {
+                    name: '👆 Clicks',
+                    value: `0/${this.economy.robberyConfig.maxClicks}`,
+                    inline: true
+                },
+                {
+                    name: '💡 Instrucciones',
+                    value: 'Haz click en el botón **lo más rápido posible**!\nMientras más clicks hagas, mayor será tu probabilidad de éxito.',
+                    inline: false
+                }
+            ])
+            .setFooter({ text: 'Puedes robar entre 10% - 20% del dinero del objetivo' })
+            .setTimestamp();
+        
+        // Crear botón
+        const robButton = new ButtonBuilder()
+            .setCustomId(`rob_${robberId}_${Date.now()}`)
+            .setLabel('🏃‍♂️ ¡ROBAR!')
+            .setStyle(ButtonStyle.Danger);
+        
+        const row = new ActionRowBuilder()
+            .addComponents(robButton);
+        
+        const robberyMessage = await message.reply({ 
+            embeds: [robberyEmbed], 
+            components: [row] 
+        });
+        
+        // Collector para el botón
+        const collector = robberyMessage.createMessageComponentCollector({
+            time: this.economy.robberyConfig.buttonTimeLimit + 2000
+        });
+        
+        let lastUpdate = Date.now();
+        
+        collector.on('collect', async (interaction) => {
+            // Solo el ladrón puede hacer click
+            if (interaction.user.id !== robberId) {
+                await interaction.reply({
+                    content: '❌ Solo el ladrón puede usar este botón',
+                    ephemeral: true
+                });
+                return;
+            }
+            
+            // Procesar click
+            const clickResult = await this.economy.processRobberyClick(robberId);
+            
+            if (!clickResult.success) {
+                // Robo terminado o expirado
+                collector.stop('finished');
+                return;
+            }
+            
+            // Actualizar embed cada 5 clicks o cada 3 segundos para no saturar
+            const now = Date.now();
+            const shouldUpdate = clickResult.clicks % 5 === 0 || now - lastUpdate > 3000;
+            
+            if (shouldUpdate) {
+                const updatedEmbed = EmbedBuilder.from(robberyEmbed)
+                    .spliceFields(2, 1, {
+                        name: '👆 Clicks',
+                        value: `${clickResult.clicks}/${clickResult.maxClicks}`,
+                        inline: true
+                    })
+                    .addFields([
+                        {
+                            name: '⚡ Progreso',
+                            value: `${'█'.repeat(Math.floor((clickResult.clicks / clickResult.maxClicks) * 20))}${'░'.repeat(20 - Math.floor((clickResult.clicks / clickResult.maxClicks) * 20))}`,
+                            inline: false
+                        }
+                    ]);
+                
+                await interaction.update({ embeds: [updatedEmbed] });
+                lastUpdate = now;
+            } else {
+                await interaction.deferUpdate();
+            }
+            
+            // Auto-finalizar si llegó al máximo
+            if (clickResult.clicks >= economySystem.robberyConfig.maxClicks) {
+                collector.stop('max_clicks');
+            }
+        });
+        
+        collector.on('end', async (collected, reason) => {
+            try {
+                // Finalizar robo y obtener resultado
+                const finalResult = await this.economy.finishRobbery(robberId);
+                
+                if (!finalResult.success) {
+                    const errorEmbed = new EmbedBuilder()
+                        .setColor('#ff4444')
+                        .setTitle('❌ Error')
+                        .setDescription('Hubo un problema al finalizar el robo')
+                        .setTimestamp();
+                    
+                    await robberyMessage.edit({ embeds: [errorEmbed], components: [] });
+                    return;
+                }
+                
+                // Crear embed de resultado
+                let resultEmbed;
+                
+                if (finalResult.robberySuccess) {
+                    // ÉXITO
+                    resultEmbed = new EmbedBuilder()
+                        .setColor('#00ff44')
+                        .setTitle('🎉 ¡ROBO EXITOSO!')
+                        .setDescription(`**${message.author.username}** robó exitosamente a **${targetUser.username}**!`)
+                        .addFields([
+                            {
+                                name: '💰 Dinero robado',
+                                value: `${finalResult.stolenAmount} ${this.economy.config.currencySymbol}`,
+                                inline: true
+                            },
+                            {
+                                name: '👆 Clicks realizados',
+                                value: `${finalResult.clicks}/${this.economy.robberyConfig.maxClicks}`,
+                                inline: true
+                            },
+                            {
+                                name: '⚡ Eficiencia',
+                                value: `${finalResult.efficiency}%`,
+                                inline: true
+                            },
+                            {
+                                name: '💳 Tu nuevo balance',
+                                value: `${finalResult.robberNewBalance} ${this.economy.config.currencySymbol}`,
+                                inline: false
+                            }
+                        ])
+                        .setFooter({ text: 'El crimen sí paga... a veces' })
+                        .setTimestamp();
+                        
+                } else {
+                    // FRACASO
+                    resultEmbed = new EmbedBuilder()
+                        .setColor('#ff4444')
+                        .setTitle('🚨 ¡ROBO FALLIDO!')
+                        .setDescription(`**${message.author.username}** fue atrapado intentando robar a **${targetUser.username}**!`)
+                        .addFields([
+                            {
+                                name: '💸 Penalización',
+                                value: `${finalResult.penalty} ${this.economy.config.currencySymbol}`,
+                                inline: true
+                            },
+                            {
+                                name: '👆 Clicks realizados',
+                                value: `${finalResult.clicks}/${this.economy.robberyConfig.maxClicks}`,
+                                inline: true
+                            },
+                            {
+                                name: '⚡ Eficiencia',
+                                value: `${finalResult.efficiency}%`,
+                                inline: true
+                            },
+                            {
+                                name: '💳 Tu nuevo balance',
+                                value: `${finalResult.robberNewBalance} ${this.economy.config.currencySymbol}`,
+                                inline: false
+                            }
+                        ])
+                        .setFooter({ text: 'La policía te mulió por intento de robo' })
+                        .setTimestamp();
+                }
+                
+                await robberyMessage.edit({ embeds: [resultEmbed], components: [] });
+                
+            } catch (error) {
+                console.error('Error finalizando robo:', error);
+                const errorEmbed = new EmbedBuilder()
+                    .setColor('#ff4444')
+                    .setTitle('❌ Error')
+                    .setDescription('Hubo un problema al finalizar el robo')
+                    .setTimestamp();
+                
+                await robberyMessage.edit({ embeds: [errorEmbed], components: [] });
+            }
+        });
+    }
+    
     async processCommand(message) {
         if (message.author.bot) return;
 
@@ -837,7 +1127,11 @@ class AllCommands {
                 case '>work':
                 case '>job':
                     await this.handleWork(message);
-                    break;               
+                    break;
+                case '>robar':
+                case '>rob':
+                    await this.handleRobberyCommand(message, args)
+                    break;
                 case '>addmoney':
                 case '>givemoney':
                 case '>givem':
@@ -985,7 +1279,7 @@ class AllCommands {
                 // Betting
                 { name: '🎲 Apuestas', value: '`>bet [@usuario] <cantidad> <descripción>` - Crear apuesta\n`>mybets` - Ver tus apuestas activas\n`>betstats [@usuario]` - Ver estadísticas de apuestas', inline: false },
                 //Economy
-                { name: '📋 Economía', value: '`>balance [@usuario]` - Ver tu dinero y nivel (o el de otro usuario)\n`>daily` - Reclamar' + `(${this.economy.config.dailyAmount}±${this.economy.config.dailyVariation} ${this.economy.config.currencySymbol})` + 'diarios\n`>work [tipo]` - Trabajar para ganar dinero (delivery, programmer, doctor, criminal)\n`>level [@usuario]` - Ver información detallada de nivel\n`>pay @usuario <cantidad>` - Transferir dinero a otro usuario\n`>top [money/level]` - Ver los rankings del servidor', inline: false},
+                { name: '📋 Economía', value: '`>balance [@usuario]` - Ver tu dinero y nivel (o el de otro usuario)\n`>daily` - Reclamar' + `(${this.economy.config.dailyAmount}±${this.economy.config.dailyVariation} ${this.economy.config.currencySymbol})` + 'diarios\n`>work [tipo]` - Trabajar para ganar dinero (delivery, programmer, doctor, criminal)\n`>level [@usuario]` - Ver información detallada de nivel\n`>pay @usuario <cantidad>` - Transferir dinero a otro usuario\n`>top [money/level]` - Ver los rankings del servidor\n`>robar @usuario` - Robar dinero de otro usuario', inline: false},
                 // Minijuegos
                 { name: '🎮 Minijuegos', value: '`>games` - Ver lista de minijuegos', inline: false },
 /*                // Eventos
