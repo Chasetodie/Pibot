@@ -1963,7 +1963,7 @@ class MinigamesSystem {
             )
             .setTimestamp();
     
-        await gameMessage.reply({ embeds: [embed] });
+        await gameMessage.channel.send({ embeds: [embed] });
     }
 
 async handleCancelRussian(message) {
@@ -1990,7 +1990,7 @@ async handleCancelRussian(message) {
         clearTimeout(game.joinTimeout);
     }
     
-    await this.cancelRussianRoulette(game, null, 'Cancelada por el creador');
+    await this.cancelRussianRoulette(game, message, 'Cancelada por el creador');
     await message.reply('✅ Partida cancelada exitosamente.');
 }
     
