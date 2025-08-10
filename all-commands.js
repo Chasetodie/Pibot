@@ -989,7 +989,7 @@ class AllCommands {
             }
             
             // Auto-finalizar si llegó al máximo
-            if (clickResult.clicks >= economySystem.robberyConfig.maxClicks) {
+            if (clickResult.clicks >= this.economy.robberyConfig.maxClicks) {
                 collector.stop('max_clicks');
             }
         });
