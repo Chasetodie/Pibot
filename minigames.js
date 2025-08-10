@@ -1581,7 +1581,7 @@ class MinigamesSystem {
             .setTimestamp()
             .setFooter({ text: 'El primer jugador tiene 20 segundos para disparar...' });
     
-        await gameMessage.edit({ embeds: [embed] });
+        await gameMessage.reply({ embeds: [embed] });
         
         setTimeout(() => this.nextTurn(game, gameMessage.client), 3000);
     }
@@ -1625,7 +1625,7 @@ class MinigamesSystem {
         try {
             const channel = await client.channels.fetch(game.channelId);
             const gameMessage = await channel.messages.fetch(game.messageId);
-            await gameMessage.edit({ embeds: [embed] });
+            await gameMessage.reply({ embeds: [embed] });
         } catch (error) {
             console.error('Error actualizando mensaje del juego:', error);
         }   
@@ -1720,7 +1720,7 @@ class MinigamesSystem {
         try {
             const channel = await client.channels.fetch(game.channelId);
             const gameMessage = await channel.messages.fetch(game.messageId);
-            await gameMessage.edit({ embeds: [embed] });
+            await gameMessage.reply({ embeds: [embed] });
         } catch (error) {
             console.error('Error actualizando mensaje del juego: ', error);
         }
@@ -1744,7 +1744,7 @@ class MinigamesSystem {
         try {
             const channel = await client.channels.fetch(game.channelId);
             const gameMessage = await channel.messages.fetch(game.messageId);
-            await gameMessage.edit({ embeds: [embed] });
+            await gameMessage.reply({ embeds: [embed] });
         } catch (error) {
             console.error('Error actualizando mensaje del juego:', error);
         }
@@ -1815,7 +1815,7 @@ class MinigamesSystem {
         try {
             const channel = await client.channels.fetch(game.channelId);
             const gameMessage = await channel.messages.fetch(game.messageId);
-            await gameMessage.edit({ embeds: [embed] });
+            await gameMessage.reply({ embeds: [embed] });
         } catch (error) {
             console.error('Error actualizando mensaje final del juego:', error);
         }
@@ -1839,7 +1839,7 @@ class MinigamesSystem {
             )
             .setTimestamp();
     
-        await gameMessage.edit({ embeds: [embed] });
+        await gameMessage.reply({ embeds: [embed] });
     }
     
     async processCommand(message) {
