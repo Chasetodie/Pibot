@@ -25,6 +25,22 @@ class EconomySystem {
 
         // Referencia a la colección de usuarios
         this.usersCollection = admin.firestore().collection('users');    
+
+        // Configuración de robos
+        this.robberyConfig = {
+            cooldown: 2 * 60 * 60 * 1000, // 2 horas de cooldown
+            minStealPercentage: 10, // Mínimo 10%
+            maxStealPercentage: 20, // Máximo 20%
+            buttonTimeLimit: 30000, // 30 segundos para hacer clicks
+            maxClicks: 50, // Máximo de clicks
+            failChance: 0.3, // 30% de chance de fallar
+            penaltyPercentage: 15, // 15% de penalización si fallas
+            levelRequirement: 5, // Nivel mínimo para robar
+            minTargetBalance: 500, // El objetivo debe tener al menos 500 coins
+        };
+        
+        // Map para trackear robos activos
+        this.activeRobberies = new Map();
     }
 
     // Inicializar Firebase
@@ -65,6 +81,7 @@ class EconomySystem {
                     totalXp: 0,
                     lastDaily: 0,
                     lastWork: 0,
+                    lastRobbery: 0,
                     lastNameWork: "",
                     messagesCount: 0,
                     items: {},
@@ -75,6 +92,12 @@ class EconomySystem {
                         workCount: 0,
                         gamesPlayed: 0,
                         lotteryWins: 0,
+                        // Puedes agregar estadísticas de robos si quieres
+                        robberies: 0,
+                        robberiesSuccessful: 0,
+                        moneyStolen: 0,
+                        timesRobbed: 0,
+                        moneyLostToRobbers: 0
                     },
                     betStats: {
                         wins: 0,
@@ -752,6 +775,231 @@ class EconomySystem {
             timeLeft: canWorkResult.timeLeft || 0, // Solo si es cooldown
             canWorkResult: canWorkResult               
         };
+    }
+
+    // Verificar si puede robar
+    async canRob(robberId, targetId) {
+        const robber = await this.getUser(robberId);
+        const target = await this.getUser(targetId);
+        
+        // No puede robarse a sí mismo
+        if (robberId === targetId) {
+            return { canRob: false, reason: 'self_target' };
+        }
+        
+        // Verificar nivel mínimo
+        if (robber.level < this.robberyConfig.levelRequirement) {
+            return { 
+                canRob: false, 
+                reason: 'level_too_low', 
+                requiredLevel: this.robberyConfig.levelRequirement 
+            };
+        }
+        
+        // Verificar que el objetivo tenga suficiente dinero
+        if (target.balance < this.robberyConfig.minTargetBalance) {
+            return { 
+                canRob: false, 
+                reason: 'target_too_poor', 
+                minBalance: this.robberyConfig.minTargetBalance 
+            };
+        }
+        
+        // Verificar cooldown
+        const lastRobbery = robber.lastRobbery || 0;
+        const now = Date.now();
+        
+        if (now - lastRobbery < this.robberyConfig.cooldown) {
+            const timeLeft = this.robberyConfig.cooldown - (now - lastRobbery);
+            return { canRob: false, reason: 'cooldown', timeLeft: timeLeft };
+        }
+        
+        // Verificar si ya hay un robo activo para este usuario
+        if (this.activeRobberies.has(robberId)) {
+            return { canRob: false, reason: 'already_robbing' };
+        }
+        
+        return { canRob: true };
+    }
+    
+    // Iniciar un robo
+    async startRobbery(robberId, targetId) {
+        const canRobResult = await this.canRob(robberId, targetId);
+        
+        if (!canRobResult.canRob) {
+            return canRobResult;
+        }
+        
+        // Crear datos del robo activo
+        const robberyData = {
+            robberId: robberId,
+            targetId: targetId,
+            startTime: Date.now(),
+            clicks: 0,
+            maxClicks: this.robberyConfig.maxClicks,
+            timeLimit: this.robberyConfig.buttonTimeLimit
+        };
+        
+        this.activeRobberies.set(robberId, robberyData);
+        
+        // Auto-cleanup después del tiempo límite
+        setTimeout(() => {
+            if (this.activeRobberies.has(robberId)) {
+                this.activeRobberies.delete(robberId);
+            }
+        }, this.robberyConfig.buttonTimeLimit + 5000); // +5 segundos de gracia
+        
+        return {
+            success: true,
+            robberyData: robberyData
+        };
+    }
+    
+    // Procesar click en botón de robo
+    async processRobberyClick(robberId) {
+        const robberyData = this.activeRobberies.get(robberId);
+        
+        if (!robberyData) {
+            return { success: false, reason: 'no_active_robbery' };
+        }
+        
+        const now = Date.now();
+        const timeElapsed = now - robberyData.startTime;
+        
+        // Verificar si se acabó el tiempo
+        if (timeElapsed > this.robberyConfig.buttonTimeLimit) {
+            this.activeRobberies.delete(robberId);
+            return { success: false, reason: 'time_expired' };
+        }
+        
+        // Incrementar clicks
+        robberyData.clicks++;
+        
+        // Verificar si llegó al máximo
+        if (robberyData.clicks >= this.robberyConfig.maxClicks) {
+            // Finalizar robo automáticamente
+            return await this.finishRobbery(robberId);
+        }
+        
+        return {
+            success: true,
+            clicks: robberyData.clicks,
+            maxClicks: robberyData.maxClicks,
+            timeLeft: this.robberyConfig.buttonTimeLimit - timeElapsed
+        };
+    }
+    
+    // Finalizar robo y calcular resultado
+    async finishRobbery(robberId) {
+        const robberyData = this.activeRobberies.get(robberId);
+        
+        if (!robberyData) {
+            return { success: false, reason: 'no_active_robbery' };
+        }
+        
+        this.activeRobberies.delete(robberId);
+        
+        const robber = await this.getUser(robberId);
+        const target = await this.getUser(robberyData.targetId);
+        
+        // Calcular probabilidad de éxito basada en clicks
+        const clickEfficiency = Math.min(robberyData.clicks / this.robberyConfig.maxClicks, 1);
+        const baseSuccessChance = 1 - this.robberyConfig.failChance;
+        const finalSuccessChance = baseSuccessChance + (clickEfficiency * 0.3); // Bonus por clicks
+        
+        const success = Math.random() < finalSuccessChance;
+        
+        // Actualizar cooldown del ladrón
+/*        const robberUpdateData = {
+            lastRobbery: Date.now()
+        };*/
+        
+        if (success) {
+            // ROBO EXITOSO
+            // Calcular cantidad robada basada en clicks
+            const minSteal = this.robberyConfig.minStealPercentage / 100;
+            const maxSteal = this.robberyConfig.maxStealPercentage / 100;
+            
+            const stealPercentage = minSteal + (clickEfficiency * (maxSteal - minSteal));
+            const stolenAmount = Math.floor(target.balance * stealPercentage);
+            
+            if (stolenAmount <= 0) {
+                return { success: false, reason: 'target_too_poor_now' };
+            }
+            
+            // Actualizar balances
+/*            robberUpdateData.balance = robber.balance + stolenAmount;
+            robberUpdateData['stats.totalEarned'] = (robber.stats.totalEarned || 0) + stolenAmount;
+            
+            const targetUpdateData = {
+                balance: Math.max(0, target.balance - stolenAmount),
+                'stats.totalSpent': (target.stats.totalSpent || 0) + stolenAmount
+            };
+            
+            await this.updateUser(robberId, robberUpdateData);
+            await this.updateUser(robberyData.targetId, targetUpdateData);*/
+            
+            console.log(`🦹 Robo exitoso: ${robberId} robó ${stolenAmount} ${this.config.currencySymbol} a ${robberyData.targetId}`);
+            
+            return {
+                success: true,
+                robberySuccess: true,
+                stolenAmount: stolenAmount,
+                clicks: robberyData.clicks,
+                efficiency: Math.round(clickEfficiency * 100),
+                robberNewBalance: robber.balance + stolenAmount,
+                targetNewBalance: Math.max(0, target.balance - stolenAmount)
+            };
+            
+        } else {
+            // ROBO FALLIDO
+            const penalty = Math.floor(robber.balance * (this.robberyConfig.penaltyPercentage / 100));
+            
+/*            robberUpdateData.balance = Math.max(0, robber.balance - penalty);
+            robberUpdateData['stats.totalSpent'] = (robber.stats.totalSpent || 0) + penalty;
+            
+            await this.updateUser(robberId, robberUpdateData);*/
+            
+            console.log(`🚨 Robo fallido: ${robberId} perdió ${penalty} ${this.config.currencySymbol} como penalización`);
+            
+            return {
+                success: true,
+                robberySuccess: false,
+                penalty: penalty,
+                clicks: robberyData.clicks,
+                efficiency: Math.round(clickEfficiency * 100),
+                robberNewBalance: Math.max(0, robber.balance - penalty)
+            };
+        }
+    }
+    
+    // Obtener estadísticas de robo activo
+    getRobberyStats(robberId) {
+        const robberyData = this.activeRobberies.get(robberId);
+        
+        if (!robberyData) {
+            return null;
+        }
+        
+        const now = Date.now();
+        const timeElapsed = now - robberyData.startTime;
+        const timeLeft = Math.max(0, this.robberyConfig.buttonTimeLimit - timeElapsed);
+        
+        return {
+            clicks: robberyData.clicks,
+            maxClicks: robberyData.maxClicks,
+            timeLeft: timeLeft,
+            efficiency: Math.round((robberyData.clicks / robberyData.maxClicks) * 100)
+        };
+    }
+    
+    // Cancelar robo activo (útil para comandos de administrador)
+    cancelRobbery(robberId) {
+        if (this.activeRobberies.has(robberId)) {
+            this.activeRobberies.delete(robberId);
+            return true;
+        }
+        return false;
     }
 }
 
