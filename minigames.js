@@ -1667,8 +1667,7 @@ class MinigamesSystem {
 
         try {
             const channel = await client.channels.fetch(game.channelId);
-            const gameMessage = await channel.messages.fetch(game.messageId);
-            await gameMessage.reply({ embeds: [embed] });
+            await channel.send({ embeds: [embed] });
         } catch (error) {
             console.error('Error actualizando mensaje del juego:', error);
         }   
@@ -1787,8 +1786,7 @@ class MinigamesSystem {
 
         try {
             const channel = await client.channels.fetch(game.channelId);
-            const gameMessage = await channel.messages.fetch(game.messageId);
-            await gameMessage.edit({ embeds: [embed] });
+            await channel.send({ embeds: [embed] });
             console.log(`gameMessage: ${gameMessage} game.messageId: ${game.messageId} game.channelId: ${game.channelId} game: ${game}`);
         } catch (error) {
             console.error('Error actualizando mensaje del juego: ', error);
@@ -1847,8 +1845,7 @@ class MinigamesSystem {
     
         try {
             const channel = await client.channels.fetch(game.channelId);
-            const gameMessage = await channel.messages.fetch(game.messageId);
-            await gameMessage.reply({ embeds: [embed] });
+            await channel.send({ embeds: [embed] });
         } catch (error) {
             console.error('Error actualizando mensaje del juego:', error);
         }
@@ -1871,8 +1868,7 @@ class MinigamesSystem {
 
         try {
             const channel = await client.channels.fetch(game.channelId);
-            const gameMessage = await channel.messages.fetch(game.messageId);
-            await gameMessage.reply({ embeds: [embed] });
+            await channel.send({ embeds: [embed] });
         } catch (error) {
             console.error('Error actualizando mensaje del juego:', error);
         }
@@ -1942,8 +1938,7 @@ class MinigamesSystem {
 
         try {
             const channel = await client.channels.fetch(game.channelId);
-            const gameMessage = await channel.messages.fetch(game.messageId);
-            await gameMessage.reply({ embeds: [embed] });
+            await channel.send({ embeds: [embed] });
         } catch (error) {
             console.error('Error actualizando mensaje final del juego:', error);
         }
@@ -2016,6 +2011,10 @@ class MinigamesSystem {
                 case '>start': // ← NUEVO COMANDO
                 case '>iniciar':
                     await this.handleStartRussian(message);
+                    break;
+                case '>cancel':
+                case '>cancelar:
+                    await this.cancelRussianRoulette(message, args);
                     break;
                 case '>games':
                 case '>minigames':
