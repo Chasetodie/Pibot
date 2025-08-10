@@ -1580,10 +1580,10 @@ class MinigamesSystem {
     
         await gameMessage.edit({ embeds: [embed] });
         
-        setTimeout(() => this.nextTurn(game), 3000);
+        setTimeout(() => this.nextTurn(game, gameMessage.client), 3000);
     }
     
-    async nextTurn(game) {
+    async nextTurn(game, client) {
         if (game.phase !== 'playing') return;
     
         // Verificar si el juego terminó
@@ -1618,16 +1618,20 @@ class MinigamesSystem {
                 { name: '🎮 Acción', value: `<@${currentPlayer.id}> escribe \`>shoot\` para disparar`, inline: true }
             )
             .setTimestamp();
+
+        try {
+            const channel = await client.channels.fetch(game.channelId);
+            const gameMessage = await channel.messages.fetch(game.messageId);
+            await gameMessage.edit({ embeds: [embed] });
+        } catch (error) {
+            console.error('Error actualizando mensaje del juego:', error);
+        }   
     
-        const channel = await game.client?.channels?.fetch(game.channelId) || 
-                       await (await game.players[0].client?.channels?.fetch(game.channelId));
-        const gameMessage = await channel.messages.fetch(game.messageId);
-        await gameMessage.edit({ embeds: [embed] });
     
         // Timer para el turno
         game.turnTimeout = setTimeout(async () => {
             if (game.phase === 'playing') {
-                await this.forceShoot(game, currentPlayer.id);
+                await this.forceShoot(game, currentPlayer.id, client);
             }
         }, this.config.russianRoulette.turnTime);
     }
@@ -1649,10 +1653,10 @@ class MinigamesSystem {
             clearTimeout(game.turnTimeout);
         }
     
-        await this.executeShot(game, message.author.id);
+        await this.executeShot(game, message.author.id, message.client);
     }
     
-    async executeShot(game, playerId) {
+    async executeShot(game, playerId, client) {
         const currentPlayer = game.players.find(p => p.id === playerId);
         if (!currentPlayer) return;
     
@@ -1709,20 +1713,23 @@ class MinigamesSystem {
                     }
                 );
         }
-    
-        const channel = await message.client?.channels?.fetch(game.channelId) || 
-                       (await game.players[0].client?.channels?.fetch(game.channelId));
-        const gameMessage = await channel.messages.fetch(game.messageId);
-        await gameMessage.edit({ embeds: [embed] });
+
+        try {
+            const channel = await client.channels.fetch(game.channelId);
+            const gameMessage = await channel.messages.fetch(game.messageId);
+            await gameMessage.edit({ embeds: [embed] });
+        } catch (error) {
+            console.error('Error actualizando mensaje del juego: ', error);
+        }
     
         // Pasar al siguiente turno después de un delay
         setTimeout(async () => {
             game.currentPlayerIndex = (game.currentPlayerIndex + 1) % game.players.length;
-            await this.nextTurn(game);
+            await this.nextTurn(game, client);
         }, 4000);
     }
     
-    async forceShoot(game, playerId) {
+    async forceShoot(game, playerId, client) {
         const currentPlayer = game.players.find(p => p.id === playerId);
         if (!currentPlayer) return;
     
@@ -1730,15 +1737,19 @@ class MinigamesSystem {
             .setTitle('⏰ ¡Tiempo Agotado!')
             .setDescription(`${currentPlayer.displayName} no disparó a tiempo. Se dispara automáticamente...`)
             .setColor('#FF8C00');
+
+        try {
+            const channel = await client.channels.fetch(game.channelId);
+            const gameMessage = await channel.messages.fetch(game.messageId);
+            await gameMessage.edit({ embeds: [embed] });
+        } catch (error) {
+            console.error('Error actualizando mensaje del juego:', error);
+        }
     
-        const channel = await game.client?.channels?.fetch(game.channelId);
-        const gameMessage = await channel.messages.fetch(game.messageId);
-        await gameMessage.edit({ embeds: [embed] });
-    
-        setTimeout(() => this.executeShot(game, playerId), 2000);
+        setTimeout(() => this.executeShot(game, playerId, client), 2000);
     }
     
-    async endRussianRoulette(game) {
+    async endRussianRoulette(game, client) {
         game.phase = 'finished';
         this.activeGames.delete(`russian_${game.channelId}`);
     
@@ -1797,10 +1808,14 @@ class MinigamesSystem {
                 //await this.economy.addMoney(player.id, game.betAmount, 'russian_roulette_refund');
             }
         }
-    
-        const channel = await game.client?.channels?.fetch(game.channelId);
-        const gameMessage = await channel.messages.fetch(game.messageId);
-        await gameMessage.edit({ embeds: [embed] });
+
+        try {
+            const channel = await client.channels.fetch(game.channelId);
+            const gameMessage = await channel.messages.fetch(game.messageId);
+            await gameMessage.edit({ embeds: [embed] });
+        } catch (error) {
+            console.error('Error actualizando mensaje final del juego:', error);
+        }
     }
     
     async cancelRussianRoulette(game, gameMessage, reason) {
