@@ -1728,7 +1728,9 @@ class MinigamesSystem {
     
         const embed = new EmbedBuilder()
             .setTimestamp();
-    
+
+        console.log('ez2');
+        
         if (isBullet) {
             // ¡BANG! El jugador muere
             currentPlayer.alive = false;
@@ -1787,12 +1789,15 @@ class MinigamesSystem {
             const channel = await client.channels.fetch(game.channelId);
             const gameMessage = await channel.messages.fetch(game.messageId);
             await gameMessage.edit({ embeds: [embed] });
+            console.log('ez3');
         } catch (error) {
             console.error('Error actualizando mensaje del juego: ', error);
         }
     
         // VERIFICAR SI EL JUEGO DEBE TERMINAR
         const alivePlayers = game.players.filter(p => p.alive);
+
+        console.log('ez4');
         
         // Si solo queda 1 jugador vivo, terminar
         if (alivePlayers.length <= 1) {
@@ -1801,6 +1806,8 @@ class MinigamesSystem {
             }, 4000);
             return;
         }
+
+        console.log('ez5');
         
         // Si llegamos al 6to disparo y hay 2+ jugadores, recargar revólver
         if (game.currentShot === 6 && alivePlayers.length > 1) {
@@ -1809,6 +1816,8 @@ class MinigamesSystem {
             }, 4000);
             return;
         }
+
+        console.log('ez6');
     }
 
     async reloadRevolver(game, client) {
