@@ -72,7 +72,7 @@ class MinigamesSystem {
             russianRoulette: {
                 minBet: 200,
                 maxBet: 5000,
-                cooldown: 300000, // 5 minutos entre juegos
+                cooldown: 90000, // 5 minutos entre juegos
                 minPlayers: 2,
                 maxPlayers: 6,
                 joinTime: 30000, // 30 segundos para unirse
@@ -1427,7 +1427,7 @@ class MinigamesSystem {
         this.activeGames.set(gameKey, game);
     
         // Reservar dinero del creador
-        await this.economy.removeMoney(userId, betAmount, 'russian_roulette_bet');
+//        await this.economy.removeMoney(userId, betAmount, 'russian_roulette_bet');
     
         const embed = new EmbedBuilder()
             .setTitle('🔫 Ruleta Rusa - Nueva Partida')
@@ -1501,7 +1501,7 @@ class MinigamesSystem {
         game.pot += betAmount;
     
         // Reservar dinero
-        await this.economy.removeMoney(userId, betAmount, 'russian_roulette_bet');
+    //    await this.economy.removeMoney(userId, betAmount, 'russian_roulette_bet');
     
         // Actualizar embed
         const embed = new EmbedBuilder()
@@ -1686,13 +1686,13 @@ class MinigamesSystem {
             this.setCooldown(playerId, 'russianRoulette');
     
             // Actualizar estadísticas
-            const updateData = { 'stats.gamesPlayed': ((await this.economy.getUser(playerId)).stats.gamesPlayed || 0) + 1 };
-            await this.economy.updateUser(playerId, updateData);
+  //          const updateData = { 'stats.gamesPlayed': ((await this.economy.getUser(playerId)).stats.gamesPlayed || 0) + 1 };
+  //          await this.economy.updateUser(playerId, updateData);
     
-            if (this.achievements) {
-                await this.achievements.updateStats(playerId, 'game_played');
-                await this.achievements.updateStats(playerId, 'game_lost');
-            }
+  //          if (this.achievements) {
+  //              await this.achievements.updateStats(playerId, 'game_played');
+  //              await this.achievements.updateStats(playerId, 'game_lost');
+  //          }
         } else {
             // ¡CLICK! Está vivo
             embed.setTitle('🔄 ¡CLICK! 🔄')
@@ -1754,19 +1754,19 @@ class MinigamesSystem {
             // Un ganador
             const winner = survivors[0];
             
-            await this.economy.addMoney(winner.id, winnerPrize, 'russian_roulette_win');
+//            await this.economy.addMoney(winner.id, winnerPrize, 'russian_roulette_win');
             
             // Establecer cooldown para el ganador
             this.setCooldown(winner.id, 'russianRoulette');
     
             // Actualizar estadísticas del ganador
-            const updateData = { 'stats.gamesPlayed': ((await this.economy.getUser(winner.id)).stats.gamesPlayed || 0) + 1 };
-            await this.economy.updateUser(winner.id, updateData);
+//            const updateData = { 'stats.gamesPlayed': ((await this.economy.getUser(winner.id)).stats.gamesPlayed || 0) + 1 };
+//            await this.economy.updateUser(winner.id, updateData);
     
-            if (this.achievements) {
-                await this.achievements.updateStats(winner.id, 'game_played');
-                await this.achievements.updateStats(winner.id, 'game_won');
-            }
+//            if (this.achievements) {
+//                await this.achievements.updateStats(winner.id, 'game_played');
+//                await this.achievements.updateStats(winner.id, 'game_won');
+//            }
     
             embed.setTitle('🏆 ¡TENEMOS UN GANADOR! 🏆')
                 .setDescription(`🎉 **¡${winner.displayName} sobrevivió a la ruleta rusa!**`)
@@ -1794,7 +1794,7 @@ class MinigamesSystem {
     
             // Devolver dinero a todos
             for (const player of game.players) {
-                await this.economy.addMoney(player.id, game.betAmount, 'russian_roulette_refund');
+                //await this.economy.addMoney(player.id, game.betAmount, 'russian_roulette_refund');
             }
         }
     
@@ -1809,7 +1809,7 @@ class MinigamesSystem {
     
         // Devolver dinero a todos los jugadores
         for (const player of game.players) {
-            await this.economy.addMoney(player.id, game.betAmount, 'russian_roulette_refund');
+            //await this.economy.addMoney(player.id, game.betAmount, 'russian_roulette_refund');
         }
     
         const embed = new EmbedBuilder()
