@@ -1789,7 +1789,7 @@ class MinigamesSystem {
             const channel = await client.channels.fetch(game.channelId);
             const gameMessage = await channel.messages.fetch(game.messageId);
             await gameMessage.edit({ embeds: [embed] });
-            console.log('ez3');
+            console.log(`gameMessage: ${gameMessage} game.messageId: ${game.messageId} game.channelId: ${game.channelId} game: ${game}`);
         } catch (error) {
             console.error('Error actualizando mensaje del juego: ', error);
         }
@@ -1819,6 +1819,11 @@ class MinigamesSystem {
             return;
         }
 
+        // Pasar al siguiente turno después de un delay
+        setTimeout(async () => {
+            game.currentPlayerIndex = (game.currentPlayerIndex + 1) % game.players.length;
+            await this.nextTurn(game, client);
+        }, 4000);
         console.log('ez7');
     }
 
