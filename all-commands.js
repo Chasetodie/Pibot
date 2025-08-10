@@ -1009,9 +1009,6 @@ class AllCommands {
         collector.on('end', async (collected, reason) => {
             try {
                 console.log(`🔍 Finalizando robo - Razón: ${reason}, Collector: ${collected.size} interactions`);
-
-                // Finalizar robo y obtener resultado
-                const finalResult = await this.economy.finishRobbery(robberId);
                 
                 // Verificar si el robo aún existe antes de finalizarlo
                 const robberyStats = this.economy.getRobberyStats(robberId);
@@ -1021,7 +1018,7 @@ class AllCommands {
                 
                 if (robberyStats && (reason === 'max_clicks' || reason === 'time')) {
                     // Finalizar robo normalmente
-                    finalResult = await economySystem.finishRobbery(robberId);
+                    finalResult = await this.economy.finishRobbery(robberId);
                 } else if (reason === 'finished') {
                     // El robo ya fue finalizado en el click handler
                     console.log('⚠️ Robo ya finalizado previamente');
@@ -1029,7 +1026,7 @@ class AllCommands {
                 } else {
                     // Timeout o cancelación - finalizar manualmente
                     console.log('⏰ Finalizando robo por timeout');
-                    finalResult = await economySystem.finishRobbery(robberId);
+                    finalResult = await this.economy.finishRobbery(robberId);
                 }
                 
                 if (!finalResult || !finalResult.success) {
