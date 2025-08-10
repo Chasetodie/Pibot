@@ -1072,10 +1072,6 @@ class AllCommands {
                     break;
                 case '>pay':
                 case '>transfer':
-                    if (result.reason === 'being_robbed') {
-    return message.reply(`❌ No puedes transferir dinero mientras te están robando! Tiempo restante: ${Math.ceil(result.timeLeft/1000)}s`);
-                    }
-                    
                     await this.handlePay(message);
                     break;
                 case '>top':
