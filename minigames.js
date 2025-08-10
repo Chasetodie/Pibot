@@ -1130,7 +1130,7 @@ class MinigamesSystem {
             const winAmount = Math.floor(betAmount * multiplier);
             const profit = winAmount - betAmount;
             
-            await this.economy.addMoney(userId, profit, 'roulette_win');
+//            await this.economy.addMoney(userId, profit, 'roulette_win');
 //            await this.economy.updateUser(userId, updateData);
     
             // *** ACTUALIZAR ESTADÍSTICAS DE ACHIEVEMENTS ***
@@ -1158,7 +1158,7 @@ class MinigamesSystem {
                 });
             }
         } else {
-            await this.economy.removeMoney(userId, betAmount, 'roulette_loss');
+  //          await this.economy.removeMoney(userId, betAmount, 'roulette_loss');
     /*        await this.economy.updateUser(userId, updateData);
     
             // *** ACTUALIZAR ESTADÍSTICAS DE ACHIEVEMENTS ***
