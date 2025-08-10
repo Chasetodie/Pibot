@@ -84,7 +84,7 @@ const events = new EventsSystem(economy);*/
 const betting = new BettingSystem(economy);
 
 // Instancia del sistema de comandos mejorados
-const allCommands = new AllCommands(economy, achievements/*, shop*/, betting/*, events*/);
+const allCommands = new AllCommands(economy/*, achievements, shop*/, betting/*, events*/);
 
 economy.achievements = achievements;
 minigames.achievements = achievements;
@@ -470,6 +470,7 @@ client.login(process.env.TOKEN).then(() => {
     console.error('❌ Error en el login:', error);
 
 });
+
 
 
 
