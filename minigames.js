@@ -2030,7 +2030,7 @@ async handleCancelRussian(message) {
                 case '>lottery':
                 case '>loteria':
                 case '>lotto':
-                    await this.handleLottery(message);
+                    await this.handleLottery(message, args);
                     break;
                 case '>blackjack':
                 case '>bj':
