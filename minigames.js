@@ -1720,7 +1720,7 @@ class MinigamesSystem {
         try {
             const channel = await client.channels.fetch(game.channelId);
             const gameMessage = await channel.messages.fetch(game.messageId);
-            await gameMessage.reply({ embeds: [embed] });
+            await gameMessage.edit({ embeds: [embed] });
         } catch (error) {
             console.error('Error actualizando mensaje del juego: ', error);
         }
