@@ -52,7 +52,7 @@ class MinigamesSystem {
             roulette: {
                 minBet: 100,
                 maxBet: 20000,
-                cooldown: 45000, // 45 segundos entre juegos
+                cooldown: 0/*45000*/, // 45 segundos entre juegos
                 payouts: {
                     straight: 35,    // Número exacto: x35
                     red: 1.95,       // Rojo: x1.95
