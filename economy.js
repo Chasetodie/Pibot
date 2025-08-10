@@ -932,9 +932,9 @@ class EconomySystem {
             const success = Math.random() < finalSuccessChance;
             
             // Actualizar cooldown del ladrón
-    /*        const robberUpdateData = {
+            const robberUpdateData = {
                 lastRobbery: Date.now()
-            };*/
+            };
             
             if (success) {
                 // ROBO EXITOSO
@@ -951,7 +951,7 @@ class EconomySystem {
                 }
                 
                 // Actualizar balances
-    /*            robberUpdateData.balance = robber.balance + stolenAmount;
+                robberUpdateData.balance = robber.balance + stolenAmount;
                 robberUpdateData['stats.totalEarned'] = (robber.stats.totalEarned || 0) + stolenAmount;
                 
                 const targetUpdateData = {
@@ -960,7 +960,7 @@ class EconomySystem {
                 };
                 
                 await this.updateUser(robberId, robberUpdateData);
-                await this.updateUser(robberyData.targetId, targetUpdateData);*/
+                await this.updateUser(robberyData.targetId, targetUpdateData);
                 
                 console.log(`🦹 Robo exitoso: ${robberId} robó ${stolenAmount} ${this.config.currencySymbol} a ${robberyData.targetId}`);
                 
@@ -979,10 +979,10 @@ class EconomySystem {
                 console.log(`❌ Robo fallido!`);
                 const penalty = Math.floor(robber.balance * (this.robberyConfig.penaltyPercentage / 100));
                 
-    /*            robberUpdateData.balance = Math.max(0, robber.balance - penalty);
+                robberUpdateData.balance = Math.max(0, robber.balance - penalty);
                 robberUpdateData['stats.totalSpent'] = (robber.stats.totalSpent || 0) + penalty;
                 
-                await this.updateUser(robberId, robberUpdateData);*/
+                await this.updateUser(robberId, robberUpdateData);
                 
                 console.log(`🚨 Robo fallido: ${robberId} perdió ${penalty} ${this.config.currencySymbol} como penalización`);
                 
