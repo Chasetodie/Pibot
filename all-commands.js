@@ -1,12 +1,12 @@
 const { EmbedBuilder } = require('discord.js');
 
 class AllCommands {
-    constructor(economySystem, achievementsSystem/*, shopSystem*/, bettingSystem/*, eventsSystem*/) {
+    constructor(economySystem/*, shopSystem*/, bettingSystem, achievementsSystem/*, eventsSystem*/) {
         this.economy = economySystem;
-        this.achievements = achievementsSystem;
 /*        this.shop = shopSystem;*/
         this.betting = bettingSystem;
 /*        this.events = eventsSystem;*/
+        this.achievements = achievementsSystem;
     }
 
     // Formatear tiempo restante para daily
