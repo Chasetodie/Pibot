@@ -204,6 +204,17 @@ class EconomySystem {
 
     // Transferir dinero entre usuarios
     async transferMoney(fromUserId, toUserId, amount) {
+        // *** NUEVA VERIFICACIÓN: Prevenir transferencias durante robos ***
+    const robberyCheck = this.isBeingRobbed(fromUserId);
+    if (robberyCheck.beingRobbed) {
+        return { 
+            success: false, 
+            reason: 'being_robbed',
+            timeLeft: robberyCheck.timeLeft,
+            robberId: robberyCheck.robberId
+        };
+    }
+        
         const fromUser = await this.getUser(fromUserId);
         const toUser = await this.getUser(toUserId);
         
@@ -777,6 +788,30 @@ class EconomySystem {
         };
     }
 
+    // PROBLEMA 1: Prevenir transferencias durante robos activos
+// Agrega este método a tu clase EconomySystem:
+
+// Verificar si un usuario está siendo robado
+isBeingRobbed(userId) {
+    for (const [robberId, robberyData] of this.activeRobberies) {
+        if (robberyData.targetId === userId) {
+            const now = Date.now();
+            const timeElapsed = now - robberyData.startTime;
+            
+            // Solo si el robo está dentro del tiempo límite
+            if (timeElapsed <= this.robberyConfig.buttonTimeLimit) {
+                return {
+                    beingRobbed: true,
+                    robberId: robberId,
+                    timeLeft: this.robberyConfig.buttonTimeLimit - timeElapsed
+                };
+            }
+        }
+    }
+    return { beingRobbed: false };
+}
+    
+
     // Verificar si puede robar
     async canRob(robberId, targetId) {
         const robber = await this.getUser(robberId);
@@ -921,6 +956,17 @@ class EconomySystem {
             const target = await this.getUser(robberyData.targetId);
 
             console.log(`👤 Robber balance: ${robber.balance}, Target balance: ${target.balance}`);
+
+// *** VERIFICACIÓN ADICIONAL: El target aún tiene dinero suficiente ***
+        if (target.balance < this.robberyConfig.minTargetBalance) {
+            console.log(`⚠️ Target ya no tiene suficiente dinero para robar`);
+            return { 
+                success: false, 
+                reason: 'target_too_poor_now',
+                targetBalance: target.balance,
+                minRequired: this.robberyConfig.minTargetBalance
+            };
+        }
             
             // Calcular probabilidad de éxito basada en clicks
             const clickEfficiency = Math.min(robberyData.clicks / this.robberyConfig.maxClicks, 1);
@@ -933,7 +979,8 @@ class EconomySystem {
             
             // Actualizar cooldown del ladrón
             const robberUpdateData = {
-                lastRobbery: Date.now()
+                lastRobbery: Date.now(),
+                'stats.robberies': (robber.stats.robberies || 0) + 1
             };
             
             if (success) {
@@ -953,10 +1000,16 @@ class EconomySystem {
                 // Actualizar balances
                 robberUpdateData.balance = robber.balance + stolenAmount;
                 robberUpdateData['stats.totalEarned'] = (robber.stats.totalEarned || 0) + stolenAmount;
+robberUpdateData['stats.robberiesSuccessful'] = (robber.stats.robberiesSuccessful || 0) + 1;
+            robberUpdateData['stats.moneyStolen'] = (robber.stats.moneyStolen || 0) + stolenAmount;
+                
                 
                 const targetUpdateData = {
                     balance: Math.max(0, target.balance - stolenAmount),
-                    'stats.totalSpent': (target.stats.totalSpent || 0) + stolenAmount
+                    'stats.totalSpent': (target.stats.totalSpent || 0) + stolenAmount,
+                'stats.timesRobbed': (target.stats.timesRobbed || 0) + 1,
+                'stats.moneyLostToRobbers': (target.stats.moneyLostToRobbers || 0) + stolenAmount
+                
                 };
                 
                 await this.updateUser(robberId, robberUpdateData);
@@ -966,12 +1019,17 @@ class EconomySystem {
                 
                 return {
                     success: true,
-                    robberySuccess: true,
-                    stolenAmount: stolenAmount,
-                    clicks: robberyData.clicks,
-                    efficiency: Math.round(clickEfficiency * 100),
-                    robberNewBalance: robber.balance + stolenAmount,
-                    targetNewBalance: Math.max(0, target.balance - stolenAmount)
+                robberySuccess: true,
+                stolenAmount: stolenAmount,
+                clicks: robberyData.clicks,
+                maxClicks: this.robberyConfig.maxClicks,
+                efficiency: Math.round(clickEfficiency * 100),
+                robberOldBalance: robber.balance,
+                robberNewBalance: robber.balance + stolenAmount,
+                targetOldBalance: target.balance,
+                targetNewBalance: Math.max(0, target.balance - stolenAmount),
+                targetId: robberyData.targetId,
+                stealPercentage: Math.round(stealPercentage * 100)
                 };
                 
             } else {
@@ -988,11 +1046,14 @@ class EconomySystem {
                 
                 return {
                     success: true,
-                    robberySuccess: false,
-                    penalty: penalty,
-                    clicks: robberyData.clicks,
-                    efficiency: Math.round(clickEfficiency * 100),
-                    robberNewBalance: Math.max(0, robber.balance - penalty)
+                robberySuccess: false,
+                penalty: penalty,
+                clicks: robberyData.clicks,
+                maxClicks: this.robberyConfig.maxClicks,
+                efficiency: Math.round(clickEfficiency * 100),
+                robberOldBalance: robber.balance,
+                robberNewBalance: Math.max(0, robber.balance - penalty),
+                targetId: robberyData.targetId
                 };
             }
         } catch (error) {
