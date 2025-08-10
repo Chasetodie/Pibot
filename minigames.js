@@ -1442,7 +1442,8 @@ class MinigamesSystem {
                 { name: '👥 Jugadores', value: `${game.players.length}/${this.config.russianRoulette.maxPlayers}`, inline: true },
                 { name: '⏰ Tiempo para Unirse', value: '30 segundos', inline: true },
                 { name: '🎮 Para Unirse', value: `\`>russian ${betAmount}\``, inline: true },       
-                { name: '🚀 Para Iniciar', value: `\`>start\` (solo el creador)`, inline: true } // ← NUEVO
+                { name: '🚀 Para Iniciar', value: `\`>start\` (solo el creador)`, inline: true }, // ← NUEVO
+                { name: '❌ Para Cancelar', value: `\`>cancel\` (solo el creador)`, inline: true }
             )
             .setTimestamp()
             .setFooter({ text: 'El creador puede iniciar con >start cuando haya mínimo 2 jugadores' });
@@ -1964,6 +1965,34 @@ class MinigamesSystem {
     
         await gameMessage.reply({ embeds: [embed] });
     }
+
+async handleCancelRussian(message) {
+    const gameKey = `russian_${message.channel.id}`;
+    const game = this.activeGames.get(gameKey);
+    
+    if (!game) {
+        await message.reply('❌ No hay ninguna partida activa en este canal.');
+        return;
+    }
+    
+    if (game.phase !== 'waiting') {
+        await message.reply('❌ Solo se puede cancelar una partida que esté esperando jugadores.');
+        return;
+    }
+    
+    if (message.author.id !== game.creatorId) {
+        await message.reply('❌ Solo el creador de la partida puede cancelarla.');
+        return;
+    }
+    
+    // Limpiar timeout si existe
+    if (game.joinTimeout) {
+        clearTimeout(game.joinTimeout);
+    }
+    
+    await this.cancelRussianRoulette(game, null, 'Cancelada por el creador');
+    await message.reply('✅ Partida cancelada exitosamente.');
+}
     
     async processCommand(message) {
         if (message.author.bot) return;
@@ -1986,7 +2015,7 @@ class MinigamesSystem {
                 case '>lottery':
                 case '>loteria':
                 case '>lotto':
-                    await this.handleLottery(message, args);
+                    await this.handleLottery(message);
                     break;
                 case '>blackjack':
                 case '>bj':
@@ -2014,7 +2043,7 @@ class MinigamesSystem {
                     break;
                 case '>cancel':
                 case '>cancelar':
-                    await this.cancelRussianRoulette(message, args);
+                    await this.handleCancelRussian(message, args);
                     break;
                 case '>games':
                 case '>minigames':
