@@ -1095,10 +1095,10 @@ class MinigamesSystem {
         // Establecer cooldown
         this.setCooldown(userId, 'roulette');
     
-        const updateData = {
+/*        const updateData = {
             'stats.gamesPlayed': (user.stats.gamesPlayed || 0) + 1
         };
-    
+ */   
         // Crear embed con animación de giro
         const loadingEmbed = new EmbedBuilder()
             .setTitle('🎰 Ruleta - Girando...')
@@ -1131,14 +1131,14 @@ class MinigamesSystem {
             const profit = winAmount - betAmount;
             
             await this.economy.addMoney(userId, profit, 'roulette_win');
-            await this.economy.updateUser(userId, updateData);
+//            await this.economy.updateUser(userId, updateData);
     
             // *** ACTUALIZAR ESTADÍSTICAS DE ACHIEVEMENTS ***
-            if (this.achievements) {
-                await this.achievements.updateStats(userId, 'game_played');
-                await this.achievements.updateStats(userId, 'game_won');
-                await this.achievements.updateStats(userId, 'money_bet', betAmount);
-            }
+  //          if (this.achievements) {
+  //              await this.achievements.updateStats(userId, 'game_played');
+  //              await this.achievements.updateStats(userId, 'game_won');
+  //              await this.achievements.updateStats(userId, 'money_bet', betAmount);
+  //          }
             
             resultEmbed.setDescription(`🎉 **¡GANASTE!**`)
                 .addFields(
@@ -1159,7 +1159,7 @@ class MinigamesSystem {
             }
         } else {
             await this.economy.removeMoney(userId, betAmount, 'roulette_loss');
-            await this.economy.updateUser(userId, updateData);
+    /*        await this.economy.updateUser(userId, updateData);
     
             // *** ACTUALIZAR ESTADÍSTICAS DE ACHIEVEMENTS ***
             if (this.achievements) {
@@ -1167,7 +1167,7 @@ class MinigamesSystem {
                 await this.achievements.updateStats(userId, 'game_lost');
                 await this.achievements.updateStats(userId, 'money_bet', betAmount);
             }
-            
+      */      
             let encouragement = '🎯 ¡La próxima será tu momento de suerte!';
             
             // Mensajes especiales según el número
