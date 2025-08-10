@@ -858,7 +858,7 @@ class AllCommands {
                     errorMessage = `Necesitas ser nivel **${canRobResult.requiredLevel}** para robar`;
                     break;
                 case 'target_too_poor':
-                    errorMessage = `${targetUser.username} necesita tener al menos **${canRobResult.minBalance}** ${economySystem.config.currencySymbol}`;
+                    errorMessage = `${targetUser.username} necesita tener al menos **${canRobResult.minBalance}** ${this.economy.config.currencySymbol}`;
                     break;
                 case 'cooldown':
                     const timeLeft = Math.ceil(canRobResult.timeLeft / (1000 * 60 * 60));
