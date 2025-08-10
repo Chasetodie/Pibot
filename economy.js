@@ -28,7 +28,7 @@ class EconomySystem {
 
         // Configuración de robos
         this.robberyConfig = {
-            cooldown: 2 * 60 * 60 * 1000, // 2 horas de cooldown
+            cooldown: 6 * 60 * 60 * 1000, // 6 horas de cooldown
             minStealPercentage: 10, // Mínimo 10%
             maxStealPercentage: 20, // Máximo 20%
             buttonTimeLimit: 30000, // 30 segundos para hacer clicks
