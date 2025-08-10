@@ -69,6 +69,16 @@ class MinigamesSystem {
                     column3: 2.9     // 3era columna: x2.9
                 }
             },
+            russianRoulette: {
+                minBet: 200,
+                maxBet: 5000,
+                cooldown: 300000, // 5 minutos entre juegos
+                minPlayers: 2,
+                maxPlayers: 6,
+                joinTime: 30000, // 30 segundos para unirse
+                turnTime: 20000, // 20 segundos por turno
+                winnerMultiplier: 0.85 // El ganador se lleva 85% del pot total
+            },
         };
         
         this.cooldowns = new Map(); // Para cooldowns por usuario
@@ -1306,6 +1316,513 @@ class MinigamesSystem {
         
         return `${colorEmoji} **${number}** (${colorName})`;
     }
+
+    // Método principal para manejar la ruleta rusa
+    async handleRussianRoulette(message, args) {
+        const userId = message.author.id;
+        const channelId = message.channel.id;
+        const user = await this.economy.getUser(userId);
+    
+        // Si no hay argumentos suficientes, mostrar ayuda
+        if (args.length < 2) {
+            const embed = new EmbedBuilder()
+                .setTitle('🔫 Ruleta Rusa - Juego Multiplayer')
+                .setDescription('¡El último jugador en pie se lleva todo el dinero!')
+                .addFields(
+                    { name: '📝 Uso', value: '`>russian <cantidad>` - Crear/Unirse a partida', inline: false },
+                    { 
+                        name: '🎯 Cómo Funciona', 
+                        value: '• Cada jugador apuesta la misma cantidad\n• Se carga 1 bala en un revólver de 6 cámaras\n• Los jugadores se turnan para disparar\n• El último vivo gana 85% del pot total\n• La casa se queda con el 15%', 
+                        inline: false 
+                    },
+                    { 
+                        name: '👥 Jugadores', 
+                        value: `Mínimo: ${this.config.russianRoulette.minPlayers}\nMáximo: ${this.config.russianRoulette.maxPlayers}`, 
+                        inline: true 
+                    },
+                    { 
+                        name: '💰 Apuesta', 
+                        value: `Min: ${this.formatNumber(this.config.russianRoulette.minBet)} π-b$\nMax: ${this.formatNumber(this.config.russianRoulette.maxBet)} π-b$`, 
+                        inline: true 
+                    },
+                    { 
+                        name: '⏰ Tiempos', 
+                        value: '30s para unirse\n20s por turno\nCooldown: 5 min', 
+                        inline: true 
+                    },
+                    { 
+                        name: '💡 Ejemplo', 
+                        value: '`>russian 1000` - Apostar 1000 π-b$', 
+                        inline: false 
+                    }
+                )
+                .setColor('#8B0000')
+                .setFooter({ text: '⚠️ Juego de alto riesgo - Solo para valientes' });
+            
+            await message.reply({ embeds: [embed] });
+            return;
+        }
+    
+        const betAmount = parseInt(args[1]);
+    
+        // Validar cantidad de apuesta
+        if (isNaN(betAmount) || betAmount < this.config.russianRoulette.minBet || betAmount > this.config.russianRoulette.maxBet) {
+            await message.reply(`❌ La apuesta debe ser entre ${this.formatNumber(this.config.russianRoulette.minBet)} y ${this.formatNumber(this.config.russianRoulette.maxBet)} π-b$`);
+            return;
+        }
+    
+        // Verificar fondos
+        if (user.balance < betAmount) {
+            await message.reply(`❌ No tienes suficientes π-b Coins. Tu balance: ${this.formatNumber(user.balance)} π-b$`);
+            return;
+        }
+    
+        // Verificar cooldown
+        const cooldownCheck = this.checkCooldown(userId, 'russianRoulette');
+        if (cooldownCheck.onCooldown) {
+            const timeLeft = Math.ceil(cooldownCheck.timeLeft / 60000);
+            await message.reply(`⏰ Debes esperar ${timeLeft} minutos antes de jugar otra vez`);
+            return;
+        }
+    
+        // Verificar si ya hay una partida activa en el canal
+        const gameKey = `russian_${channelId}`;
+        let game = this.activeGames.get(gameKey);
+    
+        if (game) {
+            // Unirse a partida existente
+            await this.joinRussianRoulette(message, game, userId, betAmount);
+        } else {
+            // Crear nueva partida
+            await this.createRussianRoulette(message, userId, betAmount, channelId);
+        }
+    }
+    
+    async createRussianRoulette(message, userId, betAmount, channelId) {
+        const gameKey = `russian_${channelId}`;
+        
+        const game = {
+            channelId,
+            creatorId: userId,
+            betAmount,
+            players: [
+                {
+                    id: userId,
+                    username: message.author.username,
+                    displayName: message.author.displayName || message.author.username,
+                    alive: true,
+                    shots: 0
+                }
+            ],
+            phase: 'waiting', // waiting, playing, finished
+            currentPlayerIndex: 0,
+            bulletPosition: 0, // Se determinará cuando inicie el juego
+            currentShot: 0,
+            pot: betAmount,
+            startTime: Date.now(),
+            turnTimeout: null,
+            joinTimeout: null
+        };
+    
+        this.activeGames.set(gameKey, game);
+    
+        // Reservar dinero del creador
+        await this.economy.removeMoney(userId, betAmount, 'russian_roulette_bet');
+    
+        const embed = new EmbedBuilder()
+            .setTitle('🔫 Ruleta Rusa - Nueva Partida')
+            .setDescription('¡Se ha creado una nueva partida! Otros jugadores pueden unirse.')
+            .setColor('#8B0000')
+            .addFields(
+                { name: '👑 Creador', value: `<@${userId}>`, inline: true },
+                { name: '💰 Apuesta por Jugador', value: `${this.formatNumber(betAmount)} π-b$`, inline: true },
+                { name: '💎 Pot Actual', value: `${this.formatNumber(game.pot)} π-b$`, inline: true },
+                { name: '👥 Jugadores', value: `${game.players.length}/${this.config.russianRoulette.maxPlayers}`, inline: true },
+                { name: '⏰ Tiempo para Unirse', value: '30 segundos', inline: true },
+                { name: '🎮 Para Unirse', value: `\`>russian ${betAmount}\``, inline: true }
+            )
+            .setTimestamp()
+            .setFooter({ text: 'La partida iniciará automáticamente cuando se acabe el tiempo o se llene' });
+    
+        const reply = await message.reply({ embeds: [embed] });
+        game.messageId = reply.id;
+    
+        // Timer para iniciar el juego automáticamente
+        game.joinTimeout = setTimeout(async () => {
+            if (game.players.length >= this.config.russianRoulette.minPlayers) {
+                await this.startRussianRoulette(game, reply);
+            } else {
+                await this.cancelRussianRoulette(game, reply, 'No se unieron suficientes jugadores');
+            }
+        }, this.config.russianRoulette.joinTime);
+    }
+    
+    async joinRussianRoulette(message, game, userId, betAmount) {
+        // Verificar si el juego ya empezó
+        if (game.phase !== 'waiting') {
+            await message.reply('❌ Esta partida ya comenzó. Espera a que termine para crear una nueva.');
+            return;
+        }
+    
+        // Verificar si ya está en el juego
+        if (game.players.some(p => p.id === userId)) {
+            await message.reply('❌ Ya estás en esta partida.');
+            return;
+        }
+    
+        // Verificar si la apuesta coincide
+        if (betAmount !== game.betAmount) {
+            await message.reply(`❌ La apuesta debe ser exactamente ${this.formatNumber(game.betAmount)} π-b$ para unirse a esta partida.`);
+            return;
+        }
+    
+        // Verificar si está lleno
+        if (game.players.length >= this.config.russianRoulette.maxPlayers) {
+            await message.reply('❌ Esta partida está llena.');
+            return;
+        }
+    
+        // Verificar fondos del nuevo jugador
+        const user = await this.economy.getUser(userId);
+        if (user.balance < betAmount) {
+            await message.reply(`❌ No tienes suficientes π-b Coins. Tu balance: ${this.formatNumber(user.balance)} π-b$`);
+            return;
+        }
+    
+        // Agregar jugador
+        game.players.push({
+            id: userId,
+            username: message.author.username,
+            displayName: message.author.displayName || message.author.username,
+            alive: true,
+            shots: 0
+        });
+    
+        game.pot += betAmount;
+    
+        // Reservar dinero
+        await this.economy.removeMoney(userId, betAmount, 'russian_roulette_bet');
+    
+        // Actualizar embed
+        const embed = new EmbedBuilder()
+            .setTitle('🔫 Ruleta Rusa - Esperando Jugadores')
+            .setDescription('¡Un jugador más se ha unido a la partida!')
+            .setColor('#8B0000')
+            .addFields(
+                { name: '👑 Creador', value: `<@${game.creatorId}>`, inline: true },
+                { name: '💰 Apuesta por Jugador', value: `${this.formatNumber(game.betAmount)} π-b$`, inline: true },
+                { name: '💎 Pot Actual', value: `${this.formatNumber(game.pot)} π-b$`, inline: true },
+                { 
+                    name: '👥 Jugadores', 
+                    value: game.players.map(p => `• ${p.displayName}`).join('\n'), 
+                    inline: false 
+                },
+                { name: '📊 Estado', value: `${game.players.length}/${this.config.russianRoulette.maxPlayers} jugadores`, inline: true }
+            )
+            .setTimestamp();
+    
+        // Si está lleno, iniciar inmediatamente
+        if (game.players.length >= this.config.russianRoulette.maxPlayers) {
+            if (game.joinTimeout) {
+                clearTimeout(game.joinTimeout);
+            }
+            embed.addFields({ name: '🚀 Estado', value: '¡Partida llena! Iniciando...', inline: true });
+            
+            const channel = await message.client.channels.fetch(game.channelId);
+            const gameMessage = await channel.messages.fetch(game.messageId);
+            await gameMessage.edit({ embeds: [embed] });
+            
+            setTimeout(() => this.startRussianRoulette(game, gameMessage), 3000);
+        } else {
+            embed.addFields({ 
+                name: '🎮 Para Unirse', 
+                value: `\`>russian ${game.betAmount}\`\nTiempo restante: ${Math.ceil((game.joinTimeout._idleStart + this.config.russianRoulette.joinTime - Date.now()) / 1000)}s`, 
+                inline: true 
+            });
+            
+            const channel = await message.client.channels.fetch(game.channelId);
+            const gameMessage = await channel.messages.fetch(game.messageId);
+            await gameMessage.edit({ embeds: [embed] });
+        }
+    
+        await message.reply(`✅ Te has unido a la partida! Pot actual: ${this.formatNumber(game.pot)} π-b$`);
+    }
+    
+    async startRussianRoulette(game, gameMessage) {
+        game.phase = 'playing';
+        
+        // Mezclar orden de jugadores
+        for (let i = game.players.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [game.players[i], game.players[j]] = [game.players[j], game.players[i]];
+        }
+    
+        // Determinar posición de la bala (1-6)
+        game.bulletPosition = Math.floor(Math.random() * 6) + 1;
+        game.currentShot = 0;
+        game.currentPlayerIndex = 0;
+    
+        const embed = new EmbedBuilder()
+            .setTitle('🔫 Ruleta Rusa - ¡EL JUEGO COMIENZA!')
+            .setDescription('🎲 **El revólver ha sido cargado con una bala...**\n🔄 **Los jugadores han sido mezclados...**')
+            .setColor('#FF0000')
+            .addFields(
+                { name: '💎 Pot Total', value: `${this.formatNumber(game.pot)} π-b$`, inline: true },
+                { name: '🏆 Premio para el Ganador', value: `${this.formatNumber(Math.floor(game.pot * this.config.russianRoulette.winnerMultiplier))} π-b$`, inline: true },
+                { 
+                    name: '👥 Orden de Juego', 
+                    value: game.players.map((p, i) => `${i + 1}. ${p.displayName} ${p.alive ? '💚' : '💀'}`).join('\n'), 
+                    inline: false 
+                }
+            )
+            .setTimestamp()
+            .setFooter({ text: 'El primer jugador tiene 20 segundos para disparar...' });
+    
+        await gameMessage.edit({ embeds: [embed] });
+        
+        setTimeout(() => this.nextTurn(game), 3000);
+    }
+    
+    async nextTurn(game) {
+        if (game.phase !== 'playing') return;
+    
+        // Verificar si el juego terminó
+        const alivePlayers = game.players.filter(p => p.alive);
+        if (alivePlayers.length <= 1) {
+            await this.endRussianRoulette(game);
+            return;
+        }
+    
+        // Encontrar el siguiente jugador vivo
+        while (!game.players[game.currentPlayerIndex].alive) {
+            game.currentPlayerIndex = (game.currentPlayerIndex + 1) % game.players.length;
+        }
+    
+        const currentPlayer = game.players[game.currentPlayerIndex];
+        game.currentShot++;
+    
+        const embed = new EmbedBuilder()
+            .setTitle('🔫 Ruleta Rusa - Turno Actual')
+            .setDescription(`🎯 **Es el turno de ${currentPlayer.displayName}**`)
+            .setColor('#FFD700')
+            .addFields(
+                { name: '🔫 Disparo Número', value: `${game.currentShot}/6`, inline: true },
+                { name: '💎 Pot', value: `${this.formatNumber(game.pot)} π-b$`, inline: true },
+                { name: '👥 Jugadores Vivos', value: `${alivePlayers.length}`, inline: true },
+                { 
+                    name: '🎲 Estado de Jugadores', 
+                    value: game.players.map(p => `${p.alive ? '💚' : '💀'} ${p.displayName}${p.id === currentPlayer.id ? ' **← TURNO**' : ''}`).join('\n'), 
+                    inline: false 
+                },
+                { name: '⏰ Tiempo Límite', value: '20 segundos', inline: true },
+                { name: '🎮 Acción', value: `<@${currentPlayer.id}> escribe \`>shoot\` para disparar`, inline: true }
+            )
+            .setTimestamp();
+    
+        const channel = await game.client?.channels?.fetch(game.channelId) || 
+                       await (await game.players[0].client?.channels?.fetch(game.channelId));
+        const gameMessage = await channel.messages.fetch(game.messageId);
+        await gameMessage.edit({ embeds: [embed] });
+    
+        // Timer para el turno
+        game.turnTimeout = setTimeout(async () => {
+            if (game.phase === 'playing') {
+                await this.forceShoot(game, currentPlayer.id);
+            }
+        }, this.config.russianRoulette.turnTime);
+    }
+    
+    async handleShoot(message, gameKey) {
+        const game = this.activeGames.get(gameKey);
+        if (!game || game.phase !== 'playing') {
+            await message.reply('❌ No hay ninguna partida activa o no es tu turno.');
+            return;
+        }
+    
+        const currentPlayer = game.players[game.currentPlayerIndex];
+        if (message.author.id !== currentPlayer.id) {
+            await message.reply('❌ No es tu turno.');
+            return;
+        }
+    
+        if (game.turnTimeout) {
+            clearTimeout(game.turnTimeout);
+        }
+    
+        await this.executeShot(game, message.author.id);
+    }
+    
+    async executeShot(game, playerId) {
+        const currentPlayer = game.players.find(p => p.id === playerId);
+        if (!currentPlayer) return;
+    
+        currentPlayer.shots++;
+    
+        // Verificar si es la bala
+        const isBullet = game.currentShot === game.bulletPosition;
+    
+        const embed = new EmbedBuilder()
+            .setTimestamp();
+    
+        if (isBullet) {
+            // ¡BANG! El jugador muere
+            currentPlayer.alive = false;
+            
+            embed.setTitle('💥 ¡BANG! 💥')
+                .setDescription(`💀 **${currentPlayer.displayName} ha sido eliminado...**`)
+                .setColor('#8B0000')
+                .addFields(
+                    { name: '🔫 Resultado', value: '💥 ¡La bala estaba en esta cámara!', inline: false },
+                    { name: '💀 Jugador Eliminado', value: currentPlayer.displayName, inline: true },
+                    { name: '🎯 Disparo Fatal', value: `${game.currentShot}/6`, inline: true },
+                    { 
+                        name: '👥 Jugadores Restantes', 
+                        value: game.players.filter(p => p.alive).map(p => `💚 ${p.displayName}`).join('\n') || 'Ninguno', 
+                        inline: false 
+                    }
+                );
+    
+            // Establecer cooldown para el jugador eliminado
+            this.setCooldown(playerId, 'russianRoulette');
+    
+            // Actualizar estadísticas
+            const updateData = { 'stats.gamesPlayed': ((await this.economy.getUser(playerId)).stats.gamesPlayed || 0) + 1 };
+            await this.economy.updateUser(playerId, updateData);
+    
+            if (this.achievements) {
+                await this.achievements.updateStats(playerId, 'game_played');
+                await this.achievements.updateStats(playerId, 'game_lost');
+            }
+        } else {
+            // ¡CLICK! Está vivo
+            embed.setTitle('🔄 ¡CLICK! 🔄')
+                .setDescription(`😅 **${currentPlayer.displayName} está a salvo... por ahora**`)
+                .setColor('#00FF00')
+                .addFields(
+                    { name: '🔫 Resultado', value: '🔄 Cámara vacía - ¡Qué suerte!', inline: false },
+                    { name: '😌 Jugador Salvado', value: currentPlayer.displayName, inline: true },
+                    { name: '🎯 Disparo Número', value: `${game.currentShot}/6`, inline: true },
+                    { 
+                        name: '👥 Siguiente Turno', 
+                        value: 'El siguiente jugador tomará el revólver...', 
+                        inline: false 
+                    }
+                );
+        }
+    
+        const channel = await message.client?.channels?.fetch(game.channelId) || 
+                       (await game.players[0].client?.channels?.fetch(game.channelId));
+        const gameMessage = await channel.messages.fetch(game.messageId);
+        await gameMessage.edit({ embeds: [embed] });
+    
+        // Pasar al siguiente turno después de un delay
+        setTimeout(async () => {
+            game.currentPlayerIndex = (game.currentPlayerIndex + 1) % game.players.length;
+            await this.nextTurn(game);
+        }, 4000);
+    }
+    
+    async forceShoot(game, playerId) {
+        const currentPlayer = game.players.find(p => p.id === playerId);
+        if (!currentPlayer) return;
+    
+        const embed = new EmbedBuilder()
+            .setTitle('⏰ ¡Tiempo Agotado!')
+            .setDescription(`${currentPlayer.displayName} no disparó a tiempo. Se dispara automáticamente...`)
+            .setColor('#FF8C00');
+    
+        const channel = await game.client?.channels?.fetch(game.channelId);
+        const gameMessage = await channel.messages.fetch(game.messageId);
+        await gameMessage.edit({ embeds: [embed] });
+    
+        setTimeout(() => this.executeShot(game, playerId), 2000);
+    }
+    
+    async endRussianRoulette(game) {
+        game.phase = 'finished';
+        this.activeGames.delete(`russian_${game.channelId}`);
+    
+        const survivors = game.players.filter(p => p.alive);
+        const totalPot = game.pot;
+        const winnerPrize = Math.floor(totalPot * this.config.russianRoulette.winnerMultiplier);
+        const houseCut = totalPot - winnerPrize;
+    
+        let embed = new EmbedBuilder()
+            .setTimestamp();
+    
+        if (survivors.length === 1) {
+            // Un ganador
+            const winner = survivors[0];
+            
+            await this.economy.addMoney(winner.id, winnerPrize, 'russian_roulette_win');
+            
+            // Establecer cooldown para el ganador
+            this.setCooldown(winner.id, 'russianRoulette');
+    
+            // Actualizar estadísticas del ganador
+            const updateData = { 'stats.gamesPlayed': ((await this.economy.getUser(winner.id)).stats.gamesPlayed || 0) + 1 };
+            await this.economy.updateUser(winner.id, updateData);
+    
+            if (this.achievements) {
+                await this.achievements.updateStats(winner.id, 'game_played');
+                await this.achievements.updateStats(winner.id, 'game_won');
+            }
+    
+            embed.setTitle('🏆 ¡TENEMOS UN GANADOR! 🏆')
+                .setDescription(`🎉 **¡${winner.displayName} sobrevivió a la ruleta rusa!**`)
+                .setColor('#FFD700')
+                .addFields(
+                    { name: '👑 GANADOR', value: `<@${winner.id}>`, inline: false },
+                    { name: '💰 Premio', value: `${this.formatNumber(winnerPrize)} π-b$`, inline: true },
+                    { name: '💎 Pot Total', value: `${this.formatNumber(totalPot)} π-b$`, inline: true },
+                    { name: '🏦 Casa', value: `${this.formatNumber(houseCut)} π-b$ (15%)`, inline: true },
+                    { 
+                        name: '📊 Resultado Final', 
+                        value: game.players.map(p => `${p.alive ? '🏆' : '💀'} ${p.displayName} (${p.shots} disparos)`).join('\n'), 
+                        inline: false 
+                    },
+                    { name: '🔫 Bala Estaba En', value: `Disparo ${game.bulletPosition}/6`, inline: true }
+                );
+        } else {
+            // Todos murieron (teóricamente imposible, pero por seguridad)
+            embed.setTitle('💀 ¡TODOS ELIMINADOS!')
+                .setDescription('¡Increíble! Todos los jugadores fueron eliminados.')
+                .setColor('#8B0000')
+                .addFields(
+                    { name: '💰 Devolución', value: 'Dinero devuelto a todos los jugadores', inline: false }
+                );
+    
+            // Devolver dinero a todos
+            for (const player of game.players) {
+                await this.economy.addMoney(player.id, game.betAmount, 'russian_roulette_refund');
+            }
+        }
+    
+        const channel = await game.client?.channels?.fetch(game.channelId);
+        const gameMessage = await channel.messages.fetch(game.messageId);
+        await gameMessage.edit({ embeds: [embed] });
+    }
+    
+    async cancelRussianRoulette(game, gameMessage, reason) {
+        game.phase = 'finished';
+        this.activeGames.delete(`russian_${game.channelId}`);
+    
+        // Devolver dinero a todos los jugadores
+        for (const player of game.players) {
+            await this.economy.addMoney(player.id, game.betAmount, 'russian_roulette_refund');
+        }
+    
+        const embed = new EmbedBuilder()
+            .setTitle('❌ Partida Cancelada')
+            .setDescription(`La partida ha sido cancelada: ${reason}`)
+            .setColor('#FF0000')
+            .addFields(
+                { name: '💰 Devolución', value: 'El dinero ha sido devuelto a todos los jugadores', inline: false }
+            )
+            .setTimestamp();
+    
+        await gameMessage.edit({ embeds: [embed] });
+    }
     
     async processCommand(message) {
         if (message.author.bot) return;
@@ -1339,6 +1856,16 @@ class MinigamesSystem {
                 case '>ruleta':
                 case '>wheel':
                     await this.handleRoulette(message, args);
+                    break;
+                case '>russian':
+                case '>rr':
+                case '>ruleta-rusa':
+                    await this.handleRussianRoulette(message, args);
+                    break;
+                case '>shoot':
+                case '>disparar':
+                    const gameKey = `russian_${message.channel.id}`;
+                    await this.handleShoot(message, gameKey);
                     break;
                 case '>games':
                 case '>minigames':
@@ -1388,8 +1915,13 @@ class MinigamesSystem {
                     inline: false 
                 },
                 { 
+                    name: '🔫 Ruleta Rusa (Multiplayer)', 
+                    value: '`>russian <cantidad>` - Juego de supervivencia\nApuesta: 200-5,000 π-b$\nJugadores: 2-6\nGanador se lleva 85% del pot\nCooldown: 5 minutos', 
+                    inline: false 
+                },
+                { 
                     name: '🔮 Próximamente', 
-                    value: '\n• Slots', 
+                    value: '\n• Slots\n• Poker', 
                     inline: false 
                 }
             )
