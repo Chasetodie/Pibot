@@ -1589,7 +1589,7 @@ class MinigamesSystem {
         // Verificar si el juego terminó
         const alivePlayers = game.players.filter(p => p.alive);
         if (alivePlayers.length <= 1) {
-            await this.endRussianRoulette(game);
+            await this.endRussianRoulette(game, client);
             return;
         }
     
