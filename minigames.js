@@ -1693,18 +1693,25 @@ class MinigamesSystem {
             await message.reply('❌ No hay ninguna partida activa o no es tu turno.');
             return;
         }
-    
+
+        console.log('alive in 1');
+        
         const currentPlayer = game.players[game.currentPlayerIndex];
         if (message.author.id !== currentPlayer.id) {
             await message.reply('❌ No es tu turno.');
             return;
         }
+
+        console.log('alive in 2');
     
         if (game.turnTimeout) {
             clearTimeout(game.turnTimeout);
         }
+
+        console.log('alive in 3');
     
         await this.executeShot(game, message.author.id, message.client);
+        console.log('alive in 4');
     }
     
     async executeShot(game, playerId, client) {
