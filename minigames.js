@@ -37,7 +37,7 @@ class MinigamesSystem {
             lottery: {
                 minBet: 500,
                 maxBet: 5000,
-                cooldown: 1800000, // 30 minutos (30 * 60 * 1000)
+                cooldown: 900000, // 30 minutos (30 * 60 * 1000)
                 winMultiplier: 100, // Gana x100 si acierta
                 minNumber: 1,
                 maxNumber: 100
