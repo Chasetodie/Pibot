@@ -860,6 +860,7 @@ class EconomySystem {
         const robberyData = this.activeRobberies.get(robberId);
         
         if (!robberyData) {
+            console.log(`⚠️ No hay robo activo para ${robberId}`);
             return { success: false, reason: 'no_active_robbery' };
         }
         
@@ -868,108 +869,137 @@ class EconomySystem {
         
         // Verificar si se acabó el tiempo
         if (timeElapsed > this.robberyConfig.buttonTimeLimit) {
-            this.activeRobberies.delete(robberId);
+            console.log(`⏰ Tiempo expirado para robo de ${robberId}`);
             return { success: false, reason: 'time_expired' };
         }
         
         // Incrementar clicks
         robberyData.clicks++;
+        console.log(`👆 Click ${robberyData.clicks}/${this.robberyConfig.maxClicks} para ${robberId}`);
+
         
         // Verificar si llegó al máximo
         if (robberyData.clicks >= this.robberyConfig.maxClicks) {
             // Finalizar robo automáticamente
-            return await this.finishRobbery(robberId);
+            console.log(`🎯 Máximo de clicks alcanzado para ${robberId}`);
+
+            return {
+                success: true,
+                clicks: robberyData.clicks,
+                maxClicks: robberyData.maxClicks,
+                timeLeft: this.robberyConfig.buttonTimeLimit - timeElapsed,
+                maxReached: true
+            }
         }
         
         return {
             success: true,
             clicks: robberyData.clicks,
             maxClicks: robberyData.maxClicks,
-            timeLeft: this.robberyConfig.buttonTimeLimit - timeElapsed
+            timeLeft: this.robberyConfig.buttonTimeLimit - timeElapsed,
+            maxReached: false
         };
     }
     
     // Finalizar robo y calcular resultado
     async finishRobbery(robberId) {
+        console.log(`🎯 Finalizando robo para usuario: ${robberId}`);
+
         const robberyData = this.activeRobberies.get(robberId);
         
         if (!robberyData) {
+            console.log(`⚠️ No se encontró robo activo para ${robberId}`);
             return { success: false, reason: 'no_active_robbery' };
         }
+
+        console.log(`📊 Datos del robo:`, robberyData);
         
         this.activeRobberies.delete(robberId);
-        
-        const robber = await this.getUser(robberId);
-        const target = await this.getUser(robberyData.targetId);
-        
-        // Calcular probabilidad de éxito basada en clicks
-        const clickEfficiency = Math.min(robberyData.clicks / this.robberyConfig.maxClicks, 1);
-        const baseSuccessChance = 1 - this.robberyConfig.failChance;
-        const finalSuccessChance = baseSuccessChance + (clickEfficiency * 0.3); // Bonus por clicks
-        
-        const success = Math.random() < finalSuccessChance;
-        
-        // Actualizar cooldown del ladrón
-/*        const robberUpdateData = {
-            lastRobbery: Date.now()
-        };*/
-        
-        if (success) {
-            // ROBO EXITOSO
-            // Calcular cantidad robada basada en clicks
-            const minSteal = this.robberyConfig.minStealPercentage / 100;
-            const maxSteal = this.robberyConfig.maxStealPercentage / 100;
+
+        try {
+            const robber = await this.getUser(robberId);
+            const target = await this.getUser(robberyData.targetId);
+
+            console.log(`👤 Robber balance: ${robber.balance}, Target balance: ${target.balance}`);
             
-            const stealPercentage = minSteal + (clickEfficiency * (maxSteal - minSteal));
-            const stolenAmount = Math.floor(target.balance * stealPercentage);
+            // Calcular probabilidad de éxito basada en clicks
+            const clickEfficiency = Math.min(robberyData.clicks / this.robberyConfig.maxClicks, 1);
+            const baseSuccessChance = 1 - this.robberyConfig.failChance;
+            const finalSuccessChance = baseSuccessChance + (clickEfficiency * 0.3); // Bonus por clicks
+
+            console.log(`🎲 Probabilidad de éxito: ${finalSuccessChance * 100}%`);
             
-            if (stolenAmount <= 0) {
-                return { success: false, reason: 'target_too_poor_now' };
+            const success = Math.random() < finalSuccessChance;
+            
+            // Actualizar cooldown del ladrón
+    /*        const robberUpdateData = {
+                lastRobbery: Date.now()
+            };*/
+            
+            if (success) {
+                // ROBO EXITOSO
+                // Calcular cantidad robada basada en clicks
+                const minSteal = this.robberyConfig.minStealPercentage / 100;
+                const maxSteal = this.robberyConfig.maxStealPercentage / 100;
+                
+                const stealPercentage = minSteal + (clickEfficiency * (maxSteal - minSteal));
+                const stolenAmount = Math.floor(target.balance * stealPercentage);
+                
+                if (stolenAmount <= 0) {
+                    console.log(`⚠️ Cantidad robada es 0, target muy pobre`);
+                    return { success: false, reason: 'target_too_poor_now' };
+                }
+                
+                // Actualizar balances
+    /*            robberUpdateData.balance = robber.balance + stolenAmount;
+                robberUpdateData['stats.totalEarned'] = (robber.stats.totalEarned || 0) + stolenAmount;
+                
+                const targetUpdateData = {
+                    balance: Math.max(0, target.balance - stolenAmount),
+                    'stats.totalSpent': (target.stats.totalSpent || 0) + stolenAmount
+                };
+                
+                await this.updateUser(robberId, robberUpdateData);
+                await this.updateUser(robberyData.targetId, targetUpdateData);*/
+                
+                console.log(`🦹 Robo exitoso: ${robberId} robó ${stolenAmount} ${this.config.currencySymbol} a ${robberyData.targetId}`);
+                
+                return {
+                    success: true,
+                    robberySuccess: true,
+                    stolenAmount: stolenAmount,
+                    clicks: robberyData.clicks,
+                    efficiency: Math.round(clickEfficiency * 100),
+                    robberNewBalance: robber.balance + stolenAmount,
+                    targetNewBalance: Math.max(0, target.balance - stolenAmount)
+                };
+                
+            } else {
+                // ROBO FALLIDO
+                console.log(`❌ Robo fallido!`);
+                const penalty = Math.floor(robber.balance * (this.robberyConfig.penaltyPercentage / 100));
+                
+    /*            robberUpdateData.balance = Math.max(0, robber.balance - penalty);
+                robberUpdateData['stats.totalSpent'] = (robber.stats.totalSpent || 0) + penalty;
+                
+                await this.updateUser(robberId, robberUpdateData);*/
+                
+                console.log(`🚨 Robo fallido: ${robberId} perdió ${penalty} ${this.config.currencySymbol} como penalización`);
+                
+                return {
+                    success: true,
+                    robberySuccess: false,
+                    penalty: penalty,
+                    clicks: robberyData.clicks,
+                    efficiency: Math.round(clickEfficiency * 100),
+                    robberNewBalance: Math.max(0, robber.balance - penalty)
+                };
             }
-            
-            // Actualizar balances
-/*            robberUpdateData.balance = robber.balance + stolenAmount;
-            robberUpdateData['stats.totalEarned'] = (robber.stats.totalEarned || 0) + stolenAmount;
-            
-            const targetUpdateData = {
-                balance: Math.max(0, target.balance - stolenAmount),
-                'stats.totalSpent': (target.stats.totalSpent || 0) + stolenAmount
-            };
-            
-            await this.updateUser(robberId, robberUpdateData);
-            await this.updateUser(robberyData.targetId, targetUpdateData);*/
-            
-            console.log(`🦹 Robo exitoso: ${robberId} robó ${stolenAmount} ${this.config.currencySymbol} a ${robberyData.targetId}`);
-            
-            return {
-                success: true,
-                robberySuccess: true,
-                stolenAmount: stolenAmount,
-                clicks: robberyData.clicks,
-                efficiency: Math.round(clickEfficiency * 100),
-                robberNewBalance: robber.balance + stolenAmount,
-                targetNewBalance: Math.max(0, target.balance - stolenAmount)
-            };
-            
-        } else {
-            // ROBO FALLIDO
-            const penalty = Math.floor(robber.balance * (this.robberyConfig.penaltyPercentage / 100));
-            
-/*            robberUpdateData.balance = Math.max(0, robber.balance - penalty);
-            robberUpdateData['stats.totalSpent'] = (robber.stats.totalSpent || 0) + penalty;
-            
-            await this.updateUser(robberId, robberUpdateData);*/
-            
-            console.log(`🚨 Robo fallido: ${robberId} perdió ${penalty} ${this.config.currencySymbol} como penalización`);
-            
-            return {
-                success: true,
-                robberySuccess: false,
-                penalty: penalty,
-                clicks: robberyData.clicks,
-                efficiency: Math.round(clickEfficiency * 100),
-                robberNewBalance: Math.max(0, robber.balance - penalty)
-            };
+        } catch (error) {
+            console.error(`❌ Error procesando robo:`, error);
+            // Volver a agregar al Map si hubo error
+            this.activeRobberies.set(robberId, robberyData);
+            return { success: false, reason: 'processing_error', error: error.message };
         }
     }
     
