@@ -801,7 +801,7 @@ class AllCommands {
         }
     }    
 
-    async function handleRobberyCommand(message, args) {
+    async handleRobberyCommand(message, args) {
         const robberId = message.author.id;
         
         // Verificar que se mencionó a alguien
