@@ -1715,9 +1715,12 @@ class MinigamesSystem {
     }
     
     async executeShot(game, playerId, client) {
+        console.log(game.players.find(p => p.id === playerId));
         const currentPlayer = game.players.find(p => p.id === playerId);
         if (!currentPlayer) return;
-    
+
+        console.log('ez');
+        
         currentPlayer.shots++;
     
         // Verificar si es la bala
