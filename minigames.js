@@ -125,12 +125,7 @@ class MinigamesSystem {
 /*        if (this.events) {
             this.events.applyEventModifiers(userId, 0, 'games');
         }*/
-
-        // Al inicio del juego
-        if (this.economy.missions) {
-            await this.economy.missions.updateMissionProgress(userId, 'game_played');
-        }
-
+        
         // Verificar argumentos
         if (args.length < 3) {
             const embed = new EmbedBuilder()
@@ -179,6 +174,11 @@ class MinigamesSystem {
             return;
         }
 
+        // Al inicio del juego
+        if (this.economy.missions) {
+            await this.economy.missions.updateMissionProgress(userId, 'game_played');
+        }
+        
         // Realizar el juego
         const result = Math.random() < 0.5 ? 'cara' : 'cruz';
         const won = result === normalizedChoice;
@@ -255,11 +255,6 @@ class MinigamesSystem {
             this.events.applyEventModifiers(userId, 0, 'games');
         }*/
 
-        // Al inicio del juego
-        if (this.economy.missions) {
-            await this.economy.missions.updateMissionProgress(userId, 'game_played');
-        }
-
         // Si no hay argumentos, mostrar ayuda
         if (args.length < 3) {
             const embed = new EmbedBuilder()
@@ -305,6 +300,11 @@ class MinigamesSystem {
             return;
         }
 
+        // Al inicio del juego
+        if (this.economy.missions) {
+            await this.economy.missions.updateMissionProgress(userId, 'game_played');
+        }
+        
         // Tirar el dado
         const diceResult = Math.floor(Math.random() * 6) + 1;
         let won = false;
@@ -397,11 +397,6 @@ class MinigamesSystem {
     async handleLottery(message, args) {
         const userId = message.author.id;
         const user = await this.economy.getUser(userId);
-
-        // Al inicio del juego
-        if (this.economy.missions) {
-            await this.economy.missions.updateMissionProgress(userId, 'game_played');
-        }
     
         // Si no hay argumentos suficientes, mostrar ayuda
         if (args.length < 3) {
@@ -451,7 +446,12 @@ class MinigamesSystem {
             await message.reply(`⏰ Debes esperar ${timeLeft} minutos antes de jugar la lotería otra vez`);
             return;
         }
-    
+
+        // Al inicio del juego
+        if (this.economy.missions) {
+            await this.economy.missions.updateMissionProgress(userId, 'game_played');
+        }
+        
         // Generar número ganador
         const winningNumber = Math.floor(Math.random() * this.config.lottery.maxNumber) + this.config.lottery.minNumber;
         const won = winningNumber === predictedNumber;
@@ -562,11 +562,6 @@ class MinigamesSystem {
     async handleBlackjack(message, args) {
         const userId = message.author.id;
         const user = await this.economy.getUser(userId);
-
-        // Al inicio del juego
-        if (this.economy.missions) {
-            await this.economy.missions.updateMissionProgress(userId, 'game_played');
-        }
     
         // Si no hay argumentos suficientes, mostrar ayuda
         if (args.length < 2) {
@@ -608,7 +603,12 @@ class MinigamesSystem {
             await message.reply(`⏰ Debes esperar ${timeLeft} minutos antes de jugar otra vez`);
             return;
         }
-    
+
+        // Al inicio del juego
+        if (this.economy.missions) {
+            await this.economy.missions.updateMissionProgress(userId, 'game_played');
+        }
+        
         // Verificar si ya hay un juego activo
         if (this.activeGames.has(`blackjack_${userId}`)) {
             await message.reply('❌ Ya tienes un juego de Blackjack activo. Termínalo primero.');
@@ -1077,12 +1077,7 @@ class MinigamesSystem {
     async handleRoulette(message, args) {
         const userId = message.author.id;
         const user = await this.economy.getUser(userId);
-
-        // Al inicio del juego
-        if (this.economy.missions) {
-            await this.economy.missions.updateMissionProgress(userId, 'game_played');
-        }
-    
+        
         // Si no hay argumentos suficientes, mostrar ayuda
         if (args.length < 3) {
             const embed = new EmbedBuilder()
@@ -1140,7 +1135,12 @@ class MinigamesSystem {
             await message.reply(`⏰ Debes esperar ${timeLeft} segundos antes de jugar otra vez`);
             return;
         }
-    
+
+        // Al inicio del juego
+        if (this.economy.missions) {
+            await this.economy.missions.updateMissionProgress(userId, 'game_played');
+        }
+        
         // Validar tipo de apuesta
         const validBet = this.validateRouletteBet(betType);
         if (!validBet.isValid) {
@@ -1377,11 +1377,6 @@ class MinigamesSystem {
         const userId = message.author.id;
         const channelId = message.channel.id;
         const user = await this.economy.getUser(userId);
-
-        // Al inicio del juego
-        if (this.economy.missions) {
-            await this.economy.missions.updateMissionProgress(userId, 'game_played');
-        }
         
         // Si no hay argumentos suficientes, mostrar ayuda
         if (args.length < 2) {
@@ -1443,6 +1438,11 @@ class MinigamesSystem {
             const timeLeft = Math.ceil(cooldownCheck.timeLeft / 60000);
             await message.reply(`⏰ Debes esperar ${timeLeft} minutos antes de jugar otra vez`);
             return;
+        }
+
+        // Al inicio del juego
+        if (this.economy.missions) {
+            await this.economy.missions.updateMissionProgress(userId, 'game_played');
         }
     
         // Verificar si ya hay una partida activa en el canal
@@ -1583,7 +1583,8 @@ class MinigamesSystem {
                 },
                 { name: '📊 Estado', value: `${game.players.length}/${this.config.russianRoulette.maxPlayers} jugadores`, inline: true },
                 { name: '🎮 Para Unirse', value: `\`>russian ${game.betAmount}\``, inline: true },
-                { name: '🚀 Para Iniciar', value: `\`>start\` (solo el creador)`, inline: true }
+                { name: '🚀 Para Iniciar', value: `\`>start\` (solo el creador)`, inline: true },
+                { name: '❌ Para Cancelar', value: `\`>cancel\` (solo el creador)`, inline: true }
             )
             .setTimestamp()
             .setFooter({ text: 'El creador puede iniciar con >start cuando esté listo' });
