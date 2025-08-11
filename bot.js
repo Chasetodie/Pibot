@@ -8,6 +8,7 @@ const MusicHandler = require('./musicHandler.js'); // Importar el bot de música
 const MinigamesSystem = require('./minigames'); // Importar el sistema de minijuegos
 const AchievementsSystem = require('./achievements');
 const BettingSystem = require('./betting');
+const MissionsSystem = require('./missions');
 /*const ShopSystem = require('./shop');
 const EventsSystem = require('./events');*/
 const AllCommands = require('./all-commands');
@@ -83,11 +84,16 @@ const achievements = new AchievementsSystem(economy);
 const events = new EventsSystem(economy);*/
 const betting = new BettingSystem(economy);
 
+const missions = new MissionsSystem(economy);
+
 // Instancia del sistema de comandos mejorados
 const allCommands = new AllCommands(economy/*, achievements, shop*/, betting/*, events*/);
 
 economy.achievements = achievements;
 minigames.achievements = achievements;
+
+economy.missions = missions;
+minigames.missions = missions;
 
 /*economy.events = events;
 minigames.events = events;*/
@@ -428,10 +434,23 @@ client.on('messageCreate', async (message) => {
         } catch (error) {
             console.error('❌ Error verificando logros:', error);
         }
+
+        // *** NUEVO: ACTUALIZAR PROGRESO DE MISIONES ***
+        try {
+            const completedMissions = await missions.updateMissionProgress(userId, 'message');
+            if (completedMissions.length > 0) {
+                await missions.notifyCompletedMissions(message, completedMissions);
+            }
+        } catch (error) {
+            console.error('❌ Error actualizando misiones:', error);
+        }
     }
 
     // Procesar comandos de logros
     await achievements.processCommand(message);
+
+    // Procesar comandos de misiones
+    await missions.processCommand(message);
 
     // Procesar comandos mejorados (shop, betting, etc.)
     await allCommands.processCommand(message);
@@ -470,6 +489,7 @@ client.login(process.env.TOKEN).then(() => {
     console.error('❌ Error en el login:', error);
 
 });
+
 
 
 
