@@ -1267,7 +1267,7 @@ class AllCommands {
                 // Betting
                 { name: '🎲 Apuestas', value: '`>bet [@usuario] <cantidad> <descripción>` - Crear apuesta\n`>mybets` - Ver tus apuestas activas\n`>betstats [@usuario]` - Ver estadísticas de apuestas', inline: false },
                 //Economy
-                { name: '📋 Economía', value: '`>balance [@usuario]` - Ver tu dinero y nivel (o el de otro usuario)\n`>daily` - Reclamar' + `(${this.economy.config.dailyAmount}±${this.economy.config.dailyVariation} ${this.economy.config.currencySymbol})` + 'diarios\n`>work [tipo]` - Trabajar para ganar dinero (delivery, programmer, doctor, criminal)\n`>level [@usuario]` - Ver información detallada de nivel\n`>pay @usuario <cantidad>` - Transferir dinero a otro usuario\n`>top [money/level]` - Ver los rankings del servidor\n`>robar @usuario` - Robar dinero de otro usuario', inline: false},
+                { name: '📋 Economía', value: '`>balance [@usuario]` - Ver tu dinero y nivel (o el de otro usuario)\n`>daily` - Reclamar' + `(${this.economy.config.dailyAmount}±${this.economy.config.dailyVariation} ${this.economy.config.currencySymbol})` + 'diarios\n`>missions` - Mira tus misiones diaras y completalas para ganar dinero\n`>work [tipo]` - Trabajar para ganar dinero (delivery, programmer, doctor, criminal)\n`>level [@usuario]` - Ver información detallada de nivel\n`>pay @usuario <cantidad>` - Transferir dinero a otro usuario\n`>top [money/level]` - Ver los rankings del servidor\n`>robar @usuario` - Robar dinero de otro usuario', inline: false},
                 // Minijuegos
                 { name: '🎮 Minijuegos', value: '`>games` - Ver lista de minijuegos', inline: false },
 /*                // Eventos
