@@ -689,6 +689,27 @@ class EconomySystem {
                     'Un rival intentó sabotearte',
                     'Te quedaste dormida y el cliente se fue sin pagar'
                 ]
+            },
+            'paranormalinv': {
+                name: '👻 Investigador Paranormal',
+                cooldown: 60 * 60 * 1000, // 1 hora
+                codeName: 'paranormalinv',
+                baseReward: 1500,
+                variation: 1300,
+                levelRequirement: 25,
+                failChance: 0.30, // 30% de fallar
+                messages: [
+                    'Descubriste un fenómeno paranormal',
+                    'Realizaste una investigación exitosa',
+                    'Capturaste evidencia de lo sobrenatural',
+                    'Tuviste una experiencia inquietante pero reveladora'
+                ],
+                failMessages: [
+                    'No encontraste pruebas suficientes',
+                    'Tuviste que abandonar la investigación',
+                    'El fenómeno resultó ser un engaño',
+                    'No lograste captar nada inusual'
+                ]
             }
         };
     }
