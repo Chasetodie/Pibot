@@ -970,8 +970,8 @@ class AllCommands {
             if (clickResult.reason === 'time_expired') {
                 // Tiempo expirado, finalizar robo AQUÍ
                 console.log('⏰ Finalizando robo por tiempo expirado en click handler');
-                
-                const finalResult = await this.economy.finishRobbery(robberId);
+               
+                const finishResult = await this.economy.finishRobbery(robberId);
                 
                 // En lugar de mostrar el resultado inmediatamente, envía un mensaje separado
                 if (finishResult.success) {
