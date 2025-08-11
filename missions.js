@@ -582,15 +582,26 @@ class MissionsSystem {
             inline: false
         });
         
-        // Mostrar tiempo restante para reset
+        // Mostrar tiempo restante para reset (12 PM Ecuador)
         const now = new Date();
+        const ecuadorTime = new Date(now.getTime() - (5 * 60 * 60 * 1000));
+        const currentHour = ecuadorTime.getHours();
         
-        // Crear fecha para medianoche de mañana en hora local
-        const tomorrow = new Date(now);
-        tomorrow.setDate(tomorrow.getDate() + 1);
-        tomorrow.setHours(0, 0, 0, 0);
+        let nextReset;
+        if (currentHour < 12) {
+            // Si son menos de las 12 PM, el próximo reset es hoy a las 12 PM
+            nextReset = new Date(ecuadorTime);
+            nextReset.setHours(12, 0, 0, 0);
+        } else {
+            // Si ya pasaron las 12 PM, el próximo reset es mañana a las 12 PM
+            nextReset = new Date(ecuadorTime);
+            nextReset.setDate(nextReset.getDate() + 1);
+            nextReset.setHours(12, 0, 0, 0);
+        }
         
-        const timeLeft = tomorrow.getTime() - now.getTime();
+        // Convertir de vuelta a UTC para comparar con 'now'
+        const nextResetUTC = new Date(nextReset.getTime() + (5 * 60 * 60 * 1000));
+        const timeLeft = nextResetUTC.getTime() - now.getTime();
         const hoursLeft = Math.floor(timeLeft / (1000 * 60 * 60));
         const minutesLeft = Math.floor((timeLeft % (1000 * 60 * 60)) / (1000 * 60));
         
