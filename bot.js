@@ -444,6 +444,18 @@ client.on('messageCreate', async (message) => {
         } catch (error) {
             console.error('❌ Error actualizando misiones:', error);
         }
+
+        if (message.mentions.users.size > 0) {
+            try {
+                const mentionsCount = message.mentions.users.size;
+                const completedMissions = await missions.updateMissionProgress(userId, 'mention_made', mentionsCount);
+                if (completedMissions.length > 0) {
+                    await missions.notifyCompletedMissions(message, completedMissions);
+                }
+            } catch (error) {
+                console.error('❌ Error procesando menciones para misiones:', error);
+            }
+        }
     }
 
     // Procesar comandos de logros
@@ -489,6 +501,7 @@ client.login(process.env.TOKEN).then(() => {
     console.error('❌ Error en el login:', error);
 
 });
+
 
 
 
