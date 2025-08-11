@@ -298,6 +298,10 @@ class AllCommands {
         const result = await this.economy.transferMoney(message.author.id, targetUser.id, amount);
         
         if (!result.success) {
+            if (result.reason === 'being_robbed') {
+                return message.reply(`❌ No puedes transferir dinero mientras te están robando! Tiempo restante: ${Math.ceil(result.timeLeft/1000)}s`);
+            }
+            
             if (result.reason === 'insufficient_funds') {
                 const embed = new EmbedBuilder()
                     .setTitle('❌ Fondos Insuficientes')
