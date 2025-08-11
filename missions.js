@@ -311,19 +311,30 @@ class MissionsSystem {
     // Obtener el día actual en formato YYYY-MM-DD
     getCurrentDay() {
         const now = new Date();
-        // Esto asegura que use la fecha en tu zona horaria local
-        return now.toLocaleDateString('en-CA'); // Formato YYYY-MM-DD
+        // Convertir a zona horaria de Ecuador (UTC-5)
+        const ecuadorTime = new Date(now.getTime() - (5 * 60 * 60 * 1000));
+        return ecuadorTime.toISOString().split('T')[0]; // Formato YYYY-MM-DD
     }
     
     // Verificar si es hora de resetear misiones (12 PM)
     shouldResetMissions(user) {
-        const today = this.getCurrentDay();
+        const now = new Date();
+        // Convertir a zona horaria de Ecuador (UTC-5)
+        const ecuadorTime = new Date(now.getTime() - (5 * 60 * 60 * 1000));
+        const today = ecuadorTime.toISOString().split('T')[0];
+        const currentHour = ecuadorTime.getHours();
+        
         const userMissionsDate = user.daily_missions_date;
         
-        return !userMissionsDate || userMissionsDate !== today;
+        // Si es un día diferente, o si es el mismo día pero ya pasaron las 12 PM
+        return !userMissionsDate || 
+               userMissionsDate !== today || 
+               (userMissionsDate === today && currentHour >= 12 && !user.missions_reset_today);
     }
     
     // Inicializar misiones diarias para un usuario
+
+    
     async initializeDailyMissions(userId) {
         const user = await this.economy.getUser(userId);
         
@@ -337,6 +348,7 @@ class MissionsSystem {
                     return obj;
                 }, {}),
                 daily_missions_date: today,
+                missions_reset_today: true,
                 daily_stats: {
                     messages_today: 0,
                     work_today: 0,
