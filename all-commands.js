@@ -168,6 +168,14 @@ class AllCommands {
                 console.error('❌ Error verificando logros después del daily:', error);
             }
         }
+
+        // *** NUEVO: NOTIFICAR MISIONES COMPLETADAS ***
+        if (this.economy.missions) {
+            const completedMissions = await this.economy.missions.updateMissionProgress(userId, 'daily_claimed');
+            if (completedMissions.length > 0) {
+                await this.economy.missions.notifyCompletedMissions(message, completedMissions);
+            }
+        }
     }
 
     // Comando !level - Ver información detallada de nivel
@@ -767,6 +775,17 @@ class AllCommands {
                 }
             }
 
+            // *** NUEVO: NOTIFICAR MISIONES COMPLETADAS ***
+            if (this.economy.missions) {
+                const workMissions = await this.economy.missions.updateMissionProgress(userId, 'work');
+                const moneyMissions = await this.economy.missions.updateMissionProgress(userId, 'money_earned', result.amount);
+                
+                const allCompleted = [...workMissions, ...moneyMissions];
+                if (allCompleted.length > 0) {
+                    await this.economy.missions.notifyCompletedMissions(message, allCompleted);
+                }
+            }
+
             return;
         }
         
@@ -801,6 +820,17 @@ class AllCommands {
                 }
             } catch (error) {
                 console.error('❌ Error verificando logros después del trabajo:', error);
+            }
+        }
+
+        // *** NUEVO: NOTIFICAR MISIONES COMPLETADAS ***
+        if (this.economy.missions) {
+            const workMissions = await this.economy.missions.updateMissionProgress(userId, 'work');
+            const moneyMissions = await this.economy.missions.updateMissionProgress(userId, 'money_earned', result.amount);
+            
+            const allCompleted = [...workMissions, ...moneyMissions];
+            if (allCompleted.length > 0) {
+                await this.economy.missions.notifyCompletedMissions(message, allCompleted);
             }
         }
     }    
