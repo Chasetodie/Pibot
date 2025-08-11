@@ -973,39 +973,38 @@ class AllCommands {
                 
                 const finalResult = await this.economy.finishRobbery(robberId);
                 
-                if (finalResult && finalResult.success) {
-                    // Crear embed de resultado inmediatamente
-                    let resultEmbed;
-                    
-                    if (finalResult.robberySuccess) {
-                        resultEmbed = new EmbedBuilder()
-                            .setColor('#00ff44')
-                            .setTitle('🎉 ¡ROBO EXITOSO!')
-                            .setDescription(`**${message.author.username}** robó exitosamente a **${targetUser.username}**!`)
-                            .addFields([
-                                { name: '💰 Dinero robado', value: `${finalResult.stolenAmount} ${this.economy.config.currencySymbol}`, inline: true },
-                                { name: '👆 Clicks realizados', value: `${finalResult.clicks}/${this.economy.robberyConfig.maxClicks}`, inline: true },
-                                { name: '⚡ Eficiencia', value: `${finalResult.efficiency}%`, inline: true },
-                                { name: '💳 Tu nuevo balance', value: `${finalResult.robberNewBalance} ${this.economy.config.currencySymbol}`, inline: false }
-                            ])
-                            .setFooter({ text: 'El crimen sí paga... a veces' })
-                            .setTimestamp();
-                    } else {
-                        resultEmbed = new EmbedBuilder()
-                            .setColor('#ff4444')
-                            .setTitle('🚨 ¡ROBO FALLIDO!')
-                            .setDescription(`**${message.author.username}** fue atrapado intentando robar a **${targetUser.username}**!`)
-                            .addFields([
-                                { name: '💸 Penalización', value: `${finalResult.penalty} ${this.economy.config.currencySymbol}`, inline: true },
-                                { name: '👆 Clicks realizados', value: `${finalResult.clicks}/${this.economy.robberyConfig.maxClicks}`, inline: true },
-                                { name: '⚡ Eficiencia', value: `${finalResult.efficiency}%`, inline: true },
-                                { name: '💳 Tu nuevo balance', value: `${finalResult.robberNewBalance} ${this.economy.config.currencySymbol}`, inline: false }
-                            ])
-                            .setFooter({ text: 'La policía te multó por intento de robo' })
-                            .setTimestamp();
-                    }
-                    
-                    await robberyMessage.edit({ embeds: [resultEmbed], components: [] });
+                // En lugar de mostrar el resultado inmediatamente, envía un mensaje separado
+                if (finishResult.success) {
+                    // Esperar un poco para que se vea como mensaje separado
+                    setTimeout(async () => {
+                        if (finishResult.robberySuccess) {
+                            // Mensaje de robo exitoso
+                            const successEmbed = new EmbedBuilder()
+                                .setColor('#ff0000')
+                                .setTitle('🦹‍♂️ ¡Robo Exitoso!')
+                                .setDescription(`<@${message.author.id}> robó **${finishResult.stolenAmount}** ${this.economy.config.currencySymbol} a <@${finishResult.targetId}>`)
+                                .addFields(
+                                    { name: '💰 Cantidad robada', value: `${finishResult.stolenAmount} ${this.economy.config.currencySymbol}`, inline: true },
+                                    { name: '🎯 Eficiencia', value: `${finishResult.efficiency}%`, inline: true },
+                                    { name: '👆 Clicks', value: `${finishResult.clicks}/${finishResult.maxClicks}`, inline: true }
+                                );
+                            
+                            await message.channel.send({ embeds: [successEmbed] });
+                        } else {
+                            // Mensaje de robo fallido
+                            const failEmbed = new EmbedBuilder()
+                                .setColor('#800080')
+                                .setTitle('🚨 ¡Robo Fallido!')
+                                .setDescription(`<@${message.author.id}> falló el robo y perdió **${finishResult.penalty}** ${this.economy.config.currencySymbol}`)
+                                .addFields(
+                                    { name: '💸 Penalización', value: `${finishResult.penalty} ${this.economy.config.currencySymbol}`, inline: true },
+                                    { name: '🎯 Eficiencia', value: `${finishResult.efficiency}%`, inline: true },
+                                    { name: '👆 Clicks', value: `${finishResult.clicks}/${finishResult.maxClicks}`, inline: true }
+                                );
+                            
+                            await message.channel.send({ embeds: [failEmbed] });
+                        }
+                    }, 1000); // 1 segundo de delay para que se vea separado
                 }
                 
                 collector.stop('finished');
