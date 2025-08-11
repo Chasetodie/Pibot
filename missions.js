@@ -311,7 +311,8 @@ class MissionsSystem {
     // Obtener el día actual en formato YYYY-MM-DD
     getCurrentDay() {
         const now = new Date();
-        return now.toISOString().split('T')[0];
+        // Esto asegura que use la fecha en tu zona horaria local
+        return now.toLocaleDateString('en-CA'); // Formato YYYY-MM-DD
     }
     
     // Verificar si es hora de resetear misiones (12 PM)
@@ -569,13 +570,15 @@ class MissionsSystem {
             inline: false
         });
         
-        // Mostrar tiempo restante para reset (medianoche)
+        // Mostrar tiempo restante para reset
         const now = new Date();
-        const midnight = new Date(now);
-        midnight.setDate(midnight.getDate() + 1);
-        midnight.setHours(0, 0, 0, 0); // Medianoche del siguiente día
         
-        const timeLeft = midnight.getTime() - now.getTime();
+        // Crear fecha para medianoche de mañana en hora local
+        const tomorrow = new Date(now);
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        tomorrow.setHours(0, 0, 0, 0);
+        
+        const timeLeft = tomorrow.getTime() - now.getTime();
         const hoursLeft = Math.floor(timeLeft / (1000 * 60 * 60));
         const minutesLeft = Math.floor((timeLeft % (1000 * 60 * 60)) / (1000 * 60));
         
