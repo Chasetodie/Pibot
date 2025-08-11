@@ -106,6 +106,14 @@ class EconomySystem {
                         totalLost: 0,
                         netProfit: 0
                     },
+                    daily_missions: {},
+                    daily_missions_date: null,
+                    daily_stats: {
+                        messages_today: 0,
+                        work_today: 0,
+                        money_earned_today: 0,
+                        // ... etc
+                    },
                     createdAt: admin.firestore.FieldValue.serverTimestamp(),
                     updatedAt: admin.firestore.FieldValue.serverTimestamp()
                 };
@@ -253,6 +261,11 @@ class EconomySystem {
         console.log(`💸 Transferencia: ${fromUserId} -> ${toUserId}, ${amount} ${this.config.currencySymbol}`);
         console.log(`💸 TotalEarned: ${updateDataTo['stats.totalEarned']} && TotalSpent: ${updateDataFrom['stats.totalSpent']}`);
 
+        // *** NUEVO: ACTUALIZAR MISIONES ***
+        if (this.missions) {
+            await this.missions.updateMissionProgress(fromUserId, 'money_transferred', amount);
+        }
+        
         return {
             success: true,
             fromBalance: updateDataFrom.balance,
@@ -308,6 +321,11 @@ class EconomySystem {
             updateData['stats.totalEarned'] = user.stats.totalEarned + reward;
             
             console.log(`🎉 ${userId} subió ${levelUps} nivel(es)! Nuevo nivel: ${newLevel}, Recompensa: ${reward} ${this.config.currencySymbol}`);
+
+            // *** NUEVO: ACTUALIZAR MISIONES DE LEVEL UP ***
+            if (this.missions) {
+                await this.missions.updateMissionProgress(userId, 'level_up', levelUps);
+            }
             
             await this.updateUser(userId, updateData); // ← Reemplaza saveUsers()
            
@@ -505,6 +523,12 @@ class EconomySystem {
         // *** NUEVO: ACTUALIZAR ESTADÍSTICAS DE ACHIEVEMENTS ***
         if (this.achievements) {
             await this.achievements.updateStats(userId, 'daily_claimed');
+        }
+
+        // *** NUEVO: ACTUALIZAR MISIONES ***
+        if (this.missions) {
+            const completedMissions = await this.missions.updateMissionProgress(userId, 'daily_claimed');
+            // No notificar aquí porque se hace desde el comando
         }
         
         return {
@@ -732,7 +756,7 @@ class EconomySystem {
             user.stats.totalSpent += penalty;*/
             
             await this.updateUser(userId, updateData); // ← Reemplaza saveUsers()
- 
+           
             return {
                 success: false,
                 failed: true,
@@ -772,6 +796,13 @@ class EconomySystem {
         
         await this.updateUser(userId, updateData); // ← Reemplaza saveUsers()
 
+        // *** NUEVO: ACTUALIZAR MISIONES ***
+        if (this.missions) {
+            const completedMissions = await this.missions.updateMissionProgress(userId, 'work');
+            const moneyMissions = await this.missions.updateMissionProgress(userId, 'money_earned', amount);
+            // Las notificaciones se manejan desde los comandos
+        }
+        
         return {
             success: true,
             amount: amount,
@@ -1016,6 +1047,11 @@ robberUpdateData['stats.robberiesSuccessful'] = (robber.stats.robberiesSuccessfu
                 await this.updateUser(robberyData.targetId, targetUpdateData);
                 
                 console.log(`🦹 Robo exitoso: ${robberId} robó ${stolenAmount} ${this.config.currencySymbol} a ${robberyData.targetId}`);
+
+                // *** NUEVO: ACTUALIZAR MISIONES ***
+                if (this.missions) {
+                    await this.missions.updateMissionProgress(robberId, 'successful_robbery');
+                }
                 
                 return {
                     success: true,
