@@ -126,6 +126,11 @@ class MinigamesSystem {
             this.events.applyEventModifiers(userId, 0, 'games');
         }*/
 
+        // Al inicio del juego
+        if (this.economy.missions) {
+            await this.economy.missions.updateMissionProgress(userId, 'game_played');
+        }
+
         // Verificar argumentos
         if (args.length < 3) {
             const embed = new EmbedBuilder()
@@ -204,6 +209,11 @@ class MinigamesSystem {
                 await this.achievements.updateStats(userId, 'game_won');
                 await this.achievements.updateStats(userId, 'money_bet', betAmount);
             }            
+
+            // Si gana el juego
+            if (this.economy.missions) {
+                await this.economy.missions.updateMissionProgress(userId, 'game_won');
+            }
             
             embed.setDescription(`🎉 **¡GANASTE!**`)
                 .addFields(
@@ -244,6 +254,11 @@ class MinigamesSystem {
 /*        if (this.events) {
             this.events.applyEventModifiers(userId, 0, 'games');
         }*/
+
+        // Al inicio del juego
+        if (this.economy.missions) {
+            await this.economy.missions.updateMissionProgress(userId, 'game_played');
+        }
 
         // Si no hay argumentos, mostrar ayuda
         if (args.length < 3) {
@@ -343,6 +358,11 @@ class MinigamesSystem {
                 await this.achievements.updateStats(userId, 'game_won');
                 await this.achievements.updateStats(userId, 'money_bet', betAmount);
             }
+
+            // Si gana el juego
+            if (this.economy.missions) {
+                await this.economy.missions.updateMissionProgress(userId, 'game_won');
+            }
             
             embed.setDescription(`🎉 **¡GANASTE!**`)
                 .addFields(
@@ -377,6 +397,11 @@ class MinigamesSystem {
     async handleLottery(message, args) {
         const userId = message.author.id;
         const user = await this.economy.getUser(userId);
+
+        // Al inicio del juego
+        if (this.economy.missions) {
+            await this.economy.missions.updateMissionProgress(userId, 'game_played');
+        }
     
         // Si no hay argumentos suficientes, mostrar ayuda
         if (args.length < 3) {
@@ -481,6 +506,11 @@ class MinigamesSystem {
                 await this.achievements.updateStats(userId, 'game_won');
                 await this.achievements.updateStats(userId, 'money_bet', betAmount);
             }
+
+            // Si gana el juego
+            if (this.economy.missions) {
+                await this.economy.missions.updateMissionProgress(userId, 'game_won');
+            }
             
             resultEmbed.setDescription(`🎉 **¡JACKPOT! ¡GANASTE LA LOTERÍA!** 🎉`)
                 .addFields(
@@ -532,6 +562,11 @@ class MinigamesSystem {
     async handleBlackjack(message, args) {
         const userId = message.author.id;
         const user = await this.economy.getUser(userId);
+
+        // Al inicio del juego
+        if (this.economy.missions) {
+            await this.economy.missions.updateMissionProgress(userId, 'game_played');
+        }
     
         // Si no hay argumentos suficientes, mostrar ayuda
         if (args.length < 2) {
@@ -853,6 +888,11 @@ class MinigamesSystem {
                     await this.achievements.updateStats(userId, 'game_won');
                     await this.achievements.updateStats(userId, 'money_bet', finalBet);
                 }
+
+                // Si gana el juego
+                if (this.economy.missions) {
+                    await this.economy.missions.updateMissionProgress(userId, 'game_won');
+                }
                 break;
             case 'win':
             case 'dealer_bust':
@@ -867,6 +907,11 @@ class MinigamesSystem {
                     await this.achievements.updateStats(userId, 'game_played');
                     await this.achievements.updateStats(userId, 'game_won');
                     await this.achievements.updateStats(userId, 'money_bet', finalBet);
+                }
+
+                // Si gana el juego
+                if (this.economy.missions) {
+                    await this.economy.missions.updateMissionProgress(userId, 'game_won');
                 }
                 break;
             case 'push':
@@ -1032,6 +1077,11 @@ class MinigamesSystem {
     async handleRoulette(message, args) {
         const userId = message.author.id;
         const user = await this.economy.getUser(userId);
+
+        // Al inicio del juego
+        if (this.economy.missions) {
+            await this.economy.missions.updateMissionProgress(userId, 'game_played');
+        }
     
         // Si no hay argumentos suficientes, mostrar ayuda
         if (args.length < 3) {
@@ -1148,6 +1198,11 @@ class MinigamesSystem {
                 await this.achievements.updateStats(userId, 'game_played');
                 await this.achievements.updateStats(userId, 'game_won');
                 await this.achievements.updateStats(userId, 'money_bet', betAmount);
+            }
+
+            // Si gana el juego
+            if (this.economy.missions) {
+                await this.economy.missions.updateMissionProgress(userId, 'game_won');
             }
             
             resultEmbed.setDescription(`🎉 **¡GANASTE!**`)
@@ -1322,7 +1377,12 @@ class MinigamesSystem {
         const userId = message.author.id;
         const channelId = message.channel.id;
         const user = await this.economy.getUser(userId);
-    
+
+        // Al inicio del juego
+        if (this.economy.missions) {
+            await this.economy.missions.updateMissionProgress(userId, 'game_played');
+        }
+        
         // Si no hay argumentos suficientes, mostrar ayuda
         if (args.length < 2) {
             const embed = new EmbedBuilder()
@@ -1920,6 +1980,10 @@ class MinigamesSystem {
             if (this.achievements) {
                 await this.achievements.updateStats(winner.id, 'game_played');
                 await this.achievements.updateStats(winner.id, 'game_won');
+            }
+
+            if (this.economy.missions) {
+                await this.economy.missions.updateMissionProgress(winner.id, 'game_won');
             }
     
             embed.setTitle('🏆 ¡TENEMOS UN GANADOR! 🏆')
