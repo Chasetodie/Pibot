@@ -177,6 +177,7 @@ class MinigamesSystem {
         // Al inicio del juego
         if (this.economy.missions) {
             await this.economy.missions.updateMissionProgress(userId, 'game_played');
+            await this.economy.missions.updateMissionProgress(userId, 'money_bet', betAmount);
         }
         
         // Realizar el juego
@@ -213,6 +214,7 @@ class MinigamesSystem {
             // Si gana el juego
             if (this.economy.missions) {
                 await this.economy.missions.updateMissionProgress(userId, 'game_won');
+                await this.economy.missions.updateMissionProgress(userId, 'bet_won');
             }
             
             embed.setDescription(`🎉 **¡GANASTE!**`)
@@ -303,6 +305,7 @@ class MinigamesSystem {
         // Al inicio del juego
         if (this.economy.missions) {
             await this.economy.missions.updateMissionProgress(userId, 'game_played');
+            await this.economy.missions.updateMissionProgress(userId, 'money_bet', betAmount);
         }
         
         // Tirar el dado
@@ -362,6 +365,7 @@ class MinigamesSystem {
             // Si gana el juego
             if (this.economy.missions) {
                 await this.economy.missions.updateMissionProgress(userId, 'game_won');
+                await this.economy.missions.updateMissionProgress(userId, 'bet_won');
             }
             
             embed.setDescription(`🎉 **¡GANASTE!**`)
@@ -450,6 +454,7 @@ class MinigamesSystem {
         // Al inicio del juego
         if (this.economy.missions) {
             await this.economy.missions.updateMissionProgress(userId, 'game_played');
+            await this.economy.missions.updateMissionProgress(userId, 'money_bet', betAmount);
         }
         
         // Generar número ganador
@@ -510,6 +515,7 @@ class MinigamesSystem {
             // Si gana el juego
             if (this.economy.missions) {
                 await this.economy.missions.updateMissionProgress(userId, 'game_won');
+                await this.economy.missions.updateMissionProgress(userId, 'bet_won');
             }
             
             resultEmbed.setDescription(`🎉 **¡JACKPOT! ¡GANASTE LA LOTERÍA!** 🎉`)
@@ -607,6 +613,7 @@ class MinigamesSystem {
         // Al inicio del juego
         if (this.economy.missions) {
             await this.economy.missions.updateMissionProgress(userId, 'game_played');
+            await this.economy.missions.updateMissionProgress(userId, 'money_bet', betAmount);
         }
         
         // Verificar si ya hay un juego activo
@@ -892,6 +899,7 @@ class MinigamesSystem {
                 // Si gana el juego
                 if (this.economy.missions) {
                     await this.economy.missions.updateMissionProgress(userId, 'game_won');
+                    await this.economy.missions.updateMissionProgress(userId, 'bet_won');
                 }
                 break;
             case 'win':
@@ -912,6 +920,7 @@ class MinigamesSystem {
                 // Si gana el juego
                 if (this.economy.missions) {
                     await this.economy.missions.updateMissionProgress(userId, 'game_won');
+                    await this.economy.missions.updateMissionProgress(userId, 'bet_won');
                 }
                 break;
             case 'push':
@@ -1139,6 +1148,7 @@ class MinigamesSystem {
         // Al inicio del juego
         if (this.economy.missions) {
             await this.economy.missions.updateMissionProgress(userId, 'game_played');
+            await this.economy.missions.updateMissionProgress(userId, 'money_bet', betAmount);
         }
         
         // Validar tipo de apuesta
@@ -1203,6 +1213,7 @@ class MinigamesSystem {
             // Si gana el juego
             if (this.economy.missions) {
                 await this.economy.missions.updateMissionProgress(userId, 'game_won');
+                await this.economy.missions.updateMissionProgress(userId, 'bet_won');
             }
             
             resultEmbed.setDescription(`🎉 **¡GANASTE!**`)
@@ -1443,6 +1454,7 @@ class MinigamesSystem {
         // Al inicio del juego
         if (this.economy.missions) {
             await this.economy.missions.updateMissionProgress(userId, 'game_played');
+            await this.economy.missions.updateMissionProgress(userId, 'money_bet', betAmount);
         }
     
         // Verificar si ya hay una partida activa en el canal
@@ -1983,10 +1995,11 @@ class MinigamesSystem {
                 await this.achievements.updateStats(winner.id, 'game_won');
             }
 
+            // Si gana el juego
             if (this.economy.missions) {
                 await this.economy.missions.updateMissionProgress(winner.id, 'game_won');
-            }
-    
+                await this.economy.missions.updateMissionProgress(winner.id, 'bet_won');
+            }    
             embed.setTitle('🏆 ¡TENEMOS UN GANADOR! 🏆')
                 .setDescription(`🎉 **¡${winner.displayName} sobrevivió a la ruleta rusa!**`)
                 .setColor('#FFD700')
