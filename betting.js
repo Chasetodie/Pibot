@@ -220,6 +220,11 @@ class BettingSystem {
             embeds: [embed]
         });
 
+        // Al hacer una apuesta
+        if (this.economy.missions) {
+            await this.economy.missions.updateMissionProgress(userId, 'money_bet', betAmount);
+        }
+
         // ✅ CORREGIDO: Configurar expiración
         setTimeout(async () => {
             await this.expireBet(message, betId);
@@ -373,6 +378,11 @@ class BettingSystem {
         
         // Actualizar estadísticas
         await this.updateBetStats(winnerId, loserId, bet.amount);
+
+        // Si gana la apuesta
+        if (this.economy.missions) {
+            await this.economy.missions.updateMissionProgress(userId, 'bet_won');
+        }
 
         const embed = new EmbedBuilder()
             .setTitle('🏆 Apuesta Resuelta')
