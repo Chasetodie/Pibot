@@ -569,13 +569,13 @@ class MissionsSystem {
             inline: false
         });
         
-        // Mostrar tiempo restante para reset
+        // Mostrar tiempo restante para reset (medianoche)
         const now = new Date();
-        const tomorrow = new Date(now);
-        tomorrow.setDate(tomorrow.getDate() + 1);
-        tomorrow.setHours(12, 0, 0, 0); // 12 PM del siguiente día
+        const midnight = new Date(now);
+        midnight.setDate(midnight.getDate() + 1);
+        midnight.setHours(0, 0, 0, 0); // Medianoche del siguiente día
         
-        const timeLeft = tomorrow.getTime() - now.getTime();
+        const timeLeft = midnight.getTime() - now.getTime();
         const hoursLeft = Math.floor(timeLeft / (1000 * 60 * 60));
         const minutesLeft = Math.floor((timeLeft % (1000 * 60 * 60)) / (1000 * 60));
         
