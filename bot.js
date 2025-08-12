@@ -175,11 +175,12 @@ const client = new Client({
 });
 
 // Evento cuando el bot está listo
-client.once('ready', () => {
+client.once('ready', async () => {
     console.log(`✅ Bot conectado como ${client.user.tag}`);
     console.log(`📊 Contadores actuales: Pibe ${counters.pibe}, Piba ${counters.piba}`);
     console.log(`🌍 Variables de entorno: PIBE_COUNT=${process.env.PIBE_COUNT || 'no definida'}, PIBA_COUNT=${process.env.PIBA_COUNT || 'no definida'}`);
     console.log(`🔧 Comandos disponibles: !contadores, !reset, !reload, !help`);
+    await gamblingSystem.loadActiveRussianGames(client);
 
     // Establecer el guild para eventos
     const guild = client.guilds.cache.get('1404905496644685834'); // ← Cambiar por tu ID real

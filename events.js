@@ -39,7 +39,7 @@ class EventsSystem {
                 minDuration: 1800000, // 30 minutos
                 maxDuration: 7200000  // 2 horas
             },
-            'money_rain': {
+/*            'money_rain': {
                 name: '💰 Lluvia de Dinero',
                 description: 'Aumenta las ganancias de trabajo y daily',
                 emoji: '💰',
@@ -104,19 +104,19 @@ class EventsSystem {
                 maxDuration: 86400000, // 24 horas
                 special: true,
                 rare: true
-            }
+            }*/
         };
         
         // Probabilidades de eventos (por hora)
         this.eventProbabilities = {
             'double_xp': 0.15,      // 15%
-            'money_rain': 0.12,     // 12%
+/*            'money_rain': 0.12,     // 12%
             'lucky_hour': 0.10,     // 10%
             'fever_time': 0.08,     // 8%
             'charity_event': 0.05,  // 5%
             'treasure_hunt': 0.04,  // 4%
             'market_crash': 0.03,   // 3%
-            'server_anniversary': 0.01 // 1% (muy raro)
+            'server_anniversary': 0.01 // 1% (muy raro)*/
         };
         
         // Iniciar sistema después del delay

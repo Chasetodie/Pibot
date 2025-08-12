@@ -5,6 +5,7 @@ class MinigamesSystem {
         this.economy = economySystem;
         this.events = null;
         this.activeGames = new Map(); // Para manejar juegos en progreso
+        this.russianGamesCollection = admin.firestore().collection('russian_game');
         
         // Configuración de minijuegos
         this.config = {
@@ -1741,6 +1742,58 @@ class MinigamesSystem {
         return `${colorEmoji} **${number}** (${colorName})`;
     }
 
+    // Obtener partida de Firebase
+    async getRussianGame(gameId) {
+        try {
+            const gameDoc = await this.russianGamesCollection.doc(gameId).get();
+            if (!gameDoc.exists) return null;
+            return gameDoc.data();
+        } catch (error) {
+            console.error('❌ Error obteniendo partida:', error);
+            return null;
+        }
+    }
+
+    // Crear partida en Firebase
+    async createRussianGameInDB(gameId, gameData) {
+        try {
+            const gameWithTimestamp = {
+                ...gameData,
+                createdAt: admin.firestore.FieldValue.serverTimestamp(),
+                updatedAt: admin.firestore.FieldValue.serverTimestamp()
+            };
+            
+            await this.russianGamesCollection.doc(gameId).set(gameWithTimestamp);
+            return gameWithTimestamp;
+        } catch (error) {
+            console.error('❌ Error creando partida:', error);
+            throw error;
+        }
+    }
+
+    // Actualizar partida en Firebase
+    async updateRussianGame(gameId, updateData) {
+        try {
+            const updateWithTimestamp = {
+                ...updateData,
+                updatedAt: admin.firestore.FieldValue.serverTimestamp()
+            };
+            
+            await this.russianGamesCollection.doc(gameId).update(updateWithTimestamp);
+        } catch (error) {
+            console.error('❌ Error actualizando partida:', error);
+        }
+    }
+
+    // Eliminar partida de Firebase
+    async deleteRussianGame(gameId) {
+        try {
+            await this.russianGamesCollection.doc(gameId).delete();
+        } catch (error) {
+            console.error('❌ Error eliminando partida:', error);
+        }
+    }
+
     // Método principal para manejar la ruleta rusa
     async handleRussianRoulette(message, args) {
         const userId = message.author.id;
@@ -1824,6 +1877,7 @@ class MinigamesSystem {
         const gameKey = `russian_${channelId}`;
         
         const game = {
+            id: gameKey,
             channelId,
             creatorId: userId,
             betAmount,
@@ -1847,6 +1901,8 @@ class MinigamesSystem {
             joinTimeout: null,
             manualStart: false
         };
+
+        await this.createRussianGameInDB(gameKey, game);
     
         this.activeGames.set(gameKey, game);
     
@@ -1925,6 +1981,11 @@ class MinigamesSystem {
         });
     
         game.pot += betAmount;
+
+        await this.updateRussianGame(gameKey, {
+            players: game.players,
+            pot: game.pot
+        });
     
         // Reservar dinero
         await this.economy.removeMoney(userId, betAmount, 'russian_roulette_bet');
@@ -2020,6 +2081,14 @@ class MinigamesSystem {
     
     async startRussianRoulette(game, gameMessage) {
         game.phase = 'playing';
+
+        await this.updateRussianGame(gameKey, {
+            phase: game.phase,
+            players: game.players,
+            bulletPosition: game.bulletPosition,
+            currentShot: game.currentShot,
+            currentPlayerIndex: game.currentPlayerIndex
+        }); 
         
         // Mezclar orden de jugadores
         for (let i = game.players.length - 1; i > 0; i--) {
@@ -2225,6 +2294,13 @@ class MinigamesSystem {
         console.log('ez4');
 
         game.processing = false;
+
+        await this.updateRussianGame(gameKey, {
+            players: game.players,
+            currentShot: game.currentShot,
+            processing: game.processing,
+            // Agregar cualquier otro campo que haya cambiado
+        });
     
         // VERIFICAR SI EL JUEGO DEBE TERMINAR
         const alivePlayers = game.players.filter(p => p.alive);
@@ -2426,10 +2502,37 @@ class MinigamesSystem {
         }
 
         try {
+            await this.deleteRussianGame(`russian_${game.channelId}`);
             const channel = await client.channels.fetch(game.channelId);
             await channel.send({ embeds: [embed] });
         } catch (error) {
             console.error('Error actualizando mensaje final del juego:', error);
+        }
+    }
+
+    // Método para cargar partidas existentes al iniciar
+    async loadActiveRussianGames(client) {
+        try {
+            const snapshot = await this.russianGamesCollection
+                .where('phase', 'in', ['waiting', 'playing'])
+                .get();
+                
+            for (const doc of snapshot.docs) {
+                const gameData = doc.data();
+                const gameKey = doc.id;
+                
+                // Restaurar en cache local
+                this.activeGames.set(gameKey, gameData);
+                
+                // Si estaba en turno, reanudar
+                if (gameData.phase === 'playing') {
+                    setTimeout(() => this.nextTurn(gameData, client), 5000);
+                }
+            }
+            
+            console.log(`🔄 Cargadas ${snapshot.size} partidas de ruleta rusa`);
+        } catch (error) {
+            console.error('❌ Error cargando partidas:', error);
         }
     }
     
@@ -2451,6 +2554,7 @@ class MinigamesSystem {
             )
             .setTimestamp();
     
+        await this.deleteRussianGame(`russian_${game.channelId}`);
         await gameMessage.channel.send({ embeds: [embed] });
     }
 
