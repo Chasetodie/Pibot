@@ -270,9 +270,9 @@ class MinigamesSystem {
                 );
 
             // Si hay eventos aplicados
-            if (result.appliedEvents && result.appliedEvents.length > 0) {
+            if (appliedEvents && appliedEvents.length > 0) {
                 let eventText = '';
-                for (const event of result.appliedEvents) {
+                for (const event of appliedEvents) {
                     eventText += `${event.emoji} **${event.name}** activo!\n`;
                     
                     if (event.specialReward) {
@@ -466,9 +466,9 @@ class MinigamesSystem {
                 );
 
             // Si hay eventos aplicados
-            if (result.appliedEvents && result.appliedEvents.length > 0) {
+            if (appliedEvents && appliedEvents.length > 0) {
                 let eventText = '';
-                for (const event of result.appliedEvents) {
+                for (const event of appliedEvents) {
                     eventText += `${event.emoji} **${event.name}** activo!\n`;
                     
                     if (event.specialReward) {
@@ -663,9 +663,9 @@ class MinigamesSystem {
                 );
 
             // Si hay eventos aplicados
-            if (result.appliedEvents && result.appliedEvents.length > 0) {
+            if (appliedEvents && appliedEvents.length > 0) {
                 let eventText = '';
-                for (const event of result.appliedEvents) {
+                for (const event of appliedEvents) {
                     eventText += `${event.emoji} **${event.name}** activo!\n`;
                     
                     if (event.specialReward) {
@@ -1214,9 +1214,9 @@ class MinigamesSystem {
         }
 
         // Si hay eventos aplicados
-        if (result.appliedEvents && result.appliedEvents.length > 0) {
+        if (appliedEvents && appliedEvents.length > 0) {
             let eventText = '';
-            for (const event of result.appliedEvents) {
+            for (const event of appliedEvents) {
                 eventText += `${event.emoji} **${event.name}** activo!\n`;
                 
                 if (event.specialReward) {
@@ -1491,9 +1491,9 @@ class MinigamesSystem {
             }
 
             // Si hay eventos aplicados
-            if (result.appliedEvents && result.appliedEvents.length > 0) {
+            if (appliedEvents && appliedEvents.length > 0) {
                 let eventText = '';
-                for (const event of result.appliedEvents) {
+                for (const event of appliedEvents) {
                     eventText += `${event.emoji} **${event.name}** activo!\n`;
                     
                     if (event.specialReward) {
@@ -2319,9 +2319,9 @@ class MinigamesSystem {
                 );
 
             // Si hay eventos aplicados
-            if (result.appliedEvents && result.appliedEvents.length > 0) {
+            if (appliedEvents && appliedEvents.length > 0) {
                 let eventText = '';
-                for (const event of result.appliedEvents) {
+                for (const event of appliedEvents) {
                     eventText += `${event.emoji} **${event.name}** activo!\n`;
                     
                     if (event.specialReward) {
