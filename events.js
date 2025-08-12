@@ -5,7 +5,7 @@ class EventsSystem {
         this.economy = economySystem;
         this.admin = economySystem.admin;
         this.eventsCollection = this.admin.firestore().collection('serverEvents');
-        this.activeEvents{};
+        this.activeEvents = {};
         this.loadEvents();
         
         // Definir tipos de eventos disponibles
