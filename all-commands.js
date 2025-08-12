@@ -1166,9 +1166,9 @@ class AllCommands {
                 case '>createevent':
                     const eventType = args[1];
                     const duration = args[2] ? parseInt(args[2]) : null;
-                    await events.createManualEvent(message, eventType, duration);
+                    await this.events.createManualEvent(message, eventType, duration);
                 case '>eventstats':
-                    await events.showEventStats(message);
+                    await this.events.showEventStats(message);
                 case '>help':
                     await this.showHelp(message);
                     break;
