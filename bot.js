@@ -180,6 +180,12 @@ client.once('ready', () => {
     console.log(`📊 Contadores actuales: Pibe ${counters.pibe}, Piba ${counters.piba}`);
     console.log(`🌍 Variables de entorno: PIBE_COUNT=${process.env.PIBE_COUNT || 'no definida'}, PIBA_COUNT=${process.env.PIBA_COUNT || 'no definida'}`);
     console.log(`🔧 Comandos disponibles: !contadores, !reset, !reload, !help`);
+
+    // Establecer el guild para eventos
+    const guild = client.guilds.cache.get('1404905496644685834'); // ← Cambiar por tu ID real
+    if (guild) {
+        events.setGuild(guild); // Asumiendo que events es accesible aquí
+    }
 });
 
 // Evento cuando un miembro abandona el servidor

@@ -2454,33 +2454,33 @@ class MinigamesSystem {
         await gameMessage.channel.send({ embeds: [embed] });
     }
 
-async handleCancelRussian(message) {
-    const gameKey = `russian_${message.channel.id}`;
-    const game = this.activeGames.get(gameKey);
-    
-    if (!game) {
-        await message.reply('❌ No hay ninguna partida activa en este canal.');
-        return;
+    async handleCancelRussian(message) {
+        const gameKey = `russian_${message.channel.id}`;
+        const game = this.activeGames.get(gameKey);
+        
+        if (!game) {
+            await message.reply('❌ No hay ninguna partida activa en este canal.');
+            return;
+        }
+        
+        if (game.phase !== 'waiting') {
+            await message.reply('❌ Solo se puede cancelar una partida que esté esperando jugadores.');
+            return;
+        }
+        
+        if (message.author.id !== game.creatorId) {
+            await message.reply('❌ Solo el creador de la partida puede cancelarla.');
+            return;
+        }
+        
+        // Limpiar timeout si existe
+        if (game.joinTimeout) {
+            clearTimeout(game.joinTimeout);
+        }
+        
+        await this.cancelRussianRoulette(game, message, 'Cancelada por el creador');
+        await message.reply('✅ Partida cancelada exitosamente.');
     }
-    
-    if (game.phase !== 'waiting') {
-        await message.reply('❌ Solo se puede cancelar una partida que esté esperando jugadores.');
-        return;
-    }
-    
-    if (message.author.id !== game.creatorId) {
-        await message.reply('❌ Solo el creador de la partida puede cancelarla.');
-        return;
-    }
-    
-    // Limpiar timeout si existe
-    if (game.joinTimeout) {
-        clearTimeout(game.joinTimeout);
-    }
-    
-    await this.cancelRussianRoulette(game, message, 'Cancelada por el creador');
-    await message.reply('✅ Partida cancelada exitosamente.');
-}
     
     async processCommand(message) {
         if (message.author.bot) return;

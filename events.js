@@ -292,6 +292,12 @@ class EventsSystem {
         return event;
     }
 
+    // Agregar este método en la clase EventsSystem
+    setGuild(guild) {
+        this.guild = guild;
+        console.log(`🏠 Guild establecido para eventos: ${guild.name}`);
+    }
+
     // Obtener duración aleatoria para un evento
     getRandomDuration(eventData) {
         const min = eventData.minDuration;
