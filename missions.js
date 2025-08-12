@@ -315,6 +315,20 @@ class MissionsSystem {
         const ecuadorTime = new Date(now.getTime() - (5 * 60 * 60 * 1000));
         return ecuadorTime.toISOString().split('T')[0]; // Formato YYYY-MM-DD
     }
+
+    // Agregar esta función después de getCurrentDay()
+    resetDailyFlag(user) {
+        const now = new Date();
+        const ecuadorTime = new Date(now.getTime() - (5 * 60 * 60 * 1000));
+        const today = ecuadorTime.toISOString().split('T')[0];
+        const currentHour = ecuadorTime.getHours();
+        
+        // Si es un nuevo día y son menos de las 12 PM, resetear la bandera
+        if (user.daily_missions_date !== today && currentHour < 12) {
+            return { missions_reset_today: false };
+        }
+        return {};
+    }
     
     // Verificar si es hora de resetear misiones (12 PM)
     shouldResetMissions(user) {
@@ -326,10 +340,11 @@ class MissionsSystem {
         
         const userMissionsDate = user.daily_missions_date;
         
-        // Si es un día diferente, o si es el mismo día pero ya pasaron las 12 PM
-        return !userMissionsDate || 
-               userMissionsDate !== today || 
-               (userMissionsDate === today && currentHour >= 12 && !user.missions_reset_today);
+        // Solo resetear si es un día diferente Y ya pasaron las 12 PM, o si es el mismo día pero aún no se han reseteado hoy después de las 12 PM
+        if (!userMissionsDate) return currentHour >= 12; // Primera vez del usuario
+        if (userMissionsDate !== today) return currentHour >= 12; // Día diferente
+        if (userMissionsDate === today && currentHour >= 12 && !user.missions_reset_today) return true; // Mismo día, después de 12 PM y no reseteado
+        return false;
     }
     
     // Inicializar misiones diarias para un usuario
@@ -337,6 +352,12 @@ class MissionsSystem {
     
     async initializeDailyMissions(userId) {
         const user = await this.economy.getUser(userId);
+
+        // Resetear bandera si es necesario
+        const flagReset = this.resetDailyFlag(user);
+        if (Object.keys(flagReset).length > 0) {
+            await this.economy.updateUser(userId, flagReset);
+        }
         
         if (this.shouldResetMissions(user)) {
             const newMissions = this.generateDailyMissions();
@@ -348,7 +369,7 @@ class MissionsSystem {
                     return obj;
                 }, {}),
                 daily_missions_date: today,
-                missions_reset_today: true,
+                missions_reset_today: currentHour >= 12,
                 daily_stats: {
                     messages_today: 0,
                     work_today: 0,
