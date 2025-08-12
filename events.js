@@ -1,4 +1,5 @@
 const { EmbedBuilder } = require('discord.js');
+const admin = require('firebase-admin'); // ← Asegúrate de tener esta línea
 
 class EventsSystem {
     constructor(economySystem) {
