@@ -3,10 +3,15 @@ const { EmbedBuilder } = require('discord.js');
 class EventsSystem {
     constructor(economySystem) {
         this.economy = economySystem;
-        this.admin = economySystem.admin;
-        this.eventsCollection = this.admin.firestore().collection('serverEvents');
+        
+        // Esperar a que Firebase esté inicializado
+        setTimeout(() => {
+            const admin = require('firebase-admin');
+            this.eventsCollection = admin.firestore().collection('serverEvents');
+            this.loadEvents();
+        }, 1000);
+        
         this.activeEvents = {};
-        this.loadEvents();
         
         // Definir tipos de eventos disponibles
         this.eventTypes = {
