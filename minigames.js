@@ -1091,13 +1091,13 @@ class MinigamesSystem {
                 color = '#00FF00';
 
                 let finalWinAmountd = profit;
-                let appliedEvents = [];
+                let appliedEventsd = [];
                 
                 // Aplicar modificadores de eventos
                 if (this.events) {
                     const moneyMod = await this.events.applyMoneyModifiers(userId, profit, 'gambling');
                     finalWinAmount = moneyMod.finalAmount;
-                    appliedEvents = moneyMod.appliedEvents;
+                    appliedEventsd = moneyMod.appliedEvents;
                     
                     // Verificar eventos especiales (como treasure hunt)
                     const specialRewards = await this.events.checkSpecialEvents(userId, 'gambling', {
@@ -1109,7 +1109,7 @@ class MinigamesSystem {
                     for (const reward of specialRewards) {
                         if (reward.type === 'treasure') {
                             // Ya se agregó el dinero automáticamente en checkSpecialEvents
-                            appliedEvents.push({
+                            appliedEventsd.push({
                                 ...reward.event,
                                 specialReward: reward.amount
                             });
