@@ -269,7 +269,10 @@ class EventsSystem {
                 messagesAffected: 0,
                 workJobsAffected: 0,
                 dailiesAffected: 0,
-                gamesAffected: 0
+                gamesAffected: 0,
+                treasuresFound: 0,           // ✨ NUEVO
+                totalTreasureValue: 0,       // ✨ NUEVO  
+                totalXpGiven: 0              // ✨ NUEVO
             }
         };
         
@@ -401,22 +404,54 @@ class EventsSystem {
         let rewards = [];
         
         for (const event of this.getActiveEvents()) {
-            if (event.type === 'treasure_hunt' && Math.random() < 0.15) {
+            if (event.type === 'treasure_hunt' && Math.random() < 0.15) { // 15% chance
+                // DIFERENTES TIPOS DE TESORO
                 const treasureType = Math.random();
+                let treasureReward = 0;
+                let xpBonus = 0;
+                let treasureDescription = '';
+                let rewardType = 'money';
                 
-                if (treasureType < 0.7) {
-                    // 70% - Tesoro pequeño
-                    const reward = Math.floor(Math.random() * 1000) + 300; // 300-1300
-                    // ... agregar dinero
-                    treasureDescription = `Cofre pequeño con ${reward} π-b$`;
-                } else if (treasureType < 0.95) {
-                    // 25% - Tesoro medio  
-                    const reward = Math.floor(Math.random() * 2000) + 1000; // 1000-3000
-                    treasureDescription = `Cofre dorado con ${reward} π-b$`;
+                if (treasureType < 0.6) {
+                    // 60% - Tesoro de dinero normal
+                    treasureReward = Math.floor(Math.random() * 2000) + 500; // 500-2500
+                    treasureDescription = `Cofre de monedas: ${treasureReward} π-b$`;
+                    rewardType = 'money';
+                } else if (treasureType < 0.85) {
+                    // 25% - Tesoro de dinero premium
+                    treasureReward = Math.floor(Math.random() * 3000) + 1500; // 1500-4500
+                    treasureDescription = `Cofre dorado: ${treasureReward} π-b$`;
+                    rewardType = 'premium_money';
                 } else {
-                    // 5% - Tesoro legendario
-                    const reward = Math.floor(Math.random() * 5000) + 3000; // 3000-8000  
-                    treasureDescription = `¡Tesoro legendario con ${reward} π-b$!`;
+                    // 15% - Tesoro de XP
+                    xpBonus = Math.floor(Math.random() * 100) + 50; // 50-150 XP
+                    treasureDescription = `Pergamino ancestral: +${xpBonus} XP`;
+                    rewardType = 'xp';
+                }
+                
+                // Dar recompensas
+                if (treasureReward > 0) {
+                    await this.economy.addMoney(userId, treasureReward, 'treasure_found');
+                }
+                if (xpBonus > 0) {
+                    await this.economy.addXp(userId, xpBonus);
+                }
+                
+                rewards.push({
+                    type: 'treasure',
+                    subType: rewardType,
+                    amount: treasureReward,
+                    xpAmount: xpBonus,
+                    description: treasureDescription,
+                    event: event
+                });
+                
+                // Estadísticas mejoradas
+                event.stats.gamesAffected++;
+                event.stats.treasuresFound = (event.stats.treasuresFound || 0) + 1;
+                event.stats.totalTreasureValue = (event.stats.totalTreasureValue || 0) + treasureReward;
+                if (xpBonus > 0) {
+                    event.stats.totalXpGiven = (event.stats.totalXpGiven || 0) + xpBonus;
                 }
             }
             
@@ -605,13 +640,25 @@ class EventsSystem {
             const totalInteractions = stats.messagesAffected + stats.workJobsAffected + 
                                     stats.dailiesAffected + stats.gamesAffected;
             
+            let statsText = `**Interacciones totales:** ${totalInteractions}\n` +
+                            `• Mensajes: ${stats.messagesAffected}\n` +
+                            `• Trabajos: ${stats.workJobsAffected}\n` +
+                            `• Dailies: ${stats.dailiesAffected}\n` +
+                            `• Juegos: ${stats.gamesAffected}`;
+            
+            // ✨ ESTADÍSTICAS ESPECIALES PARA TREASURE HUNT
+            if (event.type === 'treasure_hunt') {
+                statsText += `\n**🗺️ Tesoros:**\n` +
+                             `• Encontrados: ${stats.treasuresFound || 0}\n` +
+                             `• Valor total: ${stats.totalTreasureValue || 0} π-b$`;
+                if (stats.totalXpGiven > 0) {
+                    statsText += `\n• XP dado: ${stats.totalXpGiven}`;
+                }
+            }
+            
             embed.addFields({
                 name: `${event.emoji} ${event.name}`,
-                value: `**Interacciones totales:** ${totalInteractions}\n` +
-                       `• Mensajes: ${stats.messagesAffected}\n` +
-                       `• Trabajos: ${stats.workJobsAffected}\n` +
-                       `• Dailies: ${stats.dailiesAffected}\n` +
-                       `• Juegos: ${stats.gamesAffected}`,
+                value: statsText,
                 inline: true
             });
         }
