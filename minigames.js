@@ -1118,7 +1118,7 @@ class MinigamesSystem {
                     }
                 }
                 
-                await this.economy.addMoney(userId, finalWinAmountd, 'blackjack_win');
+                await this.economy.addMoney(userId, finalWinAmount, 'blackjack_win');
 
                 // *** NUEVO: ACTUALIZAR ESTADÍSTICAS DE ACHIEVEMENTS ***
                 if (this.achievements) {
