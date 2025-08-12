@@ -266,7 +266,7 @@ class EconomySystem {
         if (this.missions) {
             await this.missions.updateMissionProgress(fromUserId, 'money_transferred', amount);
         }
-        
+       
         return {
             success: true,
             fromBalance: updateDataFrom.balance,
@@ -544,6 +544,14 @@ class EconomySystem {
         
         await this.updateUser(userId, updateData);
 
+        let treasuresFound = [];
+        if (this.events) {
+            const treasures = await this.events.checkSpecialEvents(userId, 'daily', {
+                amount: amount
+            });
+            treasuresFound = treasures;
+        }
+
         // *** NUEVO: ACTUALIZAR ESTADÍSTICAS DE ACHIEVEMENTS ***
         if (this.achievements) {
             await this.achievements.updateStats(userId, 'daily_claimed');
@@ -559,7 +567,8 @@ class EconomySystem {
             success: true,
             amount: amount,
             oldBalance: user.balance,
-            newBalance: user.balance + amount
+            newBalance: user.balance + amount,
+            treasuresFound: treasuresFound
         };
     }
 
@@ -847,6 +856,17 @@ class EconomySystem {
         
         await this.updateUser(userId, updateData); // ← Reemplaza saveUsers()
 
+        let treasuresFound = [];
+        if (this.events) {
+            const treasures = await this.events.checkSpecialEvents(userId, 'work', {
+                job: jobType,
+                amount: amount
+            });
+    
+            // treasures contendrá info si encontró tesoro
+            result.treasuresFound = treasures;
+        }
+        
         // *** NUEVO: ACTUALIZAR MISIONES ***
         if (this.missions) {
             const completedMissions = await this.missions.updateMissionProgress(userId, 'work');
@@ -861,6 +881,7 @@ class EconomySystem {
             oldBalance: user.balance,
             newBalance: user.balance + amount,
             jobName: job.name,
+            treasuresFound: treasuresFound,
 
             canWork: canWorkResult.canWork,
             reason: canWorkResult.reason,
