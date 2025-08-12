@@ -401,16 +401,23 @@ class EventsSystem {
         let rewards = [];
         
         for (const event of this.getActiveEvents()) {
-            if (event.type === 'treasure_hunt' && Math.random() < 0.15) { // 15% chance
-                const treasureReward = Math.floor(Math.random() * 2000) + 500; // 500-2500 π-b$
-                this.economy.addMoney(userId, treasureReward, 'treasure_found');
-                rewards.push({
-                    type: 'treasure',
-                    amount: treasureReward,
-                    event: event
-                });
+            if (event.type === 'treasure_hunt' && Math.random() < 0.15) {
+                const treasureType = Math.random();
                 
-                event.stats.gamesAffected++;
+                if (treasureType < 0.7) {
+                    // 70% - Tesoro pequeño
+                    const reward = Math.floor(Math.random() * 1000) + 300; // 300-1300
+                    // ... agregar dinero
+                    treasureDescription = `Cofre pequeño con ${reward} π-b$`;
+                } else if (treasureType < 0.95) {
+                    // 25% - Tesoro medio  
+                    const reward = Math.floor(Math.random() * 2000) + 1000; // 1000-3000
+                    treasureDescription = `Cofre dorado con ${reward} π-b$`;
+                } else {
+                    // 5% - Tesoro legendario
+                    const reward = Math.floor(Math.random() * 5000) + 3000; // 3000-8000  
+                    treasureDescription = `¡Tesoro legendario con ${reward} π-b$!`;
+                }
             }
             
             if (event.type === 'lucky_hour' && context === 'gambling') {
