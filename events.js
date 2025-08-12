@@ -283,7 +283,9 @@ class EventsSystem {
         
         console.log(`🎉 Evento creado: ${eventData.name} (${this.formatTime(duration)})`);
 
-        await this.announceEvent(event, 'created');
+        if (!triggeredBy) { // Solo si es automático (no hay triggeredBy)
+           await this.announceEvent(event, 'created');
+        }
 
         return event;
     }
