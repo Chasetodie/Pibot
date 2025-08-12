@@ -1052,8 +1052,8 @@ isBeingRobbed(userId) {
                 // Actualizar balances
                 robberUpdateData.balance = robber.balance + stolenAmount;
                 robberUpdateData['stats.totalEarned'] = (robber.stats.totalEarned || 0) + stolenAmount;
-robberUpdateData['stats.robberiesSuccessful'] = (robber.stats.robberiesSuccessful || 0) + 1;
-            robberUpdateData['stats.moneyStolen'] = (robber.stats.moneyStolen || 0) + stolenAmount;
+                robberUpdateData['stats.robberiesSuccessful'] = (robber.stats.robberiesSuccessful || 0) + 1;
+                robberUpdateData['stats.moneyStolen'] = (robber.stats.moneyStolen || 0) + stolenAmount;
                 
                 
                 const targetUpdateData = {
