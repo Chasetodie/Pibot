@@ -83,6 +83,7 @@ const achievements = new AchievementsSystem(economy);
 /*const shop = new ShopSystem(economy);*/
 const events = new EventsSystem(economy);
 economy.connectEventsSystem(events);
+minigames.connectEventsSystem(events);
 
 setTimeout(async () => {
     await events.loadEvents();
@@ -508,6 +509,7 @@ client.login(process.env.TOKEN).then(() => {
     console.error('❌ Error en el login:', error);
 
 });
+
 
 
 
