@@ -1033,6 +1033,9 @@ class MinigamesSystem {
         let profit = 0;
         let resultText = '';
         let color = '#FF0000';
+
+        let finalWinAmount = 0;
+        let appliedEvents = [];
         
         switch (result) {
             case 'blackjack':
@@ -1041,11 +1044,10 @@ class MinigamesSystem {
                 resultText = '🎉 **¡BLACKJACK NATURAL!**';
                 color = '#00FF00';
 
-                let finalWinAmount = profit;
-                let appliedEvents = [];
+                finalWinAmount = profit
                 
                 // Aplicar modificadores de eventos
-                if (this.events) {
+                if (this.events) {                   
                     const moneyMod = await this.events.applyMoneyModifiers(userId, profit, 'gambling');
                     finalWinAmount = moneyMod.finalAmount;
                     appliedEvents = moneyMod.appliedEvents;
@@ -1090,14 +1092,13 @@ class MinigamesSystem {
                 resultText = result === 'dealer_bust' ? '🎉 **¡DEALER SE PASÓ!**' : '🎉 **¡GANASTE!**';
                 color = '#00FF00';
 
-                let finalWinAmountd = profit;
-                let appliedEventsd = [];
+                finalWinAmount = profit
                 
                 // Aplicar modificadores de eventos
                 if (this.events) {
                     const moneyMod = await this.events.applyMoneyModifiers(userId, profit, 'gambling');
                     finalWinAmount = moneyMod.finalAmount;
-                    appliedEventsd = moneyMod.appliedEvents;
+                    appliedEvents = moneyMod.appliedEvents;
                     
                     // Verificar eventos especiales (como treasure hunt)
                     const specialRewards = await this.events.checkSpecialEvents(userId, 'gambling', {
