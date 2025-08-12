@@ -41,6 +41,7 @@ class EconomySystem {
         
         // Map para trackear robos activos
         this.activeRobberies = new Map();
+        this.events = null;
     }
 
     // Inicializar Firebase
@@ -370,6 +371,22 @@ class EconomySystem {
                     
             // Agregar XP (ahora async)
             const result = await this.addXp(userId, this.config.xpPerMessage);
+
+            // Aplicar modificadores de eventos a XP
+            let finalResult = result;
+            if (this.events) {
+                const xpMod = await this.events.applyEventModifiers(userId, result.xpGained, 'message');
+                if (xpMod.appliedEvents.length > 0) {
+                    // Recalcular con XP modificada
+                    const extraXp = xpMod.finalXp - xpMod.originalXp;
+                    if (extraXp > 0) {
+                        const bonusResult = await this.addXp(userId, extraXp);
+                        finalResult.xpGained = xpMod.finalXp;
+                        finalResult.eventBonus = true;
+                        finalResult.appliedEvents = xpMod.appliedEvents;
+                    }
+                }
+            }
             
             return {
                 levelUp: result.levelUp,
@@ -377,7 +394,9 @@ class EconomySystem {
                 newLevel: result.newLevel,
                 xpGained: result.xpGained,
                 reward: result.reward,
-                result: result
+                eventBonus: finalResult.eventBonus || false,
+                appliedEvents: finalResult.appliedEvents || [],
+                result: finalResult
             };
         } catch (error) {
             console.error('❌ Error procesando XP del mensaje:', error);
@@ -499,6 +518,11 @@ class EconomySystem {
         const user = await this.getUser(userId);
         const variation = Math.floor(Math.random() * (this.config.dailyVariation * 2)) - this.config.dailyVariation;
         let amount = Math.max(100, this.config.dailyAmount + variation);
+
+        if (this.events) {
+            const mod = await this.events.applyMoneyModifiers(userId, amount, 'daily');
+            amount = mod.finalAmount;
+        }
        
         // Aplicar modificadores de eventos a dinero de daily
 /*        if (this.events) {
@@ -799,6 +823,12 @@ class EconomySystem {
         let amount = Math.max(50, job.baseReward + variation);
         const message = job.messages[Math.floor(Math.random() * job.messages.length)];
 
+        // Aplicar modificadores de eventos a dinero de trabajo
+        if (this.events) {
+            const mod = await this.events.applyMoneyModifiers(userId, amount, 'work');
+            amount = mod.finalAmount;
+        }
+        
         // === INTEGRAR EVENTOS AQUÍ ===
 /*        if (this.events) {
             const mod = this.events.applyMoneyModifiers(userId, amount, 'work');
@@ -1148,6 +1178,12 @@ isBeingRobbed(userId) {
             return true;
         }
         return false;
+    }
+
+    // Método para conectar el sistema de eventos
+    connectEventsSystem(eventsSystem) {
+        this.events = eventsSystem;
+        console.log('🔗 Sistema de eventos conectado a la economía');
     }
 }
 
