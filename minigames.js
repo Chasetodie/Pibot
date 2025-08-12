@@ -2267,7 +2267,7 @@ class MinigamesSystem {
                 // Verificar eventos especiales (como treasure hunt)
                 const specialRewards = await this.events.checkSpecialEvents(winner.id, 'gambling', {
                     game: 'roulette',
-                    betAmount: betAmount
+                    betAmount: winnerPrize
                 });
                 
                 // Procesar recompensas especiales
