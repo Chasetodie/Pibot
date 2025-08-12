@@ -119,8 +119,8 @@ class MinigamesSystem {
 
     async canCoinflip(userId) {
         const user = await this.economy.getUser(userId);
-        
-        const lastCoin = user.lastCoinflip || 0;
+
+        const lastCoin = user['minigames.lastCoinflip'] || 0;
         const now = Date.now();
 
         if (now - lastCoin < this.config.coinflip.cooldown) {
@@ -329,7 +329,7 @@ class MinigamesSystem {
     async canDice(userId) {
         const user = await this.economy.getUser(userId);
 
-        const lastDice = user.lastDice || 0;
+        const lastDice = user['minigames.lastDice'] || 0;
         const now = Date.now();
 
         if (now - lastDice < this.config.dice.cooldown) {
@@ -540,7 +540,7 @@ class MinigamesSystem {
     async canLottery(userId) {
         const user = await this.economy.getUser(userId);
 
-        const lastLottery = user.lastLotto || 0;
+        const lastLottery = user['minigames.lastLottery'] || 0;
         const now = Date.now();
 
         if (now - lastLottery < this.config.lottery.cooldown) {
@@ -768,7 +768,7 @@ class MinigamesSystem {
     async canBlackJack(userId) {
         const user = await this.economy.getUser(userId);
 
-        const lastBlackJack = user.lastBlackJack || 0;
+        const lastBlackJack = user['minigames.lastBlackJack'] || 0;
         const now = Date.now();
 
         if (now - lastBlackJack < this.config.blackjack.cooldown) {
@@ -1379,7 +1379,7 @@ class MinigamesSystem {
     async canRoulette(userId) {
         const user = await this.economy.getUser(userId);
 
-        const lastRoulette = user.lastRoulette || 0;
+        const lastRoulette = user['minigames.lastRoulette'] || 0;
         const now = Date.now();
 
         if (now - lastRoulette < this.config.roulette.cooldown) {
