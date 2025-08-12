@@ -1278,8 +1278,8 @@ class AllCommands {
                 { name: '📋 Economía', value: '`>balance [@usuario]` - Ver tu dinero y nivel (o el de otro usuario)\n`>daily` - Reclamar' + `(${this.economy.config.dailyAmount}±${this.economy.config.dailyVariation} ${this.economy.config.currencySymbol})` + 'diarios\n`>missions` - Mira tus misiones diaras y completalas para ganar dinero\n`>work [tipo]` - Trabajar para ganar dinero (delivery, programmer, doctor, criminal)\n`>level [@usuario]` - Ver información detallada de nivel\n`>pay @usuario <cantidad>` - Transferir dinero a otro usuario\n`>top [money/level]` - Ver los rankings del servidor\n`>robar @usuario` - Robar dinero de otro usuario', inline: false},
                 // Minijuegos
                 { name: '🎮 Minijuegos', value: '`>games` - Ver lista de minijuegos', inline: false },
-/*                // Eventos
-                { name: '🎉 Eventos', value: '`>events` - Ver eventos activos', inline: false },*/
+                // Eventos
+                { name: '🎉 Eventos', value: '`>events` - Ver eventos activos', inline: false },
                 // Musica
 //                { name: '🎵 Música', value: '`>play <url>` - Reproducir música\n`>skip` - Saltar canción actual\n`>stop` - Detener reproducción\n`>pause` - Pausar reproducción\n`>resume` - Reanudar reproducción\n`>queue` - Ver cola de reproducción\n`>search` - Busca una canción junto a sus datos\n`>nowplaying` - Ver canción actual\n`>clearmusic` - Limpiar cola de reproducción', inline: false }
             )
