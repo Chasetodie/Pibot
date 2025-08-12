@@ -362,6 +362,10 @@ class MissionsSystem {
         if (this.shouldResetMissions(user)) {
             const newMissions = this.generateDailyMissions();
             const today = this.getCurrentDay();
+            const now = new Date();
+            // Convertir a zona horaria de Ecuador (UTC-5)
+            const ecuadorTime = new Date(now.getTime() - (5 * 60 * 60 * 1000));
+            const currentHour = ecuadorTime.getHours();
             
             const updateData = {
                 daily_missions: newMissions.reduce((obj, mission) => {

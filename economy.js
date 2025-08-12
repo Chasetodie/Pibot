@@ -107,6 +107,11 @@ class EconomySystem {
                         totalLost: 0,
                         netProfit: 0
                     },
+                    minigames: {
+                        lastDaily: 0,
+                        lastWork: 0,
+                        lastRobbery: 0,
+                    },
                     daily_missions: {},
                     daily_missions_date: null,
                     daily_stats: {
