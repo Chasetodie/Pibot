@@ -5,8 +5,10 @@ const path = require('path');
 class EventsSystem {
     constructor(economySystem) {
         this.economy = economySystem;
-        this.eventsFile = path.join(__dirname, 'events.json');
-        this.activeEvents = this.loadEvents();
+        this.admin = economySystem.admin;
+        this.eventsCollection = this.admin.firestore().collection('serverEvents');
+        this.activeEvents{};
+        this.loadEvents();
         
         // Definir tipos de eventos disponibles
         this.eventTypes = {
@@ -105,48 +107,68 @@ class EventsSystem {
     }
 
     // Cargar eventos desde archivo
-    loadEvents() {
+    async loadEvents() {
         try {
-            if (fs.existsSync(this.eventsFile)) {
-                const data = fs.readFileSync(this.eventsFile, 'utf8');
-                const events = JSON.parse(data);
-                console.log(`📅 ${Object.keys(events).length} eventos cargados`);
-                return events;
+            const snapshot = await this.eventsCollection.get();
+            
+            if (snapshot.empty) {
+                console.log('🆕 No hay eventos en Firebase, creando colección');
+                return;
             }
+            
+            this.activeEvents = {};
+            snapshot.forEach(doc => {
+                this.activeEvents[doc.id] = doc.data();
+            });
+            
+            console.log(`📅 ${Object.keys(this.activeEvents).length} eventos cargados desde Firebase`);
+            
+            // Limpiar eventos expirados al cargar
+            this.cleanExpiredEvents();
         } catch (error) {
-            console.error('❌ Error cargando eventos:', error);
+            console.error('❌ Error cargando eventos desde Firebase:', error);
         }
-        
-        console.log('🆕 Creando nueva base de datos de eventos');
-        return {};
     }
 
-    // Guardar eventos
-    saveEvents() {
+    // Guardar evento individual en Firebase
+    async saveEvent(eventId, eventData) {
         try {
-            fs.writeFileSync(this.eventsFile, JSON.stringify(this.activeEvents, null, 2));
+            await this.eventsCollection.doc(eventId).set({
+                ...eventData,
+                updatedAt: this.admin.firestore.FieldValue.serverTimestamp()
+            });
+            console.log(`💾 Evento ${eventId} guardado en Firebase`);
         } catch (error) {
-            console.error('❌ Error guardando eventos:', error);
+            console.error('❌ Error guardando evento en Firebase:', error);
+        }
+    }
+
+    async deleteEvent(eventId) {
+        try {
+            await this.eventsCollection.doc(eventId).delete();
+            console.log(`🗑️ Evento ${eventId} eliminado de Firebase`);
+        } catch (error) {
+            console.error('❌ Error eliminando evento de Firebase:', error);
         }
     }
 
     // Iniciar el loop de eventos automáticos
     startEventLoop() {
         // Verificar cada hora si crear nuevos eventos
-        setInterval(() => {
-            this.tryCreateRandomEvent();
+        setInterval(async () => {
+            await this.tryCreateRandomEvent();
         }, 3600000); // 1 hora
         
         // Limpiar eventos expirados cada 10 minutos
-        setInterval(() => {
-            this.cleanExpiredEvents();
+        setInterval(async () => {
+            await this.cleanExpiredEvents();
         }, 600000); // 10 minutos
         
         console.log('🔄 Sistema de eventos iniciado');
     }
 
     // Intentar crear un evento aleatorio
-    tryCreateRandomEvent() {
+    async tryCreateRandomEvent() {
         // No crear eventos si ya hay muchos activos
         const activeCount = Object.keys(this.activeEvents).length;
         if (activeCount >= 3) return;
@@ -170,12 +192,12 @@ class EventsSystem {
         }
         
         if (selectedEventType) {
-            this.createEvent(selectedEventType);
+            await this.createEvent(selectedEventType);
         }
     }
 
     // Crear un evento específico
-    createEvent(eventType, customDuration = null, triggeredBy = null) {
+    async createEvent(eventType, customDuration = null, triggeredBy = null) {
         const eventData = this.eventTypes[eventType];
         if (!eventData) return false;
         
@@ -215,7 +237,7 @@ class EventsSystem {
         };
         
         this.activeEvents[eventId] = event;
-        this.saveEvents();
+        await this.saveEvent(eventId, event); // Ahora async
         
         console.log(`🎉 Evento creado: ${eventData.name} (${this.formatTime(duration)})`);
         return event;
@@ -245,7 +267,7 @@ class EventsSystem {
     }
 
     // Aplicar modificadores de eventos a XP
-    applyEventModifiers(userId, baseXp, context = 'message') {
+    async applyEventModifiers(userId, baseXp, context = 'message') {
         let finalXp = baseXp;
         let appliedEvents = [];
         
@@ -264,7 +286,10 @@ class EventsSystem {
         }
         
         if (appliedEvents.length > 0) {
-            this.saveEvents();
+            // Guardar eventos modificados en Firebase
+            for (const event of appliedEvents) {
+                await this.saveEvent(event.id, event);
+            }
         }
         
         return {
@@ -275,7 +300,7 @@ class EventsSystem {
     }
 
     // Aplicar modificadores de eventos a dinero (trabajo/daily)
-    applyMoneyModifiers(userId, baseAmount, context = 'work') {
+    async applyMoneyModifiers(userId, baseAmount, context = 'work') {
         let finalAmount = baseAmount;
         let appliedEvents = [];
         
@@ -302,7 +327,10 @@ class EventsSystem {
         }
         
         if (appliedEvents.length > 0) {
-            this.saveEvents();
+            // Guardar eventos modificados en Firebase
+            for (const event of appliedEvents) {
+                await this.saveEvent(event.id, event);
+            }
         }
         
         return {
@@ -332,7 +360,7 @@ class EventsSystem {
     }
 
     // Verificar eventos especiales para contextos específicos
-    checkSpecialEvents(userId, context, data = {}) {
+    async checkSpecialEvents(userId, context, data = {}) {
         let rewards = [];
         
         for (const event of this.getActiveEvents()) {
@@ -358,8 +386,11 @@ class EventsSystem {
             }
         }
         
-        if (rewards.length > 0) {
-            this.saveEvents();
+        if (appliedEvents.length > 0) {
+            // Guardar eventos modificados en Firebase
+            for (const event of appliedEvents) {
+                await this.saveEvent(event.id, event);
+            }
         }
         
         return rewards;
@@ -425,7 +456,7 @@ class EventsSystem {
         }
         
         const customDuration = duration ? duration * 60000 : null; // Convertir minutos a ms
-        const event = this.createEvent(eventType, customDuration, message.author.id);
+        const event = await this.createEvent(eventType, customDuration, message.author.id);
         
         if (!event) {
             await message.reply('❌ No se pudo crear el evento. Puede que ya haya uno del mismo tipo activo.');
@@ -462,20 +493,17 @@ class EventsSystem {
     }
 
     // Limpiar eventos expirados
-    cleanExpiredEvents() {
+    async cleanExpiredEvents() {
         const now = Date.now();
         let cleaned = 0;
         
         for (const [eventId, event] of Object.entries(this.activeEvents)) {
             if (event.endTime <= now) {
                 delete this.activeEvents[eventId];
+                await this.deleteEvent(eventId); // Eliminar de Firebase
                 cleaned++;
                 console.log(`🧹 Evento expirado limpiado: ${event.name}`);
             }
-        }
-        
-        if (cleaned > 0) {
-            this.saveEvents();
         }
     }
 
