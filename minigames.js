@@ -1,4 +1,5 @@
 const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
+const admin = require('firebase-admin'); // ← Asegúrate de tener esta línea
 
 class MinigamesSystem {
     constructor(economySystem) {
