@@ -3,6 +3,7 @@ const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('
 class MinigamesSystem {
     constructor(economySystem) {
         this.economy = economySystem;
+        this.events = null;
         this.activeGames = new Map(); // Para manejar juegos en progreso
         
         // Configuración de minijuegos
@@ -179,9 +180,25 @@ class MinigamesSystem {
             await this.economy.missions.updateMissionProgress(userId, 'game_played');
             await this.economy.missions.updateMissionProgress(userId, 'money_bet', betAmount);
         }
+
+        let baseWinChance = 0.5; // 50% chance base
+        let finalWinChance = baseWinChance;
+        let appliedEvents = [];
+        
+        // Verificar eventos de suerte
+        if (this.events) {
+            const specialRewards = await this.events.checkSpecialEvents(userId, 'gambling');
+            
+            for (const reward of specialRewards) {
+                if (reward.type === 'luck_boost') {
+                    finalWinChance *= reward.multiplier;
+                    appliedEvents.push(reward.event);
+                }
+            }
+        }
         
         // Realizar el juego
-        const result = Math.random() < 0.5 ? 'cara' : 'cruz';
+        const result = Math.random() < finalWinChance ? 'cara' : 'cruz';
         const won = result === normalizedChoice;
         
         // Establecer cooldown
@@ -200,8 +217,33 @@ class MinigamesSystem {
         if (won) {
             const winAmount = Math.floor(betAmount * this.config.coinflip.winMultiplier);
             const profit = winAmount - betAmount;
+            const finalWinAmount = profit;
+            let appliedEvents = [];
             
-            await this.economy.addMoney(userId, profit, 'coinflip_win');            
+            // Aplicar modificadores de eventos
+            if (this.events) {
+                const moneyMod = await this.events.applyMoneyModifiers(userId, profit, 'gambling');
+                finalWinAmount = moneyMod.finalAmount;
+                appliedEvents = moneyMod.appliedEvents;
+                
+                // Verificar eventos especiales (como treasure hunt)
+                const specialRewards = await this.events.checkSpecialEvents(userId, 'gambling', {
+                    game: 'coinflip',
+                    betAmount: betAmount
+                });
+                
+                // Procesar recompensas especiales
+                for (const reward of specialRewards) {
+                    if (reward.type === 'treasure') {
+                        // Ya se agregó el dinero automáticamente en checkSpecialEvents
+                        appliedEvents.push({
+                            ...reward.event,
+                            specialReward: reward.amount
+                        });
+                    }
+                }
+            }
+            await this.economy.addMoney(userId, finalWinAmount, 'coinflip_win');            
             await this.economy.updateUser(userId, updateData);
 
             // *** NUEVO: ACTUALIZAR ESTADÍSTICAS DE ACHIEVEMENTS ***
@@ -217,15 +259,33 @@ class MinigamesSystem {
                 await this.economy.missions.updateMissionProgress(userId, 'bet_won');
                 await this.economy.missions.updateMissionProgress(userId, 'money_earned', profit);
             }
-            
+          
             embed.setDescription(`🎉 **¡GANASTE!**`)
                 .addFields(
                     { name: '🪙 Resultado', value: result === 'cara' ? '🟡 Cara' : '⚪ Cruz', inline: true },
                     { name: '🎯 Tu Elección', value: normalizedChoice === 'cara' ? '🟡 Cara' : '⚪ Cruz', inline: true },
                     { name: '💰 Ganancia', value: `+${this.formatNumber(profit)} π-b$`, inline: true },
                     { name: '💸 Balance Antiguo', value: `${this.formatNumber(user.balance)} π-b$`, inline: false },
-                    { name: '💳 Balance Actual', value: `${this.formatNumber(user.balance + profit)} π-b$`, inline: false }
+                    { name: '💳 Balance Actual', value: `${this.formatNumber(user.balance + profit)} π-b$`, inline: false },
                 );
+
+            // Si hay eventos aplicados
+            if (result.appliedEvents && result.appliedEvents.length > 0) {
+                let eventText = '';
+                for (const event of result.appliedEvents) {
+                    eventText += `${event.emoji} **${event.name}** activo!\n`;
+                    
+                    if (event.specialReward) {
+                        eventText += `🎁 +${event.specialReward} π-b$ de tesoro encontrado!\n`;
+                    }
+                }
+                
+                embed.addFields({
+                    name: '🎉 Eventos Activos',
+                    value: eventText,
+                    inline: false
+                });
+            }
         } else {
             await this.economy.removeMoney(userId, betAmount, 'coinflip_loss');            
             await this.economy.updateUser(userId, updateData);
@@ -352,8 +412,35 @@ class MinigamesSystem {
         if (won) {
             const winAmount = Math.floor(betAmount * multiplier);
             const profit = winAmount - betAmount;
+
+            let finalWinAmount = profit;
+            let appliedEvents = [];
             
-            await this.economy.addMoney(userId, profit, 'dice_win');
+            // Aplicar modificadores de eventos
+            if (this.events) {
+                const moneyMod = await this.events.applyMoneyModifiers(userId, profit, 'gambling');
+                finalWinAmount = moneyMod.finalAmount;
+                appliedEvents = moneyMod.appliedEvents;
+                
+                // Verificar eventos especiales (como treasure hunt)
+                const specialRewards = await this.events.checkSpecialEvents(userId, 'gambling', {
+                    game: 'dice',
+                    betAmount: betAmount
+                });
+                
+                // Procesar recompensas especiales
+                for (const reward of specialRewards) {
+                    if (reward.type === 'treasure') {
+                        // Ya se agregó el dinero automáticamente en checkSpecialEvents
+                        appliedEvents.push({
+                            ...reward.event,
+                            specialReward: reward.amount
+                        });
+                    }
+                }
+            }
+            
+            await this.economy.addMoney(userId, finalWinAmount, 'dice_win');
             await this.economy.updateUser(userId, updateData);
 
             // *** NUEVO: ACTUALIZAR ESTADÍSTICAS DE ACHIEVEMENTS ***
@@ -377,6 +464,24 @@ class MinigamesSystem {
                     { name: '💸 Balance Antiguo', value: `${this.formatNumber(user.balance)} π-b$`, inline: false },
                     { name: '💳 Balance Actual', value: `${this.formatNumber(user.balance + profit)} π-b$`, inline: false }
                 );
+
+            // Si hay eventos aplicados
+            if (result.appliedEvents && result.appliedEvents.length > 0) {
+                let eventText = '';
+                for (const event of result.appliedEvents) {
+                    eventText += `${event.emoji} **${event.name}** activo!\n`;
+                    
+                    if (event.specialReward) {
+                        eventText += `🎁 +${event.specialReward} π-b$ de tesoro encontrado!\n`;
+                    }
+                }
+                
+                embed.addFields({
+                    name: '🎉 Eventos Activos',
+                    value: eventText,
+                    inline: false
+                });
+            }
         } else {
             await this.economy.removeMoney(userId, betAmount, 'dice_loss');
             await this.economy.updateUser(userId, updateData);
@@ -499,8 +604,35 @@ class MinigamesSystem {
         if (won) {
             const winAmount = betAmount * this.config.lottery.winMultiplier;
             const profit = winAmount - betAmount;
+
+            let finalWinAmount = profit;
+            let appliedEvents = [];
             
-            await this.economy.addMoney(userId, profit, 'lottery_win');     
+            // Aplicar modificadores de eventos
+            if (this.events) {
+                const moneyMod = await this.events.applyMoneyModifiers(userId, profit, 'gambling');
+                finalWinAmount = moneyMod.finalAmount;
+                appliedEvents = moneyMod.appliedEvents;
+                
+                // Verificar eventos especiales (como treasure hunt)
+                const specialRewards = await this.events.checkSpecialEvents(userId, 'gambling', {
+                    game: 'lottery',
+                    betAmount: betAmount
+                });
+                
+                // Procesar recompensas especiales
+                for (const reward of specialRewards) {
+                    if (reward.type === 'treasure') {
+                        // Ya se agregó el dinero automáticamente en checkSpecialEvents
+                        appliedEvents.push({
+                            ...reward.event,
+                            specialReward: reward.amount
+                        });
+                    }
+                }
+            }
+            
+            await this.economy.addMoney(userId, finalWinAmount, 'lottery_win');     
             // AGREGAR ESTAS LÍNEAS:
             const updateDataLottery = {
                 'stats.lotteryWins': (user.stats.lotteryWins || 0) + 1  // ← NUEVA LÍNEA
@@ -529,6 +661,24 @@ class MinigamesSystem {
                     { name: '💸 Balance Anterior', value: `${this.formatNumber(user.balance)} π-b$`, inline: false },
                     { name: '💳 Balance Actual', value: `${this.formatNumber(user.balance + profit)} π-b$ 🚀`, inline: false }
                 );
+
+            // Si hay eventos aplicados
+            if (result.appliedEvents && result.appliedEvents.length > 0) {
+                let eventText = '';
+                for (const event of result.appliedEvents) {
+                    eventText += `${event.emoji} **${event.name}** activo!\n`;
+                    
+                    if (event.specialReward) {
+                        eventText += `🎁 +${event.specialReward} π-b$ de tesoro encontrado!\n`;
+                    }
+                }
+                
+                embed.addFields({
+                    name: '🎉 Eventos Activos',
+                    value: eventText,
+                    inline: false
+                });
+            }
         } else {
             await this.economy.removeMoney(userId, betAmount, 'lottery_loss');
             await this.economy.updateUser(userId, updateData);
@@ -890,7 +1040,34 @@ class MinigamesSystem {
                 profit = blackjackWin - betAmount;
                 resultText = '🎉 **¡BLACKJACK NATURAL!**';
                 color = '#00FF00';
-                await this.economy.addMoney(userId, profit, 'blackjack_win');
+
+                let finalWinAmount = profit;
+                let appliedEvents = [];
+                
+                // Aplicar modificadores de eventos
+                if (this.events) {
+                    const moneyMod = await this.events.applyMoneyModifiers(userId, profit, 'gambling');
+                    finalWinAmount = moneyMod.finalAmount;
+                    appliedEvents = moneyMod.appliedEvents;
+                    
+                    // Verificar eventos especiales (como treasure hunt)
+                    const specialRewards = await this.events.checkSpecialEvents(userId, 'gambling', {
+                        game: 'blackjack',
+                        betAmount: betAmount
+                    });
+                    
+                    // Procesar recompensas especiales
+                    for (const reward of specialRewards) {
+                        if (reward.type === 'treasure') {
+                            // Ya se agregó el dinero automáticamente en checkSpecialEvents
+                            appliedEvents.push({
+                                ...reward.event,
+                                specialReward: reward.amount
+                            });
+                        }
+                    }
+                }
+                await this.economy.addMoney(userId, finalWinAmount, 'blackjack_win');
 
                 // *** NUEVO: ACTUALIZAR ESTADÍSTICAS DE ACHIEVEMENTS ***
                 if (this.achievements) {
@@ -912,7 +1089,35 @@ class MinigamesSystem {
                 profit = normalWin - finalBet;
                 resultText = result === 'dealer_bust' ? '🎉 **¡DEALER SE PASÓ!**' : '🎉 **¡GANASTE!**';
                 color = '#00FF00';
-                await this.economy.addMoney(userId, profit, 'blackjack_win');
+
+                let finalWinAmount = profit;
+                let appliedEvents = [];
+                
+                // Aplicar modificadores de eventos
+                if (this.events) {
+                    const moneyMod = await this.events.applyMoneyModifiers(userId, profit, 'gambling');
+                    finalWinAmount = moneyMod.finalAmount;
+                    appliedEvents = moneyMod.appliedEvents;
+                    
+                    // Verificar eventos especiales (como treasure hunt)
+                    const specialRewards = await this.events.checkSpecialEvents(userId, 'gambling', {
+                        game: 'blackjack',
+                        betAmount: betAmount
+                    });
+                    
+                    // Procesar recompensas especiales
+                    for (const reward of specialRewards) {
+                        if (reward.type === 'treasure') {
+                            // Ya se agregó el dinero automáticamente en checkSpecialEvents
+                            appliedEvents.push({
+                                ...reward.event,
+                                specialReward: reward.amount
+                            });
+                        }
+                    }
+                }
+                
+                await this.economy.addMoney(userId, finalWinAmount, 'blackjack_win');
 
                 // *** NUEVO: ACTUALIZAR ESTADÍSTICAS DE ACHIEVEMENTS ***
                 if (this.achievements) {
@@ -1006,6 +1211,24 @@ class MinigamesSystem {
         
         if (doubled) {
             embed.addFields({ name: '🔄 Especial', value: 'Apuesta doblada', inline: true });
+        }
+
+        // Si hay eventos aplicados
+        if (result.appliedEvents && result.appliedEvents.length > 0) {
+            let eventText = '';
+            for (const event of result.appliedEvents) {
+                eventText += `${event.emoji} **${event.name}** activo!\n`;
+                
+                if (event.specialReward) {
+                    eventText += `🎁 +${event.specialReward} π-b$ de tesoro encontrado!\n`;
+                }
+            }
+            
+            embed.addFields({
+                name: '🎉 Eventos Activos',
+                value: eventText,
+                inline: false
+            });
         }
     
         embed.setTimestamp();
@@ -1204,8 +1427,35 @@ class MinigamesSystem {
             const multiplier = this.config.roulette.payouts[validBet.type];
             const winAmount = Math.floor(betAmount * multiplier);
             const profit = winAmount - betAmount;
+
+            let finalWinAmount = profit;
+            let appliedEvents = [];
             
-            await this.economy.addMoney(userId, profit, 'roulette_win');
+            // Aplicar modificadores de eventos
+            if (this.events) {
+                const moneyMod = await this.events.applyMoneyModifiers(userId, profit, 'gambling');
+                finalWinAmount = moneyMod.finalAmount;
+                appliedEvents = moneyMod.appliedEvents;
+                
+                // Verificar eventos especiales (como treasure hunt)
+                const specialRewards = await this.events.checkSpecialEvents(userId, 'gambling', {
+                    game: 'roulette',
+                    betAmount: betAmount
+                });
+                
+                // Procesar recompensas especiales
+                for (const reward of specialRewards) {
+                    if (reward.type === 'treasure') {
+                        // Ya se agregó el dinero automáticamente en checkSpecialEvents
+                        appliedEvents.push({
+                            ...reward.event,
+                            specialReward: reward.amount
+                        });
+                    }
+                }
+            }
+            
+            await this.economy.addMoney(userId, finalWinAmount, 'roulette_win');
             await this.economy.updateUser(userId, updateData);
     
             // *** ACTUALIZAR ESTADÍSTICAS DE ACHIEVEMENTS ***
@@ -1239,6 +1489,24 @@ class MinigamesSystem {
                     inline: false 
                 });
             }
+
+            // Si hay eventos aplicados
+            if (result.appliedEvents && result.appliedEvents.length > 0) {
+                let eventText = '';
+                for (const event of result.appliedEvents) {
+                    eventText += `${event.emoji} **${event.name}** activo!\n`;
+                    
+                    if (event.specialReward) {
+                        eventText += `🎁 +${event.specialReward} π-b$ de tesoro encontrado!\n`;
+                    }
+                }
+                
+                embed.addFields({
+                    name: '🎉 Eventos Activos',
+                    value: eventText,
+                    inline: false
+                });
+            }            
         } else {
             await this.economy.removeMoney(userId, betAmount, 'roulette_loss');
             await this.economy.updateUser(userId, updateData);
@@ -1986,8 +2254,35 @@ class MinigamesSystem {
         if (survivors.length === 1) {
             // Un ganador
             const winner = survivors[0];
+
+            let finalWinAmount = winnerPrize;
+            let appliedEvents = [];
             
-            await this.economy.addMoney(winner.id, winnerPrize, 'russian_roulette_win');
+            // Aplicar modificadores de eventos
+            if (this.events) {
+                const moneyMod = await this.events.applyMoneyModifiers(userId, winnerPrize, 'gambling');
+                finalWinAmount = moneyMod.finalAmount;
+                appliedEvents = moneyMod.appliedEvents;
+                
+                // Verificar eventos especiales (como treasure hunt)
+                const specialRewards = await this.events.checkSpecialEvents(userId, 'gambling', {
+                    game: 'roulette',
+                    betAmount: betAmount
+                });
+                
+                // Procesar recompensas especiales
+                for (const reward of specialRewards) {
+                    if (reward.type === 'treasure') {
+                        // Ya se agregó el dinero automáticamente en checkSpecialEvents
+                        appliedEvents.push({
+                            ...reward.event,
+                            specialReward: reward.amount
+                        });
+                    }
+                }
+            }            
+            
+            await this.economy.addMoney(winner.id, finalWinAmount, 'russian_roulette_win');
             
             // Establecer cooldown para el ganador
             this.setCooldown(winner.id, 'russianRoulette');
@@ -2022,6 +2317,24 @@ class MinigamesSystem {
                     },
                     { name: '🔫 Bala Estaba En', value: `Disparo ${game.bulletPosition}/6`, inline: true }
                 );
+
+            // Si hay eventos aplicados
+            if (result.appliedEvents && result.appliedEvents.length > 0) {
+                let eventText = '';
+                for (const event of result.appliedEvents) {
+                    eventText += `${event.emoji} **${event.name}** activo!\n`;
+                    
+                    if (event.specialReward) {
+                        eventText += `🎁 +${event.specialReward} π-b$ de tesoro encontrado!\n`;
+                    }
+                }
+                
+                embed.addFields({
+                    name: '🎉 Eventos Activos',
+                    value: eventText,
+                    inline: false
+                });
+            }
         } else {
             // Todos murieron (teóricamente imposible, pero por seguridad)
             embed.setTitle('💀 ¡TODOS ELIMINADOS!')
@@ -2199,7 +2512,7 @@ async handleCancelRussian(message) {
                 },
                 { 
                     name: '🔮 Próximamente', 
-                    value: '\n• Slots\n• Poker', 
+                    value: '• Poker\n• Trivia\n• Memory Game', 
                     inline: false 
                 }
             )
@@ -2207,6 +2520,12 @@ async handleCancelRussian(message) {
             .setTimestamp();
 
         await message.reply({ embeds: [embed] });
+    }
+
+    // Método para conectar eventos
+    connectEventsSystem(eventsSystem) {
+        this.events = eventsSystem;
+        console.log('🎮 Sistema de eventos conectado a minijuegos');
     }
 }
 
