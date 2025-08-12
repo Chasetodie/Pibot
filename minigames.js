@@ -1983,7 +1983,7 @@ class MinigamesSystem {
     
         game.pot += betAmount;
 
-        await this.updateRussianGame(gameKey, {
+        await this.updateRussianGame(game.id, {
             players: game.players,
             pot: game.pot
         });
