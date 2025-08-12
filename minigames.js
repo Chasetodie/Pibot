@@ -131,6 +131,8 @@ class MinigamesSystem {
             };
         }
 
+        console.log(lastCoin, now, this.config.coinflip.cooldown);
+
         return { canCoinPlay: true };
     }
 
