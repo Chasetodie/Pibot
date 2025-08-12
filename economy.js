@@ -108,9 +108,11 @@ class EconomySystem {
                         netProfit: 0
                     },
                     minigames: {
-                        lastDaily: 0,
-                        lastWork: 0,
-                        lastRobbery: 0,
+                        lastCoinflip: 0,
+                        lastDice: 0,
+                        lastRoulette: 0,
+                        lastLotto: 0,
+                        lastBlackJack: 0,
                     },
                     daily_missions: {},
                     daily_missions_date: null,

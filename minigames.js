@@ -73,7 +73,6 @@ class MinigamesSystem {
             russianRoulette: {
                 minBet: 200,
                 maxBet: 5000,
-                cooldown: 90000, // 5 minutos entre juegos
                 minPlayers: 2,
                 maxPlayers: 6,
                 joinTime: 60000, // 1 minuto segundos para unirse
@@ -117,7 +116,24 @@ class MinigamesSystem {
     formatNumber(num) {
         return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
     }
-   
+
+    async canCoinflip(userId) {
+        const user = await this.getUser(userId);
+        
+        const lastCoin = user.lastCoinflip || 0;
+        const now = Date.now();
+
+        if (now - lastCoin < this.config.coinflip.cooldown) {
+            const timeLeft = this.config.coinflip.cooldown - (now - lastCoin);
+            return {
+                canCoinPlay: false,
+                timeLeft: timeLeft
+            };
+        }
+
+        return { canCoinPlay: true };
+    }
+
     async handleCoinflip(message, args) {
         const userId = message.author.id;
         const user = await this.economy.getUser(userId);
@@ -168,10 +184,9 @@ class MinigamesSystem {
             return;
         }
 
-        // Verificar cooldown
-        const cooldownCheck = this.checkCooldown(userId, 'coinflip');
-        if (cooldownCheck.onCooldown) {
-            await message.reply(`⏰ Debes esperar ${this.formatTime(cooldownCheck.timeLeft)} antes de jugar otra vez`);
+        const canCoinResult = await this.canCoinflip(userId);
+        if (!canCoinResult.canCoinPlay) {
+            await message.reply(`⏰ Debes esperar ${this.formatTime(canCoinResult.timeLeft)} antes de jugar otra vez`);
             return;
         }
 
@@ -310,6 +325,23 @@ class MinigamesSystem {
         await message.reply({ embeds: [embed] });
     }
 
+    async canDice(userId) {
+        const user = await this.getUser(userId);
+
+        const lastDice = user.lastDice || 0;
+        const now = Date.now();
+
+        if (now - lastDice < this.config.dice.cooldown) {
+            const timeLeft = this.config.dice.cooldown - (now - lastDice);
+            return {
+                canDicePlay: false,
+                timeLeft: timeLeft
+            };
+        }
+
+        return { canDicePlay: true };
+    }
+
     async handleDice(message, args) {
         const userId = message.author.id;
         const user = await this.economy.getUser(userId);
@@ -356,10 +388,9 @@ class MinigamesSystem {
             return;
         }
 
-        // Verificar cooldown
-        const cooldownCheck = this.checkCooldown(userId, 'dice');
-        if (cooldownCheck.onCooldown) {
-            await message.reply(`⏰ Debes esperar ${this.formatTime(cooldownCheck.timeLeft)} antes de jugar otra vez`);
+        const canDiceResult = await this.canDice(userId);
+        if (!canDiceResult.canDicePlay) {
+            await message.reply(`⏰ Debes esperar ${this.formatTime(canDiceResult.timeLeft)} antes de jugar otra vez`);
             return;
         }
 
@@ -504,6 +535,23 @@ class MinigamesSystem {
         await message.reply({ embeds: [embed] });
     }
 
+    async canLottery(userId) {
+        const user = await this.getUser(userId);
+
+        const lastLottery = user.lastLotto || 0;
+        const now = Date.now();
+
+        if (now - lastLottery < this.config.lottery.cooldown) {
+            const timeLeft = this.config.lottery.cooldown - (now - lastLottery);
+            return {
+                canLottery: false,
+                timeLeft: timeLeft
+            };
+        }
+
+        return { canLottery };
+    }
+
     // Método para manejar la lotería (agregar a la clase MinigamesSystem)
     async handleLottery(message, args) {
         const userId = message.author.id;
@@ -550,11 +598,9 @@ class MinigamesSystem {
             return;
         }
     
-        // Verificar cooldown
-        const cooldownCheck = this.checkCooldown(userId, 'lottery');
-        if (cooldownCheck.onCooldown) {
-            const timeLeft = Math.ceil(cooldownCheck.timeLeft / 60000); // Convertir a minutos
-            await message.reply(`⏰ Debes esperar ${timeLeft} minutos antes de jugar la lotería otra vez`);
+        const canLotteryResult = await this.canLottery(userId);
+        if (!canLotteryResult.canLottery) {
+            await message.reply(`⏰ Debes esperar ${this.formatTime(canLotteryResult.timeLeft)} antes de jugar otra vez`);  
             return;
         }
 
@@ -716,6 +762,23 @@ class MinigamesSystem {
         await reply.edit({ embeds: [resultEmbed] });
     }
 
+    async canBlackJack(userId) {
+        const user = await this.getUser(userId);
+
+        const lastBlackJack = user.lastBlackJack || 0;
+        const now = Date.now();
+
+        if (now - lastBlackJack < this.config.blackjack.cooldown) {
+            const timeLeft = this.config.blackjack.cooldown - (now - lastBlackJack);
+            return {
+                canBlackJack: false,
+                timeLeft: timeLeft
+            };
+        }
+
+        return { canBlackJack: true };
+    }
+
     // Agregar estos métodos a tu clase MinigamesSystem
     
     async handleBlackjack(message, args) {
@@ -755,11 +818,9 @@ class MinigamesSystem {
             return;
         }
     
-        // Verificar cooldown
-        const cooldownCheck = this.checkCooldown(userId, 'blackjack');
-        if (cooldownCheck.onCooldown) {
-            const timeLeft = Math.ceil(cooldownCheck.timeLeft / 60000); // Convertir a minutos
-            await message.reply(`⏰ Debes esperar ${timeLeft} minutos antes de jugar otra vez`);
+        const canBlackJackResult = await this.canBlackJack(userId);
+        if (!canBlackJackResult.canBlackJack) {
+            await message.reply(`⏰ Debes esperar ${this.formatTime(canBlackJackResult.timeLeft)} antes de jugar otra vez`);
             return;
         }
 
@@ -1311,6 +1372,23 @@ class MinigamesSystem {
         await this.handleBlackjackAction(interaction, userId, action);
     }    
 
+    async canRoulette(userId) {
+        const user = await this.getUser(userId);
+
+        const lastRoulette = user.lastRoulette || 0;
+        const now = Date.now();
+
+        if (now - lastRoulette < this.config.roulette.cooldown) {
+            const timeLeft = this.config.roulette.cooldown - (now - lastRoulette);
+            return {
+                canRoulette: false,
+                timeLeft: timeLeft
+            };
+        }
+
+        return { canRoulette: true };
+    }
+
     // Método principal para manejar la ruleta
     async handleRoulette(message, args) {
         const userId = message.author.id;
@@ -1366,11 +1444,9 @@ class MinigamesSystem {
             return;
         }
     
-        // Verificar cooldown
-        const cooldownCheck = this.checkCooldown(userId, 'roulette');
-        if (cooldownCheck.onCooldown) {
-            const timeLeft = Math.ceil(cooldownCheck.timeLeft / 1000);
-            await message.reply(`⏰ Debes esperar ${timeLeft} segundos antes de jugar otra vez`);
+        const canRouletteResult = await this.canRoulette(userId);
+        if (!canRouletteResult.canRoulette) {
+            await message.reply(`⏰ Debes esperar ${this.formatTime(canRouletteResult.timeLeft)} antes de jugar otra vez`);
             return;
         }
 
@@ -1718,14 +1794,6 @@ class MinigamesSystem {
             return;
         }
     
-        // Verificar cooldown
-        const cooldownCheck = this.checkCooldown(userId, 'russianRoulette');
-        if (cooldownCheck.onCooldown) {
-            const timeLeft = Math.ceil(cooldownCheck.timeLeft / 60000);
-            await message.reply(`⏰ Debes esperar ${timeLeft} minutos antes de jugar otra vez`);
-            return;
-        }
-
         // Al inicio del juego
         if (this.economy.missions) {
             await this.economy.missions.updateMissionProgress(userId, 'game_played');

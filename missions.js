@@ -323,8 +323,7 @@ class MissionsSystem {
         const today = ecuadorTime.toISOString().split('T')[0];
         const currentHour = ecuadorTime.getHours();
         
-        // Si es un nuevo día y son menos de las 12 PM, resetear la bandera
-        if (user.daily_missions_date !== today && currentHour < 12) {
+        if (user.daily_missions_date !== today) {
             return { missions_reset_today: false };
         }
         return {};
@@ -336,15 +335,13 @@ class MissionsSystem {
         // Convertir a zona horaria de Ecuador (UTC-5)
         const ecuadorTime = new Date(now.getTime() - (5 * 60 * 60 * 1000));
         const today = ecuadorTime.toISOString().split('T')[0];
-        const currentHour = ecuadorTime.getHours();
         
         const userMissionsDate = user.daily_missions_date;
         
         // Solo resetear si es un día diferente Y ya pasaron las 12 PM, o si es el mismo día pero aún no se han reseteado hoy después de las 12 PM
-        if (!userMissionsDate) return currentHour >= 12; // Primera vez del usuario
-        if (userMissionsDate !== today) return currentHour >= 12; // Día diferente
-        if (userMissionsDate === today && currentHour >= 12 && !user.missions_reset_today) return true; // Mismo día, después de 12 PM y no reseteado
-        return false;
+        if (!userMissionsDate) return true; // Primera vez del usuario
+        if (userMissionsDate !== today) return true; // Día diferente
+        return false; // Mismo día, no resetear
     }
     
     // Inicializar misiones diarias para un usuario
@@ -362,10 +359,6 @@ class MissionsSystem {
         if (this.shouldResetMissions(user)) {
             const newMissions = this.generateDailyMissions();
             const today = this.getCurrentDay();
-            const now = new Date();
-            // Convertir a zona horaria de Ecuador (UTC-5)
-            const ecuadorTime = new Date(now.getTime() - (5 * 60 * 60 * 1000));
-            const currentHour = ecuadorTime.getHours();
             
             const updateData = {
                 daily_missions: newMissions.reduce((obj, mission) => {
@@ -373,7 +366,7 @@ class MissionsSystem {
                     return obj;
                 }, {}),
                 daily_missions_date: today,
-                missions_reset_today: currentHour >= 12,
+                missions_reset_today: true,
                 daily_stats: {
                     messages_today: 0,
                     work_today: 0,
@@ -610,19 +603,11 @@ class MissionsSystem {
         // Mostrar tiempo restante para reset (12 PM Ecuador)
         const now = new Date();
         const ecuadorTime = new Date(now.getTime() - (5 * 60 * 60 * 1000));
-        const currentHour = ecuadorTime.getHours();
         
-        let nextReset;
-        if (currentHour < 12) {
-            // Si son menos de las 12 PM, el próximo reset es hoy a las 12 PM
-            nextReset = new Date(ecuadorTime);
-            nextReset.setHours(12, 0, 0, 0);
-        } else {
-            // Si ya pasaron las 12 PM, el próximo reset es mañana a las 12 PM
-            nextReset = new Date(ecuadorTime);
-            nextReset.setDate(nextReset.getDate() + 1);
-            nextReset.setHours(12, 0, 0, 0);
-        }
+        // CAMBIAR: Calcular próximo reset a medianoche
+        let nextReset = new Date(ecuadorTime);
+        nextReset.setDate(nextReset.getDate() + 1); // Próximo día
+        nextReset.setHours(0, 0, 0, 0); // A las 00:00
         
         // Convertir de vuelta a UTC para comparar con 'now'
         const nextResetUTC = new Date(nextReset.getTime() + (5 * 60 * 60 * 1000));

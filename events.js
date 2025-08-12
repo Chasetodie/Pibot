@@ -196,13 +196,14 @@ class EventsSystem {
         // Verificar cada hora si crear nuevos eventos
         setInterval(async () => {
             await this.tryCreateRandomEvent();
-        }, 1800000); // 30 minutos
+            console.log('🔄 Verificando eventos automáticos...');
+        }, 900000); // 15 minutos
 
-        // Limpiar eventos expirados cada 10 minutos
+        // Limpiar eventos expirados cada 1 minutos
         setInterval(async () => {
             await this.cleanExpiredEvents();
-        }, 600000); // 10 minutos
-        
+        }, 60000); // 1 minuto
+
         console.log('🔄 Sistema de eventos iniciado');
     }
 
