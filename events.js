@@ -1,6 +1,4 @@
 const { EmbedBuilder } = require('discord.js');
-const fs = require('fs');
-const path = require('path');
 
 class EventsSystem {
     constructor(economySystem) {
