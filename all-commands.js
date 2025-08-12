@@ -159,9 +159,19 @@ class AllCommands {
         if (result.treasuresFound && result.treasuresFound.length > 0) {
             for (const treasure of result.treasuresFound) {
                 if (treasure.type === 'treasure') {
+                    let treasureEmbed = '🗺️ ¡Tesoro Encontrado!\n';
+                    
+                    if (treasure.subType === 'money') {
+                        treasureEmbed += `💰 +${treasure.amount} π-b$`;
+                    } else if (treasure.subType === 'premium_money') {
+                        treasureEmbed += `✨ ¡Tesoro Premium!\n💰 +${treasure.amount} π-b$`;
+                    } else if (treasure.subType === 'xp') {
+                        treasureEmbed += `📜 ¡Pergamino Ancestral!\n⚡ +${treasure.xpAmount} XP`;
+                    }
+                    
                     embed.addFields({
-                        name: '🗺️ ¡Tesoro en tu Daily!',
-                        value: `¡Había un tesoro escondido en tu recompensa diaria!\n💰 +${treasure.amount} π-b$`,
+                        name: treasure.description,
+                        value: treasureEmbed,
                         inline: false
                     });
                 }
@@ -825,9 +835,19 @@ class AllCommands {
         if (result.treasuresFound && result.treasuresFound.length > 0) {
             for (const treasure of result.treasuresFound) {
                 if (treasure.type === 'treasure') {
+                    let treasureEmbed = '🗺️ ¡Tesoro Encontrado!\n';
+                    
+                    if (treasure.subType === 'money') {
+                        treasureEmbed += `💰 +${treasure.amount} π-b$`;
+                    } else if (treasure.subType === 'premium_money') {
+                        treasureEmbed += `✨ ¡Tesoro Premium!\n💰 +${treasure.amount} π-b$`;
+                    } else if (treasure.subType === 'xp') {
+                        treasureEmbed += `📜 ¡Pergamino Ancestral!\n⚡ +${treasure.xpAmount} XP`;
+                    }
+                    
                     embed.addFields({
-                        name: '🗺️ ¡Tesoro Encontrado!',
-                        value: `Encontraste un tesoro mientras trabajabas!\n💰 +${treasure.amount} π-b$`,
+                        name: treasure.description,
+                        value: treasureEmbed,
                         inline: false
                     });
                 }
