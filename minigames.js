@@ -220,6 +220,7 @@ class MinigamesSystem {
         this.setCooldown(userId, 'coinflip');
 
         const updateData = {
+            'minigames.lastCoinflip': Date.now(),
             'stats.gamesPlayed': (user.stats.gamesPlayed || 0) + 1
         }
 
@@ -424,6 +425,7 @@ class MinigamesSystem {
         this.setCooldown(userId, 'dice');
         
         const updateData = {
+            'minigames.lastDice': Date.now(),
             'stats.gamesPlayed': (user.stats.gamesPlayed || 0) + 1
         }
 
@@ -618,6 +620,7 @@ class MinigamesSystem {
         this.setCooldown(userId, 'lottery');
         
         const updateData = {
+            'minigames.lastLotto': Date.now(),
             'stats.gamesPlayed': (user.stats.gamesPlayed || 0) + 1
         };
     
@@ -1088,6 +1091,7 @@ class MinigamesSystem {
         this.setCooldown(userId, 'blackjack');
         
         const updateData = {
+            'minigames.lastBlackJack': Date.now(),
             'stats.gamesPlayed': (user.stats.gamesPlayed || 0) + 1
         };
         
@@ -1471,6 +1475,7 @@ class MinigamesSystem {
         this.setCooldown(userId, 'roulette');
     
         const updateData = {
+            'minigames.lastRoulette': Date.now(),
             'stats.gamesPlayed': (user.stats.gamesPlayed || 0) + 1
         };
     
