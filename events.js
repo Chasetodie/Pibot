@@ -562,21 +562,6 @@ class EventsSystem {
             .setTimestamp();
         
         await message.reply({ embeds: [embed] });
-        
-        // Anunciar en el canal
-        const announcement = new EmbedBuilder()
-            .setTitle(`${event.emoji} ¡Nuevo Evento Activo!`)
-            .setDescription(`**${event.name}**\n\n${event.description}`)
-            .addFields({
-                name: '⏰ Duración',
-                value: this.formatTime(event.duration),
-                inline: true
-            })
-            .setColor(event.color)
-            .setFooter({ text: 'Usa >events para ver todos los eventos activos' })
-            .setTimestamp();
-        
-        await message.channel.send({ embeds: [announcement] });
         await this.announceEvent(event, 'created', message.guild);
     }
 
