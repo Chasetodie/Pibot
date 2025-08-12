@@ -2143,7 +2143,6 @@ class MinigamesSystem {
         try {
             const channel = await client.channels.fetch(game.channelId);
             await channel.send({ embeds: [embed] });
-            console.log(`gameMessage: ${gameMessage} game.messageId: ${game.messageId} game.channelId: ${game.channelId} game: ${game}`);
         } catch (error) {
             console.error('Error actualizando mensaje del juego: ', error);
         }
@@ -2261,12 +2260,12 @@ class MinigamesSystem {
             
             // Aplicar modificadores de eventos
             if (this.events) {
-                const moneyMod = await this.events.applyMoneyModifiers(userId, winnerPrize, 'gambling');
+                const moneyMod = await this.events.applyMoneyModifiers(winner.id, winnerPrize, 'gambling');
                 finalWinAmount = moneyMod.finalAmount;
                 appliedEvents = moneyMod.appliedEvents;
                 
                 // Verificar eventos especiales (como treasure hunt)
-                const specialRewards = await this.events.checkSpecialEvents(userId, 'gambling', {
+                const specialRewards = await this.events.checkSpecialEvents(winner.id, 'gambling', {
                     game: 'roulette',
                     betAmount: betAmount
                 });
