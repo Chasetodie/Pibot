@@ -217,7 +217,7 @@ class MinigamesSystem {
         if (won) {
             const winAmount = Math.floor(betAmount * this.config.coinflip.winMultiplier);
             const profit = winAmount - betAmount;
-            const finalWinAmount = profit;
+            let finalWinAmount = profit;
             let appliedEvents = [];
             
             // Aplicar modificadores de eventos
