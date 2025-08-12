@@ -154,6 +154,19 @@ class AllCommands {
             .setColor('#00FF00')
             .setFooter({ text: 'Vuelve mañana por más!' })
             .setTimestamp();
+
+        // Si hay tesoros encontrados  
+        if (result.treasuresFound && result.treasuresFound.length > 0) {
+            for (const treasure of result.treasuresFound) {
+                if (treasure.type === 'treasure') {
+                    embed.addFields({
+                        name: '🗺️ ¡Tesoro en tu Daily!',
+                        value: `¡Había un tesoro escondido en tu recompensa diaria!\n💰 +${treasure.amount} π-b$`,
+                        inline: false
+                    });
+                }
+            }
+        }
         
         await message.reply({ embeds: [embed] });
     
@@ -808,6 +821,18 @@ class AllCommands {
             )
             .setColor('#28a745')
             .setTimestamp();
+
+        if (result.treasuresFound && result.treasuresFound.length > 0) {
+            for (const treasure of result.treasuresFound) {
+                if (treasure.type === 'treasure') {
+                    embed.addFields({
+                        name: '🗺️ ¡Tesoro Encontrado!',
+                        value: `Encontraste un tesoro mientras trabajabas!\n💰 +${treasure.amount} π-b$`,
+                        inline: false
+                    });
+                }
+            }
+        }
         
         await message.reply({ embeds: [embed] });
 
