@@ -283,9 +283,10 @@ class EventsSystem {
         await this.saveEvent(eventId, event); // Ahora async
         
         console.log(`🎉 Evento creado: ${eventData.name} (${this.formatTime(duration)})`);
-
-        if (!triggeredBy) { // Solo si es automático (no hay triggeredBy)
-           await this.announceEvent(event, 'created');
+        console.log(`triggeredBy: ${triggeredBy}, guild: ${this.guild ? 'disponible' : 'no disponible'}`); // ← Agregar esta línea
+        if (!triggeredBy && this.guild) {
+            console.log('Enviando anuncio de evento automático...'); // ← Y esta también
+            await this.announceEvent(event, 'created');
         }
 
         return event;
