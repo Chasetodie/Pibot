@@ -5,14 +5,26 @@ class EventsSystem {
     constructor(economySystem) {
         this.economy = economySystem;
         
-        // Esperar a que Firebase esté inicializado
-        setTimeout(() => {
-            const admin = require('firebase-admin');
+        // Importar admin directamente desde firebase-admin
+        const admin = require('firebase-admin');
+        this.admin = admin; // Guardar referencia
+        
+        // Verificar que Firebase esté inicializado
+        try {
             this.eventsCollection = admin.firestore().collection('serverEvents');
-            this.loadEvents();
-        }, 1000);
+            console.log('🔥 Firebase conectado en EventsSystem');
+        } catch (error) {
+            console.error('❌ Error conectando Firebase en eventos:', error);
+            // Fallback: crear colección vacía para evitar crashes
+            this.eventsCollection = null;
+        }
         
         this.activeEvents = {};
+
+        // Cargar eventos después de un breve delay para asegurar conexión
+        setTimeout(() => {
+            this.loadEvents();
+        }, 1000);
         
         // Definir tipos de eventos disponibles
         this.eventTypes = {
@@ -105,13 +117,21 @@ class EventsSystem {
             'server_anniversary': 0.01 // 1% (muy raro)
         };
         
-        // Iniciar sistema de eventos
-        this.startEventLoop();
-        this.cleanExpiredEvents();
+        // Iniciar sistema después del delay
+        setTimeout(() => {
+            this.startEventLoop();
+            this.cleanExpiredEvents();
+        }, 2000);
     }
 
     // Cargar eventos desde archivo
     async loadEvents() {
+        // Verificar que Firebase esté disponible
+        if (!this.eventsCollection) {
+            console.log('⚠️ Firebase no disponible para cargar eventos');
+            return;
+        }
+        
         try {
             const snapshot = await this.eventsCollection.get();
             
@@ -136,6 +156,12 @@ class EventsSystem {
 
     // Guardar evento individual en Firebase
     async saveEvent(eventId, eventData) {
+        // Verificar que Firebase esté disponible
+        if (!this.eventsCollection) {
+            console.log('⚠️ Firebase no disponible, evento no guardado:', eventId);
+            return;
+        }
+        
         try {
             await this.eventsCollection.doc(eventId).set({
                 ...eventData,
@@ -146,8 +172,15 @@ class EventsSystem {
             console.error('❌ Error guardando evento en Firebase:', error);
         }
     }
-
+    
+    // Eliminar evento de Firebase
     async deleteEvent(eventId) {
+        // Verificar que Firebase esté disponible
+        if (!this.eventsCollection) {
+            console.log('⚠️ Firebase no disponible, evento no eliminado:', eventId);
+            return;
+        }
+        
         try {
             await this.eventsCollection.doc(eventId).delete();
             console.log(`🗑️ Evento ${eventId} eliminado de Firebase`);
