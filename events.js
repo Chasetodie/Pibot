@@ -20,6 +20,7 @@ class EventsSystem {
         }
         
         this.activeEvents = {};
+        this.announcementChannelId = '1404905496644685834'; // Cambia esto al ID de tu canal de anuncios
 
         // Cargar eventos después de un breve delay para asegurar conexión
         setTimeout(() => {
@@ -194,8 +195,8 @@ class EventsSystem {
         // Verificar cada hora si crear nuevos eventos
         setInterval(async () => {
             await this.tryCreateRandomEvent();
-        }, 3600000); // 1 hora
-        
+        }, 1800000); // 30 minutos
+
         // Limpiar eventos expirados cada 10 minutos
         setInterval(async () => {
             await this.cleanExpiredEvents();
@@ -280,6 +281,9 @@ class EventsSystem {
         await this.saveEvent(eventId, event); // Ahora async
         
         console.log(`🎉 Evento creado: ${eventData.name} (${this.formatTime(duration)})`);
+
+        await this.announceEvent(event, 'created');
+
         return event;
     }
 
@@ -581,6 +585,7 @@ class EventsSystem {
             if (event.endTime <= now) {
                 delete this.activeEvents[eventId];
                 await this.deleteEvent(eventId); // Eliminar de Firebase
+                await this.announceEvent(event, 'expired');
                 cleaned++;
                 console.log(`🧹 Evento expirado limpiado: ${event.name}`);
             }
@@ -665,6 +670,49 @@ class EventsSystem {
         }
         
         await message.reply({ embeds: [embed] });
+    }
+
+    // Anunciar eventos en canal específico
+    async announceEvent(event, action) {
+        if (!this.announcementChannelId) return;
+        
+        try {
+            const channel = await this.admin.app().channel.fetch(this.announcementChannelId);
+            if (!channel) return;
+            
+            const embed = new EmbedBuilder()
+                .setTitle(action === 'created' ? `${event.emoji} ¡Nuevo Evento Activo!` : `${event.emoji} Evento Finalizado`)
+                .setDescription(`**${event.name}**\n\n${event.description}`)
+                .setColor(action === 'created' ? event.color : '#808080')
+                .setTimestamp();
+            
+            if (action === 'created') {
+                embed.addFields({
+                    name: '⏰ Duración',
+                    value: this.formatTime(event.duration),
+                    inline: true
+                });
+            } else {
+                const stats = event.stats;
+                const totalInteractions = stats.messagesAffected + stats.workJobsAffected + 
+                                        stats.dailiesAffected + stats.gamesAffected;
+                embed.addFields({
+                    name: '📊 Participación',
+                    value: `${totalInteractions} interacciones`,
+                    inline: true
+                });
+            }
+            
+            const shouldPing = action === 'created'; // Solo ping al crear
+
+            await channel.send({
+                content: shouldPing ? `@everyone` : undefined,
+                embeds: [embed],
+                allowedMentions: shouldPing ? { parse: ['everyone'] } : undefined
+            });
+        } catch (error) {
+            console.error('❌ Error enviando anuncio de evento:', error);
+        }
     }
 }
 
