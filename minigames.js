@@ -1090,7 +1090,7 @@ class MinigamesSystem {
                 resultText = result === 'dealer_bust' ? '🎉 **¡DEALER SE PASÓ!**' : '🎉 **¡GANASTE!**';
                 color = '#00FF00';
 
-                let finalWinAmount = profit;
+                let finalWinAmountd = profit;
                 let appliedEvents = [];
                 
                 // Aplicar modificadores de eventos
@@ -1117,7 +1117,7 @@ class MinigamesSystem {
                     }
                 }
                 
-                await this.economy.addMoney(userId, finalWinAmount, 'blackjack_win');
+                await this.economy.addMoney(userId, finalWinAmountd, 'blackjack_win');
 
                 // *** NUEVO: ACTUALIZAR ESTADÍSTICAS DE ACHIEVEMENTS ***
                 if (this.achievements) {
