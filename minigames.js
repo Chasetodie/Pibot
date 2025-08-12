@@ -118,7 +118,7 @@ class MinigamesSystem {
     }
 
     async canCoinflip(userId) {
-        const user = await this.getUser(userId);
+        const user = await this.economy.getUser(userId);
         
         const lastCoin = user.lastCoinflip || 0;
         const now = Date.now();
@@ -326,7 +326,7 @@ class MinigamesSystem {
     }
 
     async canDice(userId) {
-        const user = await this.getUser(userId);
+        const user = await this.economy.getUser(userId);
 
         const lastDice = user.lastDice || 0;
         const now = Date.now();
@@ -536,7 +536,7 @@ class MinigamesSystem {
     }
 
     async canLottery(userId) {
-        const user = await this.getUser(userId);
+        const user = await this.economy.getUser(userId);
 
         const lastLottery = user.lastLotto || 0;
         const now = Date.now();
@@ -763,7 +763,7 @@ class MinigamesSystem {
     }
 
     async canBlackJack(userId) {
-        const user = await this.getUser(userId);
+        const user = await this.economy.getUser(userId);
 
         const lastBlackJack = user.lastBlackJack || 0;
         const now = Date.now();
@@ -1373,7 +1373,7 @@ class MinigamesSystem {
     }    
 
     async canRoulette(userId) {
-        const user = await this.getUser(userId);
+        const user = await this.economy.getUser(userId);
 
         const lastRoulette = user.lastRoulette || 0;
         const now = Date.now();
