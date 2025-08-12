@@ -864,7 +864,7 @@ class EconomySystem {
             });
     
             // treasures contendrá info si encontró tesoro
-            result.treasuresFound = treasures;
+            treasuresFound = treasures;
         }
         
         // *** NUEVO: ACTUALIZAR MISIONES ***
