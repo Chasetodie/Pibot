@@ -21,6 +21,7 @@ class EventsSystem {
         
         this.activeEvents = {};
         this.announcementChannelId = '1404905496644685834'; // Cambia esto al ID de tu canal de anuncios
+        this.guild = null;
 
         // Cargar eventos después de un breve delay para asegurar conexión
         setTimeout(() => {
@@ -532,6 +533,8 @@ class EventsSystem {
             await message.reply('❌ Solo administradores pueden crear eventos manuales.');
             return;
         }
+
+        if (!this.guild) this.guild = message.guild;
         
         if (!this.eventTypes[eventType]) {
             const availableTypes = Object.keys(this.eventTypes).join(', ');
@@ -574,6 +577,7 @@ class EventsSystem {
             .setTimestamp();
         
         await message.channel.send({ embeds: [announcement] });
+        await this.announceEvent(event, 'created', message.guild);
     }
 
     // Limpiar eventos expirados
@@ -675,9 +679,12 @@ class EventsSystem {
     // Anunciar eventos en canal específico
     async announceEvent(event, action) {
         if (!this.announcementChannelId) return;
+
+        const targetGuild = guild || this.guild;
+        if (!targetGuild) return;
         
         try {
-            const channel = await this.admin.app().channel.fetch(this.announcementChannelId);
+            const channel = await targetGuild.channels.fetch(this.announcementChannelId);
             if (!channel) return;
             
             const embed = new EmbedBuilder()
