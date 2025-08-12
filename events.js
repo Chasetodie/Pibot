@@ -402,6 +402,7 @@ class EventsSystem {
     // Verificar eventos especiales para contextos específicos
     async checkSpecialEvents(userId, context, data = {}) {
         let rewards = [];
+        let appliedEvents = [];
         
         for (const event of this.getActiveEvents()) {
             if (event.type === 'treasure_hunt' && Math.random() < 0.15) { // 15% chance
