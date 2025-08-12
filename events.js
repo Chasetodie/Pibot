@@ -677,10 +677,10 @@ class EventsSystem {
     }
 
     // Anunciar eventos en canal específico
-    async announceEvent(event, action) {
+    async announceEvent(event, action, passedGuild = null) {
         if (!this.announcementChannelId) return;
 
-        const targetGuild = guild || this.guild;
+        const targetGuild = passedGuild || this.guild;
         if (!targetGuild) return;
         
         try {
