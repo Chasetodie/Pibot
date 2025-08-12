@@ -2300,7 +2300,7 @@ class MinigamesSystem {
             if (this.economy.missions) {
                 await this.economy.missions.updateMissionProgress(winner.id, 'game_won');
                 await this.economy.missions.updateMissionProgress(winner.id, 'bet_won');
-                await this.economy.missions.updateMissionProgress(userId, 'money_earned', winnerPrize);
+                await this.economy.missions.updateMissionProgress(winner.id, 'money_earned', winnerPrize);
             }    
             embed.setTitle('🏆 ¡TENEMOS UN GANADOR! 🏆')
                 .setDescription(`🎉 **¡${winner.displayName} sobrevivió a la ruleta rusa!**`)
