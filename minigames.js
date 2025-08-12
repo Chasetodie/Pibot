@@ -2083,7 +2083,7 @@ class MinigamesSystem {
     async startRussianRoulette(game, gameMessage) {
         game.phase = 'playing';
 
-        await this.updateRussianGame(gameKey, {
+        await this.updateRussianGame(game.id, {
             phase: game.phase,
             players: game.players,
             bulletPosition: game.bulletPosition,
@@ -2296,7 +2296,7 @@ class MinigamesSystem {
 
         game.processing = false;
 
-        await this.updateRussianGame(gameKey, {
+        await this.updateRussianGame(game.id, {
             players: game.players,
             currentShot: game.currentShot,
             processing: game.processing,
