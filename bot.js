@@ -4,13 +4,13 @@ const fs = require('fs');
 const path = require('path');
 const CommandHandler = require('./commands'); // Importar el manejador de comandos
 const EconomySystem = require('./economy'); // Importar el sistema de economia
+const EventsSystem = require('./EventsSystem');
 const MusicHandler = require('./musicHandler.js'); // Importar el bot de música
 const MinigamesSystem = require('./minigames'); // Importar el sistema de minijuegos
 const AchievementsSystem = require('./achievements');
 const BettingSystem = require('./betting');
 const MissionsSystem = require('./missions');
-/*const ShopSystem = require('./shop');
-const EventsSystem = require('./events');*/
+/*const ShopSystem = require('./shop');*/
 const AllCommands = require('./all-commands');
 
 // Configuración del servidor web para mantener activo el bot
@@ -80,14 +80,21 @@ const minigames = new MinigamesSystem(economy);
 
 //Instancia de sistemas extra
 const achievements = new AchievementsSystem(economy);
-/*const shop = new ShopSystem(economy);
-const events = new EventsSystem(economy);*/
+/*const shop = new ShopSystem(economy);*/
+const events = new EventsSystem(economy);
+economy.connectEventsSystem(events);
+
+setTimeout(async () => {
+    await events.loadEvents();
+    console.log('✅ Sistemas de economía y eventos listos');
+}, 2000);
+
 const betting = new BettingSystem(economy);
 
 const missions = new MissionsSystem(economy);
 
 // Instancia del sistema de comandos mejorados
-const allCommands = new AllCommands(economy/*, achievements, shop*/, betting/*, events*/);
+const allCommands = new AllCommands(economy/*, achievements, shop*/, events, betting);
 
 economy.achievements = achievements;
 minigames.achievements = achievements;
@@ -501,6 +508,7 @@ client.login(process.env.TOKEN).then(() => {
     console.error('❌ Error en el login:', error);
 
 });
+
 
 
 
