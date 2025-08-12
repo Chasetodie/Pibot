@@ -1,11 +1,11 @@
 const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 
 class AllCommands {
-    constructor(economySystem/*, shopSystem*/, bettingSystem, achievementsSystem/*, eventsSystem*/) {
+    constructor(economySystem/*, shopSystem*/, eventsSystem, bettingSystem, achievementsSystem) {
         this.economy = economySystem;
 /*        this.shop = shopSystem;*/
+        this.events = eventsSystem;
         this.betting = bettingSystem;
-/*        this.events = eventsSystem;*/
         this.achievements = achievementsSystem;
     }
 
@@ -1161,6 +1161,8 @@ class AllCommands {
                     const targetUserb = message.mentions.members?.first();
                     await this.betting.showBetStats(message, targetUserb);
                     break;
+                case '>events':
+                    await this.events.showActiveEvents(message);
                 case '>help':
                     await this.showHelp(message);
                     break;
