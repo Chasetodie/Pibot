@@ -380,7 +380,7 @@ class EconomySystem {
             // Aplicar modificadores de eventos a XP
             let finalResult = result;
             if (this.events) {
-                const xpMod = await this.events.applyEventModifiers(userId, result.xpGained, 'message');
+                const xpMod = await this.events.applyXpModifiers(userId, result.xpGained, 'message');
                 if (xpMod.appliedEvents.length > 0) {
                     // Recalcular con XP modificada
                     const extraXp = xpMod.finalXp - xpMod.originalXp;
