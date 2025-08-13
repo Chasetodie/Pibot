@@ -334,22 +334,7 @@ class AchievementsSystem {
                 
                 // Agregar XP por separado
                 if (achievement.reward.xp) {
-                    const result = await this.economy.addXp(userId, achievement.reward.xp);
-
-                    let finalResult = result;
-                    if (this.events) {
-                        const xpMod = await this.events.applyEventModifiers(userId, result.xpGained, 'message');
-                        if (xpMod.appliedEvents.length > 0) {
-                            // Recalcular con XP modificada
-                            const extraXp = xpMod.finalXp - xpMod.originalXp;
-                            if (extraXp > 0) {
-                                const bonusResult = await this.addXp(userId, extraXp);
-                                finalResult.xpGained = xpMod.finalXp;
-                                finalResult.eventBonus = true;
-                                finalResult.appliedEvents = xpMod.appliedEvents;
-                            }
-                        }
-                    }
+                    await this.economy.addXp(userId, achievement.reward.xp);
                 }
                 
                 completedAchievements.push(achievementId);

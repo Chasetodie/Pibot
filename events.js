@@ -120,10 +120,10 @@ class EventsSystem {
         };
         
         // Iniciar sistema después del delay
-        setTimeout(() => {
+/*        setTimeout(() => {
             this.startEventLoop();
             this.cleanExpiredEvents();
-        }, 2000);
+        }, 2000);*/
     }
 
     // Cargar eventos desde archivo
@@ -192,7 +192,7 @@ class EventsSystem {
     }
 
     // Iniciar el loop de eventos automáticos
-    startEventLoop() {
+    /*startEventLoop() {
         // Verificar cada hora si crear nuevos eventos
         setInterval(async () => {
             await this.tryCreateRandomEvent();
@@ -205,7 +205,7 @@ class EventsSystem {
         }, 60000); // 1 minuto
 
         console.log('🔄 Sistema de eventos iniciado');
-    }
+    }*/
 
     // Intentar crear un evento aleatorio
     async tryCreateRandomEvent() {
@@ -322,20 +322,30 @@ class EventsSystem {
     }
 
     // Aplicar modificadores de eventos a XP
-    async applyEventModifiers(userId, baseXp, context = 'message') {
+    async applyXpModifiers(userId, baseXp, context = 'message') {
         let finalXp = baseXp;
         let appliedEvents = [];
         
         for (const event of this.getActiveEvents()) {
-            if (event.multipliers.xp) {
-                finalXp = Math.floor(finalXp * event.multipliers.xp);
-                appliedEvents.push(event);
-                
-                // Actualizar estadísticas del evento
-                if (context === 'message') {
-                    event.stats.messagesAffected++;
-                } else if (context === 'games') {
-                    event.stats.gamesAffected++;
+            if (event.multipliers.xp)
+            {
+                switch (event.type) {
+                    case 'double_xp':
+                        if (context === 'message')
+                        {
+                            finalXp = Math.floor(finalXp * event.multipliers.xp);
+                            appliedEvents.push(event);
+                            event.stats.messagesAffected++;
+                        }
+                    case 'fever_time':
+                        if (context === 'message' || context === 'games')
+                        {
+                            finalXp = Math.floor(finalXp * event.multipliers.xp);
+                            appliedEvents.push(event);
+
+                            if(context === 'message') event.stats.messagesAffected++;
+                            if(context === 'games') event.stats.gamesAffected++;
+                        }
                 }
             }
         }

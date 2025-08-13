@@ -555,7 +555,7 @@ class MinigamesSystem {
             };
         }
 
-        return { canLottery };
+        return { canLottery: true };
     }
 
     // Método para manejar la lotería (agregar a la clase MinigamesSystem)
