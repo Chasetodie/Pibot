@@ -114,6 +114,17 @@ class MinigamesSystem {
         return `${Math.ceil(ms / 1000)}s`;
     }
 
+    formatTimeLeft(milliseconds) {
+        const hours = Math.floor(milliseconds / (1000 * 60 * 60));
+        const minutes = Math.floor((milliseconds % (1000 * 60 * 60)) / (1000 * 60));
+        
+        if (hours > 0) {
+            return `${hours}h ${minutes}m`;
+        } else {
+            return `${minutes}m`;
+        }
+    }
+
     // Formatear números
     formatNumber(num) {
         return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
@@ -190,7 +201,7 @@ class MinigamesSystem {
 
         const canCoinResult = await this.canCoinflip(userId);
         if (!canCoinResult.canCoinPlay) {
-            await message.reply(`⏰ Debes esperar ${this.formatTime(canCoinResult.timeLeft)} antes de jugar otra vez`);
+            await message.reply(`⏰ Debes esperar ${this.formatTimeLeft(canCoinResult.timeLeft)} antes de jugar otra vez`);
             return;
         }
 
@@ -395,7 +406,7 @@ class MinigamesSystem {
 
         const canDiceResult = await this.canDice(userId);
         if (!canDiceResult.canDicePlay) {
-            await message.reply(`⏰ Debes esperar ${this.formatTime(canDiceResult.timeLeft)} antes de jugar otra vez`);
+            await message.reply(`⏰ Debes esperar ${this.formatTimeLeft(canDiceResult.timeLeft)} antes de jugar otra vez`);
             return;
         }
 
@@ -606,7 +617,7 @@ class MinigamesSystem {
     
         const canLotteryResult = await this.canLottery(userId);
         if (!canLotteryResult.canLottery) {
-            await message.reply(`⏰ Debes esperar ${this.formatTime(canLotteryResult.timeLeft)} antes de jugar otra vez`);  
+            await message.reply(`⏰ Debes esperar ${this.formatTimeLeft(canLotteryResult.timeLeft)} antes de jugar otra vez`);  
             return;
         }
 
@@ -827,7 +838,7 @@ class MinigamesSystem {
     
         const canBlackJackResult = await this.canBlackJack(userId);
         if (!canBlackJackResult.canBlackJack) {
-            await message.reply(`⏰ Debes esperar ${this.formatTime(canBlackJackResult.timeLeft)} antes de jugar otra vez`);
+            await message.reply(`⏰ Debes esperar ${this.formatTimeLeft(canBlackJackResult.timeLeft)} antes de jugar otra vez`);
             return;
         }
 
@@ -1454,7 +1465,7 @@ class MinigamesSystem {
     
         const canRouletteResult = await this.canRoulette(userId);
         if (!canRouletteResult.canRoulette) {
-            await message.reply(`⏰ Debes esperar ${this.formatTime(canRouletteResult.timeLeft)} antes de jugar otra vez`);
+            await message.reply(`⏰ Debes esperar ${this.formatTimeLeft(canRouletteResult.timeLeft)} antes de jugar otra vez`);
             return;
         }
 
