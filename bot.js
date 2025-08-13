@@ -447,10 +447,6 @@ client.on('messageCreate', async (message) => {
                 });
         }
 
-        if (xpResult.appliedEvents) {
-            message.react(xpResult.appliedEvents.emoji);
-        }
-
         // *** NUEVO: VERIFICAR ACHIEVEMENTS DESPUÉS DE GANAR XP ***
         try {
             const newAchievements = await achievements.checkAchievements(userId);
