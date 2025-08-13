@@ -3,6 +3,7 @@ const { EmbedBuilder } = require('discord.js');
 class MissionsSystem {
     constructor(economySystem) {
         this.economy = economySystem;
+        this.events = null;
         
         // Todas las misiones disponibles
         this.availableMissions = {
@@ -477,8 +478,15 @@ class MissionsSystem {
                 
                 // Dar recompensas
                 if (mission.reward.money) {
-                    updateData.balance = user.balance + mission.reward.money;
-                    updateData['stats.totalEarned'] = (user.stats.totalEarned || 0) + mission.reward.money;
+                    let rewardFinal = mission.reward.money;
+                    
+                    if (this.events) {
+                        const mod = await this.events.applyMoneyModifiers(userId, rewardFinal, 'missions');
+                        rewardFinal = mod.finalAmount;
+                    }
+
+                    updateData.balance = user.balance + rewardFinal;
+                    updateData['stats.totalEarned'] = (user.stats.totalEarned || 0) + rewardFinal;
                 }
             }
         }
@@ -490,7 +498,12 @@ class MissionsSystem {
         for (const missionId of completedMissions) {
             const mission = this.availableMissions[missionId];
             if (mission.reward.xp) {
-                await this.economy.addXp(userId, mission.reward.xp);
+                if (this.events) {
+                    const finalResult = await this.events.applyXpModifiers(userId, mission.reward.xp, 'mission');
+                    await this.economy.addXp(userId, finalResult.finalXp);
+                } else {
+                    await this.economy.addXp(userId, mission.reward.xp);
+                }
             }
         }
         

@@ -30,7 +30,7 @@ class EventsSystem {
         
         // Definir tipos de eventos disponibles
         this.eventTypes = {
-/*            'double_xp': {
+            'double_xp': {
                 name: '⚡ Doble XP',
                 description: 'Gana el doble de XP por mensajes',
                 emoji: '⚡',
@@ -39,7 +39,7 @@ class EventsSystem {
                 minDuration: 1800000, // 30 minutos
                 maxDuration: 7200000  // 2 horas
             },
-/*            'money_rain': {
+            'money_rain': {
                 name: '💰 Lluvia de Dinero',
                 description: 'Aumenta las ganancias de trabajo y daily',
                 emoji: '💰',
@@ -62,7 +62,15 @@ class EventsSystem {
                 description: 'Reducción de cooldowns y bonificaciones múltiples',
                 emoji: '🔥',
                 color: '#FF4500',
-                multiplier: { xp: 1.5, work: 1.3, cooldown: 0.5 },
+                multiplier: { 
+                    xp: 1.5, 
+                    work: 1.3, 
+                    cooldown: 0.5, 
+                    daily: 1.2, 
+                    minigames: 1.5, 
+                    missions: 1.4, 
+                    achievements: 1.6
+                },
                 minDuration: 2700000, // 45 minutos
                 maxDuration: 5400000  // 1.5 horas
             },
@@ -89,7 +97,13 @@ class EventsSystem {
                 description: 'Menores ganancias pero mayores recompensas por riesgo',
                 emoji: '📉',
                 color: '#DC143C',
-                multiplier: { work: 0.7, daily: 0.8, gambling: 1.5 },
+                multiplier: { 
+                    work: 0.7, 
+                    daily: 0.8, 
+                    minigames: 1.5, 
+                    missions: 0.8, 
+                    achievements: 0.8
+                },
                 minDuration: 1800000, // 30 minutos
                 maxDuration: 3600000, // 1 hora
                 negative: true
@@ -99,24 +113,31 @@ class EventsSystem {
                 description: 'Celebración especial con múltiples bonificaciones',
                 emoji: '🎉',
                 color: '#9932CC',
-                multiplier: { xp: 3, work: 2, daily: 2, gambling: 1.2 },
+                multiplier: { 
+                    xp: 3, 
+                    work: 2, 
+                    daily: 2, 
+                    minigames: 2, 
+                    missions: 2, 
+                    achievements: 2
+                },
                 minDuration: 14400000, // 4 horas
                 maxDuration: 86400000, // 24 horas
                 special: true,
                 rare: true
-            }*/
+            }
         };
         
         // Probabilidades de eventos (por hora)
         this.eventProbabilities = {
 //            'double_xp': 0.15,      // 15%
-/*            'money_rain': 0.12,     // 12%
+            'money_rain': 0.12,     // 12%
             'lucky_hour': 0.10,     // 10%
             'fever_time': 0.08,     // 8%
             'charity_event': 0.05,  // 5%
             'treasure_hunt': 0.04,  // 4%
             'market_crash': 0.03,   // 3%
-            'server_anniversary': 0.01 // 1% (muy raro)*/
+            'server_anniversary': 0.01 // 1% (muy raro)
         };
         
         // Iniciar sistema después del delay
@@ -337,8 +358,9 @@ class EventsSystem {
                             appliedEvents.push(event);
                             event.stats.messagesAffected++;
                         }
+                        break;
                     case 'fever_time':
-                        if (context === 'message' || context === 'games')
+                        if (context === 'message' || context === 'games' || context === 'mission' || context === 'achievement')
                         {
                             finalXp = Math.floor(finalXp * event.multipliers.xp);
                             appliedEvents.push(event);
@@ -346,6 +368,19 @@ class EventsSystem {
                             if(context === 'message') event.stats.messagesAffected++;
                             if(context === 'games') event.stats.gamesAffected++;
                         }
+                        break;
+                    case 'server_anniversary':
+                        if (context === 'message' || context === 'games' || context === 'mission' || context === 'achievement')
+                        {
+                            finalXp = Math.floor(finalXp * event.multipliers.xp);
+                            appliedEvents.push(event);
+
+                            if(context === 'message') event.stats.messagesAffected++;
+                            if(context === 'games') event.stats.gamesAffected++;
+                        }
+                        break;
+                    default:
+                        break;
                 }
             }
         }
@@ -368,25 +403,83 @@ class EventsSystem {
     async applyMoneyModifiers(userId, baseAmount, context = 'work') {
         let finalAmount = baseAmount;
         let appliedEvents = [];
+        let eventMessage = '';
+        let multiplier = 1;      
+        let bonus = 0;
+        let loss = 0;     
         
         for (const event of this.getActiveEvents()) {
-            let multiplier = 1;
-            
-            if (context === 'work' && event.multipliers.work) {
-                multiplier = event.multipliers.work;
-            } else if (context === 'daily' && event.multipliers.daily) {
-                multiplier = event.multipliers.daily;
-            }
-            
-            if (multiplier !== 1) {
-                finalAmount = Math.floor(finalAmount * multiplier);
-                appliedEvents.push(event);
-                
-                // Actualizar estadísticas
-                if (context === 'work') {
-                    event.stats.workJobsAffected++;
-                } else if (context === 'daily') {
-                    event.stats.dailiesAffected++;
+            if (event.multipliers.work || event.multipliers.daily || event.multipliers.minigames || event.multipliers.missions || event.multipliers.achievements)  // Verificar si hay modificadores de dinero
+            {
+                if(event.multipliers.work && context === 'work') {
+                    multiplier = event.multipliers.work;
+                }
+                else if(event.multipliers.daily && context === 'daily') {
+                    multiplier = event.multipliers.daily;
+                }
+                else if(event.multipliers.minigames && context === 'minigames') {
+                    multiplier = event.multipliers.minigames;
+                }
+                else if(event.multipliers.missions && context === 'missions') {
+                    multiplier = event.multipliers.missions;
+                }
+                else if(event.multipliers.achievements && context === 'achievements') {
+                    multiplier = event.multipliers.achievements;
+                }
+
+                switch (event.type) {
+                    case 'money_rain':
+                        finalAmount = Math.floor(baseAmount * multiplier); // x1.5
+                        bonus = finalAmount - baseAmount;
+                        eventMessage = `\n💰 **${event.name}** te dio +${bonus} π-b$ extra!`;
+ 
+                        appliedEvents.push(event);                
+                        // Actualizar estadísticas
+                        if (context === 'work') event.stats.workJobsAffected++;
+                        else if (context === 'daily') event.stats.dailiesAffected++;
+
+                        break;
+                    case 'fever_time':
+                        finalAmount = Math.floor(baseAmount * multiplier); // x1.3
+                        bonus = finalAmount - baseAmount;
+                        eventMessage = `\n🔥 **${event.name}** te dio +${bonus} π-b$ extra!`;
+                        
+                        appliedEvents.push(event);
+                        
+                        // Actualizar estadísticas
+                        if (context === 'work') event.stats.workJobsAffected++;
+                        else if (context === 'daily') event.stats.dailiesAffected++;
+                        else if (context == 'minigames') event.stats.gamesAffected++;
+                                                
+                        break;
+                    case 'market_crash':
+                        finalAmount = Math.floor(baseAmount * multiplier); // x0.7
+                        loss = baseAmount - finalAmount;
+                        eventMessage = `\n📉 **${event.name}** redujo tus ganancias en ${loss} π-b$`;
+
+                        appliedEvents.push(event);
+                        
+                        // Actualizar estadísticas
+                        if (context === 'work') event.stats.workJobsAffected++;
+                        else if (context === 'daily') event.stats.dailiesAffected++;
+                        else if (context == 'minigames') event.stats.gamesAffected++;
+
+                        break;                        
+                    case 'server_anniversary':
+                        finalAmount = Math.floor(baseAmount * multiplier); // x2
+                        bonus = finalAmount - baseAmount;
+                        eventMessage = `\n🎉 **${event.name}** ¡Mega bonus de +${bonus} π-b$!`;
+
+                        appliedEvents.push(event);
+                        
+                        // Actualizar estadísticas
+                        if (context === 'work') event.stats.workJobsAffected++;
+                        else if (context === 'daily') event.stats.dailiesAffected++;
+                        else if (context == 'minigames') event.stats.gamesAffected++;
+
+                        break;
+                    default:
+                        break;
                 }
             }
         }
@@ -401,6 +494,7 @@ class EventsSystem {
         return {
             originalAmount: baseAmount,
             finalAmount: finalAmount,
+            eventMessage: eventMessage,
             appliedEvents: appliedEvents
         };
     }

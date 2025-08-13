@@ -3,6 +3,7 @@ const { EmbedBuilder } = require('discord.js');
 class AchievementsSystem {
     constructor(economySystem) {
         this.economy = economySystem;
+        this.events = null;
         
         // Definir todos los logros disponibles
         this.achievements = {
@@ -326,15 +327,27 @@ class AchievementsSystem {
                 
                 // Dar recompensas
                 if (achievement.reward.money) {
-                    updateData.balance = user.balance + achievement.reward.money;
-                    updateData['stats.totalEarned'] = (user.stats?.totalEarned || 0) + achievement.reward.money;
+                    let rewardFinal = achievement.reward.money;
+
+                    if (this.events) {
+                        const mod = await this.events.applyMoneyModifiers(userId, rewardFinal, 'achievements');
+                        rewardFinal = mod.finalAmount;
+                    }
+
+                    updateData.balance = user.balance + rewardFinal;
+                    updateData['stats.totalEarned'] = (user.stats.totalEarned || 0) + rewardFinal;
                 }
                                
                 await this.economy.updateUser(userId, updateData);
                 
                 // Agregar XP por separado
                 if (achievement.reward.xp) {
-                    await this.economy.addXp(userId, achievement.reward.xp);
+                    if (this.events) {
+                        const finalResult = await this.events.applyXpModifiers(userId, achievement.reward.xp, 'achievement');
+                        await this.economy.addXp(userId, finalResult.finalXp);
+                    } else {
+                        await this.economy.addXp(userId, achievement.reward.xp);
+                    }
                 }
                 
                 completedAchievements.push(achievementId);
@@ -424,8 +437,15 @@ class AchievementsSystem {
                 
                 // Dar recompensas
                 if (achievement.reward.money) {
-                    updateData.balance = user.balance + achievement.reward.money;
-                    updateData['stats.totalEarned'] = (user.stats?.totalEarned || 0) + achievement.reward.money;
+                    let rewardFinal = achievement.reward.money;
+
+                    if (this.events) {
+                        const mod = await this.events.applyMoneyModifiers(userId, rewardFinal, 'achievements');
+                        rewardFinal = mod.finalAmount;
+                    }
+
+                    updateData.balance = user.balance + rewardFinal;
+                    updateData['stats.totalEarned'] = (user.stats.totalEarned || 0) + rewardFinal;
                 }
 
                 console.log(`🏆 ${userId} completó logro: ${achievement.name}\nRecompensa: ${achievement.reward.money} balance: ${updateData.balance} totalEarned: ${updateData['stats.totalEarned']}`);
@@ -434,7 +454,12 @@ class AchievementsSystem {
                 
                 // Agregar XP por separado
                 if (achievement.reward.xp) {
-                    await this.economy.addXp(userId, achievement.reward.xp);
+                    if (this.events) {
+                        const finalResult = await this.events.applyXpModifiers(userId, achievement.reward.xp, 'achievement');
+                        await this.economy.addXp(userId, finalResult.finalXp);
+                    } else {
+                        await this.economy.addXp(userId, achievement.reward.xp);
+                    }
                 }
                 
                 unlockedAchievements.push(achievementId);

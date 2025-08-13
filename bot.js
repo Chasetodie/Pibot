@@ -82,6 +82,8 @@ const minigames = new MinigamesSystem(economy);
 const achievements = new AchievementsSystem(economy);
 /*const shop = new ShopSystem(economy);*/
 const events = new EventsSystem(economy);
+missions.connectEventsSystem(events);
+achievements.connectEventsSystem(events);
 economy.connectEventsSystem(events);
 minigames.connectEventsSystem(events);
 
@@ -438,6 +440,10 @@ client.on('messageCreate', async (message) => {
                     embeds: [levelUpEmbed],
                     allowedMentions: { users: [message.author.id] }
                 });
+        }
+
+        if (xpResult.appliedEvents) {
+            message.react(xpResult.appliedEvents.emoji);
         }
 
         // *** NUEVO: VERIFICAR ACHIEVEMENTS DESPUÉS DE GANAR XP ***

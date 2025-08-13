@@ -373,35 +373,36 @@ class EconomySystem {
         
         try {
             this.userCooldowns.set(userId, now);
-                    
+
+            
+            if (this.events) {
+                // Aplicar modificadores de eventos a XP
+                const finalResult = await this.events.applyXpModifiers(userId, this.config.xpPerMessage, 'message');
+
+                // Agregar XP (ahora async)
+                const result = await this.addXp(userId, finalResult.finalXp);
+
+                return {
+                    levelUp: result.levelUp,
+                    levelsGained: result.levelsGained,
+                    newLevel: result.newLevel,
+                    xpGained: result.xpGained,
+                    reward: result.reward,
+                    appliedEvents: finalResult.appliedEvents || [],
+                    result: finalResult
+                };
+            }
+
             // Agregar XP (ahora async)
             const result = await this.addXp(userId, this.config.xpPerMessage);
 
-            // Aplicar modificadores de eventos a XP
-            let finalResult = result;
-            if (this.events) {
-                const xpMod = await this.events.applyXpModifiers(userId, result.xpGained, 'message');
-                if (xpMod.appliedEvents.length > 0) {
-                    // Recalcular con XP modificada
-                    const extraXp = xpMod.finalXp - xpMod.originalXp;
-                    if (extraXp > 0) {
-                        const bonusResult = await this.addXp(userId, extraXp);
-                        finalResult.xpGained = xpMod.finalXp;
-                        finalResult.eventBonus = true;
-                        finalResult.appliedEvents = xpMod.appliedEvents;
-                    }
-                }
-            }
-            
             return {
                 levelUp: result.levelUp,
                 levelsGained: result.levelsGained,
                 newLevel: result.newLevel,
                 xpGained: result.xpGained,
                 reward: result.reward,
-                eventBonus: finalResult.eventBonus || false,
-                appliedEvents: finalResult.appliedEvents || [],
-                result: finalResult
+                result: result
             };
         } catch (error) {
             console.error('❌ Error procesando XP del mensaje:', error);
@@ -523,18 +524,14 @@ class EconomySystem {
         const user = await this.getUser(userId);
         const variation = Math.floor(Math.random() * (this.config.dailyVariation * 2)) - this.config.dailyVariation;
         let amount = Math.max(100, this.config.dailyAmount + variation);
+        let messageEvent = '';
 
         if (this.events) {
             const mod = await this.events.applyMoneyModifiers(userId, amount, 'daily');
             amount = mod.finalAmount;
+            messageEvent = mod.eventMessage || '';
         }
-       
-        // Aplicar modificadores de eventos a dinero de daily
-/*        if (this.events) {
-            const mod = this.events.applyMoneyModifiers(userId, amount, 'daily');
-            amount = mod.finalAmount;
-        }*/
-        
+              
         const updateData = {
             lastDaily: Date.now(),
             balance: user.balance + amount,
@@ -548,14 +545,6 @@ class EconomySystem {
         user.stats.dailyClaims++;*/
         
         await this.updateUser(userId, updateData);
-
-        let treasuresFound = [];
-        if (this.events) {
-            const treasures = await this.events.checkSpecialEvents(userId, 'daily', {
-                amount: amount
-            });
-            treasuresFound = treasures;
-        }
 
         // *** NUEVO: ACTUALIZAR ESTADÍSTICAS DE ACHIEVEMENTS ***
         if (this.achievements) {
@@ -573,7 +562,7 @@ class EconomySystem {
             amount: amount,
             oldBalance: user.balance,
             newBalance: user.balance + amount,
-            treasuresFound: treasuresFound
+            messageEvent: messageEvent
         };
     }
 
@@ -836,13 +825,14 @@ class EconomySystem {
         const variation = Math.floor(Math.random() * (job.variation * 2)) - job.variation;
         let amount = Math.max(50, job.baseReward + variation);
         const message = job.messages[Math.floor(Math.random() * job.messages.length)];
+        let messageEvent = '';
 
-        // Aplicar modificadores de eventos a dinero de trabajo
         if (this.events) {
             const mod = await this.events.applyMoneyModifiers(userId, amount, 'work');
             amount = mod.finalAmount;
+            messageEvent = mod.eventMessage || '';
         }
-        
+
         // === INTEGRAR EVENTOS AQUÍ ===
 /*        if (this.events) {
             const mod = this.events.applyMoneyModifiers(userId, amount, 'work');
@@ -860,17 +850,6 @@ class EconomySystem {
         user.stats.totalEarned += amount;*/
         
         await this.updateUser(userId, updateData); // ← Reemplaza saveUsers()
-
-        let treasuresFound = [];
-        if (this.events) {
-            const treasures = await this.events.checkSpecialEvents(userId, 'work', {
-                job: jobType,
-                amount: amount
-            });
-    
-            // treasures contendrá info si encontró tesoro
-            treasuresFound = treasures;
-        }
         
         // *** NUEVO: ACTUALIZAR MISIONES ***
         if (this.missions) {
@@ -886,7 +865,7 @@ class EconomySystem {
             oldBalance: user.balance,
             newBalance: user.balance + amount,
             jobName: job.name,
-            treasuresFound: treasuresFound,
+            messageEvent: messageEvent,
 
             canWork: canWorkResult.canWork,
             reason: canWorkResult.reason,

@@ -137,7 +137,7 @@ class AllCommands {
             .addFields(
                 {
                     name: '💰 Ganaste',
-                    value: `**+${this.formatNumber(result.amount)}** ${this.economy.config.currencySymbol}`,
+                    value: `**+${this.formatNumber(result.amount)}** ${this.economy.config.currencySymbol}${result.messageEvent}`,
                     inline: true
                 },
                 {
@@ -154,29 +154,6 @@ class AllCommands {
             .setColor('#00FF00')
             .setFooter({ text: 'Vuelve mañana por más!' })
             .setTimestamp();
-
-        // Si hay tesoros encontrados  
-        if (result.treasuresFound && result.treasuresFound.length > 0) {
-            for (const treasure of result.treasuresFound) {
-                if (treasure.type === 'treasure') {
-                    let treasureEmbed = '🗺️ ¡Tesoro Encontrado!\n';
-                    
-                    if (treasure.subType === 'money') {
-                        treasureEmbed += `💰 +${treasure.amount} π-b$`;
-                    } else if (treasure.subType === 'premium_money') {
-                        treasureEmbed += `✨ ¡Tesoro Premium!\n💰 +${treasure.amount} π-b$`;
-                    } else if (treasure.subType === 'xp') {
-                        treasureEmbed += `📜 ¡Pergamino Ancestral!\n⚡ +${treasure.xpAmount} XP`;
-                    }
-                    
-                    embed.addFields({
-                        name: treasure.description,
-                        value: treasureEmbed,
-                        inline: false
-                    });
-                }
-            }
-        }
         
         await message.reply({ embeds: [embed] });
     
@@ -817,7 +794,7 @@ class AllCommands {
             .setTitle('✅ ¡Trabajo Completado!')
             .setDescription(`**${result.jobName}**\n\n${result.message}`)
             .addFields(
-                { name: '💰 Ganaste', value: `+${this.formatNumber(result.amount)} π-b$`, inline: true },
+                { name: '💰 Ganaste', value: `+${this.formatNumber(result.amount)} π-b$${result.messageEvent}`, inline: true },
                 {
                     name: '💸 Balance Anterior',
                     value: `${this.formatNumber(result.oldBalance)} π-b$`,
@@ -831,28 +808,6 @@ class AllCommands {
             )
             .setColor('#28a745')
             .setTimestamp();
-
-        if (result.treasuresFound && result.treasuresFound.length > 0) {
-            for (const treasure of result.treasuresFound) {
-                if (treasure.type === 'treasure') {
-                    let treasureEmbed = '🗺️ ¡Tesoro Encontrado!\n';
-                    
-                    if (treasure.subType === 'money') {
-                        treasureEmbed += `💰 +${treasure.amount} π-b$`;
-                    } else if (treasure.subType === 'premium_money') {
-                        treasureEmbed += `✨ ¡Tesoro Premium!\n💰 +${treasure.amount} π-b$`;
-                    } else if (treasure.subType === 'xp') {
-                        treasureEmbed += `📜 ¡Pergamino Ancestral!\n⚡ +${treasure.xpAmount} XP`;
-                    }
-                    
-                    embed.addFields({
-                        name: treasure.description,
-                        value: treasureEmbed,
-                        inline: false
-                    });
-                }
-            }
-        }
         
         await message.reply({ embeds: [embed] });
 
