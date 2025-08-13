@@ -222,7 +222,7 @@ class BettingSystem {
 
         // Al hacer una apuesta
         if (this.economy.missions) {
-            await this.economy.missions.updateMissionProgress(userId, 'money_bet', betAmount);
+            await this.economy.missions.updateMissionProgress(userId, 'money_bet', betData.amount);
         }
 
         // ✅ CORREGIDO: Configurar expiración
