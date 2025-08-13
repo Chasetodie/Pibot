@@ -78,9 +78,16 @@ const musicBot = new MusicHandler();
 //Crear instancia del sistema de Minijuegos
 const minigames = new MinigamesSystem(economy);
 
-//Instancia de sistemas extra
+//Crear instancia del sistema de Misiones
+const missions = new MissionsSystem(economy);
+
+//Crear instancia del sistema de Achievements
 const achievements = new AchievementsSystem(economy);
+
+//Crear instancia del sistema de Tienda
 /*const shop = new ShopSystem(economy);*/
+
+//Crear instancia del sistema de Eventos
 const events = new EventsSystem(economy);
 missions.connectEventsSystem(events);
 achievements.connectEventsSystem(events);
@@ -93,8 +100,6 @@ setTimeout(async () => {
 }, 2000);
 
 const betting = new BettingSystem(economy);
-
-const missions = new MissionsSystem(economy);
 
 // Instancia del sistema de comandos mejorados
 const allCommands = new AllCommands(economy/*, achievements, shop*/, events, betting);
