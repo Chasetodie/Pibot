@@ -137,7 +137,7 @@ class MinigamesSystem {
         const now = Date.now();
 
         if (now - lastCoin < this.config.coinflip.cooldown) {
-            const timeLeft = this.config.coinflip.cooldown - (now - lastCoin);
+            const timeLeft = this.config.coinflip.cooldown * 60 * 60 * 1000 - (now - lastCoin);
             return {
                 canCoinPlay: false,
                 timeLeft: timeLeft
@@ -348,7 +348,7 @@ class MinigamesSystem {
         const now = Date.now();
 
         if (now - lastDice < this.config.dice.cooldown) {
-            const timeLeft = this.config.dice.cooldown - (now - lastDice);
+            const timeLeft = this.config.dice.cooldown * 60 * 60 * 1000 - (now - lastDice);
             return {
                 canDicePlay: false,
                 timeLeft: timeLeft
@@ -559,7 +559,7 @@ class MinigamesSystem {
         const now = Date.now();
 
         if (now - lastLottery < this.config.lottery.cooldown) {
-            const timeLeft = this.config.lottery.cooldown - (now - lastLottery);
+            const timeLeft = this.config.lottery.cooldown * 60 * 60 * 1000 - (now - lastLottery);
             return {
                 canLottery: false,
                 timeLeft: timeLeft
@@ -787,7 +787,7 @@ class MinigamesSystem {
         const now = Date.now();
 
         if (now - lastBlackJack < this.config.blackjack.cooldown) {
-            const timeLeft = this.config.blackjack.cooldown - (now - lastBlackJack);
+            const timeLeft = this.config.blackjack.cooldown * 60 * 60 * 1000 - (now - lastBlackJack);
             return {
                 canBlackJack: false,
                 timeLeft: timeLeft
@@ -1398,7 +1398,7 @@ class MinigamesSystem {
         const now = Date.now();
 
         if (now - lastRoulette < this.config.roulette.cooldown) {
-            const timeLeft = this.config.roulette.cooldown - (now - lastRoulette);
+            const timeLeft = this.config.roulette.cooldown * 60 * 60 * 1000 - (now - lastRoulette);
             return {
                 canRoulette: false,
                 timeLeft: timeLeft
