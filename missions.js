@@ -701,6 +701,12 @@ class MissionsSystem {
             await message.reply('❌ Ocurrió un error en el sistema de misiones. Intenta de nuevo.');
         }
     }
+
+    // Método para conectar eventos
+    connectEventsSystem(eventsSystem) {
+        this.events = eventsSystem;
+        console.log('🎮 Sistema de eventos conectado a minijuegos');
+    }
 }
 
 module.exports = MissionsSystem;

@@ -872,6 +872,12 @@ class AchievementsSystem {
             await message.reply('❌ Ocurrió un error en el sistema de logros. Intenta de nuevo.');
         }
     }
+        
+    // Método para conectar eventos
+    connectEventsSystem(eventsSystem) {
+        this.events = eventsSystem;
+        console.log('🎮 Sistema de eventos conectado a minijuegos');
+    }
 }
 
 module.exports = AchievementsSystem;
