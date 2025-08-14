@@ -284,16 +284,18 @@ class ModernMusicHandler {
 
         const song = queue[0];
 
-        // 🚫 Si no hay URL, saltar canción
-        if (!song.url) {
-            console.error(`❌ No hay URL para la canción: "${song.title}"`, song);
+        // 🛠 Debug para ver qué está llegando
+        console.log("🎯 Canción a reproducir:", JSON.stringify(song, null, 2));
+
+        // 🚫 Si no hay URL, saltar
+        if (!song || !song.url || typeof song.url !== "string") {
+            console.error(`❌ Canción sin URL válida, saltando:`, song);
             queue.shift();
             return this.playNext(guildId);
         }
 
         try {
             console.log(`🎵 Reproduciendo: "${song.title}"`);
-
             const stream = await play.stream(song.url, { quality: 2 });
 
             const resource = createAudioResource(stream.stream, {
