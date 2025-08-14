@@ -138,10 +138,13 @@ class MusicHandler {
             }
 
             console.log(`🔍 Buscando: "${query}"`);
+            console.log('📡 Haciendo request a YouTube Music API...');
 
             // Intentar YouTube Music primero
+            console.log('🎵 Intentando YouTube Music...');
             let results = await this.searchYouTubeMusic(query, limit);
-            
+            console.log(`🎵 YouTube Music devolvió: ${results.length} resultados`);            
+
             // Fallback a YouTube regular
             if (results.length === 0) {
                 results = await this.searchYouTube(query, limit);
@@ -199,8 +202,10 @@ class MusicHandler {
                 }
             );
 
-            return this.parseYouTubeMusicResponse(response.data, limit);
-
+            console.log('📋 Parseando respuesta de YouTube Music...');
+            const parsedResults = this.parseYouTubeMusicResponse(response.data, limit);
+            console.log(`📋 Parsed results: ${parsedResults.length}`);
+            return parsedResults;
         } catch (error) {
             console.error('❌ Error YouTube Music:', error.message);
             return [];
@@ -209,6 +214,7 @@ class MusicHandler {
 
     parseYouTubeMusicResponse(data, limit) {
         const results = [];
+        console.log('🔍 Datos recibidos:', data?.contents ? 'Contenido encontrado' : 'Sin contenido');
 
         try {
             const contents = data?.contents?.tabbedSearchResultsRenderer?.tabs?.[0]?.tabRenderer?.content?.sectionListRenderer?.contents;
