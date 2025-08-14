@@ -299,7 +299,14 @@ class ModernMusicHandler {
             song.url = String(song.url).trim();
             song.url = song.url.replace(/;$/, '');
 
-            const stream = await play.stream(song.url, { quality: 2 });
+            const youtubeUrl = `https://www.youtube.com/watch?v=${song.id || ''}`.trim();
+            console.log("▶ URL usada para stream:", youtubeUrl);
+
+            if (!youtubeUrl.startsWith("https://www.youtube.com/")) {
+                throw new Error("URL de YouTube inválida: " + youtubeUrl);
+            }
+
+            const stream = await play.stream(youtubeUrl, { quality: 2 });
 
             const resource = createAudioResource(stream.stream, {
                 inputType: stream.type,
