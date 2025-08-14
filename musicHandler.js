@@ -274,7 +274,6 @@ class ModernMusicHandler {
         }
     }
 
-    // Reproducir canción (mejorado)
     async play(guildId) {
         const queue = this.queues.get(guildId);
         const player = this.players.get(guildId);
@@ -284,20 +283,19 @@ class ModernMusicHandler {
         }
 
         const song = queue[0];
+
+        // 🚫 Si no hay URL, saltar canción
         if (!song.url) {
-            console.error(`❌ Canción sin URL, saltando: ${song.title}`);
+            console.error(`❌ No hay URL para la canción: "${song.title}"`, song);
             queue.shift();
             return this.playNext(guildId);
         }
-        
+
         try {
             console.log(`🎵 Reproduciendo: "${song.title}"`);
-            
-            // Obtener stream con play-dl
-            const stream = await play.stream(song.url, {
-                quality: 2 // 0 = lowest, 1 = medium, 2 = highest
-            });
-            
+
+            const stream = await play.stream(song.url, { quality: 2 });
+
             const resource = createAudioResource(stream.stream, {
                 inputType: stream.type,
                 metadata: {
@@ -309,25 +307,17 @@ class ModernMusicHandler {
             player.play(resource);
             this.nowPlaying.set(guildId, song);
             this.paused.set(guildId, false);
-            
+
             console.log(`✅ Reproduciendo: "${song.title}"`);
             return { success: true, song: song };
         } catch (error) {
             console.error(`❌ Error reproduciendo "${song.title}":`, error);
-            
-            // Remover canción problemática
             queue.shift();
-            
-            // Intentar siguiente
             if (queue.length > 0) {
                 console.log('🔄 Intentando siguiente canción...');
                 return this.playNext(guildId);
             }
-            
-            return { 
-                success: false, 
-                message: `No se pudo reproducir "${song.title}".` 
-            };
+            return { success: false, message: `No se pudo reproducir "${song.title}".` };
         }
     }
     
