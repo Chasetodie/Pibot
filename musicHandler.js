@@ -1,6 +1,35 @@
-const { joinVoiceChannel, createAudioPlayer, createAudioResource, AudioPlayerStatus, StreamType } = require('@discordjs/voice');
+const { PassThrough } = require('stream');
+const { createAudioResource, StreamType } = require('@discordjs/voice');
 const ytdlp = require('youtube-dl-exec');
-const ytSearch = require('yt-search');
+
+async function createResourceFromYtdlp(url) {
+    return new Promise((resolve, reject) => {
+        try {
+            const stream = new PassThrough();
+
+            // Ejecuta yt-dlp en formato bestaudio y piped stdout
+            const child = ytdlp.raw(
+                [url, '-f', 'bestaudio'],
+                { stdio: ['ignore', 'pipe', 'ignore'] }
+            );
+
+            child.stdout.pipe(stream);
+
+            child.on('error', (err) => {
+                reject(new Error(`yt-dlp error: ${err.message}`));
+            });
+
+            child.on('close', (code) => {
+                if (code !== 0) console.warn(`yt-dlp exited with code ${code}`);
+            });
+
+            const resource = createAudioResource(stream, { inputType: StreamType.Arbitrary });
+            resolve(resource);
+        } catch (err) {
+            reject(err);
+        }
+    });
+}
 
 const queue = new Map();
 const prefix = ">";
@@ -127,19 +156,17 @@ async function playSong(guildId) {
     }
 
     try {
-        const streamUrl = await getAudioUrl(song.url);
-        const resource = createAudioResource(streamUrl, { inputType: StreamType.Arbitrary });
-
+        const resource = await createResourceFromYtdlp(song.url);
         serverQueue.player.play(resource);
 
-        serverQueue.player.once(AudioPlayerStatus.Idle, () => {
+        serverQueue.player.once('idle', () => {
             serverQueue.songs.shift();
             playSong(guildId);
         });
     } catch (err) {
         console.error("Error al reproducir canción:", err.message);
-        serverQueue.songs.shift(); // Quita canción inválida
-        playSong(guildId); // Reproduce siguiente
+        serverQueue.songs.shift();
+        playSong(guildId);
     }
 }
 
