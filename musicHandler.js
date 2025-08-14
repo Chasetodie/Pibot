@@ -3,18 +3,21 @@ const { EmbedBuilder } = require('discord.js');
 const axios = require('axios');
 const ytSearch = require('yt-search');
 
-class MusicHandler {
+class InvidiousMusicHandler {
     constructor(client) {
         this.client = client;
         this.queues = new Map();
         
-        // Instancias públicas de Invidious
+        // Instancias públicas de Invidious (actualizadas 2025)
         this.invidiousInstances = [
-            'https://inv.riverside.rocks',
-            'https://invidious.snopyta.org',
-            'https://invidious.kavin.rocks',
-            'https://invidious.tube',
-            'https://invidious.site'
+            'https://invidious.protokolla.fi',
+            'https://invidious.private.coffee',
+            'https://yt.artemislena.eu',
+            'https://invidious.lunar.icu',
+            'https://inv.tux.pizza',
+            'https://invidious.nerdvpn.de',
+            'https://iv.melmac.space',
+            'https://inv.nadeko.net'
         ];
         this.currentInstance = 0;
     }
@@ -144,34 +147,66 @@ class MusicHandler {
                 console.log(`🔄 Intentando con instancia: ${instance}`);
                 
                 const response = await axios.get(`${instance}/api/v1/videos/${videoId}`, {
-                    timeout: 10000,
+                    timeout: 15000,
                     headers: {
-                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+                        'Accept': 'application/json'
                     }
                 });
 
-                const adaptiveFormats = response.data.adaptiveFormats;
-                
-                // Buscar formato de audio
-                const audioFormat = adaptiveFormats.find(format => 
-                    format.type.includes('audio') && format.url
-                );
-
-                if (audioFormat) {
-                    console.log('✅ URL de audio encontrada');
-                    return audioFormat.url;
+                // Verificar que la respuesta tenga datos válidos
+                if (!response.data || typeof response.data !== 'object') {
+                    throw new Error('Respuesta inválida del servidor');
                 }
 
-                // Rotar a la siguiente instancia
-                this.currentInstance = (this.currentInstance + 1) % this.invidiousInstances.length;
-                
+                // Buscar formatos de audio
+                let audioUrl = null;
+
+                // Método 1: adaptiveFormats
+                if (response.data.adaptiveFormats && Array.isArray(response.data.adaptiveFormats)) {
+                    const audioFormat = response.data.adaptiveFormats.find(format => 
+                        format.type && format.type.includes('audio') && format.url
+                    );
+                    if (audioFormat) {
+                        audioUrl = audioFormat.url;
+                    }
+                }
+
+                // Método 2: formatStreams (fallback)
+                if (!audioUrl && response.data.formatStreams && Array.isArray(response.data.formatStreams)) {
+                    const audioFormat = response.data.formatStreams.find(format => 
+                        format.type && format.type.includes('audio') && format.url
+                    );
+                    if (audioFormat) {
+                        audioUrl = audioFormat.url;
+                    }
+                }
+
+                // Método 3: cualquier formato que contenga audio
+                if (!audioUrl && response.data.formatStreams && Array.isArray(response.data.formatStreams)) {
+                    const anyFormat = response.data.formatStreams.find(format => format.url);
+                    if (anyFormat) {
+                        audioUrl = anyFormat.url;
+                    }
+                }
+
+                if (audioUrl) {
+                    console.log('✅ URL de audio encontrada');
+                    return audioUrl;
+                }
+
+                throw new Error('No se encontraron formatos de audio');
+
             } catch (error) {
                 console.log(`❌ Error con instancia ${this.invidiousInstances[this.currentInstance]}:`, error.message);
+                
+                // Rotar a la siguiente instancia
                 this.currentInstance = (this.currentInstance + 1) % this.invidiousInstances.length;
                 continue;
             }
         }
 
+        console.log('❌ Todas las instancias de Invidious fallaron');
         return null;
     }
 
@@ -215,4 +250,4 @@ class MusicHandler {
     }
 }
 
-module.exports = MusicHandler;
+module.exports = InvidiousMusicHandler;
