@@ -4,8 +4,13 @@ require('dotenv').config();
 class BettingSystem {
     constructor(economySystem) {
         this.economy = economySystem;
-        this.supabase = this.economy.initializeSupabase;
-
+        
+        // Inicializar el cliente directamente
+        this.supabase = createClient(
+            process.env.SUPABASE_URL,
+            process.env.SUPABASE_ANON_KEY
+        );
+        
         this.config = {
             minBet: 100,
             maxBet: 100000,
