@@ -71,11 +71,14 @@ async function play(message, query) {
             });
             serverQueue.connection = connection;
 
+            // Suscribirse al player
+            serverQueue.connection.subscribe(serverQueue.player);
+
             // Manejo de errores del player
             serverQueue.player.on('error', error => {
                 console.error(`AudioPlayer Error: ${error.message}`);
                 serverQueue.songs.shift();
-                playSong(message.guild.id);
+                if (serverQueue.songs.length > 0) playSong(message.guild.id);
             });
 
             // Reproducir primera canción
@@ -96,7 +99,7 @@ async function play(message, query) {
 // Función que reproduce la primera canción de la cola
 async function playSong(guildId) {
     const serverQueue = queue.get(guildId);
-    if (!serverQueue) return;
+    if (!serverQueue || !serverQueue.player) return;
 
     const song = serverQueue.songs[0];
     if (!song) {
@@ -107,11 +110,10 @@ async function playSong(guildId) {
 
     try {
         // Obtener stream de audio con @distube/ytdl-core
-        const ytStream = await ytdl(song.url, { filter: 'audioonly', quality: 'highestaudio', highWaterMark: 1<<25 });
-        const resource = createAudioResource(ytStream.stream, { inputType: StreamType.Opus });
+        const ytStream = await ytdl(song.url, { filter: 'audioonly', quality: 'highestaudio', highWaterMark: 1 << 25 });
+        const resource = createAudioResource(ytStream, { inputType: StreamType.Opus });
 
         serverQueue.player.play(resource);
-        serverQueue.connection.subscribe(serverQueue.player);
 
         serverQueue.player.once(AudioPlayerStatus.Idle, () => {
             serverQueue.songs.shift();
