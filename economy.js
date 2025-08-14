@@ -1093,17 +1093,21 @@ isBeingRobbed(userId) {
                 
                 // Actualizar balances
                 robberUpdateData.balance = robber.balance + stolenAmount;
-                robberUpdateData['stats.totalEarned'] = (robber.stats.totalEarned || 0) + stolenAmount;
-                robberUpdateData['stats.robberiesSuccessful'] = (robber.stats.robberiesSuccessful || 0) + 1;
-                robberUpdateData['stats.moneyStolen'] = (robber.stats.moneyStolen || 0) + stolenAmount;
-                
+                robberUpdateData.stats = {
+                    ...robber.stats,
+                    totalEarned: (robber.stats.totalEarned || 0) + stolenAmount,
+                    robberiesSuccessful: (robber.stats.robberiesSuccessful || 0) + 1,
+                    moneyStolen: (robber.stats.moneyStolen || 0) + stolenAmount,
+                };                
                 
                 const targetUpdateData = {
                     balance: Math.max(0, target.balance - stolenAmount),
-                    'stats.totalSpent': (target.stats.totalSpent || 0) + stolenAmount,
-                'stats.timesRobbed': (target.stats.timesRobbed || 0) + 1,
-                'stats.moneyLostToRobbers': (target.stats.moneyLostToRobbers || 0) + stolenAmount
-                
+                    stats: {
+                        ...target.stats,
+                        totalSpent: (target.stats.totalSpent || 0) + stolenAmount,
+                        timesRobbed: (target.stats.timesRobbed || 0) + 1,
+                        moneyLostToRobbers: (target.stats.moneyLostToRobbers || 0) + stolenAmount
+                    }                
                 };
                 
                 await this.updateUser(robberId, robberUpdateData);
