@@ -497,7 +497,7 @@ client.on('messageCreate', async (message) => {
     await allCommands.processCommand(message);
 
     // Procesar comandos de música
-    await musicHandler.processCommand(message);
+    await musicHandler.processMessage(message);
     
     //Procesar comandos de minijuegos
     await minigames.processCommand(message);
