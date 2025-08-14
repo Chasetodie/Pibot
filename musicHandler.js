@@ -146,7 +146,7 @@ class InvidiousMusicHandler {
                 const instance = this.invidiousInstances[this.currentInstance];
                 console.log(`🔄 Intentando con instancia: ${instance}`);
                 
-                const response = await axios.get(`${instance}/api/v1/videos/${videoId}`, {
+                const response = await axios.get(`${instance}/watch?v=${videoId}`, {
                     timeout: 15000,
                     headers: {
                         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
