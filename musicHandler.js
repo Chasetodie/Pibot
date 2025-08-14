@@ -106,7 +106,7 @@ class MusicHandler {
                 highWaterMark: 1 << 25,
                 requestOptions: {
                     headers: {
-                        'Cookie': 'VISITOR_INFO1_LIVE=8LApLk6E2hw; YSC=7OdY2TPFPLU; PREF=tz=America.Guayaquil&f6=40000000&f7=100',
+                        'Cookie': '__Secure-3PAPISID=RWLIGcZZ5tpL7bWE/A4j8Q0Rh2udUsuZep; PREF=tz=America.Guayaquil&f6=40000000&f7=100; LOGIN_INFO=AFmmF2swRgIhAI9t8clx8DNEeviJIqHdzcCDx9Fo0e7hM8IKP6ql3Q9fAiEAmTY3BIogG6WXhzbEHARabh0_60u-jzkIss6168Pg_mI:QUQ3MjNmeUlubVFvbDZpOXVjVThTOE1WZHdQYXE2Uk1NR2pXbGlHb2xsVFVDS1Y5NnBoUm4xTldSd251bXhfdER5QWFwMHYxenp1MUVCTjBXa3MyeE5sc2RBRjE2dFl1bjRHSnBPY0pNOVl1N2pRQk13cmN4Q09IZlZPbmJfazd5SDVDem9GVVFZMWFhWUN5MGZrVnp0MTBTNldsZWF5aUt3; wide=0; __Secure-3PSID=g.a000ywgkzUE7uTg3666SGP63baLeqogC16fCTFpY6ABwgWAHLQeBHzkKOKsPo7LrsVee5Z7tWAACgYKAewSAQ4SFQHGX2Mi-oDcsr5EBVxAlzp4IJPOLhoVAUF8yKpNVTEqs7eJJzNoriGZWd_d0076; __Secure-1PSIDTS=sidts-CjIB5H03P166r0E3Fa_f2y8VenGIz0Eco7L5UPuYzv6sCoPXDoq_ab2p71xeph-_Vhh7XxAA; __Secure-3PSIDTS=sidts-CjIB5H03P166r0E3Fa_f2y8VenGIz0Eco7L5UPuYzv6sCoPXDoq_ab2p71xeph-_Vhh7XxAA; __Secure-3PSIDCC=AKEyXzX89_4etssO76ZoUHU95A2GgZUT29-RvpmdyHOYI2J7TV0pULlwgECVpDCOrE4wd1M9dQ; YSC=7OdY2TPFPLU; VISITOR_INFO1_LIVE=8LApLk6E2hw; VISITOR_PRIVACY_METADATA=CgJFQxIEGgAgXQ%3D%3D; __Secure-ROLLOUT_TOKEN=COGMxJS0_vLHcxCrwrC5_cuNAxi6k5qViomPAw%3D%3D',
                         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
                         'Accept': '*/*',
                         'Accept-Language': 'en-US,en;q=0.9',
