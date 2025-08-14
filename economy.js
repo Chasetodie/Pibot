@@ -1072,7 +1072,7 @@ isBeingRobbed(userId) {
             const robberUpdateData = {
                 last_robbery: Date.now(),
                 stats: {
-                    ...user.stats,
+                    ...robber.stats,
                     robberies: (robber.stats.robberies || 0) + 1,
                 },
             };
