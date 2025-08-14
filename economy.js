@@ -932,7 +932,7 @@ isBeingRobbed(userId) {
         }
         
         // Verificar cooldown
-        const lastRobbery = robber.lastRobbery || 0;
+        const lastRobbery = robber.last_robbery || 0;
         const now = Date.now();
         
         if (now - lastRobbery < this.robberyConfig.cooldown) {
@@ -1070,8 +1070,11 @@ isBeingRobbed(userId) {
             
             // Actualizar cooldown del ladrón
             const robberUpdateData = {
-                lastRobbery: Date.now(),
-                'stats.robberies': (robber.stats.robberies || 0) + 1
+                last_robbery: Date.now(),
+                stats: {
+                    ...user.stats,
+                    robberies: (robber.stats.robberies || 0) + 1,
+                },
             };
             
             if (success) {
