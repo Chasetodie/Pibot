@@ -1,38 +1,13 @@
 const { joinVoiceChannel, createAudioPlayer, createAudioResource, AudioPlayerStatus } = require('@discordjs/voice');
 const { EmbedBuilder } = require('discord.js');
-const ytdl = require('@distube/ytdl-core');
+const youtubedl = require('youtube-dl-exec');
 const ytSearch = require('yt-search');
+const { spawn } = require('child_process');
 
 class MusicHandler {
     constructor(client) {
         this.client = client;
         this.queues = new Map();
-        
-        // SOLUCIÓN: Crear agente con cookies más completas
-        this.agent = ytdl.createAgent([
-            {
-                "domain": ".youtube.com",
-                "expirationDate": 1735689600,
-                "hostOnly": false,
-                "httpOnly": false,
-                "name": "VISITOR_INFO1_LIVE",
-                "path": "/",
-                "sameSite": "no_restriction",
-                "secure": true,
-                "value": "95T6eO6flSs"
-            },
-            {
-                "domain": ".youtube.com",
-                "expirationDate": 1735689600,
-                "hostOnly": false,
-                "httpOnly": true,
-                "name": "YSC",
-                "path": "/",
-                "sameSite": "no_restriction",
-                "secure": true,
-                "value": "example"
-            }
-        ]);
     }
 
     // Procesar comandos
@@ -65,7 +40,7 @@ class MusicHandler {
                         { name: '`>stop`', value: 'Para música', inline: true },
                         { name: '`>help`', value: 'Muestra esta ayuda', inline: true }
                     )
-                    .setFooter({ text: 'Bot de música con ytdl-core' });
+                    .setFooter({ text: 'Bot de música con yt-dlp' });
 
                 message.reply({ embeds: [embed] });
                 break;
@@ -86,22 +61,10 @@ class MusicHandler {
 
         try {
             let songUrl;
-            let songTitle = query;
-            let songDuration;
-            let songThumbnail;
+            let songInfo;
 
-            // Verificar si es una URL de YouTube
-            if (ytdl.validateURL(query)) {
-                songUrl = query;
-                console.log('🔗 URL directa de YouTube detectada');
-                
-                // CAMBIO 3: Usar el agente en getInfo
-                const info = await ytdl.getInfo(songUrl, { agent: this.agent });
-                songTitle = info.videoDetails.title;
-                songDuration = this.formatDuration(info.videoDetails.lengthSeconds);
-                songThumbnail = info.videoDetails.thumbnails[0]?.url;
-            } else {
-                // Buscar en YouTube
+            // Si no es una URL, buscar en YouTube
+            if (!query.includes('youtube.com') && !query.includes('youtu.be')) {
                 console.log('🔍 Buscando en YouTube...');
                 const searchResults = await ytSearch(query);
                 
@@ -111,51 +74,73 @@ class MusicHandler {
 
                 const video = searchResults.videos[0];
                 songUrl = video.url;
-                songTitle = video.title;
-                songDuration = video.duration.timestamp;
-                songThumbnail = video.thumbnail;
+                songInfo = {
+                    title: video.title,
+                    duration: video.duration.timestamp,
+                    thumbnail: video.thumbnail,
+                    channel: video.author.name
+                };
                 
-                console.log('🎵 Canción encontrada:', songTitle);
+                console.log('🎵 Canción encontrada:', songInfo.title);
+            } else {
+                songUrl = query;
+                console.log('🔗 URL directa detectada');
+                
+                // Obtener información del video con yt-dlp
+                try {
+                    const info = await youtubedl(songUrl, {
+                        dumpSingleJson: true,
+                        noCheckCertificates: true,
+                        noWarnings: true,
+                        preferFreeFormats: true,
+                        addHeader: [
+                            'referer:youtube.com',
+                            'user-agent:Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+                        ]
+                    });
+                    
+                    songInfo = {
+                        title: info.title,
+                        duration: this.formatDuration(info.duration),
+                        thumbnail: info.thumbnail,
+                        channel: info.uploader
+                    };
+                } catch (error) {
+                    console.log('⚠️ No se pudo obtener info del video, usando URL directamente');
+                    songInfo = {
+                        title: 'Video de YouTube',
+                        duration: 'Desconocida',
+                        thumbnail: null,
+                        channel: 'Desconocido'
+                    };
+                }
             }
 
-            // Verificar que la URL es válida
-            if (!ytdl.validateURL(songUrl)) {
-                return message.reply('❌ URL de YouTube inválida.');
-            }
-
-            console.log('🎶 Creando stream de audio...');
+            console.log('🎶 Creando stream con yt-dlp...');
             
-            // SOLUCIÓN: Configuración sin Keep-Alive problemático
-            const stream = ytdl(songUrl, {
-                filter: 'audioonly',
-                highWaterMark: 1 << 25,
-                quality: 'highestaudio',
-                agent: this.agent,
-                requestOptions: {
-                    headers: {
-                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-                        'Accept': '*/*',
-                        'Accept-Language': 'en-US,en;q=0.9',
-                        'Accept-Encoding': 'gzip, deflate, br',
-                        'Connection': 'close' // CAMBIO: Usar 'close' en lugar de 'keep-alive'
-                    }
-                },
-                // AÑADIR: Configuraciones adicionales para evitar bloqueos
-                begin: 0,
-                liveBuffer: 1 << 25,
-                dlChunkSize: 0,
-                bitrate: 128
+            // Crear stream usando spawn con yt-dlp
+            const stream = spawn('yt-dlp', [
+                songUrl,
+                '-o', '-',
+                '--audio-format', 'opus',
+                '--audio-quality', '96K',
+                '--format', 'bestaudio[ext=webm]/bestaudio/best',
+                '--no-check-certificates',
+                '--prefer-free-formats',
+                '--add-header', 'referer:youtube.com',
+                '--add-header', 'user-agent:Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+                '--extract-flat', 'false',
+                '--embed-subs', 'false'
+            ], {
+                stdio: ['ignore', 'pipe', 'ignore']
             });
 
-            // CAMBIO 5: Mejor manejo de errores del stream
-            stream.on('error', (error) => {
-                console.error('❌ Error del stream:', error.message);
-                message.channel.send('❌ Error al obtener el audio del video. Intenta con otro video.');
-            });
+            if (!stream || !stream.stdout) {
+                throw new Error('No se pudo crear el stream');
+            }
 
-            const resource = createAudioResource(stream, {
-                inputType: 'arbitrary',
-                inlineVolume: true
+            const resource = createAudioResource(stream.stdout, {
+                inputType: 'arbitrary'
             });
 
             // Conectar al canal de voz
@@ -174,7 +159,20 @@ class MusicHandler {
             this.queues.set(message.guild.id, {
                 connection,
                 player,
-                textChannel: message.channel
+                textChannel: message.channel,
+                process: stream
+            });
+
+            // Manejar errores del proceso
+            stream.on('error', (error) => {
+                console.error('❌ Error del proceso yt-dlp:', error.message);
+                message.channel.send('❌ Error al procesar el video.');
+            });
+
+            stream.on('close', (code) => {
+                if (code !== 0) {
+                    console.error(`❌ yt-dlp proceso terminó con código: ${code}`);
+                }
             });
 
             // Reproducir la canción
@@ -185,14 +183,15 @@ class MusicHandler {
             const embed = new EmbedBuilder()
                 .setColor('#00FF00')
                 .setTitle('🎵 Reproduciendo ahora')
-                .setDescription(`[${songTitle}](${songUrl})`)
+                .setDescription(`[${songInfo.title}](${songUrl})`)
                 .addFields(
-                    { name: '⏱️ Duración', value: songDuration || 'Desconocida', inline: true },
-                    { name: '👤 Solicitado por', value: message.author.toString(), inline: true }
+                    { name: '⏱️ Duración', value: songInfo.duration || 'Desconocida', inline: true },
+                    { name: '👤 Solicitado por', value: message.author.toString(), inline: true },
+                    { name: '📺 Canal', value: songInfo.channel || 'Desconocido', inline: true }
                 );
 
-            if (songThumbnail) {
-                embed.setThumbnail(songThumbnail);
+            if (songInfo.thumbnail) {
+                embed.setThumbnail(songInfo.thumbnail);
             }
 
             message.reply({ embeds: [embed] });
@@ -201,34 +200,22 @@ class MusicHandler {
             player.on(AudioPlayerStatus.Idle, () => {
                 console.log('🏁 Reproducción terminada');
                 message.channel.send('✅ Reproducción terminada.');
-                // CAMBIO 7: Limpiar recursos
-                const queue = this.queues.get(message.guild.id);
-                if (queue) {
-                    queue.connection.destroy();
-                    this.queues.delete(message.guild.id);
-                }
+                this.cleanup(message.guild.id);
             });
 
             player.on('error', (error) => {
                 console.error('❌ Error del reproductor:', error.message);
                 message.channel.send('❌ Ocurrió un error durante la reproducción.');
-                // Limpiar recursos en caso de error
-                const queue = this.queues.get(message.guild.id);
-                if (queue) {
-                    queue.connection.destroy();
-                    this.queues.delete(message.guild.id);
-                }
+                this.cleanup(message.guild.id);
             });
 
         } catch (error) {
             console.error('❌ Error en play:', error.message);
             
-            if (error.message.includes('Sign in to confirm')) {
-                message.reply('❌ YouTube requiere verificación. El servicio está temporalmente limitado.');
-            } else if (error.message.includes('Video unavailable')) {
-                message.reply('❌ El video no está disponible o es privado.');
-            } else if (error.message.includes('Could not extract functions')) {
-                message.reply('❌ Error de extracción de YouTube. Intenta actualizar las dependencias o usa otro video.');
+            if (error.message.includes('not found')) {
+                message.reply('❌ yt-dlp no está instalado. Por favor instálalo primero.');
+            } else if (error.message.includes('unavailable')) {
+                message.reply('❌ El video no está disponible.');
             } else {
                 message.reply('❌ Ocurrió un error al reproducir la música. Intenta con otro video.');
             }
@@ -241,15 +228,24 @@ class MusicHandler {
             return message.reply('❌ No hay música reproduciéndose.');
         }
 
-        queue.player.stop();
-        queue.connection.destroy();
-        this.queues.delete(message.guild.id);
-        
+        this.cleanup(message.guild.id);
         message.reply('⏹️ Música detenida y desconectado del canal de voz.');
+    }
+
+    // Limpiar recursos
+    cleanup(guildId) {
+        const queue = this.queues.get(guildId);
+        if (queue) {
+            if (queue.player) queue.player.stop();
+            if (queue.connection) queue.connection.destroy();
+            if (queue.process) queue.process.kill();
+            this.queues.delete(guildId);
+        }
     }
 
     // Formatear duración de segundos a MM:SS
     formatDuration(seconds) {
+        if (!seconds) return 'Desconocida';
         const mins = Math.floor(seconds / 60);
         const secs = Math.floor(seconds % 60);
         return `${mins}:${secs.toString().padStart(2, '0')}`;
