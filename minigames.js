@@ -6,7 +6,7 @@ class MinigamesSystem {
         this.economy = economySystem;
         this.events = null;
         this.activeGames = new Map(); // Para manejar juegos en progreso
-        this.supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY);
+        this.supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_ANON_KEY);
         
         // Configuración de minijuegos
         this.config = {
