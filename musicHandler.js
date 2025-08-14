@@ -73,8 +73,7 @@ async function play(message, query) {
 async function playSong(guildId) {
     const serverQueue = queue.get(guildId);
     if (!serverQueue) return;
-
-    const song = serverQueue.songs[0];
+    let song = serverQueue.songs[0];
     if (!song) {
         serverQueue.connection.destroy();
         queue.delete(guildId);
@@ -82,7 +81,7 @@ async function playSong(guildId) {
     }
 
     try {
-        // Intentar reproducir la canción
+        // Intentar reproducir
         const stream = await ytdl(song.url, { filter: 'audioonly', highWaterMark: 1 << 25 });
         const resource = createAudioResource(stream, { inputType: StreamType.Opus });
         serverQueue.player.play(resource);
@@ -92,20 +91,17 @@ async function playSong(guildId) {
             serverQueue.songs.shift();
             playSong(guildId);
         });
+
     } catch (err) {
         console.error("Error al reproducir canción:", err.message);
-        // Si falla la URL, intentar buscar automáticamente otra
-        try {
-            const searchResult = await ytSearch(song.title);
-            if (searchResult && searchResult.videos.length > 0) {
-                serverQueue.songs[0].url = searchResult.videos[0].url;
-                return playSong(guildId); // Reintento con URL válida
-            }
-        } catch (e) {
-            console.error("Error al reintentar la canción:", e.message);
-        }
+
+        // Quitar la canción inválida
         serverQueue.songs.shift();
-        playSong(guildId); // Reproducir siguiente canción
+
+        // Si la cola tiene más canciones, reproducir la siguiente
+        if (serverQueue.songs.length > 0) {
+            playSong(guildId);
+        }
     }
 }
 
