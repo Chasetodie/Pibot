@@ -106,7 +106,7 @@ class MusicHandler {
                 highWaterMark: 1 << 25,
                 requestOptions: {
                     headers: {
-                        'Cookie': 'VISITOR_INFO1_LIVE=95T6eO6flSs; YSC=dQw4w9WgXcQ; PREF=f4=4000000&f5=30&f6=8',
+                        'Cookie': 'VISITOR_INFO1_LIVE=8LApLk6E2hw; YSC=7OdY2TPFPLU; PREF=tz=America.Guayaquil&f6=40000000&f7=100',
                         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
                         'Accept': '*/*',
                         'Accept-Language': 'en-US,en;q=0.9',
