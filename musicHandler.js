@@ -307,18 +307,30 @@ class ModernMusicHandler {
         try {
             console.log(`🎵 Reproduciendo: "${song.title}"`);
             
-            // Obtener stream con mejor calidad
-            const stream = ytdl(song.url, {
-                filter: 'audioonly',
-                quality: 'highestaudio',
-                highWaterMark: 1 << 25, // 32MB buffer
-                dlChunkSize: 0,
-                requestOptions: {
-                    headers: {
-                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+            // Obtener stream con múltiples intentos
+            let stream;
+            try {
+                // Primer intento con lowestaudio
+                stream = ytdl(song.url, {
+                    filter: 'audioonly',
+                    quality: 'lowestaudio',
+                    requestOptions: {
+                        headers: {
+                            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+                        }
                     }
-                }
-            });
+                });
+            } catch (error) {
+                console.log('Primer intento falló, probando configuración alternativa...');
+                // Segundo intento sin filtro específico
+                stream = ytdl(song.url, {
+                    requestOptions: {
+                        headers: {
+                            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+                        }
+                    }
+                });
+            }
             
             const resource = createAudioResource(stream, {
                 inputType: StreamType.Arbitrary,

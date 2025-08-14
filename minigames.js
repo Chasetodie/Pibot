@@ -2524,7 +2524,7 @@ class MinigamesSystem {
                         value: game.players.map(p => `${p.alive ? '🏆' : '💀'} ${p.displayName} (${p.shots} disparos)`).join('\n'), 
                         inline: false 
                     },
-                    { name: '🔫 Bala Estaba En', value: `Disparo ${game.bulletPosition}/6`, inline: true }
+                    { name: '🔫 Bala Estaba En', value: `Disparo ${game.bullet_position}/6`, inline: true }
                 );
 
             // Si hay eventos aplicados
