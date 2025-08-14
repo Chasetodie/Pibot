@@ -4,7 +4,7 @@ class EventsSystem {
     constructor(economySystem) {
         this.economy = economySystem;
 
-        this.supabase = economy.supabase; // Guardar referencia a Supabase
+        this.supabase = this.economy.supabase; // Guardar referencia a Supabase
                
         this.activeEvents = {};
         this.announcementChannelId = '1404905496644685834'; // Cambia esto al ID de tu canal de anuncios
