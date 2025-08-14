@@ -1,12 +1,16 @@
 const { DisTube } = require('distube');
+const { YouTubePlugin } = require('@distube/youtube');
+const { SoundCloudPlugin } = require('@distube/soundcloud');
 const { EmbedBuilder, ActionRowBuilder, StringSelectMenuBuilder } = require('discord.js');
-const { YtDlpPlugin } = require('@distube/yt-dlp');
 
 class MusicHandler {
     constructor(client) {
         this.client = client;
         this.distube = new DisTube(client, {
-            plugins: [new YtDlpPlugin()],
+            plugins: [
+                new YouTubePlugin(),
+                new SoundCloudPlugin()
+            ],
             ffmpeg: {
                 path: require('ffmpeg-static')
             }
