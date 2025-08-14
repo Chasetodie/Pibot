@@ -1,9 +1,27 @@
 const { joinVoiceChannel, createAudioPlayer, createAudioResource, AudioPlayerStatus, StreamType } = require('@discordjs/voice');
-const ytDlp = require('@distube/yt-dlp');
+const ytdlp = require('youtube-dl-exec');
 const ytSearch = require('yt-search');
 
 const queue = new Map();
 const prefix = ">";
+
+// Función para obtener la URL directa de audio
+async function getAudioUrl(url) {
+    try {
+        const info = await ytdlp(url, {
+            dumpSingleJson: true,
+            noWarnings: true,
+            quiet: true,
+            extractAudio: true,
+            audioFormat: 'bestaudio',
+            addHeader: ['referer:youtube.com', 'user-agent:googlebot']
+        });
+        return info.url;
+    } catch (error) {
+        console.error('Error al obtener la URL de audio:', error);
+        throw new Error('No se pudo obtener la URL de audio');
+    }
+}
 
 // Función central para manejar comandos
 async function processCommand(message) {
@@ -96,7 +114,7 @@ async function play(message, query) {
     }
 }
 
-// Función que reproduce la primera canción de la cola usando yt-dlp
+// Función que reproduce la primera canción de la cola usando youtube-dl-exec
 async function playSong(guildId) {
     const serverQueue = queue.get(guildId);
     if (!serverQueue || !serverQueue.player) return;
@@ -109,9 +127,7 @@ async function playSong(guildId) {
     }
 
     try {
-        // Obtener URL directa de audio con yt-dlp
-        const info = await ytDlp.getInfo(song.url);
-        const streamUrl = info.url; // URL directa de audio
+        const streamUrl = await getAudioUrl(song.url);
         const resource = createAudioResource(streamUrl, { inputType: StreamType.Arbitrary });
 
         serverQueue.player.play(resource);
