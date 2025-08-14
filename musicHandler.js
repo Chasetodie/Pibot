@@ -1,5 +1,5 @@
 const { joinVoiceChannel, createAudioPlayer, createAudioResource, AudioPlayerStatus, StreamType } = require('@discordjs/voice');
-const { stream } = require('@distube/ytdl-core');
+const ytdl = require('@distube/ytdl-core');
 const ytSearch = require('yt-search');
 
 const queue = new Map();
@@ -107,7 +107,7 @@ async function playSong(guildId) {
 
     try {
         // Obtener stream de audio con @distube/ytdl-core
-        const ytStream = await stream(song.url, { filter: 'audioonly' });
+        const ytStream = await ytdl(song.url, { filter: 'audioonly', quality: 'highestaudio', highWaterMark: 1<<25 });
         const resource = createAudioResource(ytStream.stream, { inputType: StreamType.Opus });
 
         serverQueue.player.play(resource);
