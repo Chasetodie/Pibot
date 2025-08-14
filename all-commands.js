@@ -51,7 +51,7 @@ class AllCommands {
         const xpForNextLevel = this.economy.getXpForLevel(user.level + 1);
         const xpForCurrentLevel = this.economy.getXpForLevel(user.level);
         const totalXpForCurrent = this.economy.getXpNeededForLevel(user.level);
-        const xpProgress = user.totalXp - totalXpForCurrent;
+        const xpProgress = user.total_xp - totalXpForCurrent;
         const xpNeeded = xpForNextLevel - xpProgress;
         
         // Crear barra de progreso
@@ -78,7 +78,7 @@ class AllCommands {
                 },
                 { 
                     name: '⭐ XP Total', 
-                    value: `**${this.formatNumber(user.totalXp)}**`, 
+                    value: `**${this.formatNumber(user.total_xp)}**`, 
                     inline: true 
                 },
                 { 
@@ -88,7 +88,7 @@ class AllCommands {
                 },
                 { 
                     name: '💬 Mensajes Enviados', 
-                    value: `${this.formatNumber(user.messagesCount)}`, 
+                    value: `${this.formatNumber(user.messages_count)}`, 
                     inline: true 
                 },
                 { 
@@ -191,7 +191,7 @@ class AllCommands {
         // Información de XP
         const xpForNextLevel = this.economy.getXpForLevel(user.level + 1);
         const totalXpForCurrent = this.economy.getXpNeededForLevel(user.level);
-        const xpProgress = user.totalXp - totalXpForCurrent;
+        const xpProgress = user.total_xp - totalXpForCurrent;
         const xpNeeded = xpForNextLevel - xpProgress;
         
         // Barra de progreso más detallada
@@ -218,7 +218,7 @@ class AllCommands {
                 },
                 { 
                     name: '⭐ XP Total', 
-                    value: `**${this.formatNumber(user.totalXp)}**`, 
+                    value: `**${this.formatNumber(user.total_xp)}**`, 
                     inline: true 
                 },
                 { 
@@ -228,7 +228,7 @@ class AllCommands {
                 },
                 { 
                     name: '💬 Mensajes', 
-                    value: `${this.formatNumber(user.messagesCount)}`, 
+                    value: `${this.formatNumber(user.messages_count)}`, 
                     inline: true 
                 },
                 { 
