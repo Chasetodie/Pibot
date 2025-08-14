@@ -13,7 +13,7 @@ async function getAudioUrl(url) {
             noWarnings: true,
             quiet: true,
             extractAudio: true,
-            audioFormat: 'bestaudio',
+            audioFormat: 'm4a', // <- Cambiado de "bestaudio" a "m4a"
             addHeader: ['referer:youtube.com', 'user-agent:googlebot']
         });
         return info.url;
