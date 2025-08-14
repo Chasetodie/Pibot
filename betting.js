@@ -1,5 +1,6 @@
 const { EmbedBuilder } = require('discord.js');
 require('dotenv').config();
+const { createClient } = require('@supabase/supabase-js');
 
 class BettingSystem {
     constructor(economySystem) {
