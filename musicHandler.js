@@ -1,25 +1,49 @@
 const { joinVoiceChannel, createAudioPlayer, createAudioResource, AudioPlayerStatus, StreamType } = require('@discordjs/voice');
-const {stream } = require('@distube/ytdl-core');
+const { stream } = require('@distube/ytdl-core');
 const ytSearch = require('yt-search');
 
 const queue = new Map();
 const prefix = ">";
 
-// Función para reproducir canciones
+// Función central para manejar comandos
+async function processCommand(message) {
+    if (!message.content.startsWith(prefix) || message.author.bot) return;
+
+    const args = message.content.slice(prefix.length).trim().split(/ +/);
+    const command = args.shift().toLowerCase();
+
+    if (command === "play") {
+        const query = args.join(" ");
+        if (!query) return message.reply("Debes escribir el nombre de la canción.");
+        await play(message, query);
+    } else if (command === "skip") {
+        skip(message);
+    } else if (command === "stop") {
+        stop(message);
+    } else if (command === "pause") {
+        pause(message);
+    } else if (command === "resume") {
+        resume(message);
+    } else if (command === "queue") {
+        showQueue(message);
+    }
+}
+
+// Función para reproducir o agregar canciones
 async function play(message, query) {
     const voiceChannel = message.member.voice.channel;
     if (!voiceChannel) return message.reply("¡Debes estar en un canal de voz!");
 
     let serverQueue = queue.get(message.guild.id);
 
-    // Buscar siempre una URL válida
+    // Buscar canción en YouTube
     let songInfo;
     try {
         const searchResult = await ytSearch(query);
         if (!searchResult || !searchResult.videos.length) return message.reply("No encontré la canción 😢");
         songInfo = searchResult.videos[0];
     } catch (err) {
-        return message.reply("Error al buscar la canción. Intenta otro nombre.");
+        return message.reply("Error al buscar la canción.");
     }
 
     const song = {
@@ -28,33 +52,33 @@ async function play(message, query) {
     };
 
     if (!serverQueue) {
-        const queueContruct = {
+        // Crear cola por primera vez
+        serverQueue = {
             voiceChannel,
             connection: null,
             songs: [],
             player: createAudioPlayer(),
         };
-
-        queue.set(message.guild.id, queueContruct);
-        queueContruct.songs.push(song);
+        queue.set(message.guild.id, serverQueue);
+        serverQueue.songs.push(song);
 
         try {
+            // Unirse al canal de voz
             const connection = joinVoiceChannel({
                 channelId: voiceChannel.id,
                 guildId: message.guild.id,
                 adapterCreator: message.guild.voiceAdapterCreator,
             });
-
-            connection.subscribe(serverQueue.player);
-            queueContruct.connection = connection;
+            serverQueue.connection = connection;
 
             // Manejo de errores del player
-            queueContruct.player.on('error', error => {
+            serverQueue.player.on('error', error => {
                 console.error(`AudioPlayer Error: ${error.message}`);
-                queueContruct.songs.shift();
+                serverQueue.songs.shift();
                 playSong(message.guild.id);
             });
 
+            // Reproducir primera canción
             playSong(message.guild.id);
             message.reply(`🎶 Reproduciendo: **${song.title}**`);
         } catch (err) {
@@ -63,6 +87,7 @@ async function play(message, query) {
             return message.reply("No pude unirme al canal de voz 😢");
         }
     } else {
+        // Agregar canción a la cola
         serverQueue.songs.push(song);
         return message.reply(`✅ Agregada a la cola: **${song.title}**`);
     }
@@ -81,21 +106,28 @@ async function playSong(guildId) {
     }
 
     try {
+        // Obtener stream de audio con @distube/ytdl-core
         const ytStream = await stream(song.url, { filter: 'audioonly' });
         const resource = createAudioResource(ytStream.stream, { inputType: StreamType.Opus });
+
         serverQueue.player.play(resource);
         serverQueue.connection.subscribe(serverQueue.player);
+
+        serverQueue.player.once(AudioPlayerStatus.Idle, () => {
+            serverQueue.songs.shift();
+            playSong(guildId);
+        });
     } catch (err) {
         console.error("Error al reproducir canción:", err.message);
-        serverQueue.songs.shift();
-        if (serverQueue.songs.length > 0) playSong(serverQueue, serverQueue.songs[0]);
+        serverQueue.songs.shift(); // Quita canción inválida
+        playSong(guildId); // Reproduce siguiente
     }
 }
 
 // Comandos de música
 function skip(message) {
     const serverQueue = queue.get(message.guild.id);
-    if (!serverQueue) return message.reply("No hay canciones para saltar 😢");
+    if (!serverQueue || !serverQueue.songs.length) return message.reply("No hay canciones para saltar 😢");
     serverQueue.player.stop();
     message.reply("⏭️ Canción saltada");
 }
@@ -126,33 +158,9 @@ function resume(message) {
 
 function showQueue(message) {
     const serverQueue = queue.get(message.guild.id);
-    if (!serverQueue || serverQueue.songs.length === 0) return message.reply("La cola está vacía");
+    if (!serverQueue || !serverQueue.songs.length) return message.reply("La cola está vacía");
     const queueList = serverQueue.songs.map((song, i) => `${i + 1}. ${song.title}`).join("\n");
     message.reply(`🎶 Cola de canciones:\n${queueList}`);
-}
-
-// Función central que maneja todos los comandos con prefijo
-function processCommand(message) {
-    if (!message.content.startsWith(prefix) || message.author.bot) return;
-
-    const args = message.content.slice(prefix.length).trim().split(/ +/);
-    const command = args.shift().toLowerCase();
-
-    if (command === "play") {
-        const query = args.join(" ");
-        if (!query) return message.reply("Debes escribir el nombre de la canción.");
-        play(message, query);
-    } else if (command === "skip") {
-        skip(message);
-    } else if (command === "stop") {
-        stop(message);
-    } else if (command === "pause") {
-        pause(message);
-    } else if (command === "resume") {
-        resume(message);
-    } else if (command === "queue") {
-        showQueue(message);
-    }
 }
 
 module.exports = {
