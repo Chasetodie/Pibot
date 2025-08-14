@@ -1,5 +1,5 @@
 const { PassThrough } = require('stream');
-const { createAudioResource, StreamType } = require('@discordjs/voice');
+const { joinVoiceChannel, createAudioPlayer, createAudioResource, AudioPlayerStatus, StreamType } = require('@discordjs/voice');
 const ytdlp = require('youtube-dl-exec');
 const ytSearch = require('yt-search');
 
