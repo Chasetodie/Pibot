@@ -88,7 +88,7 @@ const economy = new EconomySystem();
 const minigames = new MinigamesSystem(economy);
 
 // Inicializar el manejador de música
-const musicHandler = new MusicHandler(client);
+let musicHandler;
 
 //Crear instancia del sistema de Misiones
 const missions = new MissionsSystem(economy);
@@ -188,6 +188,7 @@ client.once('ready', async () => {
     console.log(`🌍 Variables de entorno: PIBE_COUNT=${process.env.PIBE_COUNT || 'no definida'}, PIBA_COUNT=${process.env.PIBA_COUNT || 'no definida'}`);
     console.log(`🔧 Comandos disponibles: !contadores, !reset, !reload, !help`);
     await minigames.loadActiveRussianGames(client);
+    musicHandler = new MusicHandler(client);
 
     // Establecer el guild para eventos
     const guild = client.guilds.cache.get('1404905496644685834'); // ← Cambiar por tu ID real
@@ -414,6 +415,10 @@ client.on('interactionCreate', async (interaction) => {
 client.on('messageCreate', async (message) => {
     // Ignorar mensajes de bots
     if (message.author.bot) return;
+
+    if (!musicHandler) {
+        return message.reply('⏳ El bot se está inicializando. Espera unos segundos e inténtalo de nuevo.');
+    }
 
     // AGREGAR ESTO AL INICIO:
     const userId = message.author.id;
