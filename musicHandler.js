@@ -18,11 +18,11 @@ class MusicHandler {
             'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36 Edg/119.0.0.0'
         ];
         
-        // Cookies rotativas
+        // Sin cookies problemáticas - usar headers básicos
         this.cookieSets = [
-            'VISITOR_INFO1_LIVE=95T6eO6flSs; YSC=dQw4w9WgXcQ; PREF=f4=4000000',
-            'VISITOR_INFO1_LIVE=Kuqb0174f0o; YSC=example123; PREF=f4=4000000&f5=30',
-            'VISITOR_INFO1_LIVE=a1b2c3d4e5f; YSC=random456; PREF=f4=4000000&f6=8'
+            '', // Sin cookies
+            '', // Sin cookies  
+            ''  // Sin cookies
         ];
         
         this.currentUserAgent = 0;
@@ -148,26 +148,20 @@ class MusicHandler {
             };
         }
 
-        // Configuración avanzada con rotación
+        // Configuración SIN cookies problemáticas
         const stream = ytdl(songUrl, {
             filter: 'audioonly',
             quality: 'highestaudio',
             highWaterMark: 1 << 25,
             requestOptions: {
                 headers: {
-                    'Cookie': config.cookies,
                     'User-Agent': config.userAgent,
                     'Accept': '*/*',
                     'Accept-Language': 'en-US,en;q=0.9',
                     'Accept-Encoding': 'gzip, deflate, br',
                     'DNT': '1',
                     'Connection': 'close',
-                    'Upgrade-Insecure-Requests': '1',
-                    'Sec-Fetch-Dest': 'empty',
-                    'Sec-Fetch-Mode': 'cors',
-                    'Sec-Fetch-Site': 'cross-site',
-                    'X-YouTube-Client-Name': '1',
-                    'X-YouTube-Client-Version': '2.20240101.00.00'
+                    'Upgrade-Insecure-Requests': '1'
                 }
             },
             begin: 0,
