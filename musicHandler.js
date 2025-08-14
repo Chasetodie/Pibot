@@ -63,14 +63,16 @@ async function playSong(guildId) {
         return;
     }
 
-    const stream = await ytdl(song.url, { filter: 'audioonly', highWaterMark: 1 << 25 });
-    const resource = createAudioResource(stream, { inputType: StreamType.Opus });    serverQueue.player.play(resource);
-    serverQueue.connection.subscribe(serverQueue.player);
-
-    serverQueue.player.on(AudioPlayerStatus.Idle, () => {
+    try {
+        const stream = await ytdl(song.url, { filter: 'audioonly', highWaterMark: 1 << 25 });
+        const resource = createAudioResource(stream, { inputType: StreamType.Opus });
+        serverQueue.player.play(resource);
+        serverQueue.connection.subscribe(serverQueue.player);
+    } catch (err) {
+        console.error("Error al reproducir canción:", err);
         serverQueue.songs.shift();
         playSong(guildId);
-    });
+    }
 }
 
 function skip(message) {
