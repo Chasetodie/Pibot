@@ -306,8 +306,14 @@ class ModernMusicHandler {
                 throw new Error("URL de YouTube inválida: " + youtubeUrl);
             }
 
-            const stream = await play.stream(youtubeUrl, { quality: 2 });
-
+            let stream;
+            try {
+                const info = await play.video_basic_info(youtubeUrl);
+                stream = await play.stream(info.video_details.url, { quality: 2 });
+            } catch (err) {
+                console.error("Error al obtener stream:", err);
+                return { success: false, message: 'No se pudo reproducir la canción (formato no soportado).' };
+            }
             const resource = createAudioResource(stream.stream, {
                 inputType: stream.type,
                 metadata: {
