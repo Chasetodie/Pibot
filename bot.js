@@ -63,6 +63,18 @@ function saveCounters(counters) {
     }
 }
 
+// Configuración del bot de Discord con TODOS los intents necesarios
+const client = new Client({
+    intents: [
+        GatewayIntentBits.Guilds,
+        GatewayIntentBits.GuildMembers,
+        GatewayIntentBits.GuildMessages,
+        GatewayIntentBits.DirectMessages,
+        GatewayIntentBits.MessageContent,
+        GatewayIntentBits.GuildVoiceStates,
+    ]
+});
+
 // Cargar contadores al iniciar
 let counters = loadCounters();
 
@@ -76,7 +88,7 @@ const economy = new EconomySystem();
 const minigames = new MinigamesSystem(economy);
 
 // Inicializar el manejador de música
-const musicHandler = new MusicHandler();
+const musicHandler = new MusicHandler(client);
 
 //Crear instancia del sistema de Misiones
 const missions = new MissionsSystem(economy);
@@ -167,18 +179,6 @@ app.get('/reset/:pibe/:piba', (req, res) => {
 app.listen(PORT, () => {
     console.log(`Servidor web corriendo en puerto ${PORT}`);
     console.log(`URL del bot: ${process.env.RAILWAY_PUBLIC_DOMAIN ? `https://${process.env.RAILWAY_PUBLIC_DOMAIN}` : `http://localhost:${PORT}`}`);
-});
-
-// Configuración del bot de Discord con TODOS los intents necesarios
-const client = new Client({
-    intents: [
-        GatewayIntentBits.Guilds,
-        GatewayIntentBits.GuildMembers,
-        GatewayIntentBits.GuildMessages,
-        GatewayIntentBits.DirectMessages,
-        GatewayIntentBits.MessageContent,
-        GatewayIntentBits.GuildVoiceStates,
-    ]
 });
 
 // Evento cuando el bot está listo
