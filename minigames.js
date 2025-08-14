@@ -236,7 +236,10 @@ class MinigamesSystem {
 
         const updateData = {
             lastCoinflip: Date.now(),
-            'stats.gamesPlayed': (user.stats.games_played || 0) + 1
+            stats: {
+                ...user.stats,
+                games_played: (user.stats.games_played || 0) + 1
+            }
         }
 
         // Crear embed del resultado
@@ -441,7 +444,10 @@ class MinigamesSystem {
         
         const updateData = {
             lastDice: Date.now(),
-            'stats.gamesPlayed': (user.stats.games_played || 0) + 1
+            stats: {
+                ...user.stats,
+                games_played: (user.stats.games_played || 0) + 1
+            }        
         }
 
         // Emojis del dado
@@ -636,7 +642,10 @@ class MinigamesSystem {
         
         const updateData = {
             lastLotto: Date.now(),
-            'stats.gamesPlayed': (user.stats.games_played || 0) + 1
+            stats: {
+                ...user.stats,
+                games_played: (user.stats.games_played || 0) + 1
+            }
         };
     
         // Crear embed del resultado con animación
@@ -699,7 +708,10 @@ class MinigamesSystem {
             await this.economy.addMoney(userId, finalWinAmount, 'lottery_win');     
             // AGREGAR ESTAS LÍNEAS:
             const updateDataLottery = {
-                'stats.lotteryWins': (user.stats.lottery_wins || 0) + 1  // ← NUEVA LÍNEA
+                stats: {
+                    ...user.stats,
+                    lottery_wins': (user.stats.lottery_wins || 0) + 1  // ← NUEVA LÍNEA
+                }
             };       
             await this.economy.updateUser(userId, updateData);
 
@@ -1107,7 +1119,10 @@ class MinigamesSystem {
         
         const updateData = {
             lastBlackJack: Date.now(),
-            'stats.gamesPlayed': (user.stats.games_played || 0) + 1
+            stats: {
+                ...user.stats,
+                games_played: (user.stats.games_played || 0) + 1
+            }
         };
         
         let profit = 0;
@@ -1491,7 +1506,10 @@ class MinigamesSystem {
     
         const updateData = {
             lastRoulette: Date.now(),
-            'stats.gamesPlayed': (user.stats.games_played || 0) + 1
+            stats: {
+                ...user.stats,
+                games_played: (user.stats.games_played || 0) + 1
+            }
         };
     
         // Crear embed con animación de giro
@@ -2290,7 +2308,12 @@ class MinigamesSystem {
     
             // Actualizar estadísticas
             const user = await this.economy.getUser(playerId);
-            const updateData = { 'stats.gamesPlayed': (user.stats.games_played || 0) + 1 };
+            const updateData = {    
+                stats: {
+                    ...user.stats,
+                    games_played: (user.stats.games_played || 0) + 1
+                }
+            };
             await this.economy.updateUser(playerId, updateData);
             
             if (this.achievements) {
@@ -2348,7 +2371,7 @@ class MinigamesSystem {
         console.log('ez6');
         
         // Si llegamos al 6to disparo y hay 2+ jugadores, recargar revólver
-        if (game.currentShot === 6 && alivePlayers.length > 1) {
+        if (game.currentShot === 6 && alivePlayers.length > 1 || !currentPlayer.alive) {
             setTimeout(async () => {
                 await this.reloadRevolver(game, client);
             }, 4000);
@@ -2469,7 +2492,12 @@ class MinigamesSystem {
             this.setCooldown(winner.id, 'russianRoulette');
     
             // Actualizar estadísticas del ganador
-            const updateData = { 'stats.gamesPlayed': ((await this.economy.getUser(winner.id)).stats.games_played || 0) + 1 };
+            const updateData = {   
+                stats: {
+                    ...user.stats,
+                    games_played: ((await this.economy.getUser(winner.id)).stats.games_played || 0) + 1
+                }
+            };
             await this.economy.updateUser(winner.id, updateData);
     
             if (this.achievements) {
