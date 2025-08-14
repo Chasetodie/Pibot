@@ -214,6 +214,11 @@ class ModernMusicHandler {
                 song = results[0];
             }
 
+            if (!song.url) {
+                console.error('❌ La canción no tiene URL:', song);
+                return { success: false, message: 'No se pudo obtener la URL de la canción.' };
+            }
+
             // Verificar que la canción se pueda reproducir
             if (!await this.isPlayable(song.url)) {
                 return { success: false, message: 'Esta canción no se puede reproducir (restricciones de región/edad).' };
