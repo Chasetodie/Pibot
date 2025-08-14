@@ -26,7 +26,6 @@
     "sodium-native": "^5.0.6",
     "spotify-web-api-node": "^5.0.2",
     "undici": "^5.29.0",
-    "yt-search": "^2.13.1",
-    "ytdl-core": "^4.11.5"
+    "yt-search": "^2.13.1"
   }
 }

@@ -1,12 +1,15 @@
 const { joinVoiceChannel, createAudioPlayer, createAudioResource, AudioPlayerStatus } = require('@discordjs/voice');
 const { EmbedBuilder } = require('discord.js');
-const ytdl = require('ytdl-core');
+const ytdl = require('@distube/ytdl-core'); // CAMBIO 1: Usar @distube/ytdl-core
 const ytSearch = require('yt-search');
 
 class MusicHandler {
     constructor(client) {
         this.client = client;
         this.queues = new Map();
+        
+        // CAMBIO 2: Crear agente con cookies
+        this.agent = ytdl.createAgent();
     }
 
     // Procesar comandos
@@ -69,8 +72,8 @@ class MusicHandler {
                 songUrl = query;
                 console.log('🔗 URL directa de YouTube detectada');
                 
-                // Obtener información del video
-                const info = await ytdl.getInfo(songUrl);
+                // CAMBIO 3: Usar el agente en getInfo
+                const info = await ytdl.getInfo(songUrl, { agent: this.agent });
                 songTitle = info.videoDetails.title;
                 songDuration = this.formatDuration(info.videoDetails.lengthSeconds);
                 songThumbnail = info.videoDetails.thumbnails[0]?.url;
@@ -99,20 +102,33 @@ class MusicHandler {
 
             console.log('🎶 Creando stream de audio...');
             
-            // Configuración especial para evitar bloqueos
+            // CAMBIO 4: Configuración mejorada con el agente
             const stream = ytdl(songUrl, {
                 filter: 'audioonly',
                 highWaterMark: 1 << 25,
                 quality: 'highestaudio',
+                agent: this.agent, // Usar el agente
                 requestOptions: {
                     headers: {
-                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:120.0) Gecko/20100101 Firefox/120.0',
+                        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+                        'Accept-Language': 'en-us,en;q=0.5',
+                        'Accept-Encoding': 'gzip,deflate',
+                        'Accept-Charset': 'ISO-8859-1,utf-8;q=0.7,*;q=0.7',
+                        'Keep-Alive': '300',
+                        'Connection': 'keep-alive',
                     }
                 }
             });
 
+            // CAMBIO 5: Mejor manejo de errores del stream
+            stream.on('error', (error) => {
+                console.error('❌ Error del stream:', error.message);
+                message.channel.send('❌ Error al obtener el audio del video. Intenta con otro video.');
+            });
+
             const resource = createAudioResource(stream, {
-                inputType: 'webm/opus'
+                inputType: 'arbitrary' // CAMBIO 6: Cambiar inputType
             });
 
             // Conectar al canal de voz
@@ -132,12 +148,6 @@ class MusicHandler {
                 connection,
                 player,
                 textChannel: message.channel
-            });
-
-            // Manejar errores del stream
-            stream.on('error', (error) => {
-                console.error('❌ Error del stream:', error);
-                message.channel.send('❌ Error al obtener el audio del video.');
             });
 
             // Reproducir la canción
@@ -164,20 +174,34 @@ class MusicHandler {
             player.on(AudioPlayerStatus.Idle, () => {
                 console.log('🏁 Reproducción terminada');
                 message.channel.send('✅ Reproducción terminada.');
+                // CAMBIO 7: Limpiar recursos
+                const queue = this.queues.get(message.guild.id);
+                if (queue) {
+                    queue.connection.destroy();
+                    this.queues.delete(message.guild.id);
+                }
             });
 
             player.on('error', (error) => {
-                console.error('❌ Error del reproductor:', error);
+                console.error('❌ Error del reproductor:', error.message);
                 message.channel.send('❌ Ocurrió un error durante la reproducción.');
+                // Limpiar recursos en caso de error
+                const queue = this.queues.get(message.guild.id);
+                if (queue) {
+                    queue.connection.destroy();
+                    this.queues.delete(message.guild.id);
+                }
             });
 
         } catch (error) {
-            console.error('❌ Error en play:', error);
+            console.error('❌ Error en play:', error.message);
             
             if (error.message.includes('Sign in to confirm')) {
                 message.reply('❌ YouTube requiere verificación. El servicio está temporalmente limitado.');
             } else if (error.message.includes('Video unavailable')) {
                 message.reply('❌ El video no está disponible o es privado.');
+            } else if (error.message.includes('Could not extract functions')) {
+                message.reply('❌ Error de extracción de YouTube. Intenta actualizar las dependencias o usa otro video.');
             } else {
                 message.reply('❌ Ocurrió un error al reproducir la música. Intenta con otro video.');
             }
