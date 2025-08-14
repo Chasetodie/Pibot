@@ -152,25 +152,31 @@ class MusicHandler {
         }
     }
 
-    // Comando play principal
     async play(message, query) {
+        console.log('🎵 Método play llamado con query:', query); // DEBUG
+        
         const voiceChannel = message.member.voice.channel;
         if (!voiceChannel) {
+            console.log('❌ Usuario no está en canal de voz'); // DEBUG
             return message.reply('❌ ¡Necesitas estar en un canal de voz para usar este comando!');
         }
 
         if (!query) {
+            console.log('❌ No se proporcionó query'); // DEBUG
             return message.reply('❌ ¡Necesitas proporcionar una URL o término de búsqueda!');
         }
 
+        console.log('✅ Intentando reproducir...'); // DEBUG
+        
         try {
             await this.distube.play(voiceChannel, query, {
                 member: message.member,
                 textChannel: message.channel,
                 message
             });
+            console.log('✅ Comando distube.play ejecutado'); // DEBUG
         } catch (error) {
-            console.error('Error al reproducir:', error);
+            console.error('❌ Error en distube.play:', error); // DEBUG
             message.reply('❌ Ocurrió un error al intentar reproducir la música.');
         }
     }
