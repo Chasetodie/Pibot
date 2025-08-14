@@ -1,12 +1,12 @@
 const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
-const admin = require('firebase-admin'); // ← Asegúrate de tener esta línea
+const { createClient } = require('@supabase/supabase-js');
 
 class MinigamesSystem {
     constructor(economySystem) {
         this.economy = economySystem;
         this.events = null;
         this.activeGames = new Map(); // Para manejar juegos en progreso
-        this.russianGamesCollection = admin.firestore().collection('russian_game');
+        this.supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY);
         
         // Configuración de minijuegos
         this.config = {
@@ -133,7 +133,7 @@ class MinigamesSystem {
     async canCoinflip(userId) {
         const user = await this.economy.getUser(userId);
 
-        const lastCoin = user.lastCoinflip || 0;
+        const lastCoin = user.last_coinflip || 0;
         const now = Date.now();
 
         if (now - lastCoin < this.config.coinflip.cooldown) {
@@ -236,7 +236,7 @@ class MinigamesSystem {
 
         const updateData = {
             lastCoinflip: Date.now(),
-            'stats.gamesPlayed': (user.stats.gamesPlayed || 0) + 1
+            'stats.gamesPlayed': (user.stats.games_played || 0) + 1
         }
 
         // Crear embed del resultado
@@ -344,7 +344,7 @@ class MinigamesSystem {
     async canDice(userId) {
         const user = await this.economy.getUser(userId);
 
-        const lastDice = user.lastDice || 0;
+        const lastDice = user.last_dice || 0;
         const now = Date.now();
 
         if (now - lastDice < this.config.dice.cooldown) {
@@ -441,7 +441,7 @@ class MinigamesSystem {
         
         const updateData = {
             lastDice: Date.now(),
-            'stats.gamesPlayed': (user.stats.gamesPlayed || 0) + 1
+            'stats.gamesPlayed': (user.stats.games_played || 0) + 1
         }
 
         // Emojis del dado
@@ -555,7 +555,7 @@ class MinigamesSystem {
     async canLottery(userId) {
         const user = await this.economy.getUser(userId);
 
-        const lastLottery = user.lastLotto || 0;
+        const lastLottery = user.last_lotto || 0;
         const now = Date.now();
 
         if (now - lastLottery < this.config.lottery.cooldown) {
@@ -636,7 +636,7 @@ class MinigamesSystem {
         
         const updateData = {
             lastLotto: Date.now(),
-            'stats.gamesPlayed': (user.stats.gamesPlayed || 0) + 1
+            'stats.gamesPlayed': (user.stats.games_played || 0) + 1
         };
     
         // Crear embed del resultado con animación
@@ -699,7 +699,7 @@ class MinigamesSystem {
             await this.economy.addMoney(userId, finalWinAmount, 'lottery_win');     
             // AGREGAR ESTAS LÍNEAS:
             const updateDataLottery = {
-                'stats.lotteryWins': (user.stats.lotteryWins || 0) + 1  // ← NUEVA LÍNEA
+                'stats.lotteryWins': (user.stats.lottery_wins || 0) + 1  // ← NUEVA LÍNEA
             };       
             await this.economy.updateUser(userId, updateData);
 
@@ -783,7 +783,7 @@ class MinigamesSystem {
     async canBlackJack(userId) {
         const user = await this.economy.getUser(userId);
 
-        const lastBlackJack = user.lastBlackJack || 0;
+        const lastBlackJack = user.last_blackjack || 0;
         const now = Date.now();
 
         if (now - lastBlackJack < this.config.blackjack.cooldown) {
@@ -1107,7 +1107,7 @@ class MinigamesSystem {
         
         const updateData = {
             lastBlackJack: Date.now(),
-            'stats.gamesPlayed': (user.stats.gamesPlayed || 0) + 1
+            'stats.gamesPlayed': (user.stats.games_played || 0) + 1
         };
         
         let profit = 0;
@@ -1394,7 +1394,7 @@ class MinigamesSystem {
     async canRoulette(userId) {
         const user = await this.economy.getUser(userId);
 
-        const lastRoulette = user.lastRoulette || 0;
+        const lastRoulette = user.last_roulette || 0;
         const now = Date.now();
 
         if (now - lastRoulette < this.config.roulette.cooldown) {
@@ -1491,7 +1491,7 @@ class MinigamesSystem {
     
         const updateData = {
             lastRoulette: Date.now(),
-            'stats.gamesPlayed': (user.stats.gamesPlayed || 0) + 1
+            'stats.gamesPlayed': (user.stats.games_played || 0) + 1
         };
     
         // Crear embed con animación de giro
@@ -1754,55 +1754,73 @@ class MinigamesSystem {
         return `${colorEmoji} **${number}** (${colorName})`;
     }
 
-    // Obtener partida de Firebase
     async getRussianGame(gameId) {
         try {
-            const gameDoc = await this.russianGamesCollection.doc(gameId).get();
-            if (!gameDoc.exists) return null;
-            return gameDoc.data();
+            const { data, error } = await this.supabase
+                .from('russian_game')
+                .select('*')
+                .eq('id', gameId)
+                .single();
+            
+            if (error) return null;
+            return data;
         } catch (error) {
-            console.error('❌ Error obteniendo partida:', error);
+            console.error('⚠️ Error obteniendo partida:', error);
             return null;
         }
     }
 
-    // Crear partida en Firebase
     async createRussianGameInDB(gameId, gameData) {
         try {
             const gameWithTimestamp = {
                 ...gameData,
-                createdAt: admin.firestore.FieldValue.serverTimestamp(),
-                updatedAt: admin.firestore.FieldValue.serverTimestamp()
+                id: gameId,
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString()
             };
             
-            await this.russianGamesCollection.doc(gameId).set(gameWithTimestamp);
-            return gameWithTimestamp;
+            const { data, error } = await this.supabase
+                .from('russian_game')
+                .insert([gameWithTimestamp])
+                .select()
+                .single();
+                
+            if (error) throw error;
+            return data;
         } catch (error) {
-            console.error('❌ Error creando partida:', error);
+            console.error('⚠️ Error creando partida:', error);
             throw error;
         }
     }
 
-    // Actualizar partida en Firebase
     async updateRussianGame(gameId, updateData) {
         try {
             const updateWithTimestamp = {
                 ...updateData,
-                updatedAt: admin.firestore.FieldValue.serverTimestamp()
+                updated_at: new Date().toISOString()
             };
             
-            await this.russianGamesCollection.doc(gameId).update(updateWithTimestamp);
+            const { error } = await this.supabase
+                .from('russian_game')
+                .update(updateWithTimestamp)
+                .eq('id', gameId);
+                
+            if (error) throw error;
         } catch (error) {
-            console.error('❌ Error actualizando partida:', error);
+            console.error('⚠️ Error actualizando partida:', error);
         }
     }
 
-    // Eliminar partida de Firebase
     async deleteRussianGame(gameId) {
         try {
-            await this.russianGamesCollection.doc(gameId).delete();
+            const { error } = await this.supabase
+                .from('russian_game')
+                .delete()
+                .eq('id', gameId);
+                
+            if (error) throw error;
         } catch (error) {
-            console.error('❌ Error eliminando partida:', error);
+            console.error('⚠️ Error eliminando partida:', error);
         }
     }
 
@@ -2272,7 +2290,7 @@ class MinigamesSystem {
     
             // Actualizar estadísticas
             const user = await this.economy.getUser(playerId);
-            const updateData = { 'stats.gamesPlayed': (user.stats.gamesPlayed || 0) + 1 };
+            const updateData = { 'stats.gamesPlayed': (user.stats.games_played || 0) + 1 };
             await this.economy.updateUser(playerId, updateData);
             
             if (this.achievements) {
@@ -2451,7 +2469,7 @@ class MinigamesSystem {
             this.setCooldown(winner.id, 'russianRoulette');
     
             // Actualizar estadísticas del ganador
-            const updateData = { 'stats.gamesPlayed': ((await this.economy.getUser(winner.id)).stats.gamesPlayed || 0) + 1 };
+            const updateData = { 'stats.gamesPlayed': ((await this.economy.getUser(winner.id)).stats.games_played || 0) + 1 };
             await this.economy.updateUser(winner.id, updateData);
     
             if (this.achievements) {
@@ -2522,16 +2540,17 @@ class MinigamesSystem {
         }
     }
 
-    // Método para cargar partidas existentes al iniciar
     async loadActiveRussianGames(client) {
         try {
-            const snapshot = await this.russianGamesCollection
-                .where('phase', 'in', ['waiting', 'playing'])
-                .get();
+            const { data, error } = await this.supabase
+                .from('russian_game')
+                .select('*')
+                .in('phase', ['waiting', 'playing']);
                 
-            for (const doc of snapshot.docs) {
-                const gameData = doc.data();
-                const gameKey = doc.id;
+            if (error) throw error;
+            
+            for (const gameData of data) {
+                const gameKey = gameData.id;
                 
                 // Restaurar en cache local
                 this.activeGames.set(gameKey, gameData);
@@ -2542,9 +2561,9 @@ class MinigamesSystem {
                 }
             }
             
-            console.log(`🔄 Cargadas ${snapshot.size} partidas de ruleta rusa`);
+            console.log(`🔄 Cargadas ${data.length} partidas de ruleta rusa`);
         } catch (error) {
-            console.error('❌ Error cargando partidas:', error);
+            console.error('⚠️ Error cargando partidas:', error);
         }
     }
     

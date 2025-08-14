@@ -1,12 +1,10 @@
 const { EmbedBuilder } = require('discord.js');
 require('dotenv').config();
-const admin = require('firebase-admin');
-const fs = require('fs');
-const path = require('path');
 
 class BettingSystem {
     constructor(economySystem) {
         this.economy = economySystem;
+        this.supabase = this.economySystem.supabase;
 
         this.config = {
             minBet: 100,
@@ -15,115 +13,141 @@ class BettingSystem {
             maxActiveBets: 3,
             houseFee: 0.05
         };
-
-        this.betsCollection = admin.firestore().collection('bets');
     }
 
-    // ✅ CORREGIDO: Solo obtener apuesta existente, no crear una vacía
+    // ✅ CAMBIO: Obtener apuesta de Supabase
     async getBet(betId) {
         try {
-            const betDoc = await this.betsCollection.doc(betId).get();
-            
-            if (!betDoc.exists) {
-                return null; // Retornar null si no existe
+            const { data: bet, error } = await this.supabase
+                .from('bets')
+                .select('*')
+                .eq('id', betId)
+                .single();
+
+            if (error && error.code !== 'PGRST116') { // PGRST116 = no encontrado
+                throw error;
             }
 
-            return betDoc.data();
+            return bet || null;
         } catch (error) {
             console.error('❌ Error obteniendo apuesta:', error);
             return null;
         }
     }
 
-    // ✅ NUEVO: Crear apuesta específicamente
+    // ✅ CAMBIO: Crear apuesta en Supabase
     async createBetInDB(betId, betData) {
         try {
             const betWithTimestamp = {
                 ...betData,
-                createdAt: admin.firestore.FieldValue.serverTimestamp(),
-                updatedAt: admin.firestore.FieldValue.serverTimestamp()
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString()
             };
 
-            await this.betsCollection.doc(betId).set(betWithTimestamp);
-            console.log(`🎲 Nueva apuesta creada en Firebase: ${betId}`);
-            return betWithTimestamp;
+            const { data: createdBet, error } = await this.supabase
+                .from('bets')
+                .insert([betWithTimestamp])
+                .select()
+                .single();
+
+            if (error) {
+                throw error;
+            }
+
+            console.log(`🎲 Nueva apuesta creada en Supabase: ${betId}`);
+            return createdBet;
         } catch (error) {
             console.error('❌ Error creando apuesta:', error);
             throw error;
         }
     }
 
-    // Actualizar datos de apuesta
+    // ✅ CAMBIO: Actualizar apuesta en Supabase
     async updateBet(betId, updateData) {
         try {
             const updateWithTimestamp = {
                 ...updateData,
-                updatedAt: admin.firestore.FieldValue.serverTimestamp()
+                updated_at: new Date().toISOString()
             };
 
-            await this.betsCollection.doc(betId).update(updateWithTimestamp);
-            console.log(`💾 Apuesta ${betId} actualizada en Firebase`);
+            const { data, error } = await this.supabase
+                .from('bets')
+                .update(updateWithTimestamp)
+                .eq('id', betId)
+                .select();
+
+            if (error) {
+                throw error;
+            }
+
+            console.log(`💾 Apuesta ${betId} actualizada en Supabase`);
+            return data[0];
         } catch (error) {
             console.error('❌ Error actualizando apuesta:', error);
             throw error;
         }
     }
 
-    // ✅ CORREGIDO: Obtener apuestas activas de un usuario específico
+    // ✅ CAMBIO: Obtener apuestas activas del usuario en Supabase
     async getUserActiveBets(userId) {
         try {
-            const userBets = [];
-            
-            // Buscar apuestas donde el usuario es challenger
-            const challengerQuery = await this.betsCollection
-                .where('challenger', '==', userId)
-                .where('status', 'in', ['pending', 'active'])
-                .get();
-            
-            challengerQuery.forEach(doc => {
-                userBets.push({ id: doc.id, ...doc.data() });
-            });
+            // Buscar apuestas donde el usuario es challenger u opponent
+            const { data: userBets, error } = await this.supabase
+                .from('bets')
+                .select('*')
+                .or(`challenger.eq.${userId},opponent.eq.${userId}`)
+                .in('status', ['pending', 'active']);
 
-            // Buscar apuestas donde el usuario es opponent
-            const opponentQuery = await this.betsCollection
-                .where('opponent', '==', userId)
-                .where('status', 'in', ['pending', 'active'])
-                .get();
-            
-            opponentQuery.forEach(doc => {
-                userBets.push({ id: doc.id, ...doc.data() });
-            });
+            if (error) {
+                throw error;
+            }
 
-            return userBets;
+            return userBets || [];
         } catch (error) {
             console.error('❌ Error obteniendo apuestas del usuario:', error);
             return [];
         }
     }
 
+    // ✅ CAMBIO: Obtener todas las apuestas de Supabase
     async getAllBets() {
         try {
-            const snapshot = await this.betsCollection.get();
+            const { data: bets, error } = await this.supabase
+                .from('bets')
+                .select('*');
 
-            if (snapshot.empty) return {};
+            if (error) {
+                throw error;
+            }
 
-            const bets = {};
-            snapshot.forEach(doc => {
-                bets[doc.id] = doc.data();
+            if (!bets || bets.length === 0) return {};
+
+            // Convertir array a objeto con ID como key
+            const betsObject = {};
+            bets.forEach(bet => {
+                betsObject[bet.id] = bet;
             });
 
-            return bets;
+            return betsObject;
         } catch (error) {
             console.error('❌ Error obteniendo todas las apuestas:', error);
             return {};
         }
     }
 
-    // Eliminar una apuesta
+    // ✅ CAMBIO: Eliminar apuesta de Supabase
     async deleteBet(betId) {
         try {
-            await this.betsCollection.doc(betId).delete();
-            console.log(`🗑️ Apuesta ${betId} eliminada de Firebase`);
+            const { error } = await this.supabase
+                .from('bets')
+                .delete()
+                .eq('id', betId);
+
+            if (error) {
+                throw error;
+            }
+
+            console.log(`🗑️ Apuesta ${betId} eliminada de Supabase`);
         } catch (error) {
             console.error('❌ Error eliminando apuesta:', error);
             throw error;
@@ -193,8 +217,8 @@ class BettingSystem {
             amount: amount,
             description: description,
             status: "pending",
-            expiresAt: Date.now() + this.config.betTimeout,
-            channelId: message.channel.id
+            expires_at: Date.now() + this.config.betTimeout,
+            channel_id: message.channel.id
         };
 
         // ✅ CORREGIDO: Crear la apuesta en la base de datos
@@ -251,22 +275,27 @@ class BettingSystem {
             return;
         }
         
-        // ✅ CORREGIDO: Buscar apuesta pendiente entre estos usuarios
-        const pendingBets = await this.betsCollection
-            .where('challenger', '==', challengerUser.id)
-            .where('opponent', '==', opponentId)
-            .where('status', '==', 'pending')
-            .get();
+        // ✅ CAMBIO: Buscar apuesta pendiente en Supabase
+        const { data: pendingBets, error } = await this.supabase
+            .from('bets')
+            .select('*')
+            .eq('challenger', challengerUser.id)
+            .eq('opponent', opponentId)
+            .eq('status', 'pending');
 
-        if (pendingBets.empty) {
+        if (error) {
+            console.error('❌ Error buscando apuestas pendientes:', error);
+            return;
+        }
+
+        if (!pendingBets || pendingBets.length === 0) {
             await message.reply('❌ No hay apuestas pendientes de este usuario hacia ti.');
             return;
         }
 
         // Tomar la primera apuesta pendiente
-        const betDoc = pendingBets.docs[0];
-        const bet = betDoc.data();
-        const betId = betDoc.id;
+        const bet = pendingBets[0];
+        const betId = bet.id;
 
         const challengerData = await this.economy.getUser(bet.challenger);
         const opponentData = await this.economy.getUser(bet.opponent);
@@ -286,7 +315,7 @@ class BettingSystem {
         // Actualizar estado de la apuesta
         await this.updateBet(betId, {
             status: 'active',
-            acceptedAt: Date.now()
+            accepted_at: Date.now()
         });
 
         const embed = new EmbedBuilder()
@@ -320,21 +349,21 @@ class BettingSystem {
             return;
         }
         
-        // Buscar apuesta pendiente
-        const pendingBets = await this.betsCollection
-            .where('challenger', '==', challengerUser.id)
-            .where('opponent', '==', opponentId)
-            .where('status', '==', 'pending')
-            .get();
+        // ✅ CAMBIO: Buscar en Supabase
+        const { data: pendingBets, error } = await this.supabase
+            .from('bets')
+            .select('*')
+            .eq('challenger', challengerUser.id)
+            .eq('opponent', opponentId)
+            .eq('status', 'pending');
 
-        if (pendingBets.empty) {
+        if (error || !pendingBets || pendingBets.length === 0) {
             await message.reply('❌ No hay apuestas pendientes de este usuario hacia ti.');
             return;
         }
 
-        const betDoc = pendingBets.docs[0];
-        const bet = betDoc.data();
-        const betId = betDoc.id;
+        const bet = pendingBets[0];
+        const betId = bet.id;
 
         await this.deleteBet(betId);
 
@@ -491,7 +520,7 @@ class BettingSystem {
         const displayName = targetUser ? targetUser.displayName : message.author.displayName;
         const user = await this.economy.getUser(userId);
 
-        const stats = user.betStats || { wins: 0, losses: 0, totalWon: 0, totalLost: 0, netProfit: 0 };
+        const stats = user.betStats || { wins: 0, losses: 0, total_won: 0, total_lost: 0, net_profit: 0 };
         const totalBets = stats.wins + stats.losses;
         const winRate = totalBets > 0 ? (((stats.wins || 0) / totalBets) * 100).toFixed(1) : 0;
 
@@ -526,23 +555,23 @@ class BettingSystem {
         const winAmount = amount * 2 - Math.floor(amount * 2 * this.config.houseFee);
 
         const updateDataWinner = {
-            'betStats.wins': (winner.betStats.wins || 0) + 1,
-            'betStats.totalWon': (winner.betStats.totalWon || 0) + winAmount,
-            'betStats.netProfit': (winner.betStats.netProfit || 0) + (winAmount - amount),
-
-            'betStats.losses': (winner.betStats.losses || 0),
-            'betStats.totalLost': (winner.betStats.totalLost || 0),
-            'betStats.netProfit': (winner.betStats.netProfit || 0)
+            bet_stats: { // ✅ CAMBIO: snake_case y estructura completa
+                wins: (winner.bet_stats.wins || 0) + 1,
+                losses: (winner.bet_stats.losses || 0),
+                total_won: (winner.bet_stats.total_won || 0) + winAmount,
+                total_lost: (winner.bet_stats.total_lost || 0),
+                net_profit: (winner.bet_stats.net_profit || 0) + (winAmount - amount)
+            }
         }
         
         const updateDataLoser = {
-            'betStats.losses': (loser.betStats.losses || 0) + 1,
-            'betStats.totalLost': (loser.betStats.totalLost || 0) + amount,
-            'betStats.netProfit': (loser.betStats.netProfit || 0) - amount,
-
-            'betStats.wins': (loser.betStats.wins || 0),
-            'betStats.totalWon': (loser.betStats.totalWon || 0),
-            'betStats.netProfit': (loser.betStats.netProfit || 0)
+            bet_stats: { // ✅ CAMBIO: snake_case y estructura completa
+                wins: (loser.bet_stats.wins || 0),
+                losses: (loser.bet_stats.losses || 0) + 1,
+                total_won: (loser.bet_stats.total_won || 0),
+                total_lost: (loser.bet_stats.total_lost || 0) + amount,
+                net_profit: (loser.bet_stats.net_profit || 0) - amount
+            }
         }
 
         await this.economy.updateUser(winnerId, updateDataWinner);

@@ -407,59 +407,95 @@ class MissionsSystem {
         // Actualizar estadísticas diarias según el tipo de acción
         switch (actionType) {
             case 'message':
-                updateData['daily_stats.messages_today'] = (user.daily_stats.messages_today || 0) + 1;
+                updateData.daily_stats = {
+                    ...user.daily_stats,
+                    messages_today: (user.daily_stats.messages_today || 0) + 1
+                };
                 
                 // Agregar hora actual para misión de active_hours
                 const currentHour = new Date().getHours();
                 const activeHours = user.daily_stats.active_hours_today || [];
                 if (!activeHours.includes(currentHour)) {
                     activeHours.push(currentHour);
-                    updateData['daily_stats.active_hours_today'] = activeHours;
+                    updateData.daily_stats = {
+                        ...user.daily_stats,
+                        active_hours_today: activeHours
+                    };
                 }
                 break;
-                
             case 'work':
-                updateData['daily_stats.work_today'] = (user.daily_stats.work_today || 0) + 1;
+                updateData.daily_stats = {
+                    ...user.daily_stats,
+                    work_today: (user.daily_stats.work_today || 0) + 1
+                };
                 break;
-                
             case 'money_earned':
-                updateData['daily_stats.money_earned_today'] = (user.daily_stats.money_earned_today || 0) + value;
-                break;
-                
+                updateData.daily_stats = {
+                    ...user.daily_stats,
+                    money_earned_today: (user.daily_stats.money_earned_today || 0) + value
+                };
+                break;                
             case 'game_played':
-                updateData['daily_stats.games_today'] = (user.daily_stats.games_today || 0) + 1;
+                updateData.daily_stats = {
+                    ...user.daily_stats,
+                    games_today: (user.daily_stats.games_today || 0) + 1
+                };
                 break;
                 
             case 'game_won':
-                updateData['daily_stats.games_won_today'] = (user.daily_stats.games_won_today || 0) + 1;
+                updateData.daily_stats = {
+                    ...user.daily_stats,
+                    games_won_today: (user.daily_stats.games_won_today || 0) + 1
+                };
                 break;
                 
             case 'money_transferred':
-                updateData['daily_stats.money_transferred_today'] = (user.daily_stats.money_transferred_today || 0) + value;
+                updateData.daily_stats = {
+                    ...user.daily_stats,
+                    money_transferred_today: (user.daily_stats.money_transferred_today || 0) + value
+                };
                 break;
                 
             case 'level_up':
-                updateData['daily_stats.level_ups_today'] = (user.daily_stats.level_ups_today || 0) + 1;
+                updateData.daily_stats = {
+                    ...user.daily_stats,
+                    level_ups_today: (user.daily_stats.level_ups_today || 0) + 1
+                };
                 break;
                 
             case 'money_bet':
-                updateData['daily_stats.money_bet_today'] = (user.daily_stats.money_bet_today || 0) + value;
+                updateData.daily_stats = {
+                    ...user.daily_stats,
+                    money_bet_today: (user.daily_stats.money_bet_today || 0) + value
+                };
                 break;
                 
             case 'bet_won':
-                updateData['daily_stats.bets_won_today'] = (user.daily_stats.bets_won_today || 0) + 1;
+                updateData.daily_stats = {
+                    ...user.daily_stats,
+                    bets_won_today: (user.daily_stats.bets_won_today || 0) + 1
+                };
                 break;
                 
             case 'successful_robbery':
-                updateData['daily_stats.successful_robberies_today'] = (user.daily_stats.successful_robberies_today || 0) + 1;
+                updateData.daily_stats = {
+                    ...user.daily_stats,
+                    successful_robberies_today: (user.daily_stats.successful_robberies_today || 0) + 1
+                };
                 break;
                 
             case 'daily_claimed':
-                updateData['daily_stats.daily_claimed_today'] = true;
+                updateData.daily_stats = {
+                    ...user.daily_stats,
+                    daily_claimed_today: true
+                };
                 break;
                 
             case 'mention_made':
-                updateData['daily_stats.mentions_made_today'] = (user.daily_stats.mentions_made_today || 0) + 1;
+                updateData.daily_stats = {
+                    ...user.daily_stats,
+                    mentions_made_today: (user.daily_stats.mentions_made_today || 0) + 1
+                };
                 break;
         }
         
@@ -473,7 +509,10 @@ class MissionsSystem {
             const currentProgress = this.getCurrentProgress(user, mission);
             
             if (currentProgress >= mission.target) {
-                updateData[`daily_missions.${missionId}`] = 'completed';
+                updateData.daily_missions = {
+                    ...user.daily_missions,
+                    [missionId]: 'completed'
+                };
                 completedMissions.push(missionId);
                 
                 // Dar recompensas
@@ -486,7 +525,10 @@ class MissionsSystem {
                     }
 
                     updateData.balance = user.balance + rewardFinal;
-                    updateData['stats.totalEarned'] = (user.stats.totalEarned || 0) + rewardFinal;
+                    updateData.stats = {
+                        ...user.stats,
+                        total_earned: (user.stats.total_earned || 0) + rewardFinal
+                    };
                 }
             }
         }

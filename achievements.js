@@ -261,7 +261,7 @@ class AchievementsSystem {
             // Obtener valor actual según el tipo de logro
             switch (req.type) {
                 case 'money_earned':
-                    currentValue = user.stats?.totalEarned || 0;
+                    currentValue = user.stats?.total_earned || 0;
                     break;
                 case 'money_balance':
                     currentValue = user.balance || 0;
@@ -270,39 +270,39 @@ class AchievementsSystem {
                     currentValue = user.level || 1;
                     break;
                 case 'messages':
-                    currentValue = user.messagesCount || 0;
+                    currentValue = user.messages_count || 0;
                     break;
                 case 'work_count':
-                    currentValue = user.stats?.workCount || 0;
+                    currentValue = user.stats?.work_count || 0;
                     break;
                 case 'daily_streak':
-                    currentValue = user.stats?.dailyStreak || 0;
+                    currentValue = user.stats?.daily_streak || 0;
                     break;
                 case 'games_played':
-                    currentValue = user.stats?.gamesPlayed || 0;
+                    currentValue = user.stats?.games_played || 0;
                     break;
                 case 'win_streak':
-                    currentValue = user.stats?.currentWinStreak || 0;
+                    currentValue = user.stats?.current_win_streak || 0;
                     break;
                 case 'total_bet':
-                    currentValue = user.stats?.totalBet || 0;
+                    currentValue = user.stats?.total_bet || 0;
                     break;
                 case 'money_given':
-                    currentValue = user.stats?.moneyGiven || 0;
+                    currentValue = user.stats?.money_given || 0;
                     break;
                 case 'achievements_count':
                     // Contar achievements completados
                     currentValue = Object.values(user.achievements || {}).filter(status => status === 'completed').length;
                     break;
                 case 'lottery_wins':
-                    currentValue = user.stats?.lotteryWins || 0;
+                    currentValue = user.stats?.lottery_wins || 0;
                     break;
                 case 'inactive_streak':
                     // Calcular días sin usar work ni daily
                     const now = Date.now();
                     const dayInMs = 24 * 60 * 60 * 1000;
-                    const lastWork = user.lastWork || 0;
-                    const lastDaily = user.lastDaily || 0;
+                    const lastWork = user.last_work || 0;
+                    const lastDaily = user.last_daily || 0;
                     const lastActivity = Math.max(lastWork, lastDaily);
                     
                     if (lastActivity === 0) {
@@ -319,7 +319,10 @@ class AchievementsSystem {
             if (currentValue >= req.value) {
                 // Marcar como completado en la base de datos
                 const updateData = {
-                    [`achievements.${achievementId}`]: 'completed'
+                    achievements: {
+                        ...user.achievements,
+                        [achievementId]: 'completed'
+                    }
                 };
                 
                 unlockedAchievements.push(achievementId);
@@ -335,7 +338,10 @@ class AchievementsSystem {
                     }
 
                     updateData.balance = user.balance + rewardFinal;
-                    updateData['stats.totalEarned'] = (user.stats.totalEarned || 0) + rewardFinal;
+                    updateData.stats = {
+                        ...user.stats,
+                        total_earned: (user.stats.total_earned || 0) + rewardFinal
+                    };
                 }
                                
                 await this.economy.updateUser(userId, updateData);
@@ -374,7 +380,7 @@ class AchievementsSystem {
             // Obtener valor actual según el tipo de logro
             switch (req.type) {
                 case 'money_earned':
-                    currentValue = user.stats?.totalEarned || 0;
+                    currentValue = user.stats?.total_earned || 0;
                     break;
                 case 'money_balance':
                     currentValue = user.balance || 0;
@@ -383,39 +389,39 @@ class AchievementsSystem {
                     currentValue = user.level || 1;
                     break;
                 case 'messages':
-                    currentValue = user.messagesCount || 0;
+                    currentValue = user.messages_count || 0;
                     break;
                 case 'work_count':
-                    currentValue = user.stats?.workCount || 0;
+                    currentValue = user.stats?.work_count || 0;
                     break;
                 case 'daily_streak':
-                    currentValue = user.stats?.dailyStreak || 0;
+                    currentValue = user.stats?.daily_streak || 0;
                     break;
                 case 'games_played':
-                    currentValue = user.stats?.gamesPlayed || 0;
+                    currentValue = user.stats?.games_played || 0;
                     break;
                 case 'win_streak':
-                    currentValue = user.stats?.currentWinStreak || 0;
+                    currentValue = user.stats?.current_win_streak || 0;
                     break;
                 case 'total_bet':
-                    currentValue = user.stats?.totalBet || 0;
+                    currentValue = user.stats?.total_bet || 0;
                     break;
                 case 'money_given':
-                    currentValue = user.stats?.moneyGiven || 0;
+                    currentValue = user.stats?.money_given || 0;
                     break;
                 case 'achievements_count':
                     // Contar achievements completados
                     currentValue = Object.values(user.achievements || {}).filter(status => status === 'completed').length;
                     break;
                 case 'lottery_wins':
-                    currentValue = user.stats?.lotteryWins || 0;
+                    currentValue = user.stats?.lottery_wins || 0;
                     break;
                 case 'inactive_streak':
                     // Calcular días sin usar work ni daily
                     const now = Date.now();
                     const dayInMs = 24 * 60 * 60 * 1000;
-                    const lastWork = user.lastWork || 0;
-                    const lastDaily = user.lastDaily || 0;
+                    const lastWork = user.last_work || 0;
+                    const lastDaily = user.last_daily || 0;
                     const lastActivity = Math.max(lastWork, lastDaily);
                     
                     if (lastActivity === 0) {
@@ -432,7 +438,10 @@ class AchievementsSystem {
             if (currentValue >= req.value) {
                 // Marcar como completado en la base de datos
                 const updateData = {
-                    [`achievements.${achievementId}`]: 'completed'
+                    achievements: {
+                        ...user.achievements,
+                        [achievementId]: 'completed'
+                    }
                 };
                 
                 // Dar recompensas
@@ -445,7 +454,10 @@ class AchievementsSystem {
                     }
 
                     updateData.balance = user.balance + rewardFinal;
-                    updateData['stats.totalEarned'] = (user.stats.totalEarned || 0) + rewardFinal;
+                    updateData.stats = {
+                        ...user.stats,
+                        total_earned: (user.stats.total_earned || 0) + rewardFinal
+                    };
                 }
 
                 console.log(`🏆 ${userId} completó logro: ${achievement.name}\nRecompensa: ${achievement.reward.money} balance: ${updateData.balance} totalEarned: ${updateData['stats.totalEarned']}`);
@@ -477,35 +489,60 @@ class AchievementsSystem {
         
         switch (statType) {
             case 'game_played':
-                updateData['stats.gamesPlayed'] = (user.stats?.gamesPlayed || 0) + 1;
+                updateData.stats = {
+                    ...user.stats,
+                    games_played: (user.stats?.games_played || 0) + 1
+                };
                 break;
             case 'game_won':
-                updateData['stats.gamesWon'] = (user.stats?.gamesWon || 0) + 1;
-                updateData['stats.currentWinStreak'] = (user.stats?.currentWinStreak || 0) + 1;
-                updateData['stats.bestWinStreak'] = Math.max(user.stats?.bestWinStreak || 0, updateData['stats.currentWinStreak']);
+                const newWinStreak = (user.stats?.current_win_streak || 0) + 1;
+                updateData.stats = {
+                    ...user.stats,
+                    games_won: (user.stats?.games_won || 0) + 1,
+                    current_win_streak: newWinStreak,
+                    best_win_streak: Math.max(user.stats?.best_win_streak || 0, newWinStreak)
+                };
                 break;
             case 'game_lost':
-                updateData['stats.gamesLost'] = (user.stats?.gamesLost || 0) + 1;
-                updateData['stats.currentWinStreak'] = 0;
+                updateData.stats = {
+                    ...user.stats,
+                    games_lost: (user.stats?.games_lost || 0) + 1,
+                    current_win_streak: 0
+                };
                 break;
             case 'money_bet':
-                updateData['stats.totalBet'] = (user.stats?.totalBet || 0) + value;
+                updateData.stats = {
+                    ...user.stats,
+                    total_bet: (user.stats?.total_bet || 0) + value
+                };
                 break;
             case 'money_given':
-                updateData['stats.moneyGiven'] = (user.stats?.moneyGiven || 0) + value;
+                updateData.stats = {
+                    ...user.stats,
+                    money_given: (user.stats?.money_given || 0) + value
+                };
                 break;
             case 'daily_claimed':
-                const lastDaily = user.lastDaily;
+                const lastDaily = user.last_daily;
                 const now = Date.now();
                 const dayInMs = 24 * 60 * 60 * 1000;
+
+                let newDailyStreak;
                 
                 // Verificar si es consecutivo (dentro de 48 horas de la última)
                 if (lastDaily && (now - lastDaily) <= (dayInMs * 2)) {
-                    updateData['stats.dailyStreak'] = (user.stats?.dailyStreak || 0) + 1;
+                    // Es consecutivo, incrementar streak
+                    newDailyStreak = (user.stats?.daily_streak || 0) + 1;
                 } else {
-                    updateData['stats.dailyStreak'] = 1;
+                    // No es consecutivo o es el primer daily, reiniciar a 1
+                    newDailyStreak = 1;
                 }
-                updateData['stats.bestDailyStreak'] = Math.max(user.stats?.bestDailyStreak || 0, updateData['stats.dailyStreak']);
+                
+                updateData.stats = {
+                    ...user.stats,
+                    daily_streak: newDailyStreak,
+                    best_daily_streak: Math.max(user.stats?.best_daily_streak || 0, newDailyStreak)
+                };
                 break;
         }
         
@@ -560,7 +597,7 @@ class AchievementsSystem {
     // NUEVO: Comando para admin - detectar logros de todos los usuarios
     async handleDetectAllAchievements(message) {
         // Verificar permisos de admin (puedes personalizar esto)
-        if (!message.member.permissions.has('ADMINISTRATOR')) {
+        if (!message.member.permissions.has('Administrator')) {
             await message.reply('❌ Solo los administradores pueden usar este comando.');
             return;
         }
@@ -696,7 +733,7 @@ class AchievementsSystem {
         
         switch (req.type) {
             case 'money_earned':
-                currentValue = user.stats?.totalEarned || 0;
+                currentValue = user.stats?.total_earned || 0;
                 break;
             case 'money_balance':
                 currentValue = user.balance || 0;
@@ -705,25 +742,25 @@ class AchievementsSystem {
                 currentValue = user.level || 1;
                 break;
             case 'messages':
-                currentValue = user.messagesCount || 0;
+                currentValue = user.messages_count || 0;
                 break;
             case 'work_count':
-                currentValue = user.stats?.workCount || 0;
+                currentValue = user.stats?.work_count || 0;
                 break;
             case 'daily_streak':
-                currentValue = user.stats?.dailyStreak || 0;
+                currentValue = user.stats?.daily_streak || 0;
                 break;
             case 'games_played':
-                currentValue = user.stats?.gamesPlayed || 0;
+                currentValue = user.stats?.games_played || 0;
                 break;
             case 'win_streak':
-                currentValue = user.stats?.currentWinStreak || 0;
+                currentValue = user.stats?.current_win_streak || 0;
                 break;
             case 'total_bet':
-                currentValue = user.stats?.totalBet || 0;
+                currentValue = user.stats?.total_bet || 0;
                 break;
             case 'money_given':
-                currentValue = user.stats?.moneyGiven || 0;
+                currentValue = user.stats?.money_given || 0;
                 break;
             case 'achievements_count':
                 currentValue = Object.values(user.achievements || {}).filter(status => status === 'completed').length;

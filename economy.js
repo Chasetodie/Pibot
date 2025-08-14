@@ -1,11 +1,9 @@
 require('dotenv').config();
-const fs = require('fs');
-const path = require('path');
-const admin = require('firebase-admin');
+const { createClient } = require('@supabase/supabase-js');
 
 class EconomySystem {
     constructor() {
-        this.initializeFirebase();
+        this.initializeSupabase();
         
         // Configuración del sistema
         this.config = {
@@ -22,9 +20,6 @@ class EconomySystem {
         };
         
         this.userCooldowns = new Map(); // Para controlar cooldowns de XP
-
-        // Referencia a la colección de usuarios
-        this.usersCollection = admin.firestore().collection('users');    
 
         // Configuración de robos
         this.robberyConfig = {
@@ -44,131 +39,164 @@ class EconomySystem {
         this.events = null;
     }
 
-    // Inicializar Firebase
-    initializeFirebase() {
+    // Inicializar Supabase
+    initializeSupabase() {
         try {
             // Verificar que las variables de entorno existan
-            if (!process.env.FIREBASE_PROJECT_ID || !process.env.FIREBASE_CLIENT_EMAIL || !process.env.FIREBASE_PRIVATE_KEY) {
-                throw new Error('❌ Variables de entorno de Firebase no configuradas. Revisa tu archivo .env');
+            if (!process.env.SUPABASE_URL || !process.env.SUPABASE_ANON_KEY) {
+                throw new Error('❌ Variables de entorno de Supabase no configuradas. Revisa tu archivo .env');
             }
 
-            admin.initializeApp({
-                credential: admin.credential.cert({
-                    projectId: process.env.FIREBASE_PROJECT_ID,
-                    clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-                    privateKey: process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n'),
-                }),
-            });
+            this.supabase = createClient(
+                process.env.SUPABASE_URL,
+                process.env.SUPABASE_ANON_KEY
+            );
 
-            console.log('🔥 Firebase inicializado correctamente');
-            console.log(`📊 Proyecto: ${process.env.FIREBASE_PROJECT_ID}`);
+            console.log('🚀 Supabase inicializado correctamente');
+            console.log(`📊 Proyecto: ${process.env.SUPABASE_URL}`);
         } catch (error) {
-            console.error('❌ Error inicializando Firebase:', error);
+            console.error('❌ Error inicializando Supabase:', error);
             console.error('💡 Asegúrate de que tu archivo .env esté configurado correctamente');
         }
     }
 
-    // Obtener o crear datos de un usuario
+    // Obtener o crear datos de un usuario (MIGRADO)
     async getUser(userId) {
         try {
-            const userDoc = await this.usersCollection.doc(userId).get();
-            
-            if (!userDoc.exists) {
-                // Crear nuevo usuario
-                const newUser = {
-                    balance: 0, // π-b Coins iniciales
-                    level: 1,
-                    xp: 0,
-                    totalXp: 0,
-                    lastDaily: 0,
-                    lastWork: 0,
-                    lastRobbery: 0,
-                    lastCoinflip: 0,
-                    lastDice: 0,
-                    lastRoulette: 0,
-                    lastLotto: 0,
-                    lastBlackJack: 0,
-                    lastNameWork: "",
-                    messagesCount: 0,
-                    items: {},
-                    stats: {
-                        totalEarned: 0, // Incluir los iniciales
-                        totalSpent: 0,
-                        dailyClaims: 0,
-                        workCount: 0,
-                        gamesPlayed: 0,
-                        lotteryWins: 0,
-                        // Puedes agregar estadísticas de robos si quieres
-                        robberies: 0,
-                        robberiesSuccessful: 0,
-                        moneyStolen: 0,
-                        timesRobbed: 0,
-                        moneyLostToRobbers: 0
-                    },
-                    betStats: {
-                        wins: 0,
-                        losses: 0,
-                        totalWon: 0,
-                        totalLost: 0,
-                        netProfit: 0
-                    },
-                    daily_missions: {},
-                    daily_missions_date: null,
-                    daily_stats: {
-                        messages_today: 0,
-                        work_today: 0,
-                        money_earned_today: 0,
-                        // ... etc
-                    },
-                    createdAt: admin.firestore.FieldValue.serverTimestamp(),
-                    updatedAt: admin.firestore.FieldValue.serverTimestamp()
-                };
-                
-                await this.usersCollection.doc(userId).set(newUser);
-                console.log(`👤 Nuevo usuario creado en Firebase: ${userId}`);
-                return newUser;
+            // Buscar usuario existente
+            const { data: existingUser, error: fetchError } = await this.supabase
+                .from('users')
+                .select('*')
+                .eq('id', userId)
+                .single();
+
+            if (fetchError && fetchError.code !== 'PGRST116') { // PGRST116 = no encontrado
+                throw fetchError;
             }
-            
-            return userDoc.data();
+
+            if (existingUser) {
+                return existingUser;
+            }
+
+            // Crear nuevo usuario si no existe
+            const newUser = {
+                id: userId, // En Supabase necesitamos especificar el ID
+                balance: 0,
+                level: 1,
+                xp: 0,
+                total_xp: 0, // snake_case para PostgreSQL
+                last_daily: 0,
+                last_work: 0,
+                last_robbery: 0,
+                last_coinflip: 0,
+                last_dice: 0,
+                last_roulette: 0,
+                last_lotto: 0,
+                last_blackjack: 0,
+                last_name_work: "",
+                messages_count: 0,
+                items: {}, // JSON field en PostgreSQL
+                stats: {
+                    total_earned: 0,
+                    total_spent: 0,
+                    daily_claims: 0,
+                    work_count: 0,
+                    games_played: 0,
+                    lottery_wins: 0,
+                    robberies: 0,
+                    robberies_successful: 0,
+                    money_stolen: 0,
+                    times_robbed: 0,
+                    money_lost_to_robbers: 0
+                },
+                bet_stats: {
+                    wins: 0,
+                    losses: 0,
+                    total_won: 0,
+                    total_lost: 0,
+                    net_profit: 0
+                },
+                daily_missions: {},
+                daily_missions_date: null,
+                daily_stats: {
+                    messages_today: 0,
+                    work_today: 0,
+                    money_earned_today: 0
+                },
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString()
+            };
+
+            const { data: createdUser, error: insertError } = await this.supabase
+                .from('users')
+                .insert([newUser])
+                .select()
+                .single();
+
+            if (insertError) {
+                throw insertError;
+            }
+
+            console.log(`👤 Nuevo usuario creado en Supabase: ${userId}`);
+            return createdUser;
+
         } catch (error) {
             console.error('❌ Error obteniendo usuario:', error);
             throw error;
         }
     }
 
-    // Actualizar datos de usuario
+    // Actualizar datos de usuario (MIGRADO)
     async updateUser(userId, updateData) {
         try {
             const updateWithTimestamp = {
                 ...updateData,
-                updatedAt: admin.firestore.FieldValue.serverTimestamp()
+                updated_at: new Date().toISOString()
             };
-            
-            await this.usersCollection.doc(userId).update(updateWithTimestamp);
-            console.log(`💾 Usuario ${userId} actualizado en Firebase`);
+
+            const { data, error } = await this.supabase
+                .from('users')
+                .update(updateWithTimestamp)
+                .eq('id', userId)
+                .select();
+
+            if (error) {
+                throw error;
+            }
+
+            console.log(`💾 Usuario ${userId} actualizado en Supabase`);
+            return data[0];
         } catch (error) {
             console.error('❌ Error actualizando usuario:', error);
             throw error;
         }
     }
 
+    // Obtener todos los usuarios (MIGRADO)
     async getAllUsers() {
         try {
-            const snapshot = await this.usersCollection.get();
-            
-            if (snapshot.empty) return {};
-            
-            const users = {};
-            snapshot.forEach(doc => {
-                users[doc.id] = doc.data();
+            const { data: users, error } = await this.supabase
+                .from('users')
+                .select('*');
+
+            if (error) {
+                throw error;
+            }
+
+            if (!users || users.length === 0) return {};
+
+            // Convertir array a objeto con ID como key
+            const usersObject = {};
+            users.forEach(user => {
+                usersObject[user.id] = user;
             });
-            
-            return users;
+
+            return usersObject;
         } catch (error) {
             console.error('❌ Error obteniendo todos los usuarios:', error);
             return {};
         }
-    }  
+    }
 
     // Agregar dinero a un usuario
     async addMoney(userId, amount, reason = 'unknown') {
@@ -176,11 +204,11 @@ class EconomySystem {
 
         const updateData = {
             balance: user.balance + amount,
-            'stats.totalEarned': (user.stats.totalEarned || 0) + amount
+            stats: {
+                ...user.stats,
+                totalEarned: (user.stats.totalEarned || 0) + amount
+            }
         }
-
-/*        user.balance += amount;
-        user.stats.totalEarned += amount;*/
         
         console.log(`💰 +${amount} ${this.config.currencySymbol} para ${userId} (${reason})`);
         await this.updateUser(userId, updateData);
@@ -194,7 +222,10 @@ class EconomySystem {
         if (user.balance < amount) {
             const updateDataWithout = {
                 balance: 0,
-                'stats.totalSpent': (user.stats.totalSpent || 0) + amount
+                stats: {
+                    ...user.stats,
+                    totalSpent: (user.stats.totalSpent || 0) + amount
+                }
             }
 
             console.log(`💸 -${amount} ${this.config.currencySymbol} para ${userId} (${reason})`);
@@ -205,12 +236,12 @@ class EconomySystem {
 
         const updateData = {
             balance: user.balance - amount,
-            'stats.totalSpent': (user.stats.totalSpent || 0) + amount
+            stats: {
+                ...user.stats,
+                totalSpent: (user.stats.totalSpent || 0) + amount
+            }
         }
-        
-        /*user.balance -= amount;
-        user.stats.totalSpent += amount;*/
-        
+                
         console.log(`💸 -${amount} ${this.config.currencySymbol} para ${userId} (${reason})`);
         await this.updateUser(userId, updateData);
         return user.balance;
@@ -218,16 +249,15 @@ class EconomySystem {
 
     // Transferir dinero entre usuarios
     async transferMoney(fromUserId, toUserId, amount) {
-        // *** NUEVA VERIFICACIÓN: Prevenir transferencias durante robos ***
-    const robberyCheck = this.isBeingRobbed(fromUserId);
-    if (robberyCheck.beingRobbed) {
-        return { 
-            success: false, 
-            reason: 'being_robbed',
-            timeLeft: robberyCheck.timeLeft,
-            robberId: robberyCheck.robberId
-        };
-    }
+        const robberyCheck = this.isBeingRobbed(fromUserId);
+        if (robberyCheck.beingRobbed) {
+            return { 
+                success: false, 
+                reason: 'being_robbed',
+                timeLeft: robberyCheck.timeLeft,
+                robberId: robberyCheck.robberId
+            };
+        }
         
         const fromUser = await this.getUser(fromUserId);
         const toUser = await this.getUser(toUserId);
@@ -242,30 +272,28 @@ class EconomySystem {
       
         const updateDataFrom = {
             balance: fromUser.balance - amount,
-            'stats.totalSpent': (fromUser.stats.totalSpent || 0) + amount,
+            stats: {
+                ...fromUser.stats,
+                total_spent: (fromUser.stats.totalSpent || 0) + amount
+            }
         };
 
         const updateDataTo = {
             balance: toUser.balance + amount,
-            'stats.totalEarned': (toUser.stats.totalEarned || 0) + amount
+            stats: {
+                ...toUser.stats,
+                totalEarned: (toUser.stats.totalEarned || 0) + amount
+            }
         };
-
-/*        fromUser.balance -= amount;
-        fromUser.stats.totalSpent += amount;
-        
-        toUser.balance += amount;
-        toUser.stats.totalEarned += amount;*/
 
         await this.updateUser(fromUserId, updateDataFrom);
         await this.updateUser(toUserId, updateDataTo);
 
-        // *** NUEVO: ACTUALIZAR ESTADÍSTICAS DE ACHIEVEMENTS ***
         if (this.achievements) {
             await this.achievements.updateStats(fromUserId, 'money_given', amount);
         }
 
         console.log(`💸 Transferencia: ${fromUserId} -> ${toUserId}, ${amount} ${this.config.currencySymbol}`);
-        console.log(`💸 TotalEarned: ${updateDataTo['stats.totalEarned']} && TotalSpent: ${updateDataFrom['stats.totalSpent']}`);
 
         // *** NUEVO: ACTUALIZAR MISIONES ***
         if (this.missions) {
@@ -306,7 +334,7 @@ class EconomySystem {
         
         const oldLevel = user.level;
         const newXp = user.xp + xpGained;
-        const newTotalXp = user.totalXp + xpGained;
+        const newTotalXp = user.total_xp + xpGained;
         
         // Calcular nuevo nivel
         const newLevel = this.getLevelFromXp(newTotalXp);
@@ -315,7 +343,7 @@ class EconomySystem {
         // Preparar datos para actualizar
         const updateData = {
             xp: newXp,
-            totalXp: newTotalXp
+            total_xp: newTotalXp
         };
         
         if (levelUps > 0) {
@@ -324,8 +352,11 @@ class EconomySystem {
             // Agregar campos de level up
             updateData.level = newLevel;
             updateData.balance = user.balance + reward;
-            updateData['stats.totalEarned'] = user.stats.totalEarned + reward;
-            
+            updateData.stats = {
+                ...user.stats,
+                totalEarned: (user.stats.totalEarned || 0) + reward
+            };
+
             console.log(`🎉 ${userId} subió ${levelUps} nivel(es)! Nuevo nivel: ${newLevel}, Recompensa: ${reward} ${this.config.currencySymbol}`);
 
             // *** NUEVO: ACTUALIZAR MISIONES DE LEVEL UP ***
@@ -353,7 +384,7 @@ class EconomySystem {
         };
     }
 
-    // Procesar XP por mensaje (con cooldown) - VERSIÓN FIREBASE
+    // Procesar XP por mensaje (con cooldown)
     async processMessageXp(userId) {
         const now = Date.now();
         const lastXp = this.userCooldowns.get(userId) || 0;
@@ -364,7 +395,7 @@ class EconomySystem {
         if (now - lastXp < this.config.xpCooldown) {
             // Actualizar contador de mensajes
             const updateData = {
-                messagesCount: (user.messagesCount || 0) + 1
+                messages_count: (user.messages_count || 0) + 1
             };
             await this.updateUser(userId, updateData);
             
@@ -437,66 +468,50 @@ class EconomySystem {
         return totalXp;
     }
 
-    // Obtener leaderboard de dinero
     async getBalanceLeaderboard(limit = 10) {
         try {
-            const snapshot = await this.usersCollection
-                .orderBy('balance', 'desc')
-                .limit(limit)
-                .get();
+            const { data: users, error } = await this.supabase
+                .from('users')
+                .select('id, balance, level, total_xp')
+                .order('balance', { ascending: false })
+                .limit(limit);
+
+            if (error) {
+                throw error;
+            }
             
-            if (snapshot.empty) return [];
-            
-            const leaderboard = [];
-            snapshot.forEach(doc => {
-                const userData = doc.data();
-                if (userData && typeof userData.balance === 'number') {
-                    leaderboard.push({
-                        userId: doc.id,
-                        ...userData
-                    });
-                }
-            });
-            
-            return leaderboard;
+            return users.map(user => ({
+                userId: user.id,
+                balance: user.balance,
+                level: user.level,
+                totalXp: user.total_xp
+            }));
         } catch (error) {
             console.error('❌ Error obteniendo ranking de balance:', error);
             return [];
         }
     }
 
-    // Obtener leaderboard de niveles
     async getLevelLeaderboard(limit = 10) {
         try {
-            const snapshot = await this.usersCollection
-                .orderBy('totalXp', 'desc')
-                .limit(limit)
-                .get();
-            
-            if (snapshot.empty) {
-                console.log('📊 No hay usuarios en la base de datos');
-                return [];
+            const { data: users, error } = await this.supabase
+                .from('users')
+                .select('id, balance, level, total_xp')
+                .order('total_xp', { ascending: false })
+                .limit(limit);
+
+            if (error) {
+                throw error;
             }
             
-            const leaderboard = [];
-            snapshot.forEach(doc => {
-                const userData = doc.data();
-                // Validar que userData existe y tiene propiedades necesarias
-                if (userData && typeof userData.totalXp === 'number') {
-                    leaderboard.push({
-                        userId: doc.id,
-                        level: this.getLevelFromXp(userData.totalXp),
-                        totalXp: userData.totalXp,
-                        balance: userData.balance || 0,
-                        ...userData
-                    });
-                }
-            });
-            
-            return leaderboard;
+            return users.map(user => ({
+                userId: user.id,
+                level: user.level,
+                totalXp: user.total_xp,
+                balance: user.balance
+            }));
         } catch (error) {
             console.error('❌ Error obteniendo ranking de niveles:', error);
-            // Retornar array vacío en caso de error para evitar crashes
             return [];
         }
     }
@@ -507,14 +522,14 @@ class EconomySystem {
         const now = Date.now();
         const dayInMs = 24 * 60 * 60 * 1000;
         
-        return (now - user.lastDaily) >= dayInMs;
+        return (now - user.last_daily) >= dayInMs;
     }
 
     // Usar comando daily
     async useDaily(userId) {
         if (!await this.canUseDaily(userId)) {
             const user = await this.getUser(userId);
-            const timeLeft = 24 * 60 * 60 * 1000 - (Date.now() - user.lastDaily);
+            const timeLeft = 24 * 60 * 60 * 1000 - (Date.now() - user.last_daily);
             return {
                 success: false,
                 timeLeft: timeLeft
@@ -533,16 +548,14 @@ class EconomySystem {
         }
               
         const updateData = {
-            lastDaily: Date.now(),
+            last_daily: Date.now(),
             balance: user.balance + amount,
-            'stats.totalEarned': user.stats.totalEarned + amount,
-            'stats.dailyClaims': user.stats.dailyClaims + 1
+            stats: {
+                ...user.stats,
+                totalEarned: user.stats.totalEarned + amount,
+                dailyClaims: user.stats.dailyClaims + 1
+            }
         }
-
-        /*user.lastDaily = Date.now();
-        user.balance += amount;
-        user.stats.totalEarned += amount;
-        user.stats.dailyClaims++;*/
         
         await this.updateUser(userId, updateData);
 
@@ -753,7 +766,7 @@ class EconomySystem {
             return { canWork: false, reason: 'level_too_low', requiredLevel: job.levelRequirement };
         }
         
-        const lastWork = user.lastWork || 0;
+        const lastWork = user.last_work || 0;
         const now = Date.now();
         
         if (now - lastWork < job.cooldown) {
@@ -784,12 +797,13 @@ class EconomySystem {
         const failed = job.failChance && Math.random() < job.failChance;
 
         const updateData = {
-            lastWork: Date.now(),
-            'stats.workCount': user.stats.workCount + 1
+            last_work: Date.now(),
+            last_name_work: job.name, // Para mostrar en el embed el nombre del trabajo hecho
+            stats: {
+                ...user.stats,
+                work_count: (user.stats?.work_count || 0) + 1
+            }
         }
-        
-/*        user.lastWork = Date.now();
-        user.stats.workCount++;*/
         
         if (failed) {
             // Trabajo falló
@@ -797,12 +811,8 @@ class EconomySystem {
             const penalty = Math.floor(job.baseReward * 0.2); // Pierde 20% del reward base
 
             updateData.balance = Math.max(0, user.balance - penalty);
-            updateData['stats.totalSpent'] = user.stats.totalSpent + penalty;
-            updateData.lastNameWork = job.name; // Para mostrar en el embed el nombre del trabajo hecho
+            updateData.stats.total_spent = (user.stats?.total_spent || 0) + penalty;
 
-/*            user.balance = Math.max(0, user.balance - penalty);
-            user.stats.totalSpent += penalty;*/
-            
             await this.updateUser(userId, updateData); // ← Reemplaza saveUsers()
            
             return {
@@ -841,13 +851,7 @@ class EconomySystem {
         // =============================
         
         updateData.balance = user.balance + amount;
-        updateData['stats.totalEarned'] = (user.stats.totalEarned || 0) + amount;
-        updateData.lastNameWork = job.name; // Para mostrar en el embed el nombre del trabajo hecho
-
-        console.log(`Amount ${amount}\nLastWork ${updateData.lastWork}\nworkCount ${updateData.workCount}\nBalance ${updateData.balance}\nStats.TotalEarned ${updateData['stats.totalEarned']}`);
-
-/*        user.balance += amount;
-        user.stats.totalEarned += amount;*/
+        updateData.stats.total_earned = (user.stats?.total_earned || 0) + amount;
         
         await this.updateUser(userId, updateData); // ← Reemplaza saveUsers()
         

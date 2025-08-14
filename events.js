@@ -1,24 +1,11 @@
 const { EmbedBuilder } = require('discord.js');
-const admin = require('firebase-admin'); // ← Asegúrate de tener esta línea
 
 class EventsSystem {
     constructor(economySystem) {
         this.economy = economySystem;
-        
-        // Importar admin directamente desde firebase-admin
-        const admin = require('firebase-admin');
-        this.admin = admin; // Guardar referencia
-        
-        // Verificar que Firebase esté inicializado
-        try {
-            this.eventsCollection = admin.firestore().collection('serverEvents');
-            console.log('🔥 Firebase conectado en EventsSystem');
-        } catch (error) {
-            console.error('❌ Error conectando Firebase en eventos:', error);
-            // Fallback: crear colección vacía para evitar crashes
-            this.eventsCollection = null;
-        }
-        
+
+        this.supabase = economySystem.supabase; // Guardar referencia a Supabase
+               
         this.activeEvents = {};
         this.announcementChannelId = '1404905496644685834'; // Cambia esto al ID de tu canal de anuncios
         this.guild = null;
@@ -147,68 +134,119 @@ class EventsSystem {
         }, 2000);*/
     }
 
-    // Cargar eventos desde archivo
+    // ✅ CAMBIO 2: Cargar eventos desde Supabase
     async loadEvents() {
-        // Verificar que Firebase esté disponible
-        if (!this.eventsCollection) {
-            console.log('⚠️ Firebase no disponible para cargar eventos');
+        if (!this.supabase) {
+            console.log('⚠️ Supabase no disponible para cargar eventos');
             return;
         }
         
         try {
-            const snapshot = await this.eventsCollection.get();
+            const { data: events, error } = await this.supabase
+                .from('server_events')
+                .select('*')
+                .gt('end_time', new Date().toISOString()); // Solo eventos no expirados
             
-            if (snapshot.empty) {
-                console.log('🆕 No hay eventos en Firebase, creando colección');
-                return;
+            if (error) {
+                throw error;
             }
             
             this.activeEvents = {};
-            snapshot.forEach(doc => {
-                this.activeEvents[doc.id] = doc.data();
-            });
             
-            console.log(`📅 ${Object.keys(this.activeEvents).length} eventos cargados desde Firebase`);
+            if (events && events.length > 0) {
+                events.forEach(event => {
+                    // Convertir timestamps de string a number si es necesario
+                    this.activeEvents[event.id] = {
+                        ...event,
+                        startTime: new Date(event.start_time).getTime(),
+                        endTime: new Date(event.end_time).getTime(),
+                        multipliers: event.multipliers || {},
+                        stats: event.stats || {
+                            messagesAffected: 0,
+                            workJobsAffected: 0,
+                            dailiesAffected: 0,
+                            gamesAffected: 0,
+                            treasuresFound: 0,
+                            totalTreasureValue: 0,
+                            totalXpGiven: 0
+                        }
+                    };
+                });
+            }
+            
+            console.log(`📅 ${Object.keys(this.activeEvents).length} eventos cargados desde Supabase`);
             
             // Limpiar eventos expirados al cargar
             this.cleanExpiredEvents();
         } catch (error) {
-            console.error('❌ Error cargando eventos desde Firebase:', error);
+            console.error('❌ Error cargando eventos desde Supabase:', error);
         }
     }
 
-    // Guardar evento individual en Firebase
+    // ✅ CAMBIO 3: Guardar evento en Supabase
     async saveEvent(eventId, eventData) {
-        // Verificar que Firebase esté disponible
-        if (!this.eventsCollection) {
-            console.log('⚠️ Firebase no disponible, evento no guardado:', eventId);
+        if (!this.supabase) {
+            console.log('⚠️ Supabase no disponible, evento no guardado:', eventId);
             return;
         }
         
         try {
-            await this.eventsCollection.doc(eventId).set({
-                ...eventData,
-                updatedAt: this.admin.firestore.FieldValue.serverTimestamp()
-            });
-            console.log(`💾 Evento ${eventId} guardado en Firebase`);
+            // Preparar datos para Supabase (snake_case y timestamps)
+            const supabaseData = {
+                id: eventData.id,
+                type: eventData.type,
+                name: eventData.name,
+                description: eventData.description,
+                emoji: eventData.emoji,
+                color: eventData.color,
+                start_time: new Date(eventData.startTime).toISOString(),
+                end_time: new Date(eventData.endTime).toISOString(),
+                duration: eventData.duration,
+                multipliers: eventData.multipliers || {},
+                is_special: eventData.isSpecial || false,
+                is_negative: eventData.isNegative || false,
+                is_rare: eventData.isRare || false,
+                triggered_by: eventData.triggeredBy || null,
+                participant_count: eventData.participantCount || 0,
+                stats: eventData.stats || {},
+                updated_at: new Date().toISOString()
+            };
+
+            // Usar upsert para insertar o actualizar
+            const { error } = await this.supabase
+                .from('server_events')
+                .upsert([supabaseData]);
+
+            if (error) {
+                throw error;
+            }
+
+            console.log(`💾 Evento ${eventId} guardado en Supabase`);
         } catch (error) {
-            console.error('❌ Error guardando evento en Firebase:', error);
+            console.error('❌ Error guardando evento en Supabase:', error);
         }
     }
     
-    // Eliminar evento de Firebase
+    // ✅ CAMBIO 4: Eliminar evento de Supabase
     async deleteEvent(eventId) {
-        // Verificar que Firebase esté disponible
-        if (!this.eventsCollection) {
-            console.log('⚠️ Firebase no disponible, evento no eliminado:', eventId);
+        if (!this.supabase) {
+            console.log('⚠️ Supabase no disponible, evento no eliminado:', eventId);
             return;
         }
         
         try {
-            await this.eventsCollection.doc(eventId).delete();
-            console.log(`🗑️ Evento ${eventId} eliminado de Firebase`);
+            const { error } = await this.supabase
+                .from('server_events')
+                .delete()
+                .eq('id', eventId);
+
+            if (error) {
+                throw error;
+            }
+
+            console.log(`🗑️ Evento ${eventId} eliminado de Supabase`);
         } catch (error) {
-            console.error('❌ Error eliminando evento de Firebase:', error);
+            console.error('❌ Error eliminando evento de Supabase:', error);
         }
     }
 
@@ -386,7 +424,6 @@ class EventsSystem {
         }
         
         if (appliedEvents.length > 0) {
-            // Guardar eventos modificados en Firebase
             for (const event of appliedEvents) {
                 await this.saveEvent(event.id, event);
             }
@@ -485,7 +522,6 @@ class EventsSystem {
         }
         
         if (appliedEvents.length > 0) {
-            // Guardar eventos modificados en Firebase
             for (const event of appliedEvents) {
                 await this.saveEvent(event.id, event);
             }
@@ -586,7 +622,6 @@ class EventsSystem {
         }
         
         if (appliedEvents.length > 0) {
-            // Guardar eventos modificados en Firebase
             for (const event of appliedEvents) {
                 await this.saveEvent(event.id, event);
             }
@@ -687,7 +722,7 @@ class EventsSystem {
         for (const [eventId, event] of Object.entries(this.activeEvents)) {
             if (event.endTime <= now) {
                 delete this.activeEvents[eventId];
-                await this.deleteEvent(eventId); // Eliminar de Firebase
+                await this.deleteEvent(eventId);
                 await this.announceEvent(event, 'expired');
                 cleaned++;
                 console.log(`🧹 Evento expirado limpiado: ${event.name}`);
