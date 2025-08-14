@@ -416,7 +416,7 @@ class BettingSystem {
 
         // Si gana la apuesta
         if (this.economy.missions) {
-            await this.economy.missions.updateMissionProgress(userId, 'bet_won');
+            await this.economy.missions.updateMissionProgress(winnerId, 'bet_won');
         }
 
         const embed = new EmbedBuilder()
