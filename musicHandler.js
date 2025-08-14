@@ -5,12 +5,11 @@ class MusicHandler {
     constructor(client) {
         this.client = client;
         this.distube = new DisTube(client, {
-            leaveOnStop: false,
-            leaveOnFinish: false,
+            emitNewSongOnly: true,
             leaveOnEmpty: true,
             emptyCooldown: 300000, // 5 minutos
             searchSongs: 10,
-            customFilters: {},
+            nsfw: false,
             plugins: []
         });
 
