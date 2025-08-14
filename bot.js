@@ -76,7 +76,7 @@ const economy = new EconomySystem();
 const minigames = new MinigamesSystem(economy);
 
 // Inicializar el manejador de música
-const musicHandler = new MusicHandler(client);
+const musicHandler = new MusicHandler();
 
 //Crear instancia del sistema de Misiones
 const missions = new MissionsSystem(economy);
