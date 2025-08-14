@@ -1,8 +1,11 @@
-[phases.setup]
-nixPkgs = ["nodejs", "ffmpeg", "python3", "pkg-config", "yt-dlp"]
+[build]
+builder = "nixpacks"
 
-[phases.build]
-cmds = ["npm ci"]
+[build.nixpacksConfig]
+providers = ["nodejs", "python"]
 
-[start]
-cmd = "npm start"
+[build.nixpacksConfig.variables]
+NPM_CONFIG_PRODUCTION = "false"
+
+[build.nixpacksConfig.phases.install]
+cmds = ["npm install", "pip install yt-dlp"]

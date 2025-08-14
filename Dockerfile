@@ -1,15 +1,20 @@
 # Usamos Node 20
 FROM node:20
 
-# Instalar yt-dlp y dependencias
-RUN apk add --no-cache python3 py3-pip ffmpeg
-RUN pip3 install yt-dlp
+# Instalamos Python
+RUN apt-get update && apt-get install -y python3 python3-pip
 
+# Directorio de la app
 WORKDIR /app
 
+# Copiamos package.json y package-lock.json
 COPY package*.json ./
+
+# Instalamos dependencias
 RUN npm install
 
+# Copiamos el resto del proyecto
 COPY . .
 
-CMD ["npm", "start"]
+# Comando para iniciar el bot
+CMD ["node", "bot.js"]
