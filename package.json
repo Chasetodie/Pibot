@@ -4,7 +4,7 @@
   "description": "Bot de Discord para asignar apodos",
   "main": "bot.js",
   "scripts": {
-    "start": "node script.js"
+    "start": "node bot.js"
   },
   "dependencies": {
     "@discordjs/voice": "^0.18.0",
@@ -14,7 +14,6 @@
     "dotenv": "^17.2.1",
     "express": "^4.21.2",
     "ffmpeg-static": "^5.2.0",
-    "firebase-admin": "^13.4.0",
     "opusscript": "^0.0.8",
     "sodium-native": "^5.0.6",
     "soundcloud-downloader": "^1.0.0"
