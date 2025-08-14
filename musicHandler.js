@@ -1,25 +1,12 @@
 const { joinVoiceChannel, createAudioPlayer, createAudioResource, AudioPlayerStatus } = require('@discordjs/voice');
 const { EmbedBuilder } = require('discord.js');
-const axios = require('axios');
 const ytSearch = require('yt-search');
+const axios = require('axios');
 
-class InvidiousMusicHandler {
+class MusicHandler {
     constructor(client) {
         this.client = client;
         this.queues = new Map();
-        
-        // Instancias públicas de Invidious (actualizadas 2025)
-        this.invidiousInstances = [
-            'https://invidious.protokolla.fi',
-            'https://invidious.private.coffee',
-            'https://yt.artemislena.eu',
-            'https://invidious.lunar.icu',
-            'https://inv.tux.pizza',
-            'https://invidious.nerdvpn.de',
-            'https://iv.melmac.space',
-            'https://inv.nadeko.net'
-        ];
-        this.currentInstance = 0;
     }
 
     async processCommand(message) {
@@ -52,7 +39,7 @@ class InvidiousMusicHandler {
         }
 
         try {
-            // Buscar en YouTube
+            // Buscar el video
             console.log('🔍 Buscando:', query);
             const searchResults = await ytSearch(query);
             
@@ -61,26 +48,27 @@ class InvidiousMusicHandler {
             }
 
             const video = searchResults.videos[0];
-            const videoId = this.extractVideoId(video.url);
-            
-            if (!videoId) {
-                return message.reply('❌ No se pudo extraer el ID del video.');
-            }
+            console.log('🎵 Video encontrado:', video.title);
 
-            // Obtener URL de audio usando Invidious
-            const audioUrl = await this.getAudioUrl(videoId);
+            // Obtener múltiples URLs de audio usando diferentes métodos
+            const audioUrl = await this.getWorkingAudioUrl(video.videoId);
             
             if (!audioUrl) {
-                return message.reply('❌ No se pudo obtener el audio del video.');
+                return message.reply('❌ No se pudo obtener el audio. Intenta con otra canción.');
             }
 
-            // Crear stream desde la URL directa
+            console.log('🎶 Creando stream...');
+
+            // Crear stream desde la URL
             const response = await axios({
                 method: 'get',
                 url: audioUrl,
                 responseType: 'stream',
+                timeout: 30000,
                 headers: {
-                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+                    'Accept': '*/*',
+                    'Range': 'bytes=0-'
                 }
             });
 
@@ -98,7 +86,7 @@ class InvidiousMusicHandler {
             const player = createAudioPlayer();
             connection.subscribe(player);
 
-            // Guardar información de la cola
+            // Guardar información
             this.queues.set(message.guild.id, {
                 connection,
                 player,
@@ -107,8 +95,9 @@ class InvidiousMusicHandler {
 
             // Reproducir
             player.play(resource);
+            console.log('▶️ Reproduciendo...');
 
-            // Embed de reproducción
+            // Enviar embed
             const embed = new EmbedBuilder()
                 .setColor('#00FF00')
                 .setTitle('🎵 Reproduciendo ahora')
@@ -121,8 +110,9 @@ class InvidiousMusicHandler {
 
             message.reply({ embeds: [embed] });
 
-            // Eventos del reproductor
+            // Eventos
             player.on(AudioPlayerStatus.Idle, () => {
+                console.log('🏁 Reproducción terminada');
                 message.channel.send('✅ Reproducción terminada.');
                 this.cleanup(message.guild.id);
             });
@@ -135,85 +125,110 @@ class InvidiousMusicHandler {
 
         } catch (error) {
             console.error('❌ Error en play:', error.message);
-            message.reply('❌ Error al reproducir la música. Intenta con otra canción.');
+            message.reply('❌ Error al reproducir. Intenta con otra canción.');
         }
     }
 
-    async getAudioUrl(videoId) {
-        // Intentar con diferentes instancias de Invidious
-        for (let i = 0; i < this.invidiousInstances.length; i++) {
+    async getWorkingAudioUrl(videoId) {
+        const methods = [
+            () => this.tryInvidiousMethod(videoId),
+            () => this.tryPipedMethod(videoId),
+            () => this.tryDirectMethod(videoId)
+        ];
+
+        for (let i = 0; i < methods.length; i++) {
             try {
-                const instance = this.invidiousInstances[this.currentInstance];
-                console.log(`🔄 Intentando con instancia: ${instance}`);
-                
-                const response = await axios.get(`${instance}/watch?v=${videoId}`, {
-                    timeout: 15000,
-                    headers: {
-                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-                        'Accept': 'application/json'
-                    }
-                });
-
-                // Verificar que la respuesta tenga datos válidos
-                if (!response.data || typeof response.data !== 'object') {
-                    throw new Error('Respuesta inválida del servidor');
+                console.log(`🔄 Probando método ${i + 1}...`);
+                const url = await methods[i]();
+                if (url) {
+                    console.log(`✅ Método ${i + 1} exitoso`);
+                    return url;
                 }
-
-                // Buscar formatos de audio
-                let audioUrl = null;
-
-                // Método 1: adaptiveFormats
-                if (response.data.adaptiveFormats && Array.isArray(response.data.adaptiveFormats)) {
-                    const audioFormat = response.data.adaptiveFormats.find(format => 
-                        format.type && format.type.includes('audio') && format.url
-                    );
-                    if (audioFormat) {
-                        audioUrl = audioFormat.url;
-                    }
-                }
-
-                // Método 2: formatStreams (fallback)
-                if (!audioUrl && response.data.formatStreams && Array.isArray(response.data.formatStreams)) {
-                    const audioFormat = response.data.formatStreams.find(format => 
-                        format.type && format.type.includes('audio') && format.url
-                    );
-                    if (audioFormat) {
-                        audioUrl = audioFormat.url;
-                    }
-                }
-
-                // Método 3: cualquier formato que contenga audio
-                if (!audioUrl && response.data.formatStreams && Array.isArray(response.data.formatStreams)) {
-                    const anyFormat = response.data.formatStreams.find(format => format.url);
-                    if (anyFormat) {
-                        audioUrl = anyFormat.url;
-                    }
-                }
-
-                if (audioUrl) {
-                    console.log('✅ URL de audio encontrada');
-                    return audioUrl;
-                }
-
-                throw new Error('No se encontraron formatos de audio');
-
             } catch (error) {
-                console.log(`❌ Error con instancia ${this.invidiousInstances[this.currentInstance]}:`, error.message);
-                
-                // Rotar a la siguiente instancia
-                this.currentInstance = (this.currentInstance + 1) % this.invidiousInstances.length;
+                console.log(`❌ Método ${i + 1} falló:`, error.message);
                 continue;
             }
         }
 
-        console.log('❌ Todas las instancias de Invidious fallaron');
         return null;
     }
 
-    extractVideoId(url) {
-        const regex = /(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([^&\n?#]+)/;
-        const match = url.match(regex);
-        return match ? match[1] : null;
+    async tryInvidiousMethod(videoId) {
+        const instances = [
+            'https://invidious.protokolla.fi',
+            'https://invidious.private.coffee',
+            'https://yt.artemislena.eu'
+        ];
+
+        for (const instance of instances) {
+            try {
+                const response = await axios.get(`${instance}/api/v1/videos/${videoId}`, {
+                    timeout: 10000,
+                    headers: {
+                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+                    }
+                });
+
+                if (response.data?.adaptiveFormats) {
+                    const audioFormat = response.data.adaptiveFormats.find(format => 
+                        format.type?.includes('audio') && format.url
+                    );
+                    if (audioFormat) return audioFormat.url;
+                }
+            } catch (error) {
+                continue;
+            }
+        }
+        return null;
+    }
+
+    async tryPipedMethod(videoId) {
+        const instances = [
+            'https://pipedapi.kavin.rocks',
+            'https://api-piped.mha.fi'
+        ];
+
+        for (const instance of instances) {
+            try {
+                const response = await axios.get(`${instance}/streams/${videoId}`, {
+                    timeout: 10000
+                });
+
+                if (response.data?.audioStreams?.length > 0) {
+                    return response.data.audioStreams[0].url;
+                }
+            } catch (error) {
+                continue;
+            }
+        }
+        return null;
+    }
+
+    async tryDirectMethod(videoId) {
+        // Este método usa cobalt.tools API (más confiable)
+        try {
+            const response = await axios.post('https://co.wuk.sh/api/json', {
+                url: `https://www.youtube.com/watch?v=${videoId}`,
+                vCodec: 'h264',
+                vQuality: '720',
+                aFormat: 'mp3',
+                filenamePattern: 'classic',
+                isAudioOnly: true
+            }, {
+                timeout: 15000,
+                headers: {
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json'
+                }
+            });
+
+            if (response.data?.status === 'success' && response.data?.url) {
+                return response.data.url;
+            }
+        } catch (error) {
+            console.log('❌ Método directo falló:', error.message);
+        }
+        return null;
     }
 
     stop(message) {
@@ -238,16 +253,16 @@ class InvidiousMusicHandler {
     showHelp(message) {
         const embed = new EmbedBuilder()
             .setColor('#3498DB')
-            .setTitle('🎵 Comandos de Música (Invidious)')
+            .setTitle('🎵 Comandos de Música')
             .addFields(
                 { name: '`>play <búsqueda>`', value: 'Reproduce música', inline: true },
                 { name: '`>stop`', value: 'Para la música', inline: true },
                 { name: '`>help`', value: 'Muestra esta ayuda', inline: true }
             )
-            .setFooter({ text: 'Bot usando Invidious API' });
+            .setFooter({ text: 'Bot con múltiples métodos de extracción' });
 
         message.reply({ embeds: [embed] });
     }
 }
 
-module.exports = InvidiousMusicHandler;
+module.exports = MusicHandler;
