@@ -699,8 +699,6 @@ class AllCommands {
         // Intentar trabajar
         const result = await this.economy.doWork(userId, jobType);
 
-        console.log(`canWork: ${result.canWork}\nreason: ${result.reason}\nrequiredLevel: ${result.requiredLevel}\ncanWorkResult: ${result.canWorkResult}`);
-
         if (!result.canWork) {
             if (result.reason === 'level_too_low') {
                 const userLevel = await this.economy.getUser(userId);
@@ -724,7 +722,7 @@ class AllCommands {
 
                 const embed = new EmbedBuilder()
                     .setTitle('⏰ En Cooldown')
-                    .setDescription(`Ya trabajaste como **${userJob.lastNameWork}** recientemente, espera un momento para volver a trabajar en otra profesión`)
+                    .setDescription(`Ya trabajaste como **${userJob.last_name_work}** recientemente, espera un momento para volver a trabajar en otra profesión`)
                     .addFields({
                         name: '🕐 Tiempo restante',
                         value: `**${timeLeft}**`,
