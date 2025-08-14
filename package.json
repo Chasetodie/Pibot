@@ -12,9 +12,7 @@
   "dependencies": {
     "@discordjs/opus": "^0.10.0",
     "@discordjs/voice": "^0.16.1",
-    "@distube/soundcloud": "^2.0.4",
     "@distube/spotify": "^2.0.2",
-    "@distube/youtube": "^1.0.4",
     "@distube/ytdl-core": "^4.16.12",
     "@supabase/supabase-js": "^2.55.0",
     "axios": "^1.11.0",
