@@ -282,6 +282,11 @@ class ModernMusicHandler {
         }
 
         const song = queue[0];
+        if (!song.url) {
+            console.error(`❌ Canción sin URL, saltando: ${song.title}`);
+            queue.shift();
+            return this.playNext(guildId);
+        }
         
         try {
             console.log(`🎵 Reproduciendo: "${song.title}"`);
