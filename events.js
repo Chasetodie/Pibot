@@ -1,4 +1,5 @@
 const { EmbedBuilder } = require('discord.js');
+const { createClient } = require('@supabase/supabase-js');
 
 class EventsSystem {
     constructor(economySystem) {
