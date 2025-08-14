@@ -1,5 +1,5 @@
 const { joinVoiceChannel, createAudioPlayer, createAudioResource, AudioPlayerStatus, StreamType } = require('@discordjs/voice');
-const ytdl = require('@ybd-project/ytdl-core');
+const {stream } = require('@distube/ytdl-core');
 const ytSearch = require('yt-search');
 
 const queue = new Map();
@@ -44,6 +44,8 @@ async function play(message, query) {
                 guildId: message.guild.id,
                 adapterCreator: message.guild.voiceAdapterCreator,
             });
+
+            connection.subscribe(serverQueue.player);
             queueContruct.connection = connection;
 
             // Manejo de errores del player
@@ -79,20 +81,14 @@ async function playSong(guildId) {
     }
 
     try {
-        // Obtener siempre una URL válida de YouTube antes de reproducir
-        const stream = await ytdl(song.url, { filter: 'audioonly', highWaterMark: 1 << 25 });
-        const resource = createAudioResource(stream, { inputType: StreamType.Opus });
+        const ytStream = await stream(song.url, { filter: 'audioonly' });
+        const resource = createAudioResource(ytStream.stream, { inputType: StreamType.Opus });
         serverQueue.player.play(resource);
         serverQueue.connection.subscribe(serverQueue.player);
-
-        serverQueue.player.once(AudioPlayerStatus.Idle, () => {
-            serverQueue.songs.shift();
-            playSong(guildId);
-        });
     } catch (err) {
         console.error("Error al reproducir canción:", err.message);
-        serverQueue.songs.shift(); // Quita canción inválida
-        playSong(guildId); // Reproduce siguiente canción
+        serverQueue.songs.shift();
+        if (serverQueue.songs.length > 0) playSong(serverQueue, serverQueue.songs[0]);
     }
 }
 
