@@ -42,16 +42,18 @@ class ModernMusicHandler {
                 limit: limit,
                 source: { youtube: 'video' }
             });
-            
-            return results.map(video => ({
-                id: video.id,
-                title: video.title,
-                artist: video.channel.name,
-                duration: video.durationInSec,
-                url: video.url,
-                thumbnail: video.thumbnails[0]?.url,
-                views: video.views
-            }));
+
+            return results
+                .filter(video => !!video.url) // solo videos con URL válida
+                .map(video => ({
+                    id: video.id,
+                    title: video.title || "Sin título",
+                    artist: video.channel?.name || "Desconocido",
+                    duration: video.durationInSec || 0,
+                    url: video.url,
+                    thumbnail: video.thumbnails?.[0]?.url || null,
+                    views: video.views || 0
+                }));
         } catch (error) {
             console.error('❌ Error buscando en YouTube:', error);
             return [];
@@ -187,7 +189,7 @@ class ModernMusicHandler {
             if (this.isSpotifyUrl(query)) {
                 // Buscar desde Spotify
                 song = await this.searchFromSpotify(query);
-                if (!song) {
+                if (!song || !song.url) {
                     return { success: false, message: 'No se pudo obtener la canción de Spotify.' };
                 }
             } else if (this.isYouTubeUrl(query)) {
