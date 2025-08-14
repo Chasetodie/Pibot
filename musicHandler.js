@@ -1,6 +1,6 @@
 const { joinVoiceChannel, createAudioPlayer, createAudioResource, AudioPlayerStatus, VoiceConnectionStatus, StreamType } = require('@discordjs/voice');
 const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
-const ytdl = require('@distube/ytdl-core');
+const play = require('play-dl');
 const SpotifyWebApi = require('spotify-web-api-node');
 
 class ModernMusicHandler {
@@ -38,60 +38,20 @@ class ModernMusicHandler {
     async searchYouTube(query, limit = 5) {
         try {
             console.log(`🔍 Buscando en YouTube: "${query}"`);
-            
-            // Usar la API no oficial de YouTube (innertube)
-            const searchUrl = `https://www.youtube.com/results?search_query=${encodeURIComponent(query)}`;
-            const response = await fetch(searchUrl, {
-                headers: {
-                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
-                }
+            const results = await play.search(query, {
+                limit: limit,
+                source: { youtube: 'video' }
             });
             
-            const html = await response.text();
-            const regex = /var ytInitialData = ({.+?});/;
-            const match = html.match(regex);
-            
-            if (!match) {
-                console.log('⚠️ No se pudo extraer datos de YouTube, usando búsqueda básica');
-                return [];
-            }
-
-            const data = JSON.parse(match[1]);
-            const videos = [];
-            
-            // Navegar por la estructura de datos de YouTube
-            const contents = data?.contents?.twoColumnSearchResultsRenderer?.primaryContents?.sectionListRenderer?.contents;
-            
-            if (contents) {
-                for (const section of contents) {
-                    const items = section?.itemSectionRenderer?.contents;
-                    if (items) {
-                        for (const item of items) {
-                            if (item.videoRenderer) {
-                                const video = item.videoRenderer;
-                                const duration = this.parseDuration(video.lengthText?.simpleText);
-                                
-                                if (duration && duration > 30) { // Filtrar muy cortos
-                                    videos.push({
-                                        id: video.videoId,
-                                        title: video.title?.runs?.[0]?.text || video.title?.simpleText || 'Título desconocido',
-                                        artist: video.ownerText?.runs?.[0]?.text || 'Artista desconocido',
-                                        duration: duration,
-                                        url: `https://www.youtube.com/watch?v=${video.videoId}`,
-                                        thumbnail: video.thumbnail?.thumbnails?.[0]?.url,
-                                        views: this.parseViews(video.viewCountText?.simpleText)
-                                    });
-                                }
-                                
-                                if (videos.length >= limit) break;
-                            }
-                        }
-                    }
-                    if (videos.length >= limit) break;
-                }
-            }
-
-            return videos;
+            return results.map(video => ({
+                id: video.id,
+                title: video.title,
+                artist: video.channel.name,
+                duration: video.durationInSec,
+                url: video.url,
+                thumbnail: video.thumbnails[0]?.url,
+                views: video.views
+            }));
         } catch (error) {
             console.error('❌ Error buscando en YouTube:', error);
             return [];
@@ -160,7 +120,7 @@ class ModernMusicHandler {
     }
 
     isYouTubeUrl(url) {
-        return ytdl.validateURL(url);
+        return play.yt_validate(url) === 'video';
     }
 
     // Unirse al canal de voz (mejorado)
@@ -233,14 +193,14 @@ class ModernMusicHandler {
             } else if (this.isYouTubeUrl(query)) {
                 // URL directa de YouTube
                 try {
-                    const info = await ytdl.getInfo(query);
+                    const info = await play.video_info(query);
                     song = {
-                        id: info.videoDetails.videoId,
-                        title: info.videoDetails.title,
-                        artist: info.videoDetails.ownerChannelName,
-                        duration: parseInt(info.videoDetails.lengthSeconds),
-                        url: info.videoDetails.video_url,
-                        thumbnail: info.videoDetails.thumbnails[0]?.url
+                        id: info.video_details.id,
+                        title: info.video_details.title,
+                        artist: info.video_details.channel.name,
+                        duration: info.video_details.durationInSec,
+                        url: info.video_details.url,
+                        thumbnail: info.video_details.thumbnails[0]?.url
                     };
                 } catch (error) {
                     return { success: false, message: 'No se pudo obtener información de ese video de YouTube.' };
@@ -285,8 +245,8 @@ class ModernMusicHandler {
     // Verificar si una canción se puede reproducir
     async isPlayable(url) {
         try {
-            const info = await ytdl.getInfo(url);
-            return !info.videoDetails.isLiveContent;
+            const info = await play.video_info(url);
+            return !info.video_details.live;
         } catch (error) {
             console.log(`⚠️ No se pudo verificar: ${url}, pero intentaremos reproducir`);
             return true;
@@ -307,33 +267,13 @@ class ModernMusicHandler {
         try {
             console.log(`🎵 Reproduciendo: "${song.title}"`);
             
-            // Obtener stream con múltiples intentos
-            let stream;
-            try {
-                // Primer intento con lowestaudio
-                stream = ytdl(song.url, {
-                    filter: 'audioonly',
-                    quality: 'lowestaudio',
-                    requestOptions: {
-                        headers: {
-                            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-                        }
-                    }
-                });
-            } catch (error) {
-                console.log('Primer intento falló, probando configuración alternativa...');
-                // Segundo intento sin filtro específico
-                stream = ytdl(song.url, {
-                    requestOptions: {
-                        headers: {
-                            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-                        }
-                    }
-                });
-            }
+            // Obtener stream con play-dl
+            const stream = await play.stream(song.url, {
+                quality: 2 // 0 = lowest, 1 = medium, 2 = highest
+            });
             
-            const resource = createAudioResource(stream, {
-                inputType: StreamType.Arbitrary,
+            const resource = createAudioResource(stream.stream, {
+                inputType: stream.type,
                 metadata: {
                     title: song.title,
                     artist: song.artist
