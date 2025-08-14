@@ -526,7 +526,7 @@ class BettingSystem {
         const displayName = targetUser ? targetUser.displayName : message.author.displayName;
         const user = await this.economy.getUser(userId);
 
-        const stats = user.betStats || { wins: 0, losses: 0, total_won: 0, total_lost: 0, net_profit: 0 };
+        const stats = user.bet_stats || { wins: 0, losses: 0, total_won: 0, total_lost: 0, net_profit: 0 };
         const totalBets = stats.wins + stats.losses;
         const winRate = totalBets > 0 ? (((stats.wins || 0) / totalBets) * 100).toFixed(1) : 0;
 
@@ -555,8 +555,8 @@ class BettingSystem {
         const winner = await this.economy.getUser(winnerId);
         const loser = await this.economy.getUser(loserId);
 
-        if (!winner.betStats) winner.betStats = { wins: 0, losses: 0, totalWon: 0, totalLost: 0, netProfit: 0 };
-        if (!loser.betStats) loser.betStats = { wins: 0, losses: 0, totalWon: 0, totalLost: 0, netProfit: 0 };
+        if (!winner.betStats) winner.bet_stats = { wins: 0, losses: 0, totalWon: 0, totalLost: 0, netProfit: 0 };
+        if (!loser.betStats) loser.bet_stats = { wins: 0, losses: 0, totalWon: 0, totalLost: 0, netProfit: 0 };
 
         const winAmount = amount * 2 - Math.floor(amount * 2 * this.config.houseFee);
 
