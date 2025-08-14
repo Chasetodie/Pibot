@@ -1,7 +1,8 @@
 const { joinVoiceChannel, createAudioPlayer, createAudioResource, AudioPlayerStatus } = require('@discordjs/voice');
 const { EmbedBuilder } = require('discord.js');
-const ytdl = require('ytdl-core');
+const youtubedl = require('youtube-dl-exec');
 const ytSearch = require('yt-search');
+const { spawn } = require('child_process');
 
 class MusicHandler {
     constructor(client) {
@@ -11,12 +12,8 @@ class MusicHandler {
 
     // Procesar comandos
     async processCommand(message) {
-        console.log('🔄 processCommand llamado con:', message.content);
-        
         const args = message.content.slice(1).trim().split(/ +/);
         const command = args.shift().toLowerCase();
-        
-        console.log('🎯 Comando procesado:', command, 'Args:', args);
         
         switch (command) {
             case 'play':
@@ -115,24 +112,32 @@ class MusicHandler {
                 }
             }
 
-            console.log('🎶 Creando stream con configuración avanzada...');
+            console.log('🎶 Creando stream con yt-dlp...');
             
-            // Usar ytdl-core con configuración anti-bloqueo
-            const stream = ytdl(songUrl, {
-                filter: 'audioonly',
-                quality: 'highestaudio',
-                highWaterMark: 1 << 25,
-                requestOptions: {
-                    headers: {
-                        'Cookie': 'VISITOR_INFO1_LIVE=95T6eO6flSs; YSC=example; PREF=f4=4000000',
-                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-                        'X-YouTube-Client-Name': '1',
-                        'X-YouTube-Client-Version': '2.20210721.00.00'
-                    }
-                }
+            // Crear stream usando spawn con yt-dlp
+            const stream = spawn('yt-dlp', [
+                songUrl,
+                '-o', '-',
+                '--audio-format', 'opus',
+                '--audio-quality', '96K',
+                '--format', 'bestaudio[ext=webm]/bestaudio/best',
+                '--no-check-certificates',
+                '--prefer-free-formats',
+                '--add-header', 'referer:youtube.com',
+                '--add-header', 'user-agent:Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+                '--extract-flat', 'false',
+                '--embed-subs', 'false'
+            ], {
+                stdio: ['ignore', 'pipe', 'ignore']
             });
 
-            const resource = createAudioResource(stream);
+            if (!stream || !stream.stdout) {
+                throw new Error('No se pudo crear el stream');
+            }
+
+            const resource = createAudioResource(stream.stdout, {
+                inputType: 'arbitrary'
+            });
 
             // Conectar al canal de voz
             console.log('🔊 Conectando al canal de voz...');

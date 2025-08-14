@@ -3,6 +3,8 @@ FROM node:20
 
 # Instalamos Python
 RUN apt-get update && apt-get install -y python3 python3-pip
+RUN apk add --no-cache python3 py3-pip ffmpeg
+RUN pip3 install yt-dlp
 
 # Directorio de la app
 WORKDIR /app
@@ -17,4 +19,4 @@ RUN npm install
 COPY . .
 
 # Comando para iniciar el bot
-CMD ["node", "bot.js"]
+CMD ["npm", "start"]
