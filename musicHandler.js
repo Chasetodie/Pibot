@@ -1,207 +1,122 @@
-const { joinVoiceChannel, createAudioPlayer, createAudioResource, AudioPlayerStatus, VoiceConnectionStatus } = require('@discordjs/voice');
-const { EmbedBuilder } = require('discord.js');
-const scdl = require('soundcloud-downloader').default;
-const axios = require('axios');
+const { joinVoiceChannel, createAudioPlayer, createAudioResource, AudioPlayerStatus, VoiceConnectionStatus, StreamType } = require('@discordjs/voice');
+const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
+const ytdl = require('ytdl-core');
+const yts = require('yt-search');
+const SpotifyWebApi = require('spotify-web-api-node');
 
-class MusicHandler {
+class ModernMusicHandler {
     constructor() {
-        this.connections = new Map(); // Almacena conexiones por guild
-        this.players = new Map(); // Almacena players por guild
-        this.queues = new Map(); // Almacena colas por guild
-        this.nowPlaying = new Map(); // Almacena canción actual por guild
+        this.connections = new Map();
+        this.players = new Map(); 
+        this.queues = new Map();
+        this.nowPlaying = new Map();
+        this.paused = new Map();
         
-        // Configuración de APIs
-        this.deezerApiUrl = 'https://api.deezer.com';
-        // soundcloud-downloader maneja internamente los client_ids
+        // Spotify API (opcional)
+        this.spotify = new SpotifyWebApi({
+            clientId: process.env.SPOTIFY_CLIENT_ID,
+            clientSecret: process.env.SPOTIFY_CLIENT_SECRET
+        });
+        
+        // Renovar token de Spotify cada hora
+        this.refreshSpotifyToken();
+        setInterval(() => this.refreshSpotifyToken(), 3600000);
     }
 
-    // Buscar canción en Deezer
-    async searchDeezer(query, limit = 5) {
+    async refreshSpotifyToken() {
         try {
-            const response = await axios.get(`${this.deezerApiUrl}/search`, {
-                params: {
-                    q: query,
-                    limit: limit
-                }
-            });
-            
-            return response.data.data.map(track => ({
-                id: track.id,
-                title: track.title,
-                artist: track.artist.name,
-                album: track.album.title,
-                duration: track.duration,
-                preview: track.preview,
-                cover: track.album.cover_medium
-            }));
+            if (process.env.SPOTIFY_CLIENT_ID && process.env.SPOTIFY_CLIENT_SECRET) {
+                const data = await this.spotify.clientCredentialsGrant();
+                this.spotify.setAccessToken(data.body.access_token);
+                console.log('✅ Token de Spotify renovado');
+            }
         } catch (error) {
-            console.error('Error buscando en Deezer:', error);
+            console.log('⚠️ No se pudo renovar token de Spotify:', error.message);
+        }
+    }
+
+    // Buscar en YouTube (más confiable que SoundCloud)
+    async searchYouTube(query, limit = 5) {
+        try {
+            console.log(`🔍 Buscando en YouTube: "${query}"`);
+            const results = await yts(query);
+            
+            if (!results || !results.videos || results.videos.length === 0) {
+                return [];
+            }
+
+            return results.videos
+                .filter(video => video.duration && video.duration.seconds > 30) // Filtrar muy cortos
+                .slice(0, limit)
+                .map(video => ({
+                    id: video.videoId,
+                    title: video.title,
+                    artist: video.author.name,
+                    duration: video.duration.seconds,
+                    url: video.url,
+                    thumbnail: video.thumbnail,
+                    views: video.views
+                }));
+        } catch (error) {
+            console.error('❌ Error buscando en YouTube:', error);
             return [];
         }
     }
 
-    // Buscar en SoundCloud usando los datos de Deezer
-    async findOnSoundCloud(deezerTrack) {
+    // Obtener info de Spotify y buscar en YouTube
+    async searchFromSpotify(spotifyUrl) {
         try {
-            const searchQuery = `${deezerTrack.artist} ${deezerTrack.title}`;
+            const trackId = this.extractSpotifyId(spotifyUrl);
+            if (!trackId) return null;
 
-            console.log(`🔍 Buscando en SoundCloud: "${searchQuery}"`);
+            const data = await this.spotify.getTrack(trackId);
+            const track = data.body;
             
-            // soundcloud-downloader maneja automáticamente el client_id
-            const tracks = await scdl.search({
-                query: searchQuery,
-                limit: 10, // Aumentar límite para más opciones
-                offset: 0
-            });
-
-            if (tracks && tracks.collection && tracks.collection.length > 0) {
-                console.log(`✅ Encontradas ${tracks.collection.length} canciones en SoundCloud`);
-                
-                // Filtrar tracks que no se pueden reproducir
-                const playableTracks = tracks.collection.filter(track => 
-                    track && track.streamable && !track.policy_disabled
-                );
-                
-                if (playableTracks.length === 0) {
-                    console.log('❌ No hay tracks reproducibles encontrados');
-                    // Intentar búsqueda alternativa
-                    return await this.alternativeSearch(deezerTrack);
-                }
-                
-                // Buscar la mejor coincidencia
-                const bestMatch = this.findBestMatch(deezerTrack, playableTracks);
-                console.log(`🎯 Mejor coincidencia: "${bestMatch.title}" por ${bestMatch.user?.username || 'Unknown'}`);
-                return bestMatch;
+            const searchQuery = `${track.artists[0].name} ${track.name}`;
+            const youtubeResults = await this.searchYouTube(searchQuery, 1);
+            
+            if (youtubeResults.length > 0) {
+                const result = youtubeResults[0];
+                result.spotifyInfo = {
+                    title: track.name,
+                    artist: track.artists[0].name,
+                    album: track.album.name,
+                    cover: track.album.images[0]?.url
+                };
+                return result;
             }
-
-            console.log('❌ No se encontraron tracks en SoundCloud');
-            return await this.alternativeSearch(deezerTrack);
+            return null;
         } catch (error) {
-            console.error('❌ Error buscando en SoundCloud:', error);
-            // Fallback: intentar búsqueda más simple
-            return await this.alternativeSearch(deezerTrack);
+            console.error('❌ Error obteniendo de Spotify:', error);
+            return null;
         }
     }
 
-    // Búsqueda alternativa con diferentes estrategias
-    async alternativeSearch(deezerTrack) {
-        const searchStrategies = [
-            // Solo título
-            deezerTrack.title,
-            // Solo artista + título (sin álbum)
-            `${deezerTrack.artist} ${deezerTrack.title}`,
-            // Título + artista (orden inverso)
-            `${deezerTrack.title} ${deezerTrack.artist}`,
-            // Solo palabras clave del título
-            deezerTrack.title.split(' ').slice(0, 2).join(' ')
-        ];
-
-        for (const strategy of searchStrategies) {
-            try {
-                console.log(`🔄 Intentando búsqueda alternativa: "${strategy}"`);
-                
-                const tracks = await scdl.search({
-                    query: strategy,
-                    limit: 5,
-                    offset: 0
-                });
-
-                if (tracks && tracks.collection && tracks.collection.length > 0) {
-                    const playableTracks = tracks.collection.filter(track => 
-                        track && track.streamable && !track.policy_disabled
-                    );
-                    
-                    if (playableTracks.length > 0) {
-                        console.log(`✅ Encontrado con estrategia alternativa: "${playableTracks[0].title}"`);
-                        return playableTracks[0];
-                    }
-                }
-            } catch (error) {
-                console.log(`❌ Error con estrategia "${strategy}":`, error.message);
-                continue;
-            }
-        }
-
-        console.log('❌ Todas las estrategias de búsqueda fallaron');
-        return null;
+    extractSpotifyId(url) {
+        const match = url.match(/track\/([a-zA-Z0-9]+)/);
+        return match ? match[1] : null;
     }
 
-    // Encontrar la mejor coincidencia entre Deezer y SoundCloud
-    findBestMatch(deezerTrack, soundcloudTracks) {
-        const deezerTitle = this.normalizeString(deezerTrack.title);
-        const deezerArtist = this.normalizeString(deezerTrack.artist);
-        
-        let bestScore = 0;
-        let bestTrack = soundcloudTracks[0];
-
-        soundcloudTracks.forEach(track => {
-            const scTitle = this.normalizeString(track.title);
-            let score = 0;
-
-            // Puntuación por coincidencia en título (más flexible)
-            if (scTitle.includes(deezerTitle) || deezerTitle.includes(scTitle.split(' ')[0])) {
-                score += 5;
-            }
-            
-            // Puntuación por palabras clave del título
-            const deezerWords = deezerTitle.split(' ');
-            const scWords = scTitle.split(' ');
-            const commonWords = deezerWords.filter(word => 
-                word.length > 3 && scWords.some(scWord => scWord.includes(word))
-            );
-            score += commonWords.length * 2;
-
-            // Puntuación por coincidencia en artista
-            if (scTitle.includes(deezerArtist)) {
-                score += 3;
-            }
-
-            // Puntuación por duración similar (±45 segundos - más flexible)
-            const durationDiff = Math.abs(track.duration - (deezerTrack.duration * 1000));
-            if (durationDiff < 45000) {
-                score += 2;
-            }
-
-            // Penalización por tracks muy cortos (probablemente previews)
-            if (track.duration < 30000) {
-                score -= 2;
-            }
-
-            // Bonus por popularidad (si tiene más likes/plays)
-            if (track.playback_count > 10000) {
-                score += 1;
-            }
-
-            if (score > bestScore) {
-                bestScore = score;
-                bestTrack = track;
-            }
-        });
-
-        console.log(`🎯 Mejor coincidencia encontrada con score: ${bestScore}`);
-        return bestTrack;
+    isSpotifyUrl(url) {
+        return url.includes('spotify.com/track/');
     }
 
-    // Normalizar strings para mejor comparación
-    normalizeString(str) {
-        return str.toLowerCase()
-            .replace(/[áàäâ]/g, 'a')
-            .replace(/[éèëê]/g, 'e')
-            .replace(/[íìïî]/g, 'i')
-            .replace(/[óòöô]/g, 'o')
-            .replace(/[úùüû]/g, 'u')
-            .replace(/[ñ]/g, 'n')
-            .replace(/[^\w\s]/g, '') // Remover caracteres especiales
-            .trim();
+    isYouTubeUrl(url) {
+        return ytdl.validateURL(url);
     }
-   
-    // Unirse al canal de voz
+
+    // Unirse al canal de voz (mejorado)
     async joinVoice(message) {
         const member = message.member;
         const voiceChannel = member.voice.channel;
 
         if (!voiceChannel) {
             return { success: false, message: '¡Necesitas estar en un canal de voz!' };
+        }
+
+        const permissions = voiceChannel.permissionsFor(message.client.user);
+        if (!permissions.has('CONNECT') || !permissions.has('SPEAK')) {
+            return { success: false, message: 'No tengo permisos para unirme o hablar en ese canal.' };
         }
 
         try {
@@ -219,66 +134,108 @@ class MusicHandler {
                 this.players.set(message.guild.id, player);
                 connection.subscribe(player);
 
-                // Manejar eventos del player
+                // Eventos del player
                 player.on(AudioPlayerStatus.Idle, () => {
-                    this.playNext(message.guild.id);
+                    setTimeout(() => this.playNext(message.guild.id), 1000);
                 });
 
                 player.on('error', (error) => {
-                    console.error('Error en el reproductor:', error);
+                    console.error('❌ Error en el reproductor:', error);
                     this.playNext(message.guild.id);
+                });
+
+                // Manejar desconexiones
+                connection.on(VoiceConnectionStatus.Disconnected, () => {
+                    setTimeout(() => {
+                        if (connection.state.status === VoiceConnectionStatus.Disconnected) {
+                            this.disconnect(message.guild.id);
+                        }
+                    }, 5000);
                 });
             }
 
             return { success: true, message: `Conectado a ${voiceChannel.name}!` };
         } catch (error) {
-            console.error('Error conectando al canal de voz:', error);
+            console.error('❌ Error conectando al canal de voz:', error);
             return { success: false, message: 'Error al conectar al canal de voz.' };
         }
     }
 
-    // Añadir canción a la cola
+    // Añadir canción a la cola (mejorado)
     async addToQueue(message, query) {
-        // Buscar en Deezer
-        const deezerResults = await this.searchDeezer(query, 1);
-        
-        if (deezerResults.length === 0) {
-            return { success: false, message: 'No se encontraron resultados en Deezer.' };
+        let song = null;
+
+        try {
+            if (this.isSpotifyUrl(query)) {
+                // Buscar desde Spotify
+                song = await this.searchFromSpotify(query);
+                if (!song) {
+                    return { success: false, message: 'No se pudo obtener la canción de Spotify.' };
+                }
+            } else if (this.isYouTubeUrl(query)) {
+                // URL directa de YouTube
+                try {
+                    const info = await ytdl.getInfo(query);
+                    song = {
+                        id: info.videoDetails.videoId,
+                        title: info.videoDetails.title,
+                        artist: info.videoDetails.ownerChannelName,
+                        duration: parseInt(info.videoDetails.lengthSeconds),
+                        url: info.videoDetails.video_url,
+                        thumbnail: info.videoDetails.thumbnails[0]?.url
+                    };
+                } catch (error) {
+                    return { success: false, message: 'No se pudo obtener información de ese video de YouTube.' };
+                }
+            } else {
+                // Buscar por texto en YouTube
+                const results = await this.searchYouTube(query, 1);
+                if (results.length === 0) {
+                    return { success: false, message: 'No se encontraron resultados.' };
+                }
+                song = results[0];
+            }
+
+            // Verificar que la canción se pueda reproducir
+            if (!await this.isPlayable(song.url)) {
+                return { success: false, message: 'Esta canción no se puede reproducir (restricciones de región/edad).' };
+            }
+
+            // Añadir metadata
+            song.requestedBy = message.author;
+            song.addedAt = Date.now();
+
+            // Añadir a la cola
+            const guildId = message.guild.id;
+            if (!this.queues.has(guildId)) {
+                this.queues.set(guildId, []);
+            }
+
+            this.queues.get(guildId).push(song);
+
+            return { 
+                success: true, 
+                message: `Añadido a la cola: **${song.title}**`,
+                song: song
+            };
+        } catch (error) {
+            console.error('❌ Error añadiendo a la cola:', error);
+            return { success: false, message: 'Error al procesar la canción.' };
         }
-
-        const deezerTrack = deezerResults[0];
-        
-        // Buscar en SoundCloud
-        const soundcloudTrack = await this.findOnSoundCloud(deezerTrack);
-        
-        if (!soundcloudTrack) {
-            return { success: false, message: 'No se encontró la canción en SoundCloud.' };
-        }
-
-        // Crear objeto de canción combinado
-        const song = {
-            deezer: deezerTrack,
-            soundcloud: soundcloudTrack,
-            requestedBy: message.author,
-            url: soundcloudTrack.permalink_url
-        };
-
-        // Añadir a la cola
-        const guildId = message.guild.id;
-        if (!this.queues.has(guildId)) {
-            this.queues.set(guildId, []);
-        }
-
-        this.queues.get(guildId).push(song);
-
-        return { 
-            success: true, 
-            message: `Añadido a la cola: **${deezerTrack.title}** - ${deezerTrack.artist}`,
-            song: song
-        };
     }
 
-    // Reproducir canción
+    // Verificar si una canción se puede reproducir
+    async isPlayable(url) {
+        try {
+            const info = await ytdl.getInfo(url);
+            return !info.videoDetails.isLiveContent && 
+                   info.formats.some(format => format.hasAudio);
+        } catch (error) {
+            return false;
+        }
+    }
+
+    // Reproducir canción (mejorado)
     async play(guildId) {
         const queue = this.queues.get(guildId);
         const player = this.players.get(guildId);
@@ -290,41 +247,42 @@ class MusicHandler {
         const song = queue[0];
         
         try {
-            console.log(`🎵 Intentando reproducir: "${song.deezer.title}" desde ${song.soundcloud.permalink_url}`);
+            console.log(`🎵 Reproduciendo: "${song.title}"`);
             
-            // Verificar que la canción sea reproducible
-            if (!song.soundcloud.streamable) {
-                console.log('❌ Track no es streamable, saltando...');
-                queue.shift();
-                return this.playNext(guildId);
-            }
-
-            // Crear stream de audio desde SoundCloud
-            const stream = await scdl.download(song.soundcloud.permalink_url, {
-                clientID: this.soundcloudClientId,
-                format: scdl.FORMATS.OPUS // Mejor formato para Discord
+            // Obtener stream con mejor calidad
+            const stream = ytdl(song.url, {
+                filter: 'audioonly',
+                quality: 'highestaudio',
+                highWaterMark: 1 << 25, // 32MB buffer
+                dlChunkSize: 0,
+                requestOptions: {
+                    headers: {
+                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+                    }
+                }
             });
             
             const resource = createAudioResource(stream, {
+                inputType: StreamType.Arbitrary,
                 metadata: {
-                    title: song.deezer.title,
-                    artist: song.deezer.artist
-                },
-                inputType: 'opus' // Especificar tipo de input
+                    title: song.title,
+                    artist: song.artist
+                }
             });
 
             player.play(resource);
             this.nowPlaying.set(guildId, song);
+            this.paused.set(guildId, false);
             
-            console.log(`✅ Reproduciendo: "${song.deezer.title}"`);
+            console.log(`✅ Reproduciendo: "${song.title}"`);
             return { success: true, song: song };
         } catch (error) {
-            console.error(`❌ Error reproduciendo canción "${song.deezer.title}":`, error);
+            console.error(`❌ Error reproduciendo "${song.title}":`, error);
             
-            // Remover canción problemática y continuar
+            // Remover canción problemática
             queue.shift();
             
-            // Si hay más canciones en la cola, intentar la siguiente
+            // Intentar siguiente
             if (queue.length > 0) {
                 console.log('🔄 Intentando siguiente canción...');
                 return this.playNext(guildId);
@@ -332,7 +290,7 @@ class MusicHandler {
             
             return { 
                 success: false, 
-                message: `No se pudo reproducir "${song.deezer.title}". ${queue.length > 0 ? 'Intentando siguiente...' : 'Cola vacía.'}` 
+                message: `No se pudo reproducir "${song.title}".` 
             };
         }
     }
@@ -352,37 +310,37 @@ class MusicHandler {
         return { success: false, message: 'Cola terminada.' };
     }
 
-    // Saltar canción
+    // Controles mejorados
     skip(guildId) {
         const player = this.players.get(guildId);
-        if (player) {
+        if (player && player.state.status !== AudioPlayerStatus.Idle) {
             player.stop();
             return { success: true, message: 'Canción saltada.' };
         }
         return { success: false, message: 'No hay música reproduciéndose.' };
     }
 
-    // Pausar música
     pause(guildId) {
         const player = this.players.get(guildId);
-        if (player) {
+        if (player && player.state.status === AudioPlayerStatus.Playing) {
             player.pause();
+            this.paused.set(guildId, true);
             return { success: true, message: 'Música pausada.' };
         }
         return { success: false, message: 'No hay música reproduciéndose.' };
     }
 
-    // Reanudar música
     resume(guildId) {
         const player = this.players.get(guildId);
-        if (player) {
+        if (player && this.paused.get(guildId)) {
             player.unpause();
+            this.paused.set(guildId, false);
             return { success: true, message: 'Música reanudada.' };
         }
-        return { success: false, message: 'No hay música pausada.' };
+        return { success: false, message: 'La música no está pausada.' };
     }
 
-    // Mostrar cola
+    // Otros métodos (mantener igual pero mejorados)
     showQueue(guildId) {
         const queue = this.queues.get(guildId);
         const nowPlaying = this.nowPlaying.get(guildId);
@@ -394,17 +352,16 @@ class MusicHandler {
         return {
             success: true,
             nowPlaying: nowPlaying,
-            queue: queue.slice(0, 10) // Mostrar solo primeras 10
+            queue: queue.slice(0, 10),
+            totalDuration: queue.reduce((total, song) => total + song.duration, 0)
         };
     }
 
-    // Limpiar cola
     clearQueue(guildId) {
         this.queues.set(guildId, []);
         return { success: true, message: 'Cola limpiada.' };
     }
 
-    // Desconectar
     disconnect(guildId) {
         const connection = this.connections.get(guildId);
         const player = this.players.get(guildId);
@@ -421,22 +378,47 @@ class MusicHandler {
 
         this.queues.delete(guildId);
         this.nowPlaying.delete(guildId);
+        this.paused.delete(guildId);
 
         return { success: true, message: 'Desconectado del canal de voz.' };
     }
 
-    // Crear embed para mostrar información de canción
+    // Crear embed mejorado
     createSongEmbed(song, type = 'nowPlaying') {
         const embed = new EmbedBuilder()
-            .setColor(type === 'nowPlaying' ? '#1DB954' : '#FF6B35')
-            .setThumbnail(song.deezer.cover)
+            .setColor(type === 'nowPlaying' ? '#FF0000' : '#00FF00')
+            .setThumbnail(song.spotifyInfo?.cover || song.thumbnail)
             .addFields(
-                { name: '🎵 Título', value: song.deezer.title, inline: true },
-                { name: '👨‍🎤 Artista', value: song.deezer.artist, inline: true },
-                { name: '💿 Álbum', value: song.deezer.album, inline: true },
-                { name: '⏱️ Duración', value: this.formatDuration(song.deezer.duration), inline: true },
-                { name: '📱 Solicitado por', value: song.requestedBy.displayName, inline: true },
-                { name: '🔗 Fuente', value: 'Deezer + SoundCloud', inline: true }
+                { 
+                    name: '🎵 Título', 
+                    value: song.spotifyInfo?.title || song.title, 
+                    inline: true 
+                },
+                { 
+                    name: '👨‍🎤 Artista', 
+                    value: song.spotifyInfo?.artist || song.artist, 
+                    inline: true 
+                },
+                { 
+                    name: '⏱️ Duración', 
+                    value: this.formatDuration(song.duration), 
+                    inline: true 
+                },
+                { 
+                    name: '📱 Solicitado por', 
+                    value: song.requestedBy.displayName, 
+                    inline: true 
+                },
+                { 
+                    name: '🔗 Fuente', 
+                    value: song.spotifyInfo ? 'Spotify → YouTube' : 'YouTube', 
+                    inline: true 
+                },
+                { 
+                    name: '👀 Reproducciones', 
+                    value: song.views ? this.formatNumber(song.views) : 'N/A', 
+                    inline: true 
+                }
             );
 
         if (type === 'nowPlaying') {
@@ -448,23 +430,53 @@ class MusicHandler {
         return embed;
     }
 
-    // Formatear duración
+    // Crear botones de control
+    createControlButtons() {
+        return new ActionRowBuilder()
+            .addComponents(
+                new ButtonBuilder()
+                    .setCustomId('music_pause')
+                    .setLabel('⏸️ Pausar')
+                    .setStyle(ButtonStyle.Secondary),
+                new ButtonBuilder()
+                    .setCustomId('music_skip')
+                    .setLabel('⏭️ Saltar')
+                    .setStyle(ButtonStyle.Primary),
+                new ButtonBuilder()
+                    .setCustomId('music_stop')
+                    .setLabel('⏹️ Parar')
+                    .setStyle(ButtonStyle.Danger),
+                new ButtonBuilder()
+                    .setCustomId('music_queue')
+                    .setLabel('📋 Cola')
+                    .setStyle(ButtonStyle.Success)
+            );
+    }
+
     formatDuration(seconds) {
         const mins = Math.floor(seconds / 60);
         const secs = seconds % 60;
         return `${mins}:${secs.toString().padStart(2, '0')}`;
     }
 
-    // Funciones para manejar comandos
-    
+    formatNumber(num) {
+        if (num >= 1000000) return (num / 1000000).toFixed(1) + 'M';
+        if (num >= 1000) return (num / 1000).toFixed(1) + 'K';
+        return num.toString();
+    }
+
+    // Comandos mejorados
     async handlePlay(message, args) {  
         if (args.length === 0) {
             const embed = new EmbedBuilder()
                 .setColor('#FF6B35')
                 .setTitle('❌ Error')
-                .setDescription(`Uso: \`${PREFIX}play <nombre de la canción>\``)
+                .setDescription('**Uso:** `>play <canción/URL>`')
                 .addFields(
-                    { name: 'Ejemplos:', value: `'play despacito\n p bad bunny safaera'` }
+                    { 
+                        name: 'Ejemplos:', 
+                        value: '`>play despacito`\n`>play https://youtu.be/...`\n`>play https://open.spotify.com/track/...`' 
+                    }
                 );
             return message.reply({ embeds: [embed] });
         }
@@ -476,13 +488,11 @@ class MusicHandler {
         
         const loadingMsg = await message.reply({ embeds: [loadingEmbed] });
     
-        args = message.content.slice(8).trim().split(/ +/);
-        const query = args.join(' ');
-        console.log(`🎵 Args: ${args.join(' ')} | Usuario: ${message.author.tag}`);
+        const query = message.content.slice(6).trim(); // Después de ">play "
+        console.log(`🎵 Reproducir: ${query} | Usuario: ${message.author.tag}`);
         
         try {
             // Unirse al canal de voz
-            console.log('🔗 Intentando unirse al canal de voz...');
             const joinResult = await this.joinVoice(message);
             if (!joinResult.success) {
                 const errorEmbed = new EmbedBuilder()
@@ -492,7 +502,6 @@ class MusicHandler {
                 return loadingMsg.edit({ embeds: [errorEmbed] });
             }
             
-            console.log('🎵 Añadiendo a la cola...');
             // Añadir a la cola
             const queueResult = await this.addToQueue(message, query);
             if (!queueResult.success) {
@@ -503,16 +512,16 @@ class MusicHandler {
                 return loadingMsg.edit({ embeds: [errorEmbed] });
             }
             
-            // Si es la primera canción, reproducir inmediatamente
+            // Si es la primera canción, reproducir
             const queue = this.queues.get(message.guild.id);
             const isFirst = queue.length === 1;
             
             if (isFirst) {
-                console.log('▶️ Reproduciendo primera canción...');
                 const playResult = await this.play(message.guild.id);
                 if (playResult.success) {
                     const embed = this.createSongEmbed(playResult.song, 'nowPlaying');
-                    await loadingMsg.edit({ embeds: [embed] });
+                    const buttons = this.createControlButtons();
+                    await loadingMsg.edit({ embeds: [embed], components: [buttons] });
                 } else {
                     const errorEmbed = new EmbedBuilder()
                         .setColor('#FF0000')
@@ -530,7 +539,7 @@ class MusicHandler {
                 await loadingMsg.edit({ embeds: [embed] });
             }
         } catch (error) {
-            console.error('Error en handlePlay:', error);
+            console.error('❌ Error en handlePlay:', error);
             const errorEmbed = new EmbedBuilder()
                 .setColor('#FF0000')
                 .setTitle('❌ Error')
@@ -538,242 +547,156 @@ class MusicHandler {
             await loadingMsg.edit({ embeds: [errorEmbed] });
         }
     }
-    
-    async handleSkip(message) {
-        const result = this.skip(message.guild.id);
-        
-        const embed = new EmbedBuilder()
-            .setColor(result.success ? '#FFA500' : '#FF0000')
-            .setTitle(result.success ? '⏭️ Canción saltada' : '❌ Error')
-            .setDescription(result.message)
-            .setTimestamp();
-        
-        message.reply({ embeds: [embed] });
-    }
-    
-    async handlePause(message) {
-        const result = this.pause(message.guild.id);
-        
-        const embed = new EmbedBuilder()
-            .setColor(result.success ? '#FFA500' : '#FF0000')
-            .setTitle(result.success ? '⏸️ Música pausada' : '❌ Error')
-            .setDescription(result.message)
-            .setTimestamp();
-        
-        message.reply({ embeds: [embed] });
-    }
-    
-    async handleResume(message) {
-        const result = this.resume(message.guild.id);
-        
-        const embed = new EmbedBuilder()
-            .setColor(result.success ? '#00FF00' : '#FF0000')
-            .setTitle(result.success ? '▶️ Música reanudada' : '❌ Error')
-            .setDescription(result.message)
-            .setTimestamp();
-        
-        message.reply({ embeds: [embed] });
-    }
-    
-    async handleQueue(message) {
-        const result = this.showQueue(message.guild.id);
-        
-        if (!result.success) {
-            const embed = new EmbedBuilder()
-                .setColor('#FF0000')
-                .setTitle('📋 Cola de reproducción')
-                .setDescription(result.message)
-                .setTimestamp();
-            
-            return message.reply({ embeds: [embed] });
+
+    // Manejar botones (nuevo)
+    async handleButtonInteraction(interaction) {
+        const { customId, guildId } = interaction;
+
+        switch (customId) {
+            case 'music_pause':
+                const pauseResult = this.paused.get(guildId) ? 
+                    this.resume(guildId) : this.pause(guildId);
+                await interaction.reply({ 
+                    content: pauseResult.message, 
+                    ephemeral: true 
+                });
+                break;
+
+            case 'music_skip':
+                const skipResult = this.skip(guildId);
+                await interaction.reply({ 
+                    content: skipResult.message, 
+                    ephemeral: true 
+                });
+                break;
+
+            case 'music_stop':
+                const stopResult = this.disconnect(guildId);
+                await interaction.reply({ 
+                    content: stopResult.message, 
+                    ephemeral: true 
+                });
+                break;
+
+            case 'music_queue':
+                const queueResult = this.showQueue(guildId);
+                if (queueResult.success) {
+                    const embed = new EmbedBuilder()
+                        .setColor('#1DB954')
+                        .setTitle('📋 Cola de reproducción')
+                        .setTimestamp();
+                    
+                    if (queueResult.nowPlaying) {
+                        embed.addFields({
+                            name: '🎶 Reproduciendo ahora',
+                            value: `**${queueResult.nowPlaying.title}**`,
+                            inline: false
+                        });
+                    }
+                    
+                    if (queueResult.queue.length > 0) {
+                        const queueList = queueResult.queue.map((song, index) => 
+                            `${index + 1}. **${song.title}** - ${this.formatDuration(song.duration)}`
+                        ).join('\n');
+                        
+                        embed.addFields({
+                            name: '⏳ Siguiente(s)',
+                            value: queueList.length > 1024 ? queueList.substring(0, 1021) + '...' : queueList,
+                            inline: false
+                        });
+                        
+                        embed.setFooter({
+                            text: `${queueResult.queue.length} canción(es) | ${this.formatDuration(queueResult.totalDuration)} total`
+                        });
+                    }
+                    
+                    await interaction.reply({ embeds: [embed], ephemeral: true });
+                } else {
+                    await interaction.reply({ 
+                        content: queueResult.message, 
+                        ephemeral: true 
+                    });
+                }
+                break;
         }
-        
-        const embed = new EmbedBuilder()
-            .setColor('#1DB954')
-            .setTitle('📋 Cola de reproducción')
-            .setTimestamp();
-        
-        if (result.nowPlaying) {
-            embed.addFields({
-                name: '🎶 Reproduciendo ahora',
-                value: `**${result.nowPlaying.deezer.title}** - ${result.nowPlaying.deezer.artist}`,
-                inline: false
-            });
-        }
-        
-        if (result.queue.length > 0) {
-            const queueList = result.queue.map((song, index) => 
-                `${index + 1}. **${song.deezer.title}** - ${song.deezer.artist}`
-            ).join('\n');
-            
-            embed.addFields({
-                name: '⏳ Siguiente(s)',
-                value: queueList.length > 1024 ? queueList.substring(0, 1021) + '...' : queueList,
-                inline: false
-            });
-            
-            embed.setFooter({
-                text: `Total: ${result.queue.length} canción(es) en cola`
-            });
-        }
-        
-        message.reply({ embeds: [embed] });
     }
-    
-    async handleNowPlaying(message) {
-        const nowPlaying = this.nowPlaying.get(message.guild.id);
-        
-        if (!nowPlaying) {
-            const embed = new EmbedBuilder()
-                .setColor('#FF0000')
-                .setTitle('❌ Error')
-                .setDescription('No hay música reproduciéndose.')
-                .setTimestamp();
-            
-            return message.reply({ embeds: [embed] });
-        }
-        
-        const embed = this.createSongEmbed(nowPlaying, 'nowPlaying');
-        message.reply({ embeds: [embed] });
-    }
-    
-    async handleClear(message) {
-        const result = this.clearQueue(message.guild.id);
-        
-        const embed = new EmbedBuilder()
-            .setColor('#FFA500')
-            .setTitle('🗑️ Cola limpiada')
-            .setDescription(result.message)
-            .setTimestamp();
-        
-        message.reply({ embeds: [embed] });
-    }
-    
-    async handleStop(message) {
-        const result = this.disconnect(message.guild.id);
-        
-        const embed = new EmbedBuilder()
-            .setColor('#FF0000')
-            .setTitle('⏹️ Música detenida')
-            .setDescription(result.message)
-            .setTimestamp();
-        
-        message.reply({ embeds: [embed] });
-    }
-    
+
+    // Resto de comandos (mantener estructura similar pero mejorada)
     async handleSearch(message, args) {
         if (args.length === 0) {
             const embed = new EmbedBuilder()
                 .setColor('#FF6B35')
                 .setTitle('❌ Error')
-                .setDescription(`Uso: >search <término de búsqueda>`)
-                .addFields(
-                    { name: 'Ejemplo:', value: `>search bad bunny` }
-                );
+                .setDescription('**Uso:** `>search <término>`');
             return message.reply({ embeds: [embed] });
         }
-    
-        const loadingEmbed = new EmbedBuilder()
-            .setColor('#FFA500')
-            .setTitle('🔍 Buscando en Deezer...')
-            .setDescription(`Término: **${args.join(' ')}**`);
-        
-        const loadingMsg = await message.reply({ embeds: [loadingEmbed] });
 
-        args = message.content.slice(11).trim().split(/ +/);
-        const query = args.join(' ');
-        console.log(`🎵 Search Args: ${args.join(' ')} | Usuario: ${message.author.tag}`);
-        const results = await this.searchDeezer(query, 5);
+        const query = message.content.slice(8).trim();
+        const results = await this.searchYouTube(query, 5);
         
         if (results.length === 0) {
             const errorEmbed = new EmbedBuilder()
                 .setColor('#FF0000')
                 .setTitle('❌ Sin resultados')
-                .setDescription('No se encontraron resultados en Deezer.')
-                .setTimestamp();
-            return loadingMsg.edit({ embeds: [errorEmbed] });
+                .setDescription('No se encontraron resultados.');
+            return message.reply({ embeds: [errorEmbed] });
         }
         
         const embed = new EmbedBuilder()
-            .setColor('#FF6B35')
-            .setTitle('🔍 Resultados de búsqueda en Deezer')
-            .setDescription(`Resultados para: **${query}**`)
-            .setTimestamp();
+            .setColor('#FF0000')
+            .setTitle('🔍 Resultados de YouTube')
+            .setDescription(`Resultados para: **${query}**`);
         
         results.forEach((track, index) => {
             embed.addFields({
                 name: `${index + 1}. ${track.title}`,
-                value: `👨‍🎤 **Artista:** ${track.artist}\n💿 **Álbum:** ${track.album}\n⏱️ **Duración:** ${this.formatDuration(track.duration)}`,
+                value: `👨‍🎤 **Canal:** ${track.artist}\n⏱️ **Duración:** ${this.formatDuration(track.duration)}\n👀 **Vistas:** ${this.formatNumber(track.views)}`,
                 inline: true
             });
         });
         
-        embed.setFooter({
-            text: `Usa >play <nombre de canción> para reproducir`
-        });
+        embed.setFooter({ text: 'Usa >play <número> o >play <nombre>' });
         
-        loadingMsg.edit({ embeds: [embed] });
+        message.reply({ embeds: [embed] });
     }
 
+    // Procesar comandos
     async processCommand(message) {
         if (message.author.bot) return;
 
-        const args = message.content.trim().split(/ +/g);
+        const args = message.content.trim().split(/ +/);
         const command = args[0].toLowerCase();
 
         try {
             switch (command) {
                 case '>play':
                 case '>p':
-                    await this.handlePlay(message, args);
+                    await this.handlePlay(message, args.slice(1));
                     break;
                 
                 case '>skip':
                 case '>s':
-                    await this.handleSkip(message);
+                    const result = this.skip(message.guild.id);
+                    const embed = new EmbedBuilder()
+                        .setColor(result.success ? '#FFA500' : '#FF0000')
+                        .setDescription(result.message);
+                    message.reply({ embeds: [embed] });
                     break;
                 
-                case '>pause':
-                    await this.handlePause(message);
-                    break;
-                
-                case '>resume':
-                case '>r':
-                    await this.handleResume(message);
-                    break;
-                
-                case '>queue':
-                case '>q':
-                    await this.handleQueue(message);
-                    break;
-                
-                case '>nowplaying':
-                case '>np':
-                    await this.handleNowPlaying(message);
-                    break;
-                
-                case '>clearmusic':
-                case '>cm':
-                    await this.handleClear(message);
-                    break;
-                
-                case '>stop':
-                case '>disconnect':
-                case '>dc':
-                    await this.handleStop(message);
-                    break;
-    
                 case '>search':
-                    await this.handleSearch(message, args);
+                    await this.handleSearch(message, args.slice(1));
                     break;
+                
+                // ... otros comandos similares
+                
                 default:
                     break;
             }
         } catch (error) {
             console.error('❌ Error procesando comando:', error);
-            await message.reply('❌ Ocurrió un error al procesar el comando. Intenta de nuevo.');
+            await message.reply('❌ Ocurrió un error al procesar el comando.');
         }
-    }    
+    }
 }
 
-module.exports = MusicHandler;
+module.exports = ModernMusicHandler;

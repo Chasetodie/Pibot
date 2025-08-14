@@ -1945,8 +1945,8 @@ class MinigamesSystem {
             pot: betAmount,
             start_time: Date.now(),
             join_start_time: Date.now(),
-            turnTimeout: null,
-            joinTimeout: null,
+            turn_timeout: null,
+            join_timeout: null,
             manual_start: false
         };
 
@@ -1978,7 +1978,7 @@ class MinigamesSystem {
         game.message_id = reply.id;
     
         // Timer para iniciar el juego automáticamente
-/*        game.joinTimeout = setTimeout(async () => {
+/*        game.join_timeout = setTimeout(async () => {
             if (game.players.length >= this.config.russianRoulette.minPlayers) {
                 await this.startRussianRoulette(game, reply);
             } else {
@@ -2062,8 +2062,8 @@ class MinigamesSystem {
     
 /*        // Si está lleno, iniciar inmediatamente
         if (game.players.length >= this.config.russianRoulette.maxPlayers) {
-            if (game.joinTimeout) {
-                clearTimeout(game.joinTimeout);
+            if (game.join_timeout) {
+                clearTimeout(game.join_timeout);
             }
             embed.addFields({ name: '🚀 Estado', value: '¡Partida llena! Iniciando...', inline: true });*/
             
@@ -2215,7 +2215,7 @@ class MinigamesSystem {
     
     
         // Timer para el turno
-        game.turnTimeout = setTimeout(async () => {
+        game.turn_timeout = setTimeout(async () => {
             if (game.phase === 'playing') {
                 await this.forceShoot(game, currentPlayer.id, client);
             }
@@ -2250,9 +2250,9 @@ class MinigamesSystem {
 
         game.processing = true;
     
-        if (game.turnTimeout) {
-            clearTimeout(game.turnTimeout);
-            game.turnTimeout = null;
+        if (game.turn_timeout) {
+            clearTimeout(game.turn_timeout);
+            game.turn_timeout = null;
         }
 
         console.log('alive in 3');
@@ -2637,8 +2637,8 @@ class MinigamesSystem {
         }
         
         // Limpiar timeout si existe
-        if (game.joinTimeout) {
-            clearTimeout(game.joinTimeout);
+        if (game.join_timeout) {
+            clearTimeout(game.join_timeout);
         }
         
         await this.cancelRussianRoulette(game, message, 'Cancelada por el creador');

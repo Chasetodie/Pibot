@@ -5,7 +5,7 @@ const path = require('path');
 const CommandHandler = require('./commands'); // Importar el manejador de comandos
 const EconomySystem = require('./economy'); // Importar el sistema de economia
 const EventsSystem = require('./events');
-const MusicHandler = require('./musicHandler.js'); // Importar el bot de música
+const ModernMusicHandler = require('./musicHandler.js'); // Importar el bot de música
 const MinigamesSystem = require('./minigames'); // Importar el sistema de minijuegos
 const AchievementsSystem = require('./achievements');
 const BettingSystem = require('./betting');
@@ -73,7 +73,7 @@ const commandHandler = new CommandHandler(counters, saveCounters);
 const economy = new EconomySystem();
 
 //Crear instancia del bot de música
-const musicBot = new MusicHandler();
+const musicBot = new ModernMusicHandler();
 
 //Crear instancia del sistema de Minijuegos
 const minigames = new MinigamesSystem(economy);
@@ -296,6 +296,10 @@ client.on('guildMemberAdd', async (member) => {
 client.on('interactionCreate', async (interaction) => {
     if (!interaction.isButton()) return;
 
+    if (interaction.isButton()) {
+        await musicHandler.handleButtonInteraction(interaction);
+    }
+
     try {
         // Si la interacción viene de un DM, necesitamos encontrar el guild y member
         let member;
@@ -331,6 +335,12 @@ client.on('interactionCreate', async (interaction) => {
                 });
                 return;
             }
+        }
+
+        // ===== MANEJO DE BOTONES DE MÚSICA (NUEVO) =====
+        if (interaction.customId.startsWith('music_')) {
+            await musicHandler.handleButtonInteraction(interaction);
+            return; // Importante: return para no continuar con otros botones
         }
 
         // AGREGAR ESTO: Manejo de botones del blackjack
@@ -398,10 +408,12 @@ client.on('interactionCreate', async (interaction) => {
         console.error('❌ Error procesando selección:', error);
         
         try {
-            await interaction.reply({
-                content: 'Hubo un error al asignar tu apodo. Por favor contacta a un administrador.',
-                flags: 64 // ephemeral
-            });
+            if (!interaction.replied && !interaction.deferred) {
+                await interaction.reply({
+                    content: 'Hubo un error al procesar tu acción. Por favor contacta a un administrador.',
+                    flags: 64 // ephemeral
+                });
+            }
         } catch (replyError) {
             console.error('❌ Error enviando mensaje de error:', replyError);
         }
