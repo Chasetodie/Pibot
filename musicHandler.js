@@ -1,6 +1,6 @@
 const { joinVoiceChannel, createAudioPlayer, createAudioResource, AudioPlayerStatus } = require('@discordjs/voice');
 const { EmbedBuilder } = require('discord.js');
-const ytdl = require('@distube/ytdl-core'); // CAMBIO 1: Usar @distube/ytdl-core
+const ytdl = require('@distube/ytdl-core');
 const ytSearch = require('yt-search');
 
 class MusicHandler {
@@ -8,8 +8,31 @@ class MusicHandler {
         this.client = client;
         this.queues = new Map();
         
-        // CAMBIO 2: Crear agente con cookies
-        this.agent = ytdl.createAgent();
+        // SOLUCIÓN: Crear agente con cookies más completas
+        this.agent = ytdl.createAgent([
+            {
+                "domain": ".youtube.com",
+                "expirationDate": 1735689600,
+                "hostOnly": false,
+                "httpOnly": false,
+                "name": "VISITOR_INFO1_LIVE",
+                "path": "/",
+                "sameSite": "no_restriction",
+                "secure": true,
+                "value": "95T6eO6flSs"
+            },
+            {
+                "domain": ".youtube.com",
+                "expirationDate": 1735689600,
+                "hostOnly": false,
+                "httpOnly": true,
+                "name": "YSC",
+                "path": "/",
+                "sameSite": "no_restriction",
+                "secure": true,
+                "value": "example"
+            }
+        ]);
     }
 
     // Procesar comandos
@@ -102,23 +125,26 @@ class MusicHandler {
 
             console.log('🎶 Creando stream de audio...');
             
-            // CAMBIO 4: Configuración mejorada con el agente
+            // SOLUCIÓN: Configuración sin Keep-Alive problemático
             const stream = ytdl(songUrl, {
                 filter: 'audioonly',
                 highWaterMark: 1 << 25,
                 quality: 'highestaudio',
-                agent: this.agent, // Usar el agente
+                agent: this.agent,
                 requestOptions: {
                     headers: {
-                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:120.0) Gecko/20100101 Firefox/120.0',
-                        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-                        'Accept-Language': 'en-us,en;q=0.5',
-                        'Accept-Encoding': 'gzip,deflate',
-                        'Accept-Charset': 'ISO-8859-1,utf-8;q=0.7,*;q=0.7',
-                        'Keep-Alive': '300',
-                        'Connection': 'keep-alive',
+                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                        'Accept': '*/*',
+                        'Accept-Language': 'en-US,en;q=0.9',
+                        'Accept-Encoding': 'gzip, deflate, br',
+                        'Connection': 'close' // CAMBIO: Usar 'close' en lugar de 'keep-alive'
                     }
-                }
+                },
+                // AÑADIR: Configuraciones adicionales para evitar bloqueos
+                begin: 0,
+                liveBuffer: 1 << 25,
+                dlChunkSize: 0,
+                bitrate: 128
             });
 
             // CAMBIO 5: Mejor manejo de errores del stream
@@ -128,7 +154,8 @@ class MusicHandler {
             });
 
             const resource = createAudioResource(stream, {
-                inputType: 'arbitrary' // CAMBIO 6: Cambiar inputType
+                inputType: 'arbitrary',
+                inlineVolume: true
             });
 
             // Conectar al canal de voz

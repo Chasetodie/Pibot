@@ -13,7 +13,7 @@
     "@discordjs/opus": "^0.10.0",
     "@discordjs/voice": "^0.16.1",
     "@distube/spotify": "^2.0.2",
-    "@distube/ytdl-core": "^4.16.12",
+    "@distube/ytdl-core": "^4.13.5",
     "@supabase/supabase-js": "^2.55.0",
     "axios": "^1.11.0",
     "discord.js": "^14.14.1",
