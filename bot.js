@@ -5,7 +5,7 @@ const path = require('path');
 const CommandHandler = require('./commands'); // Importar el manejador de comandos
 const EconomySystem = require('./economy'); // Importar el sistema de economia
 const EventsSystem = require('./events');
-const ModernMusicHandler = require('./musicHandler.js'); // Importar el bot de música
+const musicHandler = require('./musicHandler.js'); // Importar el bot de música
 const MinigamesSystem = require('./minigames'); // Importar el sistema de minijuegos
 const AchievementsSystem = require('./achievements');
 const BettingSystem = require('./betting');
@@ -73,7 +73,7 @@ const commandHandler = new CommandHandler(counters, saveCounters);
 const economy = new EconomySystem();
 
 //Crear instancia del bot de música
-const musicBot = new ModernMusicHandler();
+const musicBot = new musicHandler();
 
 //Crear instancia del sistema de Minijuegos
 const minigames = new MinigamesSystem(economy);
