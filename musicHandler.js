@@ -1,5 +1,5 @@
-const { joinVoiceChannel, createAudioPlayer, createAudioResource, AudioPlayerStatus, StreamType } = require('@discordjs/voice');
 const { PassThrough } = require('stream');
+const { createAudioResource, StreamType } = require('@discordjs/voice');
 const ytdlp = require('youtube-dl-exec');
 const ytSearch = require('yt-search');
 
@@ -11,10 +11,15 @@ async function createResourceFromYtdlp(url) {
     return new Promise((resolve, reject) => {
         try {
             const stream = new PassThrough();
-            const child = ytdlp.raw(
-                [url, '-f', 'bestaudio'],
-                { stdio: ['ignore', 'pipe', 'ignore'] }
-            );
+
+            // Ejecuta yt-dlp y pipe stdout a stream
+            const child = ytdlp(url, {
+                output: '-',         // salida a stdout
+                format: 'bestaudio',
+                quiet: true,
+                noWarnings: true,
+            });
+
             child.stdout.pipe(stream);
 
             child.on('error', err => reject(new Error(`yt-dlp error: ${err.message}`)));
