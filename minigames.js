@@ -235,7 +235,7 @@ class MinigamesSystem {
         this.setCooldown(userId, 'coinflip');
 
         const updateData = {
-            lastCoinflip: Date.now(),
+            last_coinflip: Date.now(),
             stats: {
                 ...user.stats,
                 games_played: (user.stats.games_played || 0) + 1
@@ -443,7 +443,7 @@ class MinigamesSystem {
         this.setCooldown(userId, 'dice');
         
         const updateData = {
-            lastDice: Date.now(),
+            last_dice: Date.now(),
             stats: {
                 ...user.stats,
                 games_played: (user.stats.games_played || 0) + 1
@@ -641,7 +641,7 @@ class MinigamesSystem {
         this.setCooldown(userId, 'lottery');
         
         const updateData = {
-            lastLotto: Date.now(),
+            last_lotto: Date.now(),
             stats: {
                 ...user.stats,
                 games_played: (user.stats.games_played || 0) + 1
@@ -1118,7 +1118,7 @@ class MinigamesSystem {
         this.setCooldown(userId, 'blackjack');
         
         const updateData = {
-            lastBlackJack: Date.now(),
+            last_blackjack: Date.now(),
             stats: {
                 ...user.stats,
                 games_played: (user.stats.games_played || 0) + 1
@@ -1505,7 +1505,7 @@ class MinigamesSystem {
         this.setCooldown(userId, 'roulette');
     
         const updateData = {
-            lastRoulette: Date.now(),
+            last_roulette: Date.now(),
             stats: {
                 ...user.stats,
                 games_played: (user.stats.games_played || 0) + 1
