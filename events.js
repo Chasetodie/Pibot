@@ -4,8 +4,12 @@ class EventsSystem {
     constructor(economySystem) {
         this.economy = economySystem;
 
-        this.supabase = this.economy.supabase; // Guardar referencia a Supabase
-               
+        // Inicializar el cliente directamente
+        this.supabase = createClient(
+            process.env.SUPABASE_URL,
+            process.env.SUPABASE_ANON_KEY
+        );
+        
         this.activeEvents = {};
         this.announcementChannelId = '1404905496644685834'; // Cambia esto al ID de tu canal de anuncios
         this.guild = null;
