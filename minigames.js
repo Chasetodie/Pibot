@@ -710,7 +710,7 @@ class MinigamesSystem {
             const updateDataLottery = {
                 stats: {
                     ...user.stats,
-                    lottery_wins': (user.stats.lottery_wins || 0) + 1  // ← NUEVA LÍNEA
+                    lottery_wins: (user.stats.lottery_wins || 0) + 1  // ← NUEVA LÍNEA
                 }
             };       
             await this.economy.updateUser(userId, updateData);
