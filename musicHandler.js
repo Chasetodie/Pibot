@@ -103,21 +103,23 @@ class ModernMusicHandler {
 
             const data = await this.spotify.getTrack(trackId);
             const track = data.body;
-            
+
             const searchQuery = `${track.artists[0].name} ${track.name}`;
             const youtubeResults = await this.searchYouTube(searchQuery, 1);
-            
-            if (youtubeResults.length > 0) {
-                const result = youtubeResults[0];
-                result.spotifyInfo = {
-                    title: track.name,
-                    artist: track.artists[0].name,
-                    album: track.album.name,
-                    cover: track.album.images[0]?.url
-                };
-                return result;
+
+            if (youtubeResults.length === 0 || !youtubeResults[0].url) {
+                console.warn(`⚠️ No se encontró URL válida en YouTube para: ${searchQuery}`);
+                return null;
             }
-            return null;
+
+            const result = youtubeResults[0];
+            result.spotifyInfo = {
+                title: track.name,
+                artist: track.artists[0].name,
+                album: track.album.name,
+                cover: track.album.images[0]?.url
+            };
+            return result;
         } catch (error) {
             console.error('❌ Error obteniendo de Spotify:', error);
             return null;
@@ -228,7 +230,7 @@ class ModernMusicHandler {
                 song = results[0];
             }
 
-            if (!song.url) {
+            if (!song || !song.url) {
                 console.error('❌ La canción no tiene URL:', song);
                 return { success: false, message: 'No se pudo obtener la URL de la canción.' };
             }
