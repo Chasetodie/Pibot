@@ -83,6 +83,7 @@ async function migrarUsuarios() {
                 stats: data.stats || {},
                 bet_stats: data.betStats || {},
                 daily_missions: data.daily_missions || {},
+                achievements: data.achievements || {},
                 daily_missions_date: data.daily_missions_date || null,
                 daily_stats: data.daily_stats || {},
                 created_at: data.createdAt?.toDate?.()?.toISOString() || new Date().toISOString(),
