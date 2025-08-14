@@ -1,7 +1,6 @@
 const { joinVoiceChannel, createAudioPlayer, createAudioResource, AudioPlayerStatus, VoiceConnectionStatus, StreamType } = require('@discordjs/voice');
 const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 const ytdl = require('ytdl-core');
-const yts = require('yt-search');
 const SpotifyWebApi = require('spotify-web-api-node');
 
 class ModernMusicHandler {
@@ -35,32 +34,91 @@ class ModernMusicHandler {
         }
     }
 
-    // Buscar en YouTube (más confiable que SoundCloud)
+    // Buscar usando YouTube con fetch directo (sin yt-search)
     async searchYouTube(query, limit = 5) {
         try {
             console.log(`🔍 Buscando en YouTube: "${query}"`);
-            const results = await yts(query);
             
-            if (!results || !results.videos || results.videos.length === 0) {
+            // Usar la API no oficial de YouTube (innertube)
+            const searchUrl = `https://www.youtube.com/results?search_query=${encodeURIComponent(query)}`;
+            const response = await fetch(searchUrl, {
+                headers: {
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+                }
+            });
+            
+            const html = await response.text();
+            const regex = /var ytInitialData = ({.+?});/;
+            const match = html.match(regex);
+            
+            if (!match) {
+                console.log('⚠️ No se pudo extraer datos de YouTube, usando búsqueda básica');
                 return [];
             }
 
-            return results.videos
-                .filter(video => video.duration && video.duration.seconds > 30) // Filtrar muy cortos
-                .slice(0, limit)
-                .map(video => ({
-                    id: video.videoId,
-                    title: video.title,
-                    artist: video.author.name,
-                    duration: video.duration.seconds,
-                    url: video.url,
-                    thumbnail: video.thumbnail,
-                    views: video.views
-                }));
+            const data = JSON.parse(match[1]);
+            const videos = [];
+            
+            // Navegar por la estructura de datos de YouTube
+            const contents = data?.contents?.twoColumnSearchResultsRenderer?.primaryContents?.sectionListRenderer?.contents;
+            
+            if (contents) {
+                for (const section of contents) {
+                    const items = section?.itemSectionRenderer?.contents;
+                    if (items) {
+                        for (const item of items) {
+                            if (item.videoRenderer) {
+                                const video = item.videoRenderer;
+                                const duration = this.parseDuration(video.lengthText?.simpleText);
+                                
+                                if (duration && duration > 30) { // Filtrar muy cortos
+                                    videos.push({
+                                        id: video.videoId,
+                                        title: video.title?.runs?.[0]?.text || video.title?.simpleText || 'Título desconocido',
+                                        artist: video.ownerText?.runs?.[0]?.text || 'Artista desconocido',
+                                        duration: duration,
+                                        url: `https://www.youtube.com/watch?v=${video.videoId}`,
+                                        thumbnail: video.thumbnail?.thumbnails?.[0]?.url,
+                                        views: this.parseViews(video.viewCountText?.simpleText)
+                                    });
+                                }
+                                
+                                if (videos.length >= limit) break;
+                            }
+                        }
+                    }
+                    if (videos.length >= limit) break;
+                }
+            }
+
+            return videos;
         } catch (error) {
             console.error('❌ Error buscando en YouTube:', error);
             return [];
         }
+    }
+
+    // Helper para parsear duración
+    parseDuration(durationText) {
+        if (!durationText) return null;
+        const parts = durationText.split(':').reverse();
+        let seconds = 0;
+        
+        for (let i = 0; i < parts.length; i++) {
+            seconds += parseInt(parts[i]) * Math.pow(60, i);
+        }
+        
+        return seconds;
+    }
+
+    // Helper para parsear vistas
+    parseViews(viewText) {
+        if (!viewText) return 0;
+        const match = viewText.match(/[\d,]+/);
+        if (match) {
+            return parseInt(match[0].replace(/,/g, ''));
+        }
+        return 0;
     }
 
     // Obtener info de Spotify y buscar en YouTube
@@ -115,7 +173,7 @@ class ModernMusicHandler {
         }
 
         const permissions = voiceChannel.permissionsFor(message.client.user);
-        if (!permissions.has('CONNECT') || !permissions.has('SPEAK')) {
+        if (!permissions.has('Connect') || !permissions.has('Speak')) {
             return { success: false, message: 'No tengo permisos para unirme o hablar en ese canal.' };
         }
 
@@ -621,7 +679,7 @@ class ModernMusicHandler {
         }
     }
 
-    // Resto de comandos (mantener estructura similar pero mejorada)
+    // Resto de comandos (búsqueda alternativa)
     async handleSearch(message, args) {
         if (args.length === 0) {
             const embed = new EmbedBuilder()
