@@ -263,73 +263,72 @@ class MusicHandler {
         message.reply(`🔊 Volumen establecido a: **${vol}%**`);
     }
 
+    // Procesar comandos
     async processCommand(message) {
-        if (message.author.bot) return;
-
+        console.log('🔄 processCommand llamado con:', message.content); // DEBUG
+        
         const args = message.content.slice(1).trim().split(/ +/);
         const command = args.shift().toLowerCase();
+        
+        console.log('🎯 Comando procesado:', command, 'Args:', args); // DEBUG
 
-        try {
-            switch (command) {                    
-                case '>play':
-                case '>p':
-                    const query = args.join(' ');
-                    await this.play(message, query);
-                    break;
+        // Comandos de música
+        switch (command) {
+            case '>play':
+            case '>p':
+                const query = args.join(' ');
+                await this.play(message, query);
+                break;
 
-                case '>pause':
-                    this.togglePause(message);
-                    break;
+            case '>pause':
+                this.togglePause(message);
+                break;
 
-                case '>skip':
-                case '>s':
-                    await this.skip(message);
-                    break;
+            case '>skip':
+            case '>s':
+                await this.skip(message);
+                break;
 
-                case '>stop':
-                    this.stop(message);
-                    break;
+            case '>stop':
+                this.stop(message);
+                break;
 
-                case '>queue':
-                case '>q':
-                    this.showQueue(message);
-                    break;
+            case '>queue':
+            case '>q':
+                this.showQueue(message);
+                break;
 
-                case '>nowplaying':
-                case '>np':
-                    this.nowPlaying(message);
-                    break;
+            case '>nowplaying':
+            case '>np':
+                this.nowPlaying(message);
+                break;
 
-                case '>volume':
-                case '>vol':
-                    const volume = args[0];
-                    this.setVolume(message, volume);
-                    break;
+            case '>volume':
+            case '>vol':
+                const volume = args[0];
+                this.setVolume(message, volume);
+                break;
 
-                case '>helpmusic':
-                case '>commandsmusic':
-                    const helpEmbed = require('discord.js').EmbedBuilder;
-                    const embed = new helpEmbed()
-                        .setColor('#3498DB')
-                        .setTitle('🎵 Comandos de Música')
-                        .addFields(
-                            { name: '`>play <url/búsqueda>`', value: 'Reproduce música', inline: true },
-                            { name: '`>pause`', value: 'Pausa/reanuda música', inline: true },
-                            { name: '`>skip` o `>s`', value: 'Salta canción actual', inline: true },
-                            { name: '`>stop`', value: 'Para música y limpia cola', inline: true },
-                            { name: '`>queue` o `>q`', value: 'Muestra la cola', inline: true },
-                            { name: '`>nowplaying` o `>np`', value: 'Canción actual', inline: true },
-                            { name: '`>volume <0-100>`', value: 'Cambia volumen', inline: true },
-                            { name: '`>help`', value: 'Muestra esta ayuda', inline: true }
-                        )
-                        .setFooter({ text: 'Bot de música con DisTube' });
+            case '>helpmusic':
+            case '>commandsmusic':
+                const { EmbedBuilder } = require('discord.js');
+                const embed = new EmbedBuilder()
+                    .setColor('#3498DB')
+                    .setTitle('🎵 Comandos de Música')
+                    .addFields(
+                        { name: '`>play <url/búsqueda>`', value: 'Reproduce música', inline: true },
+                        { name: '`>pause`', value: 'Pausa/reanuda música', inline: true },
+                        { name: '`>skip` o `>s`', value: 'Salta canción actual', inline: true },
+                        { name: '`>stop`', value: 'Para música y limpia cola', inline: true },
+                        { name: '`>queue` o `>q`', value: 'Muestra la cola', inline: true },
+                        { name: '`>nowplaying` o `>np`', value: 'Canción actual', inline: true },
+                        { name: '`>volume <0-100>`', value: 'Cambia volumen', inline: true },
+                        { name: '`>help`', value: 'Muestra esta ayuda', inline: true }
+                    )
+                    .setFooter({ text: 'Bot de música con DisTube' });
 
-                    message.reply({ embeds: [embed] });
-                    break;
-            }
-        } catch (error) {
-            console.error('❌ Error procesando comando:', error);
-            await message.reply('❌ Ocurrió un error al procesar el comando. Intenta de nuevo.');
+                message.reply({ embeds: [embed] });
+                break;
         }
     }
 }
