@@ -58,23 +58,43 @@ class MusicHandler {
         }
 
         try {
-            // Buscar la canción
-            const searched = await play.search(query, { limit: 1 });
-            
-            if (!searched || searched.length === 0) {
-                return message.reply(`❌ No se encontraron resultados para: **${query}**`);
+            // Verificar si es una URL directa de YouTube
+            let songUrl;
+            let songTitle = query;
+
+            if (query.includes('youtube.com') || query.includes('youtu.be')) {
+                songUrl = query;
+                console.log('🔗 URL directa detectada:', songUrl);
+            } else {
+                // Buscar la canción
+                console.log('🔍 Buscando canción...');
+                const searched = await play.search(query, { limit: 1, source: { youtube: 'video' } });
+                
+                if (!searched || searched.length === 0) {
+                    return message.reply(`❌ No se encontraron resultados para: **${query}**`);
+                }
+
+                const song = searched[0];
+                songUrl = song.url;
+                songTitle = song.title;
+                console.log('🎵 Canción encontrada:', songTitle, 'URL:', songUrl);
             }
 
-            const song = searched[0];
-            console.log('🎵 Canción encontrada:', song.title);
+            // Validar que la URL existe
+            if (!songUrl || songUrl === 'undefined') {
+                return message.reply('❌ No se pudo obtener la URL de la canción.');
+            }
 
             // Obtener el stream de audio
-            const stream = await play.stream(song.url);
+            console.log('🎶 Obteniendo stream de audio...');
+            const stream = await play.stream(songUrl, { quality: 2 });
+            
             const resource = createAudioResource(stream.stream, {
                 inputType: stream.type
             });
 
             // Conectar al canal de voz
+            console.log('🔊 Conectando al canal de voz...');
             const connection = joinVoiceChannel({
                 channelId: voiceChannel.id,
                 guildId: message.guild.id,
@@ -87,6 +107,7 @@ class MusicHandler {
 
             // Reproducir la canción
             player.play(resource);
+            console.log('▶️ Reproducción iniciada');
 
             // Guardar información de la cola
             this.queues.set(message.guild.id, {
@@ -99,12 +120,11 @@ class MusicHandler {
             const embed = new EmbedBuilder()
                 .setColor('#00FF00')
                 .setTitle('🎵 Reproduciendo ahora')
-                .setDescription(`[${song.title}](${song.url})`)
+                .setDescription(`**${songTitle}**`)
                 .addFields(
-                    { name: '⏱️ Duración', value: song.durationRaw || 'Desconocida', inline: true },
-                    { name: '👤 Solicitado por', value: message.author.toString(), inline: true }
-                )
-                .setThumbnail(song.thumbnails?.[0]?.url || null);
+                    { name: '👤 Solicitado por', value: message.author.toString(), inline: true },
+                    { name: '🔗 URL', value: songUrl.substring(0, 50) + '...', inline: true }
+                );
 
             message.reply({ embeds: [embed] });
 
@@ -120,7 +140,14 @@ class MusicHandler {
 
         } catch (error) {
             console.error('❌ Error en play:', error);
-            message.reply('❌ Ocurrió un error al buscar o reproducir la música.');
+            
+            if (error.message.includes('Sign in to confirm')) {
+                message.reply('❌ YouTube está bloqueando el acceso. Intenta con una URL directa de YouTube.');
+            } else if (error.code === 'ERR_INVALID_URL') {
+                message.reply('❌ URL inválida. Intenta con una URL directa de YouTube.');
+            } else {
+                message.reply('❌ Ocurrió un error al buscar o reproducir la música.');
+            }
         }
     }
 
