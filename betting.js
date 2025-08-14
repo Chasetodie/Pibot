@@ -535,15 +535,15 @@ class BettingSystem {
         
         const embed = new EmbedBuilder()
             .setTitle(`🎲 Estadísticas de Apuestas - ${displayName}`)
-            .setColor(stats.netProfit >= 0 ? '#00FF00' : '#FF0000')
+            .setColor(stats.net_profit >= 0 ? '#00FF00' : '#FF0000')
             .setThumbnail(avatarUrl)
             .addFields(
                 { name: '🏆 Victorias', value: (stats.wins.toString() || 0), inline: true },
                 { name: '💸 Derrotas', value: (stats.losses.toString() || 0), inline: true },
                 { name: '📊 Tasa de Victoria', value: `${winRate}%`, inline: true },
-                { name: '💰 Total Ganado', value: `${this.formatNumber((stats.totalWon || 0))} π-b$`, inline: true },
-                { name: '💸 Total Perdido', value: `${this.formatNumber((stats.totalLost || 0))} π-b$`, inline: true },
-                { name: '📈 Ganancia Neta', value: `${stats.netProfit >= 0 ? '+' : ''}${this.formatNumber((stats.netProfit || 0))} π-b$`, inline: true }
+                { name: '💰 Total Ganado', value: `${this.formatNumber((stats.total_won || 0))} π-b$`, inline: true },
+                { name: '💸 Total Perdido', value: `${this.formatNumber((stats.total_lost || 0))} π-b$`, inline: true },
+                { name: '📈 Ganancia Neta', value: `${stats.net_profit >= 0 ? '+' : ''}${this.formatNumber((stats.net_profit || 0))} π-b$`, inline: true }
             )
             .setTimestamp();
 
@@ -555,8 +555,8 @@ class BettingSystem {
         const winner = await this.economy.getUser(winnerId);
         const loser = await this.economy.getUser(loserId);
 
-        if (!winner.betStats) winner.bet_stats = { wins: 0, losses: 0, totalWon: 0, totalLost: 0, netProfit: 0 };
-        if (!loser.betStats) loser.bet_stats = { wins: 0, losses: 0, totalWon: 0, totalLost: 0, netProfit: 0 };
+        if (!winner.betStats) winner.bet_stats = { wins: 0, losses: 0, total_won: 0, total_lost: 0, net_profit: 0 };
+        if (!loser.betStats) loser.bet_stats = { wins: 0, losses: 0, total_won: 0, total_lost: 0, net_profit: 0 };
 
         const winAmount = amount * 2 - Math.floor(amount * 2 * this.config.houseFee);
 
