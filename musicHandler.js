@@ -5,29 +5,26 @@ const ytSearch = require('yt-search');
 const queue = new Map();
 const prefix = ">";
 
-// Función principal para reproducir o agregar canciones
+// Función para reproducir canciones
 async function play(message, query) {
     const voiceChannel = message.member.voice.channel;
     if (!voiceChannel) return message.reply("¡Debes estar en un canal de voz!");
 
     let serverQueue = queue.get(message.guild.id);
 
+    // Buscar siempre una URL válida
     let songInfo;
     try {
-        if (ytdl.validateURL(query)) {
-            songInfo = await ytdl.getInfo(query);
-        } else {
-            const searchResult = await ytSearch(query);
-            if (!searchResult || !searchResult.videos.length) return message.reply("No encontré la canción 😢");
-            songInfo = searchResult.videos[0];
-        }
+        const searchResult = await ytSearch(query);
+        if (!searchResult || !searchResult.videos.length) return message.reply("No encontré la canción 😢");
+        songInfo = searchResult.videos[0];
     } catch (err) {
-        return message.reply("Error al buscar la canción. Intenta con otro nombre o URL.");
+        return message.reply("Error al buscar la canción. Intenta otro nombre.");
     }
 
     const song = {
         title: songInfo.title,
-        url: songInfo.video_url || songInfo.url
+        url: songInfo.url
     };
 
     if (!serverQueue) {
@@ -69,11 +66,12 @@ async function play(message, query) {
     }
 }
 
-// Función para reproducir la siguiente canción de la cola
+// Función que reproduce la primera canción de la cola
 async function playSong(guildId) {
     const serverQueue = queue.get(guildId);
     if (!serverQueue) return;
-    let song = serverQueue.songs[0];
+
+    const song = serverQueue.songs[0];
     if (!song) {
         serverQueue.connection.destroy();
         queue.delete(guildId);
@@ -81,7 +79,7 @@ async function playSong(guildId) {
     }
 
     try {
-        // Intentar reproducir
+        // Obtener siempre una URL válida de YouTube antes de reproducir
         const stream = await ytdl(song.url, { filter: 'audioonly', highWaterMark: 1 << 25 });
         const resource = createAudioResource(stream, { inputType: StreamType.Opus });
         serverQueue.player.play(resource);
@@ -91,17 +89,10 @@ async function playSong(guildId) {
             serverQueue.songs.shift();
             playSong(guildId);
         });
-
     } catch (err) {
         console.error("Error al reproducir canción:", err.message);
-
-        // Quitar la canción inválida
-        serverQueue.songs.shift();
-
-        // Si la cola tiene más canciones, reproducir la siguiente
-        if (serverQueue.songs.length > 0) {
-            playSong(guildId);
-        }
+        serverQueue.songs.shift(); // Quita canción inválida
+        playSong(guildId); // Reproduce siguiente canción
     }
 }
 
@@ -144,7 +135,7 @@ function showQueue(message) {
     message.reply(`🎶 Cola de canciones:\n${queueList}`);
 }
 
-// Función central para manejar comandos con prefijo
+// Función central que maneja todos los comandos con prefijo
 function processCommand(message) {
     if (!message.content.startsWith(prefix) || message.author.bot) return;
 
@@ -153,7 +144,7 @@ function processCommand(message) {
 
     if (command === "play") {
         const query = args.join(" ");
-        if (!query) return message.reply("Debes escribir el nombre o URL de la canción.");
+        if (!query) return message.reply("Debes escribir el nombre de la canción.");
         play(message, query);
     } else if (command === "skip") {
         skip(message);
