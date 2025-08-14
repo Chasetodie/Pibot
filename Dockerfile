@@ -1,20 +1,20 @@
-# Usamos Node 20
-FROM node:20
+FROM node:18-alpine
 
-# Instalamos Python
-RUN apt-get update && apt-get install -y python3 python3-pip
+# Instalar dependencias del sistema
+RUN apk add --no-cache ffmpeg python3 py3-pip build-base
 
-# Directorio de la app
+# Directorio de trabajo
 WORKDIR /app
 
-# Copiamos package.json y package-lock.json
+# Copiar e instalar dependencias
 COPY package*.json ./
-
-# Instalamos dependencias
 RUN npm install
 
-# Copiamos el resto del proyecto
+# Copiar código fuente
 COPY . .
 
-# Comando para iniciar el bot
+# Exponer puerto si necesitas web dashboard
+EXPOSE 3000
+
+# Comando para ejecutar
 CMD ["node", "bot.js"]
