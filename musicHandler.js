@@ -329,7 +329,9 @@ class ModernMusicHandler {
                     const ytdlStream = ytdl(song.url, {
                         filter: "audioonly",
                         quality: "highestaudio",
-                        highWaterMark: 1 << 25 // Evita cortes en streams largos
+                        highWaterMark: 1 << 25,
+                        requestOptions: { headers: { cookie: process.env.YT_COOKIE } },
+                        opusEncoded: true
                     });
 
                     resource = createAudioResource(ytdlStream, {
