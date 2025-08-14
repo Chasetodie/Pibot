@@ -1,6 +1,6 @@
 const { joinVoiceChannel, createAudioPlayer, createAudioResource, AudioPlayerStatus, VoiceConnectionStatus, StreamType } = require('@discordjs/voice');
 const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
-const ytdl = require('ytdl-core');
+const ytdl = require('@distube/ytdl-core');
 const SpotifyWebApi = require('spotify-web-api-node');
 
 class ModernMusicHandler {
