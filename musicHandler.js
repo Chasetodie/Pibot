@@ -1,5 +1,5 @@
 const { joinVoiceChannel, createAudioPlayer, createAudioResource, AudioPlayerStatus, StreamType } = require('@discordjs/voice');
-const ytdl = require('ytdl-core-discord');
+const ytdl = require('@ybd-project/ytdl-core');
 const ytSearch = require('yt-search');
 
 const queue = new Map();
