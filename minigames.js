@@ -2494,7 +2494,7 @@ class MinigamesSystem {
             // Actualizar estadísticas del ganador
             const updateData = {   
                 stats: {
-                    ...user.stats,
+                    ...winner.id.stats,
                     games_played: ((await this.economy.getUser(winner.id)).stats.games_played || 0) + 1
                 }
             };

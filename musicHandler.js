@@ -286,10 +286,10 @@ class ModernMusicHandler {
     async isPlayable(url) {
         try {
             const info = await ytdl.getInfo(url);
-            return !info.videoDetails.isLiveContent && 
-                   info.formats.some(format => format.hasAudio);
+            return !info.videoDetails.isLiveContent;
         } catch (error) {
-            return false;
+            console.log(`⚠️ No se pudo verificar: ${url}, pero intentaremos reproducir`);
+            return true;
         }
     }
 
