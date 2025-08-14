@@ -4,14 +4,7 @@ const { EmbedBuilder, ActionRowBuilder, StringSelectMenuBuilder } = require('dis
 class MusicHandler {
     constructor(client) {
         this.client = client;
-        this.distube = new DisTube(client, {
-            emitNewSongOnly: true,
-            leaveOnEmpty: true,
-            emptyCooldown: 300000, // 5 minutos
-            searchSongs: 10,
-            nsfw: false,
-            plugins: []
-        });
+        this.distube = new DisTube(client);
 
         this.setupEvents();
     }
