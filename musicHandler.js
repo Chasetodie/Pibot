@@ -4,13 +4,7 @@ const { EmbedBuilder, ActionRowBuilder, StringSelectMenuBuilder } = require('dis
 class MusicHandler {
     constructor(client) {
         this.client = client;
-        this.distube = new DisTube(client, {
-            searchSongs: 10,
-            plugins: [],
-            ffmpeg: {
-                path: require('ffmpeg-static')
-            }
-        });
+        this.distube = new DisTube(client);
 
         this.setupEvents();
     }
