@@ -1,5 +1,5 @@
 const { joinVoiceChannel, createAudioPlayer, createAudioResource, AudioPlayerStatus } = require('@discordjs/voice');
-const ytdl = require('ytdl-core');
+const ytdl = require('ytdl-core-discord');
 const ytSearch = require('yt-search');
 
 const queue = new Map();
@@ -39,7 +39,7 @@ async function play(message, query) {
                 adapterCreator: message.guild.voiceAdapterCreator,
             });
             queueContruct.connection = connection;
-            playSong(message.guild.id);
+            await playSong(message.guild.id);
             message.reply(`Reproduciendo: **${song.title}**`);
         } catch (err) {
             console.error(err);
@@ -52,7 +52,7 @@ async function play(message, query) {
     }
 }
 
-function playSong(guildId) {
+async function playSong(guildId) {
     const serverQueue = queue.get(guildId);
     if (!serverQueue) return;
 
@@ -63,9 +63,8 @@ function playSong(guildId) {
         return;
     }
 
-    const stream = ytdl(song.url, { filter: 'audioonly' });
-    const resource = createAudioResource(stream);
-    serverQueue.player.play(resource);
+    const stream = await ytdl(song.url, { filter: 'audioonly', highWaterMark: 1 << 25 });
+    const resource = createAudioResource(stream, { inputType: StreamType.Opus });    serverQueue.player.play(resource);
     serverQueue.connection.subscribe(serverQueue.player);
 
     serverQueue.player.on(AudioPlayerStatus.Idle, () => {
