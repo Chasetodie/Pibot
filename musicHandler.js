@@ -1,7 +1,7 @@
 const { Client, GatewayIntentBits, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 const { joinVoiceChannel, createAudioPlayer, createAudioResource, StreamType, AudioPlayerStatus, VoiceConnectionStatus } = require('@discordjs/voice');
 const ytdl = require('ytdl-core');
-const ytsr = require('ytsr');
+const play = require('play-dl');
 const ytpl = require('ytpl');
 const axios = require('axios');
 
@@ -264,86 +264,79 @@ class MusicHandler {
 
     async searchYouTube(query, limit = 10) {
         try {
-            // Búsqueda directa usando ytdl para obtener info
-            const searchUrl = `https://www.youtube.com/results?search_query=${encodeURIComponent(query)}`;
+            console.log(`🔍 Buscando en YouTube: "${query}"`);
             
-            const response = await axios.get(searchUrl, {
-                headers: {
-                    'User-Agent': this.getRandomUserAgent()
-                }
+            // Usar play-dl que es más confiable
+            const results = await play.search(query, {
+                limit: limit,
+                source: { youtube: 'video' }
             });
 
-            // Extraer IDs de video de la respuesta HTML
-            const videoIds = [];
-            const regex = /"videoId":"([^"]{11})"/g;
-            let match;
-            
-            while ((match = regex.exec(response.data)) !== null && videoIds.length < limit) {
-                if (!videoIds.includes(match[1])) {
-                    videoIds.push(match[1]);
-                }
+            if (!results || results.length === 0) {
+                console.log('❌ No se encontraron resultados');
+                return [];
             }
 
-            // Obtener información de cada video
-            const results = [];
-            for (const videoId of videoIds.slice(0, limit)) {
-                try {
-                    const info = await ytdl.getBasicInfo(`https://www.youtube.com/watch?v=${videoId}`, {
-                        requestOptions: {
-                            headers: { 'User-Agent': this.getRandomUserAgent() }
-                        }
-                    });
+            const formattedResults = results.map(item => ({
+                id: item.id,
+                title: item.title,
+                artist: item.channel?.name || 'Canal desconocido',
+                duration: item.durationRaw || 'N/A',
+                thumbnail: item.thumbnails?.[0]?.url,
+                url: item.url,
+                type: 'youtube',
+                source: 'YouTube',
+                views: item.views
+            }));
 
-                    results.push({
-                        id: videoId,
-                        title: info.videoDetails.title,
-                        artist: info.videoDetails.author.name,
-                        duration: this.formatDuration(info.videoDetails.lengthSeconds),
-                        thumbnail: info.videoDetails.thumbnails?.[0]?.url,
-                        url: info.videoDetails.video_url,
-                        type: 'youtube',
-                        source: 'YouTube'
-                    });
-                } catch (videoError) {
-                    console.log(`Saltando video ${videoId}:`, videoError.message);
-                    continue;
-                }
-            }
-
-            console.log(`✅ YouTube: ${results.length} resultados encontrados`);
-            return results;
+            console.log(`✅ YouTube: ${formattedResults.length} resultados encontrados`);
+            return formattedResults;
 
         } catch (error) {
-            console.error('❌ Error en búsqueda alternativa de YouTube:', error.message);
+            console.error('❌ Error en búsqueda de YouTube:', error.message);
             return [];
         }
     }
 
     async getAudioStream(videoId) {
         try {
-            const url = `https://www.youtube.com/watch?v=${videoId}`;
+            console.log(`🎵 Creando stream para: ${videoId}`);
             
-            const stream = ytdl(url, {
-                filter: 'audioonly',
-                quality: 'highestaudio',
-                highWaterMark: 1 << 25,
-                requestOptions: {
-                    headers: {
-                        'User-Agent': this.getRandomUserAgent(),
-                        'Accept': '*/*',
-                        'Accept-Language': 'es-ES,es;q=0.9,en;q=0.8'
-                    }
-                }
+            // Usar play-dl para obtener el stream
+            const stream = await play.stream(`https://www.youtube.com/watch?v=${videoId}`, {
+                quality: 2, // Alta calidad
             });
 
-            return createAudioResource(stream, {
-                inputType: StreamType.Arbitrary,
+            return createAudioResource(stream.stream, {
+                inputType: stream.type,
                 inlineVolume: true
             });
 
         } catch (error) {
-            console.error(`❌ Error stream ${videoId}:`, error.message);
-            throw error;
+            console.error(`❌ Error creando stream para ${videoId}:`, error.message);
+            
+            // Fallback a ytdl si play-dl falla
+            try {
+                const url = `https://www.youtube.com/watch?v=${videoId}`;
+                const ytdlStream = ytdl(url, {
+                    filter: 'audioonly',
+                    quality: 'highestaudio',
+                    highWaterMark: 1 << 25,
+                    requestOptions: {
+                        headers: {
+                            'User-Agent': this.getRandomUserAgent(),
+                        }
+                    }
+                });
+
+                return createAudioResource(ytdlStream, {
+                    inputType: StreamType.Arbitrary,
+                    inlineVolume: true
+                });
+            } catch (fallbackError) {
+                console.error('❌ Fallback también falló:', fallbackError.message);
+                throw error;
+            }
         }
     }
 
