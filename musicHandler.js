@@ -118,6 +118,14 @@ class MusicHandler {
         return agent;
     }
 
+    // Formatear duración en segundos a MM:SS
+    formatDuration(seconds) {
+        if (!seconds) return 'N/A';
+        const mins = Math.floor(seconds / 60);
+        const secs = seconds % 60;
+        return `${mins}:${secs.toString().padStart(2, '0')}`;
+    }
+
     // FUNCIONES DE BÚSQUEDA (como RiMusic)
     async searchMusic(query, limit = 10, useCache = true) {
         try {
@@ -256,28 +264,57 @@ class MusicHandler {
 
     async searchYouTube(query, limit = 10) {
         try {
-            const filters = await ytsr.getFilters(query);
-            const filter = filters.get('Type').get('Video');
-            const searchResults = await ytsr(filter.url, { 
-                limit,
-                requestOptions: {
-                    headers: { 'User-Agent': this.getRandomUserAgent() }
+            // Búsqueda directa usando ytdl para obtener info
+            const searchUrl = `https://www.youtube.com/results?search_query=${encodeURIComponent(query)}`;
+            
+            const response = await axios.get(searchUrl, {
+                headers: {
+                    'User-Agent': this.getRandomUserAgent()
                 }
             });
 
-            return searchResults.items.map(item => ({
-                id: item.id,
-                title: item.title,
-                artist: item.author?.name || 'Canal desconocido',
-                duration: item.duration,
-                thumbnail: item.bestThumbnail?.url,
-                url: item.url,
-                type: 'youtube',
-                source: 'YouTube'
-            }));
+            // Extraer IDs de video de la respuesta HTML
+            const videoIds = [];
+            const regex = /"videoId":"([^"]{11})"/g;
+            let match;
+            
+            while ((match = regex.exec(response.data)) !== null && videoIds.length < limit) {
+                if (!videoIds.includes(match[1])) {
+                    videoIds.push(match[1]);
+                }
+            }
+
+            // Obtener información de cada video
+            const results = [];
+            for (const videoId of videoIds.slice(0, limit)) {
+                try {
+                    const info = await ytdl.getBasicInfo(`https://www.youtube.com/watch?v=${videoId}`, {
+                        requestOptions: {
+                            headers: { 'User-Agent': this.getRandomUserAgent() }
+                        }
+                    });
+
+                    results.push({
+                        id: videoId,
+                        title: info.videoDetails.title,
+                        artist: info.videoDetails.author.name,
+                        duration: this.formatDuration(info.videoDetails.lengthSeconds),
+                        thumbnail: info.videoDetails.thumbnails?.[0]?.url,
+                        url: info.videoDetails.video_url,
+                        type: 'youtube',
+                        source: 'YouTube'
+                    });
+                } catch (videoError) {
+                    console.log(`Saltando video ${videoId}:`, videoError.message);
+                    continue;
+                }
+            }
+
+            console.log(`✅ YouTube: ${results.length} resultados encontrados`);
+            return results;
 
         } catch (error) {
-            console.error('❌ Error YouTube search:', error.message);
+            console.error('❌ Error en búsqueda alternativa de YouTube:', error.message);
             return [];
         }
     }
