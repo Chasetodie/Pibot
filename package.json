@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "@discordjs/voice": "^0.16.1",
+    "@distube/yt-dlp": "^2.0.1",
     "@distube/ytdl-core": "^4.16.12",
     "@supabase/supabase-js": "^2.55.0",
     "axios": "^1.11.0",

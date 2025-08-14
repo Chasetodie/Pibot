@@ -1,5 +1,5 @@
 const { joinVoiceChannel, createAudioPlayer, createAudioResource, AudioPlayerStatus, StreamType } = require('@discordjs/voice');
-const ytdl = require('@distube/ytdl-core');
+const ytDlp = require('@distube/yt-dlp');
 const ytSearch = require('yt-search');
 
 const queue = new Map();
@@ -96,7 +96,7 @@ async function play(message, query) {
     }
 }
 
-// Función que reproduce la primera canción de la cola
+// Función que reproduce la primera canción de la cola usando yt-dlp
 async function playSong(guildId) {
     const serverQueue = queue.get(guildId);
     if (!serverQueue || !serverQueue.player) return;
@@ -109,9 +109,10 @@ async function playSong(guildId) {
     }
 
     try {
-        // Obtener stream de audio con @distube/ytdl-core
-        const ytStream = await ytdl(song.url, { filter: 'audioonly', quality: 'highestaudio', highWaterMark: 1 << 25 });
-        const resource = createAudioResource(ytStream, { inputType: StreamType.Opus });
+        // Obtener URL directa de audio con yt-dlp
+        const info = await ytDlp.getInfo(song.url);
+        const streamUrl = info.url; // URL directa de audio
+        const resource = createAudioResource(streamUrl, { inputType: StreamType.Arbitrary });
 
         serverQueue.player.play(resource);
 
