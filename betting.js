@@ -4,7 +4,7 @@ require('dotenv').config();
 class BettingSystem {
     constructor(economySystem) {
         this.economy = economySystem;
-        this.supabase = this.economySystem.supabase;
+        this.supabase = this.economySystem.initializeSupabase;
 
         this.config = {
             minBet: 100,
