@@ -306,21 +306,42 @@ class ModernMusicHandler {
                 throw new Error("URL de YouTube inválida: " + youtubeUrl);
             }
 
-            let stream;
+            let resource;
+
             try {
-                const info = await play.video_basic_info(youtubeUrl);
-                stream = await play.stream(info.video_details.url, { quality: 2 });
+                // Intentar con play-dl
+                const stream = await play.stream(song.url, { quality: 2 });
+                resource = createAudioResource(stream.stream, {
+                    inputType: stream.type,
+                    metadata: {
+                        title: song.title,
+                        artist: song.artist
+                    }
+                });
             } catch (err) {
-                console.error("Error al obtener stream:", err);
-                return { success: false, message: 'No se pudo reproducir la canción (formato no soportado).' };
-            }
-            const resource = createAudioResource(stream.stream, {
-                inputType: stream.type,
-                metadata: {
-                    title: song.title,
-                    artist: song.artist
+                console.error("⚠ Error con play-dl:", err.message);
+
+                // Si es error de CAPTCHA o URL inválida, intentar con ytdl-core
+                if (err.message.includes("Sign in to confirm") || err.code === "ERR_INVALID_URL") {
+                    console.log("🔄 Usando ytdl-core como fallback...");
+                    const ytdl = require("ytdl-core");
+
+                    const ytdlStream = ytdl(song.url, {
+                        filter: "audioonly",
+                        quality: "highestaudio",
+                        highWaterMark: 1 << 25 // Evita cortes en streams largos
+                    });
+
+                    resource = createAudioResource(ytdlStream, {
+                        metadata: {
+                            title: song.title,
+                            artist: song.artist
+                        }
+                    });
+                } else {
+                    throw err; // Otros errores, que los maneje el try/catch general
                 }
-            });
+            }
 
             player.play(resource);
             this.nowPlaying.set(guildId, song);
