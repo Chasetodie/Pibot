@@ -72,9 +72,6 @@ const commandHandler = new CommandHandler(counters, saveCounters);
 //Crear instancia del sistema de economia
 const economy = new EconomySystem();
 
-//Crear instancia del bot de música
-const musicBot = new musicHandler();
-
 //Crear instancia del sistema de Minijuegos
 const minigames = new MinigamesSystem(economy);
 
@@ -296,10 +293,6 @@ client.on('guildMemberAdd', async (member) => {
 client.on('interactionCreate', async (interaction) => {
     if (!interaction.isButton()) return;
 
-    if (interaction.isButton()) {
-        await musicHandler.handleButtonInteraction(interaction);
-    }
-
     try {
         // Si la interacción viene de un DM, necesitamos encontrar el guild y member
         let member;
@@ -335,12 +328,6 @@ client.on('interactionCreate', async (interaction) => {
                 });
                 return;
             }
-        }
-
-        // ===== MANEJO DE BOTONES DE MÚSICA (NUEVO) =====
-        if (interaction.customId.startsWith('music_')) {
-            await musicHandler.handleButtonInteraction(interaction);
-            return; // Importante: return para no continuar con otros botones
         }
 
         // AGREGAR ESTO: Manejo de botones del blackjack
@@ -502,7 +489,7 @@ client.on('messageCreate', async (message) => {
     await allCommands.processCommand(message);
 
     // Procesar comandos de música
-    await musicBot.processCommand(message);
+    await musicHandler.processCommand(message);
     
     //Procesar comandos de minijuegos
     await minigames.processCommand(message);
