@@ -5,20 +5,24 @@ const ytSearch = require('yt-search');
 const queue = new Map();
 const prefix = ">";
 
+// Función principal para reproducir o agregar canciones
 async function play(message, query) {
     const voiceChannel = message.member.voice.channel;
     if (!voiceChannel) return message.reply("¡Debes estar en un canal de voz!");
 
     let serverQueue = queue.get(message.guild.id);
 
-    // Buscar canción en YouTube
     let songInfo;
-    if (ytdl.validateURL(query)) {
-        songInfo = await ytdl.getInfo(query);
-    } else {
-        const searchResult = await ytSearch(query);
-        if (!searchResult || !searchResult.videos.length) return message.reply("No encontré la canción 😢");
-        songInfo = searchResult.videos[0];
+    try {
+        if (ytdl.validateURL(query)) {
+            songInfo = await ytdl.getInfo(query);
+        } else {
+            const searchResult = await ytSearch(query);
+            if (!searchResult || !searchResult.videos.length) return message.reply("No encontré la canción 😢");
+            songInfo = searchResult.videos[0];
+        }
+    } catch (err) {
+        return message.reply("Error al buscar la canción. Intenta con otro nombre o URL.");
     }
 
     const song = {
@@ -27,7 +31,6 @@ async function play(message, query) {
     };
 
     if (!serverQueue) {
-        // Crear cola
         const queueContruct = {
             voiceChannel,
             connection: null,
@@ -66,6 +69,7 @@ async function play(message, query) {
     }
 }
 
+// Función para reproducir la siguiente canción de la cola
 async function playSong(guildId) {
     const serverQueue = queue.get(guildId);
     if (!serverQueue) return;
@@ -78,6 +82,7 @@ async function playSong(guildId) {
     }
 
     try {
+        // Intentar reproducir la canción
         const stream = await ytdl(song.url, { filter: 'audioonly', highWaterMark: 1 << 25 });
         const resource = createAudioResource(stream, { inputType: StreamType.Opus });
         serverQueue.player.play(resource);
@@ -89,11 +94,22 @@ async function playSong(guildId) {
         });
     } catch (err) {
         console.error("Error al reproducir canción:", err.message);
+        // Si falla la URL, intentar buscar automáticamente otra
+        try {
+            const searchResult = await ytSearch(song.title);
+            if (searchResult && searchResult.videos.length > 0) {
+                serverQueue.songs[0].url = searchResult.videos[0].url;
+                return playSong(guildId); // Reintento con URL válida
+            }
+        } catch (e) {
+            console.error("Error al reintentar la canción:", e.message);
+        }
         serverQueue.songs.shift();
-        playSong(guildId);
+        playSong(guildId); // Reproducir siguiente canción
     }
 }
 
+// Comandos de música
 function skip(message) {
     const serverQueue = queue.get(message.guild.id);
     if (!serverQueue) return message.reply("No hay canciones para saltar 😢");
