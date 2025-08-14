@@ -3,6 +3,18 @@ const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('
 const play = require('play-dl');
 const SpotifyWebApi = require('spotify-web-api-node');
 
+// Cargar cookie de YouTube si existe en .env
+if (process.env.YT_COOKIE) {
+    play.setToken({
+        youtube: {
+            cookie: process.env.YT_COOKIE
+        }
+    });
+    console.log("✅ Cookie de YouTube cargada.");
+} else {
+    console.warn("⚠ No se encontró YT_COOKIE en las variables de entorno.");
+}
+
 class ModernMusicHandler {
     constructor() {
         this.connections = new Map();
