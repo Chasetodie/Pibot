@@ -276,47 +276,49 @@ class MusicHandler {
         const args = message.content.slice(1).trim().split(/ +/);
         const command = args.shift().toLowerCase();
         
-        console.log('🎯 Comando procesado:', command, 'Args:', args); // DEBUG
+        console.log('🎯 Comando procesado:', command, 'Args:', args);
+        console.log('🔍 Tipo de command:', typeof command); // NUEVO DEBUG
+        console.log('🔍 Command length:', command.length); // NUEVO DEBUG
 
         // Comandos de música
         switch (command) {
-            case '>play':
-            case '>p':
+            case 'play':
+            case 'p':
                 const query = args.join(' ');
                 await this.play(message, query);
                 break;
 
-            case '>pause':
+            case 'pause':
                 this.togglePause(message);
                 break;
 
-            case '>skip':
-            case '>s':
+            case 'skip':
+            case 's':
                 await this.skip(message);
                 break;
 
-            case '>stop':
+            case 'stop':
                 this.stop(message);
                 break;
 
-            case '>queue':
-            case '>q':
+            case 'queue':
+            case 'q':
                 this.showQueue(message);
                 break;
 
-            case '>nowplaying':
-            case '>np':
+            case 'nowplaying':
+            case 'np':
                 this.nowPlaying(message);
                 break;
 
-            case '>volume':
-            case '>vol':
+            case 'volume':
+            case 'vol':
                 const volume = args[0];
                 this.setVolume(message, volume);
                 break;
 
-            case '>helpmusic':
-            case '>commandsmusic':
+            case 'helpmusic':
+            case 'commandsmusic':
                 const { EmbedBuilder } = require('discord.js');
                 const embed = new EmbedBuilder()
                     .setColor('#3498DB')
