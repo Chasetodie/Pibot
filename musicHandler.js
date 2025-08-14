@@ -285,7 +285,7 @@ class ModernMusicHandler {
         const song = queue[0];
 
         // 🛠 Debug para ver qué está llegando
-        console.log("🎯 Canción a reproducir:", JSON.stringify(song, null, 2));
+        console.log("🎯 Canción a reproducir:", song.url, typeof song.url);
 
         // 🚫 Si no hay URL, saltar
         if (!song || !song.url || typeof song.url !== "string") {
@@ -296,6 +296,9 @@ class ModernMusicHandler {
 
         try {
             console.log(`🎵 Reproduciendo: "${song.title}"`);
+            song.url = String(song.url).trim();
+            song.url = song.url.replace(/;$/, '');
+
             const stream = await play.stream(song.url, { quality: 2 });
 
             const resource = createAudioResource(stream.stream, {
