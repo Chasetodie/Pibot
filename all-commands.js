@@ -809,7 +809,7 @@ class AllCommands {
         
         await message.reply({ 
             embeds: [embed],                 
-            content: `💼 Trabajaste y ganaste **${result.finalEarnings} π-b$**${eventMessage}`
+            //content: `💼 Trabajaste y ganaste **${result.finalEarnings} π-b$**${eventMessage}`
         });
 
         // *** NUEVO: VERIFICAR ACHIEVEMENTS DESPUÉS DE TRABAJAR ***
