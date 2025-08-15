@@ -844,7 +844,11 @@ class AchievementsSystem {
                 })
                 .setTimestamp();
 
-            await message.channel.send({ embeds: [embed] });
+            await message.channel.send({
+                content: `<@${message.author.id}>`,
+                embeds: [embed],
+                allowedMentions: { users: [message.author.id] }
+            });
         }
     }
    
