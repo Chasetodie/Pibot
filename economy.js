@@ -523,7 +523,7 @@ class EconomySystem {
         let eventMessage = '';
         let finalEarnings = amount;
 
-        for (const event of eventsSystem.getActiveEvents()) {
+        /*for (const event of eventsSystem.getActiveEvents()) {
             if (event.type === 'money_rain') {
                 finalEarnings = Math.floor(amount * 1.75); // 💰 +50%
                 eventMessage = `\n💰 **Lluvia de Dinero** (+${finalEarnings - amount} π-b$)`;
@@ -543,7 +543,7 @@ class EconomySystem {
                 finalEarnings = Math.floor(amount * 2);
                 eventMessage = `\n🎉 **Aniversario del Servidor** (+${finalEarnings - amount} π-b$)`
             }
-        }
+        }*/
               
         const updateData = {
             last_daily: Date.now(),
@@ -837,7 +837,7 @@ class EconomySystem {
         let eventMessage = '';
         let finalEarnings = amount;
 
-        for (const event of eventsSystem.getActiveEvents()) {
+        /*for (const event of eventsSystem.getActiveEvents()) {
             if (event.type === 'money_rain') {
                 finalEarnings = Math.floor(amount * 1.5); // 💰 +50%
                 eventMessage = `\n💰 **Lluvia de Dinero** (+${finalEarnings - amount} π-b$)`;
@@ -857,7 +857,7 @@ class EconomySystem {
                 finalEarnings = Math.floor(amount * 2);
                 eventMessage = `\n🎉 **Aniversario del Servidor** (+${finalEarnings - amount} π-b$)`
             }
-        }
+        }*/
         
         updateData.balance = user.balance + finalEarnings;
         updateData.stats.total_earned = (user.stats?.total_earned || 0) + finalEarnings;
