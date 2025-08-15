@@ -3,6 +3,7 @@ const { EmbedBuilder } = require('discord.js');
 class MissionsSystem {
     constructor(economySystem) {
         this.economy = economySystem;
+        this.events = null;
         
         // Todas las misiones disponibles
         this.availableMissions = {
@@ -516,12 +517,31 @@ class MissionsSystem {
                 
                 // Dar recompensas
                 if (mission.reward.money) {
-                    let rewardFinal = mission.reward.money;
+                    let finalEarnings = mission.reward.money;
+                    let eventMessage = '';
+
+                    for (const event of eventsSystem.getActiveEvents()) {
+                        if (event.type === 'fever_time') {
+                            finalEarnings = Math.floor(mission.reward.money * 1.4); // 🔥 +30%
+                            eventMessage = `\n🔥 **Tiempo Fiebre** (+${finalEarnings - mission.reward.money} π-b$)`;
+                            break;
+                        }
+                        else if (event.type === 'market_crash') {
+                            finalEarnings = Math.floor(mission.reward.money * 0.8); // 📉 -30%
+                            eventMessage = `\n📉 **Crisis del Mercado** (-${mission.reward.money - finalEarnings} π-b$)`;
+                            break;
+                        }
+                        else if (event.type === 'server_anniversary') {
+                            finalEarnings = Math.floor(mission.reward.money * 2);
+                            eventMessage = `\n🎉 **Aniversario del Servidor** (+${finalEarnings - mission.reward.money} π-b$)`
+                        }
+                    }
                     
-                    updateData.balance = user.balance + rewardFinal;
+                    updateData.balance = user.balance + finalEarnings;
                     updateData.stats = {
                         ...user.stats,
-                        totalEarned: (user.stats.totalEarned || 0) + rewardFinal
+                        totalEarned: (user.stats.totalEarned || 0) + finalEarnings,
+                        message_missions: eventMessage
                     };
                 }
             }
@@ -735,6 +755,12 @@ class MissionsSystem {
             console.error('❌ Error en sistema de misiones:', error);
             await message.reply('❌ Ocurrió un error en el sistema de misiones. Intenta de nuevo.');
         }
+    }
+        
+    // Método para conectar eventos
+    connectEventsSystem(eventsSystem) {
+        this.events = eventsSystem;
+        console.log('🎮 Sistema de eventos conectado a minijuegos');
     }
 }
 

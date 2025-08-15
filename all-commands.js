@@ -806,6 +806,8 @@ class AllCommands {
             )
             .setColor('#28a745')
             .setTimestamp();
+
+        await message.reply({ embeds: [embed] });
         
         // *** NUEVO: VERIFICAR ACHIEVEMENTS DESPUÉS DE TRABAJAR ***
         if (result.success && this.achievements) {

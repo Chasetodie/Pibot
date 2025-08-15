@@ -4,3 +4,5 @@ missions: fever_time, market_crash, server_anniversary
 achievements: fever_time, market_crash, server_anniversary
 
 Treasure: TODOS
+
+MANDAR MENSAJE DE MISSIONS Y ACHIEVEMENTS A USER.STATS.MESSAGE_ACHIEVEMENTS O MESSAGE_MISSIONS

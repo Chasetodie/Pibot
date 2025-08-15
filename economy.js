@@ -108,7 +108,9 @@ class EconomySystem {
                     robberies_successful: 0,
                     moneyStolen: 0,
                     timesRobbed: 0,
-                    money_lost_to_robbers: 0
+                    money_lost_to_robbers: 0,
+                    message_missions: "",
+                    message_achievements: ""
                 },
                 bet_stats: {
                     wins: 0,
@@ -543,6 +545,7 @@ class EconomySystem {
             else if (event.type === 'server_anniversary') {
                 finalEarnings = Math.floor(amount * 2);
                 eventMessage = `\n🎉 **Aniversario del Servidor** (+${finalEarnings - amount} π-b$)`
+                break;
             }
         }
               
@@ -857,6 +860,7 @@ class EconomySystem {
             else if (event.type === 'server_anniversary') {
                 finalEarnings = Math.floor(amount * 2);
                 eventMessage = `\n🎉 **Aniversario del Servidor** (+${finalEarnings - amount} π-b$)`
+                break;
             }
         }
         
