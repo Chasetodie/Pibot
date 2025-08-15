@@ -526,7 +526,7 @@ class EconomySystem {
         let eventMessage = '';
         let finalEarnings = amount;
 
-        for (const event of eventsSystem.getActiveEvents()) {
+        for (const event of this.events.getActiveEvents()) {
             if (event.type === 'money_rain') {
                 finalEarnings = Math.floor(amount * 1.75); // 💰 +50%
                 eventMessage = `\n💰 **Lluvia de Dinero** (+${finalEarnings - amount} π-b$)`;

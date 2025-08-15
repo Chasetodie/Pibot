@@ -1,4 +1,5 @@
 const { EmbedBuilder } = require('discord.js');
+const EventsSystem = require('./events');
 
 class MissionsSystem {
     constructor(economySystem) {
@@ -520,7 +521,7 @@ class MissionsSystem {
                     let finalEarnings = mission.reward.money;
                     let eventMessage = '';
 
-                    for (const event of eventsSystem.getActiveEvents()) {
+                    for (const event of this.events.getActiveEvents()) {
                         if (event.type === 'fever_time') {
                             finalEarnings = Math.floor(mission.reward.money * 1.4); // 🔥 +30%
                             eventMessage = `\n🔥 **Tiempo Fiebre** (+${finalEarnings - mission.reward.money} π-b$)`;
