@@ -137,7 +137,7 @@ class AllCommands {
             .addFields(
                 {
                     name: '💰 Ganaste',
-                    value: `**+${this.formatNumber(result.amount)}** ${this.economy.config.currencySymbol}${result.eventMessage}`,
+                    value: `**+${this.formatNumber(result.amount)}** ${this.economy.config.currencySymbol}`,
                     inline: true
                 },
                 {
@@ -149,7 +149,8 @@ class AllCommands {
                     name: '💳 Balance Actual',
                     value: `**${this.formatNumber(result.newBalance)}** ${this.economy.config.currencySymbol}`,
                     inline: true
-                }
+                },
+                { name: 'Extra por Eventos', value: `${result.eventMessage || "No hay eventos Activos"} `, inline: false }
             )
             .setColor('#00FF00')
             .setFooter({ text: 'Vuelve mañana por más!' })
@@ -792,7 +793,7 @@ class AllCommands {
             .setTitle('✅ ¡Trabajo Completado!')
             .setDescription(`**${result.jobName}**\n\n${result.message}`)
             .addFields(
-                { name: '💰 Ganaste', value: `+${this.formatNumber(result.amount)} π-b$${result.eventMessage}`, inline: true },
+                { name: '💰 Ganaste', value: `+${this.formatNumber(result.amount)} π-b$`, inline: true },
                 {
                     name: '💸 Balance Anterior',
                     value: `${this.formatNumber(result.oldBalance)} π-b$`,
@@ -802,7 +803,8 @@ class AllCommands {
                     name: '💳 Balance Actual',
                     value: `${this.formatNumber(result.newBalance)} π-b$`,
                     inline: true
-                }
+                },
+                { name: 'Extra por Eventos', value: `${result.eventMessage || "No hay eventos Activos"} `, inline: false }
             )
             .setColor('#28a745')
             .setTimestamp();

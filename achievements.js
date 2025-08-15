@@ -1,8 +1,10 @@
 const { EmbedBuilder } = require('discord.js');
+const EventsSystem = require('./events');
 
 class AchievementsSystem {
     constructor(economySystem) {
         this.economy = economySystem;
+        this.events = null;
         
         // Definir todos los logros disponibles
         this.achievements = {
@@ -435,12 +437,31 @@ class AchievementsSystem {
                 
                 // Dar recompensas
                 if (achievement.reward.money) {
-                    let rewardFinal = achievement.reward.money;
+                    let finalEarnings = achievement.reward.money;
+                    let eventMessage = '';
+
+                    for (const event of this.events.getActiveEvents()) {
+                        if (event.type === 'fever_time') {
+                            finalEarnings = Math.floor(achievement.reward.money * 1.6); // 🔥 +30%
+                            eventMessage = `🔥 **Tiempo Fiebre** (+${finalEarnings - achievement.reward.money} π-b$)`;
+                            break;
+                        }
+                        else if (event.type === 'market_crash') {
+                            finalEarnings = Math.floor(achievement.reward.money * 0.8); // 📉 -30%
+                            eventMessage = `📉 **Crisis del Mercado** (-${achievement.reward.money - finalEarnings} π-b$)`;
+                            break;
+                        }
+                        else if (event.type === 'server_anniversary') {
+                            finalEarnings = Math.floor(achievement.reward.money * 2);
+                            eventMessage = `🎉 **Aniversario del Servidor** (+${finalEarnings - achievement.reward.money} π-b$)`
+                        }
+                    }
 
                     updateData.balance = user.balance + rewardFinal;
                     updateData.stats = {
                         ...user.stats,
-                        totalEarned: (user.stats.totalEarned || 0) + rewardFinal
+                        totalEarned: (user.stats.totalEarned || 0) + rewardFinal,
+                        message_achievements: eventMessage
                     };
                 }
 
@@ -837,11 +858,14 @@ class AchievementsSystem {
                 .setDescription(`${rarityEmoji} ${achievement.emoji} **${achievement.name}**\n\n*${achievement.description}*`)
                 .setColor(rarityColor)
 //                .setThumbnail(achievement.emoji)
-                .addFields({
-                    name: 'Recompensas',
-                    value: `${achievement.reward.money ? `+${this.formatNumber(achievement.reward.money)} π-b$` : ''}\n${achievement.reward.xp ? `+${this.formatNumber(achievement.reward.xp)} XP` : ''}`.trim(),
-                    inline: true
-                })
+                .addFields(
+                    {
+                        name: 'Recompensas',
+                        value: `${achievement.reward.money ? `+${this.formatNumber(achievement.reward.money)} π-b$` : ''}\n${achievement.reward.xp ? `+${this.formatNumber(achievement.reward.xp)} XP` : ''}`.trim(),
+                        inline: true
+                    },
+                    { name: 'Extra por Eventos', value: `${user.stats.message_achievements || "No hay eventos Activos"} `, inline: false }                
+                )
                 .setTimestamp();
 
             await message.channel.send({
@@ -891,6 +915,12 @@ class AchievementsSystem {
             console.error('❌ Error en sistema de logros:', error);
             await message.reply('❌ Ocurrió un error en el sistema de logros. Intenta de nuevo.');
         }
+    }
+
+    // Método para conectar eventos
+    connectEventsSystem(eventsSystem) {
+        this.events = eventsSystem;
+        console.log('🎮 Sistema de eventos conectado a minijuegos');
     }
 }
 

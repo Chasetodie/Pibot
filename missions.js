@@ -524,17 +524,17 @@ class MissionsSystem {
                     for (const event of this.events.getActiveEvents()) {
                         if (event.type === 'fever_time') {
                             finalEarnings = Math.floor(mission.reward.money * 1.4); // 🔥 +30%
-                            eventMessage = `\n🔥 **Tiempo Fiebre** (+${finalEarnings - mission.reward.money} π-b$)`;
+                            eventMessage = `🔥 **Tiempo Fiebre** (+${finalEarnings - mission.reward.money} π-b$)`;
                             break;
                         }
                         else if (event.type === 'market_crash') {
                             finalEarnings = Math.floor(mission.reward.money * 0.8); // 📉 -30%
-                            eventMessage = `\n📉 **Crisis del Mercado** (-${mission.reward.money - finalEarnings} π-b$)`;
+                            eventMessage = `📉 **Crisis del Mercado** (-${mission.reward.money - finalEarnings} π-b$)`;
                             break;
                         }
                         else if (event.type === 'server_anniversary') {
                             finalEarnings = Math.floor(mission.reward.money * 2);
-                            eventMessage = `\n🎉 **Aniversario del Servidor** (+${finalEarnings - mission.reward.money} π-b$)`
+                            eventMessage = `🎉 **Aniversario del Servidor** (+${finalEarnings - mission.reward.money} π-b$)`
                         }
                     }
                     
@@ -699,6 +699,8 @@ class MissionsSystem {
     // Notificar misiones completadas
     async notifyCompletedMissions(message, completedMissions) {
         if (completedMissions.length === 0) return;
+
+        const user = await this.economy.getUser(message.author.id);
         
         for (const missionId of completedMissions) {
             const mission = this.availableMissions[missionId];
@@ -718,11 +720,14 @@ class MissionsSystem {
             if (mission.reward.xp) rewards.push(`+${mission.reward.xp} XP`);
             
             if (rewards.length > 0) {
-                embed.addFields({
-                    name: '🎁 Recompensas',
-                    value: rewards.join('\n'),
-                    inline: true
-                });
+                embed.addFields(
+                    {
+                        name: '🎁 Recompensas',
+                        value: rewards.join('\n'),
+                        inline: true
+                    },
+                    { name: 'Extra por Eventos', value: `${user.stats.message_missions || "No hay eventos Activos"} `, inline: false }
+                );
             }
             
             await message.channel.send({ 

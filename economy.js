@@ -534,17 +534,17 @@ class EconomySystem {
             }
             else if (event.type === 'fever_time') {
                 finalEarnings = Math.floor(amount * 1.2); // 🔥 +30%
-                eventMessage = `\n🔥 **Tiempo Fiebre** (+${finalEarnings - amount} π-b$)`;
+                eventMessage = `🔥 **Tiempo Fiebre** (+${finalEarnings - amount} π-b$)`;
                 break;
             }
             else if (event.type === 'market_crash') {
                 finalEarnings = Math.floor(amount * 0.8); // 📉 -30%
-                eventMessage = `\n📉 **Crisis del Mercado** (-${amount - finalEarnings} π-b$)`;
+                eventMessage = `📉 **Crisis del Mercado** (-${amount - finalEarnings} π-b$)`;
                 break;
             }
             else if (event.type === 'server_anniversary') {
                 finalEarnings = Math.floor(amount * 2);
-                eventMessage = `\n🎉 **Aniversario del Servidor** (+${finalEarnings - amount} π-b$)`
+                eventMessage = `🎉 **Aniversario del Servidor** (+${finalEarnings - amount} π-b$)`
                 break;
             }
         }
@@ -844,22 +844,22 @@ class EconomySystem {
         for (const event of this.events.getActiveEvents()) {
             if (event.type === 'money_rain') {
                 finalEarnings = Math.floor(amount * 1.5); // 💰 +50%
-                eventMessage = `\n💰 **Lluvia de Dinero** (+${finalEarnings - amount} π-b$)`;
+                eventMessage = `💰 **Lluvia de Dinero** (+${finalEarnings - amount} π-b$)`;
                 break;
             }
             else if (event.type === 'fever_time') {
                 finalEarnings = Math.floor(amount * 1.3); // 🔥 +30%
-                eventMessage = `\n🔥 **Tiempo Fiebre** (+${finalEarnings - amount} π-b$)`;
+                eventMessage = `🔥 **Tiempo Fiebre** (+${finalEarnings - amount} π-b$)`;
                 break;
             }
             else if (event.type === 'market_crash') {
                 finalEarnings = Math.floor(amount * 0.7); // 📉 -30%
-                eventMessage = `\n📉 **Crisis del Mercado** (-${amount - finalEarnings} π-b$)`;
+                eventMessage = `📉 **Crisis del Mercado** (-${amount - finalEarnings} π-b$)`;
                 break;
             }
             else if (event.type === 'server_anniversary') {
                 finalEarnings = Math.floor(amount * 2);
-                eventMessage = `\n🎉 **Aniversario del Servidor** (+${finalEarnings - amount} π-b$)`
+                eventMessage = `🎉 **Aniversario del Servidor** (+${finalEarnings - amount} π-b$)`
                 break;
             }
         }
