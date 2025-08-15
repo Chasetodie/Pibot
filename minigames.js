@@ -3594,13 +3594,13 @@ class MinigamesSystem {
                     break;
                 case '>uno!':
                 case '>uno':
-                    const unogame = this.findActiveUnoGame(message.channel.id, userId);
+                    const unogame = this.findActiveUnoGame(message.channel.id, message.author.id);
                     if (unogame){
                         await this.handleUnoCall(message, unogame);
                     }
                     break;
                 case '>unocallout':
-                    const calloutgame = this.findActiveUnoGame(message.channel.id, userId);
+                    const calloutgame = this.findActiveUnoGame(message.channel.id, message.author.id);
                     if (calloutgame) {
                         await this.handleUnoCallout(message, calloutgame);
                     }
