@@ -86,9 +86,9 @@ const achievements = new AchievementsSystem(economy);
 //Crear instancia del sistema de Eventos
 const events = new EventsSystem(economy);
 /*missions.connectEventsSystem(events);
-achievements.connectEventsSystem(events);
+achievements.connectEventsSystem(events);*/
 economy.connectEventsSystem(events);
-minigames.connectEventsSystem(events);*/
+//minigames.connectEventsSystem(events);
 
 setTimeout(async () => {
     await events.loadEvents();

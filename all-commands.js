@@ -137,7 +137,7 @@ class AllCommands {
             .addFields(
                 {
                     name: '💰 Ganaste',
-                    value: `**+${this.formatNumber(result.amount)}** ${this.economy.config.currencySymbol}`,
+                    value: `**+${this.formatNumber(result.amount)}** ${this.economy.config.currencySymbol}${result.eventMessage}`,
                     inline: true
                 },
                 {
@@ -792,7 +792,7 @@ class AllCommands {
             .setTitle('✅ ¡Trabajo Completado!')
             .setDescription(`**${result.jobName}**\n\n${result.message}`)
             .addFields(
-                { name: '💰 Ganaste', value: `+${this.formatNumber(result.amount)} π-b$`, inline: true },
+                { name: '💰 Ganaste', value: `+${this.formatNumber(result.amount)} π-b$${result.eventMessage}`, inline: true },
                 {
                     name: '💸 Balance Anterior',
                     value: `${this.formatNumber(result.oldBalance)} π-b$`,
@@ -807,11 +807,6 @@ class AllCommands {
             .setColor('#28a745')
             .setTimestamp();
         
-        await message.reply({ 
-            embeds: [embed],                 
-            //content: `💼 Trabajaste y ganaste **${result.finalEarnings} π-b$**${eventMessage}`
-        });
-
         // *** NUEVO: VERIFICAR ACHIEVEMENTS DESPUÉS DE TRABAJAR ***
         if (result.success && this.achievements) {
             try {
