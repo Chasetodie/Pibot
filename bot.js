@@ -88,11 +88,11 @@ const events = new EventsSystem(economy);
 missions.connectEventsSystem(events);
 achievements.connectEventsSystem(events);
 economy.connectEventsSystem(events);
-//minigames.connectEventsSystem(events);
+minigames.connectEventsSystem(events);
 
 setTimeout(async () => {
     await events.loadEvents();
-    console.log('✅ Sistemas de economía y eventos listos');
+    console.log('✅ Sistemas de eventos listo');
 }, 2000);
 
 const betting = new BettingSystem(economy);
@@ -105,9 +105,6 @@ minigames.achievements = achievements;
 
 economy.missions = missions;
 minigames.missions = missions;
-
-/*economy.events = events;
-minigames.events = events;*/
 
 // Rutas del servidor web
 app.get('/', (req, res) => {

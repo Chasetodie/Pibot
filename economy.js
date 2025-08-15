@@ -1214,7 +1214,7 @@ isBeingRobbed(userId) {
     // Método para conectar eventos
     connectEventsSystem(eventsSystem) {
         this.events = eventsSystem;
-        console.log('🎮 Sistema de eventos conectado a minijuegos');
+        console.log('🎮 Sistema de eventos conectado a economia');
     }
 }
 

@@ -2,6 +2,7 @@ const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, AttachmentBu
 const { createClient } = require('@supabase/supabase-js');
 const fs = require('fs');
 const path = require('path');
+const EventsSystem = require('./events');
 
 // Colores y tipos de cartas UNO
 const UNO_COLORS = ['red', 'yellow', 'green', 'blue'];
@@ -12,6 +13,7 @@ const UNO_WILD_CARDS = ['Wild', 'Wild+4'];
 class MinigamesSystem {
     constructor(economySystem) {
         this.economy = economySystem;
+        this.events = null;
         this.activeGames = new Map(); // Para manejar juegos en progreso
         this.supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_ANON_KEY);
         
@@ -250,9 +252,27 @@ class MinigamesSystem {
         if (won) {
             const winAmount = Math.floor(betAmount * this.config.coinflip.winMultiplier);
             const profit = winAmount - betAmount;
-            let finalWinAmount = profit;
+            let finalEarnings = profit;
+            let eventMessage = '';
+
+            for (const event of this.events.getActiveEvents()) {
+                if (event.type === 'fever_time') {
+                    finalEarnings = Math.floor(profit * 1.5); // 🔥 +30%
+                    eventMessage = `🔥 **Tiempo Fiebre** (+${finalEarnings - profit} π-b$)`;
+                    break;
+                }
+                else if (event.type === 'market_crash') {
+                    finalEarnings = Math.floor(profit * 1.5); // 📉 -30%
+                    eventMessage = `📉 **Crisis del Mercado** (-${profit - finalEarnings} π-b$)`;
+                    break;
+                }
+                else if (event.type === 'server_anniversary') {
+                    finalEarnings = Math.floor(profit * 2);
+                    eventMessage = `🎉 **Aniversario del Servidor** (+${finalEarnings - profit} π-b$)`
+                }
+            }
             
-            await this.economy.addMoney(userId, finalWinAmount, 'coinflip_win');            
+            await this.economy.addMoney(userId, finalEarnings, 'coinflip_win');            
             await this.economy.updateUser(userId, updateData);
 
             // *** NUEVO: ACTUALIZAR ESTADÍSTICAS DE ACHIEVEMENTS ***
@@ -276,25 +296,8 @@ class MinigamesSystem {
                     { name: '💰 Ganancia', value: `+${this.formatNumber(profit)} π-b$`, inline: true },
                     { name: '💸 Balance Antiguo', value: `${this.formatNumber(user.balance)} π-b$`, inline: false },
                     { name: '💳 Balance Actual', value: `${this.formatNumber(user.balance + profit)} π-b$`, inline: false },
+                    { name: 'Extra por Eventos', value: `${eventMessage || "No hay eventos Activos"} `, inline: false }
                 );
-
-            // Si hay eventos aplicados
-            if (appliedEvents && appliedEvents.length > 0) {
-                let eventText = '';
-                for (const event of appliedEvents) {
-                    eventText += `${event.emoji} **${event.name}** activo!\n`;
-                    
-                    if (event.specialReward) {
-                        eventText += `🎁 +${event.specialReward} π-b$ de tesoro encontrado!\n`;
-                    }
-                }
-                
-                embed.addFields({
-                    name: '🎉 Eventos Activos',
-                    value: eventText,
-                    inline: false
-                });
-            }
         } else {
             await this.economy.removeMoney(userId, betAmount, 'coinflip_loss');            
             await this.economy.updateUser(userId, updateData);
@@ -437,11 +440,27 @@ class MinigamesSystem {
         if (won) {
             const winAmount = Math.floor(betAmount * multiplier);
             const profit = winAmount - betAmount;
+            let finalEarnings = profit;
+            let eventMessage = '';
 
-            let finalWinAmount = profit;
-            let appliedEvents = [];
+            for (const event of this.events.getActiveEvents()) {
+                if (event.type === 'fever_time') {
+                    finalEarnings = Math.floor(profit * 1.5); // 🔥 +30%
+                    eventMessage = `🔥 **Tiempo Fiebre** (+${finalEarnings - profit} π-b$)`;
+                    break;
+                }
+                else if (event.type === 'market_crash') {
+                    finalEarnings = Math.floor(profit * 1.5); // 📉 -30%
+                    eventMessage = `📉 **Crisis del Mercado** (-${profit - finalEarnings} π-b$)`;
+                    break;
+                }
+                else if (event.type === 'server_anniversary') {
+                    finalEarnings = Math.floor(profit * 2);
+                    eventMessage = `🎉 **Aniversario del Servidor** (+${finalEarnings - profit} π-b$)`
+                }
+            }
                        
-            await this.economy.addMoney(userId, finalWinAmount, 'dice_win');
+            await this.economy.addMoney(userId, finalEarnings, 'dice_win');
             await this.economy.updateUser(userId, updateData);
 
             // *** NUEVO: ACTUALIZAR ESTADÍSTICAS DE ACHIEVEMENTS ***
@@ -463,26 +482,9 @@ class MinigamesSystem {
                     { name: '💰 Multiplicador', value: `x${multiplier}`, inline: true },
                     { name: '💰 Ganancia', value: `+${this.formatNumber(profit)} π-b$`, inline: false },
                     { name: '💸 Balance Antiguo', value: `${this.formatNumber(user.balance)} π-b$`, inline: false },
-                    { name: '💳 Balance Actual', value: `${this.formatNumber(user.balance + profit)} π-b$`, inline: false }
+                    { name: '💳 Balance Actual', value: `${this.formatNumber(user.balance + profit)} π-b$`, inline: false },
+                    { name: 'Extra por Eventos', value: `${eventMessage || "No hay eventos Activos"} `, inline: false }
                 );
-
-            // Si hay eventos aplicados
-            if (appliedEvents && appliedEvents.length > 0) {
-                let eventText = '';
-                for (const event of appliedEvents) {
-                    eventText += `${event.emoji} **${event.name}** activo!\n`;
-                    
-                    if (event.specialReward) {
-                        eventText += `🎁 +${event.specialReward} π-b$ de tesoro encontrado!\n`;
-                    }
-                }
-                
-                embed.addFields({
-                    name: '🎉 Eventos Activos',
-                    value: eventText,
-                    inline: false
-                });
-            }
         } else {
             await this.economy.removeMoney(userId, betAmount, 'dice_loss');
             await this.economy.updateUser(userId, updateData);
@@ -625,10 +627,27 @@ class MinigamesSystem {
             const winAmount = betAmount * this.config.lottery.winMultiplier;
             const profit = winAmount - betAmount;
 
-            let finalWinAmount = profit;
-            let appliedEvents = [];
+            let finalEarnings = profit;
+            let eventMessage = '';
+
+            for (const event of this.events.getActiveEvents()) {
+                if (event.type === 'fever_time') {
+                    finalEarnings = Math.floor(profit * 1.5); // 🔥 +30%
+                    eventMessage = `🔥 **Tiempo Fiebre** (+${finalEarnings - profit} π-b$)`;
+                    break;
+                }
+                else if (event.type === 'market_crash') {
+                    finalEarnings = Math.floor(profit * 1.5); // 📉 -30%
+                    eventMessage = `📉 **Crisis del Mercado** (-${profit - finalEarnings} π-b$)`;
+                    break;
+                }
+                else if (event.type === 'server_anniversary') {
+                    finalEarnings = Math.floor(profit * 2);
+                    eventMessage = `🎉 **Aniversario del Servidor** (+${finalEarnings - profit} π-b$)`
+                }
+            }
             
-            await this.economy.addMoney(userId, finalWinAmount, 'lottery_win');     
+            await this.economy.addMoney(userId, finalEarnings, 'lottery_win');     
             // AGREGAR ESTAS LÍNEAS:
             const updateDataLottery = {
                 stats: {
@@ -658,26 +677,9 @@ class MinigamesSystem {
                     { name: '💎 Multiplicador', value: `x${this.config.lottery.winMultiplier}`, inline: true },
                     { name: '🤑 Ganancia Total', value: `+${this.formatNumber(profit)} π-b$`, inline: true },
                     { name: '💸 Balance Anterior', value: `${this.formatNumber(user.balance)} π-b$`, inline: false },
-                    { name: '💳 Balance Actual', value: `${this.formatNumber(user.balance + profit)} π-b$ 🚀`, inline: false }
+                    { name: '💳 Balance Actual', value: `${this.formatNumber(user.balance + profit)} π-b$ 🚀`, inline: false },
+                    { name: 'Extra por Eventos', value: `${eventMessage || "No hay eventos Activos"} `, inline: false }
                 );
-
-            // Si hay eventos aplicados
-            if (appliedEvents && appliedEvents.length > 0) {
-                let eventText = '';
-                for (const event of appliedEvents) {
-                    eventText += `${event.emoji} **${event.name}** activo!\n`;
-                    
-                    if (event.specialReward) {
-                        eventText += `🎁 +${event.specialReward} π-b$ de tesoro encontrado!\n`;
-                    }
-                }
-                
-                embed.addFields({
-                    name: '🎉 Eventos Activos',
-                    value: eventText,
-                    inline: false
-                });
-            }
         } else {
             await this.economy.removeMoney(userId, betAmount, 'lottery_loss');
             await this.economy.updateUser(userId, updateData);
@@ -1052,8 +1054,8 @@ class MinigamesSystem {
         let resultText = '';
         let color = '#FF0000';
 
-        let finalWinAmount = 0;
-        let appliedEvents = [];
+        let finalEarnings = 0;
+        let eventMessage = '';
         
         switch (result) {
             case 'blackjack':
@@ -1062,9 +1064,26 @@ class MinigamesSystem {
                 resultText = '🎉 **¡BLACKJACK NATURAL!**';
                 color = '#00FF00';
 
-                finalWinAmount = profit
+                finalEarnings = profit
 
-                await this.economy.addMoney(userId, finalWinAmount, 'blackjack_win');
+                for (const event of this.events.getActiveEvents()) {
+                    if (event.type === 'fever_time') {
+                        finalEarnings = Math.floor(profit * 1.5); // 🔥 +30%
+                        eventMessage = `🔥 **Tiempo Fiebre** (+${finalEarnings - profit} π-b$)`;
+                        break;
+                    }
+                    else if (event.type === 'market_crash') {
+                        finalEarnings = Math.floor(profit * 1.5); // 📉 -30%
+                        eventMessage = `📉 **Crisis del Mercado** (-${profit - finalEarnings} π-b$)`;
+                        break;
+                    }
+                    else if (event.type === 'server_anniversary') {
+                        finalEarnings = Math.floor(profit * 2);
+                        eventMessage = `🎉 **Aniversario del Servidor** (+${finalEarnings - profit} π-b$)`
+                    }
+                }
+
+                await this.economy.addMoney(userId, finalEarnings, 'blackjack_win');
 
                 // *** NUEVO: ACTUALIZAR ESTADÍSTICAS DE ACHIEVEMENTS ***
                 if (this.achievements) {
@@ -1087,9 +1106,26 @@ class MinigamesSystem {
                 resultText = result === 'dealer_bust' ? '🎉 **¡DEALER SE PASÓ!**' : '🎉 **¡GANASTE!**';
                 color = '#00FF00';
 
-                finalWinAmount = profit
+                finalEarnings = profit
+
+                for (const event of this.events.getActiveEvents()) {
+                    if (event.type === 'fever_time') {
+                        finalEarnings = Math.floor(profit * 1.5); // 🔥 +30%
+                        eventMessage = `🔥 **Tiempo Fiebre** (+${finalEarnings - profit} π-b$)`;
+                        break;
+                    }
+                    else if (event.type === 'market_crash') {
+                        finalEarnings = Math.floor(profit * 1.5); // 📉 -30%
+                        eventMessage = `📉 **Crisis del Mercado** (-${profit - finalEarnings} π-b$)`;
+                        break;
+                    }
+                    else if (event.type === 'server_anniversary') {
+                        finalEarnings = Math.floor(profit * 2);
+                        eventMessage = `🎉 **Aniversario del Servidor** (+${finalEarnings - profit} π-b$)`
+                    }
+                }
                 
-                await this.economy.addMoney(userId, finalWinAmount, 'blackjack_win');
+                await this.economy.addMoney(userId, finalEarnings, 'blackjack_win');
 
                 // *** NUEVO: ACTUALIZAR ESTADÍSTICAS DE ACHIEVEMENTS ***
                 if (this.achievements) {
@@ -1162,13 +1198,14 @@ class MinigamesSystem {
                     name: '💰 Apuesta', 
                     value: `${this.formatNumber(finalBet)} π-b$`, 
                     inline: true 
-                }
+                },
             );
     
         if (profit > 0) {
             embed.addFields(
                 { name: '💰 Ganancia', value: `+${this.formatNumber(profit)} π-b$`, inline: true },
-                { name: '💳 Balance Actual', value: `${this.formatNumber(user.balance + profit)} π-b$`, inline: true }
+                { name: '💳 Balance Actual', value: `${this.formatNumber(user.balance + profit)} π-b$`, inline: true },
+                { name: 'Extra por Eventos', value: `${eventMessage || "No hay eventos Activos"} `, inline: false }
             );
         } else if (profit < 0) {
             embed.addFields(
@@ -1183,24 +1220,6 @@ class MinigamesSystem {
         
         if (doubled) {
             embed.addFields({ name: '🔄 Especial', value: 'Apuesta doblada', inline: true });
-        }
-
-        // Si hay eventos aplicados
-        if (appliedEvents && appliedEvents.length > 0) {
-            let eventText = '';
-            for (const event of appliedEvents) {
-                eventText += `${event.emoji} **${event.name}** activo!\n`;
-                
-                if (event.specialReward) {
-                    eventText += `🎁 +${event.specialReward} π-b$ de tesoro encontrado!\n`;
-                }
-            }
-            
-            embed.addFields({
-                name: '🎉 Eventos Activos',
-                value: eventText,
-                inline: false
-            });
         }
     
         embed.setTimestamp();
@@ -1419,10 +1438,27 @@ class MinigamesSystem {
             const winAmount = Math.floor(betAmount * multiplier);
             const profit = winAmount - betAmount;
 
-            let finalWinAmount = profit;
-            let appliedEvents = [];
+            let finalEarnings = profit;
+            let eventMessage = '';
+
+            for (const event of this.events.getActiveEvents()) {
+                if (event.type === 'fever_time') {
+                    finalEarnings = Math.floor(profit * 1.5); // 🔥 +30%
+                    eventMessage = `🔥 **Tiempo Fiebre** (+${finalEarnings - profit} π-b$)`;
+                    break;
+                }
+                else if (event.type === 'market_crash') {
+                    finalEarnings = Math.floor(profit * 1.5); // 📉 -30%
+                    eventMessage = `📉 **Crisis del Mercado** (-${profit - finalEarnings} π-b$)`;
+                    break;
+                }
+                else if (event.type === 'server_anniversary') {
+                    finalEarnings = Math.floor(profit * 2);
+                    eventMessage = `🎉 **Aniversario del Servidor** (+${finalEarnings - profit} π-b$)`
+                }
+            }
             
-            await this.economy.addMoney(userId, finalWinAmount, 'roulette_win');
+            await this.economy.addMoney(userId, finalEarnings, 'roulette_win');
             await this.economy.updateUser(userId, updateData);
     
             // *** ACTUALIZAR ESTADÍSTICAS DE ACHIEVEMENTS ***
@@ -1445,7 +1481,8 @@ class MinigamesSystem {
                     { name: '💎 Multiplicador', value: `x${multiplier}`, inline: true },
                     { name: '🤑 Ganancia Total', value: `+${this.formatNumber(profit)} π-b$`, inline: true },
                     { name: '💸 Balance Anterior', value: `${this.formatNumber(user.balance)} π-b$`, inline: false },
-                    { name: '💳 Balance Actual', value: `${this.formatNumber(user.balance + profit)} π-b$ 🚀`, inline: false }
+                    { name: '💳 Balance Actual', value: `${this.formatNumber(user.balance + profit)} π-b$ 🚀`, inline: false },
+                    { name: 'Extra por Eventos', value: `${eventMessage || "No hay eventos Activos"} `, inline: false }
                 );
     
             // Mensaje especial para números exactos
@@ -1455,25 +1492,7 @@ class MinigamesSystem {
                     value: '¡Increíble suerte! Acertaste el número exacto.', 
                     inline: false 
                 });
-            }
-
-            // Si hay eventos aplicados
-            if (appliedEvents && appliedEvents.length > 0) {
-                let eventText = '';
-                for (const event of appliedEvents) {
-                    eventText += `${event.emoji} **${event.name}** activo!\n`;
-                    
-                    if (event.specialReward) {
-                        eventText += `🎁 +${event.specialReward} π-b$ de tesoro encontrado!\n`;
-                    }
-                }
-                
-                embed.addFields({
-                    name: '🎉 Eventos Activos',
-                    value: eventText,
-                    inline: false
-                });
-            }            
+            }          
         } else {
             await this.economy.removeMoney(userId, betAmount, 'roulette_loss');
             await this.economy.updateUser(userId, updateData);
@@ -2311,10 +2330,27 @@ class MinigamesSystem {
             // Un ganador
             const winner = survivors[0];
 
-            let finalWinAmount = winnerPrize;
-            let appliedEvents = [];        
+            let finalEarnings = winnerPrize;
+            let eventMessage = '';
+
+            for (const event of this.events.getActiveEvents()) {
+                if (event.type === 'fever_time') {
+                    finalEarnings = Math.floor(profit * 1.5); // 🔥 +30%
+                    eventMessage = `🔥 **Tiempo Fiebre** (+${finalEarnings - profit} π-b$)`;
+                    break;
+                }
+                else if (event.type === 'market_crash') {
+                    finalEarnings = Math.floor(profit * 1.5); // 📉 -30%
+                    eventMessage = `📉 **Crisis del Mercado** (-${profit - finalEarnings} π-b$)`;
+                    break;
+                }
+                else if (event.type === 'server_anniversary') {
+                    finalEarnings = Math.floor(profit * 2);
+                    eventMessage = `🎉 **Aniversario del Servidor** (+${finalEarnings - profit} π-b$)`
+                }
+            }     
             
-            await this.economy.addMoney(winner.id, finalWinAmount, 'russian_roulette_win');
+            await this.economy.addMoney(winner.id, finalEarnings, 'russian_roulette_win');
             
             // Establecer cooldown para el ganador
             this.setCooldown(winner.id, 'russianRoulette');
@@ -2352,26 +2388,9 @@ class MinigamesSystem {
                         value: game.players.map(p => `${p.alive ? '🏆' : '💀'} ${p.displayName} (${p.shots} disparos)`).join('\n'), 
                         inline: false 
                     },
-                    { name: '🔫 Bala Estaba En', value: `Disparo ${game.bullet_position}/6`, inline: true }
+                    { name: '🔫 Bala Estaba En', value: `Disparo ${game.bullet_position}/6`, inline: true },
+                    { name: 'Extra por Eventos', value: `${eventMessage || "No hay eventos Activos"} `, inline: false }
                 );
-
-            // Si hay eventos aplicados
-            if (appliedEvents && appliedEvents.length > 0) {
-                let eventText = '';
-                for (const event of appliedEvents) {
-                    eventText += `${event.emoji} **${event.name}** activo!\n`;
-                    
-                    if (event.specialReward) {
-                        eventText += `🎁 +${event.specialReward} π-b$ de tesoro encontrado!\n`;
-                    }
-                }
-                
-                embed.addFields({
-                    name: '🎉 Eventos Activos',
-                    value: eventText,
-                    inline: false
-                });
-            }
         } else {
             // Todos murieron (teóricamente imposible, pero por seguridad)
             embed.setTitle('💀 ¡TODOS ELIMINADOS!')
@@ -3431,7 +3450,27 @@ class MinigamesSystem {
         const winnings = Math.floor(game.pot * this.config.uno.winnerMultiplier);
         const house_cut = game.pot - winnings;
 
-        await this.economy.addMoney(winnerId, winnings, 'uno_win');
+        let finalEarnings = winnings;
+        let eventMessage = '';
+
+        for (const event of this.events.getActiveEvents()) {
+            if (event.type === 'fever_time') {
+                finalEarnings = Math.floor(winnings * 1.5); // 🔥 +30%
+                eventMessage = `🔥 **Tiempo Fiebre** (+${finalEarnings - winnings} π-b$)`;
+                break;
+            }
+            else if (event.type === 'market_crash') {
+                finalEarnings = Math.floor(winnings * 1.5); // 📉 -30%
+                eventMessage = `📉 **Crisis del Mercado** (-${winnings - finalEarnings} π-b$)`;
+                break;
+            }
+            else if (event.type === 'server_anniversary') {
+                finalEarnings = Math.floor(winnings * 2);
+                eventMessage = `🎉 **Aniversario del Servidor** (+${finalEarnings - winnings} π-b$)`
+            }
+        }        
+
+        await this.economy.addMoney(winnerId, finalEarnings, 'uno_win');
 
         // Actualizar estadísticas
         if (this.economy.missions) {
@@ -3445,7 +3484,8 @@ class MinigamesSystem {
             .addFields(
                 { name: '💰 Ganancia', value: `${this.formatNumber(winnings)} π-b$`, inline: true },
                 { name: '🏠 Comisión Casa', value: `${this.formatNumber(house_cut)} π-b$`, inline: true },
-                { name: '👥 Jugadores', value: `${game.players.length}`, inline: true }
+                { name: '👥 Jugadores', value: `${game.players.length}`, inline: true },
+                    { name: 'Extra por Eventos', value: `${eventMessage || "No hay eventos Activos"} `, inline: false }
             )
             .setColor('#FFD700')
             .setTimestamp();
@@ -3623,7 +3663,7 @@ class MinigamesSystem {
                 // Reanudar timers si es necesario
                 if (game.phase === 'playing') {
                     // Aquí podrías reanudar el timer del turno actual
-                    // this.unoHandler.startTurnTimer(game, message);
+                    this.unoHandler.startTurnTimer(game, message);
                 }
             }
     
@@ -3825,6 +3865,12 @@ class MinigamesSystem {
             .setTimestamp();
 
         await message.reply({ embeds: [embed] });
+    }
+
+    // Método para conectar eventos
+    connectEventsSystem(eventsSystem) {
+        this.events = eventsSystem;
+        console.log('🎮 Sistema de eventos conectado a minijuegos');
     }
 }
 

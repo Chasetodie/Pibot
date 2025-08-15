@@ -1,4 +1,5 @@
 xp: double_xp, fever_time, server_anniversary
-minigames: lucky_hour, fever_time, market_crash, server_anniversary
+minigames: lucky_hour
+transfer: charity_event
 
 Treasure: TODOS
