@@ -538,7 +538,7 @@ class MinigamesSystem {
                     { name: '🎯 Rango de Números', value: `${this.config.lottery.minNumber} - ${this.config.lottery.maxNumber}`, inline: true },
                     { name: '💰 Apuesta', value: `Min: ${this.formatNumber(this.config.lottery.minBet)} π-b$\nMax: ${this.formatNumber(this.config.lottery.maxBet)} π-b$`, inline: true },
                     { name: '🏆 Ganancia', value: `x${this.config.lottery.winMultiplier} si aciertas\n(Probabilidad: 1%)`, inline: true },
-                    { name: '⏰ Cooldown', value: '30 minutos', inline: false }
+                    { name: '⏰ Cooldown', value: '15 minutos', inline: false }
                 )
                 .setColor('#FF1493')
                 .setFooter({ text: '¡Un juego de pura suerte! ¿Te sientes con suerte?' });
