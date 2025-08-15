@@ -500,20 +500,20 @@ client.on('messageCreate', async (message) => {
     const command = args.shift().toLowerCase();
 
     switch (command) {
-        case '>play':
-        case '>p':
+        case 'play':
+        case 'p':
             if (!args[0]) return message.reply('❌ Proporciona una canción o URL!');
             await musicHandler.play(message, args.join(' '));
             break;
-        case '>skip':
-        case '>s':
+        case 'skip':
+        case 's':
             musicHandler.skip(message);
             break;
-        case '>stop':
+        case 'stop':
             musicHandler.stop(message);
             break;
-        case '>queue':
-        case '>q':
+        case 'queue':
+        case 'q':
             musicHandler.showQueue(message);
             break;
     }
