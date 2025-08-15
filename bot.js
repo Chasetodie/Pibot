@@ -339,7 +339,7 @@ client.on('interactionCreate', async (interaction) => {
         try {
             if (interaction.customId === 'uno_show_hand') {
                 const gameKey = `uno_${interaction.channelId}`;
-                const game = minigamesSystem.activeGames.get(gameKey);
+                const game = minigames.activeGames.get(gameKey);
                 
                 if (!game) {
                     await interaction.reply({ content: '❌ No hay partida activa', ephemeral: true });
@@ -352,18 +352,31 @@ client.on('interactionCreate', async (interaction) => {
                     return;
                 }
                 
-                const handString = player.hand.map((card, i) => 
-                    `${i}: ${minigamesSystem.getCardString(card)}`).join('\n');
-                
-                await interaction.reply({ 
-                    content: `🎴 **Tu mano:**\n\`\`\`${handString}\`\`\``, 
-                    ephemeral: true 
-                });
+                try {
+                    const handString = player.hand.map((card, i) => 
+                        `${i}: ${minigames.getCardString(card)}`).join('\n');
+                    
+                    // Enviar por DM
+                    const user = await interaction.user;
+                    await user.send(`🎴 **Tu mano:**\n\`\`\`${handString}\`\`\``);
+                    
+                    // Confirmar en canal (ephemeral real porque es interaction)
+                    await interaction.reply({ 
+                        content: '✅ He enviado tu mano por mensaje privado', 
+                        ephemeral: true 
+                    });
+                    
+                } catch (error) {
+                    await interaction.reply({ 
+                        content: '❌ No puedo enviarte mensaje privado. Activa los DMs en tu configuración de privacidad.', 
+                        ephemeral: true 
+                    });
+                }
             }
             
             if (interaction.customId === 'uno_draw_card') {
                 const gameKey = `uno_${interaction.channelId}`;
-                const game = minigamesSystem.activeGames.get(gameKey);
+                const game = minigames.activeGames.get(gameKey);
                 
                 if (!game) {
                     await interaction.reply({ content: '❌ No hay partida activa', ephemeral: true });
@@ -387,7 +400,7 @@ client.on('interactionCreate', async (interaction) => {
                     }
                 };
                 
-                await minigamesSystem.drawCardForPlayer(game, interaction.user.id, fakeMessage);
+                await minigames.drawCardForPlayer(game, interaction.user.id, fakeMessage);
             }
             
         } catch (error) {

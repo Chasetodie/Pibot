@@ -2473,6 +2473,10 @@ class MinigamesSystem {
 
     // Método principal para manejar UNO
     async handleUno(message, args) {
+        // En alguna función, agregar esto para debug:
+        const unoImageDir = path.join(__dirname, 'images', 'UnoImages');
+        console.log('Archivos en UnoImages:', fs.readdirSync(unoImageDir));
+
         const userId = message.author.id;
         const channelId = message.channel.id;
         const user = await this.economy.getUser(userId);
@@ -2719,16 +2723,16 @@ class MinigamesSystem {
             return card.value === 'Wild' ? 'wild' : 'wild-draw-4';
         }
         
-        // Para cartas normales
         const colorName = card.color; // red, blue, green, yellow
-        let valueName = card.value;
+        let valueName = card.value.toString().toLowerCase();
         
-        // Convertir valores especiales
+        // Convertir valores especiales al formato correcto de tus imágenes
         if (valueName === '+2') valueName = 'draw-2';
-        if (valueName === 'Skip') valueName = 'skip';
-        if (valueName === 'Reverse') valueName = 'reverse';
+        if (valueName === 'skip') valueName = 'skip';
+        if (valueName === 'reverse') valueName = 'reverse';
         
-        const fileName = `${valueName}-${colorName}`;
+        // Para números, el formato probablemente sea diferente
+        const fileName = `card-${valueName}-${colorName}`;
         console.log(`Nombre de imagen generado: ${fileName}.png`);
         
         return fileName;
@@ -3163,21 +3167,26 @@ class MinigamesSystem {
             const handString = player.hand.map((card, i) => 
                 `${i}: ${this.getCardString(card)}`).join('\n');
             
+            // Enviar cartas por DM
             const user = await message.client.users.fetch(player.id);
             const embed = new EmbedBuilder()
-                .setTitle('🎴 Tu mano actualizada')
+                .setTitle('🎴 Tu mano de UNO')
                 .setDescription(`\`\`\`${handString}\`\`\``)
                 .setColor('#0099FF')
                 .setFooter({ text: 'Usa >unoplaycard <color> <valor> para jugar' });
 
             await user.send({ embeds: [embed] });
             
+            // NO enviar confirmación en canal público
+            
         } catch (error) {
-            // Si no se puede enviar DM, responder en canal pero borrar después
-            const reply = await message.reply(`<@${player.id}> revisa tus mensajes privados para ver tu mano`);
+            // Si falla el DM, avisar al usuario que abra sus DMs
+            const errorMsg = await message.channel.send(`❌ <@${player.id}> No puedo enviarte mensaje privado. Activa los DMs en Configuración > Privacidad > Permitir mensajes directos de miembros del servidor.`);
+            
+            // Borrar el mensaje de error después de 10 segundos
             setTimeout(() => {
-                reply.delete().catch(() => {});
-            }, 5000);
+                errorMsg.delete().catch(() => {});
+            }, 10000);
         }
     }
 
@@ -3578,9 +3587,13 @@ class MinigamesSystem {
                     }
                     break;
                 case '>unoshowhand':
+                case '>unohand':
                     const handGame = this.activeGames.get(`uno_${message.channel.id}`);
+                    const player = game.players.find(p => p.id === message.author.id);
                     if (handGame && handGame.phase === 'playing') {
-                        await this.handleShowHand(message, handGame);
+                        await this.sendHandAsEphemeral(message, player);
+                        // Reaccionar al mensaje para confirmar (sin texto en canal)
+                        await message.react('✅');
                     } else {
                         await message.reply('❌ No estás en ninguna partida de UNO activa');
                     }
