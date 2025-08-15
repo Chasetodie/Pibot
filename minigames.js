@@ -2655,10 +2655,10 @@ class MinigamesSystem {
         await this.economy.removeMoney(userId, betAmount, 'uno_bet');
         await this.updateUnoGameInDB(game);
 
-        // Si ya hay suficientes jugadores, iniciar automáticamente
+        // Solo mostrar que se puede iniciar, pero NO iniciar automáticamente
         if (game.players.length >= this.config.uno.minPlayers) {
-            await this.startUnoGame(game, message);
-        }        
+            await message.channel.send(`✅ Ya hay ${this.config.uno.minPlayers} jugadores. El creador <@${game.creator_id}> puede iniciar con \`>unostart\``);
+        }     
 
         const embed = new EmbedBuilder()
             .setTitle('🎴 UNO - Jugador Unido')
@@ -2716,35 +2716,35 @@ class MinigamesSystem {
     // Obtener nombre de archivo de imagen para una carta
     getCardImageName(card) {
         if (card.type === 'wild') {
-            return card.value === 'Wild' ? 'card-wild' : 'card-wild-draw-4';
+            return card.value === 'Wild' ? 'wild' : 'wild-draw-4';
         }
         
-        // Convertir color emoji a nombre
-        const colorNames = {
-            '🔴': 'red',
-            '🟡': 'yellow', 
-            '🟢': 'green',
-            '🔵': 'blue'
-        };
-        
-        const colorName = colorNames[card.color] || 'red';
+        // Para cartas normales
+        const colorName = card.color; // red, blue, green, yellow
+        let valueName = card.value;
         
         // Convertir valores especiales
-        const valueNames = {
-            'Skip': 'skip',
-            'Reverse': 'reverse',
-            '+2': 'draw-2'
-        };
+        if (valueName === '+2') valueName = 'draw-2';
+        if (valueName === 'Skip') valueName = 'skip';
+        if (valueName === 'Reverse') valueName = 'reverse';
         
-        const valueName = valueNames[card.value] || card.value;
+        const fileName = `${valueName}-${colorName}`;
+        console.log(`Nombre de imagen generado: ${fileName}.png`);
         
-        return `card-${valueName}-${colorName}`;
+        return fileName;
     }
 
     // Obtener ruta completa de imagen
     getCardImagePath(card) {
         const imageName = this.getCardImageName(card);
-        return path.join(__dirname, 'images', 'UnoImages', `${imageName}.png`);
+        const fullPath = path.join(__dirname, 'images', 'UnoImages', `${imageName}.png`);
+        
+        // DEBUG: Log para verificar rutas
+        console.log(`Buscando imagen: ${imageName}.png`);
+        console.log(`Ruta completa: ${fullPath}`);
+        console.log(`Existe: ${fs.existsSync(fullPath)}`);
+        
+        return fullPath;
     }
 
     // Verificar si existe la imagen
@@ -3163,22 +3163,21 @@ class MinigamesSystem {
             const handString = player.hand.map((card, i) => 
                 `${i}: ${this.getCardString(card)}`).join('\n');
             
-            // Buscar al miembro en el servidor
-            const member = await message.guild.members.fetch(player.id);
-            
-            // Enviar mensaje temporal (se puede usar followUp si es después de una interaction)
+            const user = await message.client.users.fetch(player.id);
             const embed = new EmbedBuilder()
                 .setTitle('🎴 Tu mano actualizada')
                 .setDescription(`\`\`\`${handString}\`\`\``)
                 .setColor('#0099FF')
                 .setFooter({ text: 'Usa >unoplaycard <color> <valor> para jugar' });
 
-            // Como no podemos usar ephemeral en mensajes normales, usar DM como fallback
-            const user = await message.client.users.fetch(player.id);
             await user.send({ embeds: [embed] });
             
         } catch (error) {
-            console.log(`No se pudo enviar mano actualizada a ${player.id}`);
+            // Si no se puede enviar DM, responder en canal pero borrar después
+            const reply = await message.reply(`<@${player.id}> revisa tus mensajes privados para ver tu mano`);
+            setTimeout(() => {
+                reply.delete().catch(() => {});
+            }, 5000);
         }
     }
 
@@ -3566,30 +3565,42 @@ class MinigamesSystem {
                     const unoGame = this.activeGames.get(`uno_${message.channel.id}`);
                     if (unoGame && unoGame.phase === 'playing') {
                         await this.handlePlayCard(message, args, unoGame);
+                    } else {
+                        await message.reply('❌ No estás en ninguna partida de UNO activa');
                     }
                     break;
-                case '>unodrawcard':
+                case '>unopickup':
                     const drawGame = this.activeGames.get(`uno_${message.channel.id}`);
                     if (drawGame && drawGame.phase === 'playing') {
                         await this.drawCardForPlayer(drawGame, message.author.id, message);
+                    } else {
+                        await message.reply('❌ No estás en ninguna partida de UNO activa');
                     }
                     break;
                 case '>unoshowhand':
                     const handGame = this.activeGames.get(`uno_${message.channel.id}`);
                     if (handGame && handGame.phase === 'playing') {
                         await this.handleShowHand(message, handGame);
+                    } else {
+                        await message.reply('❌ No estás en ninguna partida de UNO activa');
                     }
                     break;
                 case '>startuno':
                     const startGame = this.activeGames.get(`uno_${message.channel.id}`);
                     if (startGame && startGame.phase === 'waiting' && startGame.creator_id === message.author.id) {
                         await this.startUnoGame(startGame, message);
+                    } else if (game.creator_id !== message.author.id) {
+                        await message.reply('❌ Solo el creador puede iniciar la partida');
+                    } else {
+                        await message.reply('❌ No estás en ninguna partida de UNO activa');
                     }
                     break;
                 case '>canceluno':
                     const cancelGame = this.activeGames.get(`uno_${message.channel.id}`);
                     if (cancelGame && cancelGame.phase === 'waiting' && cancelGame.creator_id === message.author.id) {
                         await this.cancelUnoGame(cancelGame, message);
+                    } else {
+                        await message.reply('❌ No estás en ninguna partida de UNO activa');
                     }
                     break;
                 case '>uno!':

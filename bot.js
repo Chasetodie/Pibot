@@ -336,19 +336,63 @@ client.on('interactionCreate', async (interaction) => {
             return; // Importante: return para no continuar con otros botones
         }
 
-        if (interaction.customId === 'uno_show_hand') {
-            const game = this.gameHandler.findGameByChannel(interaction.channelId);
-            const player = game?.players.find(p => p.id === interaction.user.id);
-            
-            if (player) {
-                const handString = player.hand.map((card, i) => 
-                    `${i}: ${this.getCardString(card)}`).join('\n');
+        try {
+            if (interaction.customId === 'uno_show_hand') {
+                const gameKey = `uno_${interaction.channelId}`;
+                const game = minigamesSystem.activeGames.get(gameKey);
                 
-                await interaction.reply({
-                    content: `🎴 **Tu mano:**\n\`\`\`${handString}\`\`\``,
-                    ephemeral: true
+                if (!game) {
+                    await interaction.reply({ content: '❌ No hay partida activa', ephemeral: true });
+                    return;
+                }
+                
+                const player = game.players.find(p => p.id === interaction.user.id);
+                if (!player) {
+                    await interaction.reply({ content: '❌ No estás en esta partida', ephemeral: true });
+                    return;
+                }
+                
+                const handString = player.hand.map((card, i) => 
+                    `${i}: ${minigamesSystem.getCardString(card)}`).join('\n');
+                
+                await interaction.reply({ 
+                    content: `🎴 **Tu mano:**\n\`\`\`${handString}\`\`\``, 
+                    ephemeral: true 
                 });
             }
+            
+            if (interaction.customId === 'uno_draw_card') {
+                const gameKey = `uno_${interaction.channelId}`;
+                const game = minigamesSystem.activeGames.get(gameKey);
+                
+                if (!game) {
+                    await interaction.reply({ content: '❌ No hay partida activa', ephemeral: true });
+                    return;
+                }
+                
+                if (game.players[game.current_player_index].id !== interaction.user.id) {
+                    await interaction.reply({ content: '❌ No es tu turno', ephemeral: true });
+                    return;
+                }
+                
+                await interaction.deferReply();
+                
+                // Crear un mensaje fake para usar la función existente
+                const fakeMessage = {
+                    author: interaction.user,
+                    channel: interaction.channel,
+                    client: interaction.client,
+                    reply: async (content) => {
+                        await interaction.editReply(content);
+                    }
+                };
+                
+                await minigamesSystem.drawCardForPlayer(game, interaction.user.id, fakeMessage);
+            }
+            
+        } catch (error) {
+            console.error('Error en interacción de botón:', error);
+            await interaction.reply({ content: '❌ Error al procesar la acción', ephemeral: true });
         }
         
         if (interaction.customId === 'select_pibe') {
