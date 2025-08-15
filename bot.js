@@ -361,8 +361,8 @@ client.on('interactionCreate', async (interaction) => {
                     await user.send(`🎴 **Tu mano:**\n\`\`\`${handString}\`\`\``);
                     
                     // Confirmar en canal (ephemeral real porque es interaction)
-                    await interaction.reply(`🎴 **Tu mano:**\n\`\`\`${handString}\`\`\``, {
-                        content: '✅ Tambien he enviado tu mano por mensaje privado', 
+                    await interaction.reply({
+                        content: '`🎴 **Tu mano:**\n\`\`\`${handString}\`\`\``', 
                         ephemeral: true 
                     });
                     
