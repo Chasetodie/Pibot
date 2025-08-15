@@ -3594,15 +3594,19 @@ class MinigamesSystem {
                     break;
                 case '>uno!':
                 case '>uno':
-                    const unogame = this.findActiveUnoGame(message.channel.id, message.author.id);
-                    if (unogame){
+                    const unogame = this.activeGames.get(`uno_${message.channel.id}`);
+                    if (unogame && unogame.players.find(p => p.id === message.author.id)) {
                         await this.handleUnoCall(message, unogame);
+                    } else {
+                        await message.reply('❌ No estás en ninguna partida de UNO activa');
                     }
                     break;
                 case '>unocallout':
-                    const calloutgame = this.findActiveUnoGame(message.channel.id, message.author.id);
-                    if (calloutgame) {
+                    const calloutgame = this.activeGames.get(`uno_${message.channel.id}`);
+                    if (calloutgame && calloutgame.players.find(p => p.id === message.author.id)) {
                         await this.handleUnoCallout(message, calloutgame);
+                    } else {
+                        await message.reply('❌ No estás en ninguna partida de UNO activa');
                     }
                     break;
                 case '>games':
