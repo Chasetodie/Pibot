@@ -521,7 +521,7 @@ class MissionsSystem {
                     updateData.balance = user.balance + rewardFinal;
                     updateData.stats = {
                         ...user.stats,
-                        total_earned: (user.stats.total_earned || 0) + rewardFinal
+                        totalEarned: (user.stats.totalEarned || 0) + rewardFinal
                     };
                 }
             }
@@ -704,7 +704,11 @@ class MissionsSystem {
                 });
             }
             
-            await message.channel.send({ embeds: [embed] });
+            await message.channel.send({ 
+                content: `<@${message.author.id}>`,
+                embeds: [embed],
+                allowedMentions: { users: [message.author.id] }
+            });
         }
     }
     

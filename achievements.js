@@ -260,7 +260,7 @@ class AchievementsSystem {
             // Obtener valor actual según el tipo de logro
             switch (req.type) {
                 case 'money_earned':
-                    currentValue = user.stats?.total_earned || 0;
+                    currentValue = user.stats?.totalEarned || 0;
                     break;
                 case 'money_balance':
                     currentValue = user.balance || 0;
@@ -334,7 +334,7 @@ class AchievementsSystem {
                     updateData.balance = user.balance + rewardFinal;
                     updateData.stats = {
                         ...user.stats,
-                        total_earned: (user.stats.total_earned || 0) + rewardFinal
+                        totalEarned: (user.stats.totalEarned || 0) + rewardFinal
                     };
                 }
                                
@@ -369,7 +369,7 @@ class AchievementsSystem {
             // Obtener valor actual según el tipo de logro
             switch (req.type) {
                 case 'money_earned':
-                    currentValue = user.stats?.total_earned || 0;
+                    currentValue = user.stats?.totalEarned || 0;
                     break;
                 case 'money_balance':
                     currentValue = user.balance || 0;
@@ -440,7 +440,7 @@ class AchievementsSystem {
                     updateData.balance = user.balance + rewardFinal;
                     updateData.stats = {
                         ...user.stats,
-                        total_earned: (user.stats.total_earned || 0) + rewardFinal
+                        totalEarned: (user.stats.totalEarned || 0) + rewardFinal
                     };
                 }
 
@@ -712,7 +712,7 @@ class AchievementsSystem {
         
         switch (req.type) {
             case 'money_earned':
-                currentValue = user.stats?.total_earned || 0;
+                currentValue = user.stats?.totalEarned || 0;
                 break;
             case 'money_balance':
                 currentValue = user.balance || 0;

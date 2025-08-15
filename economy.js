@@ -97,16 +97,16 @@ class EconomySystem {
                 messages_count: 0,
                 items: {}, // JSON field en PostgreSQL
                 stats: {
-                    total_earned: 0,
-                    total_spent: 0,
-                    daily_claims: 0,
+                    totalEarned: 0,
+                    totalSpent: 0,
+                    dailyClaims: 0,
                     work_count: 0,
                     games_played: 0,
                     lottery_wins: 0,
                     robberies: 0,
                     robberies_successful: 0,
-                    money_stolen: 0,
-                    times_robbed: 0,
+                    moneyStolen: 0,
+                    timesRobbed: 0,
                     money_lost_to_robbers: 0
                 },
                 bet_stats: {
@@ -274,7 +274,7 @@ class EconomySystem {
             balance: fromUser.balance - amount,
             stats: {
                 ...fromUser.stats,
-                total_spent: (fromUser.stats.totalSpent || 0) + amount
+                totalSpent: (fromUser.stats.totalSpent || 0) + amount
             }
         };
 
@@ -810,7 +810,7 @@ class EconomySystem {
             const penalty = Math.floor(job.baseReward * 0.2); // Pierde 20% del reward base
 
             updateData.balance = Math.max(0, user.balance - penalty);
-            updateData.stats.total_spent = (user.stats?.total_spent || 0) + penalty;
+            updateData.stats.totalSpent = (user.stats?.totalSpent || 0) + penalty;
 
             await this.updateUser(userId, updateData); // ← Reemplaza saveUsers()
            
@@ -860,7 +860,7 @@ class EconomySystem {
         }*/
         
         updateData.balance = user.balance + finalEarnings;
-        updateData.stats.total_earned = (user.stats?.total_earned || 0) + finalEarnings;
+        updateData.stats.totalEarned = (user.stats?.totalEarned || 0) + finalEarnings;
         
         await this.updateUser(userId, updateData); // ← Reemplaza saveUsers()
         
@@ -1106,7 +1106,7 @@ isBeingRobbed(userId) {
                 robberUpdateData.stats = {
                     ...robber.stats,
                     totalEarned: (robber.stats.totalEarned || 0) + stolenAmount,
-                    robberiesSuccessful: (robber.stats.robberiesSuccessful || 0) + 1,
+                    robberies_successful: (robber.stats.robberies_successful || 0) + 1,
                     moneyStolen: (robber.stats.moneyStolen || 0) + stolenAmount,
                 };                
                 
@@ -1116,7 +1116,7 @@ isBeingRobbed(userId) {
                         ...target.stats,
                         totalSpent: (target.stats.totalSpent || 0) + stolenAmount,
                         timesRobbed: (target.stats.timesRobbed || 0) + 1,
-                        moneyLostToRobbers: (target.stats.moneyLostToRobbers || 0) + stolenAmount
+                        money_lost_to_robbers: (target.stats.money_lost_to_robbers || 0) + stolenAmount
                     }                
                 };
                 

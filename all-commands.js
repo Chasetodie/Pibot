@@ -137,7 +137,7 @@ class AllCommands {
             .addFields(
                 {
                     name: '💰 Ganaste',
-                    value: `**+${this.formatNumber(result.amount)}** ${this.economy.config.currencySymbol}${result.messageEvent}`,
+                    value: `**+${this.formatNumber(result.amount)}** ${this.economy.config.currencySymbol}`,
                     inline: true
                 },
                 {
@@ -792,7 +792,7 @@ class AllCommands {
             .setTitle('✅ ¡Trabajo Completado!')
             .setDescription(`**${result.jobName}**\n\n${result.message}`)
             .addFields(
-                { name: '💰 Ganaste', value: `+${this.formatNumber(result.amount)} π-b$${result.messageEvent}`, inline: true },
+                { name: '💰 Ganaste', value: `+${this.formatNumber(result.amount)} π-b$`, inline: true },
                 {
                     name: '💸 Balance Anterior',
                     value: `${this.formatNumber(result.oldBalance)} π-b$`,

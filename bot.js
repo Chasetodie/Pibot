@@ -335,6 +335,21 @@ client.on('interactionCreate', async (interaction) => {
             await minigames.handleBlackjackButtons(interaction);
             return; // Importante: return para no continuar con otros botones
         }
+
+        if (interaction.customId === 'uno_show_hand') {
+            const game = this.gameHandler.findGameByChannel(interaction.channelId);
+            const player = game?.players.find(p => p.id === interaction.user.id);
+            
+            if (player) {
+                const handString = player.hand.map((card, i) => 
+                    `${i}: ${this.getCardString(card)}`).join('\n');
+                
+                await interaction.reply({
+                    content: `🎴 **Tu mano:**\n\`\`\`${handString}\`\`\``,
+                    ephemeral: true
+                });
+            }
+        }
         
         if (interaction.customId === 'select_pibe') {
             // Incrementar contador de pibes
