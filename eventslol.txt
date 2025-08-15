@@ -1,0 +1,8 @@
+
+xp: double_xp, fever_time, server_anniversary
+daily: money_rain, fever_time, market_crash, server_anniversary
+minigames: lucky_hour, fever_time, market_crash, server_anniversary
+missions: fever_time, market_crash, server_anniversary
+achievements: fever_time, market_crash, server_anniversary
+
+Treasure: TODOS

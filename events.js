@@ -122,7 +122,7 @@ class EventsSystem {
         
         // Probabilidades de eventos (por hora)
         this.eventProbabilities = {
-//            'double_xp': 0.15,      // 15%
+            'double_xp': 0.15,      // 15%
             'money_rain': 0.12,     // 12%
             'lucky_hour': 0.10,     // 10%
             'fever_time': 0.08,     // 8%

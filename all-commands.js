@@ -807,7 +807,10 @@ class AllCommands {
             .setColor('#28a745')
             .setTimestamp();
         
-        await message.reply({ embeds: [embed] });
+        await message.reply({ 
+            embeds: [embed],                 
+            content: `💼 Trabajaste y ganaste **${result.finalEarnings} π-b$**${eventMessage}`
+        });
 
         // *** NUEVO: VERIFICAR ACHIEVEMENTS DESPUÉS DE TRABAJAR ***
         if (result.success && this.achievements) {
@@ -1222,23 +1225,7 @@ class AllCommands {
                 await this.shopHelp(message);
                 return;
             }
-
-            // Events
-            if (command === '>events') {
-                await this.events.showActiveEvents(message);
-                return;
-            }
-            if (command === '>createevent') {
-                // >createevent <tipo> [duración]
-                const eventType = args[1];
-                const duration = args[2] ? parseInt(args[2]) : null; // duración en minutos
-                await this.events.createManualEvent(message, eventType, duration);
-                return;
-            }
-            if (command === '>eventstats') {
-                await this.events.showEventStats(message);
-                return;
-            }            */
+           */
 
 
 

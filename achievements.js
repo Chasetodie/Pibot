@@ -3,7 +3,6 @@ const { EmbedBuilder } = require('discord.js');
 class AchievementsSystem {
     constructor(economySystem) {
         this.economy = economySystem;
-        this.events = null;
         
         // Definir todos los logros disponibles
         this.achievements = {
@@ -332,11 +331,6 @@ class AchievementsSystem {
                 if (achievement.reward.money) {
                     let rewardFinal = achievement.reward.money;
 
-                    if (this.events) {
-                        const mod = await this.events.applyMoneyModifiers(userId, rewardFinal, 'achievements');
-                        rewardFinal = mod.finalAmount;
-                    }
-
                     updateData.balance = user.balance + rewardFinal;
                     updateData.stats = {
                         ...user.stats,
@@ -348,12 +342,7 @@ class AchievementsSystem {
                 
                 // Agregar XP por separado
                 if (achievement.reward.xp) {
-                    if (this.events) {
-                        const finalResult = await this.events.applyXpModifiers(userId, achievement.reward.xp, 'achievement');
-                        await this.economy.addXp(userId, finalResult.finalXp);
-                    } else {
-                        await this.economy.addXp(userId, achievement.reward.xp);
-                    }
+                    await this.economy.addXp(userId, achievement.reward.xp);
                 }
                 
                 completedAchievements.push(achievementId);
@@ -448,11 +437,6 @@ class AchievementsSystem {
                 if (achievement.reward.money) {
                     let rewardFinal = achievement.reward.money;
 
-                    if (this.events) {
-                        const mod = await this.events.applyMoneyModifiers(userId, rewardFinal, 'achievements');
-                        rewardFinal = mod.finalAmount;
-                    }
-
                     updateData.balance = user.balance + rewardFinal;
                     updateData.stats = {
                         ...user.stats,
@@ -466,12 +450,7 @@ class AchievementsSystem {
                 
                 // Agregar XP por separado
                 if (achievement.reward.xp) {
-                    if (this.events) {
-                        const finalResult = await this.events.applyXpModifiers(userId, achievement.reward.xp, 'achievement');
-                        await this.economy.addXp(userId, finalResult.finalXp);
-                    } else {
-                        await this.economy.addXp(userId, achievement.reward.xp);
-                    }
+                    await this.economy.addXp(userId, achievement.reward.xp);
                 }
                 
                 unlockedAchievements.push(achievementId);
@@ -908,12 +887,6 @@ class AchievementsSystem {
             console.error('❌ Error en sistema de logros:', error);
             await message.reply('❌ Ocurrió un error en el sistema de logros. Intenta de nuevo.');
         }
-    }
-        
-    // Método para conectar eventos
-    connectEventsSystem(eventsSystem) {
-        this.events = eventsSystem;
-        console.log('🎮 Sistema de eventos conectado a minijuegos');
     }
 }
 

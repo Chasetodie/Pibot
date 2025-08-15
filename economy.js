@@ -1,5 +1,6 @@
 require('dotenv').config();
 const { createClient } = require('@supabase/supabase-js');
+const EventsSystem = require('./events');
 
 class EconomySystem {
     constructor() {
@@ -36,7 +37,6 @@ class EconomySystem {
         
         // Map para trackear robos activos
         this.activeRobberies = new Map();
-        this.events = null;
     }
 
     // Inicializar Supabase
@@ -405,25 +405,6 @@ class EconomySystem {
         try {
             this.userCooldowns.set(userId, now);
 
-            
-            if (this.events) {
-                // Aplicar modificadores de eventos a XP
-                const finalResult = await this.events.applyXpModifiers(userId, this.config.xpPerMessage, 'message');
-
-                // Agregar XP (ahora async)
-                const result = await this.addXp(userId, finalResult.finalXp);
-
-                return {
-                    levelUp: result.levelUp,
-                    levelsGained: result.levelsGained,
-                    newLevel: result.newLevel,
-                    xpGained: result.xpGained,
-                    reward: result.reward,
-                    appliedEvents: finalResult.appliedEvents || [],
-                    result: finalResult
-                };
-            }
-
             // Agregar XP (ahora async)
             const result = await this.addXp(userId, this.config.xpPerMessage);
 
@@ -539,20 +520,37 @@ class EconomySystem {
         const user = await this.getUser(userId);
         const variation = Math.floor(Math.random() * (this.config.dailyVariation * 2)) - this.config.dailyVariation;
         let amount = Math.max(100, this.config.dailyAmount + variation);
-        let messageEvent = '';
+        let eventMessage = '';
+        let finalEarnings = amount;
 
-        if (this.events) {
-            const mod = await this.events.applyMoneyModifiers(userId, amount, 'daily');
-            amount = mod.finalAmount;
-            messageEvent = mod.eventMessage || '';
+        for (const event of eventsSystem.getActiveEvents()) {
+            if (event.type === 'money_rain') {
+                finalEarnings = Math.floor(amount * 1.75); // 💰 +50%
+                eventMessage = `\n💰 **Lluvia de Dinero** (+${finalEarnings - amount} π-b$)`;
+                break;
+            }
+            else if (event.type === 'fever_time') {
+                finalEarnings = Math.floor(amount * 1.2); // 🔥 +30%
+                eventMessage = `\n🔥 **Tiempo Fiebre** (+${finalEarnings - amount} π-b$)`;
+                break;
+            }
+            else if (event.type === 'market_crash') {
+                finalEarnings = Math.floor(amount * 0.8); // 📉 -30%
+                eventMessage = `\n📉 **Crisis del Mercado** (-${amount - finalEarnings} π-b$)`;
+                break;
+            }
+            else if (event.type === 'server_anniversary') {
+                finalEarnings = Math.floor(amount * 2);
+                eventMessage = `\n🎉 **Aniversario del Servidor** (+${finalEarnings - amount} π-b$)`
+            }
         }
               
         const updateData = {
             last_daily: Date.now(),
-            balance: user.balance + amount,
+            balance: user.balance + finalEarnings,
             stats: {
                 ...user.stats,
-                totalEarned: user.stats.totalEarned + amount,
+                totalEarned: user.stats.totalEarned + finalEarnings,
                 dailyClaims: user.stats.dailyClaims + 1
             }
         }
@@ -572,10 +570,11 @@ class EconomySystem {
         
         return {
             success: true,
-            amount: amount,
+            amount: finalEarnings,
             oldBalance: user.balance,
-            newBalance: user.balance + amount,
-            messageEvent: messageEvent
+            newBalance: user.balance + finalEarnings,
+            eventMessage: eventMessage,
+            finalEarnings: finalEarnings
         };
     }
 
@@ -835,23 +834,33 @@ class EconomySystem {
         const variation = Math.floor(Math.random() * (job.variation * 2)) - job.variation;
         let amount = Math.max(50, job.baseReward + variation);
         const message = job.messages[Math.floor(Math.random() * job.messages.length)];
-        let messageEvent = '';
+        let eventMessage = '';
+        let finalEarnings = amount;
 
-        if (this.events) {
-            const mod = await this.events.applyMoneyModifiers(userId, amount, 'work');
-            amount = mod.finalAmount;
-            messageEvent = mod.eventMessage || '';
+        for (const event of eventsSystem.getActiveEvents()) {
+            if (event.type === 'money_rain') {
+                finalEarnings = Math.floor(amount * 1.5); // 💰 +50%
+                eventMessage = `\n💰 **Lluvia de Dinero** (+${finalEarnings - amount} π-b$)`;
+                break;
+            }
+            else if (event.type === 'fever_time') {
+                finalEarnings = Math.floor(amount * 1.3); // 🔥 +30%
+                eventMessage = `\n🔥 **Tiempo Fiebre** (+${finalEarnings - amount} π-b$)`;
+                break;
+            }
+            else if (event.type === 'market_crash') {
+                finalEarnings = Math.floor(amount * 0.7); // 📉 -30%
+                eventMessage = `\n📉 **Crisis del Mercado** (-${amount - finalEarnings} π-b$)`;
+                break;
+            }
+            else if (event.type === 'server_anniversary') {
+                finalEarnings = Math.floor(amount * 2);
+                eventMessage = `\n🎉 **Aniversario del Servidor** (+${finalEarnings - amount} π-b$)`
+            }
         }
-
-        // === INTEGRAR EVENTOS AQUÍ ===
-/*        if (this.events) {
-            const mod = this.events.applyMoneyModifiers(userId, amount, 'work');
-            amount = mod.finalAmount;
-        }*/
-        // =============================
         
-        updateData.balance = user.balance + amount;
-        updateData.stats.total_earned = (user.stats?.total_earned || 0) + amount;
+        updateData.balance = user.balance + finalEarnings;
+        updateData.stats.total_earned = (user.stats?.total_earned || 0) + finalEarnings;
         
         await this.updateUser(userId, updateData); // ← Reemplaza saveUsers()
         
@@ -864,12 +873,13 @@ class EconomySystem {
         
         return {
             success: true,
-            amount: amount,
+            amount: finalEarnings,
             message: message,
             oldBalance: user.balance,
-            newBalance: user.balance + amount,
+            newBalance: user.balance + finalEarnings,
             jobName: job.name,
-            messageEvent: messageEvent,
+            eventMessage: eventMessage,
+            finalEarnings: finalEarnings,
 
             canWork: canWorkResult.canWork,
             reason: canWorkResult.reason,
@@ -1194,12 +1204,6 @@ isBeingRobbed(userId) {
             return true;
         }
         return false;
-    }
-
-    // Método para conectar el sistema de eventos
-    connectEventsSystem(eventsSystem) {
-        this.events = eventsSystem;
-        console.log('🔗 Sistema de eventos conectado a la economía');
     }
 }
 

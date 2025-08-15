@@ -4,7 +4,6 @@ const { createClient } = require('@supabase/supabase-js');
 class MinigamesSystem {
     constructor(economySystem) {
         this.economy = economySystem;
-        this.events = null;
         this.activeGames = new Map(); // Para manejar juegos en progreso
         this.supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_ANON_KEY);
         
@@ -152,12 +151,7 @@ class MinigamesSystem {
     async handleCoinflip(message, args) {
         const userId = message.author.id;
         const user = await this.economy.getUser(userId);
-        
-        // Al inicio de handleCoinflip y handleDice
-/*        if (this.events) {
-            this.events.applyEventModifiers(userId, 0, 'games');
-        }*/
-        
+               
         // Verificar argumentos
         if (args.length < 3) {
             const embed = new EmbedBuilder()
@@ -214,19 +208,7 @@ class MinigamesSystem {
         let baseWinChance = 0.5; // 50% chance base
         let finalWinChance = baseWinChance;
         let appliedEvents = [];
-        
-        // Verificar eventos de suerte
-        if (this.events) {
-            const specialRewards = await this.events.checkSpecialEvents(userId, 'gambling');
-            
-            for (const reward of specialRewards) {
-                if (reward.type === 'luck_boost') {
-                    finalWinChance *= reward.multiplier;
-                    appliedEvents.push(reward.event);
-                }
-            }
-        }
-        
+                
         // Realizar el juego
         const result = Math.random() < finalWinChance ? 'cara' : 'cruz';
         const won = result === normalizedChoice;
@@ -252,31 +234,7 @@ class MinigamesSystem {
             const winAmount = Math.floor(betAmount * this.config.coinflip.winMultiplier);
             const profit = winAmount - betAmount;
             let finalWinAmount = profit;
-            let appliedEvents = [];
             
-            // Aplicar modificadores de eventos
-            if (this.events) {
-                const moneyMod = await this.events.applyMoneyModifiers(userId, profit, 'gambling');
-                finalWinAmount = moneyMod.finalAmount;
-                appliedEvents = moneyMod.appliedEvents;
-                
-                // Verificar eventos especiales (como treasure hunt)
-                const specialRewards = await this.events.checkSpecialEvents(userId, 'gambling', {
-                    game: 'coinflip',
-                    betAmount: betAmount
-                });
-                
-                // Procesar recompensas especiales
-                for (const reward of specialRewards) {
-                    if (reward.type === 'treasure') {
-                        // Ya se agregó el dinero automáticamente en checkSpecialEvents
-                        appliedEvents.push({
-                            ...reward.event,
-                            specialReward: reward.amount
-                        });
-                    }
-                }
-            }
             await this.economy.addMoney(userId, finalWinAmount, 'coinflip_win');            
             await this.economy.updateUser(userId, updateData);
 
@@ -364,10 +322,6 @@ class MinigamesSystem {
     async handleDice(message, args) {
         const userId = message.author.id;
         const user = await this.economy.getUser(userId);
-
-/*        if (this.events) {
-            this.events.applyEventModifiers(userId, 0, 'games');
-        }*/
 
         // Si no hay argumentos, mostrar ayuda
         if (args.length < 3) {
@@ -469,31 +423,7 @@ class MinigamesSystem {
 
             let finalWinAmount = profit;
             let appliedEvents = [];
-            
-            // Aplicar modificadores de eventos
-            if (this.events) {
-                const moneyMod = await this.events.applyMoneyModifiers(userId, profit, 'gambling');
-                finalWinAmount = moneyMod.finalAmount;
-                appliedEvents = moneyMod.appliedEvents;
-                
-                // Verificar eventos especiales (como treasure hunt)
-                const specialRewards = await this.events.checkSpecialEvents(userId, 'gambling', {
-                    game: 'dice',
-                    betAmount: betAmount
-                });
-                
-                // Procesar recompensas especiales
-                for (const reward of specialRewards) {
-                    if (reward.type === 'treasure') {
-                        // Ya se agregó el dinero automáticamente en checkSpecialEvents
-                        appliedEvents.push({
-                            ...reward.event,
-                            specialReward: reward.amount
-                        });
-                    }
-                }
-            }
-            
+                       
             await this.economy.addMoney(userId, finalWinAmount, 'dice_win');
             await this.economy.updateUser(userId, updateData);
 
@@ -680,30 +610,6 @@ class MinigamesSystem {
 
             let finalWinAmount = profit;
             let appliedEvents = [];
-            
-            // Aplicar modificadores de eventos
-            if (this.events) {
-                const moneyMod = await this.events.applyMoneyModifiers(userId, profit, 'gambling');
-                finalWinAmount = moneyMod.finalAmount;
-                appliedEvents = moneyMod.appliedEvents;
-                
-                // Verificar eventos especiales (como treasure hunt)
-                const specialRewards = await this.events.checkSpecialEvents(userId, 'gambling', {
-                    game: 'lottery',
-                    betAmount: betAmount
-                });
-                
-                // Procesar recompensas especiales
-                for (const reward of specialRewards) {
-                    if (reward.type === 'treasure') {
-                        // Ya se agregó el dinero automáticamente en checkSpecialEvents
-                        appliedEvents.push({
-                            ...reward.event,
-                            specialReward: reward.amount
-                        });
-                    }
-                }
-            }
             
             await this.economy.addMoney(userId, finalWinAmount, 'lottery_win');     
             // AGREGAR ESTAS LÍNEAS:
@@ -1140,30 +1046,7 @@ class MinigamesSystem {
                 color = '#00FF00';
 
                 finalWinAmount = profit
-                
-                // Aplicar modificadores de eventos
-                if (this.events) {                   
-                    const moneyMod = await this.events.applyMoneyModifiers(userId, profit, 'gambling');
-                    finalWinAmount = moneyMod.finalAmount;
-                    appliedEvents = moneyMod.appliedEvents;
-                    
-                    // Verificar eventos especiales (como treasure hunt)
-                    const specialRewards = await this.events.checkSpecialEvents(userId, 'gambling', {
-                        game: 'blackjack',
-                        betAmount: betAmount
-                    });
-                    
-                    // Procesar recompensas especiales
-                    for (const reward of specialRewards) {
-                        if (reward.type === 'treasure') {
-                            // Ya se agregó el dinero automáticamente en checkSpecialEvents
-                            appliedEvents.push({
-                                ...reward.event,
-                                specialReward: reward.amount
-                            });
-                        }
-                    }
-                }
+
                 await this.economy.addMoney(userId, finalWinAmount, 'blackjack_win');
 
                 // *** NUEVO: ACTUALIZAR ESTADÍSTICAS DE ACHIEVEMENTS ***
@@ -1188,30 +1071,6 @@ class MinigamesSystem {
                 color = '#00FF00';
 
                 finalWinAmount = profit
-                
-                // Aplicar modificadores de eventos
-                if (this.events) {
-                    const moneyMod = await this.events.applyMoneyModifiers(userId, profit, 'gambling');
-                    finalWinAmount = moneyMod.finalAmount;
-                    appliedEvents = moneyMod.appliedEvents;
-                    
-                    // Verificar eventos especiales (como treasure hunt)
-                    const specialRewards = await this.events.checkSpecialEvents(userId, 'gambling', {
-                        game: 'blackjack',
-                        betAmount: betAmount
-                    });
-                    
-                    // Procesar recompensas especiales
-                    for (const reward of specialRewards) {
-                        if (reward.type === 'treasure') {
-                            // Ya se agregó el dinero automáticamente en checkSpecialEvents
-                            appliedEventsd.push({
-                                ...reward.event,
-                                specialReward: reward.amount
-                            });
-                        }
-                    }
-                }
                 
                 await this.economy.addMoney(userId, finalWinAmount, 'blackjack_win');
 
@@ -1545,30 +1404,6 @@ class MinigamesSystem {
 
             let finalWinAmount = profit;
             let appliedEvents = [];
-            
-            // Aplicar modificadores de eventos
-            if (this.events) {
-                const moneyMod = await this.events.applyMoneyModifiers(userId, profit, 'gambling');
-                finalWinAmount = moneyMod.finalAmount;
-                appliedEvents = moneyMod.appliedEvents;
-                
-                // Verificar eventos especiales (como treasure hunt)
-                const specialRewards = await this.events.checkSpecialEvents(userId, 'gambling', {
-                    game: 'roulette',
-                    betAmount: betAmount
-                });
-                
-                // Procesar recompensas especiales
-                for (const reward of specialRewards) {
-                    if (reward.type === 'treasure') {
-                        // Ya se agregó el dinero automáticamente en checkSpecialEvents
-                        appliedEvents.push({
-                            ...reward.event,
-                            specialReward: reward.amount
-                        });
-                    }
-                }
-            }
             
             await this.economy.addMoney(userId, finalWinAmount, 'roulette_win');
             await this.economy.updateUser(userId, updateData);
@@ -2460,31 +2295,7 @@ class MinigamesSystem {
             const winner = survivors[0];
 
             let finalWinAmount = winnerPrize;
-            let appliedEvents = [];
-            
-            // Aplicar modificadores de eventos
-            if (this.events) {
-                const moneyMod = await this.events.applyMoneyModifiers(winner.id, winnerPrize, 'gambling');
-                finalWinAmount = moneyMod.finalAmount;
-                appliedEvents = moneyMod.appliedEvents;
-                
-                // Verificar eventos especiales (como treasure hunt)
-                const specialRewards = await this.events.checkSpecialEvents(winner.id, 'gambling', {
-                    game: 'russian',
-                    betAmount: winnerPrize
-                });
-                
-                // Procesar recompensas especiales
-                for (const reward of specialRewards) {
-                    if (reward.type === 'treasure') {
-                        // Ya se agregó el dinero automáticamente en checkSpecialEvents
-                        appliedEvents.push({
-                            ...reward.event,
-                            specialReward: reward.amount
-                        });
-                    }
-                }
-            }            
+            let appliedEvents = [];        
             
             await this.economy.addMoney(winner.id, finalWinAmount, 'russian_roulette_win');
             
@@ -2758,12 +2569,6 @@ class MinigamesSystem {
             .setTimestamp();
 
         await message.reply({ embeds: [embed] });
-    }
-
-    // Método para conectar eventos
-    connectEventsSystem(eventsSystem) {
-        this.events = eventsSystem;
-        console.log('🎮 Sistema de eventos conectado a minijuegos');
     }
 }
 

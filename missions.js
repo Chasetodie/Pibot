@@ -3,7 +3,6 @@ const { EmbedBuilder } = require('discord.js');
 class MissionsSystem {
     constructor(economySystem) {
         this.economy = economySystem;
-        this.events = null;
         
         // Todas las misiones disponibles
         this.availableMissions = {
@@ -519,11 +518,6 @@ class MissionsSystem {
                 if (mission.reward.money) {
                     let rewardFinal = mission.reward.money;
                     
-                    if (this.events) {
-                        const mod = await this.events.applyMoneyModifiers(userId, rewardFinal, 'missions');
-                        rewardFinal = mod.finalAmount;
-                    }
-
                     updateData.balance = user.balance + rewardFinal;
                     updateData.stats = {
                         ...user.stats,
@@ -540,12 +534,7 @@ class MissionsSystem {
         for (const missionId of completedMissions) {
             const mission = this.availableMissions[missionId];
             if (mission.reward.xp) {
-                if (this.events) {
-                    const finalResult = await this.events.applyXpModifiers(userId, mission.reward.xp, 'mission');
-                    await this.economy.addXp(userId, finalResult.finalXp);
-                } else {
-                    await this.economy.addXp(userId, mission.reward.xp);
-                }
+                await this.economy.addXp(userId, mission.reward.xp);
             }
         }
         
@@ -742,12 +731,6 @@ class MissionsSystem {
             console.error('❌ Error en sistema de misiones:', error);
             await message.reply('❌ Ocurrió un error en el sistema de misiones. Intenta de nuevo.');
         }
-    }
-
-    // Método para conectar eventos
-    connectEventsSystem(eventsSystem) {
-        this.events = eventsSystem;
-        console.log('🎮 Sistema de eventos conectado a minijuegos');
     }
 }
 
