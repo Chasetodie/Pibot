@@ -2881,12 +2881,7 @@ class MinigamesSystem {
             
             // Buscar al usuario para mandar mensaje oculto
             try {
-                const member = await message.guild.members.fetch(player.id);
-                await message.channel.send({
-                    content: `🎴 **Tu mano:**\n\`\`\`${handString}\`\`\``,
-                    // Esto hace que solo el jugador lo vea (requiere slash commands)
-                    ephemeral: true
-                });
+                await player.id.send(`🎴 **Tu mano:**\n\`\`\`${handString}\`\`\``);
             } catch (error) {
                 console.log(`Error enviando mano a ${player.id}`);
             }
@@ -2958,11 +2953,19 @@ class MinigamesSystem {
 
         // Para cartas Wild, verificar que se especificó un color válido
         if (card.type === 'wild') {
-            const chosenColor = args[2] ? args[2].toLowerCase() : null;
+            // Para wild, el color viene en args[1], el nuevo color en args[2]
+            let chosenColor;
+            
+            if (color.toLowerCase() === 'wild') {
+                chosenColor = value.toLowerCase(); // El color está en args[2]
+            } else {
+                chosenColor = args[2] ? args[2].toLowerCase() : null; // Wild+4 con color en args[3]
+            }
+            
             const validColors = ['red', 'yellow', 'green', 'blue'];
             
             if (!chosenColor || !validColors.includes(chosenColor)) {
-                await message.reply('❌ Para cartas Wild debes especificar un color válido\n**Ejemplo:** `>unoplaycard wild red`');
+                await message.reply('❌ Para cartas Wild debes especificar un color válido\n**Ejemplos:**\n• `>unoplaycard wild red`\n• `>unoplaycard wild+4 blue`\n**Colores válidos:** red, yellow, green, blue');
                 return;
             }
         }
@@ -3194,26 +3197,45 @@ class MinigamesSystem {
 
     // Función auxiliar para encontrar carta en la mano
     findCardInHand(player, color, value) {
-        return player.hand.findIndex(card => {
+        console.log(`🔍 Buscando carta: color="${color}", value="${value}"`);
+        console.log(`📋 Cartas en mano:`, player.hand.map(c => `${c.color} ${c.value} (type: ${c.type})`));
+
+        const index = player.hand.findIndex(card => {
             // Normalizar valores para comparación
-            const cardColor = card.color.toLowerCase();
             const cardValue = card.value.toLowerCase();
+            const searchValue = value.toLowerCase();
             
-            // Para cartas Wild
+            // CASO ESPECIAL: Cartas Wild
             if (card.type === 'wild') {
-                if (value === 'wild' && card.value === 'Wild') return true;
-                if ((value === 'wild+4' || value === 'wild4') && card.value === 'Wild+4') return true;
+                // Para Wild normal
+                if (cardValue === 'wild' && (searchValue === 'wild' || color.toLowerCase() === 'wild')) {
+                    return true;
+                }
+                // Para Wild+4
+                if (cardValue === 'wild+4' && (searchValue === 'wild+4' || searchValue === 'wild4' || 
+                    (color.toLowerCase() === 'wild' && searchValue === '+4'))) {
+                    return true;
+                }
             }
             
-            // Para cartas especiales (normalizar +2)
-            if (cardValue === '+2' && (value === '+2' || value === 'draw2')) return true;
+            // Para cartas normales
+            const cardColor = card.color.toLowerCase();
+            const searchColor = color.toLowerCase();
             
-            // Para cartas normales y especiales
-            return cardColor === color && (cardValue === value || 
-                (cardValue === 'skip' && value === 'skip') ||
-                (cardValue === 'reverse' && value === 'reverse'));
+            // Cartas especiales (normalizar +2)
+            if (cardValue === '+2' && (searchValue === '+2' || searchValue === 'draw2')) {
+                return cardColor === searchColor;
+            }
+            
+            // Cartas normales y otras especiales
+            return cardColor === searchColor && (cardValue === searchValue || 
+                (cardValue === 'skip' && searchValue === 'skip') ||
+                (cardValue === 'reverse' && searchValue === 'reverse'));
         });
-}
+
+        console.log(`✅ Resultado: índice ${index}`);
+        return index;
+    }
 
     canPlayCard(card, game) {
         if (card.type === 'wild') return true;
@@ -3383,9 +3405,14 @@ class MinigamesSystem {
 
     // Funciones de base de datos (adaptar a tu sistema)
     async createUnoGameInDB(gameId, gameData) {
-        // Implementar según tu sistema de base de datos
         try {
-            // Ejemplo con Supabase
+            // Limpiar datos para la base de datos
+            const cleanGameData = {
+                ...gameData,
+                turn_timeout: null,
+                join_timeout: null
+            };
+            
             const { error } = await this.supabase
                 .from('uno_games')
                 .insert({
@@ -3395,7 +3422,7 @@ class MinigamesSystem {
                     bet_amount: gameData.bet_amount,
                     players: gameData.players,
                     phase: gameData.phase,
-                    game_data: gameData,
+                    game_data: cleanGameData, // ← Usar datos limpios
                     created_at: new Date()
                 });
 
@@ -3405,15 +3432,23 @@ class MinigamesSystem {
         }
     }
 
+    // Función para limpiar datos antes de guardar en DB
+    cleanGameDataForDB(gameData) {
+        const { turn_timeout, join_timeout, ...cleanData } = gameData;
+        return cleanData;
+    }
+
+    // Luego usar así:
     async updateUnoGameInDB(gameData) {
-        // Implementar según tu sistema
         try {
+            const cleanGameData = this.cleanGameDataForDB(gameData);
+            
             const { error } = await this.supabase
                 .from('uno_games')
                 .update({
                     players: gameData.players,
                     phase: gameData.phase,
-                    game_data: gameData,
+                    game_data: cleanGameData,
                     updated_at: new Date()
                 })
                 .eq('id', gameData.id);
