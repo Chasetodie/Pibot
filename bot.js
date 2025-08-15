@@ -5,7 +5,6 @@ const path = require('path');
 const CommandHandler = require('./commands'); // Importar el manejador de comandos
 const EconomySystem = require('./economy'); // Importar el sistema de economia
 const EventsSystem = require('./events');
-const MusicHandler = require('./musicHandler'); // Importar el bot de música
 const MinigamesSystem = require('./minigames'); // Importar el sistema de minijuegos
 const AchievementsSystem = require('./achievements');
 const BettingSystem = require('./betting');
@@ -74,9 +73,6 @@ const economy = new EconomySystem();
 
 //Crear instancia del sistema de Minijuegos
 const minigames = new MinigamesSystem(economy);
-
-// Inicializar el manejador de música
-const musicHandler = new MusicHandler();
 
 //Crear instancia del sistema de Misiones
 const missions = new MissionsSystem(economy);
@@ -415,10 +411,6 @@ client.on('messageCreate', async (message) => {
     // Ignorar mensajes de bots
     if (message.author.bot) return;
 
-    if (!musicHandler) {
-        return message.reply('⏳ El bot se está inicializando. Espera unos segundos e inténtalo de nuevo.');
-    }
-
     // AGREGAR ESTO AL INICIO:
     const userId = message.author.id;
     const user = await economy.getUser(userId);
@@ -494,30 +486,7 @@ client.on('messageCreate', async (message) => {
 
     // Procesar comandos mejorados (shop, betting, etc.)
     await allCommands.processCommand(message);
-
-    // Procesar comandos de música
-    const args = message.content.slice(1).trim().split(/ +/);
-    const command = args.shift().toLowerCase();
-
-    switch (command) {
-        case 'play':
-        case 'p':
-            if (!args[0]) return message.reply('❌ Proporciona una canción o URL!');
-            await musicHandler.play(message, args.join(' '));
-            break;
-        case 'skip':
-        case 's':
-            musicHandler.skip(message);
-            break;
-        case 'stop':
-            musicHandler.stop(message);
-            break;
-        case 'queue':
-        case 'q':
-            musicHandler.showQueue(message);
-            break;
-    }
-    
+   
     //Procesar comandos de minijuegos
     await minigames.processCommand(message);
     
