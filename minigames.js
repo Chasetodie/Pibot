@@ -1,5 +1,11 @@
-const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
+const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, AttachmentBuilder } = require('discord.js');
 const { createClient } = require('@supabase/supabase-js');
+
+// Colores y tipos de cartas UNO
+const UNO_COLORS = ['🔴', '🟡', '🟢', '🔵'];
+const UNO_NUMBERS = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'];
+const UNO_SPECIAL_CARDS = ['Skip', 'Reverse', '+2'];
+const UNO_WILD_CARDS = ['Wild', 'Wild+4'];
 
 class MinigamesSystem {
     constructor(economySystem) {
@@ -80,6 +86,15 @@ class MinigamesSystem {
                 turnTime: 20000, // 20 segundos por turno
                 winnerMultiplier: 0.85 // El ganador se lleva 85% del pot total
             },
+            uno: {
+                minBet: 100,
+                maxBet: 10000,
+                minPlayers: 2,
+                maxPlayers: 8,
+                joinTime: 60000, //1 minuto para unirse
+                turnTime: 30000, //30 segundos por turno
+                winnerMultiplier: 0.85 //El ganador se lleva 85% del pot total
+            }
         };
         
         this.cooldowns = new Map(); // Para cooldowns por usuario
@@ -1803,11 +1818,11 @@ class MinigamesSystem {
                 { name: '👥 Jugadores', value: `${game.players.length}/${this.config.russianRoulette.maxPlayers}`, inline: true },
                 { name: '⏰ Tiempo para Unirse', value: '30 segundos', inline: true },
                 { name: '🎮 Para Unirse', value: `\`>russian ${betAmount}\``, inline: true },       
-                { name: '🚀 Para Iniciar', value: `\`>start\` (solo el creador)`, inline: true }, // ← NUEVO
-                { name: '❌ Para Cancelar', value: `\`>cancel\` (solo el creador)`, inline: true }
+                { name: '🚀 Para Iniciar', value: `\`>startrussian\` (solo el creador)`, inline: true }, // ← NUEVO
+                { name: '❌ Para Cancelar', value: `\`>cancelrussian\` (solo el creador)`, inline: true }
             )
             .setTimestamp()
-            .setFooter({ text: 'El creador puede iniciar con >start cuando haya mínimo 2 jugadores' });
+            .setFooter({ text: 'El creador puede iniciar con >startrussian cuando haya mínimo 2 jugadores' });
     
         const reply = await message.reply({ embeds: [embed] });
         game.message_id = reply.id;
@@ -1889,11 +1904,11 @@ class MinigamesSystem {
                 },
                 { name: '📊 Estado', value: `${game.players.length}/${this.config.russianRoulette.maxPlayers} jugadores`, inline: true },
                 { name: '🎮 Para Unirse', value: `\`>russian ${game.bet_amount}\``, inline: true },
-                { name: '🚀 Para Iniciar', value: `\`>start\` (solo el creador)`, inline: true },
-                { name: '❌ Para Cancelar', value: `\`>cancel\` (solo el creador)`, inline: true }
+                { name: '🚀 Para Iniciar', value: `\`>startrussian\` (solo el creador)`, inline: true },
+                { name: '❌ Para Cancelar', value: `\`>cancelrussian\` (solo el creador)`, inline: true }
             )
             .setTimestamp()
-            .setFooter({ text: 'El creador puede iniciar con >start cuando esté listo' });
+            .setFooter({ text: 'El creador puede iniciar con >startrussian cuando esté listo' });
     
 /*        // Si está lleno, iniciar inmediatamente
         if (game.players.length >= this.config.russianRoulette.maxPlayers) {
@@ -2455,6 +2470,759 @@ class MinigamesSystem {
         await this.cancelRussianRoulette(game, message, 'Cancelada por el creador');
         await message.reply('✅ Partida cancelada exitosamente.');
     }
+
+    // Método principal para manejar UNO
+    async handleUno(message, args) {
+        const userId = message.author.id;
+        const channelId = message.channel.id;
+        const user = await this.economy.getUser(userId);
+        
+        // Si no hay argumentos suficientes, mostrar ayuda
+        if (args.length < 2) {
+            const embed = new EmbedBuilder()
+                .setTitle('🎴 UNO - Juego de Cartas')
+                .setDescription('¡El primer jugador en quedarse sin cartas se lleva todo!')
+                .addFields(
+                    { name: '📝 Uso', value: '`>unoplay <cantidad>` - Crear/Unirse a partida', inline: false },
+                    { 
+                        name: '🎯 Cómo Funciona', 
+                        value: '• Cada jugador apuesta la misma cantidad\n• Cada uno recibe 7 cartas iniciales\n• Juega cartas que coincidan en color o número\n• Usa cartas especiales para cambiar el juego\n• El primero sin cartas gana 85% del pot\n• La casa se queda con el 15%', 
+                        inline: false 
+                    },
+                    { 
+                        name: '👥 Jugadores', 
+                        value: `Mínimo: ${this.config.uno.minPlayers}\nMáximo: ${this.config.uno.maxPlayers}`, 
+                        inline: true 
+                    },
+                    { 
+                        name: '💰 Apuesta', 
+                        value: `Min: ${this.formatNumber(this.config.uno.minBet)} π-b$\nMax: ${this.formatNumber(this.config.uno.maxBet)} π-b$`, 
+                        inline: true 
+                    },
+                    { 
+                        name: '⏰ Tiempos', 
+                        value: '60s para unirse\n30s por turno\nCooldown: 2 min', 
+                        inline: true 
+                    },
+                    { 
+                        name: '🎮 Comandos en Juego', 
+                        value: '`>play <número>` - Jugar carta\n`>draw` - Robar carta\n`>hand` - Ver tu mano', 
+                        inline: false 
+                    },
+                    { 
+                        name: '💡 Ejemplo', 
+                        value: '`>unoplay 500` - Apostar 500 π-b$', 
+                        inline: false 
+                    }
+                )
+                .setColor('#FF0000')
+                .setFooter({ text: '🎴 ¡Que gane el mejor estratega!' });
+            
+            await message.reply({ embeds: [embed] });
+            return;
+        }
+
+        const betAmount = parseInt(args[1]);
+
+        // Validar cantidad de apuesta
+        if (isNaN(betAmount) || betAmount < this.config.uno.minBet || betAmount > this.config.uno.maxBet) {
+            await message.reply(`❌ La apuesta debe ser entre ${this.formatNumber(this.config.uno.minBet)} y ${this.formatNumber(this.config.uno.maxBet)} π-b$`);
+            return;
+        }
+
+        // Verificar fondos
+        if (user.balance < betAmount) {
+            await message.reply(`❌ No tienes suficientes π-b Coins. Tu balance: ${this.formatNumber(user.balance)} π-b$`);
+            return;
+        }
+
+        // Actualizar misiones
+        if (this.economy.missions) {
+            await this.economy.missions.updateMissionProgress(userId, 'game_played');
+            await this.economy.missions.updateMissionProgress(userId, 'money_bet', betAmount);
+        }
+
+        // Verificar si ya hay una partida activa en el canal
+        const gameKey = `uno_${channelId}`;
+        let game = this.activeGames.get(gameKey);
+
+        if (game) {
+            // Unirse a partida existente
+            await this.joinUnoGame(message, game, userId, betAmount);
+        } else {
+            // Crear nueva partida
+            await this.createUnoGame(message, userId, betAmount, channelId);
+        }
+    }
+
+    async createUnoGame(message, userId, betAmount, channelId) {
+        const gameKey = `uno_${channelId}`;
+        
+        const game = {
+            id: gameKey,
+            channel_id: channelId,
+            creator_id: userId,
+            bet_amount: betAmount,
+            players: [
+                {
+                    id: userId,
+                    username: message.author.username,
+                    displayName: message.author.displayName || message.author.username,
+                    hand: [],
+                    cardCount: 0
+                }
+            ],
+            phase: 'waiting', // waiting, playing, finished
+            current_player_index: 0,
+            deck: [],
+            discard_pile: [],
+            current_color: null,
+            direction: 1, // 1 = horario, -1 = antihorario
+            draw_count: 0, // Para acumular cartas +2 y +4
+            pot: betAmount,
+            start_time: Date.now(),
+            join_start_time: Date.now(),
+            turn_timeout: null,
+            join_timeout: null,
+            message_id: null
+        };
+
+        await this.createUnoGameInDB(gameKey, game);
+        this.activeGames.set(gameKey, game);
+
+        // Reservar dinero del creador
+        await this.economy.removeMoney(userId, betAmount, 'uno_bet');
+
+        const embed = new EmbedBuilder()
+            .setTitle('🎴 UNO - Nueva Partida')
+            .setDescription('¡Se ha creado una nueva partida! Otros jugadores pueden unirse.')
+            .setColor('#FF0000')
+            .addFields(
+                { name: '👑 Creador', value: `<@${userId}>`, inline: true },
+                { name: '💰 Apuesta por Jugador', value: `${this.formatNumber(betAmount)} π-b$`, inline: true },
+                { name: '💎 Pot Actual', value: `${this.formatNumber(game.pot)} π-b$`, inline: true },
+                { name: '👥 Jugadores', value: `${game.players.length}/${this.config.uno.maxPlayers}`, inline: true },
+                { name: '⏰ Tiempo para Unirse', value: '60 segundos', inline: true },
+                { name: '🎮 Para Unirse', value: `\`>unoplay ${betAmount}\``, inline: true },
+                { name: '🚀 Para Iniciar', value: `\`>start\` (solo el creador)`, inline: true },
+                { name: '❌ Para Cancelar', value: `\`>cancel\` (solo el creador)`, inline: true }
+            )
+            .setTimestamp()
+            .setFooter({ text: 'El creador puede iniciar con >start cuando haya mínimo 2 jugadores' });
+
+        const reply = await message.reply({ embeds: [embed] });
+        game.message_id = reply.id;
+    }
+
+    async joinUnoGame(message, game, userId, betAmount) {
+        // Verificaciones
+        if (game.phase !== 'waiting') {
+            await message.reply('❌ Esta partida ya comenzó o terminó');
+            return;
+        }
+
+        if (game.players.find(p => p.id === userId)) {
+            await message.reply('❌ Ya estás en esta partida');
+            return;
+        }
+
+        if (game.players.length >= this.config.uno.maxPlayers) {
+            await message.reply('❌ La partida está llena');
+            return;
+        }
+
+        if (betAmount !== game.bet_amount) {
+            await message.reply(`❌ La apuesta de esta partida es ${this.formatNumber(game.bet_amount)} π-b$`);
+            return;
+        }
+
+        const user = await this.economy.getUser(userId);
+        if (user.balance < betAmount) {
+            await message.reply(`❌ No tienes suficientes π-b Coins. Tu balance: ${this.formatNumber(user.balance)} π-b$`);
+            return;
+        }
+
+        // Agregar jugador
+        game.players.push({
+            id: userId,
+            username: message.author.username,
+            displayName: message.author.displayName || message.author.username,
+            hand: [],
+            cardCount: 0
+        });
+
+        game.pot += betAmount;
+        await this.economy.removeMoney(userId, betAmount, 'uno_bet');
+        await this.updateUnoGameInDB(game);
+
+        const embed = new EmbedBuilder()
+            .setTitle('🎴 UNO - Jugador Unido')
+            .setDescription(`<@${userId}> se ha unido a la partida!`)
+            .setColor('#00FF00')
+            .addFields(
+                { name: '💎 Pot Actual', value: `${this.formatNumber(game.pot)} π-b$`, inline: true },
+                { name: '👥 Jugadores', value: `${game.players.length}/${this.config.uno.maxPlayers}`, inline: true },
+                { name: '🎮 Para Unirse', value: `\`>unoplay ${game.bet_amount}\``, inline: true }
+            );
+
+        await message.reply({ embeds: [embed] });
+    }
+
+    // Funciones de manejo de cartas UNO
+    createUnoDeck() {
+        const deck = [];
+        
+        // Cartas numeradas (0-9) para cada color
+        for (let color of UNO_COLORS) {
+            for (let number of UNO_NUMBERS) {
+                deck.push({ color, value: number, type: 'number' });
+                // Agregar una segunda copia (excepto el 0)
+                if (number !== '0') {
+                    deck.push({ color, value: number, type: 'number' });
+                }
+            }
+        }
+
+        // Cartas especiales para cada color
+        for (let color of UNO_COLORS) {
+            for (let special of UNO_SPECIAL_CARDS) {
+                deck.push({ color, value: special, type: 'special' });
+                deck.push({ color, value: special, type: 'special' });
+            }
+        }
+
+        // Cartas Wild
+        for (let i = 0; i < 4; i++) {
+            deck.push({ color: 'black', value: 'Wild', type: 'wild' });
+            deck.push({ color: 'black', value: 'Wild+4', type: 'wild' });
+        }
+
+        return this.shuffleDeck(deck);
+    }
+
+    shuffleDeck(deck) {
+        for (let i = deck.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [deck[i], deck[j]] = [deck[j], deck[i]];
+        }
+        return deck;
+    }
+
+    // Obtener nombre de archivo de imagen para una carta
+    getCardImageName(card) {
+        if (card.type === 'wild') {
+            return card.value === 'Wild' ? 'card-wild' : 'card-wild-draw-4';
+        }
+        
+        // Convertir color emoji a nombre
+        const colorNames = {
+            '🔴': 'red',
+            '🟡': 'yellow', 
+            '🟢': 'green',
+            '🔵': 'blue'
+        };
+        
+        const colorName = colorNames[card.color] || 'red';
+        
+        // Convertir valores especiales
+        const valueNames = {
+            'Skip': 'skip',
+            'Reverse': 'reverse',
+            '+2': 'draw-2'
+        };
+        
+        const valueName = valueNames[card.value] || card.value;
+        
+        return `card-${valueName}-${colorName}`;
+    }
+
+    // Obtener ruta completa de imagen
+    getCardImagePath(card) {
+        const imageName = this.getCardImageName(card);
+        return path.join(__dirname, 'images', 'UnoImages', `${imageName}.png`);
+    }
+
+    // Verificar si existe la imagen
+    cardImageExists(card) {
+        try {
+            const imagePath = this.getCardImagePath(card);
+            return fs.existsSync(imagePath);
+        } catch {
+            return false;
+        }
+    }
+
+    // Obtener carta como texto
+    getCardString(card) {
+        if (card.type === 'wild') {
+            return card.value === 'Wild' ? '🃏 Wild' : '🃏 Wild+4';
+        }
+        return `${card.color} ${card.value}`;
+    }
+
+    // Crear embed con imagen de carta
+    createCardEmbed(card, title = "Carta", description = "") {
+        const embed = new EmbedBuilder()
+            .setTitle(title)
+            .setDescription(description)
+            .setColor(this.getCardColor(card));
+
+        if (this.cardImageExists(card)) {
+            const imageName = this.getCardImageName(card);
+            embed.setImage(`attachment://${imageName}.png`);
+        } else {
+            // Fallback a texto si no existe la imagen
+            embed.addFields({ name: 'Carta', value: this.getCardString(card), inline: true });
+        }
+
+        return embed;
+    }
+
+    // Obtener color para embed según la carta
+    getCardColor(card) {
+        const colors = {
+            '🔴': 0xFF0000, // Rojo
+            '🟡': 0xFFFF00, // Amarillo  
+            '🟢': 0x00FF00, // Verde
+            '🔵': 0x0000FF, // Azul
+            'black': 0x000000 // Negro para Wild
+        };
+        return colors[card.color] || 0x808080;
+    }
+
+    // Crear attachment de imagen si existe
+    createCardAttachment(card) {
+        if (this.cardImageExists(card)) {
+            const imagePath = this.getCardImagePath(card);
+            const imageName = this.getCardImageName(card);
+            return new AttachmentBuilder(imagePath, { name: `${imageName}.png` });
+        }
+        return null;
+    }
+
+    async startUnoGame(game, message) {
+        if (game.players.length < this.config.uno.minPlayers) {
+            await message.reply(`❌ Se necesitan al menos ${this.config.uno.minPlayers} jugadores para comenzar`);
+            return;
+        }
+
+        game.phase = 'playing';
+        game.deck = this.createUnoDeck();
+        game.discard_pile = [];
+
+        // Repartir 7 cartas a cada jugador
+        for (let player of game.players) {
+            player.hand = [];
+            for (let i = 0; i < 7; i++) {
+                player.hand.push(game.deck.pop());
+            }
+            player.cardCount = player.hand.length;
+        }
+
+        // Primera carta del descarte (no puede ser Wild)
+        let firstCard;
+        do {
+            firstCard = game.deck.pop();
+        } while (firstCard.type === 'wild');
+
+        game.discard_pile.push(firstCard);
+        game.current_color = firstCard.color;
+        game.current_player_index = 0;
+
+        await this.updateUnoGameInDB(game);
+
+        // Mostrar carta inicial
+        const topCard = game.discard_pile[game.discard_pile.length - 1];
+        const embed = this.createCardEmbed(
+            topCard,
+            '🎴 UNO - ¡Partida Iniciada!',
+            `La partida ha comenzado con ${game.players.length} jugadores\n\n**Turno:** <@${game.players[game.current_player_index].id}>\n**Color actual:** ${game.current_color}`
+        );
+
+        const attachment = this.createCardAttachment(topCard);
+        const messageOptions = { embeds: [embed] };
+        
+        if (attachment) {
+            messageOptions.files = [attachment];
+        }
+
+        await message.reply(messageOptions);
+
+        // Enviar manos por DM
+        await this.sendHandsToDM(game, message);
+
+        // Iniciar timer del turno
+        this.startTurnTimer(game, message);
+    }
+
+    async sendHandsToDM(game, message) {
+        for (let player of game.players) {
+            try {
+                const user = await message.client.users.fetch(player.id);
+                const handString = player.hand.map((card, i) => `${i}: ${this.getCardString(card)}`).join('\n');
+                
+                const embed = new EmbedBuilder()
+                    .setTitle('🎴 Tu mano de UNO')
+                    .setDescription(`\`\`\`\n${handString}\n\`\`\``)
+                    .addFields(
+                        { name: 'Comandos', value: '`>play <número>` - Jugar carta\n`>draw` - Robar carta\n`>hand` - Ver mano actualizada', inline: false }
+                    )
+                    .setColor('#0099FF');
+
+                await user.send({ embeds: [embed] });
+            } catch (error) {
+                console.log(`No se pudo enviar DM a ${player.id}`);
+            }
+        }
+    }
+
+    startTurnTimer(game, message) {
+        if (game.turn_timeout) {
+            clearTimeout(game.turn_timeout);
+        }
+
+        game.turn_timeout = setTimeout(async () => {
+            // Auto-robar carta si se acaba el tiempo
+            const currentPlayer = game.players[game.current_player_index];
+            await this.drawCardForPlayer(game, currentPlayer.id, message, true);
+        }, this.config.uno.turnTime);
+    }
+
+    async handlePlayCard(message, args, game) {
+        const userId = message.author.id;
+        const cardIndex = parseInt(args[1]);
+
+        if (game.players[game.current_player_index].id !== userId) {
+            await message.reply('❌ No es tu turno');
+            return;
+        }
+
+        const player = game.players.find(p => p.id === userId);
+        if (!player || !player.hand[cardIndex]) {
+            await message.reply('❌ Carta inválida');
+            return;
+        }
+
+        const card = player.hand[cardIndex];
+        
+        // Verificar si se puede jugar la carta
+        if (!this.canPlayCard(card, game)) {
+            await message.reply('❌ No puedes jugar esta carta');
+            return;
+        }
+
+        // Jugar la carta
+        player.hand.splice(cardIndex, 1);
+        player.cardCount = player.hand.length;
+        game.discard_pile.push(card);
+
+        // Procesar efectos
+        await this.processCardEffect(card, game, args[2]); // args[2] para color de wild
+
+        // Verificar victoria
+        if (player.hand.length === 0) {
+            await this.endUnoGame(game, message, userId);
+            return;
+        }
+
+        // Siguiente turno
+        this.nextPlayer(game);
+        await this.updateUnoGameInDB(game);
+
+        // Mostrar carta jugada
+        const embed = this.createCardEmbed(
+            card,
+            '🎴 Carta Jugada',
+            `<@${userId}> jugó una carta\n**Turno:** <@${game.players[game.current_player_index].id}>\n**Color:** ${game.current_color}`
+        );
+
+        const attachment = this.createCardAttachment(card);
+        const messageOptions = { embeds: [embed] };
+        
+        if (attachment) {
+            messageOptions.files = [attachment];
+        }
+
+        await message.reply(messageOptions);
+        this.startTurnTimer(game, message);
+    }
+
+    canPlayCard(card, game) {
+        if (card.type === 'wild') return true;
+        
+        const topCard = game.discard_pile[game.discard_pile.length - 1];
+        return card.color === game.current_color || 
+               card.value === topCard.value ||
+               card.color === topCard.color;
+    }
+
+    async processCardEffect(card, game, chosenColor) {
+        switch (card.value) {
+            case 'Skip':
+                this.nextPlayer(game);
+                break;
+            case 'Reverse':
+                game.direction *= -1;
+                if (game.players.length === 2) {
+                    this.nextPlayer(game);
+                }
+                break;
+            case '+2':
+                game.draw_count += 2;
+                break;
+            case 'Wild':
+                game.current_color = this.parseColor(chosenColor) || UNO_COLORS[0];
+                break;
+            case 'Wild+4':
+                game.current_color = this.parseColor(chosenColor) || UNO_COLORS[0];
+                game.draw_count += 4;
+                break;
+            default:
+                game.current_color = card.color;
+        }
+    }
+
+    parseColor(colorInput) {
+        if (!colorInput) return null;
+        
+        const colorMap = {
+            'red': '🔴', 'rojo': '🔴',
+            'yellow': '🟡', 'amarillo': '🟡',
+            'green': '🟢', 'verde': '🟢',
+            'blue': '🔵', 'azul': '🔵'
+        };
+        
+        return colorMap[colorInput.toLowerCase()] || null;
+    }
+
+    nextPlayer(game) {
+        game.current_player_index = (game.current_player_index + game.direction + game.players.length) % game.players.length;
+    }
+
+    async drawCardForPlayer(game, userId, message, isTimeout = false) {
+        const player = game.players.find(p => p.id === userId);
+        const drawCount = game.draw_count > 0 ? game.draw_count : 1;
+
+        for (let i = 0; i < drawCount; i++) {
+            if (game.deck.length === 0) {
+                await this.reshuffleDeck(game);
+            }
+            player.hand.push(game.deck.pop());
+        }
+
+        player.cardCount = player.hand.length;
+        game.draw_count = 0;
+
+        if (!isTimeout) {
+            this.nextPlayer(game);
+        }
+
+        await this.updateUnoGameInDB(game);
+
+        // Enviar mano actualizada por DM
+        try {
+            const user = await message.client.users.fetch(userId);
+            const handString = player.hand.map((card, i) => `${i}: ${this.getCardString(card)}`).join('\n');
+            
+            await user.send(`🎴 **Robaste ${drawCount} carta(s)**\n\n**Tu mano:**\n\`\`\`\n${handString}\n\`\`\``);
+        } catch (error) {
+            console.log(`No se pudo enviar DM a ${userId}`);
+        }
+
+        const message_text = isTimeout ? 
+            `⏰ <@${userId}> se quedó sin tiempo y robó ${drawCount} carta(s)` :
+            `🎴 <@${userId}> robó ${drawCount} carta(s)`;
+
+        await message.reply(message_text);
+
+        if (!isTimeout) {
+            this.startTurnTimer(game, message);
+        }
+    }
+
+    async reshuffleDeck(game) {
+        if (game.discard_pile.length <= 1) return;
+        
+        const topCard = game.discard_pile.pop();
+        game.deck = this.shuffleDeck([...game.discard_pile]);
+        game.discard_pile = [topCard];
+    }
+
+    async endUnoGame(game, message, winnerId) {
+        game.phase = 'finished';
+        
+        if (game.turn_timeout) {
+            clearTimeout(game.turn_timeout);
+        }
+
+        const winnings = Math.floor(game.pot * this.config.uno.winnerMultiplier);
+        const house_cut = game.pot - winnings;
+
+        await this.economy.addMoney(winnerId, winnings, 'uno_win');
+
+        // Actualizar estadísticas
+        if (this.economy.missions) {
+            await this.economy.missions.updateMissionProgress(winnerId, 'game_won');
+            await this.economy.missions.updateMissionProgress(winnerId, 'money_won', winnings);
+        }
+
+        const embed = new EmbedBuilder()
+            .setTitle('🎴 UNO - ¡GANADOR!')
+            .setDescription(`🏆 **<@${winnerId}> ha ganado la partida!**`)
+            .addFields(
+                { name: '💰 Ganancia', value: `${this.formatNumber(winnings)} π-b$`, inline: true },
+                { name: '🏠 Comisión Casa', value: `${this.formatNumber(house_cut)} π-b$`, inline: true },
+                { name: '👥 Jugadores', value: `${game.players.length}`, inline: true }
+            )
+            .setColor('#FFD700')
+            .setTimestamp();
+
+        await message.reply({ embeds: [embed] });
+
+        // Limpiar juego
+        this.activeGames.delete(game.id);
+        await this.deleteUnoGameFromDB(game.id);
+    }
+
+    // Función para manejar comando de ver mano
+    async handleShowHand(message, game) {
+        const userId = message.author.id;
+        const player = game.players.find(p => p.id === userId);
+        
+        if (!player) {
+            await message.reply('❌ No estás en esta partida');
+            return;
+        }
+
+        try {
+            const user = await message.client.users.fetch(userId);
+            const handString = player.hand.map((card, i) => `${i}: ${this.getCardString(card)}`).join('\n');
+            
+            const embed = new EmbedBuilder()
+                .setTitle('🎴 Tu mano de UNO')
+                .setDescription(`\`\`\`\n${handString}\n\`\`\``)
+                .setColor('#0099FF');
+
+            await user.send({ embeds: [embed] });
+            await message.react('📬');
+        } catch (error) {
+            await message.reply('❌ No puedo enviarte un mensaje directo. Verifica tu configuración de privacidad.');
+        }
+    }
+
+    // Funciones de base de datos (adaptar a tu sistema)
+    async createUnoGameInDB(gameId, gameData) {
+        // Implementar según tu sistema de base de datos
+        try {
+            // Ejemplo con Supabase
+            const { error } = await this.supabase
+                .from('uno_games')
+                .insert({
+                    id: gameId,
+                    creator_id: gameData.creator_id,
+                    channel_id: gameData.channel_id,
+                    bet_amount: gameData.bet_amount,
+                    players: gameData.players,
+                    phase: gameData.phase,
+                    game_data: gameData,
+                    created_at: new Date()
+                });
+
+            if (error) console.error('Error creating UNO game:', error);
+        } catch (error) {
+            console.error('Database error:', error);
+        }
+    }
+
+    async updateUnoGameInDB(gameData) {
+        // Implementar según tu sistema
+        try {
+            const { error } = await this.supabase
+                .from('uno_games')
+                .update({
+                    players: gameData.players,
+                    phase: gameData.phase,
+                    game_data: gameData,
+                    updated_at: new Date()
+                })
+                .eq('id', gameData.id);
+
+            if (error) console.error('Error updating UNO game:', error);
+        } catch (error) {
+            console.error('Database error:', error);
+        }
+    }
+
+    async deleteUnoGameFromDB(gameId) {
+        // Implementar según tu sistema
+        try {
+            const { error } = await this.supabase
+                .from('uno_games')
+                .delete()
+                .eq('id', gameId);
+
+            if (error) console.error('Error deleting UNO game:', error);
+        } catch (error) {
+            console.error('Database error:', error);
+        }
+    }
+
+    async cancelUnoGame(game, message) {
+        game.phase = 'cancelled';
+        
+        // Devolver dinero a todos los jugadores
+        for (let player of game.players) {
+            await this.economy.addMoney(player.id, game.bet_amount, 'uno_refund');
+        }
+    
+        const embed = new EmbedBuilder()
+            .setTitle('🎴 UNO - Partida Cancelada')
+            .setDescription('La partida ha sido cancelada. Se ha devuelto el dinero a todos los jugadores.')
+            .setColor('#FF0000');
+    
+        await message.reply({ embeds: [embed] });
+    
+        // Limpiar timeouts
+        if (game.join_timeout) {
+            clearTimeout(game.join_timeout);
+        }
+        if (game.turn_timeout) {
+            clearTimeout(game.turn_timeout);
+        }
+    
+        // Eliminar juego
+        this.activeGames.delete(game.id);
+        await this.deleteUnoGameFromDB(game.id);
+    }
+
+    async loadActiveUnoGames(client) {
+        try {
+            const { data, error } = await this.supabase
+                .from('uno_games')
+                .select('*')
+                .neq('phase', 'finished');
+    
+            if (error) {
+                console.error('Error loading UNO games:', error);
+                return;
+            }
+    
+            for (let gameData of data) {
+                const game = gameData.game_data;
+                this.unoHandler.activeGames.set(game.id, game);
+                
+                // Reanudar timers si es necesario
+                if (game.phase === 'playing') {
+                    // Aquí podrías reanudar el timer del turno actual
+                    // this.unoHandler.startTurnTimer(game, message);
+                }
+            }
+    
+            console.log(`Loaded ${data.length} active UNO games`);
+        } catch (error) {
+            console.error('Error connecting to database:', error);
+        }
+    }
     
     async processCommand(message) {
         if (message.author.bot) return;
@@ -2499,13 +3267,46 @@ class MinigamesSystem {
                     const gameKey = `russian_${message.channel.id}`;
                     await this.handleShoot(message, gameKey);
                     break;
-                case '>start': // ← NUEVO COMANDO
-                case '>iniciar':
+                case '>startrussian': // ← NUEVO COMANDO
+                case '>iniciarrussian':
                     await this.handleStartRussian(message);
                     break;
-                case '>cancel':
-                case '>cancelar':
+                case '>cancelrussian':
+                case '>cancelarrussian':
                     await this.handleCancelRussian(message, args);
+                    break;
+                case '>unoplay':
+                    await this.handleUno(message, args);
+                    break;
+                case '>play':
+                    const unoGame = this.activeGames.get(`uno_${message.channel.id}`);
+                    if (unoGame && unoGame.phase === 'playing') {
+                        await this.handlePlayCard(message, args, unoGame);
+                    }
+                    break;
+                case '>draw':
+                    const drawGame = this.activeGames.get(`uno_${message.channel.id}`);
+                    if (drawGame && drawGame.phase === 'playing') {
+                        await this.drawCardForPlayer(drawGame, message.author.id, message);
+                    }
+                    break;
+                case '>hand':
+                    const handGame = this.activeGames.get(`uno_${message.channel.id}`);
+                    if (handGame && handGame.phase === 'playing') {
+                        await this.handleShowHand(message, handGame);
+                    }
+                    break;
+                case '>start':
+                    const startGame = this.activeGames.get(`uno_${message.channel.id}`);
+                    if (startGame && startGame.phase === 'waiting' && startGame.creator_id === message.author.id) {
+                        await this.startUnoGame(startGame, message);
+                    }
+                    break;
+                case '>cancel':
+                    const cancelGame = this.activeGames.get(`uno_${message.channel.id}`);
+                    if (cancelGame && cancelGame.phase === 'waiting' && cancelGame.creator_id === message.author.id) {
+                        await this.cancelUnoGame(cancelGame, message);
+                    }
                     break;
                 case '>games':
                 case '>minigames':
@@ -2556,7 +3357,7 @@ class MinigamesSystem {
                 },
                 { 
                     name: '🔫 Ruleta Rusa (Multiplayer)', 
-                    value: '`>russian <cantidad>` - Crear partida\n`>start` - Iniciar (creador)\n`>shoot` - Disparar en tu turno\nApuesta: 200-5,000 π-b$\nJugadores: 2-6\nGanador se lleva 85% del pot\nCooldown: 45 segundos', 
+                    value: '`>russian <cantidad>` - Crear partida\n`>startrussian` - Iniciar (creador)\n`>shoot` - Disparar en tu turno\nApuesta: 200-5,000 π-b$\nJugadores: 2-6\nGanador se lleva 85% del pot\nCooldown: 45 segundos', 
                     inline: false 
                 },
                 { 
