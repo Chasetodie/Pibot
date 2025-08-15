@@ -1,6 +1,5 @@
 const { joinVoiceChannel, createAudioPlayer, createAudioResource, AudioPlayerStatus, VoiceConnectionStatus } = require('@discordjs/voice');
 const { EmbedBuilder } = require('discord.js');
-const { canModifyQueue } = require('./utils/canPlay');
 const ytdl = require('ytdl-core');
 
 class MusicQueue {
@@ -78,10 +77,6 @@ class MusicHandler {
             return message.reply("❌ Necesitas estar en un canal de voz!");
         }
 
-        if (!canModifyQueue(message.member)) {
-            return message.reply("❌ No tienes permisos para usar comandos de música!");
-        }
-
         let queue = this.queues.get(message.guild.id);
         let song = null;
 
@@ -141,7 +136,6 @@ class MusicHandler {
     skip(message) {
         const queue = this.queues.get(message.guild.id);
         if (!queue) return message.reply("❌ No hay música reproduciéndose!");
-        if (!canModifyQueue(message.member)) return message.reply("❌ No puedes saltar canciones!");
 
         queue.skip();
         message.reply("⏭️ Canción saltada!");
@@ -150,7 +144,6 @@ class MusicHandler {
     stop(message) {
         const queue = this.queues.get(message.guild.id);
         if (!queue) return message.reply("❌ No hay música reproduciéndose!");
-        if (!canModifyQueue(message.member)) return message.reply("❌ No puedes parar la música!");
 
         queue.stop();
         this.queues.delete(message.guild.id);
