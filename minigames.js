@@ -69,6 +69,7 @@ class MinigamesSystem {
                     straight: 35,    // Número exacto: x35
                     red: 1.95,       // Rojo: x1.95
                     black: 1.95,     // Negro: x1.95
+                    green: 37,       // Verde: x37
                     odd: 1.95,       // Impar: x1.95
                     even: 1.95,      // Par: x1.95
                     low: 1.95,       // 1-18: x1.95
