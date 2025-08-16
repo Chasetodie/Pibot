@@ -3658,12 +3658,12 @@ class MinigamesSystem {
     
             for (let gameData of data) {
                 const game = gameData.game_data;
-                this.unoHandler.activeGames.set(game.id, game);
+                this.activeGames.set(game.id, game);
                 
                 // Reanudar timers si es necesario
                 if (game.phase === 'playing') {
                     // Aquí podrías reanudar el timer del turno actual
-                    this.unoHandler.startTurnTimer(game, message);
+                    //this.startTurnTimer(game, message);
                 }
             }
     
