@@ -2509,7 +2509,7 @@ class MinigamesSystem {
                 .setTitle('🎴 UNO - Juego de Cartas')
                 .setDescription('¡El primer jugador en quedarse sin cartas se lleva todo!')
                 .addFields(
-                    { name: '📝 Uso', value: '`>unoplay <cantidad>` - Crear/Unirse a partida', inline: false },
+                    { name: '📝 Uso', value: '`>ujoin <cantidad>` - Crear/Unirse a partida', inline: false },
                     { 
                         name: '🎯 Cómo Funciona', 
                         value: '• Cada jugador apuesta la misma cantidad\n• Cada uno recibe 7 cartas iniciales\n• Juega cartas que coincidan en color o número\n• Usa cartas especiales para cambiar el juego\n• El primero sin cartas gana 85% del pot\n• La casa se queda con el 15%', 
@@ -2537,7 +2537,7 @@ class MinigamesSystem {
                     },
                     { 
                         name: '💡 Ejemplo', 
-                        value: '`>unoplay 500` - Apostar 500 π-b$', 
+                        value: '`>ujoin 500` - Apostar 500 π-b$', 
                         inline: false 
                     }
                 )
@@ -2629,12 +2629,12 @@ class MinigamesSystem {
                 { name: '💎 Pot Actual', value: `${this.formatNumber(game.pot)} π-b$`, inline: true },
                 { name: '👥 Jugadores', value: `${game.players.length}/${this.config.uno.maxPlayers}`, inline: true },
                 { name: '⏰ Tiempo para Unirse', value: '60 segundos', inline: true },
-                { name: '🎮 Para Unirse', value: `\`>unojoin ${betAmount}\``, inline: true },
-                { name: '🚀 Para Iniciar', value: `\`>unostart\` (solo el creador)`, inline: true },
-                { name: '❌ Para Cancelar', value: `\`>unocancel\` (solo el creador)`, inline: true }
+                { name: '🎮 Para Unirse', value: `\`>ujoin ${betAmount}\``, inline: true },
+                { name: '🚀 Para Iniciar', value: `\`>ustart\` (solo el creador)`, inline: true },
+                { name: '❌ Para Cancelar', value: `\`>ucancel\` (solo el creador)`, inline: true }
             )
             .setTimestamp()
-            .setFooter({ text: 'El creador puede iniciar con >unostart cuando haya mínimo 2 jugadores' });
+            .setFooter({ text: 'El creador puede iniciar con >ustart cuando haya mínimo 2 jugadores' });
 
         const reply = await message.reply({ embeds: [embed] });
         game.message_id = reply.id;
@@ -2683,7 +2683,7 @@ class MinigamesSystem {
 
         // Solo mostrar que se puede iniciar, pero NO iniciar automáticamente
         if (game.players.length >= this.config.uno.minPlayers) {
-            await message.channel.send(`✅ Ya hay ${this.config.uno.minPlayers} jugadores. El creador <@${game.creator_id}> puede iniciar con \`>unostart\``);
+            await message.channel.send(`✅ Ya hay ${this.config.uno.minPlayers} jugadores. El creador <@${game.creator_id}> puede iniciar con \`>ustart\``);
         }     
 
         const embed = new EmbedBuilder()
@@ -2693,7 +2693,7 @@ class MinigamesSystem {
             .addFields(
                 { name: '💎 Pot Actual', value: `${this.formatNumber(game.pot)} π-b$`, inline: true },
                 { name: '👥 Jugadores', value: `${game.players.length}/${this.config.uno.maxPlayers}`, inline: true },
-                { name: '🎮 Para Unirse', value: `\`>unojoin ${game.bet_amount}\``, inline: true }
+                { name: '🎮 Para Unirse', value: `\`>ujoin ${game.bet_amount}\``, inline: true }
             );
 
         await message.reply({ embeds: [embed] });
@@ -2940,7 +2940,7 @@ class MinigamesSystem {
 
         // Verificar argumentos (necesita color y valor)
         if (args.length < 3) {
-            await message.reply('❌ Uso: `>unoplay <color> <valor> [>sayuno!]`\n**Ejemplos:**\n• `>unoplay red 5`\n• `>unoplay red 5 >uno!`\n• `>unoplay blue skip uno!`');
+            await message.reply('❌ Uso: `>uplay <color> <valor> [>sayuno!]`\n**Ejemplos:**\n• `>uplay red 5`\n• `>uplay red 5 >sayuno`\n• `>uplay blue skip sayuno`');
             return;
         }
 
@@ -2985,7 +2985,7 @@ class MinigamesSystem {
             const validColors = ['red', 'yellow', 'green', 'blue'];
             
             if (!chosenColor || !validColors.includes(chosenColor)) {
-                await message.reply('❌ Para cartas Wild debes especificar un color válido\n**Ejemplos:**\n• `>unoplay wild red`\n• `>unoplay wild+4 blue`\n**Colores válidos:** red, yellow, green, blue');
+                await message.reply('❌ Para cartas Wild debes especificar un color válido\n**Ejemplos:**\n• `>uplay wild red`\n• `>uplay wild+4 blue`\n**Colores válidos:** red, yellow, green, blue');
                 return;
             }
         }
@@ -3043,7 +3043,7 @@ class MinigamesSystem {
                     startTime: Date.now(),
                     duration: 30000 // 10 segundos
                 };
-//                await message.reply(`🎴 <@${userId}> tiene 1 carta... 👀\n*Los otros jugadores tienen 10 segundos para usar \`>unocallout\` si no dijo UNO*`);
+//                await message.reply(`🎴 <@${userId}> tiene 1 carta... 👀\n*Los otros jugadores tienen 10 segundos para usar \`>ucallout\` si no dijo UNO*`);
             }
         }
 
@@ -3256,7 +3256,7 @@ class MinigamesSystem {
                 .setTitle('🎴 Tu mano de UNO')
                 .setDescription(`\`\`\`${handString}\`\`\``)
                 .setColor('#0099FF')
-                .setFooter({ text: 'Usa >unoplay <color> <valor> para jugar' });
+                .setFooter({ text: 'Usa >uplay <color> <valor> para jugar' });
 
             await user.send({ embeds: [embed] });
             
@@ -3592,9 +3592,9 @@ class MinigamesSystem {
             .setDescription(`🏆 **<@${winnerId}> ha ganado la partida!**`)
             .addFields(
                 { name: '💰 Ganancia', value: `${this.formatNumber(winnings)} π-b$`, inline: true },
-                { name: '🏠 Comisión Casa', value: `${this.formatNumber(house_cut)} π-b$`, inline: true },
+//                { name: '🏠 Comisión Casa', value: `${this.formatNumber(house_cut)} π-b$`, inline: true },
                 { name: '👥 Jugadores', value: `${game.players.length}`, inline: true },
-                    { name: 'Extra por Eventos', value: `${eventMessage || "No hay eventos Activos"} `, inline: false }
+                { name: 'Extra por Eventos', value: `${eventMessage || "No hay eventos Activos"} `, inline: false }
             )
             .setColor('#FFD700')
             .setTimestamp();
@@ -3833,10 +3833,10 @@ class MinigamesSystem {
                 case '>cancelarrussian':
                     await this.handleCancelRussian(message, args);
                     break;
-                case '>unojoin':
+                case '>ujoin':
                     await this.handleUno(message, args);
                     break;
-                case '>unoplay':
+                case '>uplay':
                     const unoGame = this.activeGames.get(`uno_${message.channel.id}`);
                     if (unoGame && unoGame.phase === 'playing') {
                         await this.handlePlayCard(message, args, unoGame);
@@ -3844,7 +3844,7 @@ class MinigamesSystem {
                         await message.reply('❌ No estás en ninguna partida de UNO activa');
                     }
                     break;
-                case '>unopickup':
+                case '>upickup':
                     const drawGame = this.activeGames.get(`uno_${message.channel.id}`);
                     if (drawGame && drawGame.phase === 'playing') {
                         await this.drawCardForPlayer(drawGame, message.author.id, message);
@@ -3852,8 +3852,8 @@ class MinigamesSystem {
                         await message.reply('❌ No estás en ninguna partida de UNO activa');
                     }
                     break;
-                case '>unoshowhand':
-                case '>unohand':
+                case '>ushowhand':
+                case '>uhand':
                     const handGame = this.activeGames.get(`uno_${message.channel.id}`);
                     const player = handGame.players.find(p => p.id === message.author.id);
                     if (handGame && handGame.phase === 'playing') {
@@ -3864,7 +3864,7 @@ class MinigamesSystem {
                         await message.reply('❌ No estás en ninguna partida de UNO activa');
                     }
                     break;
-                case '>unostart':
+                case '>ustart':
                     const startGame = this.activeGames.get(`uno_${message.channel.id}`);
                     if (startGame && startGame.phase === 'waiting' && startGame.creator_id === message.author.id) {
                         await this.startUnoGame(startGame, message);
@@ -3874,7 +3874,7 @@ class MinigamesSystem {
                         await message.reply('❌ No estás en ninguna partida de UNO activa');
                     }
                     break;
-                case '>unotable':
+                case '>utable':
                     const tableGame = this.activeGames.get(`uno_${message.channel.id}`);
                     if (tableGame && tableGame.players.find(p => p.id === message.author.id)) {
                         await this.showGameTable(tableGame, message);
@@ -3882,7 +3882,7 @@ class MinigamesSystem {
                         await message.reply('❌ No estás en ninguna partida activa');
                     }
                     break;
-                case '>unocancel':
+                case '>ucancel':
                     const cancelGame = this.activeGames.get(`uno_${message.channel.id}`);
                     if (cancelGame && cancelGame.phase === 'waiting' && cancelGame.creator_id === message.author.id) {
                         await this.cancelUnoGame(cancelGame, message);
@@ -3899,7 +3899,7 @@ class MinigamesSystem {
                         await message.reply('❌ No estás en ninguna partida de UNO activa');
                     }
                     break;
-                case '>unocallout':
+                case '>ucallout':
                     const calloutgame = this.activeGames.get(`uno_${message.channel.id}`);
                     if (calloutgame && calloutgame.players.find(p => p.id === message.author.id)) {
                         await this.handleUnoCallout(message, calloutgame);
@@ -3961,7 +3961,7 @@ class MinigamesSystem {
                 },
                 {
                     name: '🎴 UNO (Multiplayer)',
-                    value: '`>unojoin <cantidad>` - Crear partida\n`>unostart` - Iniciar (creador)\n`>unoplay <color> <numero>` - Lanzar una carta\n`>unopickup` - Agarra una carta\n`>unohand` - Muestra tu mano\n`>sayuno` - Usalo cuando tengas una carta\n`>unocallout` - El jugador no dijo Uno\n`>unotable` - Muestra la mesa\nApuesta: 100-10,000 π-b$\nJugadores: 2-8\nGanador se lleva 85% del pot',
+                    value: '`>ujoin <cantidad>` - Crear partida\n`>ustart` - Iniciar (creador)\n`>uplay <color> <numero>` - Lanzar una carta\n`>upickup` - Agarra una carta\n`>uhand` - Muestra tu mano\n`>sayuno` - Usalo cuando tengas una carta\n`>ucallout` - El jugador no dijo Uno\n`>utable` - Muestra la mesa\nApuesta: 100-10,000 π-b$\nJugadores: 2-8\nGanador se lleva 85% del pot',
                     inline: false,
                 },
                 { 
