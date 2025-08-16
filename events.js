@@ -4,6 +4,7 @@ const { createClient } = require('@supabase/supabase-js');
 class EventsSystem {
     constructor(economySystem) {
         this.economy = economySystem;
+        this.client = client;
 
         // Inicializar el cliente directamente
         this.supabase = createClient(
@@ -812,8 +813,23 @@ class EventsSystem {
     async announceEvent(event, action, passedGuild = null) {
         if (!this.announcementChannelId) return;
 
-        const targetGuild = passedGuild || this.guild;
-        if (!targetGuild) return;
+        let targetGuild = passedGuild || this.guild;
+
+        // Si no hay guild disponible, intentar obtenerlo del cliente
+        if (!targetGuild && this.client) {
+            try {
+                const channel = await this.client.channels.fetch(this.announcementChannelId);
+                targetGuild = channel?.guild;
+            } catch (error) {
+                console.error('❌ Error obteniendo guild del canal:', error);
+                return;
+            }
+        }
+        
+        if (!targetGuild) {
+            console.log('⚠️ No se pudo obtener el guild para anunciar evento');
+            return;
+        }        
         
         try {
             const channel = await targetGuild.channels.fetch(this.announcementChannelId);
