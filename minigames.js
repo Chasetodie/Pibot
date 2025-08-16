@@ -2512,7 +2512,7 @@ class MinigamesSystem {
                     { name: '📝 Uso', value: '`>ujoin <cantidad>` - Crear/Unirse a partida', inline: false },
                     { 
                         name: '🎯 Cómo Funciona', 
-                        value: '• Cada jugador apuesta la misma cantidad\n• Cada uno recibe 7 cartas iniciales\n• Juega cartas que coincidan en color o número\n• Usa cartas especiales para cambiar el juego\n• El primero sin cartas gana 85% del pot\n• La casa se queda con el 15%', 
+                        value: '• Cada jugador apuesta la misma cantidad\n• Cada uno recibe 7 cartas iniciales\n• Juega cartas que coincidan en color o número\n• Usa cartas especiales para cambiar el juego\n• El primero sin cartas gana 95% del pot\n• La casa se queda con el 5%', 
                         inline: false 
                     },
                     { 
