@@ -2913,13 +2913,13 @@ class MinigamesSystem {
             clearTimeout(game.turn_timeout);
         }
 
-        // Limpiar ventana de callout si ha expirado
+/*        // Limpiar ventana de callout si ha expirado
         if (game.unoCalloutWindow) {
             const timeElapsed = Date.now() - game.unoCalloutWindow.startTime;
             if (timeElapsed > game.unoCalloutWindow.duration) {
                 game.unoCalloutWindow = null;
             }
-        }
+        }*/
 
         game.turn_timeout = setTimeout(async () => {
             await this.kickPlayerFromGame(game, message);
@@ -3042,13 +3042,10 @@ class MinigamesSystem {
                     playerId: userId,
                     playerName: message.author.username,
                     startTime: Date.now(),
-                    duration: 10000 // 10 segundos
+                    duration: 30000 // 30 segundos
                 };
                 
-                console.log(`🚨 VENTANA CALLOUT CREADA:`);
-                console.log(`- Jugador: ${userId}`);
-                console.log(`- Tiempo: ${Date.now()}`);
-                console.log(`- Duración: 10 segundos`);
+                console.log(`🚨 VENTANA CALLOUT CREADA PARA: ${userId}`);
                 
         //        await message.reply(`🎴 <@${userId}> tiene 1 carta... 👀\n*Los otros jugadores tienen 10 segundos para usar \`>unocallout\` si no dijo UNO*`);
             }
@@ -3412,7 +3409,7 @@ class MinigamesSystem {
 
     nextPlayer(game) {
         // Limpiar ventana de callout al cambiar turno
-        game.unoCalloutWindow = null;
+        //game.unoCalloutWindow = null;
         
         game.current_player_index = (game.current_player_index + game.direction + game.players.length) % game.players.length;
     }
