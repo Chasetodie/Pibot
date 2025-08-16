@@ -3025,25 +3025,32 @@ class MinigamesSystem {
             return;
         }
 
-        // SISTEMA UNO: Verificar si el jugador queda con 1 carta
+        // Donde creas la ventana de callout, agrega:
         if (player.hand.length === 1) {
             if (hasUnoCall) {
                 // El jugador dijo UNO correctamente
                 player.saidUno = true;
                 player.unoCallTime = Date.now();
+                console.log(`✅ JUGADOR DIJO UNO: ${userId}`);
                 await message.reply(`🎴 **¡UNO!** <@${userId}> declaró UNO correctamente y tiene 1 carta`);
             } else {
                 // No dijo UNO - marcar para posible callout
                 player.saidUno = false;
                 player.unoCallTime = null;
-                // Los otros jugadores tienen 10 segundos para hacer callout
+                
                 game.unoCalloutWindow = {
                     playerId: userId,
                     playerName: message.author.username,
                     startTime: Date.now(),
-                    duration: 30000 // 10 segundos
+                    duration: 10000 // 10 segundos
                 };
-//                await message.reply(`🎴 <@${userId}> tiene 1 carta... 👀\n*Los otros jugadores tienen 10 segundos para usar \`>ucallout\` si no dijo UNO*`);
+                
+                console.log(`🚨 VENTANA CALLOUT CREADA:`);
+                console.log(`- Jugador: ${userId}`);
+                console.log(`- Tiempo: ${Date.now()}`);
+                console.log(`- Duración: 10 segundos`);
+                
+        //        await message.reply(`🎴 <@${userId}> tiene 1 carta... 👀\n*Los otros jugadores tienen 10 segundos para usar \`>unocallout\` si no dijo UNO*`);
             }
         }
 
@@ -3092,6 +3099,12 @@ class MinigamesSystem {
     async handleUnoCallout(message, game) {
         const userId = message.author.id;
         const caller = game.players.find(p => p.id === userId);
+
+        console.log(`🔍 CALLOUT INICIADO POR: ${userId}`);
+        console.log(`🔍 VENTANA CALLOUT:`, game.unoCalloutWindow);
+        console.log(`🔍 ESTADO DEL JUEGO:`, {
+            jugadores: game.players.map(p => ({ id: p.id, cartas: p.hand.length, dijoUno: p.saidUno }))
+        });
         
         if (!caller) {
             await message.reply('❌ No estás en esta partida');
