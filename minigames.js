@@ -3412,8 +3412,23 @@ class MinigamesSystem {
             `**Color actual:** ${game.current_color}\n**Siguiente turno:** <@${game.players[game.current_player_index].id}>`
         );
 
+        const row = new ActionRowBuilder()
+            .addComponents(
+                new ButtonBuilder()
+                    .setCustomId('uno_show_hand')
+                    .setLabel('🎴 Ver mis cartas')
+                    .setStyle(ButtonStyle.Primary),
+                new ButtonBuilder()
+                    .setCustomId('uno_draw_card')
+                    .setLabel('🔄 Robar carta')
+                    .setStyle(ButtonStyle.Secondary)
+            );
+        
         const attachment = this.createCardAttachment(topCard);
-        const messageOptions = { embeds: [cardEmbed] };
+        const messageOptions = { 
+            embeds: [embed], 
+            components: [row]
+        };
         if (attachment) {
             messageOptions.files = [attachment];
         }
