@@ -457,10 +457,10 @@ class AchievementsSystem {
                         }
                     }
 
-                    updateData.balance = user.balance + rewardFinal;
+                    updateData.balance = user.balance + finalEarnings;
                     updateData.stats = {
                         ...user.stats,
-                        totalEarned: (user.stats.totalEarned || 0) + rewardFinal,
+                        totalEarned: (user.stats.totalEarned || 0) + finalEarnings,
                         message_achievements: eventMessage
                     };
                 }
