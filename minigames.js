@@ -3041,9 +3041,9 @@ class MinigamesSystem {
                     playerId: userId,
                     playerName: message.author.username,
                     startTime: Date.now(),
-                    duration: 10000 // 10 segundos
+                    duration: 30000 // 10 segundos
                 };
-                await message.reply(`🎴 <@${userId}> tiene 1 carta... 👀\n*Los otros jugadores tienen 10 segundos para usar \`>unocallout\` si no dijo UNO*`);
+//                await message.reply(`🎴 <@${userId}> tiene 1 carta... 👀\n*Los otros jugadores tienen 10 segundos para usar \`>unocallout\` si no dijo UNO*`);
             }
         }
 
@@ -3058,9 +3058,9 @@ class MinigamesSystem {
             card,
             '🎴 Carta Jugada',
             `<@${userId}> jugó: **${this.getCardString(card)}**\n\n` +
-            `**Próximo turno:** <@${game.players[game.current_player_index].id}>\n` +
-            `**Color actual:** ${game.current_color}\n` +
-            `**Cartas restantes:** ${player.hand.length}`
+            `**Le toca a:** <@${game.players[game.current_player_index].id}>\n` +
+            `**Color actual:** ${game.current_color}\n` /*+
+            `**Cartas restantes:** ${player.hand.length}`*/
         );
 
         const row = new ActionRowBuilder()
@@ -3097,7 +3097,7 @@ class MinigamesSystem {
             await message.reply('❌ No estás en esta partida');
             return;
         }
-
+    
         // Verificar si hay una ventana de callout activa
         if (!game.unoCalloutWindow) {
             // PENALIZACIÓN: Callout sin razón válida
@@ -3114,21 +3114,41 @@ class MinigamesSystem {
             await this.sendHandAsEphemeral(message, caller);
             return;
         }
-
+    
         // Verificar si la ventana de callout sigue activa (10 segundos)
         const timeElapsed = Date.now() - game.unoCalloutWindow.startTime;
         if (timeElapsed > game.unoCalloutWindow.duration) {
             game.unoCalloutWindow = null;
-            await message.reply('❌ El tiempo para hacer callout ha expirado');
+            
+            // Callout tardío = penalización
+            for (let i = 0; i < 2; i++) {
+                if (game.deck.length === 0) {
+                    await this.reshuffleDeck(game);
+                }
+                caller.hand.push(game.deck.pop());
+            }
+            caller.cardCount = caller.hand.length;
+            
+            await message.reply(`❌ **CALLOUT TARDÍO:** <@${userId}> el tiempo para hacer callout ha expirado y recibe 2 cartas`);
+            await this.updateUnoGameInDB(game);
+            await this.sendHandAsEphemeral(message, caller);
             return;
         }
-
+    
         const targetPlayerId = game.unoCalloutWindow.playerId;
         const targetPlayer = game.players.find(p => p.id === targetPlayerId);
-
-        // Verificar que el jugador objetivo tenga exactamente 1 carta
-        if (!targetPlayer || targetPlayer.hand.length !== 1) {
-            // CALLOUT FALSO - penalizar al que hizo el callout
+    
+        // VERIFICACIONES EN ORDEN CORRECTO:
+        
+        // 1. ¿Existe el jugador objetivo?
+        if (!targetPlayer) {
+            await message.reply('❌ Error: Jugador objetivo no encontrado');
+            return;
+        }
+        
+        // 2. ¿El jugador objetivo tiene exactamente 1 carta?
+        if (targetPlayer.hand.length !== 1) {
+            // EL JUGADOR YA NO TIENE 1 CARTA - Callout inválido
             for (let i = 0; i < 2; i++) {
                 if (game.deck.length === 0) {
                     await this.reshuffleDeck(game);
@@ -3139,21 +3159,32 @@ class MinigamesSystem {
             
             game.unoCalloutWindow = null;
             
-            await message.reply(`❌ **¡CALLOUT FALSO!** <@${userId}> hizo un callout incorrecto y recibe 2 cartas de penalización\n*El jugador objetivo ${targetPlayer ? `tiene ${targetPlayer.hand.length} cartas` : 'no existe'}*`);
-            
+            await message.reply(`❌ **CALLOUT FALSO:** <@${userId}> el jugador objetivo tiene ${targetPlayer.hand.length} cartas, no 1. Recibes 2 cartas de penalización`);
             await this.updateUnoGameInDB(game);
             await this.sendHandAsEphemeral(message, caller);
             return;
         }
-
-        // Verificar si ya dijo UNO (callout válido pero tarde)
+    
+        // 3. ¿Ya declaró UNO correctamente?
         if (targetPlayer.saidUno) {
-            await message.reply(`❌ **Callout tardío:** <@${targetPlayerId}> ya declaró UNO correctamente`);
+            // YA DIJO UNO - Callout tardío
+            game.unoCalloutWindow = null;
+            
+            for (let i = 0; i < 2; i++) {
+                if (game.deck.length === 0) {
+                    await this.reshuffleDeck(game);
+                }
+                caller.hand.push(game.deck.pop());
+            }
+            caller.cardCount = caller.hand.length;
+            
+            await message.reply(`❌ **CALLOUT TARDÍO:** <@${targetPlayerId}> ya declaró UNO correctamente. <@${userId}> recibe 2 cartas`);
+            await this.updateUnoGameInDB(game);
+            await this.sendHandAsEphemeral(message, caller);
             return;
         }
-
-        // ¡CALLOUT EXITOSO!
-        // Dar 2 cartas al jugador que no dijo UNO
+    
+        // 4. ¡CALLOUT EXITOSO! - El jugador tiene 1 carta y NO dijo UNO
         for (let i = 0; i < 2; i++) {
             if (game.deck.length === 0) {
                 await this.reshuffleDeck(game);
@@ -3161,12 +3192,12 @@ class MinigamesSystem {
             targetPlayer.hand.push(game.deck.pop());
         }
         targetPlayer.cardCount = targetPlayer.hand.length;
-
+    
         // Limpiar ventana de callout
         game.unoCalloutWindow = null;
-
+    
         await message.reply(`🚨 **¡CALLOUT EXITOSO!** <@${userId}> cachó a <@${targetPlayerId}> sin decir UNO\n**<@${targetPlayerId}> recibe 2 cartas de penalización**\n*Cartas actuales: ${targetPlayer.hand.length}*`);
-
+    
         await this.updateUnoGameInDB(game);
         
         // Enviar nueva mano al jugador penalizado
@@ -3431,7 +3462,7 @@ class MinigamesSystem {
         
         const attachment = this.createCardAttachment(topCard);
         const messageOptions = { 
-            embeds: [embed], 
+            embeds: [cardEmbed], 
             components: [row]
         };
         if (attachment) {
