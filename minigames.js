@@ -3768,7 +3768,7 @@ class MinigamesSystem {
                 case '>unotable':
                     const tableGame = this.activeGames.get(`uno_${message.channel.id}`);
                     if (tableGame && tableGame.players.find(p => p.id === message.author.id)) {
-                        await this.showGameTable(game, message);
+                        await this.showGameTable(tableGame, message);
                     } else {
                         await message.reply('❌ No estás en ninguna partida activa');
                     }
