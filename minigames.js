@@ -1543,6 +1543,8 @@ class MinigamesSystem {
             'red': { type: 'red', displayName: '🔴 Rojo' },
             'negro': { type: 'black', displayName: '⚫ Negro' },
             'black': { type: 'black', displayName: '⚫ Negro' },
+            'verde': { type: 'green', displayName: '🟢 Verde'},
+            'green': { type: 'green', displayName: '🟢 Verde'},
             
             // Paridad
             'par': { type: 'even', displayName: '🟦 Par' },
@@ -1605,6 +1607,8 @@ class MinigamesSystem {
                 return color === 'red';
             case 'black':
                 return color === 'black';
+            case 'green':
+                return color === 'green';
             case 'even':
                 return number !== 0 && number % 2 === 0;
             case 'odd':
