@@ -283,7 +283,7 @@ class EventsSystem {
         const totalProbability = Object.values(this.eventProbabilities).reduce((sum, prob) => sum + prob, 0);
         const randomValue = Math.random();
         
-        //if (randomValue > totalProbability) return; // No crear evento
+        if (randomValue > totalProbability) return; // No crear evento
         
         // Seleccionar tipo de evento
         let cumulativeProbability = 0;
@@ -291,10 +291,10 @@ class EventsSystem {
         
         for (const [eventType, probability] of Object.entries(this.eventProbabilities)) {
             cumulativeProbability += probability;
-//            if (randomValue <= cumulativeProbability) {
-                selectedEventType = 'money_rain';
-//                break;
-//            }
+            if (randomValue <= cumulativeProbability) {
+                selectedEventType = eventType;
+                break;
+            }
         }
         
         if (selectedEventType) {
