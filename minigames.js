@@ -2527,12 +2527,12 @@ class MinigamesSystem {
                     },
                     { 
                         name: '⏰ Tiempos', 
-                        value: '60s para unirse\n30s por turno\nCooldown: 2 min', 
+                        value: '\n10m por turno, si no juega sera expulsado', 
                         inline: true 
                     },
                     { 
                         name: '🎮 Comandos en Juego', 
-                        value: '`>play <número>` - Jugar carta\n`>draw` - Robar carta\n`>hand` - Ver tu mano', 
+                        value: '`>uplay <color> <numero>` - Jugar carta\n`>upickup` - Robar carta\n`>uhand` - Ver tu mano', 
                         inline: false 
                     },
                     { 
