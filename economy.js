@@ -316,6 +316,7 @@ class EconomySystem {
        
         return {
             success: true,
+            amount: amount,
             fromBalance: updateDataFrom.balance,
             toBalance: updateDataTo.balance,
             eventMessage: eventMessage
@@ -638,7 +639,7 @@ class EconomySystem {
         
         return {
             success: true,
-            amount: finalEarnings,
+            amount: amount,
             oldBalance: user.balance,
             newBalance: user.balance + finalEarnings,
             eventMessage: eventMessage,
@@ -996,7 +997,7 @@ class EconomySystem {
         
         return {
             success: true,
-            amount: finalEarnings,
+            amount: amount,
             message: message,
             oldBalance: user.balance,
             newBalance: user.balance + finalEarnings,
