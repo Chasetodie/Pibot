@@ -711,6 +711,27 @@ class EconomySystem {
                     'Tuviste que huir sin nada'
                 ]
             },
+            'vendedordelpunto': {
+                name: '🚬 Vendedor del Punto',
+                cooldown: 60 * 60 * 1000, // 1 hora
+                codeName: 'vendedordelpunto',
+                baseReward: 1200,
+                variation: 1500,
+                levelRequirement: 15,
+                failChance: 0.35, // 35% de fallar
+                messages: [
+                    'Descubriste un fenómeno paranormal',
+                    'Realizaste una investigación exitosa',
+                    'Capturaste evidencia de lo sobrenatural',
+                    'Tuviste una experiencia inquietante pero reveladora'
+                ],
+                failMessages: [
+                    'No encontraste pruebas suficientes',
+                    'Tuviste que abandonar la investigación',
+                    'El fenómeno resultó ser un engaño',
+                    'No lograste captar nada inusual'
+                ]
+            },
             'ofseller': {
                 name: '👙 Vendedora de Nudes',
                 cooldown: 60 * 60 * 1000, // 1 hora
