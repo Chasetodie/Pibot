@@ -3005,6 +3005,15 @@ class MinigamesSystem {
 
         await this.processCardEffect(card, game, chosenColor);
 
+        // AGREGAR ESTO:
+        // Si se jugó +2 o Wild+4, el siguiente jugador debe actuar
+        if (card.value === '+2' || card.value === 'Wild+4') {
+            // Pequeño delay para que se procese todo
+            setTimeout(async () => {
+                await this.forceDrawCards(game, message);
+            }, 1500);
+        }
+
         // Verificar victoria
         if (player.hand.length === 0) {
             await this.endUnoGame(game, message, userId);
@@ -3244,9 +3253,14 @@ class MinigamesSystem {
                 if (cardValue === 'wild' && (searchValue === 'wild' || color.toLowerCase() === 'wild')) {
                     return true;
                 }
-                // Para Wild+4
-                if (cardValue === 'wild+4' && (searchValue === 'wild+4' || searchValue === 'wild4' || 
-                    (color.toLowerCase() === 'wild' && searchValue === '+4'))) {
+                // Para Wild+4 - ARREGLAR AQUÍ
+                if (cardValue === 'wild+4' && (
+                    searchValue === 'wild+4' || 
+                    searchValue === 'wild4' || 
+                    searchValue === '+4' ||
+                    (color.toLowerCase() === 'wild+4') ||
+                    (color.toLowerCase() === 'wild' && searchValue === '+4')
+                )) {
                     return true;
                 }
             }
@@ -3279,6 +3293,32 @@ class MinigamesSystem {
                card.color === topCard.color;
     }
 
+    async forceDrawCards(game, message) {
+        if (game.draw_count === 0) return;
+        
+        const currentPlayer = game.players[game.current_player_index];
+        
+        // Verificar si el jugador puede defenderse con otra carta +2 o +4
+        const hasDefenseCard = currentPlayer.hand.some(card => 
+            card.value === '+2' || card.value === 'Wild+4'
+        );
+        
+        if (!hasDefenseCard) {
+            // Forzar a robar las cartas acumuladas
+            await this.drawCardForPlayer(game, currentPlayer.id, message);
+            
+            // Mostrar mensaje explicativo
+            await message.channel.send(
+                `⚠️ <@${currentPlayer.id}> debe robar ${game.draw_count} cartas (no tiene cartas +2 o +4 para defenderse)`
+            );
+        } else {
+            // Dar opción de defenderse
+            await message.channel.send(
+                `⚠️ <@${currentPlayer.id}> debe robar ${game.draw_count} cartas O jugar una carta +2/+4 para defenderse`
+            );
+        }
+    }
+
     async processCardEffect(card, game, chosenColor) {
         switch (card.value) {
             case 'Skip':
@@ -3292,13 +3332,16 @@ class MinigamesSystem {
                 break;
             case '+2':
                 game.draw_count += 2;
+                console.log(`+2 jugada, cartas acumuladas: ${game.draw_count}`);
                 break;
             case 'Wild':
                 game.current_color = chosenColor || UNO_COLORS[0];
+                console.log(`Wild jugada, nuevo color: ${game.current_color}`);
                 break;
             case 'Wild+4':
                 game.current_color = chosenColor || UNO_COLORS[0];
                 game.draw_count += 4;
+                console.log(`Wild+4 jugada, nuevo color: ${game.current_color}, cartas acumuladas: ${game.draw_count}`);
                 break;
             default:
                 game.current_color = card.color;
@@ -3413,8 +3456,23 @@ class MinigamesSystem {
             });
         }
 
+        const row = new ActionRowBuilder()
+            .addComponents(
+                new ButtonBuilder()
+                    .setCustomId('uno_show_hand')
+                    .setLabel('🎴 Ver mis cartas')
+                    .setStyle(ButtonStyle.Primary),
+                new ButtonBuilder()
+                    .setCustomId('uno_draw_card')
+                    .setLabel('🔄 Robar carta')
+                    .setStyle(ButtonStyle.Secondary)
+            );
+            
         const attachment = this.createCardAttachment(topCard);
-        const messageOptions = { embeds: [embed] };
+        const messageOptions = { 
+            embeds: [embed], 
+            components: [row]
+        };
         if (attachment) {
             messageOptions.files = [attachment];
         }
