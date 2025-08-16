@@ -864,7 +864,7 @@ class AchievementsSystem {
                         value: `${achievement.reward.money ? `+${this.formatNumber(achievement.reward.money)} π-b$` : ''}\n${achievement.reward.xp ? `+${this.formatNumber(achievement.reward.xp)} XP` : ''}`.trim(),
                         inline: true
                     },
-                    { name: 'Extra por Eventos', value: `${user.stats.message_achievements || "No hay eventos Activos"} `, inline: false }                
+                    { name: '🎉 Extra por Eventos', value: `${user.stats.message_achievements || "No hay eventos Activos"} `, inline: false }                
                 )
                 .setTimestamp();
 

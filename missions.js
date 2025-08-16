@@ -726,7 +726,7 @@ class MissionsSystem {
                         value: rewards.join('\n'),
                         inline: true
                     },
-                    { name: 'Extra por Eventos', value: `${user.stats.message_missions || "No hay eventos Activos"} `, inline: false }
+                    { name: '🎉 Extra por Eventos', value: `${user.stats.message_missions || "No hay eventos Activos"} `, inline: false }
                 );
             }
             

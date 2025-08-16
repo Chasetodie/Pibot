@@ -225,12 +225,19 @@ class MinigamesSystem {
             await this.economy.missions.updateMissionProgress(userId, 'money_bet', betAmount);
         }
 
-        let baseWinChance = 0.5; // 50% chance base
-        let finalWinChance = baseWinChance;
-        let appliedEvents = [];
+        let winChance = 0.5; // 50% base
+        let luckMessage = '';
+        
+        for (const event of this.events.getActiveEvents()) {
+            if (event.type === 'lucky_hour') {
+                winChance *= 1.3; // 🍀 +30% probabilidad
+                luckMessage = `\n🍀 **Hora de la Suerte** (${Math.round(winChance * 100)}% probabilidad)`;
+                break;
+            }
+        }
                 
         // Realizar el juego
-        const result = Math.random() < finalWinChance ? 'cara' : 'cruz';
+        const result = Math.random() < winChance ? 'cara' : 'cruz';
         const won = result === normalizedChoice;
         
         // Establecer cooldown
@@ -297,7 +304,7 @@ class MinigamesSystem {
                     { name: '💰 Ganancia', value: `+${this.formatNumber(profit)} π-b$`, inline: true },
                     { name: '💸 Balance Antiguo', value: `${this.formatNumber(user.balance)} π-b$`, inline: false },
                     { name: '💳 Balance Actual', value: `${this.formatNumber(user.balance + profit)} π-b$`, inline: false },
-                    { name: 'Extra por Eventos', value: `${eventMessage || "No hay eventos Activos"} `, inline: false }
+                    { name: '🎉 Extra por Eventos', value: `${eventMessage && luckMessage || "No hay eventos Activos"} `, inline: false }
                 );
         } else {
             await this.economy.removeMoney(userId, betAmount, 'coinflip_loss');            
@@ -396,22 +403,43 @@ class MinigamesSystem {
         
         // Tirar el dado
         const diceResult = Math.floor(Math.random() * 6) + 1;
-        let won = false;
+        let baseWon = false;
         let multiplier = 0;
+        let winChance = 1;
 
         // Determinar si ganó y el multiplicador
         if (['1', '2', '3', '4', '5', '6'].includes(prediction)) {
             // Predicción de número exacto
-            won = diceResult === parseInt(prediction);
+            baseWon = diceResult === parseInt(prediction);
             multiplier = this.config.dice.payouts.exact;
         } else if (['alto', 'high'].includes(prediction)) {
             // Predicción alto (4-6)
-            won = diceResult >= 4;
+            baseWon = diceResult >= 4;
             multiplier = this.config.dice.payouts.high;
         } else if (['bajo', 'low'].includes(prediction)) {
             // Predicción bajo (1-3)
-            won = diceResult <= 3;
+            baseWon = diceResult <= 3;
             multiplier = this.config.dice.payouts.low;
+        }
+
+        // Aplicar hora de la suerte
+        let luckMessage = '';
+        for (const event of this.events.getActiveEvents()) {
+            if (event.type === 'lucky_hour') {
+                // Si perdió originalmente, dar 30% chance de ganar igual
+                if (!baseWon && Math.random() < 0.3) {
+                    won = true;
+                    luckMessage = `🍀 **Hora de la Suerte** te salvó!`;
+                } else if (baseWon) {
+                    won = true;
+                }
+                break;
+            }
+        }
+
+        // Si no hay hora de la suerte, usar resultado normal
+        if (luckMessage === '') {
+            won = baseWon;
         }
 
         // Establecer cooldown
@@ -484,7 +512,7 @@ class MinigamesSystem {
                     { name: '💰 Ganancia', value: `+${this.formatNumber(profit)} π-b$`, inline: false },
                     { name: '💸 Balance Antiguo', value: `${this.formatNumber(user.balance)} π-b$`, inline: false },
                     { name: '💳 Balance Actual', value: `${this.formatNumber(user.balance + profit)} π-b$`, inline: false },
-                    { name: 'Extra por Eventos', value: `${eventMessage || "No hay eventos Activos"} `, inline: false }
+                    { name: '🎉 Extra por Eventos', value: `${eventMessage && luckMessage || "No hay eventos Activos"} `, inline: false }
                 );
         } else {
             await this.economy.removeMoney(userId, betAmount, 'dice_loss');
@@ -585,7 +613,20 @@ class MinigamesSystem {
         
         // Generar número ganador
         const winningNumber = Math.floor(Math.random() * this.config.lottery.maxNumber) + this.config.lottery.minNumber;
-        const won = winningNumber === predictedNumber;
+        let won = winningNumber === predictedNumber;
+        let luckMessage = '';
+
+        // Aplicar hora de la suerte
+        for (const event of this.events.getActiveEvents()) {
+            if (event.type === 'lucky_hour') {
+                // Si perdió originalmente, dar 30% chance de ganar igual
+                if (!won && Math.random() < 0.3) {
+                    won = true;
+                    luckMessage = `🍀 **Hora de la Suerte** te dio una segunda oportunidad!`;
+                }
+                break;
+            }
+        }
         
         // Establecer cooldown
         this.setCooldown(userId, 'lottery');
@@ -679,7 +720,7 @@ class MinigamesSystem {
                     { name: '🤑 Ganancia Total', value: `+${this.formatNumber(profit)} π-b$`, inline: true },
                     { name: '💸 Balance Anterior', value: `${this.formatNumber(user.balance)} π-b$`, inline: false },
                     { name: '💳 Balance Actual', value: `${this.formatNumber(user.balance + profit)} π-b$ 🚀`, inline: false },
-                    { name: 'Extra por Eventos', value: `${eventMessage || "No hay eventos Activos"} `, inline: false }
+                    { name: '🎉 Extra por Eventos', value: `${eventMessage && luckMessage || "No hay eventos Activos"} `, inline: false }
                 );
         } else {
             await this.economy.removeMoney(userId, betAmount, 'lottery_loss');
@@ -1206,7 +1247,7 @@ class MinigamesSystem {
             embed.addFields(
                 { name: '💰 Ganancia', value: `+${this.formatNumber(profit)} π-b$`, inline: true },
                 { name: '💳 Balance Actual', value: `${this.formatNumber(user.balance + profit)} π-b$`, inline: true },
-                { name: 'Extra por Eventos', value: `${eventMessage || "No hay eventos Activos"} `, inline: false }
+                { name: '🎉 Extra por Eventos', value: `${eventMessage || "No hay eventos Activos"} `, inline: false }
             );
         } else if (profit < 0) {
             embed.addFields(
@@ -1395,7 +1436,20 @@ class MinigamesSystem {
     
         // Girar la ruleta
         const spinResult = this.spinRoulette();
-        const won = this.checkRouletteWin(validBet, spinResult);
+        let won = this.checkRouletteWin(validBet, spinResult);
+        let luckMessage = '';
+
+        // Aplicar hora de la suerte
+        for (const event of this.events.getActiveEvents()) {
+            if (event.type === 'lucky_hour') {
+                // Si perdió originalmente, dar 30% chance de ganar igual
+                if (!won && Math.random() < 0.3) {
+                    won = true;
+                    luckMessage = `🍀 **Hora de la Suerte** cambió tu destino!`;
+                }
+                break;
+            }
+        }
         
         // Establecer cooldown
         this.setCooldown(userId, 'roulette');
@@ -1483,7 +1537,7 @@ class MinigamesSystem {
                     { name: '🤑 Ganancia Total', value: `+${this.formatNumber(profit)} π-b$`, inline: true },
                     { name: '💸 Balance Anterior', value: `${this.formatNumber(user.balance)} π-b$`, inline: false },
                     { name: '💳 Balance Actual', value: `${this.formatNumber(user.balance + profit)} π-b$ 🚀`, inline: false },
-                    { name: 'Extra por Eventos', value: `${eventMessage || "No hay eventos Activos"} `, inline: false }
+                    { name: '🎉 Extra por Eventos', value: `${eventMessage && luckMessage || "No hay eventos Activos"} `, inline: false }
                 );
     
             // Mensaje especial para números exactos
@@ -2394,7 +2448,7 @@ class MinigamesSystem {
                         inline: false 
                     },
                     { name: '🔫 Bala Estaba En', value: `Disparo ${game.bullet_position}/6`, inline: true },
-                    { name: 'Extra por Eventos', value: `${eventMessage || "No hay eventos Activos"} `, inline: false }
+                    { name: '🎉 Extra por Eventos', value: `${eventMessage || "No hay eventos Activos"} `, inline: false }
                 );
         } else {
             // Todos murieron (teóricamente imposible, pero por seguridad)
@@ -3604,7 +3658,7 @@ class MinigamesSystem {
                 { name: '💰 Ganancia', value: `${this.formatNumber(winnings)} π-b$`, inline: true },
                 { name: '🏠 Comisión Casa', value: `${this.formatNumber(house_cut)} π-b$`, inline: true },
                 { name: '👥 Jugadores', value: `${game.players.length}`, inline: true },
-                { name: 'Extra por Eventos', value: `${eventMessage || "No hay eventos Activos"} `, inline: false }
+                { name: '🎉 Extra por Eventos', value: `${eventMessage || "No hay eventos Activos"} `, inline: false }
             )
             .setColor('#FFD700')
             .setTimestamp();
