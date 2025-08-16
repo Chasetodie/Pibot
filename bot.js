@@ -359,7 +359,7 @@ client.on('interactionCreate', async (interaction) => {
                     
                     // Confirmar en canal (ephemeral real porque es interaction)
                     await interaction.reply({
-                        content: '`🎴 **Tu mano:**\n\`\`\`${handString}\`\`\``', 
+                        content: `🎴 **Tu mano:**\n\`\`\`${handString}\`\`\``, 
                         ephemeral: true 
                     });
                     
@@ -588,6 +588,7 @@ client.login(process.env.TOKEN).then(() => {
     console.error('❌ Error en el login:', error);
 
 });
+
 
 
 
