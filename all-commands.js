@@ -955,7 +955,7 @@ class AllCommands {
                     inline: false
                 }
             ])
-            .setFooter({ text: 'Puedes robar entre 10% - 20% del dinero del objetivo' })
+            .setFooter({ text: 'Puedes robar entre 5% - 10% del dinero del objetivo' })
             .setTimestamp();
         
         // Crear botón

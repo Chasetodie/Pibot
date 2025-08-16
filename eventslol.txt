@@ -1,3 +1,0 @@
-xp: double_xp, fever_time, server_anniversary
-
-Treasure: TODOS

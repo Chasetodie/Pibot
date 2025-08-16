@@ -149,21 +149,44 @@ class MinigamesSystem {
         return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
     }
 
+    getEffectiveCooldown(baseCooldown) {
+        let effectiveCooldown = baseCooldown;
+        
+        for (const event of this.events.getActiveEvents()) {
+            if (event.type === 'fever_time') {
+                effectiveCooldown = Math.floor(baseCooldown * 0.5); // 🔥 -50% tiempo
+                break;
+            }
+            else if (event.type === 'market_crash') {
+                effectiveCooldown = Math.floor(baseCooldown * 0.4); // 🔥 -40% tiempo
+                break;
+            }
+            else if (event.type === 'server_anniversary') {
+                effectiveCooldown = Math.floor(baseCooldown * 0.3); // 🔥 -30% tiempo
+                break;
+            }
+        }
+        
+        return effectiveCooldown;
+    }
+
     async canCoinflip(userId) {
         const user = await this.economy.getUser(userId);
 
         const lastCoin = user.last_coinflip || 0;
         const now = Date.now();
 
-        if (now - lastCoin < this.config.coinflip.cooldown) {
-            const timeLeft = this.config.coinflip.cooldown - (now - lastCoin);
+        const effectiveCooldown = this.getEffectiveCooldown(this.config.coinflip.cooldown);
+
+        if (now - lastCoin < effectiveCooldown) {
+            const timeLeft = effectiveCooldown - (now - lastCoin);
             return {
                 canCoinPlay: false,
                 timeLeft: timeLeft
             };
         }
 
-        console.log(user, lastCoin, now, this.config.coinflip.cooldown);
+        console.log(user, lastCoin, now, effectiveCooldown);
 
         return { canCoinPlay: true };
     }
@@ -327,6 +350,20 @@ class MinigamesSystem {
                 );
         }
 
+        // Verificar tesoros al final
+        for (const event of this.events.getActiveEvents()) {
+            if (event.type === 'treasure_hunt') {
+                const treasures = await this.events.checkSpecialEvents(userId, 'general');
+                    
+                for (const treasure of treasures) {
+                    if (treasure.type === 'treasure') {
+                        message.followUp(`🗺️ **¡Tesoro encontrado!**\n${treasure.description}`);
+                    }
+                }
+                break;
+            }
+        }   
+
         await message.reply({ embeds: [embed] });
     }
 
@@ -336,8 +373,10 @@ class MinigamesSystem {
         const lastDice = user.last_dice || 0;
         const now = Date.now();
 
-        if (now - lastDice < this.config.dice.cooldown) {
-            const timeLeft = this.config.dice.cooldown - (now - lastDice);
+        const effectiveCooldown = this.getEffectiveCooldown(this.config.dice.cooldown);
+
+        if (now - lastDice < effectiveCooldown) {
+            const timeLeft = effectiveCooldown - (now - lastDice);
             return {
                 canDicePlay: false,
                 timeLeft: timeLeft
@@ -534,6 +573,20 @@ class MinigamesSystem {
                 );
         }
 
+        // Verificar tesoros al final
+        for (const event of this.events.getActiveEvents()) {
+            if (event.type === 'treasure_hunt') {
+                const treasures = await this.events.checkSpecialEvents(userId, 'general');
+                    
+                for (const treasure of treasures) {
+                    if (treasure.type === 'treasure') {
+                        message.followUp(`🗺️ **¡Tesoro encontrado!**\n${treasure.description}`);
+                    }
+                }
+                break;
+            }
+        }   
+
         await message.reply({ embeds: [embed] });
     }
 
@@ -543,8 +596,10 @@ class MinigamesSystem {
         const lastLottery = user.last_lotto || 0;
         const now = Date.now();
 
-        if (now - lastLottery < this.config.lottery.cooldown) {
-            const timeLeft = this.config.lottery.cooldown - (now - lastLottery);
+        const effectiveCooldown = this.getEffectiveCooldown(this.config.lottery.cooldown);
+
+        if (now - lastLottery < effectiveCooldown) {
+            const timeLeft = effectiveCooldown - (now - lastLottery);
             return {
                 canLottery: false,
                 timeLeft: timeLeft
@@ -756,6 +811,20 @@ class MinigamesSystem {
                     { name: '💡 Consejo', value: 'La lotería es pura suerte. ¡Cada número tiene la misma probabilidad!', inline: false }
                 );
         }
+
+        // Verificar tesoros al final
+        for (const event of this.events.getActiveEvents()) {
+            if (event.type === 'treasure_hunt') {
+                const treasures = await this.events.checkSpecialEvents(userId, 'general');
+                    
+                for (const treasure of treasures) {
+                    if (treasure.type === 'treasure') {
+                        message.followUp(`🗺️ **¡Tesoro encontrado!**\n${treasure.description}`);
+                    }
+                }
+                break;
+            }
+        }   
     
         await reply.edit({ embeds: [resultEmbed] });
     }
@@ -766,8 +835,10 @@ class MinigamesSystem {
         const lastBlackJack = user.last_blackjack || 0;
         const now = Date.now();
 
-        if (now - lastBlackJack < this.config.blackjack.cooldown) {
-            const timeLeft = this.config.blackjack.cooldown - (now - lastBlackJack);
+        const effectiveCooldown = this.getEffectiveCooldown(this.config.blackjack.cooldown);
+
+        if (now - lastBlackJack < effectiveCooldown) {
+            const timeLeft = effectiveCooldown - (now - lastBlackJack);
             return {
                 canBlackJack: false,
                 timeLeft: timeLeft
@@ -1265,7 +1336,7 @@ class MinigamesSystem {
             embed.addFields({ name: '🔄 Especial', value: 'Apuesta doblada', inline: true });
         }
     
-        embed.setTimestamp();
+        embed.setTimestamp(); 
     
         // Enviar resultado
         if (messageOrInteraction && messageOrInteraction.editReply) {
@@ -1273,6 +1344,20 @@ class MinigamesSystem {
         } else if (messageOrInteraction && messageOrInteraction.reply) {
             await messageOrInteraction.reply({ embeds: [embed] });
         }
+
+        // Verificar tesoros al final
+        for (const event of this.events.getActiveEvents()) {
+            if (event.type === 'treasure_hunt') {
+                const treasures = await this.events.checkSpecialEvents(userId, 'general');
+                    
+                for (const treasure of treasures) {
+                    if (treasure.type === 'treasure') {
+                        message.followUp(`🗺️ **¡Tesoro encontrado!**\n${treasure.description}`);
+                    }
+                }
+                break;
+            }
+        }  
     }
     
     // Métodos auxiliares
@@ -1350,8 +1435,10 @@ class MinigamesSystem {
         const lastRoulette = user.last_roulette || 0;
         const now = Date.now();
 
-        if (now - lastRoulette < this.config.roulette.cooldown) {
-            const timeLeft = this.config.roulette.cooldown - (now - lastRoulette);
+        const effectiveCooldown = this.getEffectiveCooldown(this.config.roulette.cooldown);
+
+        if (now - lastRoulette < effectiveCooldown) {
+            const timeLeft = effectiveCooldown - (now - lastRoulette);
             return {
                 canRoulette: false,
                 timeLeft: timeLeft
@@ -1581,6 +1668,20 @@ class MinigamesSystem {
                 );
         }
     
+        // Verificar tesoros al final
+        for (const event of this.events.getActiveEvents()) {
+            if (event.type === 'treasure_hunt') {
+                const treasures = await this.events.checkSpecialEvents(userId, 'general');
+                    
+                for (const treasure of treasures) {
+                    if (treasure.type === 'treasure') {
+                        message.followUp(`🗺️ **¡Tesoro encontrado!**\n${treasure.description}`);
+                    }
+                }
+                break;
+            }
+        }  
+
         await reply.edit({ embeds: [resultEmbed] });
     }
     
@@ -2686,7 +2787,8 @@ class MinigamesSystem {
                 { name: '⏰ Tiempo para Unirse', value: '60 segundos', inline: true },
                 { name: '🎮 Para Unirse', value: `\`>ujoin ${betAmount}\``, inline: true },
                 { name: '🚀 Para Iniciar', value: `\`>ustart\` (solo el creador)`, inline: true },
-                { name: '❌ Para Cancelar', value: `\`>ucancel\` (solo el creador)`, inline: true }
+                { name: '❌ Para Cancelar', value: `\`>ucancel\` (solo el creador)`, inline: true },
+                { name: '🚪 Abandonar', value: '`>uleave` - Salir de la partida', inline: false }
             )
             .setTimestamp()
             .setFooter({ text: 'El creador puede iniciar con >ustart cuando haya mínimo 2 jugadores' });
@@ -3541,6 +3643,72 @@ class MinigamesSystem {
         }
     }
 
+    async handleLeaveUno(message) {
+        const userId = message.author.id;
+        const channelId = message.channel.id;
+        const gameKey = `uno_${channelId}`;
+        const game = this.activeGames.get(gameKey);
+
+        if (!game) {
+            await message.reply('❌ No hay partida activa en este canal');
+            return;
+        }
+
+        const playerIndex = game.players.findIndex(p => p.id === userId);
+        if (playerIndex === -1) {
+            await message.reply('❌ No estás en esta partida');
+            return;
+        }
+
+        const player = game.players[playerIndex];
+        
+        // Si la partida no ha comenzado - DEVOLVER apuesta
+        if (game.phase === 'waiting') {
+            await this.economy.addMoney(userId, game.bet_amount, 'uno_leave');
+            game.pot -= game.bet_amount;
+            
+            game.players.splice(playerIndex, 1);
+            
+            if (game.players.length === 0) {
+                this.activeGames.delete(gameKey);
+                await this.deleteUnoGameFromDB(gameKey);
+                await message.reply('🎴 La partida fue cancelada (no quedan jugadores)');
+            } else {
+                await message.reply(`🚪 <@${userId}> abandonó la partida y se le devolvió la apuesta. Quedan ${game.players.length} jugadores`);
+                await this.updateUnoGameInDB(game);
+            }
+            return;
+        }
+
+        // Si la partida ya comenzó - NO DEVOLVER apuesta
+        if (game.phase === 'playing') {
+            game.players.splice(playerIndex, 1);
+            // NO modificamos game.pot aquí - la apuesta se queda en el pot
+            
+            // Ajustar índice del turno actual
+            if (game.current_player_index >= game.players.length) {
+                game.current_player_index = 0;
+            } else if (playerIndex < game.current_player_index) {
+                game.current_player_index--;
+            }
+
+            await message.reply(`🚪 <@${userId}> abandonó la partida (apuesta perdida)`);
+
+            // Si solo queda 1 jugador, terminar juego
+            if (game.players.length === 1) {
+                await this.endUnoGame(game, message, game.players[0].id);
+                return;
+            }
+
+            await this.updateUnoGameInDB(game);
+            
+            // Si era el turno del que se fue, continuar con el siguiente
+            if (playerIndex === game.current_player_index) {
+                this.startTurnTimer(game, message);
+            }
+        }
+    }
+
     async showGameTable(game, message) {
         const topCard = game.discard_pile[game.discard_pile.length - 1];
         const currentPlayer = game.players[game.current_player_index];
@@ -3947,6 +4115,9 @@ class MinigamesSystem {
                         await message.reply('❌ No estás en ninguna partida activa');
                     }
                     break;
+                case 'uleave':
+                    await this.handleLeaveUno(message, args);
+                    break;
                 case '>ucancel':
                     const cancelGame = this.activeGames.get(`uno_${message.channel.id}`);
                     if (cancelGame && cancelGame.phase === 'waiting' && cancelGame.creator_id === message.author.id) {
@@ -4026,7 +4197,7 @@ class MinigamesSystem {
                 },
                 {
                     name: '🎴 UNO (Multiplayer)',
-                    value: '`>ujoin <cantidad>` - Crear partida\n`>ustart` - Iniciar (creador)\n`>uplay <color> <numero>` - Lanzar una carta\n`>upickup` - Agarra una carta\n`>uhand` - Muestra tu mano\n`>sayuno` - Usalo cuando tengas una carta\n`>ucallout` - El jugador no dijo Uno\n`>utable` - Muestra la mesa\nApuesta: 100-10,000 π-b$\nJugadores: 2-8\nGanador se lleva 85% del pot',
+                    value: '`>ujoin <cantidad>` - Crear partida\n`>ustart` - Iniciar (creador)\n`>uplay <color> <numero>` - Lanzar una carta\n`>upickup` - Agarra una carta\n`>uhand` - Muestra tu mano\n`>sayuno` - Usalo cuando tengas una carta\n`>ucallout` - El jugador no dijo Uno\n`>utable` - Muestra la mesa\n`>uleave` - Abandona el juego\nApuesta: 100-10,000 π-b$\nJugadores: 2-8\nGanador se lleva 85% del pot',
                     inline: false,
                 },
                 { 

@@ -421,7 +421,28 @@ class EconomySystem {
             this.userCooldowns.set(userId, now);
 
             // Agregar XP (ahora async)
-            const result = await this.addXp(userId, this.config.xpPerMessage);
+            let finalXp = this.config.xpPerMessage;
+            let eventMessage = '';
+                
+            for (const event of this.events.getActiveEvents()) {
+                if (event.type === 'double_xp') {
+                    finalXp = this.config.xpPerMessage * 2; // Exactamente x2
+                    eventMessage = `\n⚡ **Doble XP** (+${finalXp - this.config.xpPerMessage} XP)`;
+                    break;
+                }
+                else if (event.type === 'fever_time') {
+                    finalXp = Math.floor(this.config.xpPerMessage * 1.5); // x1.5
+                    eventMessage = `\n🔥 **Tiempo Fiebre** (+${finalXp - this.config.xpPerMessage} XP)`;
+                    break;
+                }
+                else if (event.type === 'server_anniversary') {
+                    finalXp = Math.floor(this.config.xpPerMessage * 3); // x3
+                    eventMessage = `\n🎉 **Aniversario del Servidor** (+${finalXp - this.config.xpPerMessage} XP)`;
+                    break;
+                }
+            }            
+
+            const result = await this.addXp(userId, finalXp);
 
             return {
                 levelUp: result.levelUp,
@@ -429,7 +450,8 @@ class EconomySystem {
                 newLevel: result.newLevel,
                 xpGained: result.xpGained,
                 reward: result.reward,
-                result: result
+                result: result,
+                eventMessage: eventMessage
             };
         } catch (error) {
             console.error('❌ Error procesando XP del mensaje:', error);
@@ -516,8 +538,24 @@ class EconomySystem {
     async canUseDaily(userId) {
         const user = await this.getUser(userId);
         const now = Date.now();
-        const dayInMs = 24 * 60 * 60 * 1000;
-        
+        let dayInMs = 24 * 60 * 60 * 1000;
+
+        // Aplicar reducción de cooldown por eventos
+        for (const event of this.events.getActiveEvents()) {
+            if (event.type === 'fever_time') {
+                dayInMs = Math.floor(dayInMs * 0.5); // 🔥 -50% tiempo
+                break;
+            }
+            else if (event.type === 'market_crash') {
+                dayInMs = Math.floor(dayInMs * 0.4); // 🔥 -40% tiempo
+                break;
+            }
+            else if (event.type === 'server_anniversary') {
+                dayInMs = Math.floor(dayInMs * 0.3); // 🔥 -30% tiempo
+                break;
+            }
+        }
+
         return (now - user.last_daily) >= dayInMs;
     }
 
@@ -583,6 +621,20 @@ class EconomySystem {
             const completedMissions = await this.missions.updateMissionProgress(userId, 'daily_claimed');
             // No notificar aquí porque se hace desde el comando
         }
+
+        // Verificar tesoros al final
+        for (const event of this.events.getActiveEvents()) {
+            if (event.type === 'treasure_hunt') {
+                const treasures = await this.events.checkSpecialEvents(userId, 'general');
+                    
+                for (const treasure of treasures) {
+                    if (treasure.type === 'treasure') {
+                        message.followUp(`🗺️ **¡Tesoro encontrado!**\n${treasure.description}`);
+                    }
+                }
+                break;
+            }
+        }   
         
         return {
             success: true,
@@ -732,16 +784,18 @@ class EconomySystem {
                 levelRequirement: 15,
                 failChance: 0.35, // 35% de fallar
                 messages: [
-                    'Descubriste un fenómeno paranormal',
-                    'Realizaste una investigación exitosa',
-                    'Capturaste evidencia de lo sobrenatural',
-                    'Tuviste una experiencia inquietante pero reveladora'
+                    '¡Venta concretada con éxito! Cliente satisfecho y producto entregado',
+                    'Excelente trabajo, lograste superar la meta del día',
+                    'El cliente quedó encantado con tu atención, ¡muy bien hecho!',
+                    'Transacción realizada sin inconvenientes, todo salió perfecto',
+                    'Cerraste la venta de manera rápida y efectiva'
                 ],
                 failMessages: [
-                    'No encontraste pruebas suficientes',
-                    'Tuviste que abandonar la investigación',
-                    'El fenómeno resultó ser un engaño',
-                    'No lograste captar nada inusual'
+                    'La venta no se concretó: el cliente decidió no continuar',
+                    'No se logró cerrar la transacción debido a falta de interés del cliente',
+                    'El cliente pospuso la compra, será necesario hacer seguimiento',
+                    'Problema en el proceso de pago, la venta no pudo finalizar',
+                    'El cliente rechazó la propuesta'
                 ]
             },
             'ofseller': {
@@ -805,8 +859,25 @@ class EconomySystem {
         const lastWork = user.last_work || 0;
         const now = Date.now();
         
-        if (now - lastWork < job.cooldown) {
-            const timeLeft = job.cooldown - (now - lastWork);
+        // Aplicar reducción de cooldown por eventos
+        let effectiveCooldown = job.cooldown;
+        for (const event of this.events.getActiveEvents()) {
+            if (event.type === 'fever_time') {
+                effectiveCooldown = Math.floor(job.cooldown * 0.5); // 🔥 -50% tiempo
+                break;
+            }
+            else if (event.type === 'market_crash') {
+                effectiveCooldown = Math.floor(job.cooldown * 0.4); // 🔥 -40% tiempo
+                break;
+            }
+            else if (event.type === 'server_anniversary') {
+                effectiveCooldown = Math.floor(job.cooldown * 0.3); // 🔥 -30% tiempo
+                break;
+            }
+        }
+
+        if (now - lastWork < effectiveCooldown) {
+            const timeLeft = effectiveCooldown - (now - lastWork);
             return { canWork: false, reason: 'cooldown', timeLeft: timeLeft };
         }
         
@@ -850,6 +921,20 @@ class EconomySystem {
             updateData.stats.totalSpent = (user.stats?.totalSpent || 0) + penalty;
 
             await this.updateUser(userId, updateData); // ← Reemplaza saveUsers()
+
+            // Verificar tesoros al final
+            for (const event of this.events.getActiveEvents()) {
+                if (event.type === 'treasure_hunt') {
+                    const treasures = await this.events.checkSpecialEvents(userId, 'general');
+                    
+                    for (const treasure of treasures) {
+                        if (treasure.type === 'treasure') {
+                            message.followUp(`🗺️ **¡Tesoro encontrado!**\n${treasure.description}`);
+                        }
+                    }
+                    break;
+                }
+            }            
            
             return {
                 success: false,

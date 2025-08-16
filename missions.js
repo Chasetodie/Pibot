@@ -547,17 +547,42 @@ class MissionsSystem {
                 }
             }
         }
-        
-        // Actualizar base de datos
-        await this.economy.updateUser(userId, updateData);
-        
+                
         // Agregar XP por separado para las misiones completadas
         for (const missionId of completedMissions) {
             const mission = this.availableMissions[missionId];
             if (mission.reward.xp) {
-                await this.economy.addXp(userId, mission.reward.xp);
+                let finalXp = mission.reward.xp;
+                let eventMessage2 = '';
+                
+                for (const event of this.events.getActiveEvents()) {
+                    if (event.type === 'double_xp') {
+                        finalXp = mission.reward.xp * 2; // Exactamente x2
+                        eventMessage2 = `\n⚡ **Doble XP** (+${finalXp - mission.reward.xp} XP)`;
+                        break;
+                    }
+                    else if (event.type === 'fever_time') {
+                        finalXp = Math.floor(mission.reward.xp * 1.5); // x1.5
+                        eventMessage2 = `\n🔥 **Tiempo Fiebre** (+${finalXp - mission.reward.xp} XP)`;
+                        break;
+                    }
+                    else if (event.type === 'server_anniversary') {
+                        finalXp = Math.floor(mission.reward.xp * 3); // x3
+                        eventMessage2 = `\n🎉 **Aniversario del Servidor** (+${finalXp - mission.reward.xp} XP)`;
+                        break;
+                    }
+                }
+                await this.economy.addXp(userId, finalXp);
+
+                updateData.stats = {
+                    ...user.stats,
+                    message_missions2: eventMessage2
+                };
             }
         }
+
+        // Actualizar base de datos
+        await this.economy.updateUser(userId, updateData);
         
         return completedMissions;
     }
@@ -726,7 +751,7 @@ class MissionsSystem {
                         value: rewards.join('\n'),
                         inline: true
                     },
-                    { name: '🎉 Extra por Eventos', value: `${user.stats.message_missions || "No hay eventos Activos"} `, inline: false }
+                    { name: '🎉 Extra por Eventos', value: `${user.stats.message_missions && user.stats.message_missions2 || "No hay eventos Activos"} `, inline: false }
                 );
             }
             

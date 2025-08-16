@@ -512,7 +512,8 @@ client.on('messageCreate', async (message) => {
                 .addFields(
                     { name: '📈 XP Ganada', value: `+${xpResult.xpGained} XP`, inline: true },
                     { name: '🎁 Recompensa', value: `+${xpResult.reward} π-b$`, inline: true },
-                    { name: '🏆 Niveles Subidos', value: `${xpResult.levelsGained}`, inline: true }
+                    { name: '🏆 Niveles Subidos', value: `${xpResult.levelsGained}`, inline: true },
+                    { name: '🎉 Extra por Eventos', value: `${xpResult.eventMessage || "No hay eventos Activos"} `, inline: false }                    
                 )
                 .setColor('#FFD700')
                 .setTimestamp();

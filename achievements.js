@@ -331,21 +331,66 @@ class AchievementsSystem {
                 
                 // Dar recompensas
                 if (achievement.reward.money) {
-                    let rewardFinal = achievement.reward.money;
+                    let finalEarnings = achievement.reward.money;
+                    let eventMessage = '';
 
-                    updateData.balance = user.balance + rewardFinal;
+                    for (const event of this.events.getActiveEvents()) {
+                        if (event.type === 'fever_time') {
+                            finalEarnings = Math.floor(achievement.reward.money * 1.6); // 🔥 +30%
+                            eventMessage = `🔥 **Tiempo Fiebre** (+${finalEarnings - achievement.reward.money} π-b$)`;
+                            break;
+                        }
+                        else if (event.type === 'market_crash') {
+                            finalEarnings = Math.floor(achievement.reward.money * 0.8); // 📉 -30%
+                            eventMessage = `📉 **Crisis del Mercado** (-${achievement.reward.money - finalEarnings} π-b$)`;
+                            break;
+                        }
+                        else if (event.type === 'server_anniversary') {
+                            finalEarnings = Math.floor(achievement.reward.money * 2);
+                            eventMessage = `🎉 **Aniversario del Servidor** (+${finalEarnings - achievement.reward.money} π-b$)`
+                        }
+                    }
+
+                    updateData.balance = user.balance + finalEarnings;
                     updateData.stats = {
                         ...user.stats,
-                        totalEarned: (user.stats.totalEarned || 0) + rewardFinal
+                        totalEarned: (user.stats.totalEarned || 0) + finalEarnings,
+                        message_achievements: eventMessage
                     };
                 }
-                               
-                await this.economy.updateUser(userId, updateData);
-                
+                                              
                 // Agregar XP por separado
                 if (achievement.reward.xp) {
-                    await this.economy.addXp(userId, achievement.reward.xp);
+                    let finalXp = achievement.reward.xp;
+                    let eventMessage2 = '';
+                    
+                    for (const event of this.events.getActiveEvents()) {
+                        if (event.type === 'double_xp') {
+                            finalXp = achievement.reward.xp * 2; // Exactamente x2
+                            eventMessage2 = `\n⚡ **Doble XP** (+${finalXp - achievement.reward.xp} XP)`;
+                            break;
+                        }
+                        else if (event.type === 'fever_time') {
+                            finalXp = Math.floor(achievement.reward.xp * 1.5); // x1.5
+                            eventMessage2 = `\n🔥 **Tiempo Fiebre** (+${finalXp - achievement.reward.xp} XP)`;
+                            break;
+                        }
+                        else if (event.type === 'server_anniversary') {
+                            finalXp = Math.floor(achievement.reward.xp * 3); // x3
+                            eventMessage2 = `\n🎉 **Aniversario del Servidor** (+${finalXp - achievement.reward.xp} XP)`;
+                            break;
+                        }
+                    }
+
+                    await this.economy.addXp(userId, finalXp);
+
+                    updateData.stats = {
+                        ...user.stats,
+                        message_achievements2: eventMessage2
+                    }
                 }
+
+                await this.economy.updateUser(userId, updateData);
                 
                 completedAchievements.push(achievementId);
                 console.log(`🏆 ${userId} completó logro existente: ${achievement.name}`);
@@ -467,13 +512,40 @@ class AchievementsSystem {
 
                 console.log(`🏆 ${userId} completó logro: ${achievement.name}\nRecompensa: ${achievement.reward.money} balance: ${updateData.balance} totalEarned: ${updateData['stats.totalEarned']}`);
 
-                await this.economy.updateUser(userId, updateData);
                 
                 // Agregar XP por separado
                 if (achievement.reward.xp) {
-                    await this.economy.addXp(userId, achievement.reward.xp);
+                    let finalXp = achievement.reward.xp;
+                    let eventMessage2 = '';
+                    
+                    for (const event of this.events.getActiveEvents()) {
+                        if (event.type === 'double_xp') {
+                            finalXp = achievement.reward.xp * 2; // Exactamente x2
+                            eventMessage2 = `\n⚡ **Doble XP** (+${finalXp - achievement.reward.xp} XP)`;
+                            break;
+                        }
+                        else if (event.type === 'fever_time') {
+                            finalXp = Math.floor(achievement.reward.xp * 1.5); // x1.5
+                            eventMessage2 = `\n🔥 **Tiempo Fiebre** (+${finalXp - achievement.reward.xp} XP)`;
+                            break;
+                        }
+                        else if (event.type === 'server_anniversary') {
+                            finalXp = Math.floor(achievement.reward.xp * 3); // x3
+                            eventMessage2 = `\n🎉 **Aniversario del Servidor** (+${finalXp - achievement.reward.xp} XP)`;
+                            break;
+                        }
+                    }
+
+                    await this.economy.addXp(userId, finalXp);
+
+                    updateData.stats = {
+                        ...user.stats,
+                        message_achievements2: eventMessage2
+                    }
                 }
                 
+                await this.economy.updateUser(userId, updateData);
+
                 unlockedAchievements.push(achievementId);
                 console.log(`🏆 ${userId} desbloqueó logro: ${achievement.name}`);
             }
@@ -864,7 +936,7 @@ class AchievementsSystem {
                         value: `${achievement.reward.money ? `+${this.formatNumber(achievement.reward.money)} π-b$` : ''}\n${achievement.reward.xp ? `+${this.formatNumber(achievement.reward.xp)} XP` : ''}`.trim(),
                         inline: true
                     },
-                    { name: '🎉 Extra por Eventos', value: `${user.stats.message_achievements || "No hay eventos Activos"} `, inline: false }                
+                    { name: '🎉 Extra por Eventos', value: `${user.stats.message_achievements && user.stats.message_achievements2 || "No hay eventos Activos"} `, inline: false }                
                 )
                 .setTimestamp();
 

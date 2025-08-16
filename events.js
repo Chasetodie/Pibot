@@ -92,6 +92,7 @@ class EventsSystem {
                 multiplier: { 
                     work: 0.7, 
                     daily: 0.8, 
+                    cooldown: 0.4,
                     minigames: 1.5, 
                     missions: 0.8, 
                     achievements: 0.8
@@ -109,6 +110,7 @@ class EventsSystem {
                     xp: 3, 
                     work: 2, 
                     daily: 2, 
+                    cooldown: 0.3,
                     minigames: 2, 
                     missions: 2, 
                     achievements: 2
@@ -614,15 +616,6 @@ class EventsSystem {
                 if (xpBonus > 0) {
                     event.stats.totalXpGiven = (event.stats.totalXpGiven || 0) + xpBonus;
                 }
-            }
-            
-            if (event.type === 'lucky_hour' && context === 'gambling') {
-                // Mejorar probabilidades en minijuegos
-                rewards.push({
-                    type: 'luck_boost',
-                    multiplier: event.multipliers.luck,
-                    event: event
-                });
             }
         }
         
