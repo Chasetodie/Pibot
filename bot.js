@@ -355,7 +355,15 @@ client.on('interactionCreate', async (interaction) => {
                     
                     // Enviar por DM
                     const user = await interaction.user;
-                    await user.send(`🎴 **Tu mano:**\n\`\`\`${handString}\`\`\``);
+                    const embed = new EmbedBuilder()
+                        .setTitle('🎴 Tu mano de UNO')
+                        .setDescription(`\`\`\`${handString}\`\`\``)
+                        .setColor('#0099FF')
+                        .setFooter({ text: 'Usa >uplay <color> <valor> para jugar' });                    
+                    
+                    await user.send({ embeds: [embed] });
+
+//                    await user.send(`🎴 **Tu mano:**\n\`\`\`${handString}\`\`\``);
                     
                     // Confirmar en canal (ephemeral real porque es interaction)
                     await interaction.reply({

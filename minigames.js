@@ -403,6 +403,7 @@ class MinigamesSystem {
         
         // Tirar el dado
         const diceResult = Math.floor(Math.random() * 6) + 1;
+        let won = false;
         let baseWon = false;
         let multiplier = 0;
         let winChance = 1;
