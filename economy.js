@@ -26,8 +26,8 @@ class EconomySystem {
         // Configuración de robos
         this.robberyConfig = {
             cooldown: 6 * 60 * 60 * 1000, // 6 horas de cooldown
-            minStealPercentage: 10, // Mínimo 10%
-            maxStealPercentage: 20, // Máximo 20%
+            minStealPercentage: 5, // Mínimo 5%
+            maxStealPercentage: 10, // Máximo 10%
             buttonTimeLimit: 30000, // 30 segundos para hacer clicks
             maxClicks: 50, // Máximo de clicks
             failChance: 0.3, // 30% de chance de fallar
@@ -629,12 +629,12 @@ class EconomySystem {
             },
             'abrepuertasoxxo': {
                 name: '🚪 Abre Puertas Oxxo',
-                cooldown: 60 * 60 * 1000, // 1 hora
+                cooldown: 60 * 60 * 3000, // 3 hora
                 codeName: 'abrepuertasoxxo',
                 baseReward: 1200,
                 variation: 900,
                 levelRequirement: 9,
-                failChance: 0.75, // 75% de fallar
+                failChance: 0.40, // 75% de fallar
                 messages: [
                     'Abriste las puertas correctamente',
                     'Apertura de puertas sin contratiempos',
