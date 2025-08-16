@@ -186,8 +186,6 @@ class MinigamesSystem {
             };
         }
 
-        console.log(user, lastCoin, now, effectiveCooldown);
-
         return { canCoinPlay: true };
     }
 
