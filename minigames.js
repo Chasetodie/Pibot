@@ -3746,7 +3746,7 @@ class MinigamesSystem {
                 case '>unoshowhand':
                 case '>unohand':
                     const handGame = this.activeGames.get(`uno_${message.channel.id}`);
-                    const player = game.players.find(p => p.id === message.author.id);
+                    const player = handGame.players.find(p => p.id === message.author.id);
                     if (handGame && handGame.phase === 'playing') {
                         await this.sendHandAsEphemeral(message, player);
                         // Reaccionar al mensaje para confirmar (sin texto en canal)
