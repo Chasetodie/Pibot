@@ -98,7 +98,7 @@ class MinigamesSystem {
                 maxPlayers: 8,
                 joinTime: 60000, //1 minuto para unirse
                 turnTime: 600000, //10 minutos por turno
-                winnerMultiplier: 0.85 //El ganador se lleva 85% del pot total
+                winnerMultiplier: 0.95 //El ganador se lleva 85% del pot total
             }
         };
         
@@ -3602,7 +3602,7 @@ class MinigamesSystem {
             .setDescription(`🏆 **<@${winnerId}> ha ganado la partida!**`)
             .addFields(
                 { name: '💰 Ganancia', value: `${this.formatNumber(winnings)} π-b$`, inline: true },
-//                { name: '🏠 Comisión Casa', value: `${this.formatNumber(house_cut)} π-b$`, inline: true },
+                { name: '🏠 Comisión Casa', value: `${this.formatNumber(house_cut)} π-b$`, inline: true },
                 { name: '👥 Jugadores', value: `${game.players.length}`, inline: true },
                 { name: 'Extra por Eventos', value: `${eventMessage || "No hay eventos Activos"} `, inline: false }
             )
