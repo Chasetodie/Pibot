@@ -2,8 +2,9 @@ const { EmbedBuilder } = require('discord.js');
 const { createClient } = require('@supabase/supabase-js');
 
 class EventsSystem {
-    constructor(economySystem) {
+    constructor(economySystem, client = null) {
         this.economy = economySystem;
+        this.client = client;
 
         // Inicializar el cliente directamente
         this.supabase = createClient(
@@ -811,44 +812,71 @@ class EventsSystem {
     // Anunciar eventos en canal específico
     async announceEvent(event, action, passedGuild = null) {
         if (!this.announcementChannelId) return;
-
-        const targetGuild = passedGuild || this.guild;
-        if (!targetGuild) return;
+    
+        let targetGuild = passedGuild || this.guild;
+        
+        // Si no hay guild disponible, intentar obtenerlo del cliente
+        if (!targetGuild && this.client) {
+            try {
+                const channel = await this.client.channels.fetch(this.announcementChannelId);
+                targetGuild = channel?.guild;
+            } catch (error) {
+                console.error('❌ Error obteniendo guild del canal:', error);
+                return;
+            }
+        }
+        
+        if (!targetGuild) {
+            console.log('⚠️ No se pudo obtener el guild para anunciar evento');
+            return;
+        }
         
         try {
             const channel = await targetGuild.channels.fetch(this.announcementChannelId);
             if (!channel) return;
             
-            const embed = new EmbedBuilder()
-                .setTitle(action === 'created' ? `${event.emoji} ¡Nuevo Evento Activo!` : `${event.emoji} Evento Finalizado`)
-                .setDescription(`**${event.name}**\n\n${event.description}`)
-                .setColor(action === 'created' ? event.color : '#808080')
-                .setTimestamp();
+            let embed;
+            let shouldPing = false;
             
             if (action === 'created') {
-                embed.addFields({
-                    name: '⏰ Duración',
-                    value: this.formatTime(event.duration),
-                    inline: true
-                });
-            } else {
+                embed = new EmbedBuilder()
+                    .setTitle(`${event.emoji} ¡Nuevo Evento Activo!`)
+                    .setDescription(`**${event.name}**\n\n${event.description}`)
+                    .setColor(event.color)
+                    .addFields({
+                        name: '⏰ Duración',
+                        value: this.formatTime(event.duration),
+                        inline: true
+                    })
+                    .setTimestamp();
+                
+                shouldPing = true; // Ping solo al crear
+                
+            } else if (action === 'expired') {
                 const stats = event.stats;
                 const totalInteractions = stats.messagesAffected + stats.workJobsAffected + 
                                         stats.dailiesAffected + stats.gamesAffected;
-                embed.addFields({
-                    name: '📊 Participación',
-                    value: `${totalInteractions} interacciones`,
-                    inline: true
-                });
+                
+                embed = new EmbedBuilder()
+                    .setTitle(`${event.emoji} Evento Finalizado`)
+                    .setDescription(`**${event.name}** ha terminado.\n\n¡Gracias por participar!`)
+                    .setColor('#808080')
+                    .addFields({
+                        name: '📊 Participación Total',
+                        value: `${totalInteractions} interacciones`,
+                        inline: true
+                    })
+                    .setTimestamp();
+                
+                shouldPing = false; // Sin ping al expirar
             }
             
-            const shouldPing = action === 'created'; // Solo ping al crear
-
             await channel.send({
-                content: shouldPing ? `@everyone` : undefined,
+                content: shouldPing ? '@everyone' : undefined,
                 embeds: [embed],
                 allowedMentions: shouldPing ? { parse: ['everyone'] } : undefined
             });
+            
         } catch (error) {
             console.error('❌ Error enviando anuncio de evento:', error);
         }
