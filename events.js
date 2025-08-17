@@ -873,11 +873,11 @@ class EventsSystem {
                 shouldPing = false; // Sin ping al expirar
             }
             
-            await channel.send({
-                content: shouldPing ? '@here' : undefined,
-                embeds: [embed],
-                allowedMentions: shouldPing ? { parse: ['here'] } : undefined
-            });
+await channel.send({
+    content: shouldPing ? '@here' : '',
+    embeds: [embed],
+    allowedMentions: shouldPing ? { parse: ['everyone'] } : { parse: [] }
+});
             
         } catch (error) {
             console.error('❌ Error enviando anuncio de evento:', error);
