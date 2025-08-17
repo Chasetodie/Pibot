@@ -127,11 +127,11 @@ class EventsSystem {
         this.eventProbabilities = {
             'double_xp': 0.15,      // 15%
             'money_rain': 0.12,     // 12%
-            'lucky_hour': 0.04,     // 4%
-            'fever_time': 0.10,     // 10%
+            'lucky_hour': 0.01,     // 1%
+            'fever_time': 0.11,     // 11%
             'charity_event': 0.05,  // 5%
             'treasure_hunt': 0.07,  // 7%
-            'market_crash': 0.06//,   // 6%
+            'market_crash': 0.10//,   // 10%
             //'server_anniversary': 0.01 // 1% (muy raro)
         };
         
