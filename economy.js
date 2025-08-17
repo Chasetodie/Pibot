@@ -377,7 +377,7 @@ class EconomySystem {
                 totalEarned: (user.stats.totalEarned || 0) + reward
             };
 
-            console.log(`🎉 ${userId} subió ${levelUps} nivel(es)! Nuevo nivel: ${newLevel}, Recompensa: ${reward} ${this.config.currencySymbol}`);
+            //console.log(`🎉 ${userId} subió ${levelUps} nivel(es)! Nuevo nivel: ${newLevel}, Recompensa: ${reward} ${this.config.currencySymbol}`);
 
             // *** NUEVO: ACTUALIZAR MISIONES DE LEVEL UP ***
             if (this.missions) {
