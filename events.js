@@ -351,7 +351,7 @@ class EventsSystem {
         
         console.log(`🎉 Evento creado: ${eventData.name} (${this.formatTime(duration)})`);
         console.log(`triggeredBy: ${triggeredBy}, guild: ${this.guild ? 'disponible' : 'no disponible'}`); // ← Agregar esta línea
-        if (!triggeredBy && this.guild) {
+        if (!triggeredBy) {
             console.log('Enviando anuncio de evento automático...'); // ← Y esta también
             await this.announceEvent(event, 'created');
         }
@@ -811,8 +811,9 @@ class EventsSystem {
 
     // Anunciar eventos en canal específico
     async announceEvent(event, action, passedGuild = null) {
-        if (!this.announcementChannelId) return;
-    
+        console.log(`📢 Intentando anunciar evento: ${event.name}, action: ${action}`);
+        if (!this.announcementChannelId) return;    
+
         let targetGuild = passedGuild || this.guild;
         
         // Si no hay guild disponible, intentar obtenerlo del cliente
@@ -820,6 +821,7 @@ class EventsSystem {
             try {
                 const channel = await this.client.channels.fetch(this.announcementChannelId);
                 targetGuild = channel?.guild;
+                console.log(`🔍 Guild obtenido del cliente: ${targetGuild ? targetGuild.name : 'null'}`);
             } catch (error) {
                 console.error('❌ Error obteniendo guild del canal:', error);
                 return;
