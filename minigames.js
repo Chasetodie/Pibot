@@ -1350,7 +1350,7 @@ class MinigamesSystem {
                     
                 for (const treasure of treasures) {
                     if (treasure.type === 'treasure') {
-                        message.reply(`🗺️ **¡Tesoro encontrado!**\n${treasure.description}`);
+                        messageOrInteraction.reply(`🗺️ **¡Tesoro encontrado!**\n${treasure.description}`);
                     }
                 }
                 break;
