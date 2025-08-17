@@ -131,8 +131,8 @@ class EventsSystem {
             'fever_time': 0.08,     // 8%
             'charity_event': 0.05,  // 5%
             'treasure_hunt': 0.04,  // 4%
-            'market_crash': 0.03,   // 3%
-            'server_anniversary': 0.01 // 1% (muy raro)
+            'market_crash': 0.03//,   // 3%
+            //'server_anniversary': 0.01 // 1% (muy raro)
         };
         
         // Iniciar sistema después del delay
