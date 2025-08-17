@@ -273,22 +273,25 @@ class EconomySystem {
             return { success: false, reason: 'invalid_amount' };
         }
 
-        let finalFrom = amount;
+        let finalFrom = 0;
         let eventMessage = '';
         
         for (const event of this.events.getActiveEvents()) {
             if (event.type === 'charity_event') {
                 finalFrom = Math.floor(amount * 1.75); // 💰 +75%
-                eventMessage = `\n❤️ **Evento de Caridad** (+${finalFrom - amount} π-b$)`;
+                eventMessage = `\n❤️ **Evento de Caridad** (+${finalFrom - amount} π-b$) a quien dió dinero`;
                 break;
             }
         }
+
+        let beforeMoney = fromUser.balance - amount;
       
         const updateDataFrom = {
-            balance: fromUser.balance - finalFrom,
+            balance: (fromUser.balance - amount) + finalFrom,
             stats: {
                 ...fromUser.stats,
-                totalSpent: (fromUser.stats.totalSpent || 0) + finalFrom
+                totalSpent: (fromUser.stats.totalSpent || 0) - amount,
+                totalEarned: (fromUser.stats.totalEarned || 0) + finalFrom
             }
         };
 
@@ -317,6 +320,7 @@ class EconomySystem {
         return {
             success: true,
             amount: amount,
+            beforeEvents: beforeMoney,
             fromBalance: updateDataFrom.balance,
             toBalance: updateDataTo.balance,
             eventMessage: eventMessage
