@@ -136,10 +136,10 @@ class EventsSystem {
         };
         
         // Iniciar sistema después del delay
-/*        setTimeout(() => {
+        setTimeout(() => {
             this.startEventLoop();
             this.cleanExpiredEvents();
-        }, 2000);*/
+        }, 2000);
     }
 
     // ✅ CAMBIO 2: Cargar eventos desde Supabase
@@ -259,7 +259,7 @@ class EventsSystem {
     }
 
     // Iniciar el loop de eventos automáticos
-    /*startEventLoop() {
+    startEventLoop() {
         // Verificar cada hora si crear nuevos eventos
         setInterval(async () => {
             await this.tryCreateRandomEvent();
@@ -272,7 +272,7 @@ class EventsSystem {
         }, 60000); // 1 minuto
 
         console.log('🔄 Sistema de eventos iniciado');
-    }*/
+    }
 
     // Intentar crear un evento aleatorio
     async tryCreateRandomEvent() {
