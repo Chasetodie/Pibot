@@ -355,7 +355,7 @@ class MinigamesSystem {
                     
                 for (const treasure of treasures) {
                     if (treasure.type === 'treasure') {
-                        message.followUp(`🗺️ **¡Tesoro encontrado!**\n${treasure.description}`);
+                        message.reply(`🗺️ **¡Tesoro encontrado!**\n${treasure.description}`);
                     }
                 }
                 break;
@@ -578,7 +578,7 @@ class MinigamesSystem {
                     
                 for (const treasure of treasures) {
                     if (treasure.type === 'treasure') {
-                        message.followUp(`🗺️ **¡Tesoro encontrado!**\n${treasure.description}`);
+                        message.reply(`🗺️ **¡Tesoro encontrado!**\n${treasure.description}`);
                     }
                 }
                 break;
@@ -817,7 +817,7 @@ class MinigamesSystem {
                     
                 for (const treasure of treasures) {
                     if (treasure.type === 'treasure') {
-                        message.followUp(`🗺️ **¡Tesoro encontrado!**\n${treasure.description}`);
+                        message.reply(`🗺️ **¡Tesoro encontrado!**\n${treasure.description}`);
                     }
                 }
                 break;
@@ -1350,7 +1350,7 @@ class MinigamesSystem {
                     
                 for (const treasure of treasures) {
                     if (treasure.type === 'treasure') {
-                        message.followUp(`🗺️ **¡Tesoro encontrado!**\n${treasure.description}`);
+                        message.reply(`🗺️ **¡Tesoro encontrado!**\n${treasure.description}`);
                     }
                 }
                 break;
@@ -1673,7 +1673,7 @@ class MinigamesSystem {
                     
                 for (const treasure of treasures) {
                     if (treasure.type === 'treasure') {
-                        message.followUp(`🗺️ **¡Tesoro encontrado!**\n${treasure.description}`);
+                        message.reply(`🗺️ **¡Tesoro encontrado!**\n${treasure.description}`);
                     }
                 }
                 break;
