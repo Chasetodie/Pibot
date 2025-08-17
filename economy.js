@@ -634,7 +634,7 @@ class EconomySystem {
                     
                 for (const treasure of treasures) {
                     if (treasure.type === 'treasure') {
-                        message.followUp(`🗺️ **¡Tesoro encontrado!**\n${treasure.description}`);
+                        message.reply(`🗺️ **¡Tesoro encontrado!**\n${treasure.description}`);
                     }
                 }
                 break;
@@ -926,20 +926,6 @@ class EconomySystem {
             updateData.stats.totalSpent = (user.stats?.totalSpent || 0) + penalty;
 
             await this.updateUser(userId, updateData); // ← Reemplaza saveUsers()
-
-            // Verificar tesoros al final
-            for (const event of this.events.getActiveEvents()) {
-                if (event.type === 'treasure_hunt') {
-                    const treasures = await this.events.checkSpecialEvents(userId, 'general');
-                    
-                    for (const treasure of treasures) {
-                        if (treasure.type === 'treasure') {
-                            message.followUp(`🗺️ **¡Tesoro encontrado!**\n${treasure.description}`);
-                        }
-                    }
-                    break;
-                }
-            }            
            
             return {
                 success: false,
@@ -998,6 +984,21 @@ class EconomySystem {
             const moneyMissions = await this.missions.updateMissionProgress(userId, 'money_earned', amount);
             // Las notificaciones se manejan desde los comandos
         }
+
+            // Verificar tesoros al final
+            for (const event of this.events.getActiveEvents()) {
+                if (event.type === 'treasure_hunt') {
+                    const treasures = await this.events.checkSpecialEvents(userId, 'general');
+                    
+                    for (const treasure of treasures) {
+                        if (treasure.type === 'treasure') {
+                            message.reply(`🗺️ **¡Tesoro encontrado!**\n${treasure.description}`);
+                        }
+                    }
+                    break;
+                }
+            }            
+
         
         return {
             success: true,
