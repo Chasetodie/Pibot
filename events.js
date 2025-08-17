@@ -874,9 +874,9 @@ class EventsSystem {
             }
             
             await channel.send({
-                content: shouldPing ? '@everyone' : undefined,
+                content: shouldPing ? '@here' : undefined,
                 embeds: [embed],
-                allowedMentions: shouldPing ? { parse: ['everyone'] } : undefined
+                allowedMentions: shouldPing ? { parse: ['here'] } : undefined
             });
             
         } catch (error) {
