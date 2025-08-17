@@ -271,7 +271,6 @@ class MissionsSystem {
     // Generar misiones del día (se ejecuta automáticamente a las 12 PM)
     generateDailyMissions() {
         const allMissions = Object.values(this.availableMissions);
-        const dailyMissions = [];
         
         // Asegurar que al menos una misión de cada rareza esté presente
         const missionsByRarity = {
@@ -281,26 +280,51 @@ class MissionsSystem {
             epic: allMissions.filter(m => m.rarity === 'epic')
         };
         
-        // Seleccionar 1 common, 2 uncommon, 1 rare, 1 epic
-        const selections = [
-            this.getRandomMission(missionsByRarity.common),
-            this.getRandomMission(missionsByRarity.uncommon),
-            this.getRandomMission(missionsByRarity.uncommon),
-            this.getRandomMission(missionsByRarity.rare),
-            this.getRandomMission(missionsByRarity.epic)
+        const selectedMissions = [];
+        const usedMissionIds = new Set();
+        
+        // Función auxiliar para seleccionar misión sin repetir
+        const selectUniqueMission = (missionsArray) => {
+            const availableMissions = missionsArray.filter(m => !usedMissionIds.has(m.id));
+            if (availableMissions.length === 0) {
+                // Si no hay misiones disponibles en esta rareza, tomar de cualquier rareza
+                const allAvailable = allMissions.filter(m => !usedMissionIds.has(m.id));
+                if (allAvailable.length === 0) return null;
+                return allAvailable[Math.floor(Math.random() * allAvailable.length)];
+            }
+            return availableMissions[Math.floor(Math.random() * availableMissions.length)];
+        };
+        
+        // Seleccionar misiones por rareza: 1 common, 2 uncommon, 1 rare, 1 epic
+        const rarityPlan = [
+            { rarity: 'common', count: 1 },
+            { rarity: 'uncommon', count: 2 },
+            { rarity: 'rare', count: 1 },
+            { rarity: 'epic', count: 1 }
         ];
         
-        // Asegurar que no hay duplicados
-        const uniqueSelections = [...new Set(selections.map(m => m.id))];
-        while (uniqueSelections.length < 5) {
-            const randomMission = allMissions[Math.floor(Math.random() * allMissions.length)];
-            if (!uniqueSelections.includes(randomMission.id)) {
-                uniqueSelections.push(randomMission.id);
-                selections.push(randomMission);
+        for (const plan of rarityPlan) {
+            for (let i = 0; i < plan.count; i++) {
+                const mission = selectUniqueMission(missionsByRarity[plan.rarity]);
+                if (mission) {
+                    selectedMissions.push(mission);
+                    usedMissionIds.add(mission.id);
+                }
             }
         }
         
-        return selections.slice(0, 5).map(mission => ({
+        // Si no llegamos a 5 misiones, completar con misiones aleatorias
+        while (selectedMissions.length < 5) {
+            const availableMissions = allMissions.filter(m => !usedMissionIds.has(m.id));
+            if (availableMissions.length === 0) break; // No hay más misiones disponibles
+            
+            const randomMission = availableMissions[Math.floor(Math.random() * availableMissions.length)];
+            selectedMissions.push(randomMission);
+            usedMissionIds.add(randomMission.id);
+        }
+        
+        // Convertir a formato requerido
+        return selectedMissions.map(mission => ({
             id: mission.id,
             completed: false
         }));
