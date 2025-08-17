@@ -915,6 +915,8 @@ class AchievementsSystem {
     // Notificar logros desbloqueados (sin cambios)
     async notifyAchievements(message, achievementIds) {
         if (achievementIds.length === 0) return;
+
+        const user = await this.economy.getUser(message.author.id);
         
         for (const achievementId of achievementIds) {
             const achievement = this.achievements[achievementId];
