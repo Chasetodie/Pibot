@@ -278,7 +278,7 @@ class EconomySystem {
         
         for (const event of this.events.getActiveEvents()) {
             if (event.type === 'charity_event') {
-                finalFrom = Math.floor(amount * 1.75); // 💰 +75%
+                finalFrom = Math.floor(amount * 0.75); // 💰 +75%
                 eventMessage = `\n❤️ **Evento de Caridad** (+${finalFrom} π-b$) a quien dió dinero`;
                 break;
             }
