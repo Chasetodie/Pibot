@@ -290,7 +290,7 @@ client.on('guildMemberAdd', async (member) => {
 
 // Evento para manejar interacciones con botones
 client.on('interactionCreate', async (interaction) => {
-    if (!interaction.isButton()) return;
+    if (!interaction.isStringSelectMenu() && !interaction.isButton()) return;
 
     try {
         // Si la interacción viene de un DM, necesitamos encontrar el guild y member
