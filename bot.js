@@ -524,7 +524,7 @@ client.on('messageCreate', async (message) => {
                 });
         }
 
-      if(!xpResult || !xpResult.levelUp) {
+/*      if(!xpResult || !xpResult.levelUp) {
         try {
             const newAchievements = await achievements.checkAchievements(userId);
             if (newAchievements.length > 0) {
@@ -552,32 +552,23 @@ client.on('messageCreate', async (message) => {
         } catch (error) {
             console.error('❌ Error procesando menciones para misiones:', error);
         }        
-      }
+      }*/
     }
 
-    console.log(`[DEBUG 6] Iniciando procesamiento de comandos...`);
-
     // Procesar comandos de logros
-    console.log(`[DEBUG 7] Procesando achievements...`);
     await achievements.processCommand(message);
 
     // Procesar comandos de misiones
-    console.log(`[DEBUG 8] Procesando missions...`);
     await missions.processCommand(message);
 
     // Procesar comandos mejorados (shop, betting, etc.)
-    console.log(`[DEBUG 9] Procesando allCommands...`);
     await allCommands.processCommand(message);
    
     //Procesar comandos de minijuegos
-    console.log(`[DEBUG 10] Procesando minigames...`);
     await minigames.processCommand(message);
     
     // Luego procesar comandos normales (como !contadores, !reset, etc.)
-    console.log(`[DEBUG 11] Procesando commandHandler...`);
     await commandHandler.processCommand(message);
-
-    console.log(`[DEBUG 12] Todos los comandos procesados`);
 });
 
 // Manejo de errores
@@ -604,35 +595,3 @@ client.login(process.env.TOKEN).then(() => {
     console.error('❌ Error en el login:', error);
 
 });
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
