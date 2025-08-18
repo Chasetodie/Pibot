@@ -110,7 +110,7 @@ setTimeout(async () => {
 const betting = new BettingSystem(economy);
 
 // Instancia del sistema de comandos mejorados
-const allCommands = new AllCommands(economy/*, achievements, shop*/, events, betting, shop);
+const allCommands = new AllCommands(economy, shop, events, betting);
 
 economy.achievements = achievements;
 minigames.achievements = achievements;

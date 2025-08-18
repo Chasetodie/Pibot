@@ -1,13 +1,12 @@
 const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 
 class AllCommands {
-    constructor(economySystem/*, shopSystem*/, eventsSystem, bettingSystem, achievementsSystem, shopSystem) {
+    constructor(economySystem, shopSystem, eventsSystem, bettingSystem, achievementsSystem) {
         this.economy = economySystem;
-/*        this.shop = shopSystem;*/
+        this.shop = shopSystem;
         this.events = eventsSystem;
         this.betting = bettingSystem;
         this.achievements = achievementsSystem;
-        this.shop = shopSystem;
     }
 
     // Formatear tiempo restante para daily
