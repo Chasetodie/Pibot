@@ -145,9 +145,6 @@ class CommandHandler {
 
     // Procesador principal de comandos
     async processCommand(message) {
-        // Ignorar mensajes de bots
-        if (message.author.bot) return;
-
         const command = message.content.toLowerCase().split(' ')[0];
 
         try {
