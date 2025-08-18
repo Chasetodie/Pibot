@@ -15,7 +15,7 @@ const {
     TradeSystem,
     AuctionSystem,
     CraftingSystem
-} = require('./advanced-features');
+} = require('./things-shop');
 
 // Configuración del servidor web para mantener activo el bot
 const app = express();
