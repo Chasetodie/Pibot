@@ -4146,7 +4146,6 @@ class MinigamesSystem {
                     await this.showGamesList(message);
                     break;
                 default:
-                    console.log(`[MINIJUEGOS] Comando no encontrado: "${command}"`);
                     // No es un comando de minijuegos
                     break;
             }
