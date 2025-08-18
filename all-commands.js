@@ -1167,7 +1167,7 @@ class AllCommands {
         }
         
         // Obtener estadísticas de todos los usuarios
-        const allUsers = await this.economy.getAllUsers(); // Implementar según tu DB
+        let allUsers = await this.economy.getAllUsers(); // Implementar según tu DB
         
         let totalItems = 0;
         let totalValue = 0;
@@ -1224,7 +1224,7 @@ class AllCommands {
     // 6. Comando especial VIP
     async vipCommand(message) {
         const userId = message.author.id;
-        const hasVipAccess = await shop.hasVipAccess(userId);
+        const hasVipAccess = await this.shop.hasVipAccess(userId);
         
         if (!hasVipAccess) {
             await message.reply('❌ Necesitas ser **VIP** para usar este comando. Compra el **Pase VIP** en la tienda.');
