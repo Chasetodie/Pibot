@@ -348,13 +348,13 @@ class AllCommands {
         if (this.achievements) {
             try {
                 // Verificar logros para quien envía (por dinero dado)
-                const senderAchievements = await this.achievements.checkAchievements(fromUserId);
+                const senderAchievements = await this.achievements.checkAchievements(message.author.id);
                 if (senderAchievements.length > 0) {
                     await this.achievements.notifyAchievements(message, senderAchievements);
                 }
 
                 // Verificar logros para quien recibe (por dinero ganado)
-                const receiverAchievements = await this.achievements.checkAchievements(toUserId);
+                const receiverAchievements = await this.achievements.checkAchievements(targetUser.id);
                 if (receiverAchievements.length > 0) {
                     // Notificar en el mismo canal pero mencionando al receptor
                     for (const achievementId of receiverAchievements) {
@@ -365,7 +365,7 @@ class AllCommands {
                             
                             const embed = new EmbedBuilder()
                                 .setTitle('🎉 ¡Logro Desbloqueado!')
-                                .setDescription(`${rarityEmoji} ${achievement.emoji} **${achievement.name}**\n\n*${achievement.description}*\n\n<@${toUserId}> desbloqueó este logro!`)
+                                .setDescription(`${rarityEmoji} ${achievement.emoji} **${achievement.name}**\n\n*${achievement.description}*\n\n<@${targetUser.id}> desbloqueó este logro!`)
                                 .setColor(rarityColor)
                                 .addFields({
                                     name: '🎁 Recompensa',
