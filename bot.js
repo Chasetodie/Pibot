@@ -336,7 +336,7 @@ client.on('interactionCreate', async (interaction) => {
         }
 
         if (interaction.customId.startsWith('shop_')) {
-            await handleShopInteraction(interaction);
+            await allCommands.handleShopInteraction(interaction);
             return;
         }
 
