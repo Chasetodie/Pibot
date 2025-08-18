@@ -712,8 +712,8 @@ class AchievementsSystem {
             
             for (const userRecord of allUsers) {
                 try {
-                    console.log(`[DEBUG] Procesando usuario ${userRecord.user_id}...`);
-                    const result = await this.detectExistingAchievements(userRecord.user_id, true);
+                    console.log(`[DEBUG] Procesando usuario ${userRecord.id}...`);
+                    const result = await this.detectExistingAchievements(userRecord.id, true);
                     totalDetected += result.completedAchievements.length;
                     usersProcessed++;
                     
@@ -722,7 +722,7 @@ class AchievementsSystem {
                         await new Promise(resolve => setTimeout(resolve, 1000));
                     }
                 } catch (error) {
-                    console.error(`Error detectando logros para ${userRecord.user_id}:`, error);
+                    console.error(`Error detectando logros para ${userRecord.id}:`, error);
                 }
             }
             
