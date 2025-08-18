@@ -1081,8 +1081,6 @@ class AllCommands {
     }
     
     async processCommand(message) {
-        if (message.author.bot) return;
-
         const args = message.content.trim().split(/ +/g);
         const command = args[0].toLowerCase();
         const betId = args[1];
