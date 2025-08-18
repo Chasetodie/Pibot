@@ -420,9 +420,14 @@ class MissionsSystem {
     }
     
     // Actualizar progreso de misiones
-    async updateMissionProgress(userId, actionType, value = 1) {
+    async updateMissionProgress(userId, actionType, value = 1, maxChecks = 3, checkedInSession = new Set()) {
         await this.initializeDailyMissions(userId);
         const user = await this.economy.getUser(userId);
+
+        if (maxChecks <= 0) {
+            console.log(`⚠️ Límite de verificaciones alcanzado para ${userId}`);
+            return [];
+        }
         
         if (!user.daily_missions || !user.daily_stats) return;
         
@@ -526,7 +531,7 @@ class MissionsSystem {
         
         // Verificar progreso de cada misión
         for (const [missionId, status] of Object.entries(user.daily_missions)) {
-            if (status === 'completed') continue;
+            if (status === 'completed' || checkedInSession.has(achievementId)) continue;
             
             const mission = this.availableMissions[missionId];
             if (!mission) continue;
@@ -534,6 +539,9 @@ class MissionsSystem {
             const currentProgress = this.getCurrentProgress(user, mission);
             
             if (currentProgress >= mission.target) {
+                // Marcar como verificado en esta sesion
+                checkedInSession.add(missionId);
+
                 updateData.daily_missions = {
                     ...user.daily_missions,
                     [missionId]: 'completed'
@@ -606,7 +614,7 @@ class MissionsSystem {
         }
 
         // Actualizar base de datos
-        await this.economy.updateUser(userId, updateData);
+        await this.economy.updateUser(userId, updateData);     
         
         return completedMissions;
     }
