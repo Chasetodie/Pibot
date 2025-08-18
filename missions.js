@@ -531,7 +531,7 @@ class MissionsSystem {
         
         // Verificar progreso de cada misión
         for (const [missionId, status] of Object.entries(user.daily_missions)) {
-            if (status === 'completed' || checkedInSession.has(achievementId)) continue;
+            if (status === 'completed' || checkedInSession.has(missionId)) continue;
             
             const mission = this.availableMissions[missionId];
             if (!mission) continue;
