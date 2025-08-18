@@ -488,19 +488,13 @@ client.on('interactionCreate', async (interaction) => {
 client.on('messageCreate', async (message) => {
     // Ignorar mensajes de bots
     if (message.author.bot) return;
-
-    console.log(`[DEBUG 1] Mensaje recibido de: ${message.author.id}`);
     
     // AGREGAR ESTO AL INICIO:
-    const userId = message.author.id;
-    console.log(`[DEBUG 2] Obteniendo usuario: ${userId}`);
-  
+    const userId = message.author.id;  
     const user = await economy.getUser(userId);
-    console.log(`[DEBUG 3] Usuario obtenido:`, user ? 'OK' : 'NULL');
   
     // Procesar XP por mensaje (solo en servidores, no en DMs)
     if (message.guild) {
-        console.log(`[DEBUG 4] Procesando XP...`);
         // Aplicar modificadores de eventos a XP
         //const xpMod = events.applyEventModifiers(message.author.id, economy.config.xpPerMessage, 'message');
         
@@ -528,65 +522,37 @@ client.on('messageCreate', async (message) => {
                     embeds: [levelUpEmbed],
                     allowedMentions: { users: [message.author.id] }
                 });
-          console.log(`[DEBUG 5] XP procesado`);
         }
 
-        // *** NUEVO: VERIFICAR ACHIEVEMENTS DESPUÉS DE GANAR XP ***
+      if(!xpResult || !xpResult.levelUp) {
         try {
-            console.log(`[DEBUG] Verificando achievements para ${userId}...`);
-            
-            // Agregar timeout de 3 segundos
-            const newAchievements = await Promise.race([
-                achievements.checkAchievements(userId),
-                new Promise((_, reject) => setTimeout(() => reject(new Error('Achievement timeout')), 3000))
-            ]);
-            
-            console.log(`[DEBUG] Achievements verificados:`, newAchievements.length);
-            
+            const newAchievements = await achievements.checkAchievements(userId);
             if (newAchievements.length > 0) {
                 await achievements.notifyAchievements(message, newAchievements);
             }
         } catch (error) {
-            console.error('❌ Error verificando logros:', error.message);
-            // Continuar sin fallar
+            console.error('❌ Error verificando logros:', error);
         }
-        
-        // *** NUEVO: ACTUALIZAR PROGRESO DE MISIONES ***
+
         try {
-            console.log(`[DEBUG] Actualizando misiones para ${userId}...`);
-            
-            // Agregar timeout de 3 segundos
-            const completedMissions = await Promise.race([
-                missions.updateMissionProgress(userId, 'message'),
-                new Promise((_, reject) => setTimeout(() => reject(new Error('Missions timeout')), 3000))
-            ]);
-            
-            console.log(`[DEBUG] Misiones actualizadas:`, completedMissions.length);
-            
+            const completedMissions = await missions.updateMissionProgress(userId, 'message');
             if (completedMissions.length > 0) {
                 await missions.notifyCompletedMissions(message, completedMissions);
             }
         } catch (error) {
-            console.error('❌ Error actualizando misiones:', error.message);
-            // Continuar sin fallar
+            console.error('❌ Error actualizando misiones:', error);
         }
-        
-        // También el código de menciones
-        if (message.mentions.users.size > 0) {
-            try {
-                console.log(`[DEBUG] Procesando menciones...`);
-                const mentionsCount = message.mentions.users.size;
-                const completedMissions = await Promise.race([
-                    missions.updateMissionProgress(userId, 'mention_made', mentionsCount),
-                    new Promise((_, reject) => setTimeout(() => reject(new Error('Mentions timeout')), 3000))
-                ]);
-                if (completedMissions.length > 0) {
-                    await missions.notifyCompletedMissions(message, completedMissions);
-                }
-            } catch (error) {
-                console.error('❌ Error procesando menciones para misiones:', error.message);
+
+        try {
+            const mentionsCount = message.mentions.users.size;
+            const completedMissions = await missions.updateMissionProgress(userId, 'mention_made', mentionsCount);
+            if (completedMissions.length > 0) {
+                await missions.notifyCompletedMissions(message, completedMissions);
             }
-        }
+        } catch (error) {
+            console.error('❌ Error procesando menciones para misiones:', error);
+        }        
+      }
     }
 
     console.log(`[DEBUG 6] Iniciando procesamiento de comandos...`);
@@ -638,6 +604,7 @@ client.login(process.env.TOKEN).then(() => {
     console.error('❌ Error en el login:', error);
 
 });
+
 
 
 
