@@ -401,15 +401,22 @@ class AchievementsSystem {
     }
 
     // Verificar logros para un usuario (VERSION MEJORADA)
-    async checkAchievements(userId) {
+    async checkAchievements(userId, maxChecks = 3, checkedInSession = new Set()) {
         await this.initializeUserAchievements(userId);
         const user = await this.economy.getUser(userId);
         const unlockedAchievements = [];
 
+        if (maxChecks <= 0) {
+            console.log(`⚠️ Límite de verificaciones alcanzado para ${userId}`);
+            return [];
+        }
+
         for (const [achievementId, achievement] of Object.entries(this.achievements)) {
             // Si ya está completado, saltarlo
-            if (user.achievements[achievementId] === 'completed') continue;
-            
+            if (user.achievements[achievementId] === 'completed' || checkedInSession.has(achievementId)) {
+                continue;
+            }
+
             let currentValue = 0;
             const req = achievement.requirement;
             
@@ -472,6 +479,9 @@ class AchievementsSystem {
             
             // Verificar si completó el logro
             if (currentValue >= req.value) {
+                // Marcar como verificado en esta sesion
+                checkedInSession.add(achievementId);
+
                 // Marcar como completado en la base de datos
                 const updateData = {
                     achievements: {
@@ -545,9 +555,18 @@ class AchievementsSystem {
                 }
                 
                 await this.economy.updateUser(userId, updateData);
-
                 unlockedAchievements.push(achievementId);
                 console.log(`🏆 ${userId} desbloqueó logro: ${achievement.name}`);
+            
+                const additionalAchievements = await this.checkAchievements(
+                    userId,
+                    maxChecks - 1,
+                    checkedInSession
+                );
+                unlockedAchievements.push(...additionalAchievements);
+
+                // Solo procesar un logro por ciclo para evitar problemas
+                break;
             }
         }
         
