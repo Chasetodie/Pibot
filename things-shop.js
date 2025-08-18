@@ -1,3 +1,5 @@
+const { EmbedBuilder } = require('discord.js');
+
 // 2. Sistema de intercambio entre usuarios
 class TradeSystem {
     constructor(shopSystem) {
