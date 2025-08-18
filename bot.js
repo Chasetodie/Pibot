@@ -524,6 +524,7 @@ client.on('messageCreate', async (message) => {
                 });
         }
 
+        // *** NUEVO: VERIFICAR ACHIEVEMENTS DESPUÉS DE GANAR XP ***
         try {
             const newAchievements = await achievements.checkAchievements(userId);
             if (newAchievements.length > 0) {
@@ -533,6 +534,7 @@ client.on('messageCreate', async (message) => {
             console.error('❌ Error verificando logros:', error);
         }
 
+        // *** NUEVO: ACTUALIZAR PROGRESO DE MISIONES ***
         try {
             const completedMissions = await missions.updateMissionProgress(userId, 'message');
             if (completedMissions.length > 0) {
@@ -543,15 +545,15 @@ client.on('messageCreate', async (message) => {
         }
 
         if (message.mentions.users.size > 0) {
-          try {
-              const mentionsCount = message.mentions.users.size;
-              const completedMissions = await missions.updateMissionProgress(userId, 'mention_made', mentionsCount);
-              if (completedMissions.length > 0) {
-                  await missions.notifyCompletedMissions(message, completedMissions);
-              }
-          } catch (error) {
-              console.error('❌ Error procesando menciones para misiones:', error);
-          }        
+            try {
+                const mentionsCount = message.mentions.users.size;
+                const completedMissions = await missions.updateMissionProgress(userId, 'mention_made', mentionsCount);
+                if (completedMissions.length > 0) {
+                    await missions.notifyCompletedMissions(message, completedMissions);
+                }
+            } catch (error) {
+                console.error('❌ Error procesando menciones para misiones:', error);
+            }
         }
     }
 
@@ -595,5 +597,3 @@ client.login(process.env.TOKEN).then(() => {
     console.error('❌ Error en el login:', error);
 
 });
-
-
