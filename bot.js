@@ -524,7 +524,6 @@ client.on('messageCreate', async (message) => {
                 });
         }
 
-/*      if(!xpResult || !xpResult.levelUp) {
         try {
             const newAchievements = await achievements.checkAchievements(userId);
             if (newAchievements.length > 0) {
@@ -532,7 +531,6 @@ client.on('messageCreate', async (message) => {
             }
         } catch (error) {
             console.error('❌ Error verificando logros:', error);
-        }
 
         try {
             const completedMissions = await missions.updateMissionProgress(userId, 'message');
@@ -543,16 +541,17 @@ client.on('messageCreate', async (message) => {
             console.error('❌ Error actualizando misiones:', error);
         }
 
-        try {
-            const mentionsCount = message.mentions.users.size;
-            const completedMissions = await missions.updateMissionProgress(userId, 'mention_made', mentionsCount);
-            if (completedMissions.length > 0) {
-                await missions.notifyCompletedMissions(message, completedMissions);
-            }
-        } catch (error) {
-            console.error('❌ Error procesando menciones para misiones:', error);
-        }        
-      }*/
+        if (message.mentions.users.size > 0) {
+          try {
+              const mentionsCount = message.mentions.users.size;
+              const completedMissions = await missions.updateMissionProgress(userId, 'mention_made', mentionsCount);
+              if (completedMissions.length > 0) {
+                  await missions.notifyCompletedMissions(message, completedMissions);
+              }
+          } catch (error) {
+              console.error('❌ Error procesando menciones para misiones:', error);
+          }        
+        }
     }
 
     // Procesar comandos de logros
@@ -595,3 +594,4 @@ client.login(process.env.TOKEN).then(() => {
     console.error('❌ Error en el login:', error);
 
 });
+
