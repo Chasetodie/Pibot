@@ -532,7 +532,7 @@ client.on('messageCreate', async (message) => {
         }
 
         // *** NUEVO: VERIFICAR ACHIEVEMENTS DESPUÉS DE GANAR XP ***
-        try {
+        /*try {
             const newAchievements = await achievements.checkAchievements(userId);
             if (newAchievements.length > 0) {
                 await achievements.notifyAchievements(message, newAchievements);
@@ -549,7 +549,7 @@ client.on('messageCreate', async (message) => {
             }
         } catch (error) {
             console.error('❌ Error actualizando misiones:', error);
-        }
+        }*/
 
         if (message.mentions.users.size > 0) {
             try {
@@ -613,6 +613,7 @@ client.login(process.env.TOKEN).then(() => {
     console.error('❌ Error en el login:', error);
 
 });
+
 
 
 
