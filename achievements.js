@@ -701,7 +701,7 @@ class AchievementsSystem {
             // Opción A: Si tienes acceso a Supabase directamente
             const { data: allUsers, error } = await this.economy.supabase
                 .from('users')
-                .select('user_id');
+                .select('id');
                 
             if (error) throw error;
             
