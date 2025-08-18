@@ -182,24 +182,14 @@ class EconomySystem {
                 .from('users')
                 .select('*');
 
-            if (error) {
-                throw error;
-            }
+            if (error) throw error;
 
-            if (!users || users.length === 0) return {};
-
-            // Convertir array a objeto con ID como key
-            const usersObject = {};
-            users.forEach(user => {
-                usersObject[user.id] = user;
-            });
-
-            return usersObject;
+            return users || []; // ✅ array directo
         } catch (error) {
             console.error('❌ Error obteniendo todos los usuarios:', error);
-            return {};
+            return [];
         }
-    }
+}
 
     // Agregar dinero a un usuario
     async addMoney(userId, amount, reason = 'unknown') {

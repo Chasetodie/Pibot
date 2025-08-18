@@ -297,6 +297,18 @@ class ShopSystem {
         await message.reply({ embeds: [embed], components });
     }
     
+    async hasVipAccess(userId) {
+        const user = await this.getUser(userId);
+        const permanentEffects = user.permanentEffects || {};
+        
+        for (const effect of Object.values(permanentEffects)) {
+            if (effect.benefits && effect.benefits.includes('vip_commands')) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     // === COMPRAR ITEM ===
     async buyItem(message, itemId, quantity = 1) {
         const item = this.shopItems[itemId];

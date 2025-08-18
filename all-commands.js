@@ -1167,7 +1167,7 @@ class AllCommands {
         }
         
         // Obtener estadísticas de todos los usuarios
-        let allUsers = await this.economy.getAllUsers(); // Implementar según tu DB
+        const allUsers = await this.economy.getAllUsers(); // Implementar según tu DB
         
         let totalItems = 0;
         let totalValue = 0;
