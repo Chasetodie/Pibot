@@ -952,8 +952,6 @@ class AchievementsSystem {
    
     // NUEVO: Procesador de comandos
     async processCommand(message) {
-        if (message.author.bot) return;
-
         const args = message.content.toLowerCase().split(' ');
         const command = args[0];
 
