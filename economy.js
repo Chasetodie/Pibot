@@ -341,9 +341,12 @@ class EconomySystem {
         const user = await this.getUser(userId); // ← Ahora async
         const variation = Math.floor(Math.random() * (this.config.xpVariation * 2)) - this.config.xpVariation;
         const xpGained = Math.max(1, baseXp + variation);
-
         const modifiers = await this.shop.getActiveMultipliers(userId, 'all');
-        const finalXp = Math.floor(xpGained * modifiers.multiplier);        
+        let finalXp = xpGained;
+
+        if (modifiers.multiplier > 1) {
+            finalXp = Math.floor(xpGained * modifiers.multiplier);        
+        }
         
         const oldLevel = user.level;
         const newXp = user.xp + finalXp;
