@@ -298,7 +298,7 @@ class ShopSystem {
     }
     
     async hasVipAccess(userId) {
-        const user = await this.getUser(userId);
+        const user = await this.economy.getUser(userId);
         const permanentEffects = user.permanentEffects || {};
         
         for (const effect of Object.values(permanentEffects)) {
