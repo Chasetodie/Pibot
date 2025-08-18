@@ -637,15 +637,7 @@ class ShopSystem {
             message: `¡Felicidades! Obtuviste ${rarityEmoji} **${wonItem.name}**!` 
         };
     }
-    
-    // === LIMPIAR EFECTOS EXPIRADOS ===
-    async cleanupExpiredEffects() {
-        // Esta función debe ejecutarse periódicamente (cada minuto)
-        console.log('🧹 Limpiando efectos expirados...');
-        // Aquí implementarías la lógica para limpiar efectos de todos los usuarios
-        // Por brevedad no incluyo toda la implementación
-    }
-    
+       
     // === OBTENER MULTIPLICADORES ACTIVOS ===
     async getActiveMultipliers(userId, action) {
         const user = await this.economy.getUser(userId);

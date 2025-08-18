@@ -29,10 +29,7 @@
 
 ## 🛠️ **Comandos Administrativos** (Solo Administradores)
 - `>giveitem @usuario <item_id> [cantidad]` - Dar items a usuarios
-- `>givemoney @usuario <cantidad>` - Dar dinero a usuarios
 - `>shopstats` - Ver estadísticas de la tienda
-- `>resetuser @usuario` - Resetear completamente un usuario
-
 ---
 
 ## 🎮 **Tipos de Items Disponibles**
@@ -77,16 +74,3 @@
 - **Eventos**: Bonificaciones especiales los fines de semana
 
 ---
-
-## 🎉 **¡Listo para Usar!**
-
-Tu sistema de tienda está completo con:
-- ✅ 15+ tipos de items diferentes
-- ✅ Sistema de efectos temporales y permanentes  
-- ✅ Integración completa con misiones
-- ✅ Características avanzadas (intercambios, subastas, crafteo)
-- ✅ Comandos administrativos
-- ✅ Sistema de logros
-- ✅ Interfaz interactiva con botones y menús
-
-¡Disfruta tu nueva tienda! 🛒✨

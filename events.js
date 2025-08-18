@@ -102,6 +102,17 @@ class EventsSystem {
                 maxDuration: 3600000, // 1 hora
                 negative: true
             },
+            'week_end': {
+                name: '😎 Evento de Fin de Semana',
+                description: 'Todos los items de la tienda tienen **20% de descuento**!',
+                emoji: '😎',
+                color: '#FF6600',
+                multiplier: { 
+                    items: 0.2,
+                },
+                minDuration: 172800000, // 48 horas
+                maxDuration: 172800000 // 48 horas
+            },
             'server_anniversary': {
                 name: '🎉 Aniversario del Servidor',
                 description: 'Celebración especial con múltiples bonificaciones',

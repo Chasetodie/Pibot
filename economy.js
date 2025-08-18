@@ -341,10 +341,13 @@ class EconomySystem {
         const user = await this.getUser(userId); // ← Ahora async
         const variation = Math.floor(Math.random() * (this.config.xpVariation * 2)) - this.config.xpVariation;
         const xpGained = Math.max(1, baseXp + variation);
+
+        const modifiers = await this.shop.getActiveMultipliers(userId, 'all');
+        const finalXp = Math.floor(xpGained * modifiers.multiplier);        
         
         const oldLevel = user.level;
-        const newXp = user.xp + xpGained;
-        const newTotalXp = user.total_xp + xpGained;
+        const newXp = user.xp + finalXp;
+        const newTotalXp = user.total_xp + finalXp;
         
         // Calcular nuevo nivel
         const newLevel = this.getLevelFromXp(newTotalXp);
@@ -380,7 +383,7 @@ class EconomySystem {
                 levelUp: true,
                 levelsGained: levelUps,
                 newLevel: newLevel,
-                xpGained: xpGained,
+                xpGained: finalXp,
                 reward: reward
             };
         }
@@ -389,7 +392,7 @@ class EconomySystem {
         
         return {
             levelUp: false,
-            xpGained: xpGained,
+            xpGained: finalXp,
             currentLevel: user.level
         };
     }
@@ -572,6 +575,9 @@ class EconomySystem {
         let amount = Math.max(100, this.config.dailyAmount + variation);
         let eventMessage = '';
         let finalEarnings = amount;
+        let finalReward = 0;
+        const permanentEffects = user.permanentEffects || {};
+        let bonusText = '';
 
         for (const event of this.events.getActiveEvents()) {
             if (event.type === 'money_rain') {
@@ -595,13 +601,23 @@ class EconomySystem {
                 break;
             }
         }
+
+        for (const effect of Object.values(permanentEffects)) {
+            if (effect.benefits && effect.benefits.includes('daily_bonus')) {
+                finalReward = Math.floor(amount * 1.5); // 50% más
+                bonusText = '👑 **Bonificación VIP**: +' + (finalReward - amount) + ' π-b$';
+                break;
+            }
+        }
+
+        finalReward = finalReward + finalEarnings
               
         const updateData = {
             last_daily: Date.now(),
-            balance: user.balance + finalEarnings,
+            balance: user.balance + finalReward,
             stats: {
                 ...user.stats,
-                totalEarned: user.stats.totalEarned + finalEarnings,
+                totalEarned: user.stats.totalEarned + finalReward,
                 dailyClaims: user.stats.dailyClaims + 1
             }
         }
@@ -639,6 +655,7 @@ class EconomySystem {
             oldBalance: user.balance,
             newBalance: user.balance + finalEarnings,
             eventMessage: eventMessage,
+            bonusText: bonusText,
             finalEarnings: finalEarnings
         };
     }
@@ -853,11 +870,13 @@ class EconomySystem {
             return { canWork: false, reason: 'level_too_low', requiredLevel: job.levelRequirement };
         }
         
+        const modifiers = await this.shop.getActiveMultipliers(userId, 'work');
         const lastWork = user.last_work || 0;
         const now = Date.now();
         
         // Aplicar reducción de cooldown por eventos
-        let effectiveCooldown = job.cooldown;
+        let effectiveCooldown = job.cooldown * (1 - modifiers.reduction);
+
         for (const event of this.events.getActiveEvents()) {
             if (event.type === 'fever_time') {
                 effectiveCooldown = Math.floor(job.cooldown * 0.5); // 🔥 -50% tiempo
@@ -941,6 +960,9 @@ class EconomySystem {
         const message = job.messages[Math.floor(Math.random() * job.messages.length)];
         let eventMessage = '';
         let finalEarnings = amount;
+        const modifiers = await this.shop.getActiveMultipliers(userId, 'work');
+        let finalItemsEarn = 0;
+        let effectMessage = '';
 
         for (const event of this.events.getActiveEvents()) {
             if (event.type === 'money_rain') {
@@ -964,9 +986,20 @@ class EconomySystem {
                 break;
             }
         }
+
+        if (modifiers.multiplier > 1) {
+            finalItemsEarn = Math.floor(amount * modifiers.multiplier);
+            const bonus = finalEarnings - amount;
+            effectMessage = `🍀 **Bonificación por items**: +${bonus} π-b$`;
+            
+            // Consumir efectos de "usos limitados"
+            await this.consumeUsageEffects(userId, 'work');
+        }
+
+        finalItemsEarn = finalItemsEarn + finalEarnings
         
-        updateData.balance = user.balance + finalEarnings;
-        updateData.stats.totalEarned = (user.stats?.totalEarned || 0) + finalEarnings;
+        updateData.balance = user.balance + finalItemsEarn;
+        updateData.stats.totalEarned = (user.stats?.totalEarned || 0) + finalItemsEarn;
         
         await this.updateUser(userId, updateData); // ← Reemplaza saveUsers()
         
@@ -1001,6 +1034,7 @@ class EconomySystem {
             jobName: job.name,
             eventMessage: eventMessage,
             finalEarnings: finalEarnings,
+            effectMessage: effectMessage,
 
             canWork: canWorkResult.canWork,
             reason: canWorkResult.reason,
@@ -1078,7 +1112,76 @@ isBeingRobbed(userId) {
         
         return { canRob: true };
     }
+
+    // 5. Limpiar efectos expirados (ejecutar cada minuto)
+    async cleanupExpiredEffects() {
+        console.log('🧹 Limpiando efectos expirados...');
+        
+        // Obtener todos los usuarios con efectos activos
+        const users = await this.getAllUsersWithEffects(); // Implementar según tu DB
+        
+        for (const user of users) {
+            const activeEffects = user.activeEffects || {};
+            let hasChanges = false;
+            
+            for (const [itemId, effects] of Object.entries(activeEffects)) {
+                const validEffects = effects.filter(effect => {
+                    if (!effect.expiresAt) return true; // Efectos permanentes o por usos
+                    return effect.expiresAt > Date.now(); // No expirados
+                });
+                
+                if (validEffects.length !== effects.length) {
+                    if (validEffects.length === 0) {
+                        delete activeEffects[itemId];
+                    } else {
+                        activeEffects[itemId] = validEffects;
+                    }
+                    hasChanges = true;
+                }
+            }
+            
+            if (hasChanges) {
+                await this.updateUser(user.id, { activeEffects });
+            }
+        }
+    }
     
+    // 4. Función para consumir efectos de uso limitado
+    async consumeUsageEffects(userId, action) {
+        const user = await this.getUser(userId);
+        const activeEffects = user.activeEffects || {};
+        let updated = false;
+        
+        for (const [itemId, effects] of Object.entries(activeEffects)) {
+            for (let i = effects.length - 1; i >= 0; i--) {
+                const effect = effects[i];
+                
+                // Solo procesar efectos que afecten esta acción
+                if (!effect.targets.includes(action) && !effect.targets.includes('all')) continue;
+                
+                // Solo efectos con usos limitados
+                if (!effect.usesLeft) continue;
+                
+                effect.usesLeft--;
+                
+                if (effect.usesLeft <= 0) {
+                    effects.splice(i, 1);
+                    updated = true;
+                }
+            }
+            
+            // Limpiar arrays vacíos
+            if (effects.length === 0) {
+                delete activeEffects[itemId];
+                updated = true;
+            }
+        }
+        
+        if (updated) {
+            await this.updateUser(userId, { activeEffects });
+        }
+    }
+
     // Iniciar un robo
     async startRobbery(robberId, targetId) {
         const canRobResult = await this.canRob(robberId, targetId);

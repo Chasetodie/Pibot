@@ -153,7 +153,8 @@ class AllCommands {
                     value: `**${this.formatNumber(result.newBalance)}** ${this.economy.config.currencySymbol}`,
                     inline: true
                 },
-                { name: '🎉 Extra por Eventos', value: `${result.eventMessage || "No hay eventos Activos"} `, inline: false }
+                { name: '🎉 Extra por Eventos', value: `${result.eventMessage || "No hay eventos Activos"} `, inline: false },
+                { name: '🎁 Bonus', value: `${result.bonusText || "No hay Items Activos"} `, inline: false }
             )
             .setColor('#00FF00')
             .setFooter({ text: 'Vuelve mañana por más!' })
@@ -808,7 +809,8 @@ class AllCommands {
                     value: `${this.formatNumber(result.newBalance)} π-b$`,
                     inline: true
                 },
-                { name: '🎉 Extra por Eventos', value: `${result.eventMessage || "No hay eventos Activos"} `, inline: false }
+                { name: '🎉 Extra por Eventos', value: `${result.eventMessage || "No hay eventos Activos"} `, inline: false },
+                { name: '🎁 Bonus', value: `${result.effectMessage || "No hay Items Activos"} `, inline: false }
             )
             .setColor('#28a745')
             .setTimestamp();
