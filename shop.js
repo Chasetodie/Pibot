@@ -226,7 +226,7 @@ class ShopSystem {
             
             embed.addFields({
                 name: `${rarityEmoji} ${item.name}`,
-                value: `${item.description}\n💰 **${priceFormatted} π-b$** ${effectDesc ? `| ⏱️ ${effectDesc}` : ''}`,
+                value: `${item.description}\n💰 **${priceFormatted} π-b$** ${effectDesc ? `| ⏱️ ${effectDesc}` : ''}\n**Item Id:** ${id}`,
                 inline: false
             });
         }
