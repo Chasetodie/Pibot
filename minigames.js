@@ -849,6 +849,9 @@ class MinigamesSystem {
     // Agregar estos métodos a tu clase MinigamesSystem
     
     async handleBlackjack(message, args) {
+        console.log(`[BJ DEBUG 1] Iniciando blackjack para ${message.author.id}`);
+        console.log(`[BJ DEBUG 2] Args recibidos:`, args);
+        
         const userId = message.author.id;
         const user = await this.economy.getUser(userId);
     
@@ -872,15 +875,21 @@ class MinigamesSystem {
         }
     
         const betAmount = parseInt(args[1]);
+        console.log(`[BJ DEBUG 3] Apuesta: ${betAmount}`);
     
         // Validar cantidad de apuesta
         if (isNaN(betAmount) || betAmount < this.config.blackjack.minBet || betAmount > this.config.blackjack.maxBet) {
+            console.log(`[BJ DEBUG 4] Apuesta inválida`);
             await message.reply(`❌ La apuesta debe ser entre ${this.formatNumber(this.config.blackjack.minBet)} y ${this.formatNumber(this.config.blackjack.maxBet)} π-b$`);
             return;
         }
+
+        console.log(`[BJ DEBUG 5] Obteniendo usuario...`);
+        console.log(`[BJ DEBUG 6] Usuario obtenido, balance: ${user.balance}`);
     
         // Verificar fondos
         if (user.balance < betAmount) {
+            console.log(`[BJ DEBUG 7] Balance insuficiente`);
             await message.reply(`❌ No tienes suficientes π-b Coins. Tu balance: ${this.formatNumber(user.balance)} π-b$`);
             return;
         }
@@ -902,6 +911,8 @@ class MinigamesSystem {
             await message.reply('❌ Ya tienes un juego de Blackjack activo. Termínalo primero.');
             return;
         }
+
+        console.log(`[BJ DEBUG 8] Iniciando juego...`);
     
         // Crear nuevo juego
         await this.startBlackjackGame(message, userId, betAmount);
