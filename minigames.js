@@ -4017,6 +4017,8 @@ class MinigamesSystem {
         const args = message.content.toLowerCase().split(' ');
         const command = args[0];
 
+        console.log(`[MINIGAMES] Comando recibido: "${command}", Args:`, args);
+
         try {
             switch (command) {
                 case '>coinflip':
@@ -4037,6 +4039,7 @@ class MinigamesSystem {
                 case '>blackjack':
                 case '>bj':
                 case '>21':
+                    console.log(`[MINIGAMES] Ejecutando bj...`);
                     await this.handleBlackjack(message, args);
                     break;
                 case '>roulette':
@@ -4145,6 +4148,7 @@ class MinigamesSystem {
                     await this.showGamesList(message);
                     break;
                 default:
+                    console.log(`[MINIJUEGOS] Comando no encontrado: "${command}"`);
                     // No es un comando de minijuegos
                     break;
             }
