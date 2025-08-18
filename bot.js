@@ -489,14 +489,18 @@ client.on('messageCreate', async (message) => {
     // Ignorar mensajes de bots
     if (message.author.bot) return;
 
-    console.log(`[${new Date().toLocaleTimeString()}] ID: ${message.author.id}, User: ${message.author.username}, Content: "${message.content}"`);
-
+    console.log(`[DEBUG 1] Mensaje recibido de: ${message.author.id}`);
+    
     // AGREGAR ESTO AL INICIO:
     const userId = message.author.id;
+    console.log(`[DEBUG 2] Obteniendo usuario: ${userId}`);
+  
     const user = await economy.getUser(userId);
-    
+    console.log(`[DEBUG 3] Usuario obtenido:`, user ? 'OK' : 'NULL');
+  
     // Procesar XP por mensaje (solo en servidores, no en DMs)
     if (message.guild) {
+        console.log(`[DEBUG 4] Procesando XP...`);
         // Aplicar modificadores de eventos a XP
         //const xpMod = events.applyEventModifiers(message.author.id, economy.config.xpPerMessage, 'message');
         
@@ -524,6 +528,7 @@ client.on('messageCreate', async (message) => {
                     embeds: [levelUpEmbed],
                     allowedMentions: { users: [message.author.id] }
                 });
+          console.log(`[DEBUG 5] XP procesado`);
         }
 
         // *** NUEVO: VERIFICAR ACHIEVEMENTS DESPUÉS DE GANAR XP ***
@@ -559,20 +564,29 @@ client.on('messageCreate', async (message) => {
         }
     }
 
+    console.log(`[DEBUG 6] Iniciando procesamiento de comandos...`);
+
     // Procesar comandos de logros
+    console.log(`[DEBUG 7] Procesando achievements...`);
     await achievements.processCommand(message);
 
     // Procesar comandos de misiones
+    console.log(`[DEBUG 8] Procesando missions...`);
     await missions.processCommand(message);
 
     // Procesar comandos mejorados (shop, betting, etc.)
+    console.log(`[DEBUG 9] Procesando allCommands...`);
     await allCommands.processCommand(message);
    
     //Procesar comandos de minijuegos
+    console.log(`[DEBUG 10] Procesando minigames...`);
     await minigames.processCommand(message);
     
     // Luego procesar comandos normales (como !contadores, !reset, etc.)
+    console.log(`[DEBUG 11] Procesando commandHandler...`);
     await commandHandler.processCommand(message);
+
+    console.log(`[DEBUG 12] Todos los comandos procesados`);
 });
 
 // Manejo de errores
@@ -599,6 +613,7 @@ client.login(process.env.TOKEN).then(() => {
     console.error('❌ Error en el login:', error);
 
 });
+
 
 
 
