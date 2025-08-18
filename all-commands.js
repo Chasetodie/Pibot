@@ -1095,7 +1095,7 @@ class AllCommands {
                     }
                 };
                 
-                await shop.showShop(fakeMessage, category, 1);
+                await this.shop.showShop(fakeMessage, category, 1);
             }
         } else if (interaction.isButton()) {
             if (parts[1] === 'prev' || parts[1] === 'next') {
@@ -1109,7 +1109,7 @@ class AllCommands {
                     }
                 };
                 
-                await shop.showShop(fakeMessage, category, page);
+                await this.shop.showShop(fakeMessage, category, page);
             }
         }
     }
