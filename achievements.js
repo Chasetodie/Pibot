@@ -137,6 +137,24 @@ class AchievementsSystem {
                 rarity: 'epic',
                 emoji: '🗓️'
             },
+
+            // Logros de tienda
+            'collector': {
+                name: '🎒 Coleccionista',
+                description: 'Posee 10 items diferentes',
+                requirement: { type: 'unique_items', count: 10 },
+                reward: { money: 2000, xp: 1500},
+                rarity: 'uncommon',
+                emoji: '🎒'
+            },
+            'vip_member': {
+                name: '👑 Miembro VIP',
+                description: 'Compra el Pase VIP',
+                requirement: { type: 'owns_item', item: 'vip_pass' },
+                reward: { money: 5000, xp: 2000},
+                rarity: 'epic',
+                emoji: '👑'
+            },
             
             // Logros de gambling
             'first_bet': {
@@ -298,6 +316,12 @@ class AchievementsSystem {
                 case 'lottery_wins':
                     currentValue = user.stats?.lottery_wins || 0;
                     break;
+                case 'unique_items':
+                    currentValue = Object.keys(user.items || 0);
+                    break;
+                case 'owns_item':
+                    currentValue = user.items[achievement.requirement.item];
+                    break;
                 case 'inactive_streak':
                     // Calcular días sin usar work ni daily
                     const now = Date.now();
@@ -458,6 +482,12 @@ class AchievementsSystem {
                     break;
                 case 'lottery_wins':
                     currentValue = user.stats?.lottery_wins || 0;
+                    break;
+                case 'unique_items':
+                    currentValue = Object.keys(user.items || 0);
+                    break;
+                case 'owns_item':
+                    currentValue = user.items[achievement.requirement.item];
                     break;
                 case 'inactive_streak':
                     // Calcular días sin usar work ni daily

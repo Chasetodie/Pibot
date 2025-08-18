@@ -1,80 +1,3 @@
-// === CARACTERÍSTICAS AVANZADAS ===
-
-// 1. Sistema de logros por usar items
-class AchievementSystem {
-    constructor(shopSystem) {
-        this.shop = shopSystem;
-        
-        this.achievements = {
-            'collector': {
-                id: 'collector',
-                name: '🎒 Coleccionista',
-                description: 'Posee 10 items diferentes',
-                requirement: { type: 'unique_items', count: 10 },
-                reward: { money: 2000, title: 'Coleccionista' }
-            },
-            'big_spender': {
-                id: 'big_spender',
-                name: '💸 Gran Gastador',
-                description: 'Gasta 50,000 π-b$ en la tienda',
-                requirement: { type: 'total_spent', amount: 50000 },
-                reward: { money: 5000, title: 'Gran Gastador' }
-            },
-            'vip_member': {
-                id: 'vip_member',
-                name: '👑 Miembro VIP',
-                description: 'Compra el Pase VIP',
-                requirement: { type: 'owns_item', item: 'vip_pass' },
-                reward: { money: 3000, title: 'VIP' }
-            }
-        };
-    }
-    
-    async checkAchievements(userId) {
-        const user = await this.shop.economy.getUser(userId);
-        const userItems = user.items || {};
-        const achievements = user.achievements || {};
-        const newAchievements = [];
-        
-        for (const [achievementId, achievement] of Object.entries(this.achievements)) {
-            if (achievements[achievementId]) continue; // Ya obtenido
-            
-            let completed = false;
-            
-            switch (achievement.requirement.type) {
-                case 'unique_items':
-                    completed = Object.keys(userItems).length >= achievement.requirement.count;
-                    break;
-                case 'total_spent':
-                    completed = (user.stats?.total_spent || 0) >= achievement.requirement.amount;
-                    break;
-                case 'owns_item':
-                    completed = userItems[achievement.requirement.item] !== undefined;
-                    break;
-            }
-            
-            if (completed) {
-                achievements[achievementId] = {
-                    unlockedAt: Date.now(),
-                    title: achievement.reward.title
-                };
-                
-                // Dar recompensa
-                if (achievement.reward.money) {
-                    await this.shop.economy.updateUser(userId, {
-                        balance: user.balance + achievement.reward.money,
-                        achievements: achievements
-                    });
-                }
-                
-                newAchievements.push(achievement);
-            }
-        }
-        
-        return newAchievements;
-    }
-}
-
 // 2. Sistema de intercambio entre usuarios
 class TradeSystem {
     constructor(shopSystem) {
@@ -480,7 +403,6 @@ class CraftingSystem {
 
 // 5. Exportar todos los sistemas
 module.exports = {
-    AchievementSystem,
     TradeSystem,
     AuctionSystem,
     CraftingSystem

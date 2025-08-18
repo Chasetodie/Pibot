@@ -1,9 +1,12 @@
 const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 
 class AllCommands {
-    constructor(economySystem, shopSystem, eventsSystem, bettingSystem, achievementsSystem) {
+    constructor(economySystem, shopSystem, tradeSystem, auctionSystem, craftingSystem,  eventsSystem, bettingSystem, achievementsSystem) {
         this.economy = economySystem;
         this.shop = shopSystem;
+        this.trades = tradeSystem;
+        this.auctions = auctionSystem;
+        this.crafting = craftingSystem;
         this.events = eventsSystem;
         this.betting = bettingSystem;
         this.achievements = achievementsSystem;
@@ -1112,6 +1115,136 @@ class AllCommands {
             }
         }
     }
+
+    // Comando para dar items a usuarios (solo admins)
+    async giveItemCommand(message, args) {
+        // Verificar permisos de admin
+        if (!message.member.permissions.has('ADMINISTRATOR')) {
+            await message.reply('❌ No tienes permisos para usar este comando.');
+            return;
+        }
+        
+        const targetUser = message.mentions.users.first();
+        const itemId = args[2];
+        const quantity = parseInt(args[3]) || 1;
+        
+        if (!targetUser || !itemId) {
+            await message.reply('❌ Uso: `>giveitem @usuario item_id cantidad`');
+            return;
+        }
+        
+        const item = this.shop.shopItems[itemId];
+        if (!item) {
+            await message.reply('❌ Item no encontrado.');
+            return;
+        }
+        
+        const user = await this.economy.getUser(targetUser.id);
+        const userItems = user.items || {};
+        
+        if (userItems[itemId]) {
+            userItems[itemId].quantity += quantity;
+        } else {
+            userItems[itemId] = {
+                id: itemId,
+                quantity: quantity,
+                purchaseDate: new Date().toISOString()
+            };
+        }
+        
+        await economy.updateUser(targetUser.id, { items: userItems });
+        
+        await message.reply(
+            `✅ Se ha dado **${item.name} x${quantity}** a ${targetUser.displayName}.`
+        );
+    }
+
+    // Comando para ver estadísticas de la tienda
+    async shopStatsCommand(message) {
+        if (!message.member.permissions.has('ADMINISTRATOR')) {
+            await message.reply('❌ No tienes permisos para usar este comando.');
+            return;
+        }
+        
+        // Obtener estadísticas de todos los usuarios
+        const allUsers = await this.economy.getAllUsers(); // Implementar según tu DB
+        
+        let totalItems = 0;
+        let totalValue = 0;
+        let itemCounts = {};
+        let activeEffectsCount = 0;
+        
+        for (const user of allUsers) {
+            if (user.items) {
+                for (const [itemId, userItem] of Object.entries(user.items)) {
+                    const item = this.shop.shopItems[itemId];
+                    if (!item) continue;
+                    
+                    totalItems += userItem.quantity;
+                    totalValue += item.price * userItem.quantity;
+                    itemCounts[itemId] = (itemCounts[itemId] || 0) + userItem.quantity;
+                }
+            }
+            
+            if (user.activeEffects && Object.keys(user.activeEffects).length > 0) {
+                activeEffectsCount++;
+            }
+        }
+        
+        const embed = new EmbedBuilder()
+            .setTitle('📊 Estadísticas de la Tienda')
+            .setColor('#FFD700')
+            .addFields(
+                { name: '👥 Usuarios con Items', value: `${allUsers.filter(u => u.items && Object.keys(u.items).length > 0).length}`, inline: true },
+                { name: '📦 Items Totales', value: `${totalItems}`, inline: true },
+                { name: '💰 Valor Total', value: `${totalValue.toLocaleString('es-ES')} π-b$`, inline: true },
+                { name: '⚡ Usuarios con Efectos Activos', value: `${activeEffectsCount}`, inline: true }
+            );
+        
+        // Top 5 items más comprados
+        const topItems = Object.entries(itemCounts)
+            .sort(([,a], [,b]) => b - a)
+            .slice(0, 5)
+            .map(([itemId, count]) => {
+                const item = this.shop.shopItems[itemId];
+                return `${item ? item.name : itemId}: ${count}`;
+            });
+        
+        if (topItems.length > 0) {
+            embed.addFields({ 
+                name: '🏆 Items Más Populares', 
+                value: topItems.join('\n'), 
+                inline: false 
+            });
+        }
+        
+        await message.reply({ embeds: [embed] });
+    }
+
+    // 6. Comando especial VIP
+    async vipCommand(message) {
+        const userId = message.author.id;
+        const hasVipAccess = await shop.hasVipAccess(userId);
+        
+        if (!hasVipAccess) {
+            await message.reply('❌ Necesitas ser **VIP** para usar este comando. Compra el **Pase VIP** en la tienda.');
+            return;
+        }
+        
+        const embed = new EmbedBuilder()
+            .setTitle('👑 Comandos VIP Disponibles')
+            .setColor('#FFD700')
+            .setDescription('Comandos exclusivos para usuarios VIP:')
+            .addFields(
+                { name: '💎 >vipwork', value: 'Trabajo especial con mejores recompensas', inline: false },
+                { name: '🎁 >vipbonus', value: 'Bonificación adicional cada 12 horas', inline: false },
+                { name: '📊 >vipstats', value: 'Estadísticas detalladas de tu progreso', inline: false },
+                { name: '⭐ >vipshop', value: 'Acceso a items exclusivos VIP', inline: false }
+            )
+            .setFooter({ text: '¡Gracias por ser VIP!' });
+        
+        await message.reply({ embeds: [embed] });
+    }
     
     async processCommand(message) {
         const args = message.content.trim().split(/ +/g);
@@ -1203,6 +1336,64 @@ class AllCommands {
                     break;
                 case '>eventstats':
                     await this.events.showEventStats(message);
+                    break;
+                case '>trade':
+                    if (!args[1] || !message.mentions.users.first()) {
+                        await message.reply('❌ Uso: `>trade @usuario item_id:cantidad`');
+                        return;
+                    }
+                    await initiateTrade(message, args);
+                    break;
+                    
+                case '>tradeaccept':
+                    await acceptTrade(message);
+                    break;
+                    
+                case '>tradecancel':
+                    await cancelTrade(message);
+                    break;
+                    
+                case '>auction':
+                    if (args.length < 3) {
+                        await message.reply('❌ Uso: `>auction item_id precio_inicial [duración_en_minutos]`');
+                        return;
+                    }
+                    const durations = parseInt(args[3]) || 60;
+                    await auctions.createAuction(message, args[1], parseInt(args[2]), durations * 60000);
+                    break;
+                    
+                case '>bid':
+                    if (args.length < 3) {
+                        await message.reply('❌ Uso: `>bid auction_id cantidad`');
+                        return;
+                    }
+                    await auctions.placeBid(message, args[1], parseInt(args[2]));
+                    break;
+                    
+                case '>auctions':
+                    await showActiveAuctions(message);
+                    break;
+                    
+                case '>recipes':
+                    await crafting.showRecipes(message);
+                    break;
+                    
+                case '>craft':
+                    if (!args[1]) {
+                        await message.reply('❌ Especifica la receta. Usa `>recipes` para ver las disponibles.');
+                        return;
+                    }
+                    await crafting.craftItem(message, args[1]);
+                    break;
+                    
+                case '>vip':
+                    await vipCommand(message);
+                    break;
+                case '>giveitem':
+                    await giveItemCommand(message, args);
+                    break;
+                case '>shopstats':
+                    await shopStatsCommand(message);
                     break;
                 case '>help':
                     await this.showHelp(message);

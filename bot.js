@@ -11,6 +11,11 @@ const BettingSystem = require('./betting');
 const MissionsSystem = require('./missions');
 const ShopSystem = require('./shop');
 const AllCommands = require('./all-commands');
+const {
+    TradeSystem,
+    AuctionSystem,
+    CraftingSystem
+} = require('./advanced-features');
 
 // Configuración del servidor web para mantener activo el bot
 const app = express();
@@ -108,9 +113,12 @@ setTimeout(async () => {
 }, 2000);
 
 const betting = new BettingSystem(economy);
+const trades = new TradeSystem(shop);
+const auctions = new AuctionSystem(shop);
+const crafting = new CraftingSystem(shop);
 
 // Instancia del sistema de comandos mejorados
-const allCommands = new AllCommands(economy, shop, events, betting);
+const allCommands = new AllCommands(economy, shop, trades, auctions, crafting, events, betting);
 
 economy.achievements = achievements;
 minigames.achievements = achievements;
