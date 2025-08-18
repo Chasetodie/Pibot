@@ -1245,7 +1245,40 @@ class AllCommands {
         
         await message.reply({ embeds: [embed] });
     }
-    
+
+    async showActiveAuctions(message) {
+        const activeAuctions = Array.from(this.auctions.activeAuctions.values())
+            .filter(auction => auction.active)
+            .slice(0, 10); // Mostrar máximo 10
+        
+        if (activeAuctions.length === 0) {
+            await message.reply('❌ No hay subastas activas en este momento.');
+            return;
+        }
+        
+        const embed = new EmbedBuilder()
+            .setTitle('🔨 Subastas Activas')
+            .setColor('#FF6600');
+        
+        for (const auction of activeAuctions) {
+            const item = shop.shopItems[auction.itemId];
+            const timeLeft = Math.max(0, auction.endsAt - Date.now());
+            const minutesLeft = Math.floor(timeLeft / 60000);
+            
+            const rarityEmoji = item ? shop.rarityEmojis[item.rarity] : '❓';
+            
+            embed.addFields({
+                name: `${rarityEmoji} ${auction.itemName}`,
+                value: `**Puja actual:** ${auction.currentBid.toLocaleString('es-ES')} π-b$\n**Termina en:** ${minutesLeft} minutos\n**ID:** \`${auction.id}\``,
+                inline: true
+            });
+        }
+        
+        embed.setFooter({ text: 'Usa >bid <auction_id> <cantidad> para pujar' });
+        
+        await message.reply({ embeds: [embed] });
+    }
+
     async processCommand(message) {
         const args = message.content.trim().split(/ +/g);
         const command = args[0].toLowerCase();
@@ -1359,7 +1392,7 @@ class AllCommands {
                         return;
                     }
                     const durations = parseInt(args[3]) || 60;
-                    await auctions.createAuction(message, args[1], parseInt(args[2]), durations * 60000);
+                    await this.auctions.createAuction(message, args[1], parseInt(args[2]), durations * 60000);
                     break;
                     
                 case '>bid':
@@ -1367,15 +1400,15 @@ class AllCommands {
                         await message.reply('❌ Uso: `>bid auction_id cantidad`');
                         return;
                     }
-                    await auctions.placeBid(message, args[1], parseInt(args[2]));
+                    await this.auctions.placeBid(message, args[1], parseInt(args[2]));
                     break;
                     
                 case '>auctions':
-                    await showActiveAuctions(message);
+                    await this.showActiveAuctions(message);
                     break;
                     
                 case '>recipes':
-                    await crafting.showRecipes(message);
+                    await this.crafting.showRecipes(message);
                     break;
                     
                 case '>craft':
@@ -1383,17 +1416,17 @@ class AllCommands {
                         await message.reply('❌ Especifica la receta. Usa `>recipes` para ver las disponibles.');
                         return;
                     }
-                    await crafting.craftItem(message, args[1]);
+                    await this.crafting.craftItem(message, args[1]);
                     break;
                     
                 case '>vip':
-                    await vipCommand(message);
+                    await this.vipCommand(message);
                     break;
                 case '>giveitem':
-                    await giveItemCommand(message, args);
+                    await this.giveItemCommand(message, args);
                     break;
                 case '>shopstats':
-                    await shopStatsCommand(message);
+                    await this.shopStatsCommand(message);
                     break;
                 case '>help':
                     await this.showHelp(message);
