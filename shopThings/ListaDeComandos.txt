@@ -1,0 +1,162 @@
+# 🤖 Sistema Completo de Tienda y Economía - Lista de Comandos
+
+## 💰 **Comandos de Economía Básica**
+- `>balance` / `>bal` - Ver tu dinero actual
+- `>work` - Trabajar para ganar dinero (con efectos de items)
+- `>daily` - Recompensa diaria (bonificación VIP disponible)
+- `>gamble <cantidad>` / `>bet <cantidad>` - Apostar dinero
+- `>transfer @usuario <cantidad>` / `>pay @usuario <cantidad>` - Transferir dinero
+- `>profile` / `>perfil` [@usuario] - Ver perfil (con items equipados y efectos)
+
+## 🏪 **Comandos de Tienda**
+- `>shop` / `>tienda` - Ver la tienda completa
+- `>shop <categoría>` - Ver categoría específica (consumable, permanent, cosmetic, mystery)
+- `>buy <item_id> [cantidad]` / `>comprar <item_id> [cantidad]` - Comprar items
+- `>bag` / `>inventario` / `>inv` [@usuario] - Ver inventario
+- `>useitem <item_id>` / `>usar <item_id>` - Usar un item
+
+## 🎯 **Comandos de Misiones**
+- `>missions` / `>misiones` [@usuario] - Ver misiones diarias
+- Las misiones se completan automáticamente al realizar actividades
+
+## 🏆 **Comandos de Logros**
+- `>achievements` / `>logros` - Ver tus logros desbloqueados
+
+## 🔄 **Comandos de Intercambio**
+- `>trade @usuario item_id:cantidad` - Iniciar intercambio
+- `>tradeadd <item_id> [cantidad]` - Agregar item al intercambio
+- `>tradeaccept` - Aceptar el intercambio
+- `>tradecancel` - Cancelar intercambio
+
+## 🔨 **Comandos de Subastas**
+- `>auction <item_id> <precio_inicial> [minutos]` - Crear subasta
+- `>bid <auction_id> <cantidad>` - Pujar en una subasta
+- `>auctions` - Ver subastas activas
+
+## ⚒️ **Comandos de Crafteo**
+- `>recipes` - Ver recetas de crafteo disponibles
+- `>craft <recipe_id>` - Craftear un item
+
+## 👑 **Comandos VIP**
+- `>vip` - Ver comandos VIP disponibles (requiere Pase VIP)
+- `>vipwork` - Trabajo especial VIP
+- `>vipbonus` - Bonificación adicional cada 12 horas
+- `>vipstats` - Estadísticas detalladas
+- `>vipshop` - Items exclusivos VIP
+
+## 🛠️ **Comandos Administrativos** (Solo Administradores)
+- `>giveitem @usuario <item_id> [cantidad]` - Dar items a usuarios
+- `>givemoney @usuario <cantidad>` - Dar dinero a usuarios
+- `>shopstats` - Ver estadísticas de la tienda
+- `>resetuser @usuario` - Resetear completamente un usuario
+
+---
+
+## 🎮 **Tipos de Items Disponibles**
+
+### 🧪 **Consumibles Temporales**
+- **🍀 Amuleto de Suerte** - +50% ganancias por 2 horas
+- **⚡ Bebida Energética** - -50% cooldown de trabajo por 1 hora
+- **📚 Poción de Doble XP** - x2 XP por 30 minutos
+- **🔧 Kit de Robo** - +30% éxito en robos por 1 uso
+
+### 💎 **Items Permanentes**
+- **👑 Pase VIP** - Acceso a comandos VIP y bonificaciones
+- **🧲 Imán de Dinero** - +10% ganancias permanentes
+- **👢 Botas de Trabajo** - -20% cooldown de trabajo permanente
+
+### ✨ **Items Cosméticos**
+- **🏆 Trofeo Dorado** - Aparece en tu perfil
+- **🌈 Insignia Arcoíris** - Decoración para el perfil
+
+### 🎁 **Items Especiales**
+- **📦 Caja Misteriosa** - Contiene un item aleatorio valioso
+
+### 🔨 **Items Crafteables**
+- **🍀✨ Super Amuleto** - Versión mejorada del amuleto normal
+- **🔧⚡ Kit Maestro** - Reduce todos los cooldowns 30%
+
+---
+
+## 📊 **Características del Sistema**
+
+### ⚡ **Efectos de Items**
+- **Multiplicadores**: Aumentan ganancias de dinero y XP
+- **Reducción de Cooldown**: Menos tiempo de espera en comandos
+- **Boost de Éxito**: Mayor probabilidad en actividades
+- **Efectos Permanentes**: Mejoras que duran para siempre
+- **Efectos por Usos**: Items que se consumen gradualmente
+
+### 🎯 **Sistema de Misiones**
+- **5 misiones diarias** que se resetean a medianoche
+- **Diferentes tipos**: mensajes, trabajo, dinero ganado, juegos, etc.
+- **Rareza de misiones**: Common, Uncommon, Rare, Epic
+- **Recompensas**: Dinero y XP que se ven afectados por eventos
+
+### 🏆 **Sistema de Logros**
+- **Coleccionista**: Poseer 10 items diferentes
+- **Gran Gastador**: Gastar 50,000 π-b$ en la tienda
+- **Miembro VIP**: Comprar el Pase VIP
+- Más logros se desbloquean automáticamente
+
+### 🔄 **Funciones Avanzadas**
+- **Intercambios**: Comercia items directamente con otros usuarios
+- **Subastas**: Vende tus items al mejor postor
+- **Crafteo**: Combina items para crear otros más poderosos
+- **Eventos**: Bonificaciones especiales los fines de semana
+
+---
+
+## 🗃️ **Instalación y Configuración**
+
+### 1. **Base de Datos**
+```sql
+-- Agregar a tu tabla users:
+ALTER TABLE users 
+ADD COLUMN IF NOT EXISTS activeEffects JSON DEFAULT NULL,
+ADD COLUMN IF NOT EXISTS permanentEffects JSON DEFAULT NULL;
+```
+
+### 2. **Dependencias NPM**
+```bash
+npm install node-cron
+```
+
+### 3. **Variables de Configuración**
+- Cambiar `'TU_TOKEN_DEL_BOT'` por tu token real
+- Cambiar `'TU_CANAL_ANUNCIOS_ID'` por el ID de tu canal de anuncios
+- Configurar tu base de datos en el archivo de economía
+
+### 4. **Estructura de Archivos**
+```
+📁 tu-bot/
+├── 📄 index.js (archivo principal)
+├── 📄 economy.js (tu sistema de economía existente)
+├── 📄 shop.js (sistema de tienda)
+├── 📄 missions.js (tu sistema de misiones existente)
+├── 📄 advanced-features.js (características avanzadas)
+└── 📄 events.js (sistema de eventos, opcional)
+```
+
+---
+
+## ⚠️ **Notas Importantes**
+
+1. **Compatibilidad**: El sistema está diseñado para integrarse con tu código existente
+2. **Performance**: Los efectos expirados se limpian automáticamente cada minuto
+3. **Seguridad**: Validación completa de inputs y prevención de exploits
+4. **Escalabilidad**: Fácil agregar nuevos items y tipos de efectos
+5. **Mantenimiento**: Logs automáticos y comandos administrativos incluidos
+
+## 🎉 **¡Listo para Usar!**
+
+Tu sistema de tienda está completo con:
+- ✅ 15+ tipos de items diferentes
+- ✅ Sistema de efectos temporales y permanentes  
+- ✅ Integración completa con misiones
+- ✅ Características avanzadas (intercambios, subastas, crafteo)
+- ✅ Comandos administrativos
+- ✅ Sistema de logros
+- ✅ Interfaz interactiva con botones y menús
+
+¡Disfruta tu nueva tienda! 🛒✨

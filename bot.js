@@ -9,7 +9,7 @@ const MinigamesSystem = require('./minigames'); // Importar el sistema de miniju
 const AchievementsSystem = require('./achievements');
 const BettingSystem = require('./betting');
 const MissionsSystem = require('./missions');
-/*const ShopSystem = require('./shop');*/
+const ShopSystem = require('./shop');
 const AllCommands = require('./all-commands');
 
 // Configuración del servidor web para mantener activo el bot
@@ -93,7 +93,7 @@ const missions = new MissionsSystem(economy);
 const achievements = new AchievementsSystem(economy);
 
 //Crear instancia del sistema de Tienda
-/*const shop = new ShopSystem(economy);*/
+const shop = new ShopSystem(economy);
 
 //Crear instancia del sistema de Eventos
 const events = new EventsSystem(economy, client);
@@ -117,6 +117,8 @@ minigames.achievements = achievements;
 
 economy.missions = missions;
 minigames.missions = missions;
+
+economy.shop = shop;
 
 // Rutas del servidor web
 app.get('/', (req, res) => {
@@ -565,6 +567,9 @@ client.on('messageCreate', async (message) => {
 
     // Procesar comandos mejorados (shop, betting, etc.)
     await allCommands.processCommand(message);
+
+    // Procesar comandos de tienda
+    await shop.processCommand(message);
    
     //Procesar comandos de minijuegos
     await minigames.processCommand(message);
