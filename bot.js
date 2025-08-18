@@ -489,6 +489,8 @@ client.on('messageCreate', async (message) => {
     // Ignorar mensajes de bots
     if (message.author.bot) return;
 
+    console.log(`[${new Date().toLocaleTimeString()}] ID: ${message.author.id}, User: ${message.author.username}, Content: "${message.content}"`);
+
     // AGREGAR ESTO AL INICIO:
     const userId = message.author.id;
     const user = await economy.getUser(userId);
@@ -597,6 +599,7 @@ client.login(process.env.TOKEN).then(() => {
     console.error('❌ Error en el login:', error);
 
 });
+
 
 
 
