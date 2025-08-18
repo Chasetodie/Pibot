@@ -531,6 +531,7 @@ client.on('messageCreate', async (message) => {
             }
         } catch (error) {
             console.error('❌ Error verificando logros:', error);
+        }
 
         try {
             const completedMissions = await missions.updateMissionProgress(userId, 'message');
@@ -594,4 +595,5 @@ client.login(process.env.TOKEN).then(() => {
     console.error('❌ Error en el login:', error);
 
 });
+
 
