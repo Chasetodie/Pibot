@@ -406,28 +406,41 @@ class EconomySystem {
 
     // Procesar XP por mensaje (con cooldown)
     async processMessageXp(userId) {
+        console.log(`[XP DEBUG 1] Iniciando processMessageXp para ${userId}`);
+        
         const now = Date.now();
         const lastXp = this.userCooldowns.get(userId) || 0;
+
+        console.log(`[XP DEBUG 2] Obteniendo usuario...`);
         // Obtener usuario (ahora async)
         const user = await this.getUser(userId);
+        console.log(`[XP DEBUG 3] Usuario obtenido:`, user ? 'OK' : 'NULL');
         
         // Verificar cooldown
         if (now - lastXp < this.config.xpCooldown) {
+            console.log(`[XP DEBUG 4] En cooldown, actualizando contador...`);
             // Actualizar contador de mensajes
             const updateData = {
                 messages_count: (user.messages_count || 0) + 1
             };
             await this.updateUser(userId, updateData);
-            
+            console.log(`[XP DEBUG 5] Contador actualizado, retornando null`);
             return null; // Aún en cooldown
         }
+
+        console.log(`[XP DEBUG 6] Fuera de cooldown, procesando XP...`);
         
         try {
             this.userCooldowns.set(userId, now);
+            console.log(`[XP DEBUG 7] Cooldown establecido, calculando XP...`);
 
             // Agregar XP (ahora async)
             let finalXp = this.config.xpPerMessage;
             let eventMessage = '';
+
+            console.log(`[XP DEBUG 8] Obteniendo eventos activos...`);
+            const activeEvents = this.events.getActiveEvents();
+            console.log(`[XP DEBUG 9] Eventos obtenidos:`, activeEvents.length);
                 
             for (const event of this.events.getActiveEvents()) {
                 if (event.type === 'double_xp') {
@@ -447,7 +460,9 @@ class EconomySystem {
                 }
             }            
 
+            console.log(`[XP DEBUG 10] Agregando ${finalXp} XP...`);
             const result = await this.addXp(userId, finalXp);
+            console.log(`[XP DEBUG 11] XP agregado exitosamente`);
 
             return {
                 levelUp: result.levelUp,
