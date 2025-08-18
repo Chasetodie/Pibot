@@ -687,7 +687,6 @@ class AchievementsSystem {
 
     // NUEVO: Comando para admin - detectar logros de todos los usuarios
     async handleDetectAllAchievements(message) {
-        // Verificar permisos de admin (puedes personalizar esto)
         if (!message.member.permissions.has('Administrator')) {
             await message.reply('❌ Solo los administradores pueden usar este comando.');
             return;
@@ -696,24 +695,42 @@ class AchievementsSystem {
         await message.reply('🔍 Detectando logros para todos los usuarios...');
         
         try {
-            const allUsers = await this.economy.getAllUsers();
+            // CAMBIAR ESTO: en lugar de getAllUsers()
+            console.log('[DEBUG] Obteniendo todos los usuarios...');
+            
+            // Opción A: Si tienes acceso a Supabase directamente
+            const { data: allUsers, error } = await this.economy.supabase
+                .from('users')
+                .select('user_id');
+                
+            if (error) throw error;
+            
+            console.log(`[DEBUG] Encontrados ${allUsers.length} usuarios`);
+            
             let totalDetected = 0;
             let usersProcessed = 0;
             
-            for (const userId of Object.keys(allUsers)) {
+            for (const userRecord of allUsers) {
                 try {
-                    const result = await this.detectExistingAchievements(userId, true);
+                    console.log(`[DEBUG] Procesando usuario ${userRecord.user_id}...`);
+                    const result = await this.detectExistingAchievements(userRecord.user_id, true);
                     totalDetected += result.completedAchievements.length;
                     usersProcessed++;
+                    
+                    // Agregar delay para evitar sobrecarga
+                    if (usersProcessed % 10 === 0) {
+                        await new Promise(resolve => setTimeout(resolve, 1000));
+                    }
                 } catch (error) {
-                    console.error(`Error detectando logros para ${userId}:`, error);
+                    console.error(`Error detectando logros para ${userRecord.user_id}:`, error);
                 }
             }
             
             await message.reply(`✅ Proceso completado:\n• **${usersProcessed}** usuarios procesados\n• **${totalDetected}** logros detectados en total`);
+            
         } catch (error) {
             console.error('Error en detectar todos los logros:', error);
-            await message.reply('❌ Error procesando usuarios.');
+            await message.reply(`❌ Error procesando usuarios: ${error.message}`);
         }
     }
 
