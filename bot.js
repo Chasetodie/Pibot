@@ -110,7 +110,7 @@ setTimeout(async () => {
 const betting = new BettingSystem(economy);
 
 // Instancia del sistema de comandos mejorados
-const allCommands = new AllCommands(economy/*, achievements, shop*/, events, betting);
+const allCommands = new AllCommands(economy/*, achievements, shop*/, events, betting, shop);
 
 economy.achievements = achievements;
 minigames.achievements = achievements;
@@ -333,6 +333,11 @@ client.on('interactionCreate', async (interaction) => {
         if (interaction.customId.startsWith('bj_')) {
             await minigames.handleBlackjackButtons(interaction);
             return; // Importante: return para no continuar con otros botones
+        }
+
+        if (interaction.customId.startsWith('shop_')) {
+            await handleShopInteraction(interaction);
+            return;
         }
 
         try {

@@ -1,12 +1,13 @@
 const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 
 class AllCommands {
-    constructor(economySystem/*, shopSystem*/, eventsSystem, bettingSystem, achievementsSystem) {
+    constructor(economySystem/*, shopSystem*/, eventsSystem, bettingSystem, achievementsSystem, shopSystem) {
         this.economy = economySystem;
 /*        this.shop = shopSystem;*/
         this.events = eventsSystem;
         this.betting = bettingSystem;
         this.achievements = achievementsSystem;
+        this.shop = shopSystem;
     }
 
     // Formatear tiempo restante para daily
@@ -1078,6 +1079,39 @@ class AllCommands {
             // No hacer nada, el resultado ya se procesó en el click handler
             console.log(`🔍 Collector terminado - Razón: ${reason}`);
         });
+    }
+
+    async handleShopInteraction(interaction) {
+        const parts = interaction.customId.split('_');
+        
+        if (interaction.isStringSelectMenu()) {
+            if (parts[1] === 'category') {
+                const category = interaction.values[0];
+                
+                const fakeMessage = {
+                    author: interaction.user,
+                    reply: async (options) => {
+                        await interaction.update(options);
+                    }
+                };
+                
+                await shop.showShop(fakeMessage, category, 1);
+            }
+        } else if (interaction.isButton()) {
+            if (parts[1] === 'prev' || parts[1] === 'next') {
+                const category = parts[2];
+                const page = parseInt(parts[3]);
+                
+                const fakeMessage = {
+                    author: interaction.user,
+                    reply: async (options) => {
+                        await interaction.update(options);
+                    }
+                };
+                
+                await shop.showShop(fakeMessage, category, page);
+            }
+        }
     }
     
     async processCommand(message) {
