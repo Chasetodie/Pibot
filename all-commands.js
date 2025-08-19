@@ -1461,7 +1461,7 @@ class AllCommands {
                     break;
                     
                 case '>tradecancel':
-                    const tradeData = this.activeTrades.get(message.author.id);
+                    const tradeData = await this.trades.getActiveTradeByUser(message.author.id);
                     if (tradeData) {
                         await this.trades.cancelTrade(tradeData, 'manual');
                         await message.reply('✅ Intercambio cancelado.');
