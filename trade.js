@@ -430,26 +430,49 @@ class TradeSystem {
     
     // Completar intercambio
     async completeTrade(tradeData) {
+        console.log('=== INICIANDO COMPLETE TRADE ===');
+        console.log('Trade Data:', {
+            id: tradeData.id,
+            initiator: tradeData.initiator,
+            target: tradeData.target,
+            initiatorOffer: tradeData.initiatorOffer || tradeData.initiator_offer,
+            targetOffer: tradeData.targetOffer || tradeData.target_offer,
+            initiatorMoney: tradeData.initiatorMoneyOffer || tradeData.initiator_money_offer,
+            targetMoney: tradeData.targetMoneyOffer || tradeData.target_money_offer
+        });
+        
         try {
             const user1 = await this.shop.economy.getUser(tradeData.initiator);
             const user2 = await this.shop.economy.getUser(tradeData.target);
             
-            // Verificar que ambos usuarios tengan los items/dinero prometidos
-            if (!this.validateTradeResources(user1, tradeData.initiatorOffer, tradeData.initiatorMoneyOffer) ||
-                !this.validateTradeResources(user2, tradeData.targetOffer, tradeData.targetMoneyOffer)) {
-                await this.cancelTrade(tradeData, 'insufficient_resources');
+            // Asegurar que los arrays existen
+            const initiatorOffer = tradeData.initiatorOffer || tradeData.initiator_offer || [];
+            const targetOffer = tradeData.targetOffer || tradeData.target_offer || [];
+            const initiatorMoney = tradeData.initiatorMoneyOffer || tradeData.initiator_money_offer || 0;
+            const targetMoney = tradeData.targetMoneyOffer || tradeData.target_money_offer || 0;
+            
+            // Verificar recursos antes de proceder
+            if (!this.validateTradeResources(user1, initiatorOffer, initiatorMoney) ||
+                !this.validateTradeResources(user2, targetOffer, targetMoney)) {
+                await this.cancelTradeInDb(tradeData.id, 'insufficient_resources');
                 return false;
             }
             
-            // Realizar el intercambio
-            const user1Items = { ...user1.items };
-            const user2Items = { ...user2.items };
+            // Copiar inventarios
+            const user1Items = JSON.parse(JSON.stringify(user1.items || {}));
+            const user2Items = JSON.parse(JSON.stringify(user2.items || {}));
             
             // Transferir items del iniciador al objetivo
-            for (const offer of tradeData.initiatorOffer) {
-                user1Items[offer.id].quantity -= offer.quantity;
-                if (user1Items[offer.id].quantity <= 0) delete user1Items[offer.id];
+            for (const offer of initiatorOffer) {
+                // Remover del iniciador
+                if (user1Items[offer.id]) {
+                    user1Items[offer.id].quantity -= offer.quantity;
+                    if (user1Items[offer.id].quantity <= 0) {
+                        delete user1Items[offer.id];
+                    }
+                }
                 
+                // Agregar al objetivo
                 if (user2Items[offer.id]) {
                     user2Items[offer.id].quantity += offer.quantity;
                 } else {
@@ -462,10 +485,16 @@ class TradeSystem {
             }
             
             // Transferir items del objetivo al iniciador
-            for (const offer of tradeData.targetOffer) {
-                user2Items[offer.id].quantity -= offer.quantity;
-                if (user2Items[offer.id].quantity <= 0) delete user2Items[offer.id];
+            for (const offer of targetOffer) {
+                // Remover del objetivo
+                if (user2Items[offer.id]) {
+                    user2Items[offer.id].quantity -= offer.quantity;
+                    if (user2Items[offer.id].quantity <= 0) {
+                        delete user2Items[offer.id];
+                    }
+                }
                 
+                // Agregar al iniciador
                 if (user1Items[offer.id]) {
                     user1Items[offer.id].quantity += offer.quantity;
                 } else {
@@ -477,9 +506,15 @@ class TradeSystem {
                 }
             }
             
-            // Transferir dinero
-            const newUser1Balance = user1.balance - tradeData.initiatorMoneyOffer + tradeData.targetMoneyOffer;
-            const newUser2Balance = user2.balance - tradeData.targetMoneyOffer + tradeData.initiatorMoneyOffer;
+            // Calcular nuevos balances
+            const newUser1Balance = user1.balance - initiatorMoney + targetMoney;
+            const newUser2Balance = user2.balance - targetMoney + initiatorMoney;
+            
+            // Verificar que los balances no sean negativos
+            if (newUser1Balance < 0 || newUser2Balance < 0) {
+                console.error('Balance negativo detectado en trade');
+                return false;
+            }
             
             // Actualizar base de datos
             await this.shop.economy.updateUser(tradeData.initiator, { 
@@ -491,17 +526,17 @@ class TradeSystem {
                 balance: newUser2Balance 
             });
             
-            // Limpiar intercambio
-            this.activeTrades.delete(tradeData.initiator);
-            this.activeTrades.delete(tradeData.target);
+            // Marcar trade como completado
+            await this.completeTradeInDb(tradeData.id);
             
+            console.log(`✅ Trade ${tradeData.id} completado exitosamente`);
             return true;
+            
         } catch (error) {
-            console.error('Error completando intercambio:', error);
+            console.error('Error en completeTrade:', error);
+            console.error('Stack trace:', error.stack);
             return false;
         }
-
-        await this.completeTradeInDb(tradeData.id);
     }
     
     async cancelTradeInDb(tradeId, reason = 'manual') {
@@ -518,21 +553,40 @@ class TradeSystem {
 
     // Validar recursos para intercambio
     validateTradeResources(user, itemOffers, moneyOffer) {
-        const userItems = user.items || {};
-        
-        // Verificar items
-        for (const offer of itemOffers) {
-            if (!userItems[offer.id] || userItems[offer.id].quantity < offer.quantity) {
+        try {
+            const userItems = user.items || {};
+            const offers = Array.isArray(itemOffers) ? itemOffers : [];
+            const money = moneyOffer || 0;
+            
+            // Verificar items
+            for (const offer of offers) {
+                if (!offer || !offer.id || !offer.quantity) continue;
+                
+                const userItem = userItems[offer.id];
+                if (!userItem || userItem.quantity < offer.quantity) {
+                    console.log(`❌ Usuario no tiene suficiente ${offer.id}:`, {
+                        required: offer.quantity,
+                        available: userItem?.quantity || 0
+                    });
+                    return false;
+                }
+            }
+            
+            // Verificar dinero
+            if (user.balance < money) {
+                console.log(`❌ Usuario no tiene suficiente dinero:`, {
+                    required: money,
+                    available: user.balance
+                });
                 return false;
             }
-        }
-        
-        // Verificar dinero
-        if (user.balance < moneyOffer) {
+            
+            return true;
+            
+        } catch (error) {
+            console.error('Error validando recursos:', error);
             return false;
         }
-        
-        return true;
     }
     
     // En TradeSystem.js, reemplazar updateTradeEmbed:
