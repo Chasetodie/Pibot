@@ -513,7 +513,7 @@ class CraftingSystem {
             Object.values(this.CRAFTING_RECIPES).forEach(recipe => {
                 let requirements = '';
                 recipe.ingredients.forEach(ingredient => {
-                    const item = SHOP_ITEMS[ingredient.id];
+                    const item = this.shop.shopItems[ingredient.id];
                     if (item) {
                         requirements += `${item.emoji || '📦'} ${ingredient.quantity}x ${item.name}\n`;
                     } else {
@@ -573,7 +573,7 @@ class CraftingSystem {
                 let missingMaterials = '';
                 recipe.ingredients.forEach(ingredient => {
                     const userQuantity = userItems[ingredient.id] || 0;
-                    const item = SHOP_ITEMS[ingredient.id];
+                    const item = this.shop.shopItems[ingredient.id];
                     if (userQuantity < ingredient.quantity) {
                         const itemName = item ? item.name : ingredient.id;
                         const emoji = item ? item.emoji || '📦' : '📦';
