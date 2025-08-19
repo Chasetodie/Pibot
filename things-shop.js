@@ -524,7 +524,7 @@ class CraftingSystem {
                 const rarityEmoji = this.getRarityEmoji(recipe.result.rarity);
                 
                 embed.fields.push({
-                    name: `${rarityEmoji} ${recipe.name} (ID: ${recipe.id})`,
+                    name: `\n${rarityEmoji} ${recipe.name} (ID: ${recipe.id})`,
                     value: `${recipe.description}\n**Materiales:**\n${requirements}\n\n`,
                     inline: false
                 });
