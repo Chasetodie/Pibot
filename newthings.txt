@@ -4,3 +4,4 @@ comprobar que los apodos si cambien dentro del server - agarre el apodo original
 añadir item de roles que se pueda usar una sola vez
 arreglar lo de profiles
 arreglar el comando craft
+solucionar los botones de trade, arreglar el comando de tradeaccept, no permitir tradear "nada"
