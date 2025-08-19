@@ -64,9 +64,16 @@ class AllCommands {
         // Avatar
         const avatarUrl = targetUser ? targetUser.displayAvatarURL({ dynamic: true }) : message.author.displayAvatarURL({ dynamic: true });
 
+        // Obtener items cosméticos equipados
+        const userItems = userData.items || {};
+        const cosmetics = this.getCosmeticItems(userItems);
+        
+        // Obtener estado VIP
+        const vipStatus = await this.hasActiveVip(user.id);
+
         const embed = new EmbedBuilder()
-            .setTitle(`💰 ${displayName}`)
-            .setColor('#FFD700')
+            .setTitle(`💰 ${this.getProfileTitle(cosmetics, vipStatus)} ${displayName}`)
+            .setColor(this.getProfileColor(cosmetics, vipStatus))
             .setThumbnail(avatarUrl)
             .addFields(
                 { 
@@ -108,7 +115,59 @@ class AllCommands {
             .setFooter({ text: `ID: ${userId}` })
             .setTimestamp();
 
+        let description = ''
+            
+        // Estado VIP
+        if (vipStatus.hasVip) {
+            const timeLeft = this.formatTimeLeft(vipStatus.timeLeft);
+            description += `👑 **VIP ${vipStatus.tier}:** ${timeLeft} restante\n`;
+        }        
+
+        embed.setDescription(description);
+
+        // Insignias y cosméticos
+        const badges = this.formatBadges(cosmetics);
+        if (badges) {
+            embed.addFields({ name: '🏅 Insignias y Cosméticos', value: badges, inline: false });
+        }
+        
         await message.reply({ embeds: [embed] });
+    }
+
+    getCosmeticItems(userItems) {
+        const cosmetics = [];
+        for (const [itemId, item] of Object.entries(userItems)) {
+            const shopItem = this.shop.shopItems[itemId];
+            if (shopItem && shopItem.category === 'cosmetic') {
+                cosmetics.push(shopItem);
+            }
+        }
+        return cosmetics;
+    }
+
+    getProfileTitle(cosmetics, vipStatus) {
+        if (vipStatus.hasVip && vipStatus.tier === 'Diamond 💎') return '💎';
+        if (cosmetics.find(c => c.id === 'diamond_crown')) return '👑';
+        if (cosmetics.find(c => c.id === 'golden_trophy')) return '🏆';
+        if (vipStatus.hasVip) return '⭐';
+        return '👤';
+    }
+
+    getProfileColor(cosmetics, vipStatus) {
+        if (vipStatus.hasVip && vipStatus.tier === 'Diamond 💎') return '#00FFFF';
+        if (cosmetics.find(c => c.id === 'diamond_crown')) return '#FFD700';
+        if (vipStatus.hasVip) return '#FF6B35';
+        if (cosmetics.find(c => c.id === 'fire_badge')) return '#FF4444';
+        return '#4CAF50';
+    }
+
+    formatBadges(cosmetics) {
+        if (cosmetics.length === 0) return null;
+        
+        return cosmetics.map(item => {
+            const rarityEmoji = this.rarityEmojis[item.rarity];
+            return `${rarityEmoji} ${item.name}`;
+        }).join('\n');
     }
 
     // Comando !daily - Reclamar dinero diario
@@ -154,7 +213,6 @@ class AllCommands {
                     inline: true
                 },
                 { name: '🎉 Extra por Eventos', value: `${result.eventMessage || "No hay eventos Activos"} `, inline: false },
-                { name: '🎁 Bonus', value: `${result.bonusText || "No hay Items Activos"} `, inline: false }
             )
             .setColor('#00FF00')
             .setFooter({ text: 'Vuelve mañana por más!' })
@@ -810,7 +868,6 @@ class AllCommands {
                     inline: true
                 },
                 { name: '🎉 Extra por Eventos', value: `${result.eventMessage || "No hay eventos Activos"} `, inline: false },
-                { name: '🎁 Bonus', value: `${result.effectMessage || "No hay Items Activos"} `, inline: false }
             )
             .setColor('#28a745')
             .setTimestamp();
@@ -1248,40 +1305,9 @@ class AllCommands {
         await message.reply({ embeds: [embed] });
     }
 
-    async showActiveAuctions(message) {
-        const activeAuctions = Array.from(this.auctions.activeAuctions.values())
-            .filter(auction => auction.active)
-            .slice(0, 10); // Mostrar máximo 10
-        
-        if (activeAuctions.length === 0) {
-            await message.reply('❌ No hay subastas activas en este momento.');
-            return;
-        }
-        
-        const embed = new EmbedBuilder()
-            .setTitle('🔨 Subastas Activas')
-            .setColor('#FF6600');
-        
-        for (const auction of activeAuctions) {
-            const item = shop.shopItems[auction.itemId];
-            const timeLeft = Math.max(0, auction.endsAt - Date.now());
-            const minutesLeft = Math.floor(timeLeft / 60000);
-            
-            const rarityEmoji = item ? shop.rarityEmojis[item.rarity] : '❓';
-            
-            embed.addFields({
-                name: `${rarityEmoji} ${auction.itemName}`,
-                value: `**Puja actual:** ${auction.currentBid.toLocaleString('es-ES')} π-b$\n**Termina en:** ${minutesLeft} minutos\n**ID:** \`${auction.id}\``,
-                inline: true
-            });
-        }
-        
-        embed.setFooter({ text: 'Usa >bid <auction_id> <cantidad> para pujar' });
-        
-        await message.reply({ embeds: [embed] });
-    }
-
     async processCommand(message) {
+        await this.shop.cleanupExpiredTokens(message.author.id);
+
         const args = message.content.trim().split(/ +/g);
         const command = args[0].toLowerCase();
         const betId = args[1];
@@ -1373,62 +1399,141 @@ class AllCommands {
                     await this.events.showEventStats(message);
                     break;
                 case '>trade':
-                    if (!args[1] || !message.mentions.users.first()) {
-                        await message.reply('❌ Uso: `>trade @usuario item_id:cantidad`');
+                    if (message.author.id !== "123456789012345678")
+                    {
+                    if (!message.mentions.users.size) {
+                        await message.reply('❌ Debes mencionar a un usuario: `>trade @usuario`');
                         return;
                     }
-                    await initiateTrade(message, args);
+                    const targetUser = message.mentions.users.first();
+                    await this.trades.startTrade(message, targetUser);
+                    }
+                    break;
+                case '>tradeadd':
+                                        if (message.author.id !== "123456789012345678")
+                    {
+                    if (!args[1]) {
+                        await message.reply('❌ Especifica el item: `>tradeadd <item_id> [cantidad]`');
+                        return;
+                    }
+                    const quantity = parseInt(args[2]) || 1;
+                    await this.trades.addItemToTrade(message, args[1], quantity);}
+                    break;
+                    
+                case '>trademoney':
+                                        if (message.author.id !== "123456789012345678")
+                    {
+                    if (!args[1]) {
+                        await message.reply('❌ Especifica la cantidad: `>trademoney <cantidad>`');
+                        return;
+                    }
+                    const amount = parseInt(args[1]);
+                    await this.trades.addMoneyToTrade(message, amount);}
                     break;
                     
                 case '>tradeaccept':
-                    await acceptTrade(message);
+                                        if (message.author.id !== "123456789012345678")
+                    {
+                    await this.trades.acceptTrade(message);}
                     break;
                     
                 case '>tradecancel':
-                    await cancelTrade(message);
-                    break;
-                    
+                                        if (message.author.id !== "123456789012345678")
+                    {
+                    const tradeData = this.activeTrades.get(message.author.id);
+                    if (tradeData) {
+                        await this.trades.cancelTrade(tradeData, 'manual');
+                        await message.reply('✅ Intercambio cancelado.');
+                    } else {
+                        await message.reply('❌ No tienes ningún intercambio activo.');
+                    }}
+                    break;     
                 case '>auction':
+                                        if (message.author.id !== "123456789012345678")
+                    {
                     if (args.length < 3) {
                         await message.reply('❌ Uso: `>auction item_id precio_inicial [duración_en_minutos]`');
                         return;
                     }
                     const durations = parseInt(args[3]) || 60;
                     await this.auctions.createAuction(message, args[1], parseInt(args[2]), durations * 60000);
-                    break;
+                }break;
                     
                 case '>bid':
+                                        if (message.author.id !== "123456789012345678")
+                    {
                     if (args.length < 3) {
                         await message.reply('❌ Uso: `>bid auction_id cantidad`');
                         return;
                     }
                     await this.auctions.placeBid(message, args[1], parseInt(args[2]));
-                    break;
+                }break;
                     
                 case '>auctions':
-                    await this.showActiveAuctions(message);
-                    break;
+                case '>subastas':
+                                        if (message.author.id !== "123456789012345678")
+                    {
+                    const auctions = await this.getActiveAuctions();
+                    if (auctions.length === 0) {
+                        await message.reply('📋 No hay subastas activas.');
+                        return;
+                    }
+                    
+                    const embed = new EmbedBuilder()
+                        .setTitle('🔨 Subastas Activas')
+                        .setColor('#FF6600');
+                    
+                    for (const auction of auctions.slice(0, 5)) {
+                        const timeLeft = Math.max(0, new Date(auction.ends_at) - Date.now());
+                        const minutes = Math.floor(timeLeft / 60000);
+                        
+                        embed.addFields({
+                            name: `${auction.item_name}`,
+                            value: `💰 Puja actual: ${auction.current_bid.toLocaleString('es-ES')} π-b$\n⏰ ${minutes}m restantes\n🆔 ${auction.id}`,
+                            inline: true
+                        });
+                    }
+                    
+                    await message.reply({ embeds: [embed] });
+                }break;
                     
                 case '>recipes':
-                    await this.crafting.showRecipes(message);
+                                        if (message.author.id !== "123456789012345678")
+                    {await this.crafting.showRecipes(message);}
                     break;
                     
                 case '>craft':
-                    if (!args[1]) {
+                                        if (message.author.id !== "123456789012345678")
+                    {if (!args[1]) {
                         await message.reply('❌ Especifica la receta. Usa `>recipes` para ver las disponibles.');
                         return;
                     }
-                    await this.crafting.craftItem(message, args[1]);
+                    await this.crafting.craftItem(message, args[1]);}
                     break;
-                    
+
+                case '>setnick':
+                                        if (message.author.id !== "123456789012345678")
+                    {if (!args[1]) {
+                        await message.reply('❌ Especifica tu apodo: `>setnick <tu_apodo>`');
+                        return;
+                    }
+                    const nickname = args.slice(1).join(' ');
+                    await this.shop.setCustomNickname(message, nickname);}
+                    break;                  
                 case '>vip':
-                    await this.vipCommand(message);
+                                        if (message.author.id !== "123456789012345678")
+                    {
+                    await this.vipCommand(message);}
                     break;
                 case '>giveitem':
-                    await this.giveItemCommand(message, args);
+                                        if (message.author.id !== "123456789012345678")
+                    {
+                    await this.giveItemCommand(message, args);}
                     break;
                 case '>shopstats':
-                    await this.shopStatsCommand(message);
+                                        if (message.author.id !== "123456789012345678")
+                    {
+                    await this.shopStatsCommand(message);}
                     break;
                 case '>help':
                     await this.showHelp(message);
@@ -1437,55 +1542,6 @@ class AllCommands {
                     // No es un comando de economía
                     break;
             }
-
-/*          // Shop
-            if (command === '>shop' || command === '>tienda') {
-                const category = args[1];
-                await this.shop.showShop(message, category);
-                return;
-            }
-            if (command === '>buy' || command === '>comprar') {
-                if (args.length < 2) {
-                    await message.reply('❌ Uso: `>buy <item> [cantidad]`');
-                    return;
-                }
-                const itemId = args[1];
-                const quantity = parseInt(args[2]) || 1;
-                await this.shop.buyItem(message, itemId, quantity);
-                return;
-            }
-            if (command === '>use' || command === '>usar') {
-                if (args.length < 2) {
-                    await message.reply('❌ Uso: `>use <item>`');
-                    return;
-                }
-                const itemId = args[1];
-                await this.shop.useItem(message, itemId);
-                return;
-            }
-            if (command === '>inventory' || command === '>inv' || command === '>inventario') {
-                const targetUser = message.mentions.members?.first();
-                await this.shop.showInventory(message, targetUser);
-                return;
-            }
-            if (command === '>sell' || command === '>vender') {
-                if (args.length < 2) {
-                    await message.reply('❌ Uso: `>sell <item> [cantidad]`');
-                    return;
-                }
-                const itemId = args[1];
-                const quantity = parseInt(args[2]) || 1;
-                await this.shop.sellItem(message, itemId, quantity);
-                return;
-            }
-            if (command === '>shophelp' || command === '>ayudatienda') {
-                await this.shopHelp(message);
-                return;
-            }
-           */
-
-
-
         } catch (error) {
             console.error('❌ Error procesando comando:', error);
             await message.reply('❌ Ocurrió un error al procesar el comando. Intenta de nuevo.');

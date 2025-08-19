@@ -1,0 +1,3 @@
+implementar los demas items y crafteos - funciones
+agregar vip en los demas juegos
+comprobar que los apodos si cambien dentro del server - agarre el apodo original y lo vuelva a ingresar

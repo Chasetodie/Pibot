@@ -163,6 +163,244 @@ class ShopSystem {
                 },
                 stackable: true,
                 maxStack: 50
+            },
+
+            'anti_theft_shield': {
+                id: 'anti_theft_shield',
+                name: '🛡️ Escudo Antirrobo',
+                description: 'Te protege de robos por 24 horas',
+                price: 8000,
+                category: 'consumable',
+                rarity: 'epic',
+                effect: {
+                    type: 'protection',
+                    targets: ['robbery'],
+                    duration: 86400 // 24 horas en segundos
+                },
+                stackable: true,
+                maxStack: 5
+            },
+
+            'permanent_vault': {
+                id: 'permanent_vault',
+                name: '🏦 Bóveda Permanente',
+                description: 'Protección permanente contra robos (reduce probabilidad 80%)',
+                price: 25000,
+                category: 'permanent',
+                rarity: 'legendary',
+                effect: {
+                    type: 'permanent_protection',
+                    targets: ['robbery'],
+                    reduction: 0.8 // Reduce 80% probabilidad de ser robado
+                },
+                stackable: false,
+                maxStack: 1
+            },
+
+            // === NUEVOS CONSUMIBLES TEMPORALES ===
+            'mega_luck_potion': {
+                id: 'mega_luck_potion',
+                name: '🍀 Mega Poción de Suerte',
+                description: 'Aumenta dramáticamente la suerte en todos los juegos por 1 hora',
+                price: 5000,
+                category: 'consumable',
+                rarity: 'epic',
+                effect: {
+                    type: 'luck_boost',
+                    targets: ['games', 'all'],
+                    boost: 0.25, // +25% probabilidad de ganar
+                    duration: 3600 // 1 hora
+                },
+                stackable: true,
+                maxStack: 5
+            },
+
+            'speed_boots': {
+                id: 'speed_boots',
+                name: '👟 Botas de Velocidad',
+                description: 'Elimina todos los cooldowns por 20 minutos',
+                price: 7500,
+                category: 'consumable',
+                rarity: 'rare',
+                effect: {
+                    type: 'no_cooldown',
+                    targets: ['all'],
+                    duration: 1200 // 20 minutos
+                },
+                stackable: true,
+                maxStack: 3
+            },
+
+            'xp_tornado': {
+                id: 'xp_tornado',
+                name: '🌪️ Tornado de XP',
+                description: 'x5 XP de todos los mensajes por 15 minutos',
+                price: 4500,
+                category: 'consumable',
+                rarity: 'epic',
+                effect: {
+                    type: 'xp_multiplier',
+                    targets: ['all'],
+                    multiplier: 5.0,
+                    duration: 900 // 15 minutos
+                },
+                stackable: true,
+                maxStack: 3
+            },
+
+            'golden_pickaxe': {
+                id: 'golden_pickaxe',
+                name: '⛏️ Pico Dorado',
+                description: 'Triplica las ganancias de trabajo por 3 usos',
+                price: 6000,
+                category: 'consumable',
+                rarity: 'rare',
+                effect: {
+                    type: 'work_multiplier',
+                    targets: ['work'],
+                    multiplier: 3.0,
+                    uses: 3
+                },
+                stackable: true,
+                maxStack: 10
+            },
+
+            // === NUEVOS ITEMS PERMANENTES ===
+            'diamond_membership': {
+                id: 'diamond_membership',
+                name: '💎 Membresía Diamante',
+                description: 'Membresía premium por 30 días con beneficios exclusivos',
+                price: 50000,
+                category: 'permanent',
+                rarity: 'legendary',
+                effect: {
+                    type: 'vip_membership',
+                    duration: 30 * 24 * 60 * 60 * 1000, // 30 días en ms
+                    benefits: [
+                        'no_cooldowns',
+                        'double_earnings',
+                        'luck_boost',
+                        'priority_support',
+                        'exclusive_commands',
+                        'custom_nickname'
+                    ]
+                },
+                stackable: false,
+                maxStack: 1
+            },
+
+            'luck_charm_permanent': {
+                id: 'luck_charm_permanent',
+                name: '🍀 Amuleto de Suerte Permanente',
+                description: '+15% suerte permanente en todos los juegos',
+                price: 20000,
+                category: 'permanent',
+                rarity: 'epic',
+                effect: {
+                    type: 'permanent_luck',
+                    targets: ['games', 'all'],
+                    boost: 0.15
+                },
+                stackable: false,
+                maxStack: 1
+            },
+
+            'auto_worker': {
+                id: 'auto_worker',
+                name: '🤖 Trabajador Automático',
+                description: 'Genera dinero pasivo cada hora (500-1500 π-b$)',
+                price: 35000,
+                category: 'permanent',
+                rarity: 'legendary',
+                effect: {
+                    type: 'passive_income',
+                    minAmount: 500,
+                    maxAmount: 1500,
+                    interval: 3600000 // 1 hora en ms
+                },
+                stackable: false,
+                maxStack: 1
+            },
+
+            // === ITEMS ESPECIALES ===
+            'custom_nickname_token': {
+                id: 'custom_nickname_token',
+                name: '🏷️ Token de Apodo Personalizado',
+                description: 'Permite cambiar tu apodo una vez',
+                price: 8000,
+                category: 'special',
+                rarity: 'rare',
+                effect: {
+                    type: 'nickname_change',
+                    uses: 1
+                },
+                stackable: true,
+                maxStack: 5
+            },
+
+            'premium_mystery_box': {
+                id: 'premium_mystery_box',
+                name: '🎁 Caja Premium Misteriosa',
+                description: 'Contiene items raros o legendarios (5000-25000 π-b$ valor)',
+                price: 12000,
+                category: 'mystery',
+                rarity: 'epic',
+                effect: {
+                    type: 'premium_mystery',
+                    minValue: 5000,
+                    maxValue: 25000,
+                    rarityBonus: true
+                },
+                stackable: true,
+                maxStack: 20
+            },
+
+            // === NUEVOS COSMÉTICOS ===
+            'diamond_crown': {
+                id: 'diamond_crown',
+                name: '👑 Corona de Diamante',
+                description: 'Una corona brillante que muestra tu estatus real',
+                price: 15000,
+                category: 'cosmetic',
+                rarity: 'legendary',
+                effect: {
+                    type: 'cosmetic',
+                    display: 'profile_crown',
+                    prestige: 10
+                },
+                stackable: false,
+                maxStack: 1
+            },
+
+            'fire_badge': {
+                id: 'fire_badge',
+                name: '🔥 Insignia de Fuego',
+                description: 'Una insignia ardiente para los más activos',
+                price: 6000,
+                category: 'cosmetic',
+                rarity: 'epic',
+                effect: {
+                    type: 'cosmetic',
+                    display: 'profile_badge',
+                    prestige: 5
+                },
+                stackable: false,
+                maxStack: 1
+            },
+
+            'vip_frame': {
+                id: 'vip_frame',
+                name: '🖼️ Marco VIP',
+                description: 'Un marco dorado para tu perfil que demuestra tu estatus VIP',
+                price: 12000,
+                category: 'cosmetic',
+                rarity: 'epic',
+                effect: {
+                    type: 'cosmetic',
+                    display: 'profile_frame'
+                },
+                stackable: false,
+                maxStack: 1
             }
         };
         
@@ -517,9 +755,100 @@ class ShopSystem {
                 return await this.openMysteryBox(userId, item);
             case 'cosmetic':
                 return { success: true, message: `${item.name} ahora está equipado en tu perfil.` };
+            case 'special':
+                if (item.effect.type === 'nickname_change') {
+                    return await this.handleNicknameChange(userId, item);
+                }    
+                return { success: false, message: 'Item especial no implementado.' };
             default:
                 return { success: false, message: 'Este item no se puede usar.' };
         }
+    }
+
+    async handleNicknameChange(userId, item) {
+        // Guardar que el usuario tiene un token activo
+        const user = await this.economy.getUser(userId);
+        const activeTokens = user.activeTokens || {};
+        
+        activeTokens.nickname_change = {
+            expires: Date.now() + 300000, // 5 minutos para usar
+            uses: 1
+        };
+        
+        await this.economy.updateUser(userId, { activeTokens });
+        
+        return {
+            success: true,
+            message: 'Token de apodo activado! Usa `>setnick <tu_apodo>` en los próximos 5 minutos.'
+        };
+    }
+
+    async setCustomNickname(message, nickname) {
+        const userId = message.author.id;
+        const user = await this.economy.getUser(userId);
+        const activeTokens = user.activeTokens || {};
+        
+        if (!activeTokens.nickname_change || activeTokens.nickname_change.expires < Date.now()) {
+            await message.reply('❌ No tienes un token de apodo activo. Compra uno en la tienda!');
+            return;
+        }
+        
+        if (!nickname || nickname.length > 20) {
+            await message.reply('❌ El apodo debe tener entre 1 y 20 caracteres.');
+            return;
+        }
+        
+        // Filtro de palabras prohibidas (básico)
+        const forbiddenWords = ['admin', 'mod', 'bot', 'discord', 'everyone', 'here'];
+        if (forbiddenWords.some(word => nickname.toLowerCase().includes(word))) {
+            await message.reply('❌ El apodo contiene palabras no permitidas.');
+            return;
+        }
+        
+        try {
+            // Obtener número del usuario
+            const userNumber = await this.getUserNumber(userId);
+            const newNickname = `Pibe ${userNumber} - ${nickname}`;
+            
+            // Intentar cambiar el nickname en el servidor
+            await message.member.setNickname(newNickname);
+            
+            // Guardar el apodo personalizado
+            const newActiveTokens = { ...activeTokens };
+            delete newActiveTokens.nickname_change;
+            
+            const userProfile = user.profile || {};
+            userProfile.customNickname = nickname;
+            userProfile.nicknameSetAt = Date.now();
+            
+            await this.economy.updateUser(userId, { 
+                activeTokens: newActiveTokens,
+                profile: userProfile
+            });
+            
+            const embed = new EmbedBuilder()
+                .setTitle('🏷️ Apodo Cambiado!')
+                .setDescription(`Tu nuevo apodo es: **${newNickname}**`)
+                .setColor('#00FF00')
+                .setTimestamp();
+            
+            await message.reply({ embeds: [embed] });
+            
+        } catch (error) {
+            console.error('Error cambiando nickname:', error);
+            await message.reply('❌ No pude cambiar tu nickname. Puede que no tenga permisos.');
+        }
+    }
+
+    async getUserNumber(userId) {
+        // Generar un número único basado en el ID del usuario
+        let hash = 0;
+        for (let i = 0; i < userId.length; i++) {
+            const char = userId.charCodeAt(i);
+            hash = ((hash << 5) - hash) + char;
+            hash = hash & hash; // Convertir a entero de 32 bits
+        }
+        return Math.abs(hash) % 9999 + 1; // Número entre 1 y 9999
     }
     
     // === APLICAR EFECTO CONSUMIBLE ===
@@ -665,8 +994,144 @@ class ShopSystem {
             if (effect.multiplier) totalMultiplier *= effect.multiplier;
             if (effect.reduction) totalReduction += effect.reduction;
         }
+
+        const vipMultipliers = await this.getVipMultipliers(userId, action);
+        totalMultiplier *= vipMultipliers.multiplier;
         
         return { multiplier: totalMultiplier, reduction: Math.min(totalReduction, 0.9) };
+    }
+
+    async cleanupExpiredTokens(userId) {
+        const user = await this.economy.getUser(userId);
+        const activeTokens = user.activeTokens || {};
+        const now = Date.now();
+        
+        let hasChanges = false;
+        for (const [tokenType, tokenData] of Object.entries(activeTokens)) {
+            if (tokenData.expires < now) {
+                delete activeTokens[tokenType];
+                hasChanges = true;
+            }
+        }
+        
+        if (hasChanges) {
+            await this.economy.updateUser(userId, { activeTokens });
+        }
+    }
+
+    async isProtectedFromTheft(userId) {
+        const user = await this.economy.getUser(userId);
+        const activeEffects = user.activeEffects || {};
+        const permanentEffects = user.permanentEffects || {};
+        
+        // Verificar protección temporal (escudo)
+        if (activeEffects['anti_theft_shield']) {
+            for (const effect of activeEffects['anti_theft_shield']) {
+                if (effect.expiresAt && effect.expiresAt > Date.now()) {
+                    return { protected: true, type: 'shield' };
+                }
+            }
+        }
+        
+        // Verificar bóveda permanente
+        if (permanentEffects['permanent_vault']) {
+            const roll = Math.random();
+            if (roll < 0.8) { // 80% probabilidad de protección
+                return { protected: true, type: 'vault' };
+            }
+        }
+        
+        return { protected: false };
+    }
+
+    // Verificar si el usuario tiene VIP activo con tiempo
+    async hasActiveVip(userId) {
+        const user = await this.economy.getUser(userId);
+        const permanentEffects = user.permanentEffects || {};
+        
+        for (const [itemId, effect] of Object.entries(permanentEffects)) {
+            if (effect.type === 'vip_membership') {
+                const now = Date.now();
+                const expiresAt = effect.appliedAt + effect.duration;
+                
+                if (now < expiresAt) {
+                    const timeLeft = expiresAt - now;
+                    return {
+                        hasVip: true,
+                        timeLeft: timeLeft,
+                        tier: this.getVipTier(effect.benefits)
+                    };
+                } else {
+                    // VIP expirado, remover
+                    delete permanentEffects[itemId];
+                    await this.economy.updateUser(userId, { permanentEffects });
+                }
+            }
+        }
+        return { hasVip: false };
+    }
+
+    // Obtener tier de VIP basado en beneficios
+    getVipTier(benefits) {
+        if (benefits.includes('diamond_membership')) return 'Diamond 💎';
+        if (benefits.includes('custom_nickname')) return 'Premium 👑';
+        return 'VIP ⭐';
+    }  
+    
+    // Obtener multiplicadores VIP
+    async getVipMultipliers(userId, action) {
+        const vipStatus = await this.hasActiveVip(userId);
+        if (!vipStatus.hasVip) return { multiplier: 1.0, luckBoost: 0, noCooldown: false };
+        
+        const user = await this.economy.getUser(userId);
+        const permanentEffects = user.permanentEffects || {};
+        
+        let multiplier = 1.0;
+        let luckBoost = 0;
+        let noCooldown = false;
+        
+        for (const effect of Object.values(permanentEffects)) {
+            if (effect.type === 'vip_membership' && effect.benefits) {
+                if (effect.benefits.includes('double_earnings')) {
+                    multiplier *= 2.0; // VIP duplica ganancias
+                }
+                if (effect.benefits.includes('luck_boost')) {
+                    luckBoost += 0.20; // +20% suerte
+                }
+                if (effect.benefits.includes('no_cooldowns')) {
+                    noCooldown = true; // Sin cooldowns
+                }
+            }
+        }
+        
+        return { multiplier, luckBoost, noCooldown };
+    }
+
+    // Verificar si puede usar comando VIP
+    async canUseVipCommand(userId, commandName) {
+        const vipStatus = await this.hasActiveVip(userId);
+        if (!vipStatus.hasVip) {
+            return {
+                canUse: false,
+                reason: 'Necesitas membresía VIP para usar este comando.'
+            };
+        }
+        
+        const user = await this.economy.getUser(userId);
+        const permanentEffects = user.permanentEffects || {};
+        
+        for (const effect of Object.values(permanentEffects)) {
+            if (effect.type === 'vip_membership' && effect.benefits) {
+                if (effect.benefits.includes('exclusive_commands')) {
+                    return { canUse: true };
+                }
+            }
+        }
+        
+        return {
+            canUse: false,
+            reason: 'Tu nivel VIP no incluye comandos exclusivos.'
+        };
     }
     
     // === COMANDOS ===

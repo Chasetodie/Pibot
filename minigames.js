@@ -173,9 +173,15 @@ class MinigamesSystem {
     async canCoinflip(userId) {
         const user = await this.economy.getUser(userId);
 
+        if (this.shop) {
+            const vipMultipliers = await this.shop.getVipMultipliers(userId, 'games');
+            if (vipMultipliers.noCooldown) {
+                return { canCoinPlay: true };
+            }
+        }
+
         const lastCoin = user.last_coinflip || 0;
         const now = Date.now();
-
         const effectiveCooldown = this.getEffectiveCooldown(this.config.coinflip.cooldown);
 
         if (now - lastCoin < effectiveCooldown) {
@@ -248,15 +254,24 @@ class MinigamesSystem {
 
         let winChance = 0.5; // 50% base
         let luckMessage = '';
-        
+       
         for (const event of this.events.getActiveEvents()) {
             if (event.type === 'lucky_hour') {
                 winChance *= 1.3; // 🍀 +30% probabilidad
-                luckMessage = `\n🍀 **Hora de la Suerte** (${Math.round(winChance * 100)}% probabilidad)`;
+                luckMessage = `🍀 **Hora de la Suerte** (${Math.round(winChance * 100)}% probabilidad)`;
                 break;
             }
         }
-                
+
+        // Aplicar boost de suerte VIP
+        if (this.shop) {
+            const vipMultipliers = await this.shop.getVipMultipliers(userId, 'games');
+            winChance += vipMultipliers.luckBoost;
+            if (vipMultipliers.luckBoost > 0) {
+                luckMessage += `💎 **Boost VIP** (+${Math.round(vipMultipliers.luckBoost * 100)}% suerte)`;
+            }
+        }
+
         // Realizar el juego
         const result = Math.random() < winChance ? 'cara' : 'cruz';
         const won = result === normalizedChoice;
@@ -317,6 +332,17 @@ class MinigamesSystem {
                 await this.economy.missions.updateMissionProgress(userId, 'bet_won');
                 await this.economy.missions.updateMissionProgress(userId, 'money_earned', profit);
             }
+
+            let finalMessage = ''
+
+            if (eventMessage === '')
+                finalMessage = luckMessage;
+            else if (luckMessage === '')
+                finalMessage = eventMessage;
+            else if (luckMessage === '' && eventMessage === '')
+                finalMessage = '';
+            else
+                finalMessage = eventMessage + "\n" + luckMessage;            
           
             embed.setDescription(`🎉 **¡GANASTE!**`)
                 .addFields(
@@ -325,7 +351,7 @@ class MinigamesSystem {
                     { name: '💰 Ganancia', value: `+${this.formatNumber(profit)} π-b$`, inline: true },
                     { name: '💸 Balance Antiguo', value: `${this.formatNumber(user.balance)} π-b$`, inline: false },
                     { name: '💳 Balance Actual', value: `${this.formatNumber(user.balance + profit)} π-b$`, inline: false },
-                    { name: '🎉 Extra por Eventos', value: `${eventMessage && luckMessage || "No hay eventos Activos"} `, inline: false }
+                    { name: '🎉 Extra por Eventos', value: `${finalMessage || "No hay eventos Activos"} `, inline: false }
                 );
         } else {
             await this.economy.removeMoney(userId, betAmount, 'coinflip_loss');            
@@ -367,6 +393,13 @@ class MinigamesSystem {
 
     async canDice(userId) {
         const user = await this.economy.getUser(userId);
+
+        if (this.shop) {
+            const vipMultipliers = await this.shop.getVipMultipliers(userId, 'games');
+            if (vipMultipliers.noCooldown) {
+                return { canCoinPlay: true };
+            }
+        }
 
         const lastDice = user.last_dice || 0;
         const now = Date.now();
@@ -543,6 +576,17 @@ class MinigamesSystem {
                 await this.economy.missions.updateMissionProgress(userId, 'bet_won');
                 await this.economy.missions.updateMissionProgress(userId, 'money_earned', profit);
             }
+
+            let finalMessage = ''
+
+            if (eventMessage === '')
+                finalMessage = luckMessage;
+            else if (luckMessage === '')
+                finalMessage = eventMessage;
+            else if (luckMessage === '' && eventMessage === '')
+                finalMessage = '';
+            else
+                finalMessage = eventMessage + "\n" + luckMessage;
             
             embed.setDescription(`🎉 **¡GANASTE!**`)
                 .addFields(
@@ -550,7 +594,7 @@ class MinigamesSystem {
                     { name: '💰 Ganancia', value: `+${this.formatNumber(profit)} π-b$`, inline: false },
                     { name: '💸 Balance Antiguo', value: `${this.formatNumber(user.balance)} π-b$`, inline: false },
                     { name: '💳 Balance Actual', value: `${this.formatNumber(user.balance + profit)} π-b$`, inline: false },
-                    { name: '🎉 Extra por Eventos', value: `${eventMessage && luckMessage || "No hay eventos Activos"} `, inline: false }
+                    { name: '🎉 Extra por Eventos', value: `${finalMessage || "No hay eventos Activos"} `, inline: false }
                 );
         } else {
             await this.economy.removeMoney(userId, betAmount, 'dice_loss');
@@ -766,6 +810,18 @@ class MinigamesSystem {
                 await this.economy.missions.updateMissionProgress(userId, 'bet_won');
                 await this.economy.missions.updateMissionProgress(userId, 'money_earned', profit);
             }
+
+            let finalMessage = ''
+
+            if (eventMessage === '')
+                finalMessage = luckMessage;
+            else if (luckMessage === '')
+                finalMessage = eventMessage;
+            else if (luckMessage === '' && eventMessage === '')
+                finalMessage = '';
+            else
+                finalMessage = eventMessage + "\n" + luckMessage;
+
             
             resultEmbed.setDescription(`🎉 **¡JACKPOT! ¡GANASTE LA LOTERÍA!** 🎉`)
                 .addFields(
@@ -774,7 +830,7 @@ class MinigamesSystem {
                     { name: '🤑 Ganancia Total', value: `+${this.formatNumber(profit)} π-b$`, inline: true },
                     { name: '💸 Balance Anterior', value: `${this.formatNumber(user.balance)} π-b$`, inline: false },
                     { name: '💳 Balance Actual', value: `${this.formatNumber(user.balance + profit)} π-b$ 🚀`, inline: false },
-                    { name: '🎉 Extra por Eventos', value: `${eventMessage && luckMessage || "No hay eventos Activos"} `, inline: false }
+                    { name: '🎉 Extra por Eventos', value: `${finalMessage || "No hay eventos Activos"} `, inline: false }
                 );
         } else {
             await this.economy.removeMoney(userId, betAmount, 'lottery_loss');
@@ -1616,6 +1672,17 @@ class MinigamesSystem {
                 await this.economy.missions.updateMissionProgress(userId, 'bet_won');
                 await this.economy.missions.updateMissionProgress(userId, 'money_earned', profit);
             }
+
+            let finalMessage = ''
+
+            if (eventMessage === '')
+                finalMessage = luckMessage;
+            else if (luckMessage === '')
+                finalMessage = eventMessage;
+            else if (luckMessage === '' && eventMessage === '')
+                finalMessage = '';
+            else
+                finalMessage = eventMessage + "\n" + luckMessage;
             
             resultEmbed.setDescription(`🎉 **¡GANASTE!**`)
                 .addFields(
@@ -1624,7 +1691,7 @@ class MinigamesSystem {
                     { name: '🤑 Ganancia Total', value: `+${this.formatNumber(profit)} π-b$`, inline: true },
                     { name: '💸 Balance Anterior', value: `${this.formatNumber(user.balance)} π-b$`, inline: false },
                     { name: '💳 Balance Actual', value: `${this.formatNumber(user.balance + profit)} π-b$ 🚀`, inline: false },
-                    { name: '🎉 Extra por Eventos', value: `${eventMessage && luckMessage || "No hay eventos Activos"} `, inline: false }
+                    { name: '🎉 Extra por Eventos', value: `${finalMessage || "No hay eventos Activos"} `, inline: false }
                 );
     
             // Mensaje especial para números exactos

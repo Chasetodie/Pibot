@@ -5,6 +5,7 @@ const path = require('path');
 const CommandHandler = require('./commands'); // Importar el manejador de comandos
 const EconomySystem = require('./economy'); // Importar el sistema de economia
 const EventsSystem = require('./events');
+const TradeSystem = require('./trade');
 const MinigamesSystem = require('./minigames'); // Importar el sistema de minijuegos
 const AchievementsSystem = require('./achievements');
 const BettingSystem = require('./betting');
@@ -12,7 +13,6 @@ const MissionsSystem = require('./missions');
 const ShopSystem = require('./shop');
 const AllCommands = require('./all-commands');
 const {
-    TradeSystem,
     AuctionSystem,
     CraftingSystem
 } = require('./things-shop');
@@ -346,6 +346,13 @@ client.on('interactionCreate', async (interaction) => {
         if (interaction.customId.startsWith('shop_')) {
             await allCommands.handleShopInteraction(interaction);
             return;
+        }
+
+        if (interaction.customId.startsWith('trade_')) {
+            await this.trade.handleButtonInteraction(interaction);
+        }
+        else if (interaction.customId.startsWith('shop_')) {
+            await this.shop.handleButtonInteraction(interaction);
         }
 
         try {

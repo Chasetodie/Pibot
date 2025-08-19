@@ -6,9 +6,10 @@
 - `>useitem <item_id>` / `>usar <item_id>` - Usar un item
 
 ## 🔄 **Comandos de Intercambio**
-- `>trade @usuario item_id:cantidad` - Iniciar intercambio
-- `>tradeadd <item_id> [cantidad]` - Agregar item al intercambio
-- `>tradeaccept` - Aceptar el intercambio
+- `>trade @usuario` - Iniciar intercambio
+- `>tradeadd <item_id> [cantidad]` - Agregar item
+- `>trademoney <cantidad>` - Agregar dinero
+- `>tradeaccept` - Aceptar intercambio
 - `>tradecancel` - Cancelar intercambio
 
 ## 🔨 **Comandos de Subastas**
@@ -20,6 +21,9 @@
 - `>recipes` - Ver recetas de crafteo disponibles
 - `>craft <recipe_id>` - Craftear un item
 
+### Perfil y Apodos:
+- `>setnick <apodo>` - Cambiar apodo (requiere token)
+
 ## 👑 **Comandos VIP**
 - `>vip` - Ver comandos VIP disponibles (requiere Pase VIP)
 - `>vipwork` - Trabajo especial VIP
@@ -30,47 +34,4 @@
 ## 🛠️ **Comandos Administrativos** (Solo Administradores)
 - `>giveitem @usuario <item_id> [cantidad]` - Dar items a usuarios
 - `>shopstats` - Ver estadísticas de la tienda
----
-
-## 🎮 **Tipos de Items Disponibles**
-
-### 🧪 **Consumibles Temporales**
-- **🍀 Amuleto de Suerte** - +50% ganancias por 2 horas
-- **⚡ Bebida Energética** - -50% cooldown de trabajo por 1 hora
-- **📚 Poción de Doble XP** - x2 XP por 30 minutos
-- **🔧 Kit de Robo** - +30% éxito en robos por 1 uso
-
-### 💎 **Items Permanentes**
-- **👑 Pase VIP** - Acceso a comandos VIP y bonificaciones
-- **🧲 Imán de Dinero** - +10% ganancias permanentes
-- **👢 Botas de Trabajo** - -20% cooldown de trabajo permanente
-
-### ✨ **Items Cosméticos**
-- **🏆 Trofeo Dorado** - Aparece en tu perfil
-- **🌈 Insignia Arcoíris** - Decoración para el perfil
-
-### 🎁 **Items Especiales**
-- **📦 Caja Misteriosa** - Contiene un item aleatorio valioso
-
-### 🔨 **Items Crafteables**
-- **🍀✨ Super Amuleto** - Versión mejorada del amuleto normal
-- **🔧⚡ Kit Maestro** - Reduce todos los cooldowns 30%
-
----
-
-## 📊 **Características del Sistema**
-
-### ⚡ **Efectos de Items**
-- **Multiplicadores**: Aumentan ganancias de dinero y XP
-- **Reducción de Cooldown**: Menos tiempo de espera en comandos
-- **Boost de Éxito**: Mayor probabilidad en actividades
-- **Efectos Permanentes**: Mejoras que duran para siempre
-- **Efectos por Usos**: Items que se consumen gradualmente
-
-### 🔄 **Funciones Avanzadas**
-- **Intercambios**: Comercia items directamente con otros usuarios
-- **Subastas**: Vende tus items al mejor postor
-- **Crafteo**: Combina items para crear otros más poderosos
-- **Eventos**: Bonificaciones especiales los fines de semana
-
 ---

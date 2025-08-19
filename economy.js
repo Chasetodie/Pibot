@@ -578,9 +578,6 @@ class EconomySystem {
         let amount = Math.max(100, this.config.dailyAmount + variation);
         let eventMessage = '';
         let finalEarnings = amount;
-        let finalReward = 0;
-        const permanentEffects = user.permanentEffects || {};
-        let bonusText = '';
 
         for (const event of this.events.getActiveEvents()) {
             if (event.type === 'money_rain') {
@@ -604,23 +601,13 @@ class EconomySystem {
                 break;
             }
         }
-
-        for (const effect of Object.values(permanentEffects)) {
-            if (effect.benefits && effect.benefits.includes('daily_bonus')) {
-                finalReward = Math.floor(amount * 1.5); // 50% más
-                bonusText = '👑 **Bonificación VIP**: +' + (finalReward - amount) + ' π-b$';
-                break;
-            }
-        }
-
-        finalReward = finalReward + finalEarnings
               
         const updateData = {
             last_daily: Date.now(),
-            balance: user.balance + finalReward,
+            balance: user.balance + finalEarnings,
             stats: {
                 ...user.stats,
-                totalEarned: user.stats.totalEarned + finalReward,
+                totalEarned: user.stats.totalEarned + finalEarnings,
                 dailyClaims: user.stats.dailyClaims + 1
             }
         }
@@ -658,8 +645,7 @@ class EconomySystem {
             oldBalance: user.balance,
             newBalance: user.balance + finalEarnings,
             eventMessage: eventMessage,
-            bonusText: bonusText,
-            finalEarnings: finalEarnings
+            finalEarnings: finalEarnings,
         };
     }
 
@@ -963,9 +949,6 @@ class EconomySystem {
         const message = job.messages[Math.floor(Math.random() * job.messages.length)];
         let eventMessage = '';
         let finalEarnings = amount;
-        const modifiers = await this.shop.getActiveMultipliers(userId, 'work');
-        let finalItemsEarn = 0;
-        let effectMessage = '';
 
         for (const event of this.events.getActiveEvents()) {
             if (event.type === 'money_rain') {
@@ -989,20 +972,9 @@ class EconomySystem {
                 break;
             }
         }
-
-        if (modifiers.multiplier > 1) {
-            finalItemsEarn = Math.floor(amount * modifiers.multiplier);
-            const bonus = finalEarnings - amount;
-            effectMessage = `🍀 **Bonificación por items**: +${bonus} π-b$`;
-            
-            // Consumir efectos de "usos limitados"
-            await this.consumeUsageEffects(userId, 'work');
-        }
-
-        finalItemsEarn = finalItemsEarn + finalEarnings
         
-        updateData.balance = user.balance + finalItemsEarn;
-        updateData.stats.totalEarned = (user.stats?.totalEarned || 0) + finalItemsEarn;
+        updateData.balance = user.balance + finalEarnings;
+        updateData.stats.totalEarned = (user.stats?.totalEarned || 0) + finalEarnings;
         
         await this.updateUser(userId, updateData); // ← Reemplaza saveUsers()
         
@@ -1037,7 +1009,6 @@ class EconomySystem {
             jobName: job.name,
             eventMessage: eventMessage,
             finalEarnings: finalEarnings,
-            effectMessage: effectMessage,
 
             canWork: canWorkResult.canWork,
             reason: canWorkResult.reason,
@@ -1097,6 +1068,11 @@ isBeingRobbed(userId) {
                 reason: 'target_too_poor', 
                 minBalance: this.robberyConfig.minTargetBalance 
             };
+        }
+
+        const protection = await this.shop.isProtectedFromTheft(targetId);
+        if (protection.protected) {
+            return message.reply(`🛡️ ${targetUser} está protegido contra robos!`);
         }
         
         // Verificar cooldown

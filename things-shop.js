@@ -1,109 +1,55 @@
 const { EmbedBuilder } = require('discord.js');
 
-// 2. Sistema de intercambio entre usuarios
-class TradeSystem {
-    constructor(shopSystem) {
-        this.shop = shopSystem;
-        this.activeTrades = new Map(); // userId -> tradeData
-    }
-    
-    async startTrade(message, targetUser, offerItems) {
-        const userId = message.author.id;
-        const targetId = targetUser.id;
-        
-        if (this.activeTrades.has(userId) || this.activeTrades.has(targetId)) {
-            await message.reply('❌ Uno de los usuarios ya tiene un intercambio activo.');
-            return;
-        }
-        
-        const tradeId = `${userId}_${targetId}_${Date.now()}`;
-        const tradeData = {
-            id: tradeId,
-            initiator: userId,
-            target: targetId,
-            initiatorOffer: offerItems,
-            targetOffer: [],
-            initiatorAccepted: false,
-            targetAccepted: false,
-            createdAt: Date.now(),
-            channel: message.channel.id
-        };
-        
-        this.activeTrades.set(userId, tradeData);
-        this.activeTrades.set(targetId, tradeData);
-        
-        const embed = new EmbedBuilder()
-            .setTitle('🔄 Intercambio Iniciado')
-            .setDescription(`${message.author} quiere intercambiar con ${targetUser}`)
-            .addFields(
-                { name: '📦 Oferta de ' + message.author.displayName, value: this.formatItems(offerItems), inline: true },
-                { name: '📦 Oferta de ' + targetUser.displayName, value: 'Esperando...', inline: true }
-            )
-            .setColor('#FFA500');
-        
-        await message.reply({ 
-            content: `${targetUser}, tienes un intercambio pendiente. Usa \`>tradeadd <item>\` para agregar items.`,
-            embeds: [embed] 
-        });
-    }
-    
-    formatItems(items) {
-        if (items.length === 0) return 'Nada';
-        return items.map(item => {
-            const itemData = this.shop.shopItems[item.id];
-            return `${itemData ? itemData.name : item.id} x${item.quantity}`;
-        }).join('\n');
-    }
-    
-    async completeTrade(tradeData) {
-        const user1 = await this.shop.economy.getUser(tradeData.initiator);
-        const user2 = await this.shop.economy.getUser(tradeData.target);
-        
-        // Transferir items
-        const user1Items = { ...user1.items };
-        const user2Items = { ...user2.items };
-        
-        // Remover items del iniciador y darlos al objetivo
-        for (const offer of tradeData.initiatorOffer) {
-            user1Items[offer.id].quantity -= offer.quantity;
-            if (user1Items[offer.id].quantity <= 0) delete user1Items[offer.id];
-            
-            if (user2Items[offer.id]) {
-                user2Items[offer.id].quantity += offer.quantity;
-            } else {
-                user2Items[offer.id] = { ...offer, purchaseDate: new Date().toISOString() };
-            }
-        }
-        
-        // Remover items del objetivo y darlos al iniciador
-        for (const offer of tradeData.targetOffer) {
-            user2Items[offer.id].quantity -= offer.quantity;
-            if (user2Items[offer.id].quantity <= 0) delete user2Items[offer.id];
-            
-            if (user1Items[offer.id]) {
-                user1Items[offer.id].quantity += offer.quantity;
-            } else {
-                user1Items[offer.id] = { ...offer, purchaseDate: new Date().toISOString() };
-            }
-        }
-        
-        // Actualizar base de datos
-        await this.shop.economy.updateUser(tradeData.initiator, { items: user1Items });
-        await this.shop.economy.updateUser(tradeData.target, { items: user2Items });
-        
-        // Limpiar intercambio
-        this.activeTrades.delete(tradeData.initiator);
-        this.activeTrades.delete(tradeData.target);
-        
-        return true;
-    }
-}
-
 // 3. Sistema de subastas
 class AuctionSystem {
     constructor(shopSystem) {
         this.shop = shopSystem;
-        this.activeAuctions = new Map();
+        this.supabase = createClient(
+            process.env.SUPABASE_URL,
+            process.env.SUPABASE_ANON_KEY
+        );
+    }
+
+    async saveAuctionToDb(auction) {
+        const { error } = await this.supabase
+            .from('auctions')
+            .insert({
+                id: auction.id,
+                seller: auction.seller,
+                item_id: auction.itemId,
+                item_name: auction.itemName,
+                starting_bid: auction.currentBid,
+                current_bid: auction.currentBid,
+                highest_bidder: auction.highestBidder,
+                bids: auction.bids,
+                ends_at: new Date(auction.endsAt).toISOString()
+            });
+        
+        return !error;
+    }
+
+    async updateBidInDb(auctionId, auction) {
+        const { error } = await this.supabase
+            .from('auctions')
+            .update({
+                current_bid: auction.currentBid,
+                highest_bidder: auction.highestBidder,
+                bids: auction.bids
+            })
+            .eq('id', auctionId);
+        
+        return !error;
+    }
+
+    async getAuctionFromDb(auctionId) {
+        const { data } = await this.supabase
+            .from('auctions')
+            .select('*')
+            .eq('id', auctionId)
+            .eq('active', true)
+            .single();
+        
+        return data;
     }
     
     async createAuction(message, itemId, startingBid, duration = 3600000) { // 1 hora por defecto
@@ -135,7 +81,11 @@ class AuctionSystem {
             active: true
         };
         
-        this.activeAuctions.set(auctionId, auction);
+        const saved = await this.saveAuctionToDb(auction);
+        if (!saved) {
+            await message.reply('❌ Error creando la subasta.');
+            return;
+        }
         
         // Remover item del inventario temporalmente
         const newItems = { ...userItems };
@@ -164,11 +114,16 @@ class AuctionSystem {
     }
     
     async placeBid(message, auctionId, bidAmount) {
-        const auction = this.activeAuctions.get(auctionId);
+        const auction = await this.getAuctionFromDb(auctionId);
         if (!auction || !auction.active) {
             await message.reply('❌ Subasta no encontrada o ya terminada.');
             return;
         }
+
+        auction.currentBid = auction.current_bid;
+        auction.highestBidder = auction.highest_bidder;
+        auction.itemId = auction.item_id;
+        auction.itemName = auction.item_name;
         
         const userId = message.author.id;
         if (userId === auction.seller) {
@@ -210,11 +165,21 @@ class AuctionSystem {
         });
         
         await message.reply(`✅ Puja de **${bidAmount.toLocaleString('es-ES')} π-b$** registrada por ${message.author.displayName}!`);
+        await this.updateBidInDb(auctionId, auction);
     }
     
     async endAuction(auctionId) {
-        const auction = this.activeAuctions.get(auctionId);
-        if (!auction || !auction.active) return;
+        const auctionData = await this.getAuctionFromDb(auctionId);
+        if (!auctionData || !auctionData.active) return;
+
+        const auction = {
+            ...auctionData,
+            currentBid: auctionData.current_bid,
+            highestBidder: auctionData.highest_bidder,
+            itemId: auctionData.item_id,
+            itemName: auctionData.item_name,
+            seller: auctionData.seller
+        };
         
         auction.active = false;
         
@@ -261,7 +226,32 @@ class AuctionSystem {
             console.log(`🔨 Subasta ${auctionId} terminada sin pujas.`);
         }
         
-        this.activeAuctions.delete(auctionId);
+        await this.completeAuctionInDb(auctionId);
+    }
+
+    // 4. Agregar función para completar subasta:
+    async completeAuctionInDb(auctionId) {
+        const { error } = await this.supabase
+            .from('auctions')
+            .update({
+                active: false,
+                completed_at: new Date().toISOString()
+            })
+            .eq('id', auctionId);
+        
+        return !error;
+    }
+
+    // 5. Agregar función para listar subastas activas:
+    async getActiveAuctions() {
+        const { data } = await this.supabase
+            .from('auctions')
+            .select('*')
+            .eq('active', true)
+            .lt('ends_at', new Date().toISOString())
+            .order('created_at', { ascending: false });
+        
+        return data || [];
     }
 }
 
@@ -269,8 +259,8 @@ class AuctionSystem {
 class CraftingSystem {
     constructor(shopSystem) {
         this.shop = shopSystem;
-        
-        this.recipes = {
+
+        const CRAFTING_RECIPES = {
             'super_lucky_charm': {
                 id: 'super_lucky_charm',
                 name: '🍀✨ Super Amuleto de Suerte',
@@ -314,92 +304,349 @@ class CraftingSystem {
                     stackable: false,
                     maxStack: 1
                 }
+            },
+            'mega_luck_craft': {
+                id: 'mega_luck_craft',
+                name: '🍀✨ Mega Poción de Suerte',
+                description: 'Combina 3 amuletos de suerte para crear algo más poderoso',
+                ingredients: [
+                    { id: 'lucky_charm', quantity: 3 },
+                    { id: 'energy_drink', quantity: 2 }
+                ],
+                result: {
+                    id: 'mega_luck_potion',
+                    category: 'consumable', 
+                    rarity: 'epic',
+                    effect: {
+                        type: 'luck_boost',
+                        targets: ['games', 'all'],
+                        boost: 0.25,
+                        duration: 3600
+                    },
+                    stackable: true,
+                    maxStack: 5
+                }
+            },
+
+            'speed_boots_craft': {
+                id: 'speed_boots_craft',
+                name: '👟⚡ Botas de Velocidad Supremas',
+                description: 'Combina varios items para crear las botas definitivas',
+                ingredients: [
+                    { id: 'work_boots', quantity: 1 },
+                    { id: 'energy_drink', quantity: 5 },
+                    { id: 'robbery_kit', quantity: 3 }
+                ],
+                result: {
+                    id: 'speed_boots',
+                    category: 'consumable',
+                    rarity: 'rare',
+                    effect: {
+                        type: 'no_cooldown',
+                        targets: ['all'],
+                        duration: 1200
+                    },
+                    stackable: true,
+                    maxStack: 3
+                }
+            },
+
+            'diamond_membership_craft': {
+                id: 'diamond_membership_craft',
+                name: '💎👑 Membresía Diamante',
+                description: 'El item más exclusivo - requiere muchos recursos',
+                ingredients: [
+                    { id: 'vip_pass', quantity: 1 },
+                    { id: 'money_magnet', quantity: 1 },
+                    { id: 'golden_trophy', quantity: 2 },
+                    { id: 'premium_mystery_box', quantity: 3 }
+                ],
+                result: {
+                    id: 'diamond_membership',
+                    category: 'permanent',
+                    rarity: 'legendary',
+                    effect: {
+                        type: 'vip_membership',
+                        duration: 30 * 24 * 60 * 60 * 1000,
+                        benefits: [
+                            'no_cooldowns',
+                            'double_earnings', 
+                            'luck_boost',
+                            'priority_support',
+                            'exclusive_commands',
+                            'custom_nickname'
+                        ]
+                    },
+                    stackable: false,
+                    maxStack: 1
+                }
+            },
+
+            'xp_tornado_craft': {
+                id: 'xp_tornado_craft',
+                name: '🌪️📚 Tornado de XP',
+                description: 'Fusiona pociones de XP para algo épico',
+                ingredients: [
+                    { id: 'double_xp_potion', quantity: 4 },
+                    { id: 'lucky_charm', quantity: 2 }
+                ],
+                result: {
+                    id: 'xp_tornado',
+                    category: 'consumable',
+                    rarity: 'epic',
+                    effect: {
+                        type: 'xp_multiplier',
+                        targets: ['all'],
+                        multiplier: 5.0,
+                        duration: 900
+                    },
+                    stackable: true,
+                    maxStack: 3
+                }
+            },
+
+            'golden_pickaxe_craft': {
+                id: 'golden_pickaxe_craft', 
+                name: '⛏️💎 Pico Dorado Legendario',
+                description: 'El mejor tool para trabajar',
+                ingredients: [
+                    { id: 'work_boots', quantity: 2 },
+                    { id: 'money_magnet', quantity: 1 },
+                    { id: 'lucky_charm', quantity: 3 }
+                ],
+                result: {
+                    id: 'golden_pickaxe',
+                    category: 'consumable',
+                    rarity: 'rare',
+                    effect: {
+                        type: 'work_multiplier',
+                        targets: ['work'],
+                        multiplier: 3.0,
+                        uses: 3
+                    },
+                    stackable: true,
+                    maxStack: 10
+                }
+            },
+
+            'nickname_token_craft': {
+                id: 'nickname_token_craft',
+                name: '🏷️✨ Token de Apodo VIP',
+                description: 'Permite personalizar tu apodo con estilo',
+                ingredients: [
+                    { id: 'rainbow_badge', quantity: 2 },
+                    { id: 'golden_trophy', quantity: 1 }
+                ],
+                result: {
+                    id: 'custom_nickname_token',
+                    category: 'special',
+                    rarity: 'rare',
+                    effect: {
+                        type: 'nickname_change',
+                        uses: 1
+                    },
+                    stackable: true,
+                    maxStack: 5
+                }
+            },
+
+            'master_toolkit': {
+                id: 'master_toolkit',
+                name: '🔧⚡ Kit Maestro',
+                description: 'Reduce todos los cooldowns permanentemente en 30%',
+                ingredients: [
+                    { id: 'work_boots', quantity: 1 },
+                    { id: 'energy_drink', quantity: 5 },
+                    { id: 'robbery_kit', quantity: 3 }
+                ],
+                result: {
+                    id: 'master_toolkit',
+                    category: 'permanent',
+                    rarity: 'legendary',
+                    effect: {
+                        type: 'permanent_cooldown',
+                        targets: ['all'],
+                        reduction: 0.3
+                    },
+                    stackable: false,
+                    maxStack: 1
+                }
             }
         };
     }
-    
-    async showRecipes(message) {
-        const embed = new EmbedBuilder()
-            .setTitle('🔨 Recetas de Crafteo')
-            .setDescription('Combina items para crear otros más poderosos')
-            .setColor('#8B4513');
-        
-        for (const recipe of Object.values(this.recipes)) {
-            const ingredients = recipe.ingredients.map(ing => {
-                const item = this.shop.shopItems[ing.id];
-                return `${item ? item.name : ing.id} x${ing.quantity}`;
-            }).join('\n');
-            
-            embed.addFields({
-                name: `${this.shop.rarityEmojis[recipe.result.rarity]} ${recipe.name}`,
-                value: `**Ingredientes:**\n${ingredients}\n\n${recipe.description}`,
-                inline: false
-            });
-        }
-        
-        embed.setFooter({ text: 'Usa >craft <recipe_id> para craftear' });
-        await message.reply({ embeds: [embed] });
-    }
-    
-    async craftItem(message, recipeId) {
-        const recipe = this.recipes[recipeId];
-        if (!recipe) {
-            await message.reply('❌ Receta no encontrada. Usa `>recipes` para ver las disponibles.');
-            return;
-        }
-        
-        const userId = message.author.id;
-        const user = await this.shop.economy.getUser(userId);
-        const userItems = user.items || {};
-        
-        // Verificar ingredientes
-        for (const ingredient of recipe.ingredients) {
-            const userItem = userItems[ingredient.id];
-            if (!userItem || userItem.quantity < ingredient.quantity) {
-                const item = this.shop.shopItems[ingredient.id];
-                await message.reply(`❌ Te falta **${item ? item.name : ingredient.id} x${ingredient.quantity}**.`);
-                return;
+
+    // 2. CAMBIAR LA FUNCIÓN hasRequiredMaterials por:
+    hasRequiredMaterials(userItems, ingredients) {
+        for (const ingredient of ingredients) {
+            const userQuantity = userItems[ingredient.id] || 0;
+            if (userQuantity < ingredient.quantity) {
+                return false;
             }
         }
-        
-        // Consumir ingredientes
+        return true;
+    }
+
+    // 3. CAMBIAR LA FUNCIÓN consumeMaterials por:
+    consumeMaterials(userItems, ingredients) {
         const newItems = { ...userItems };
-        for (const ingredient of recipe.ingredients) {
-            newItems[ingredient.id].quantity -= ingredient.quantity;
-            if (newItems[ingredient.id].quantity <= 0) {
+        
+        for (const ingredient of ingredients) {
+            newItems[ingredient.id] -= ingredient.quantity;
+            if (newItems[ingredient.id] <= 0) {
                 delete newItems[ingredient.id];
             }
         }
         
-        // Crear item resultante
-        if (newItems[recipe.id]) {
-            newItems[recipe.id].quantity += 1;
-        } else {
-            newItems[recipe.id] = {
-                id: recipe.id,
-                quantity: 1,
-                purchaseDate: new Date().toISOString()
+        return newItems;
+    }
+    
+    async showCraftingRecipes(message) {
+        try {
+            const embed = {
+                color: 0x9932cc,
+                title: '🔨 **RECETAS DE CRAFTEO**',
+                description: 'Usa `>craft <recipe_id>` para craftear un item',
+                fields: []
             };
+            
+            Object.values(CRAFTING_RECIPES).forEach(recipe => {
+                let requirements = '';
+                recipe.ingredients.forEach(ingredient => {
+                    const item = SHOP_ITEMS[ingredient.id];
+                    if (item) {
+                        requirements += `${item.emoji || '📦'} ${ingredient.quantity}x ${item.name}\n`;
+                    } else {
+                        requirements += `📦 ${ingredient.quantity}x ${ingredient.id}\n`;
+                    }
+                });
+                
+                const rarityEmoji = getRarityEmoji(recipe.result.rarity);
+                
+                embed.fields.push({
+                    name: `${rarityEmoji} ${recipe.name} (ID: ${recipe.id})`,
+                    value: `${recipe.description}\n\n**Materiales:**\n${requirements}`,
+                    inline: false
+                });
+            });
+            
+            await message.channel.send({ embeds: [embed] });
+        } catch (error) {
+            console.error('Error mostrando recetas:', error);
+            message.reply('❌ Error al mostrar las recetas.');
         }
-        
-        // Agregar receta a la tienda temporalmente
-        this.shop.shopItems[recipe.id] = {
-            ...recipe.result,
-            name: recipe.name,
-            description: recipe.description,
-            price: 0 // No se puede comprar, solo craftear
+    }
+
+    getRarityEmoji(rarity) {
+        const rarityEmojis = {
+            'common': '⚪',
+            'uncommon': '🟢',
+            'rare': '🔵',
+            'epic': '🟣',
+            'legendary': '🟠'
         };
-        
-        await this.shop.economy.updateUser(userId, { items: newItems });
-        
-        const embed = new EmbedBuilder()
-            .setTitle('🔨 ¡Crafteo Exitoso!')
-            .setDescription(`Has creado: ${this.shop.rarityEmojis[recipe.result.rarity]} **${recipe.name}**`)
-            .setColor(this.shop.rarityColors[recipe.result.rarity])
-            .addFields({ name: '📝 Descripción', value: recipe.description, inline: false })
-            .setTimestamp();
-        
-        await message.reply({ embeds: [embed] });
+        return rarityEmojis[rarity] || '⚪';
+    }
+    
+    async craftItem(message, args) {
+        try {
+            if (!args[0]) {
+                return message.reply('❌ Especifica el ID de la receta: `>craft <recipe_id>`');
+            }
+            
+            const recipeId = args[0];
+            const recipe = CRAFTING_RECIPES[recipeId];
+            
+            if (!recipe) {
+                return message.reply('❌ Receta no encontrada. Usa `>recipes` para ver las disponibles.');
+            }
+            
+            const userData = await getUserData(message.author.id);
+            if (!userData) {
+                return message.reply('❌ Usuario no registrado.');
+            }
+            
+            const userItems = userData.items || {};
+            
+            // Verificar materiales usando el nuevo formato
+            if (!hasRequiredMaterials(userItems, recipe.ingredients)) {
+                let missingMaterials = '';
+                recipe.ingredients.forEach(ingredient => {
+                    const userQuantity = userItems[ingredient.id] || 0;
+                    const item = SHOP_ITEMS[ingredient.id];
+                    if (userQuantity < ingredient.quantity) {
+                        const itemName = item ? item.name : ingredient.id;
+                        const emoji = item ? item.emoji || '📦' : '📦';
+                        missingMaterials += `${emoji} ${itemName}: ${userQuantity}/${ingredient.quantity}\n`;
+                    }
+                });
+                
+                const embed = {
+                    color: 0xff0000,
+                    title: '❌ **MATERIALES INSUFICIENTES**',
+                    description: 'Te faltan los siguientes materiales:',
+                    fields: [
+                        {
+                            name: '📦 Materiales Faltantes',
+                            value: missingMaterials,
+                            inline: false
+                        }
+                    ]
+                };
+                
+                return message.channel.send({ embeds: [embed] });
+            }
+            
+            // Consumir materiales usando el nuevo formato
+            const newItems = consumeMaterials(userItems, recipe.ingredients);
+            
+            // Agregar item crafteado
+            const resultId = recipe.result.id;
+            const quantity = 1; // Por defecto 1, pero podrías agregarlo al result si quieres
+            
+            if (newItems[resultId]) {
+                newItems[resultId] += quantity;
+            } else {
+                newItems[resultId] = quantity;
+            }
+            
+            // Actualizar inventario
+            const success = await updateUserItems(message.author.id, newItems);
+            
+            if (success) {
+                const rarityEmoji = getRarityEmoji(recipe.result.rarity);
+                
+                const embed = {
+                    color: 0x00ff00,
+                    title: '🔨 **CRAFTEO EXITOSO**',
+                    description: `¡Has crafteado **${recipe.name}**! ${rarityEmoji}`,
+                    fields: [
+                        {
+                            name: '📝 Descripción',
+                            value: recipe.description,
+                            inline: false
+                        },
+                        {
+                            name: '⭐ Rareza',
+                            value: `${rarityEmoji} ${recipe.result.rarity}`,
+                            inline: true
+                        },
+                        {
+                            name: '📦 Cantidad Obtenida',
+                            value: quantity.toString(),
+                            inline: true
+                        }
+                    ]
+                };
+                
+                await message.channel.send({ embeds: [embed] });
+            } else {
+                message.reply('❌ Error al craftear el item.');
+            }
+            
+        } catch (error) {
+            console.error('Error crafteando item:', error);
+            message.reply('❌ Error al procesar el crafteo.');
+        }
     }
 }
 
