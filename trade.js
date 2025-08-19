@@ -570,11 +570,11 @@ class TradeSystem {
             const buttons = new ActionRowBuilder()
                 .addComponents(
                     new ButtonBuilder()
-                        .setCustomId(`trade_accept_${tradeId}`)
+                        .setCustomId(`trade_accept_${tradeData.id}`)
                         .setLabel('✅ Aceptar')
                         .setStyle(ButtonStyle.Success),
                     new ButtonBuilder()
-                        .setCustomId(`trade_cancel_${tradeId}`)
+                        .setCustomId(`trade_cancel_${tradeData.id}`)
                         .setLabel('❌ Cancelar')
                         .setStyle(ButtonStyle.Danger)
                 );
