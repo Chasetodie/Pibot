@@ -64,12 +64,12 @@ class AllCommands {
         // Avatar
         const avatarUrl = targetUser ? targetUser.displayAvatarURL({ dynamic: true }) : message.author.displayAvatarURL({ dynamic: true });
 
-        // Obtener items cosméticos equipados
+        /*// Obtener items cosméticos equipados
         const userItems = user.items || {};
         const cosmetics = this.getCosmeticItems(userItems);
         
         // Obtener estado VIP
-        const vipStatus = await this.shop.hasActiveVip(user.id);
+        const vipStatus = await this.shop.hasActiveVip(user.id);*/
 
         const embed = new EmbedBuilder()
             .setTitle(`💰 ${this.getProfileTitle(cosmetics, vipStatus)} ${displayName}`)
@@ -115,7 +115,7 @@ class AllCommands {
             .setFooter({ text: `ID: ${userId}` })
             .setTimestamp();
 
-        let description = ''
+/*        let description = ''
             
         // Estado VIP
         if (vipStatus.hasVip) {
@@ -129,7 +129,7 @@ class AllCommands {
         const badges = this.formatBadges(cosmetics);
         if (badges) {
             embed.addFields({ name: '🏅 Insignias y Cosméticos', value: badges, inline: false });
-        }
+        }*/
         
         await message.reply({ embeds: [embed] });
     }
