@@ -521,7 +521,7 @@ class CraftingSystem {
                     }
                 });
                 
-                const rarityEmoji = getRarityEmoji(recipe.result.rarity);
+                const rarityEmoji = this.getRarityEmoji(recipe.result.rarity);
                 
                 embed.fields.push({
                     name: `${rarityEmoji} ${recipe.name} (ID: ${recipe.id})`,
@@ -569,7 +569,7 @@ class CraftingSystem {
             const userItems = userData.items || {};
             
             // Verificar materiales usando el nuevo formato
-            if (!hasRequiredMaterials(userItems, recipe.ingredients)) {
+            if (!this.hasRequiredMaterials(userItems, recipe.ingredients)) {
                 let missingMaterials = '';
                 recipe.ingredients.forEach(ingredient => {
                     const userQuantity = userItems[ingredient.id] || 0;
@@ -598,7 +598,7 @@ class CraftingSystem {
             }
             
             // Consumir materiales usando el nuevo formato
-            const newItems = consumeMaterials(userItems, recipe.ingredients);
+            const newItems = this.consumeMaterials(userItems, recipe.ingredients);
             
             // Agregar item crafteado
             const resultId = recipe.result.id;
