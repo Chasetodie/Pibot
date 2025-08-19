@@ -348,11 +348,43 @@ client.on('interactionCreate', async (interaction) => {
             return;
         }
 
-        if (interaction.customId.startsWith('trade_')) {
-            await this.trade.handleButtonInteraction(interaction);
+        if (interaction.customId.startsWith('trade_accept_')) {
+            const tradeId = interaction.customId.replace('trade_accept_', '');
+            
+            // Obtener trade por ID específico
+            const { data: tradeData } = await supabase
+                .from('trades')
+                .select('*')
+                .eq('id', tradeId)
+                .eq('status', 'pending')
+                .single();
+                
+            if (!tradeData) {
+                await interaction.reply({ content: '❌ Intercambio no encontrado.', ephemeral: true });
+                return;
+            }
+            
+            // Verificar que el usuario sea parte del trade
+            if (interaction.user.id !== tradeData.initiator && interaction.user.id !== tradeData.target) {
+                await interaction.reply({ content: '❌ No puedes aceptar este intercambio.', ephemeral: true });
+                return;
+            }
+            
+            // Simular mensaje para acceptTrade
+            const fakeMessage = {
+                author: interaction.user,
+                channel: interaction.channel,
+                reply: (content) => interaction.reply(content)
+            };
+            
+            await trades.acceptTrade(fakeMessage);
         }
-        else if (interaction.customId.startsWith('shop_')) {
-            await this.shop.handleButtonInteraction(interaction);
+        
+        if (interaction.customId.startsWith('trade_cancel_')) {
+            // Similar lógica para cancelar
+            const tradeId = interaction.customId.replace('trade_cancel_', '');
+            await tradeSystem.cancelTradeInDb(tradeId, 'manual');
+            await interaction.reply('✅ Intercambio cancelado.');
         }
 
         try {
@@ -620,5 +652,6 @@ client.login(process.env.TOKEN).then(() => {
     console.log('🚀 Proceso de login iniciado...');
 }).catch(error => {
     console.error('❌ Error en el login:', error);
+
 
 });
