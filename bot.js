@@ -383,7 +383,7 @@ client.on('interactionCreate', async (interaction) => {
         if (interaction.customId.startsWith('trade_cancel_')) {
             // Similar lógica para cancelar
             const tradeId = interaction.customId.replace('trade_cancel_', '');
-            await tradeSystem.cancelTradeInDb(tradeId, 'manual');
+            await trades.cancelTradeInDb(tradeId, 'manual');
             await interaction.reply('✅ Intercambio cancelado.');
         }
 
@@ -655,4 +655,5 @@ client.login(process.env.TOKEN).then(() => {
 
 
 });
+
 
