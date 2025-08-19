@@ -652,7 +652,6 @@ class CraftingSystem {
 
 // 5. Exportar todos los sistemas
 module.exports = {
-    TradeSystem,
     AuctionSystem,
     CraftingSystem
 };
