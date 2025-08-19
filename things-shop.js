@@ -525,7 +525,7 @@ class CraftingSystem {
                 
                 embed.fields.push({
                     name: `${rarityEmoji} ${recipe.name} (ID: ${recipe.id})`,
-                    value: `${recipe.description}\n**Materiales:**\n${requirements}\n`,
+                    value: `${recipe.description}\n**Materiales:**\n${requirements}\n\n`,
                     inline: false
                 });
             });
