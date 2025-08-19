@@ -69,7 +69,7 @@ class AllCommands {
         const cosmetics = this.getCosmeticItems(userItems);
         
         // Obtener estado VIP
-        const vipStatus = await this.hasActiveVip(user.id);
+        const vipStatus = await this.shop.hasActiveVip(user.id);
 
         const embed = new EmbedBuilder()
             .setTitle(`💰 ${this.getProfileTitle(cosmetics, vipStatus)} ${displayName}`)
