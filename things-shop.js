@@ -260,8 +260,9 @@ class AuctionSystem {
 class CraftingSystem {
     constructor(shopSystem) {
         this.shop = shopSystem;
+    }
 
-        const CRAFTING_RECIPES = {
+            const CRAFTING_RECIPES = {
             'super_lucky_charm': {
                 id: 'super_lucky_charm',
                 name: '🍀✨ Super Amuleto de Suerte',
@@ -474,7 +475,6 @@ class CraftingSystem {
                 }
             }
         };
-    }
 
     // 2. CAMBIAR LA FUNCIÓN hasRequiredMaterials por:
     hasRequiredMaterials(userItems, ingredients) {
