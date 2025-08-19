@@ -1401,80 +1401,63 @@ class AllCommands {
                     await this.events.showEventStats(message);
                     break;
                 case '>trade':
-                    if (message.author.id !== "123456789012345678")
-                    {
                     if (!message.mentions.users.size) {
                         await message.reply('❌ Debes mencionar a un usuario: `>trade @usuario`');
                         return;
                     }
                     const targetUser = message.mentions.users.first();
                     await this.trades.startTrade(message, targetUser);
-                    }
                     break;
                 case '>tradeadd':
-                                        if (message.author.id !== "123456789012345678")
-                    {
                     if (!args[1]) {
                         await message.reply('❌ Especifica el item: `>tradeadd <item_id> [cantidad]`');
                         return;
                     }
                     const quantity = parseInt(args[2]) || 1;
-                    await this.trades.addItemToTrade(message, args[1], quantity);}
+                    await this.trades.addItemToTrade(message, args[1], quantity);
                     break;
                     
                 case '>trademoney':
-                                        if (message.author.id !== "123456789012345678")
-                    {
                     if (!args[1]) {
                         await message.reply('❌ Especifica la cantidad: `>trademoney <cantidad>`');
                         return;
                     }
                     const amount = parseInt(args[1]);
-                    await this.trades.addMoneyToTrade(message, amount);}
+                    await this.trades.addMoneyToTrade(message, amount);
                     break;
                     
                 case '>tradeaccept':
-                                        if (message.author.id !== "123456789012345678")
-                    {
-                    await this.trades.acceptTrade(message);}
+                    await this.trades.acceptTrade(message);
                     break;
                     
                 case '>tradecancel':
-                                        if (message.author.id !== "123456789012345678")
-                    {
                     const tradeData = this.activeTrades.get(message.author.id);
                     if (tradeData) {
                         await this.trades.cancelTrade(tradeData, 'manual');
                         await message.reply('✅ Intercambio cancelado.');
                     } else {
                         await message.reply('❌ No tienes ningún intercambio activo.');
-                    }}
+                    }
                     break;     
                 case '>auction':
-                                        if (message.author.id !== "123456789012345678")
-                    {
                     if (args.length < 3) {
                         await message.reply('❌ Uso: `>auction item_id precio_inicial [duración_en_minutos]`');
                         return;
                     }
                     const durations = parseInt(args[3]) || 60;
                     await this.auctions.createAuction(message, args[1], parseInt(args[2]), durations * 60000);
-                }break;
+                break;
                     
                 case '>bid':
-                                        if (message.author.id !== "123456789012345678")
-                    {
                     if (args.length < 3) {
                         await message.reply('❌ Uso: `>bid auction_id cantidad`');
                         return;
                     }
                     await this.auctions.placeBid(message, args[1], parseInt(args[2]));
-                }break;
+                break;
                     
                 case '>auctions':
                 case '>subastas':
-                                        if (message.author.id !== "123456789012345678")
-                    {
                     const auctions = await this.getActiveAuctions();
                     if (auctions.length === 0) {
                         await message.reply('📋 No hay subastas activas.');
@@ -1497,45 +1480,36 @@ class AllCommands {
                     }
                     
                     await message.reply({ embeds: [embed] });
-                }break;
+                break;
                     
                 case '>recipes':
-                                        if (message.author.id !== "123456789012345678")
-                    {await this.crafting.showRecipes(message);}
+                    await this.crafting.showRecipes(message);
                     break;
                     
                 case '>craft':
-                                        if (message.author.id !== "123456789012345678")
-                    {if (!args[1]) {
+                    if (!args[1]) {
                         await message.reply('❌ Especifica la receta. Usa `>recipes` para ver las disponibles.');
                         return;
                     }
-                    await this.crafting.craftItem(message, args[1]);}
+                    await this.crafting.craftItem(message, args[1]);
                     break;
 
                 case '>setnick':
-                                        if (message.author.id !== "123456789012345678")
-                    {if (!args[1]) {
+                    if (!args[1]) {
                         await message.reply('❌ Especifica tu apodo: `>setnick <tu_apodo>`');
                         return;
                     }
                     const nickname = args.slice(1).join(' ');
-                    await this.shop.setCustomNickname(message, nickname);}
+                    await this.shop.setCustomNickname(message, nickname);
                     break;                  
                 case '>vip':
-                                        if (message.author.id !== "123456789012345678")
-                    {
-                    await this.vipCommand(message);}
+                    await this.vipCommand(message);
                     break;
                 case '>giveitem':
-                                        if (message.author.id !== "123456789012345678")
-                    {
-                    await this.giveItemCommand(message, args);}
+                    await this.giveItemCommand(message, args);
                     break;
                 case '>shopstats':
-                                        if (message.author.id !== "123456789012345678")
-                    {
-                    await this.shopStatsCommand(message);}
+                    await this.shopStatsCommand(message);
                     break;
                 case '>help':
                     await this.showHelp(message);
