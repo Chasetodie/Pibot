@@ -388,36 +388,7 @@ class TradeSystem {
         const targetHasOffer = tradeData.targetOffer.length > 0 || tradeData.targetMoneyOffer > 0;
         
         if (!initiatorHasOffer || !targetHasOffer) {
-            const embed = new EmbedBuilder()
-                .setTitle('🔄 Sistema de Intercambio - Guía')
-                .setDescription('Aprende a intercambiar items y dinero con otros usuarios')
-                .addFields(
-                    {
-                        name: '📝 Comandos Básicos',
-                        value: '`>trade @usuario` - Iniciar intercambio\n`>tradeadd <item_id> [cantidad]` - Agregar item\n`>trademoney <cantidad>` - Agregar dinero\n`>tradeaccept` - Aceptar intercambio\n`>tradecancel` - Cancelar intercambio',
-                        inline: false
-                    },
-                    {
-                        name: '⚠️ Reglas Importantes',
-                        value: '• Ambos usuarios deben ofrecer algo\n• Solo 5 minutos para completar\n• No puedes tener múltiples trades activos\n• Una vez aceptado por ambos, es irreversible',
-                        inline: false
-                    },
-                    {
-                        name: '🔄 Proceso paso a paso',
-                        value: '1️⃣ Inicia el trade con `>trade @usuario`\n2️⃣ Ambos agregan items/dinero\n3️⃣ Ambos aceptan con `>tradeaccept`\n4️⃣ ¡Intercambio completado!',
-                        inline: false
-                    },
-                    {
-                        name: '💡 Ejemplos',
-                        value: '`>trade @Juan123`\n`>tradeadd lucky_charm 2`\n`>trademoney 5000`\n`>tradeaccept`',
-                        inline: false
-                    }
-                )
-                .setColor('#00FF00')
-                .setFooter({ text: 'Los trades expiran en 5 minutos automáticamente' })
-                .setTimestamp();
-            
-            await message.reply({ embeds: [embed] });
+            await message.reply('❌ Ambos usuarios deben ofrecer algo para completar el intercambio.');
             return;
         }
         
