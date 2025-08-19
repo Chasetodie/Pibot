@@ -1309,6 +1309,7 @@ class AllCommands {
 
     async processCommand(message) {
         await this.shop.cleanupExpiredTokens(message.author.id);
+        await this.trades.cleanUpExpiredTrades();
 
         const args = message.content.trim().split(/ +/g);
         const command = args[0].toLowerCase();
@@ -1438,7 +1439,17 @@ class AllCommands {
                     } else {
                         await message.reply('❌ No tienes ningún intercambio activo.');
                     }
-                    break;     
+                    break;    
+                case '>tradeshow':
+                case '>tradever':
+                    const currentTrade = await this.trades.getActiveTradeByUser(message.author.id);
+                    if (!currentTrade) {
+                        await message.reply('❌ No tienes ningún intercambio activo.');
+                        return;
+                    }
+                    
+                    await this.trades.updateTradeEmbed(message.channel, currentTrade);
+                    break;
                 case '>auction':
                     if (args.length < 3) {
                         await message.reply('❌ Uso: `>auction item_id precio_inicial [duración_en_minutos]`');
