@@ -75,7 +75,7 @@ class AllCommands {
 
         const embed = new EmbedBuilder()
             .setTitle(`💰 ${displayName}`)
-            .setColor(this.getProfileColor(cosmetics, vipStatus))
+            .setColor(/*this.getProfileColor(cosmetics, vipStatus)*/'#0099FF')
             .setThumbnail(avatarUrl)
             .addFields(
                 { 
@@ -136,7 +136,7 @@ class AllCommands {
         await message.reply({ embeds: [embed] });
     }
 
-    getCosmeticItems(userItems) {
+/*    getCosmeticItems(userItems) {
         const cosmetics = [];
         for (const [itemId, item] of Object.entries(userItems)) {
             const shopItem = this.shop.shopItems[itemId];
@@ -171,7 +171,7 @@ class AllCommands {
             return `${rarityEmoji} ${item.name}`;
         }).join('\n');
     }
-
+*/
     // Comando !daily - Reclamar dinero diario
     async handleDaily(message) {
         const userId = message.author.id;
