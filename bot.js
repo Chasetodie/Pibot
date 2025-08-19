@@ -349,42 +349,137 @@ client.on('interactionCreate', async (interaction) => {
         }
 
         if (interaction.customId.startsWith('trade_accept_')) {
-            const tradeId = interaction.customId.replace('trade_accept_', '');
-            
-            // Obtener trade por ID específico
-            const { data: tradeData } = await trades.supabase
-                .from('trades')
-                .select('*')
-                .eq('id', tradeId)
-                .eq('status', 'pending')
-                .single();
+            try {
+                // Evitar spam
+                await interaction.deferReply({ ephemeral: true });
                 
-            if (!tradeData) {
-                await interaction.reply({ content: '❌ Intercambio no encontrado.', ephemeral: true });
-                return;
+                const tradeId = interaction.customId.replace('trade_accept_', '');
+                
+                // Obtener trade de la DB
+                const { data: tradeData } = await trades.supabase
+                    .from('trades')
+                    .select('*')
+                    .eq('id', tradeId)
+                    .eq('status', 'pending')
+                    .single();
+                    
+                if (!tradeData) {
+                    await interaction.editReply({ content: '❌ Intercambio no encontrado o ya finalizado.' });
+                    return;
+                }
+                
+                // Verificar que el usuario es parte del trade
+                if (interaction.user.id !== tradeData.initiator && interaction.user.id !== tradeData.target) {
+                    await interaction.editReply({ content: '❌ No puedes participar en este intercambio.' });
+                    return;
+                }
+                
+                // Crear objeto mensaje falso para usar la función existente
+                const fakeMessage = {
+                    author: interaction.user,
+                    channel: interaction.channel,
+                    reply: async (content) => {
+                        // No hacer nada, usaremos editReply después
+                    }
+                };
+                
+                // Usar la función de aceptar trade existente
+                const result = await trades.acceptTradeButton(interaction.user.id, tradeData);
+                
+                if (result.success) {
+                    await interaction.editReply({ content: result.message });
+                    
+                    if (result.completed) {
+                        // Editar mensaje original para mostrar completado
+                        const embed = new EmbedBuilder()
+                            .setTitle('✅ Intercambio Completado')
+                            .setDescription('¡El intercambio se ha completado exitosamente!')
+                            .setColor('#00FF00')
+                            .setTimestamp();
+                        
+                        await interaction.message.edit({ 
+                            embeds: [embed], 
+                            components: [] 
+                        });
+                    }
+                } else {
+                    await interaction.editReply({ content: result.message });
+                }
+                
+            } catch (error) {
+                console.error('Error procesando aceptación:', error);
+                await interaction.editReply({ content: '❌ Error procesando la aceptación.' });
             }
-            
-            // Verificar que el usuario sea parte del trade
-            if (interaction.user.id !== tradeData.initiator && interaction.user.id !== tradeData.target) {
-                await interaction.reply({ content: '❌ No puedes aceptar este intercambio.', ephemeral: true });
-                return;
-            }
-            
-            // Simular mensaje para acceptTrade
-            const fakeMessage = {
-                author: interaction.user,
-                channel: interaction.channel,
-                reply: (content) => interaction.reply(content)
-            };
-            
-            await trades.acceptTrade(fakeMessage);
         }
         
         if (interaction.customId.startsWith('trade_cancel_')) {
-            // Similar lógica para cancelar
-            const tradeId = interaction.customId.replace('trade_cancel_', '');
-            await trades.cancelTradeInDb(tradeId, 'manual');
-            await interaction.reply('✅ Intercambio cancelado.');
+            try {
+                // Defer la respuesta inmediatamente para evitar spam
+                await interaction.deferReply({ ephemeral: true });
+                
+                const tradeId = interaction.customId.replace('trade_cancel_', '');
+                
+                // Verificar que el trade existe y está activo
+                const { data: tradeData } = await trades.supabase
+                    .from('trades')
+                    .select('*')
+                    .eq('id', tradeId)
+                    .eq('status', 'pending')
+                    .single();
+                    
+                if (!tradeData) {
+                    await interaction.editReply({ content: '❌ Intercambio no encontrado o ya finalizado.' });
+                    return;
+                }
+                
+                // Verificar que el usuario puede cancelar
+                if (interaction.user.id !== tradeData.initiator && interaction.user.id !== tradeData.target) {
+                    await interaction.editReply({ content: '❌ No puedes cancelar este intercambio.' });
+                    return;
+                }
+                
+                // Cancelar en la base de datos
+                const { error } = await trades.supabase
+                    .from('trades')
+                    .update({
+                        status: 'cancelled',
+                        completed_at: new Date().toISOString()
+                    })
+                    .eq('id', tradeId);
+                    
+                if (error) {
+                    console.error('Error cancelando trade:', error);
+                    await interaction.editReply({ content: '❌ Error al cancelar el intercambio.' });
+                    return;
+                }
+                
+                // Responder exitosamente
+                await interaction.editReply({ content: '✅ Intercambio cancelado exitosamente.' });
+                
+                // Editar el mensaje original para mostrar que fue cancelado
+                try {
+                    const embed = new EmbedBuilder()
+                        .setTitle('❌ Intercambio Cancelado')
+                        .setDescription(`Intercambio cancelado por ${interaction.user}`)
+                        .setColor('#FF0000')
+                        .setTimestamp();
+                    
+                    await interaction.message.edit({ 
+                        embeds: [embed], 
+                        components: [] // Quitar botones
+                    });
+                } catch (err) {
+                    console.log('No se pudo editar el mensaje original');
+                }
+                
+            } catch (error) {
+                console.error('Error procesando cancelación:', error);
+                if (!interaction.replied && !interaction.deferred) {
+                    await interaction.reply({ content: '❌ Error procesando la cancelación.', ephemeral: true });
+                } else {
+                    await interaction.editReply({ content: '❌ Error procesando la cancelación.' });
+                }
+            }
         }
 
         try {
@@ -655,5 +750,6 @@ client.login(process.env.TOKEN).then(() => {
 
 
 });
+
 
 
