@@ -1309,7 +1309,7 @@ class AllCommands {
 
     async processCommand(message) {
         await this.shop.cleanupExpiredTokens(message.author.id);
-        await this.trades.cleanUpExpiredTrades();
+        await this.trades.cleanupExpiredTrades();
 
         const args = message.content.trim().split(/ +/g);
         const command = args[0].toLowerCase();
