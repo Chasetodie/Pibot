@@ -510,7 +510,7 @@ class CraftingSystem {
                 fields: []
             };
             
-            Object.values(CRAFTING_RECIPES).forEach(recipe => {
+            Object.values(this.CRAFTING_RECIPES).forEach(recipe => {
                 let requirements = '';
                 recipe.ingredients.forEach(ingredient => {
                     const item = SHOP_ITEMS[ingredient.id];
@@ -555,7 +555,7 @@ class CraftingSystem {
             }
             
             const recipeId = args[0];
-            const recipe = CRAFTING_RECIPES[recipeId];
+            const recipe = this.CRAFTING_RECIPES[recipeId];
             
             if (!recipe) {
                 return message.reply('❌ Receta no encontrada. Usa `>recipes` para ver las disponibles.');
