@@ -1,6 +1,7 @@
 // 3. SISTEMA DE INTERCAMBIO COMPLETO - Crear archivo TradeSystem.js
 
 const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
+const { createClient } = require('@supabase/supabase-js');
 
 class TradeSystem {
     constructor(shopSystem) {
