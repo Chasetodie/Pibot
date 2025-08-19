@@ -217,7 +217,7 @@ class AchievementsSystem {
             'completionist': {
                 name: '🏅 Completista',
                 description: 'Obtén todos los logros disponibles',
-                requirement: { type: 'achievements_count', value: 22 }, // Actualizar según total
+                requirement: { type: 'achievements_count', value: 24 }, // Actualizar según total
                 reward: { money: 100000, xp: 10000 },
                 rarity: 'legendary',
                 emoji: '🏅'
@@ -319,9 +319,9 @@ class AchievementsSystem {
                 case 'unique_items':
                     currentValue = Object.keys(user.items || 0);
                     break;
-                case 'owns_item':
+/*                case 'owns_item':
                     currentValue = user.items[achievement.requirement.item];
-                    break;
+                    break;*/
                 case 'inactive_streak':
                     // Calcular días sin usar work ni daily
                     const now = Date.now();
@@ -486,9 +486,9 @@ class AchievementsSystem {
                 case 'unique_items':
                     currentValue = Object.keys(user.items || 0);
                     break;
-                case 'owns_item':
+/*                case 'owns_item':
                     currentValue = user.items[achievement.requirement.item];
-                    break;
+                    break;*/
                 case 'inactive_streak':
                     // Calcular días sin usar work ni daily
                     const now = Date.now();
