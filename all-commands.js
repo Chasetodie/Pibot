@@ -65,7 +65,7 @@ class AllCommands {
         const avatarUrl = targetUser ? targetUser.displayAvatarURL({ dynamic: true }) : message.author.displayAvatarURL({ dynamic: true });
 
         // Obtener items cosméticos equipados
-        const userItems = userData.items || {};
+        const userItems = user.items || {};
         const cosmetics = this.getCosmeticItems(userItems);
         
         // Obtener estado VIP
