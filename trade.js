@@ -13,6 +13,22 @@ class TradeSystem {
         this.tradeTimeout = 300000; // 5 minutos timeout
     }
 
+    async cleanupExpiredTrades() {
+        try {
+            const fiveMinutesAgo = new Date(Date.now() - this.tradeTimeout);
+            
+            const { error } = await this.supabase
+                .from('trades')
+                .update({ status: 'expired' })
+                .eq('status', 'pending')
+                .lt('created_at', fiveMinutesAgo.toISOString());
+                
+            if (error) console.error('Error limpiando trades:', error);
+        } catch (error) {
+            console.error('Error en cleanup:', error);
+        }
+    }
+
     async saveTradeToDb(tradeData) {
         const { data, error } = await this.supabase
             .from('trades')
@@ -117,10 +133,29 @@ class TradeSystem {
             return;
         }
         
-        // Timeout automático
-        setTimeout(() => {
-            if (this.activeTrades.has(userId)) {
-                this.cancelTrade(tradeData, 'timeout');
+        // Timeout automático - cancelar después de 5 minutos
+        setTimeout(async () => {
+            try {
+                // Verificar si el trade aún está activo
+                const { data: stillActive } = await this.supabase
+                    .from('trades')
+                    .select('status')
+                    .eq('id', tradeId)
+                    .single();
+                
+                if (stillActive && stillActive.status === 'pending') {
+                    await this.cancelTradeInDb(tradeId, 'timeout');
+                    
+                    // Notificar en el canal
+                    try {
+                        const channel = await message.client.channels.fetch(tradeData.channel);
+                        await channel.send(`⏰ El intercambio entre ${message.author} y ${targetUser} ha expirado por inactividad.`);
+                    } catch (err) {
+                        console.log('No se pudo notificar la expiración del trade');
+                    }
+                }
+            } catch (error) {
+                console.error('Error cancelando trade automáticamente:', error);
             }
         }, this.tradeTimeout);
         
