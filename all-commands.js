@@ -71,8 +71,10 @@ class AllCommands {
         // Obtener estado VIP
         const vipStatus = await this.shop.hasActiveVip(user.id);*/
 
+//        ${this.getProfileTitle(cosmetics, vipStatus)}
+
         const embed = new EmbedBuilder()
-            .setTitle(`💰 ${this.getProfileTitle(cosmetics, vipStatus)} ${displayName}`)
+            .setTitle(`💰 ${displayName}`)
             .setColor(this.getProfileColor(cosmetics, vipStatus))
             .setThumbnail(avatarUrl)
             .addFields(
