@@ -13,6 +13,86 @@ class TradeSystem {
         this.tradeTimeout = 300000; // 5 minutos timeout
     }
 
+    async acceptTradeButton(userId, tradeData) {
+        try {
+            // Convertir datos de DB
+            tradeData.initiatorOffer = tradeData.initiator_offer || [];
+            tradeData.targetOffer = tradeData.target_offer || [];
+            tradeData.initiatorMoneyOffer = tradeData.initiator_money_offer || 0;
+            tradeData.targetMoneyOffer = tradeData.target_money_offer || 0;
+            tradeData.initiatorAccepted = tradeData.initiator_accepted || false;
+            tradeData.targetAccepted = tradeData.target_accepted || false;
+            
+            // Verificar que ambos ofrecen algo
+            const initiatorHasOffer = tradeData.initiatorOffer.length > 0 || tradeData.initiatorMoneyOffer > 0;
+            const targetHasOffer = tradeData.targetOffer.length > 0 || tradeData.targetMoneyOffer > 0;
+            
+            if (!initiatorHasOffer || !targetHasOffer) {
+                const embed = new EmbedBuilder()
+                    .setTitle('🔄 Sistema de Intercambio - Guía')
+                    .setDescription('Aprende a intercambiar items y dinero con otros usuarios')
+                    .addFields(
+                        {
+                            name: '📝 Comandos Básicos',
+                            value: '`>trade @usuario` - Iniciar intercambio\n`>tradeadd <item_id> [cantidad]` - Agregar item\n`>trademoney <cantidad>` - Agregar dinero\n`>tradeaccept` - Aceptar intercambio\n`>tradecancel` - Cancelar intercambio',
+                            inline: false
+                        },
+                        {
+                            name: '⚠️ Reglas Importantes',
+                            value: '• Ambos usuarios deben ofrecer algo\n• Solo 5 minutos para completar\n• No puedes tener múltiples trades activos\n• Una vez aceptado por ambos, es irreversible',
+                            inline: false
+                        },
+                        {
+                            name: '🔄 Proceso paso a paso',
+                            value: '1️⃣ Inicia el trade con `>trade @usuario`\n2️⃣ Ambos agregan items/dinero\n3️⃣ Ambos aceptan con `>tradeaccept`\n4️⃣ ¡Intercambio completado!',
+                            inline: false
+                        },
+                        {
+                            name: '💡 Ejemplos',
+                            value: '`>trade @Juan123`\n`>tradeadd lucky_charm 2`\n`>trademoney 5000`\n`>tradeaccept`',
+                            inline: false
+                        }
+                    )
+                    .setColor('#00FF00')
+                    .setFooter({ text: 'Los trades expiran en 5 minutos automáticamente' })
+                    .setTimestamp();
+                
+                await message.reply({ embeds: [embed] });
+                return { success: false };
+            }
+            
+            // Marcar como aceptado
+            if (tradeData.initiator === userId) {
+                tradeData.initiatorAccepted = true;
+            } else {
+                tradeData.targetAccepted = true;
+            }
+            
+            // Actualizar en DB
+            await this.updateTradeInDb(tradeData);
+            
+            if (tradeData.initiatorAccepted && tradeData.targetAccepted) {
+                // Completar trade
+                const success = await this.completeTrade(tradeData);
+                return {
+                    success: success,
+                    completed: true,
+                    message: success ? '✅ ¡Intercambio completado exitosamente!' : '❌ Error completando el intercambio.'
+                };
+            } else {
+                return {
+                    success: true,
+                    completed: false,
+                    message: '✅ Has aceptado el intercambio. Esperando al otro usuario...'
+                };
+            }
+            
+        } catch (error) {
+            console.error('Error en acceptTradeButton:', error);
+            return { success: false, message: '❌ Error procesando la aceptación.' };
+        }
+    }
+    
     async cleanupExpiredTrades() {
         try {
             const fiveMinutesAgo = new Date(Date.now() - this.tradeTimeout);
@@ -308,7 +388,36 @@ class TradeSystem {
         const targetHasOffer = tradeData.targetOffer.length > 0 || tradeData.targetMoneyOffer > 0;
         
         if (!initiatorHasOffer || !targetHasOffer) {
-            await message.reply('❌ Ambos usuarios deben ofrecer algo para completar el intercambio.');
+            const embed = new EmbedBuilder()
+                .setTitle('🔄 Sistema de Intercambio - Guía')
+                .setDescription('Aprende a intercambiar items y dinero con otros usuarios')
+                .addFields(
+                    {
+                        name: '📝 Comandos Básicos',
+                        value: '`>trade @usuario` - Iniciar intercambio\n`>tradeadd <item_id> [cantidad]` - Agregar item\n`>trademoney <cantidad>` - Agregar dinero\n`>tradeaccept` - Aceptar intercambio\n`>tradecancel` - Cancelar intercambio',
+                        inline: false
+                    },
+                    {
+                        name: '⚠️ Reglas Importantes',
+                        value: '• Ambos usuarios deben ofrecer algo\n• Solo 5 minutos para completar\n• No puedes tener múltiples trades activos\n• Una vez aceptado por ambos, es irreversible',
+                        inline: false
+                    },
+                    {
+                        name: '🔄 Proceso paso a paso',
+                        value: '1️⃣ Inicia el trade con `>trade @usuario`\n2️⃣ Ambos agregan items/dinero\n3️⃣ Ambos aceptan con `>tradeaccept`\n4️⃣ ¡Intercambio completado!',
+                        inline: false
+                    },
+                    {
+                        name: '💡 Ejemplos',
+                        value: '`>trade @Juan123`\n`>tradeadd lucky_charm 2`\n`>trademoney 5000`\n`>tradeaccept`',
+                        inline: false
+                    }
+                )
+                .setColor('#00FF00')
+                .setFooter({ text: 'Los trades expiran en 5 minutos automáticamente' })
+                .setTimestamp();
+            
+            await message.reply({ embeds: [embed] });
             return;
         }
         
