@@ -159,16 +159,18 @@ class TradeSystem {
     async addItemToTrade(message, itemId, quantity = 1) {
         const userId = message.author.id;
         const tradeData = await this.getActiveTradeByUser(userId);
+        
         if (!tradeData) {
             await message.reply('❌ No tienes ningún intercambio activo.');
             return;
         }
         
-        tradeData.initiatorOffer = tradeData.initiator_offer || [];
-        tradeData.targetOffer = tradeData.target_offer || [];
+        // Convertir arrays de JSON a JavaScript
+        tradeData.initiatorOffer = Array.isArray(tradeData.initiator_offer) ? tradeData.initiator_offer : [];
+        tradeData.targetOffer = Array.isArray(tradeData.target_offer) ? tradeData.target_offer : [];
         tradeData.initiatorMoneyOffer = tradeData.initiator_money_offer || 0;
         tradeData.targetMoneyOffer = tradeData.target_money_offer || 0;
-        
+            
         // Verificar que el usuario tenga el item
         const user = await this.shop.economy.getUser(userId);
         const userItems = user.items || {};
@@ -203,13 +205,15 @@ class TradeSystem {
     async addMoneyToTrade(message, amount) {
         const userId = message.author.id;
         const tradeData = await this.getActiveTradeByUser(userId);
+        
         if (!tradeData) {
             await message.reply('❌ No tienes ningún intercambio activo.');
             return;
         }
         
-        tradeData.initiatorOffer = tradeData.initiator_offer || [];
-        tradeData.targetOffer = tradeData.target_offer || [];
+        // Convertir campos de DB
+        tradeData.initiatorOffer = Array.isArray(tradeData.initiator_offer) ? tradeData.initiator_offer : [];
+        tradeData.targetOffer = Array.isArray(tradeData.target_offer) ? tradeData.target_offer : [];
         tradeData.initiatorMoneyOffer = tradeData.initiator_money_offer || 0;
         tradeData.targetMoneyOffer = tradeData.target_money_offer || 0;
         
@@ -246,7 +250,7 @@ class TradeSystem {
         await this.updateTradeInDb(tradeData);
     }
     
-    // Aceptar intercambio
+    // En TradeSystem.js, reemplazar acceptTrade:
     async acceptTrade(message) {
         const userId = message.author.id;
         const tradeData = await this.getActiveTradeByUser(userId);
@@ -256,12 +260,32 @@ class TradeSystem {
             return;
         }
         
+        // Convertir datos de DB a formato JavaScript
+        tradeData.initiatorOffer = tradeData.initiator_offer || [];
+        tradeData.targetOffer = tradeData.target_offer || [];
+        tradeData.initiatorMoneyOffer = tradeData.initiator_money_offer || 0;
+        tradeData.targetMoneyOffer = tradeData.target_money_offer || 0;
+        tradeData.initiatorAccepted = tradeData.initiator_accepted || false;
+        tradeData.targetAccepted = tradeData.target_accepted || false;
+        
+        // VERIFICACIÓN: Ambos deben ofrecer algo
+        const initiatorHasOffer = tradeData.initiatorOffer.length > 0 || tradeData.initiatorMoneyOffer > 0;
+        const targetHasOffer = tradeData.targetOffer.length > 0 || tradeData.targetMoneyOffer > 0;
+        
+        if (!initiatorHasOffer || !targetHasOffer) {
+            await message.reply('❌ Ambos usuarios deben ofrecer algo para completar el intercambio.');
+            return;
+        }
+        
         // Marcar como aceptado
         if (tradeData.initiator === userId) {
             tradeData.initiatorAccepted = true;
         } else {
             tradeData.targetAccepted = true;
         }
+        
+        // Actualizar en base de datos
+        await this.updateTradeInDb(tradeData);
         
         if (tradeData.initiatorAccepted && tradeData.targetAccepted) {
             // Completar intercambio
@@ -392,55 +416,71 @@ class TradeSystem {
         return true;
     }
     
-    // Actualizar embed del intercambio
+    // En TradeSystem.js, reemplazar updateTradeEmbed:
     async updateTradeEmbed(channel, tradeData) {
-        const initiator = await channel.client.users.fetch(tradeData.initiator);
-        const target = await channel.client.users.fetch(tradeData.target);
-        
-        const embed = new EmbedBuilder()
-            .setTitle('🔄 Intercambio en Progreso')
-            .setDescription(`${initiator} ↔️ ${target}`)
-            .addFields(
-                { 
-                    name: `📦 Oferta de ${initiator.displayName} ${tradeData.initiatorAccepted ? '✅' : '⏳'}`, 
-                    value: this.formatOffer(tradeData.initiatorOffer, tradeData.initiatorMoneyOffer), 
-                    inline: true 
-                },
-                { 
-                    name: `📦 Oferta de ${target.displayName} ${tradeData.targetAccepted ? '✅' : '⏳'}`, 
-                    value: this.formatOffer(tradeData.targetOffer, tradeData.targetMoneyOffer), 
-                    inline: true 
-                }
-            )
-            .setColor('#FFA500')
-            .setFooter({ text: 'Ambos usuarios deben aceptar para completar el intercambio' });
-        
-        // Enviar nuevo embed (en implementación real, editarías el mensaje original)
-        await channel.send({ embeds: [embed] });
+        try {
+            const initiator = await channel.client.users.fetch(tradeData.initiator);
+            const target = await channel.client.users.fetch(tradeData.target);
+            
+            // Asegurar que los datos estén en formato correcto
+            const initiatorOffer = tradeData.initiatorOffer || tradeData.initiator_offer || [];
+            const targetOffer = tradeData.targetOffer || tradeData.target_offer || [];
+            const initiatorMoney = tradeData.initiatorMoneyOffer || tradeData.initiator_money_offer || 0;
+            const targetMoney = tradeData.targetMoneyOffer || tradeData.target_money_offer || 0;
+            const initiatorAccepted = tradeData.initiatorAccepted || tradeData.initiator_accepted || false;
+            const targetAccepted = tradeData.targetAccepted || tradeData.target_accepted || false;
+            
+            const embed = new EmbedBuilder()
+                .setTitle('🔄 Intercambio en Progreso')
+                .setDescription(`${initiator} ↔️ ${target}`)
+                .addFields(
+                    { 
+                        name: `📦 Oferta de ${initiator.displayName} ${initiatorAccepted ? '✅' : '⏳'}`, 
+                        value: this.formatOffer(initiatorOffer, initiatorMoney), 
+                        inline: true 
+                    },
+                    { 
+                        name: `📦 Oferta de ${target.displayName} ${targetAccepted ? '✅' : '⏳'}`, 
+                        value: this.formatOffer(targetOffer, targetMoney), 
+                        inline: true 
+                    }
+                )
+                .setColor('#FFA500')
+                .setFooter({ text: 'Ambos usuarios deben aceptar para completar el intercambio' });
+            
+            // Enviar nuevo embed
+            await channel.send({ embeds: [embed] });
+        } catch (error) {
+            console.error('Error actualizando embed de trade:', error);
+        }
     }
     
-    // Formatear oferta para mostrar
+    // En TradeSystem.js, reemplazar la función formatOffer completamente:
     formatOffer(itemOffers, moneyOffer) {
         let text = '';
         
-        if (itemOffers.length === 0 && moneyOffer === 0) {
+        // Asegurar que itemOffers sea un array válido
+        const offers = Array.isArray(itemOffers) ? itemOffers : [];
+        const money = moneyOffer || 0;
+        
+        if (offers.length === 0 && money === 0) {
             return 'Nada';
         }
         
-        if (itemOffers.length > 0) {
-            text += itemOffers.map(offer => {
+        if (offers.length > 0) {
+            text += offers.map(offer => {
                 const item = this.shop.shopItems[offer.id];
                 const itemName = item ? item.name : offer.id;
                 return `${itemName} x${offer.quantity}`;
             }).join('\n');
         }
         
-        if (moneyOffer > 0) {
+        if (money > 0) {
             if (text) text += '\n';
-            text += `💰 ${moneyOffer.toLocaleString('es-ES')} π-b$`;
+            text += `💰 ${money.toLocaleString('es-ES')} π-b$`;
         }
         
-        return text;
+        return text || 'Nada';
     }
 }
 
