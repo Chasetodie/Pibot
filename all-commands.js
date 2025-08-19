@@ -1483,7 +1483,7 @@ class AllCommands {
                 break;
                     
                 case '>recipes':
-                    await this.crafting.showRecipes(message);
+                    await this.crafting.showCraftingRecipes(message);
                     break;
                     
                 case '>craft':
