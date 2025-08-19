@@ -352,7 +352,7 @@ client.on('interactionCreate', async (interaction) => {
             const tradeId = interaction.customId.replace('trade_accept_', '');
             
             // Obtener trade por ID específico
-            const { data: tradeData } = await supabase
+            const { data: tradeData } = await trades.supabase
                 .from('trades')
                 .select('*')
                 .eq('id', tradeId)
@@ -655,3 +655,4 @@ client.login(process.env.TOKEN).then(() => {
 
 
 });
+
