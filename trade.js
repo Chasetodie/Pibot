@@ -103,18 +103,26 @@ class TradeSystem {
     }
 
     async updateTradeInDb(tradeData) {
+        const updateData = {
+            initiator_offer: tradeData.initiatorOffer || tradeData.initiator_offer || [],
+            target_offer: tradeData.targetOffer || tradeData.target_offer || [],
+            initiator_money_offer: tradeData.initiatorMoneyOffer || tradeData.initiator_money_offer || 0,
+            target_money_offer: tradeData.targetMoneyOffer || tradeData.target_money_offer || 0,
+            initiator_accepted: tradeData.initiatorAccepted || tradeData.initiator_accepted || false,
+            target_accepted: tradeData.targetAccepted || tradeData.target_accepted || false,
+            status: tradeData.status || 'pending'
+        };
+        
+        console.log('Actualizando trade con:', updateData); // Para debug
+        
         const { error } = await this.supabase
             .from('trades')
-            .update({
-                initiator_offer: tradeData.initiatorOffer,
-                target_offer: tradeData.targetOffer,
-                initiator_money_offer: tradeData.initiatorMoneyOffer,
-                target_money_offer: tradeData.targetMoneyOffer,
-                initiator_accepted: tradeData.initiatorAccepted,
-                target_accepted: tradeData.targetAccepted,
-                status: tradeData.status
-            })
+            .update(updateData)
             .eq('id', tradeData.id);
+        
+        if (error) {
+            console.error('Error actualizando trade:', error);
+        }
         
         return !error;
     }
@@ -280,9 +288,19 @@ class TradeSystem {
             offerArray.push({ id: itemId, quantity: quantity });
         }
         
+        // IMPORTANTE: Sincronizar con campos de DB
+        if (isInitiator) {
+            tradeData.initiator_offer = tradeData.initiatorOffer;
+        } else {
+            tradeData.target_offer = tradeData.targetOffer;
+        }
+        
         // Reset acceptance
         tradeData.initiatorAccepted = false;
         tradeData.targetAccepted = false;
+        // IMPORTANTE: También en formato DB
+        tradeData.initiator_accepted = false;
+        tradeData.target_accepted = false;
         
         await this.updateTradeEmbed(message.channel, tradeData);
         await message.reply(`✅ Agregado **${itemId}** x${quantity} a tu oferta.`);
@@ -320,18 +338,31 @@ class TradeSystem {
         // Agregar dinero a la oferta
         if (tradeData.initiator === userId) {
             tradeData.initiatorMoneyOffer += amount;
+            // IMPORTANTE: También actualizar el campo para DB
+            tradeData.initiator_money_offer = tradeData.initiatorMoneyOffer;
         } else {
             tradeData.targetMoneyOffer += amount;
+            // IMPORTANTE: También actualizar el campo para DB  
+            tradeData.target_money_offer = tradeData.targetMoneyOffer;
         }
         
         // Reset acceptance
         tradeData.initiatorAccepted = false;
         tradeData.targetAccepted = false;
+        // IMPORTANTE: También resetear en formato DB
+        tradeData.initiator_accepted = false;
+        tradeData.target_accepted = false;
 
         tradeData.initiatorOffer = tradeData.initiator_offer || [];
         tradeData.targetOffer = tradeData.target_offer || [];
         tradeData.initiatorMoneyOffer = tradeData.initiator_money_offer || 0;
         tradeData.targetMoneyOffer = tradeData.target_money_offer || 0;
+
+        console.log('Después de agregar dinero:');
+        console.log('tradeData.initiatorMoneyOffer:', tradeData.initiatorMoneyOffer);
+        console.log('tradeData.targetMoneyOffer:', tradeData.targetMoneyOffer);
+        console.log('tradeData.initiator_money_offer:', tradeData.initiator_money_offer);
+        console.log('tradeData.target_money_offer:', tradeData.target_money_offer);
         
         await this.updateTradeEmbed(message.channel, tradeData);
         await message.reply(`✅ Agregado **${amount.toLocaleString('es-ES')} π-b$** a tu oferta.`);
@@ -535,9 +566,24 @@ class TradeSystem {
                 )
                 .setColor('#FFA500')
                 .setFooter({ text: 'Ambos usuarios deben aceptar para completar el intercambio' });
-            
+
+            const buttons = new ActionRowBuilder()
+                .addComponents(
+                    new ButtonBuilder()
+                        .setCustomId(`trade_accept_${tradeId}`)
+                        .setLabel('✅ Aceptar')
+                        .setStyle(ButtonStyle.Success),
+                    new ButtonBuilder()
+                        .setCustomId(`trade_cancel_${tradeId}`)
+                        .setLabel('❌ Cancelar')
+                        .setStyle(ButtonStyle.Danger)
+                );
+                        
             // Enviar nuevo embed
-            await channel.send({ embeds: [embed] });
+            await channel.send({ 
+                embeds: [embed],
+                components: [buttons]
+            });
         } catch (error) {
             console.error('Error actualizando embed de trade:', error);
         }
