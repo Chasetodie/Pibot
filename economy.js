@@ -448,11 +448,6 @@ class EconomySystem {
 
         // Verificar cooldown
         if (now - lastXp < this.config.xpCooldown) {
-            // Actualizar contador de mensajes
-            const updateData = {
-                messages_count: (user.messages_count || 0) + 1
-            };
-            await this.updateUser(userId, updateData);
             return null; // Aún en cooldown
         }
 
@@ -487,7 +482,14 @@ class EconomySystem {
             }       
 
             const result = await this.addXp(userId, finalXp);
+            
+            // Actualizar contador de mensajes
+            const updateData = {
+                messages_count: (user.messages_count || 0) + 1
+            };
 
+            await this.updateUser(userId, updateData);
+            
             return {
                 levelUp: result.levelUp,
                 levelsGained: result.levelsGained,
