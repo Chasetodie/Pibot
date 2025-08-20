@@ -1,10 +1,11 @@
 require('dotenv').config();
 const { createClient } = require('@supabase/supabase-js');
+const LocalDatabase = require('./database');
 const EventsSystem = require('./events');
 
 class EconomySystem {
     constructor() {
-        this.initializeSupabase();
+        this.initializeDatabase();
         this.events = null;
         
         // Configuración del sistema
@@ -45,23 +46,13 @@ class EconomySystem {
     }
 
     // Inicializar Supabase
-    initializeSupabase() {
+    initializeDatabase() {
         try {
-            // Verificar que las variables de entorno existan
-            if (!process.env.SUPABASE_URL || !process.env.SUPABASE_ANON_KEY) {
-                throw new Error('❌ Variables de entorno de Supabase no configuradas. Revisa tu archivo .env');
-            }
+            this.db = new LocalDatabase();
 
-            this.supabase = createClient(
-                process.env.SUPABASE_URL,
-                process.env.SUPABASE_ANON_KEY
-            );
-
-            console.log('🚀 Supabase inicializado correctamente');
-            console.log(`📊 Proyecto: ${process.env.SUPABASE_URL}`);
+            console.log('🚀 SQLite inicializado correctamente');
         } catch (error) {
-            console.error('❌ Error inicializando Supabase:', error);
-            console.error('💡 Asegúrate de que tu archivo .env esté configurado correctamente');
+            console.error('❌ Error inicializando SQLite:', error);
         }
     }
 
@@ -77,7 +68,7 @@ class EconomySystem {
         
         try {
             // Buscar usuario existente
-            const { data: existingUser, error: fetchError } = await this.supabase
+            const { data: existingUser, error: fetchError } = await this.db
                 .from('users')
                 .select('*')
                 .eq('id', userId)
@@ -147,7 +138,7 @@ class EconomySystem {
                 updated_at: new Date().toISOString()
             };
 
-            const { data: createdUser, error: insertError } = await this.supabase
+            const { data: createdUser, error: insertError } = await this.db
                 .from('users')
                 .insert([newUser])
                 .select()
@@ -179,7 +170,7 @@ class EconomySystem {
                 updated_at: new Date().toISOString()
             };
 
-            const { data, error } = await this.supabase
+            const { data, error } = await this.db
                 .from('users')
                 .update(updateWithTimestamp)
                 .eq('id', userId)
@@ -219,7 +210,7 @@ class EconomySystem {
     // Obtener todos los usuarios (MIGRADO)
     async getAllUsers() {
         try {
-            const { data: users, error } = await this.supabase
+            const { data: users, error } = await this.db
                 .from('users')
                 .select('*');
 
@@ -534,7 +525,7 @@ class EconomySystem {
 
     async getBalanceLeaderboard(limit = 10) {
         try {
-            const { data: users, error } = await this.supabase
+            const { data: users, error } = await this.db
                 .from('users')
                 .select('id, balance, level, total_xp')
                 .order('balance', { ascending: false })
@@ -558,7 +549,7 @@ class EconomySystem {
 
     async getLevelLeaderboard(limit = 10) {
         try {
-            const { data: users, error } = await this.supabase
+            const { data: users, error } = await this.db
                 .from('users')
                 .select('id, balance, level, total_xp')
                 .order('total_xp', { ascending: false })
