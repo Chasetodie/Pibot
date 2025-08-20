@@ -422,6 +422,32 @@ class LocalDatabase {
             destination.on('error', reject);
         });
     }
+
+// AGREGAR AL FINAL del archivo database.js:
+
+    // Métodos específicos para eventos
+    async createServerEvent(eventData) {
+        return new Promise((resolve, reject) => {
+            this.db.run(`
+                INSERT INTO server_events (
+                    id, type, name, description, emoji, color,
+                    start_time, end_time, duration, multipliers,
+                    is_special, is_negative, is_rare, triggered_by,
+                    participant_count, stats
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            `, [
+                eventData.id, eventData.type, eventData.name,
+                eventData.description, eventData.emoji, eventData.color,
+                eventData.start_time, eventData.end_time, eventData.duration,
+                JSON.stringify(eventData.multipliers), eventData.is_special,
+                eventData.is_negative, eventData.is_rare, eventData.triggered_by,
+                eventData.participant_count, JSON.stringify(eventData.stats)
+            ], function(err) {
+                if (err) reject(err);
+                else resolve({ id: eventData.id });
+            });
+        });
+    }
 }
 
 module.exports = LocalDatabase;
