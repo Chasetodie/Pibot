@@ -6,11 +6,7 @@ class BettingSystem {
     constructor(economySystem) {
         this.economy = economySystem;
         
-        // Inicializar el cliente directamente
-        this.supabase = createClient(
-            process.env.SUPABASE_URL,
-            process.env.SUPABASE_ANON_KEY
-        );
+        this.db = this.economy.db;
         
         this.config = {
             minBet: 100,
@@ -24,17 +20,8 @@ class BettingSystem {
     // ✅ CAMBIO: Obtener apuesta de Supabase
     async getBet(betId) {
         try {
-            const { data: bet, error } = await this.supabase
-                .from('bets')
-                .select('*')
-                .eq('id', betId)
-                .single();
-
-            if (error && error.code !== 'PGRST116') { // PGRST116 = no encontrado
-                throw error;
-            }
-
-            return bet || null;
+            const bet = await this.db.getTrade(betId);
+            return bet;
         } catch (error) {
             console.error('❌ Error obteniendo apuesta:', error);
             return null;
@@ -44,24 +31,22 @@ class BettingSystem {
     // ✅ CAMBIO: Crear apuesta en Supabase
     async createBetInDB(betId, betData) {
         try {
-            const betWithTimestamp = {
-                ...betData,
-                created_at: new Date().toISOString(),
-                updated_at: new Date().toISOString()
+            // Adaptar datos para usar la tabla trades
+            const tradeData = {
+                id: betId,
+                initiator: betData.challenger,
+                target: betData.opponent,
+                initiator_money: betData.amount,
+                target_money: betData.amount,
+                initiator_items: { bet_description: betData.description },
+                target_items: {},
+                status: betData.status,
+                created_at: new Date().toISOString()
             };
-
-            const { data: createdBet, error } = await this.supabase
-                .from('bets')
-                .insert([betWithTimestamp])
-                .select()
-                .single();
-
-            if (error) {
-                throw error;
-            }
-
-            console.log(`🎲 Nueva apuesta creada en Supabase: ${betId}`);
-            return createdBet;
+            
+            await this.db.createTrade(tradeData);
+            console.log(`🎲 Nueva apuesta creada en SQLite: ${betId}`);
+            return tradeData;
         } catch (error) {
             console.error('❌ Error creando apuesta:', error);
             throw error;
@@ -71,23 +56,9 @@ class BettingSystem {
     // ✅ CAMBIO: Actualizar apuesta en Supabase
     async updateBet(betId, updateData) {
         try {
-            const updateWithTimestamp = {
-                ...updateData,
-                updated_at: new Date().toISOString()
-            };
-
-            const { data, error } = await this.supabase
-                .from('bets')
-                .update(updateWithTimestamp)
-                .eq('id', betId)
-                .select();
-
-            if (error) {
-                throw error;
-            }
-
-            console.log(`💾 Apuesta ${betId} actualizada en Supabase`);
-            return data[0];
+            await this.db.updateTrade(betId, updateData);
+            console.log(`💾 Apuesta ${betId} actualizada en SQLite`);
+            return { changes: 1 };
         } catch (error) {
             console.error('❌ Error actualizando apuesta:', error);
             throw error;
@@ -97,18 +68,29 @@ class BettingSystem {
     // ✅ CAMBIO: Obtener apuestas activas del usuario en Supabase
     async getUserActiveBets(userId) {
         try {
-            // Buscar apuestas donde el usuario es challenger u opponent
-            const { data: userBets, error } = await this.supabase
-                .from('bets')
-                .select('*')
-                .or(`challenger.eq.${userId},opponent.eq.${userId}`)
-                .in('status', ['pending', 'active']);
-
-            if (error) {
-                throw error;
-            }
-
-            return userBets || [];
+            return new Promise((resolve, reject) => {
+                this.db.db.all(`
+                    SELECT * FROM trades 
+                    WHERE (initiator = ? OR target = ?) 
+                    AND status IN ('pending', 'active')
+                    AND initiator_items LIKE '%bet_description%'
+                `, [userId, userId], (err, rows) => {
+                    if (err) {
+                        reject(err);
+                    } else {
+                        const bets = rows.map(row => ({
+                            id: row.id,
+                            challenger: row.initiator,
+                            opponent: row.target,
+                            amount: row.initiator_money,
+                            description: JSON.parse(row.initiator_items).bet_description,
+                            status: row.status,
+                            created_at: row.created_at
+                        }));
+                        resolve(bets);
+                    }
+                });
+            });
         } catch (error) {
             console.error('❌ Error obteniendo apuestas del usuario:', error);
             return [];
@@ -144,16 +126,13 @@ class BettingSystem {
     // ✅ CAMBIO: Eliminar apuesta de Supabase
     async deleteBet(betId) {
         try {
-            const { error } = await this.supabase
-                .from('bets')
-                .delete()
-                .eq('id', betId);
-
-            if (error) {
-                throw error;
-            }
-
-            console.log(`🗑️ Apuesta ${betId} eliminada de Supabase`);
+            await new Promise((resolve, reject) => {
+                this.db.db.run('DELETE FROM trades WHERE id = ?', [betId], (err) => {
+                    if (err) reject(err);
+                    else resolve();
+                });
+            });
+            console.log(`🗑️ Apuesta ${betId} eliminada de SQLite`);
         } catch (error) {
             console.error('❌ Error eliminando apuesta:', error);
             throw error;
@@ -281,68 +260,81 @@ class BettingSystem {
             return;
         }
         
-        // ✅ CAMBIO: Buscar apuesta pendiente en Supabase
-        const { data: pendingBets, error } = await this.supabase
-            .from('bets')
-            .select('*')
-            .eq('challenger', challengerUser.id)
-            .eq('opponent', opponentId)
-            .eq('status', 'pending');
+        // ✅ CAMBIAR: Buscar apuesta pendiente en SQLite
+        try {
+            const pendingBets = await new Promise((resolve, reject) => {
+                this.db.db.all(`
+                    SELECT * FROM trades 
+                    WHERE initiator = ? AND target = ? AND status = 'pending'
+                    AND initiator_items LIKE '%bet_description%'
+                `, [challengerUser.id, opponentId], (err, rows) => {
+                    if (err) reject(err);
+                    else resolve(rows);
+                });
+            });
 
-        if (error) {
+            if (!pendingBets || pendingBets.length === 0) {
+                await message.reply('❌ No hay apuestas pendientes de este usuario hacia ti.');
+                return;
+            }
+
+            // Convertir formato
+            const bet = {
+                id: pendingBets[0].id,
+                challenger: pendingBets[0].initiator,
+                opponent: pendingBets[0].target,
+                amount: pendingBets[0].initiator_money,
+                description: JSON.parse(pendingBets[0].initiator_items).bet_description
+            };
+
+            const betId = bet.id;
+    
+            const challengerData = await this.economy.getUser(bet.challenger);
+            const opponentData = await this.economy.getUser(bet.opponent);
+    
+            if (challengerData.balance < bet.amount) {
+                await this.deleteBet(betId);
+                return message.reply('❌ El retador ya no tiene suficientes fondos.');
+            }
+            if (opponentData.balance < bet.amount) {
+                return message.reply('❌ No tienes suficientes fondos para esta apuesta.');
+            }
+    
+            // Retirar dinero de ambos usuarios
+            await this.economy.removeMoney(bet.challenger, bet.amount, 'bet_escrow');
+            await this.economy.removeMoney(bet.opponent, bet.amount, 'bet_escrow');
+    
+            // Actualizar estado de la apuesta
+            await this.updateBet(betId, {
+                status: 'active',
+                accepted_at: Date.now()
+            });
+    
+            const embed = new EmbedBuilder()
+                .setTitle('✅ Apuesta Aceptada')
+                .setDescription('La apuesta está ahora activa!')
+                .addFields(
+                    { name: '⚔️ Retador', value: `<@${bet.challenger}>`, inline: true },
+                    { name: '🛡️ Oponente', value: `<@${bet.opponent}>`, inline: true },
+                    { name: '💰 Cantidad', value: `${this.formatNumber(bet.amount)} π-b$ cada uno`, inline: true },
+                    { name: '🎯 Descripción', value: bet.description, inline: false },
+                    { name: '📝 Resolución', value: `\`>resolvebet ${betId} challenger\` o \`>resolvebet ${betId} opponent\``, inline: false },
+                    { name: '🔄 Cancelar', value: `\`>cancelbet ${betId}\``, inline: false }
+                )
+                .setColor('#00FF00')
+                .setFooter({ text: `ID: ${betId}` })
+                .setTimestamp();
+    
+            await message.reply({ 
+                content: `ID: ${betId}`,
+                embeds: [embed],
+            });
+            
+        } catch (error) {
             console.error('❌ Error buscando apuestas pendientes:', error);
+            await message.reply('❌ Error al buscar apuestas pendientes.');
             return;
         }
-
-        if (!pendingBets || pendingBets.length === 0) {
-            await message.reply('❌ No hay apuestas pendientes de este usuario hacia ti.');
-            return;
-        }
-
-        // Tomar la primera apuesta pendiente
-        const bet = pendingBets[0];
-        const betId = bet.id;
-
-        const challengerData = await this.economy.getUser(bet.challenger);
-        const opponentData = await this.economy.getUser(bet.opponent);
-
-        if (challengerData.balance < bet.amount) {
-            await this.deleteBet(betId);
-            return message.reply('❌ El retador ya no tiene suficientes fondos.');
-        }
-        if (opponentData.balance < bet.amount) {
-            return message.reply('❌ No tienes suficientes fondos para esta apuesta.');
-        }
-
-        // Retirar dinero de ambos usuarios
-        await this.economy.removeMoney(bet.challenger, bet.amount, 'bet_escrow');
-        await this.economy.removeMoney(bet.opponent, bet.amount, 'bet_escrow');
-
-        // Actualizar estado de la apuesta
-        await this.updateBet(betId, {
-            status: 'active',
-            accepted_at: Date.now()
-        });
-
-        const embed = new EmbedBuilder()
-            .setTitle('✅ Apuesta Aceptada')
-            .setDescription('La apuesta está ahora activa!')
-            .addFields(
-                { name: '⚔️ Retador', value: `<@${bet.challenger}>`, inline: true },
-                { name: '🛡️ Oponente', value: `<@${bet.opponent}>`, inline: true },
-                { name: '💰 Cantidad', value: `${this.formatNumber(bet.amount)} π-b$ cada uno`, inline: true },
-                { name: '🎯 Descripción', value: bet.description, inline: false },
-                { name: '📝 Resolución', value: `\`>resolvebet ${betId} challenger\` o \`>resolvebet ${betId} opponent\``, inline: false },
-                { name: '🔄 Cancelar', value: `\`>cancelbet ${betId}\``, inline: false }
-            )
-            .setColor('#00FF00')
-            .setFooter({ text: `ID: ${betId}` })
-            .setTimestamp();
-
-        await message.reply({ 
-            content: `ID: ${betId}`,
-            embeds: [embed],
-        });
     }
 
     // ✅ CORREGIDO: Rechazar apuesta
@@ -355,31 +347,49 @@ class BettingSystem {
             return;
         }
         
-        // ✅ CAMBIO: Buscar en Supabase
-        const { data: pendingBets, error } = await this.supabase
-            .from('bets')
-            .select('*')
-            .eq('challenger', challengerUser.id)
-            .eq('opponent', opponentId)
-            .eq('status', 'pending');
+        // ✅ CAMBIAR: Buscar apuesta pendiente en SQLite
+        try {
+            const pendingBets = await new Promise((resolve, reject) => {
+                this.db.db.all(`
+                    SELECT * FROM trades 
+                    WHERE initiator = ? AND target = ? AND status = 'pending'
+                    AND initiator_items LIKE '%bet_description%'
+                `, [challengerUser.id, opponentId], (err, rows) => {
+                    if (err) reject(err);
+                    else resolve(rows);
+                });
+            });
 
-        if (error || !pendingBets || pendingBets.length === 0) {
-            await message.reply('❌ No hay apuestas pendientes de este usuario hacia ti.');
+            if (!pendingBets || pendingBets.length === 0) {
+                await message.reply('❌ No hay apuestas pendientes de este usuario hacia ti.');
+                return;
+            }
+
+            // Convertir formato
+            const bet = {
+                id: pendingBets[0].id,
+                challenger: pendingBets[0].initiator,
+                opponent: pendingBets[0].target,
+                amount: pendingBets[0].initiator_money,
+                description: JSON.parse(pendingBets[0].initiator_items).bet_description
+            };
+
+            const betId = bet.id;
+        
+            await this.deleteBet(betId);
+        
+            const embed = new EmbedBuilder()
+                .setTitle('❌ Apuesta Rechazada')
+                .setDescription(`<@${bet.opponent}> rechazó la apuesta de <@${bet.challenger}>`)
+                .setColor('#FF0000')
+                .setTimestamp();
+        
+            await message.reply({ embeds: [embed] });            
+        } catch (error) {
+            console.error('❌ Error buscando apuestas pendientes:', error);
+            await message.reply('❌ Error al buscar apuestas pendientes.');
             return;
         }
-
-        const bet = pendingBets[0];
-        const betId = bet.id;
-
-        await this.deleteBet(betId);
-
-        const embed = new EmbedBuilder()
-            .setTitle('❌ Apuesta Rechazada')
-            .setDescription(`<@${bet.opponent}> rechazó la apuesta de <@${bet.challenger}>`)
-            .setColor('#FF0000')
-            .setTimestamp();
-
-        await message.reply({ embeds: [embed] });
     }
 
     // ✅ CORREGIDO: Resolver apuesta
