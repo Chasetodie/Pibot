@@ -750,6 +750,11 @@ process.on('unhandledRejection', (error) => {
 process.on('SIGINT', () => {
     console.log('\n🔄 Cerrando bot...');
     saveCounters(counters);
+
+    if (economy.db) {
+        economy.db.close();
+    }
+    
     client.destroy();
     process.exit(0);
 });
@@ -762,6 +767,7 @@ client.login(process.env.TOKEN).then(() => {
 
 
 });
+
 
 
 
