@@ -420,6 +420,28 @@ class ShopSystem {
             'epic': '🟣',
             'legendary': '🟠'
         };
+
+        // AGREGAR ESTAS LÍNEAS:
+        this.itemCache = new Map();
+        this.cacheTimeout = 10 * 60 * 1000; // 10 minutos para items        
+    }
+
+    // AGREGAR esta función:
+    getCachedItems() {
+        const cached = this.itemCache.get('shop_items');
+        const now = Date.now();
+        
+        if (cached && (now - cached.timestamp) < this.cacheTimeout) {
+            return cached.items;
+        }
+        return null;
+    }
+
+    setCachedItems(items) {
+        this.itemCache.set('shop_items', {
+            items: items,
+            timestamp: Date.now()
+        });
     }
     
     // === TIENDA ===
