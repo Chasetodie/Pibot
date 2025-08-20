@@ -35,6 +35,10 @@ class EconomySystem {
             levelRequirement: 5, // Nivel mínimo para robar
             minTargetBalance: 500, // El objetivo debe tener al menos 500 coins
         };
+
+        // AGREGAR ESTAS LÍNEAS:
+        this.userCache = new Map();
+        this.cacheTimeout = 5 * 60 * 1000; // 5 minutos        
         
         // Map para trackear robos activos
         this.activeRobberies = new Map();
@@ -63,6 +67,14 @@ class EconomySystem {
 
     // Obtener o crear datos de un usuario (MIGRADO)
     async getUser(userId) {
+        // Verificar cache primero
+        const cached = this.userCache.get(userId);
+        const now = Date.now();
+
+        if (cached && (now - cached.timestamp) < this.cacheTimeout) {
+            return cached.user;
+        }
+        
         try {
             // Buscar usuario existente
             const { data: existingUser, error: fetchError } = await this.supabase
@@ -76,6 +88,11 @@ class EconomySystem {
             }
 
             if (existingUser) {
+                //Guardar en cache
+                this.userCache.set(userId, {
+                    user: existingUser,
+                    timestamp: now
+                });
                 return existingUser;
             }
 
@@ -140,6 +157,11 @@ class EconomySystem {
                 throw insertError;
             }
 
+            this.userCache.set(userId, {
+                user: createdUser,
+                timestamp: now
+            });
+
             console.log(`👤 Nuevo usuario creado en Supabase: ${userId}`);
             return createdUser;
 
@@ -167,13 +189,32 @@ class EconomySystem {
                 throw error;
             }
 
+            // IMPORTANTE: Actualizar cache tambien
+            const updateUser = data[0];
+            this.userCache.set(userId, {
+                user: updateUser,
+                timestamp: Date.now()
+            });
+
             console.log(`💾 Usuario ${userId} actualizado en Supabase`);
-            return data[0];
+            return updatedUser;
         } catch (error) {
             console.error('❌ Error actualizando usuario:', error);
             throw error;
         }
     }
+
+    // AGREGAR: Limpiar caché periódicamente
+    startCacheCleanup() {
+        setInterval(() => {
+            const now = Date.now();
+            for (const [userId, cached] of this.userCache) {
+                if (now - cached.timestamp > this.cacheTimeout) {
+                    this.userCache.delete(userId);
+                }
+            }
+        }, 10 * 60 * 1000); // Limpiar cada 10 minutos
+    }    
 
     // Obtener todos los usuarios (MIGRADO)
     async getAllUsers() {
@@ -405,9 +446,6 @@ class EconomySystem {
         const now = Date.now();
         const lastXp = this.userCooldowns.get(userId) || 0;
 
-        // Obtener usuario (ahora async)
-        const user = await this.getUser(userId);
-        
         // Verificar cooldown
         if (now - lastXp < this.config.xpCooldown) {
             // Actualizar contador de mensajes
@@ -417,10 +455,13 @@ class EconomySystem {
             await this.updateUser(userId, updateData);
             return null; // Aún en cooldown
         }
+
+        this.userCooldowns.set(userId, now);
+        
+        // Obtener usuario (ahora async)
+        const user = await this.getUser(userId);
         
         try {
-            this.userCooldowns.set(userId, now);
-
             // Agregar XP (ahora async)
             let finalXp = this.config.xpPerMessage;
             let eventMessage = '';
@@ -443,7 +484,7 @@ class EconomySystem {
                     eventMessage = `\n🎉 **Aniversario del Servidor** (+${finalXp - this.config.xpPerMessage} XP)`;
                     break;
                 }
-            }            
+            }       
 
             const result = await this.addXp(userId, finalXp);
 
