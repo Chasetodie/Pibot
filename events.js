@@ -6,11 +6,8 @@ class EventsSystem {
         this.economy = economySystem;
         this.client = client;
 
-        // Inicializar el cliente directamente
-        this.supabase = createClient(
-            process.env.SUPABASE_URL,
-            process.env.SUPABASE_ANON_KEY
-        );
+        this.db = null;
+        this.initializeDatabase();
         
         this.activeEvents = {};
         this.announcementChannelId = '1404905496644685834'; // Cambia esto al ID de tu canal de anuncios
@@ -153,119 +150,158 @@ class EventsSystem {
         }, 2000);
     }
 
-    // ✅ CAMBIO 2: Cargar eventos desde Supabase
+    // ✅ AGREGAR: Inicializar base de datos
+    async initializeDatabase() {
+        // Esperar a que economy esté listo
+        setTimeout(() => {
+            if (this.economy && this.economy.db) {
+                this.db = this.economy.db;
+                this.createEventsTable();
+                console.log('🎮 Base de datos de eventos inicializada');
+            } else {
+                console.log('⚠️ Economy no disponible, usando eventos en memoria');
+            }
+        }, 1000);
+    }
+
+    // ✅ AGREGAR: Crear tabla de eventos
+    createEventsTable() {
+        if (!this.db) return;
+        
+        this.db.db.run(`
+            CREATE TABLE IF NOT EXISTS server_events (
+                id TEXT PRIMARY KEY,
+                type TEXT NOT NULL,
+                name TEXT NOT NULL,
+                description TEXT,
+                emoji TEXT,
+                color TEXT,
+                start_time TEXT NOT NULL,
+                end_time TEXT NOT NULL,
+                duration INTEGER NOT NULL,
+                multipliers TEXT DEFAULT '{}',
+                is_special BOOLEAN DEFAULT 0,
+                is_negative BOOLEAN DEFAULT 0,
+                is_rare BOOLEAN DEFAULT 0,
+                triggered_by TEXT,
+                participant_count INTEGER DEFAULT 0,
+                stats TEXT DEFAULT '{}',
+                updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+            )
+        `, (err) => {
+            if (err) {
+                console.error('❌ Error creando tabla server_events:', err);
+            } else {
+                console.log('✅ Tabla server_events creada/verificada');
+            }
+        });
+    }
+    
+    // ✅ REEMPLAZAR: loadEvents() para SQLite
     async loadEvents() {
-        if (!this.supabase) {
-            console.log('⚠️ Supabase no disponible para cargar eventos');
+        if (!this.db) {
+            console.log('⚠️ Base de datos no disponible para cargar eventos');
             return;
         }
         
         try {
-            const { data: events, error } = await this.supabase
-                .from('server_events')
-                .select('*')
-                .gt('end_time', new Date().toISOString()); // Solo eventos no expirados
-            
-            if (error) {
-                throw error;
-            }
+            const events = await new Promise((resolve, reject) => {
+                this.db.db.all(`
+                    SELECT * FROM server_events 
+                    WHERE end_time > datetime('now')
+                `, (err, rows) => {
+                    if (err) reject(err);
+                    else resolve(rows);
+                });
+            });
             
             this.activeEvents = {};
             
             if (events && events.length > 0) {
                 events.forEach(event => {
-                    // Convertir timestamps de string a number si es necesario
                     this.activeEvents[event.id] = {
                         ...event,
                         startTime: new Date(event.start_time).getTime(),
                         endTime: new Date(event.end_time).getTime(),
-                        multipliers: event.multipliers || {},
-                        stats: event.stats || {
-                            messagesAffected: 0,
-                            workJobsAffected: 0,
-                            dailiesAffected: 0,
-                            gamesAffected: 0,
-                            treasuresFound: 0,
-                            totalTreasureValue: 0,
-                            totalXpGiven: 0
-                        }
+                        multipliers: JSON.parse(event.multipliers || '{}'),
+                        stats: JSON.parse(event.stats || '{}')
                     };
                 });
             }
             
-            console.log(`📅 ${Object.keys(this.activeEvents).length} eventos cargados desde Supabase`);
-            
-            // Limpiar eventos expirados al cargar
+            console.log(`📅 ${Object.keys(this.activeEvents).length} eventos cargados desde SQLite`);
             this.cleanExpiredEvents();
         } catch (error) {
-            console.error('❌ Error cargando eventos desde Supabase:', error);
+            console.error('❌ Error cargando eventos desde SQLite:', error);
         }
     }
 
-    // ✅ CAMBIO 3: Guardar evento en Supabase
+    // ✅ REEMPLAZAR: saveEvent() para SQLite
     async saveEvent(eventId, eventData) {
-        if (!this.supabase) {
-            console.log('⚠️ Supabase no disponible, evento no guardado:', eventId);
+        if (!this.db) {
+            console.log('⚠️ Base de datos no disponible, evento no guardado:', eventId);
             return;
         }
         
         try {
-            // Preparar datos para Supabase (snake_case y timestamps)
-            const supabaseData = {
-                id: eventData.id,
-                type: eventData.type,
-                name: eventData.name,
-                description: eventData.description,
-                emoji: eventData.emoji,
-                color: eventData.color,
-                start_time: new Date(eventData.startTime).toISOString(),
-                end_time: new Date(eventData.endTime).toISOString(),
-                duration: eventData.duration,
-                multipliers: eventData.multipliers || {},
-                is_special: eventData.isSpecial || false,
-                is_negative: eventData.isNegative || false,
-                is_rare: eventData.isRare || false,
-                triggered_by: eventData.triggeredBy || null,
-                participant_count: eventData.participantCount || 0,
-                stats: eventData.stats || {},
-                updated_at: new Date().toISOString()
-            };
+            const supabaseData = [
+                eventData.id,
+                eventData.type,
+                eventData.name,
+                eventData.description,
+                eventData.emoji,
+                eventData.color,
+                new Date(eventData.startTime).toISOString(),
+                new Date(eventData.endTime).toISOString(),
+                eventData.duration,
+                JSON.stringify(eventData.multipliers || {}),
+                eventData.isSpecial ? 1 : 0,
+                eventData.isNegative ? 1 : 0,
+                eventData.isRare ? 1 : 0,
+                eventData.triggeredBy || null,
+                eventData.participantCount || 0,
+                JSON.stringify(eventData.stats || {}),
+                new Date().toISOString()
+            ];
 
-            // Usar upsert para insertar o actualizar
-            const { error } = await this.supabase
-                .from('server_events')
-                .upsert([supabaseData]);
+            await new Promise((resolve, reject) => {
+                this.db.db.run(`
+                    INSERT OR REPLACE INTO server_events (
+                        id, type, name, description, emoji, color, 
+                        start_time, end_time, duration, multipliers,
+                        is_special, is_negative, is_rare, triggered_by,
+                        participant_count, stats, updated_at
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                `, supabaseData, (err) => {
+                    if (err) reject(err);
+                    else resolve();
+                });
+            });
 
-            if (error) {
-                throw error;
-            }
-
-            console.log(`💾 Evento ${eventId} guardado en Supabase`);
+            console.log(`💾 Evento ${eventId} guardado en SQLite`);
         } catch (error) {
-            console.error('❌ Error guardando evento en Supabase:', error);
+            console.error('❌ Error guardando evento en SQLite:', error);
         }
     }
     
-    // ✅ CAMBIO 4: Eliminar evento de Supabase
+    // ✅ REEMPLAZAR: deleteEvent() para SQLite
     async deleteEvent(eventId) {
-        if (!this.supabase) {
-            console.log('⚠️ Supabase no disponible, evento no eliminado:', eventId);
+        if (!this.db) {
+            console.log('⚠️ Base de datos no disponible, evento no eliminado:', eventId);
             return;
         }
         
         try {
-            const { error } = await this.supabase
-                .from('server_events')
-                .delete()
-                .eq('id', eventId);
+            await new Promise((resolve, reject) => {
+                this.db.db.run('DELETE FROM server_events WHERE id = ?', [eventId], (err) => {
+                    if (err) reject(err);
+                    else resolve();
+                });
+            });
 
-            if (error) {
-                throw error;
-            }
-
-            console.log(`🗑️ Evento ${eventId} eliminado de Supabase`);
+            console.log(`🗑️ Evento ${eventId} eliminado de SQLite`);
         } catch (error) {
-            console.error('❌ Error eliminando evento de Supabase:', error);
+            console.error('❌ Error eliminando evento de SQLite:', error);
         }
     }
 
@@ -285,6 +321,65 @@ class EventsSystem {
         console.log('🔄 Sistema de eventos iniciado');
     }
 
+    // ✅ OPTIMIZACIÓN: Caché para reducir consultas
+    getCachedEventData(key) {
+        const cached = this.eventCache.get(key);
+        const now = Date.now();
+        
+        if (cached && (now - cached.timestamp) < this.cacheTimeout) {
+            return cached.data;
+        }
+        return null;
+    }
+
+    setCachedEventData(key, data) {
+        this.eventCache.set(key, {
+            data: data,
+            timestamp: Date.now()
+        });
+    }
+
+    // ✅ OPTIMIZACIÓN: Batch updates para estadísticas
+    async batchUpdateEventStats(updates) {
+        if (!this.db || updates.length === 0) return;
+        
+        try {
+            await new Promise((resolve, reject) => {
+                this.db.db.serialize(() => {
+                    this.db.db.run('BEGIN TRANSACTION');
+                    
+                    for (const update of updates) {
+                        this.db.db.run(
+                            'UPDATE server_events SET stats = ?, updated_at = ? WHERE id = ?',
+                            [JSON.stringify(update.stats), new Date().toISOString(), update.eventId]
+                        );
+                    }
+                    
+                    this.db.db.run('COMMIT', (err) => {
+                        if (err) reject(err);
+                        else resolve();
+                    });
+                });
+            });
+            
+            console.log(`📊 ${updates.length} estadísticas de eventos actualizadas`);
+        } catch (error) {
+            console.error('❌ Error en batch update de estadísticas:', error);
+        }
+    }
+
+    // ✅ LIMPIEZA: Limpiar caché periódicamente
+    startCacheCleanup() {
+        setInterval(() => {
+            const now = Date.now();
+            for (const [key, cached] of this.eventCache) {
+                if (now - cached.timestamp > this.cacheTimeout) {
+                    this.eventCache.delete(key);
+                }
+            }
+        }, 10 * 60 * 1000); // Limpiar cada 10 minutos
+    }
+    
     // Intentar crear un evento aleatorio
     async tryCreateRandomEvent() {
         // No crear eventos si ya hay muchos activos
@@ -399,53 +494,77 @@ class EventsSystem {
         return Object.values(this.activeEvents).filter(event => event.endTime > now);
     }
 
-    // Aplicar modificadores de eventos a XP
+    // ✅ OPTIMIZACIÓN: Rate limiting para aplicar modificadores
     async applyXpModifiers(userId, baseXp, context = 'message') {
+        // Caché para evitar recálculos constantes
+        const cacheKey = `xp_${context}_${baseXp}`;
+        const cached = this.getCachedEventData(cacheKey);
+        
+        if (cached) {
+            // Solo actualizar estadísticas si hay eventos aplicados
+            if (cached.appliedEvents.length > 0) {
+                const updates = cached.appliedEvents.map(event => ({
+                    eventId: event.id,
+                    stats: {
+                        ...event.stats,
+                        messagesAffected: (event.stats.messagesAffected || 0) + 1
+                    }
+                }));
+                
+                // Batch update asíncrono
+                setTimeout(() => this.batchUpdateEventStats(updates), 100);
+            }
+            
+            return {
+                originalXp: baseXp,
+                finalXp: cached.finalXp,
+                appliedEvents: cached.appliedEvents
+            };
+        }
+
+        // Calcular modificadores normalmente si no está en caché
         let finalXp = baseXp;
         let appliedEvents = [];
         
         for (const event of this.getActiveEvents()) {
-            if (event.multipliers.xp)
-            {
+            if (event.multipliers.xp) {
                 switch (event.type) {
                     case 'double_xp':
-                        if (context === 'message')
-                        {
+                        if (context === 'message') {
                             finalXp = Math.floor(finalXp * event.multipliers.xp);
                             appliedEvents.push(event);
-                            event.stats.messagesAffected++;
                         }
                         break;
                     case 'fever_time':
-                        if (context === 'message' || context === 'games' || context === 'mission' || context === 'achievement')
-                        {
+                        if (['message', 'games', 'mission', 'achievement'].includes(context)) {
                             finalXp = Math.floor(finalXp * event.multipliers.xp);
                             appliedEvents.push(event);
-
-                            if(context === 'message') event.stats.messagesAffected++;
-                            if(context === 'games') event.stats.gamesAffected++;
                         }
                         break;
                     case 'server_anniversary':
-                        if (context === 'message' || context === 'games' || context === 'mission' || context === 'achievement')
-                        {
+                        if (['message', 'games', 'mission', 'achievement'].includes(context)) {
                             finalXp = Math.floor(finalXp * event.multipliers.xp);
                             appliedEvents.push(event);
-
-                            if(context === 'message') event.stats.messagesAffected++;
-                            if(context === 'games') event.stats.gamesAffected++;
                         }
-                        break;
-                    default:
                         break;
                 }
             }
         }
         
+        // Guardar en caché
+        this.setCachedEventData(cacheKey, { finalXp, appliedEvents });
+        
+        // Batch update de estadísticas
         if (appliedEvents.length > 0) {
-            for (const event of appliedEvents) {
-                await this.saveEvent(event.id, event);
-            }
+            const updates = appliedEvents.map(event => ({
+                eventId: event.id,
+                stats: {
+                    ...event.stats,
+                    messagesAffected: (event.stats.messagesAffected || 0) + 1
+                }
+            }));
+            
+            setTimeout(() => this.batchUpdateEventStats(updates), 100);
         }
         
         return {
