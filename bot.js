@@ -87,6 +87,7 @@ const commandHandler = new CommandHandler(counters, saveCounters);
 
 //Crear instancia del sistema de economia
 const economy = new EconomySystem();
+economy.startCacheCleanup();
 
 //Crear instancia del sistema de Minijuegos
 const minigames = new MinigamesSystem(economy);
@@ -633,6 +634,9 @@ client.on('interactionCreate', async (interaction) => {
     }
 });
 
+// Agregar al inicio de messageCreate:
+const messageRateLimit = new Map();
+
 // Manejar mensajes (COMANDOS + XP + ECONOMÍA)
 client.on('messageCreate', async (message) => {
     // Ignorar mensajes de bots
@@ -641,7 +645,15 @@ client.on('messageCreate', async (message) => {
     // AGREGAR ESTO AL INICIO:
     const userId = message.author.id;  
     const user = await economy.getUser(userId);
-  
+    const lastMessage = messageRateLimit.get(userId) || 0;
+
+    // Solo procesar un mensaje cada 10 segundos por usuario
+    if (now - lastMessage < 10000) {
+        return; // Skip procesamiento completo
+    }
+    
+    messageRateLimit.set(userId, now);
+    
     // Procesar XP por mensaje (solo en servidores, no en DMs)
     if (message.guild) {
         // Aplicar modificadores de eventos a XP
@@ -750,6 +762,7 @@ client.login(process.env.TOKEN).then(() => {
 
 
 });
+
 
 
 
