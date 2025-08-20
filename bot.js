@@ -113,6 +113,10 @@ setTimeout(async () => {
     console.log('✅ Sistemas de eventos listo');
 }, 2000);
 
+setInterval(async () => {
+    await economy.db.backup(); // Crear backup cada 6 horas
+}, 6 * 60 * 60 * 1000);
+
 const betting = new BettingSystem(economy);
 const trades = new TradeSystem(shop);
 const auctions = new AuctionSystem(shop);
@@ -132,7 +136,7 @@ economy.shop = shop;
 // Rutas del servidor web
 app.get('/', (req, res) => {
     res.send(`
-        <h1>Monilia Al Habla!</h1>
+        <h1>Pibot Al Habla!</h1>
         <p>Estado: <strong style="color: green;">ONLINE</strong></p>
         <p>Última verificación: ${new Date().toLocaleString()}</p>
         <p>Contadores actuales: Pibe ${counters.pibe}, Piba ${counters.piba}</p>
@@ -243,7 +247,7 @@ client.on('guildMemberAdd', async (member) => {
         
         // Crear el embed para el mensaje directo
         const embed = new EmbedBuilder()
-            .setTitle('¡Bienvenido/a a Prófugos del crotolamo!')
+            .setTitle('¡Bienvenido/a a Adictos a las píldoras!')
             .setDescription('Por favor selecciona tu género para asignarte un apodo:')
             .setColor('#5865F2')
             .addFields(
@@ -767,6 +771,7 @@ client.login(process.env.TOKEN).then(() => {
 
 
 });
+
 
 
 
