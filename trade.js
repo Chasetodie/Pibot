@@ -167,18 +167,7 @@ class TradeSystem {
 
     async getActiveTradeByUser(userId) {
         try {
-            // Verificar caché primero
-            for (const [tradeId, cached] of this.activeTradesCache) {
-                if (Date.now() - cached.timestamp < this.cacheTimeout) {
-                    const trade = cached.data;
-                    if ((trade.initiator === userId || trade.target === userId) && 
-                        trade.status === 'pending') {
-                        return trade;
-                    }
-                }
-            }
-            
-            // Si no está en caché, consultar DB
+            // SIEMPRE consultar la DB primero para estar seguros
             const [rows] = await this.database.pool.execute(`
                 SELECT * FROM trades 
                 WHERE (initiator = ? OR target = ?) 
@@ -194,8 +183,8 @@ class TradeSystem {
                     id: trade.id,
                     initiator: trade.initiator,
                     target: trade.target,
-                    initiator_offer: JSON.parse(trade.initiator_offer || '[]'),
-                    target_offer: JSON.parse(trade.target_offer || '[]'),
+                    initiator_offer: this.safeJsonParse(trade.initiator_offer, []),
+                    target_offer: this.safeJsonParse(trade.target_offer, []),
                     initiator_money_offer: trade.initiator_money_offer || 0,
                     target_money_offer: trade.target_money_offer || 0,
                     initiator_accepted: trade.initiator_accepted || false,
@@ -203,13 +192,21 @@ class TradeSystem {
                     status: trade.status
                 };
                 
-                // Agregar al caché
+                // Actualizar caché
                 this.activeTradesCache.set(trade.id, {
                     data: tradeData,
                     timestamp: Date.now()
                 });
                 
                 return tradeData;
+            }
+            
+            // Si no hay trade activo, limpiar cualquier entrada del caché para este usuario
+            for (const [tradeId, cached] of this.activeTradesCache) {
+                const cachedTrade = cached.data;
+                if (cachedTrade.initiator === userId || cachedTrade.target === userId) {
+                    this.activeTradesCache.delete(tradeId);
+                }
             }
             
             return null;
@@ -519,10 +516,17 @@ class TradeSystem {
     
     // Cancelar intercambio
     async cancelTrade(tradeData, reason = 'manual') {
-        await this.cancelTradeInDb(tradeData.id, reason);
+        const userId = message.author.id;
+        const tradeData = await this.getActiveTradeByUser(userId);
         
-        const reasonText = reason === 'timeout' ? 'por timeout' : 'manualmente';
-        // Notificar en el canal si es posible
+        if (!tradeData) {
+            await message.reply('❌ No tienes ningún intercambio activo.');
+            return;
+        }
+        
+        // ASEGURATE QUE ESTA LÍNEA ESTÉ:
+        await this.cancelTradeInDb(tradeData.id, 'manual');
+        await message.reply('✅ Intercambio cancelado.');
     }
     
     // Completar intercambio
@@ -644,9 +648,10 @@ class TradeSystem {
                 status: 'cancelled'
             });
             
-            // Remover del caché
+            // IMPORTANTE: Remover del caché
             this.activeTradesCache.delete(tradeId);
             
+            console.log(`✅ Trade ${tradeId} cancelado: ${reason}`);
             return true;
         } catch (error) {
             console.error('❌ Error cancelando trade:', error);
