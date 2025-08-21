@@ -57,9 +57,7 @@ class LocalDatabase {
                     daily_missions_date TEXT DEFAULT NULL,
                     daily_stats TEXT,
                     achievements TEXT,
-                    missions_reset_today BOOLEAN DEFAULT 0,
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+                    missions_reset_today BOOLEAN DEFAULT 0
                 )
             `);
 
@@ -74,8 +72,7 @@ class LocalDatabase {
                     category TEXT DEFAULT 'general',
                     effects TEXT DEFAULT '{}',
                     stock INTEGER DEFAULT -1,
-                    available BOOLEAN DEFAULT 1,
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    available BOOLEAN DEFAULT 1
                 )
             `);
 
@@ -92,7 +89,6 @@ class LocalDatabase {
                     status TEXT DEFAULT 'pending',
                     initiator_accepted BOOLEAN DEFAULT 0,
                     target_accepted BOOLEAN DEFAULT 0,
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     completed_at TEXT DEFAULT NULL
                 )
             `);
@@ -108,9 +104,7 @@ class LocalDatabase {
                     current_player_index INTEGER DEFAULT 0,
                     bullet_position INTEGER DEFAULT 0,
                     current_shot INTEGER DEFAULT 0,
-                    pot INTEGER DEFAULT 0,
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+                    pot INTEGER DEFAULT 0
                 )
             `);
 
@@ -123,9 +117,7 @@ class LocalDatabase {
                     bet_amount INTEGER NOT NULL,
                     players TEXT DEFAULT '[]',
                     phase TEXT DEFAULT 'waiting',
-                    game_data TEXT DEFAULT '{}',
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+                    game_data TEXT DEFAULT '{}'
                 )
             `);
 
@@ -146,9 +138,7 @@ class LocalDatabase {
                     is_rare BOOLEAN DEFAULT 0,
                     triggered_by TEXT,
                     participant_count INTEGER DEFAULT 0,
-                    stats TEXT DEFAULT '{}',
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+                    stats TEXT DEFAULT '{}'
                 )
             `);
 
@@ -165,7 +155,6 @@ class LocalDatabase {
                     bids TEXT DEFAULT '[]',
                     ends_at TEXT NOT NULL,
                     active BOOLEAN DEFAULT 1,
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     completed_at TEXT DEFAULT NULL
                 )
             `);
