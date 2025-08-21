@@ -521,6 +521,10 @@ class TradeSystem {
             const initiatorMoney = tradeData.initiatorMoneyOffer || tradeData.initiator_money_offer || 0;
             const targetMoney = tradeData.targetMoneyOffer || tradeData.target_money_offer || 0;
             
+            console.log('🔍 initiatorOffer:', initiatorOffer);
+            console.log('🔍 targetOffer:', targetOffer);
+            console.log('🔍 tipo:', typeof initiatorOffer, typeof targetOffer);
+
             // Verificar recursos antes de proceder
             if (!this.validateTradeResources(user1, initiatorOffer, initiatorMoney) ||
                 !this.validateTradeResources(user2, targetOffer, targetMoney)) {
