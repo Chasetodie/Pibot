@@ -113,15 +113,34 @@ class DatabaseMigrator {
       let type = 'TEXT';
       
       if (key === 'id') {
-        type = 'SERIAL PRIMARY KEY';
+        // Para IDs grandes de Telegram/Discord, usar BIGINT
+        if (typeof value === 'string' || (typeof value === 'number' && value > 2147483647)) {
+          type = 'BIGINT PRIMARY KEY';
+        } else {
+          type = 'SERIAL PRIMARY KEY';
+        }
+      } else if (key.includes('user_id') || key.includes('chat_id') || key.includes('_id')) {
+        // IDs externos también pueden ser muy grandes
+        type = 'BIGINT';
       } else if (typeof value === 'number') {
-        type = Number.isInteger(value) ? 'INTEGER' : 'DECIMAL';
+        // Números grandes usar BIGINT, decimales usar NUMERIC
+        if (Number.isInteger(value) && value > 2147483647) {
+          type = 'BIGINT';
+        } else if (Number.isInteger(value)) {
+          type = 'INTEGER';
+        } else {
+          type = 'NUMERIC';
+        }
       } else if (typeof value === 'boolean') {
         type = 'BOOLEAN';
       } else if (value instanceof Date) {
         type = 'TIMESTAMP';
-      } else if (key.includes('created_at') || key.includes('updated_at')) {
+      } else if (key.includes('created_at') || key.includes('updated_at') || key.includes('_at')) {
         type = 'TIMESTAMP';
+      } else if (typeof value === 'string' && value.length > 255) {
+        type = 'TEXT';
+      } else if (typeof value === 'string') {
+        type = 'VARCHAR(255)';
       }
       
       return `${key} ${type}`;
@@ -134,12 +153,13 @@ class DatabaseMigrator {
     `;
 
     console.log(`   🏗️  Creando/verificando tabla ${tableName}`);
+    console.log(`   🔧  Esquema: ${columns.join(', ')}`);
     await this.renderDB.query(createTableSQL);
   }
 
   async insertDataInBatches(tableName, data, batchSize = 100) {
     const columns = Object.keys(data[0]);
-    const placeholders = columns.map((_, i) => `$${i + 1}`).join(', ');
+    const placeholders = columns.map((_, i) => `${i + 1}`).join(', ');
     
     const insertSQL = `
       INSERT INTO ${tableName} (${columns.join(', ')}) 
@@ -156,14 +176,53 @@ class DatabaseMigrator {
       for (const row of batch) {
         const values = columns.map(col => {
           let value = row[col];
+          
           // Convertir fechas ISO string a objetos Date
           if (typeof value === 'string' && value.match(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/)) {
             value = new Date(value);
           }
+          
+          // Convertir IDs grandes de string a number si es posible
+          if (col === 'id' || col.includes('_id') || col.includes('user_id') || col.includes('chat_id')) {
+            if (typeof value === 'string' && /^\d+$/.test(value)) {
+              value = value; // Mantener como string para BIGINT
+            }
+          }
+          
+          // Limpiar valores que no pueden ser integers
+          if (typeof value === 'string' && !isNaN(value) && value.trim() !== '') {
+            // Solo convertir si parece un número válido
+            if (/^\d+$/.test(value.trim())) {
+              value = value.trim();
+            }
+          }
+          
+          // Manejar valores que no son números pero están en campos numéricos
+          if (typeof value === 'string' && col.includes('amount') || col.includes('balance') || col.includes('price')) {
+            if (!/^\d+(\.\d+)?$/.test(value)) {
+              console.log(`   ⚠️  Valor no numérico en campo ${col}: ${value}, usando 0`);
+              value = 0;
+            }
+          }
+          
           return value;
         });
         
-        await this.renderDB.query(insertSQL, values);
+        try {
+          await this.renderDB.query(insertSQL, values);
+        } catch (error) {
+          console.error(`   ❌ Error insertando fila:`, error.message);
+          console.error(`   📄 Datos problemáticos:`, row);
+          
+          // Intentar inserción más permisiva sin conflictos
+          const simpleInsert = `INSERT INTO ${tableName} (${columns.join(', ')}) VALUES (${placeholders})`;
+          try {
+            await this.renderDB.query(simpleInsert, values);
+            console.log(`   ✅ Inserción simple exitosa`);
+          } catch (simpleError) {
+            console.error(`   ❌ Falló inserción simple también:`, simpleError.message);
+          }
+        }
       }
       
       console.log(`   ⏳ Procesados ${Math.min(i + batchSize, data.length)}/${data.length} registros`);
