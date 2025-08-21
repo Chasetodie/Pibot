@@ -64,7 +64,7 @@ class LocalDatabase {
             // Tabla para items de tienda
             await this.pool.execute(`
                 CREATE TABLE IF NOT EXISTS shop_items (
-                    id TEXT PRIMARY KEY,
+                    id VARCHAR(255) PRIMARY KEY,
                     name TEXT NOT NULL,
                     description TEXT,
                     price INTEGER NOT NULL,
@@ -79,7 +79,7 @@ class LocalDatabase {
             // Tabla para trades
             await this.pool.execute(`
                 CREATE TABLE IF NOT EXISTS trades (
-                    id TEXT PRIMARY KEY,
+                    id VARCHAR(255) PRIMARY KEY,
                     initiator TEXT NOT NULL,
                     target TEXT NOT NULL,
                     initiator_items TEXT,
@@ -95,7 +95,7 @@ class LocalDatabase {
 
             await this.pool.execute(`
                 CREATE TABLE IF NOT EXISTS russian_games (
-                    id TEXT PRIMARY KEY,
+                    id VARCHAR(255) PRIMARY KEY,
                     channel_id TEXT NOT NULL,
                     creator_id TEXT NOT NULL,
                     bet_amount INTEGER NOT NULL,
@@ -111,7 +111,7 @@ class LocalDatabase {
             // Tabla para partidas UNO
             await this.pool.execute(`
                 CREATE TABLE IF NOT EXISTS uno_games (
-                    id TEXT PRIMARY KEY,
+                    id VARCHAR(255) PRIMARY KEY,
                     creator_id TEXT NOT NULL,
                     channel_id TEXT NOT NULL,
                     bet_amount INTEGER NOT NULL,
@@ -123,7 +123,7 @@ class LocalDatabase {
 
             await this.pool.execute(`
                 CREATE TABLE IF NOT EXISTS server_events (
-                    id TEXT PRIMARY KEY,
+                    id VARCHAR(255) PRIMARY KEY,
                     type TEXT NOT NULL,
                     name TEXT NOT NULL,
                     description TEXT,
@@ -145,7 +145,7 @@ class LocalDatabase {
             // Tabla para subastas
             await this.pool.execute(`
                 CREATE TABLE IF NOT EXISTS auctions (
-                    id TEXT PRIMARY KEY,
+                    id VARCHAR(255) PRIMARY KEY,
                     seller TEXT NOT NULL,
                     item_id TEXT,
                     item_name TEXT NOT NULL,
