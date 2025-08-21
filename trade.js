@@ -242,14 +242,27 @@ class TradeSystem {
             return;
         }
         
-        const existingTrade = await this.getActiveTradeByUser(userId);
-        if (existingTrade) {
+        // Verificar directamente en DB para estar seguros
+        const [userRows] = await this.database.pool.execute(`
+            SELECT * FROM trades 
+            WHERE (initiator = ? OR target = ?) 
+            AND status = 'pending'
+            LIMIT 1
+        `, [userId, userId]);
+
+        if (userRows.length > 0) {
             await message.reply('❌ Ya tienes un intercambio activo.');
             return;
         }
 
-        const targetExistingTrade = await this.getActiveTradeByUser(targetId);
-        if (targetExistingTrade) {
+        const [targetRows] = await this.database.pool.execute(`
+            SELECT * FROM trades 
+            WHERE (initiator = ? OR target = ?) 
+            AND status = 'pending'
+            LIMIT 1
+        `, [targetId, targetId]);
+
+        if (targetRows.length > 0) {
             await message.reply('❌ Ese usuario ya tiene un intercambio activo.');
             return;
         }
