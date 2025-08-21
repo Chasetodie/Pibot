@@ -15,7 +15,7 @@ class AuctionSystem {
     createAuctionsTable() {
         if (!this.db) return;
         
-        this.db.db.run(`
+        this.db.run(`
             CREATE TABLE IF NOT EXISTS auctions (
                 id TEXT PRIMARY KEY,
                 seller TEXT NOT NULL,
@@ -42,7 +42,7 @@ class AuctionSystem {
     async saveAuctionToDb(auction) {
         try {
             await new Promise((resolve, reject) => {
-                this.db.db.run(`
+                this.db.run(`
                     INSERT INTO auctions (
                         id, seller, item_id, item_name, starting_bid,
                         current_bid, highest_bidder, bids, ends_at, active
@@ -76,7 +76,7 @@ class AuctionSystem {
     async updateBidInDb(auctionId, auction) {
         try {
             await new Promise((resolve, reject) => {
-                this.db.db.run(`
+                this.db.run(`
                     UPDATE auctions 
                     SET current_bid = ?, highest_bidder = ?, bids = ?
                     WHERE id = ?
@@ -108,7 +108,7 @@ class AuctionSystem {
             }
             
             const auction = await new Promise((resolve, reject) => {
-                this.db.db.get(`
+                this.db.get(`
                     SELECT * FROM auctions 
                     WHERE id = ? AND active = 1
                 `, [auctionId], (err, row) => {
@@ -323,7 +323,7 @@ class AuctionSystem {
     async completeAuctionInDb(auctionId) {
         try {
             await new Promise((resolve, reject) => {
-                this.db.db.run(`
+                this.db.run(`
                     UPDATE auctions 
                     SET active = 0, completed_at = ?
                     WHERE id = ?
@@ -346,7 +346,7 @@ class AuctionSystem {
     async getActiveAuctions() {
         try {
             const auctions = await new Promise((resolve, reject) => {
-                this.db.db.all(`
+                this.db.all(`
                     SELECT * FROM auctions 
                     WHERE active = 1 
                     ORDER BY created_at DESC
