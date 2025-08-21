@@ -476,7 +476,7 @@ class LocalDatabase {
             await this.pool.execute(`
                 INSERT INTO russian_games (id, channel_id, creator_id, bet_amount, players, 
                                         phase, pot)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
             `, [
                 gameId,
                 gameData.channel_id,
@@ -562,7 +562,7 @@ class LocalDatabase {
             await this.pool.execute(`
                 INSERT INTO uno_games (id, creator_id, channel_id, bet_amount, 
                                     players, phase, game_data)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
             `, [
                 gameId,
                 gameData.creator_id,
