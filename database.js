@@ -386,9 +386,11 @@ class LocalDatabase {
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             `, [
                 tradeData.id, tradeData.initiator, tradeData.target,
-                JSON.stringify(tradeData.initiator_items || {}),
-                JSON.stringify(tradeData.target_items || {}),
-                tradeData.initiator_money || 0, tradeData.target_money || 0,
+                JSON.stringify(tradeData.initiator_offer || {}),
+                JSON.stringify(tradeData.target_offer || {}),
+                tradeData.initiator_money_offer || 0, tradeData.target_money_offer || 0,
+                tradeData.initiator_accepted || false,
+                tradeData.target_accepted || false,
                 tradeData.status || 'pending'
             ]);
             
