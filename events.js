@@ -164,7 +164,7 @@ class EventsSystem {
     
     // QUITAR todo el bloque de Supabase y REEMPLAZAR por:
     async loadEvents() {
-        if (!this.database) {
+        if (!this.db) {
             console.log('⚠️ Base de datos no disponible para cargar eventos');
             return;
         }
@@ -198,7 +198,7 @@ class EventsSystem {
 
     // ✅ REEMPLAZAR: saveEvent() para SQLite
     async saveEvent(eventId, eventData) {
-        if (!this.database) {
+        if (!this.db) {
             console.log('⚠️ Base de datos no disponible, evento no guardado:', eventId);
             return;
         }
@@ -213,13 +213,13 @@ class EventsSystem {
     
     // ✅ REEMPLAZAR: deleteEvent() para SQLite
     async deleteEvent(eventId) {
-        if (!this.database) {
+        if (!this.db) {
             console.log('⚠️ Base de datos no disponible, evento no eliminado:', eventId);
             return;
         }
         
         try {
-            await this.database.pool.execute(
+            await this.db.pool.execute(
                 'DELETE FROM server_events WHERE id = ?',
                 [eventId]
             );
