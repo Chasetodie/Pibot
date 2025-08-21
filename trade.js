@@ -81,15 +81,7 @@ class TradeSystem {
     
     async cleanupExpiredTrades() {
         try {
-            const fiveMinutesAgo = new Date(Date.now() - this.tradeTimeout);
-            
-            await this.database.pool.execute(`
-                UPDATE trades 
-                SET status = 'expired' 
-                WHERE status = 'pending' 
-            `);
-            
-            // Limpiar caché de trades expirados
+            // No hacer nada automático, solo limpiar caché
             for (const [tradeId, cached] of this.activeTradesCache) {
                 if (Date.now() - cached.timestamp > this.tradeTimeout) {
                     this.activeTradesCache.delete(tradeId);
