@@ -614,8 +614,6 @@ client.on('messageCreate', async (message) => {
     
     // AGREGAR ESTO AL INICIO:
     const userId = message.author.id;  
-    const user = await economy.getUser(userId);
-    const lastMessage = messageRateLimit.get(userId) || 0;
         
     // Procesar XP por mensaje (solo en servidores, no en DMs)
     if (message.guild) {
