@@ -4,6 +4,7 @@ const EventsSystem = require('./events');
 
 class EconomySystem {
     constructor() {
+        this.database = null;
         this.initializeDatabase();
         this.events = null;
         
@@ -44,12 +45,13 @@ class EconomySystem {
         this.activeRobberies = new Map();
     }
 
-    initializeDatabase() {
+    async initializeDatabase() {
         try {
             this.database = new LocalDatabase();
             console.log('🗄️ Base de datos MySQL inicializada correctamente');
         } catch (error) {
             console.error('❌ Error inicializando base de datos MySQL:', error);
+            this.database = null;
         }
     }
 
@@ -57,6 +59,10 @@ class EconomySystem {
         // Verificar cache primero
         const cached = this.userCache.get(userId);
         const now = Date.now();
+
+        if (!this.database) {
+            throw new Error('❌ Base de datos no inicializada');
+        }        
 
         if (cached && (now - cached.timestamp) < this.cacheTimeout) {
             return cached.user;
