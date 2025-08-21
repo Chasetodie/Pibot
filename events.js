@@ -162,28 +162,23 @@ class EventsSystem {
         }, 1000);
     }
     
-    // ✅ REEMPLAZAR: loadEvents() para SQLite
+    // QUITAR todo el bloque de Supabase y REEMPLAZAR por:
     async loadEvents() {
-        if (!this.db) {
+        if (!this.database) {
             console.log('⚠️ Base de datos no disponible para cargar eventos');
             return;
         }
         
         try {
-            const events = await new Promise((resolve, reject) => {
-                this.db.db.all(`
-                    SELECT * FROM server_events 
-                    WHERE end_time > datetime('now')
-                `, (err, rows) => {
-                    if (err) reject(err);
-                    else resolve(rows);
-                });
-            });
+            const [rows] = await this.db.pool.execute(
+                'SELECT * FROM server_events WHERE end_time > ?',
+                [new Date().toISOString()]
+            );
             
             this.activeEvents = {};
             
-            if (events && events.length > 0) {
-                events.forEach(event => {
+            if (rows && rows.length > 0) {
+                rows.forEach(event => {
                     this.activeEvents[event.id] = {
                         ...event,
                         startTime: new Date(event.start_time).getTime(),
@@ -194,79 +189,43 @@ class EventsSystem {
                 });
             }
             
-            console.log(`📅 ${Object.keys(this.activeEvents).length} eventos cargados desde SQLite`);
+            console.log(`📅 ${Object.keys(this.activeEvents).length} eventos cargados desde MySQL`);
             this.cleanExpiredEvents();
         } catch (error) {
-            console.error('❌ Error cargando eventos desde SQLite:', error);
+            console.error('❌ Error cargando eventos desde MySQL:', error);
         }
     }
 
     // ✅ REEMPLAZAR: saveEvent() para SQLite
     async saveEvent(eventId, eventData) {
-        if (!this.db) {
+        if (!this.database) {
             console.log('⚠️ Base de datos no disponible, evento no guardado:', eventId);
             return;
         }
         
         try {
-            const supabaseData = [
-                eventData.id,
-                eventData.type,
-                eventData.name,
-                eventData.description,
-                eventData.emoji,
-                eventData.color,
-                new Date(eventData.startTime).toISOString(),
-                new Date(eventData.endTime).toISOString(),
-                eventData.duration,
-                JSON.stringify(eventData.multipliers || {}),
-                eventData.isSpecial ? 1 : 0,
-                eventData.isNegative ? 1 : 0,
-                eventData.isRare ? 1 : 0,
-                eventData.triggeredBy || null,
-                eventData.participantCount || 0,
-                JSON.stringify(eventData.stats || {}),
-                new Date().toISOString()
-            ];
-
-            await new Promise((resolve, reject) => {
-                this.db.db.run(`
-                    INSERT OR REPLACE INTO server_events (
-                        id, type, name, description, emoji, color, 
-                        start_time, end_time, duration, multipliers,
-                        is_special, is_negative, is_rare, triggered_by,
-                        participant_count, stats, updated_at
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                `, supabaseData, (err) => {
-                    if (err) reject(err);
-                    else resolve();
-                });
-            });
-
-            console.log(`💾 Evento ${eventId} guardado en SQLite`);
+            await this.db.createServerEvent(eventData);
+            console.log(`💾 Evento ${eventId} guardado en MySQL`);
         } catch (error) {
-            console.error('❌ Error guardando evento en SQLite:', error);
+            console.error('❌ Error guardando evento en MySQL:', error);
         }
     }
     
     // ✅ REEMPLAZAR: deleteEvent() para SQLite
     async deleteEvent(eventId) {
-        if (!this.db) {
+        if (!this.database) {
             console.log('⚠️ Base de datos no disponible, evento no eliminado:', eventId);
             return;
         }
         
         try {
-            await new Promise((resolve, reject) => {
-                this.db.db.run('DELETE FROM server_events WHERE id = ?', [eventId], (err) => {
-                    if (err) reject(err);
-                    else resolve();
-                });
-            });
-
-            console.log(`🗑️ Evento ${eventId} eliminado de SQLite`);
+            await this.database.pool.execute(
+                'DELETE FROM server_events WHERE id = ?',
+                [eventId]
+            );
+            console.log(`🗑️ Evento ${eventId} eliminado de MySQL`);
         } catch (error) {
-            console.error('❌ Error eliminando evento de SQLite:', error);
+            console.error('❌ Error eliminando evento de MySQL:', error);
         }
     }
 
