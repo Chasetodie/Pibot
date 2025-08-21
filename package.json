@@ -4,7 +4,7 @@
   "description": "Bot de Discord MultiFuncional",
   "main": "bot.js",
   "scripts": {
-    "start": "node bot.js"
+    "start": "node script.js"
   },
   "engines": {
     "node": "20.x"

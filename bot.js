@@ -114,7 +114,7 @@ setTimeout(async () => {
 }, 2000);
 
 setInterval(async () => {
-    await economy.db.backup(); // Crear backup cada 6 horas
+    await economy.database.backup(); // Crear backup cada 6 horas
 }, 6 * 60 * 60 * 1000);
 
 const betting = new BettingSystem(economy);
@@ -686,8 +686,8 @@ process.on('SIGINT', () => {
     console.log('\n🔄 Cerrando bot...');
     saveCounters(counters);
 
-    if (economy.db) {
-        economy.db.close();
+    if (economy.database) {
+        economy.database.close();
     }
     
     client.destroy();
