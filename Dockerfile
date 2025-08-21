@@ -21,10 +21,10 @@ RUN git config --global user.name "Bot" && \
     git config --global user.email "bot@railway.app"
 
 # Exponer puerto (si es necesario)
-EXPOSE 3000
+EXPOSE 1010
 
 # Exponer puerto para el panel web
-EXPOSE 3000
+EXPOSE 1010
 
 # Comando para iniciar el bot
 CMD ["node", "bot.js"]

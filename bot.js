@@ -4,7 +4,7 @@ const fs = require('fs');
 const path = require('path');
 const sqlite3 = require('sqlite3').verbose();
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 1010;
 const CommandHandler = require('./commands'); // Importar el manejador de comandos
 const EconomySystem = require('./economy'); // Importar el sistema de economia
 const EventsSystem = require('./events');
@@ -137,6 +137,10 @@ economy.missions = missions;
 minigames.missions = missions;
 
 economy.shop = shop;
+
+app.listen(PORT, () => {
+    console.log(`Servidor web corriendo en puerto ${PORT}`);
+});
 
 // Evento cuando el bot está listo
 client.once('ready', async () => {

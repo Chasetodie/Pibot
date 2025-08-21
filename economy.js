@@ -54,7 +54,6 @@ class EconomySystem {
         }
     }
 
-    // Obtener o crear datos de un usuario (MIGRADO)
     async getUser(userId) {
         // Verificar cache primero
         const cached = this.userCache.get(userId);
@@ -65,95 +64,16 @@ class EconomySystem {
         }
         
         try {
-            // Buscar usuario existente
-            const { data: existingUser, error: fetchError } = await this.db
-                .from('users')
-                .select('*')
-                .eq('id', userId)
-                .single();
+            // ✅ NUEVO: Usar LocalDatabase
+            const user = await this.database.getUser(userId);
 
-            if (fetchError && fetchError.code !== 'PGRST116') { // PGRST116 = no encontrado
-                throw fetchError;
-            }
-
-            if (existingUser) {
-                //Guardar en cache
-                this.userCache.set(userId, {
-                    user: existingUser,
-                    timestamp: now
-                });
-                return existingUser;
-            }
-
-            // Crear nuevo usuario si no existe
-            const newUser = {
-                id: userId, // necesitamos especificar el ID
-                balance: 0,
-                level: 1,
-                xp: 0,
-                total_xp: 0, // snake_case para PostgreSQL
-                last_daily: 0,
-                last_work: 0,
-                last_robbery: 0,
-                last_coinflip: 0,
-                last_dice: 0,
-                last_roulette: 0,
-                last_lotto: 0,
-                last_blackjack: 0,
-                last_name_work: "",
-                messages_count: 0,
-                items: {}, // JSON field en PostgreSQL
-                stats: {
-                    totalEarned: 0,
-                    totalSpent: 0,
-                    dailyClaims: 0,
-                    work_count: 0,
-                    games_played: 0,
-                    lottery_wins: 0,
-                    robberies: 0,
-                    robberies_successful: 0,
-                    moneyStolen: 0,
-                    timesRobbed: 0,
-                    money_lost_to_robbers: 0,
-                    message_missions: "",
-                    message_achievements: ""
-                },
-                bet_stats: {
-                    wins: 0,
-                    losses: 0,
-                    total_won: 0,
-                    total_lost: 0,
-                    net_profit: 0
-                },
-                daily_missions: {},
-                daily_missions_date: null,
-                daily_stats: {
-                    messages_today: 0,
-                    work_today: 0,
-                    money_earned_today: 0
-                },
-                created_at: new Date().toISOString(),
-                updated_at: new Date().toISOString()
-            };
-
-            const { data: createdUser, error: insertError } = await this.db
-                .from('users')
-                .insert([newUser])
-                .select()
-                .single();
-
-            if (insertError) {
-                throw insertError;
-            }
-
+            // Guardar en cache
             this.userCache.set(userId, {
-                user: createdUser,
+                user: user,
                 timestamp: now
             });
 
-            console.log(`👤 Nuevo usuario creado en SQLite: ${userId}`);
-            return createdUser;
-
+            return user;
         } catch (error) {
             console.error('❌ Error obteniendo usuario:', error);
             throw error;
@@ -163,25 +83,15 @@ class EconomySystem {
     // Actualizar datos de usuario (MIGRADO)
     async updateUser(userId, updateData) {
         try {
-            const updateWithTimestamp = {
-                ...updateData,
-                updated_at: new Date().toISOString()
-            };
-
-            const { data, error } = await this.db
-                .from('users')
-                .update(updateWithTimestamp)
-                .eq('id', userId)
-                .select();
-
-            if (error) {
-                throw error;
-            }
-
-            // IMPORTANTE: Actualizar cache tambien
-            const updateUser = data[0];
+            // ✅ NUEVO: Usar LocalDatabase
+            await this.database.updateUser(userId, updateData);
+            
+            // Obtener usuario actualizado para cache
+            const updatedUser = await this.database.getUser(userId);
+            
+            // Actualizar cache
             this.userCache.set(userId, {
-                user: updateUser,
+                user: updatedUser,
                 timestamp: Date.now()
             });
 
@@ -208,18 +118,14 @@ class EconomySystem {
     // Obtener todos los usuarios (MIGRADO)
     async getAllUsers() {
         try {
-            const { data: users, error } = await this.db
-                .from('users')
-                .select('*');
-
-            if (error) throw error;
-
-            return users || []; // ✅ array directo
+            // ✅ NUEVO: Usar LocalDatabase
+            const users = await this.database.getAllUsers();
+            return users;
         } catch (error) {
             console.error('❌ Error obteniendo todos los usuarios:', error);
             return [];
         }
-}
+    }
 
     // Agregar dinero a un usuario
     async addMoney(userId, amount, reason = 'unknown') {
@@ -523,22 +429,9 @@ class EconomySystem {
 
     async getBalanceLeaderboard(limit = 10) {
         try {
-            const { data: users, error } = await this.db
-                .from('users')
-                .select('id, balance, level, total_xp')
-                .order('balance', { ascending: false })
-                .limit(limit);
-
-            if (error) {
-                throw error;
-            }
-            
-            return users.map(user => ({
-                userId: user.id,
-                balance: user.balance,
-                level: user.level,
-                totalXp: user.total_xp
-            }));
+            // ✅ NUEVO: Usar LocalDatabase
+            const users = await this.database.getBalanceLeaderboard(limit);
+            return users;
         } catch (error) {
             console.error('❌ Error obteniendo ranking de balance:', error);
             return [];
@@ -547,22 +440,9 @@ class EconomySystem {
 
     async getLevelLeaderboard(limit = 10) {
         try {
-            const { data: users, error } = await this.db
-                .from('users')
-                .select('id, balance, level, total_xp')
-                .order('total_xp', { ascending: false })
-                .limit(limit);
-
-            if (error) {
-                throw error;
-            }
-            
-            return users.map(user => ({
-                userId: user.id,
-                level: user.level,
-                totalXp: user.total_xp,
-                balance: user.balance
-            }));
+            // ✅ NUEVO: Usar LocalDatabase
+            const users = await this.database.getLevelLeaderboard(limit);
+            return users;
         } catch (error) {
             console.error('❌ Error obteniendo ranking de niveles:', error);
             return [];
