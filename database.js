@@ -48,15 +48,15 @@ class LocalDatabase {
                     last_roulette BIGINT DEFAULT 0,
                     last_lotto BIGINT DEFAULT 0,
                     last_blackjack BIGINT DEFAULT 0,
-                    last_name_work TEXT DEFAULT '',
+                    last_name_work TEXT,
                     messages_count INT DEFAULT 0,
-                    items TEXT DEFAULT '{}',
-                    stats TEXT DEFAULT '{}',
-                    bet_stats TEXT DEFAULT '{}',
-                    daily_missions TEXT DEFAULT '{}',
+                    items TEXT,
+                    stats TEXT,
+                    bet_stats TEXT,
+                    daily_missions TEXT,
                     daily_missions_date TEXT DEFAULT NULL,
-                    daily_stats TEXT DEFAULT '{}',
-                    achievements TEXT DEFAULT '{}',
+                    daily_stats TEXT,
+                    achievements TEXT,
                     missions_reset_today BOOLEAN DEFAULT 0,
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
@@ -200,12 +200,12 @@ class LocalDatabase {
             if (rows.length > 0) {
                 const user = rows[0];
                 // Parsear campos JSON de manera segura
-                user.items = this.safeJsonParse(user.items, {});
-                user.stats = this.safeJsonParse(user.stats, {});
-                user.bet_stats = this.safeJsonParse(user.bet_stats, {});
-                user.daily_missions = this.safeJsonParse(user.daily_missions, {});
-                user.daily_stats = this.safeJsonParse(user.daily_stats, {});
-                user.achievements = this.safeJsonParse(user.achievements, {});
+                user.items = this.safeJsonParse(user.items || '{}', {});
+                user.stats = this.safeJsonParse(user.stats || '{}', {});
+                user.bet_stats = this.safeJsonParse(user.bet_stats || '{}', {});
+                user.daily_missions = this.safeJsonParse(user.daily_missions || '{}', {});
+                user.daily_stats = this.safeJsonParse(user.daily_stats || '{}', {});
+                user.achievements = this.safeJsonParse(user.achievements || '{}', {});
                 return user;
             }
 
