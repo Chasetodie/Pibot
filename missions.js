@@ -454,7 +454,7 @@ class MissionsSystem {
     }
     
     // Actualizar progreso de misiones
-    async updateMissionProgress(userId, actionType, value = 1, maxChecks = 3, checkedInSession = new Set()) {
+    async updateMissionProgress(userId, actionType, value, maxChecks = 3, checkedInSession = new Set()) {
         const lastUpdate = this.updateCooldowns.get(userId) || 0;
         const now = Date.now();
         
