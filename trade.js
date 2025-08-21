@@ -558,8 +558,9 @@ class TradeSystem {
                 if (user2Items[offer.id]) {
                     user2Items[offer.id].quantity += offer.quantity;
                 } else {
+                    const originalItem = user1Items[offer.id];
                     user2Items[offer.id] = { 
-                        id: offer.id, 
+                        ...originalItem, 
                         quantity: offer.quantity, 
                         purchaseDate: new Date().toISOString() 
                     };
@@ -580,8 +581,9 @@ class TradeSystem {
                 if (user1Items[offer.id]) {
                     user1Items[offer.id].quantity += offer.quantity;
                 } else {
+                    const originalItem = user2Items[offer.id];
                     user1Items[offer.id] = { 
-                        id: offer.id, 
+                        ...originalItem, 
                         quantity: offer.quantity, 
                         purchaseDate: new Date().toISOString() 
                     };
