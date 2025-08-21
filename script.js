@@ -112,10 +112,6 @@ class DataMigration {
             daily_stats: supabaseUser.daily_stats || {},
             achievements: supabaseUser.achievements || {},
             missions_reset_today: supabaseUser.missions_reset_today || false,
-            
-            // Fechas
-            created_at: supabaseUser.created_at || new Date().toISOString(),
-            updated_at: new Date().toISOString()
         };
     }
 
