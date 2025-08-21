@@ -245,9 +245,9 @@ class MinigamesSystem {
         }
 
         // Al inicio del juego
-        if (this.economy.missions) {
-            await this.economy.missions.updateMissionProgress(userId, 'game_played');
-            await this.economy.missions.updateMissionProgress(userId, 'money_bet', betAmount);
+        if (this.missions) {
+            await this.missions.updateMissionProgress(userId, 'game_played');
+            await this.missions.updateMissionProgress(userId, 'money_bet', betAmount);
         }
 
         let winChance = 0.5; // 50% base
@@ -325,10 +325,10 @@ class MinigamesSystem {
             }            
 
             // Si gana el juego
-            if (this.economy.missions) {
-                await this.economy.missions.updateMissionProgress(userId, 'game_won');
-                await this.economy.missions.updateMissionProgress(userId, 'bet_won');
-                await this.economy.missions.updateMissionProgress(userId, 'money_earned_today', profit);
+            if (this.missions) {
+                await this.missions.updateMissionProgress(userId, 'game_won');
+                await this.missions.updateMissionProgress(userId, 'bet_won');
+                await this.missions.updateMissionProgress(userId, 'money_earned_today', profit);
             }
 
             let finalMessage = ''
@@ -464,9 +464,9 @@ class MinigamesSystem {
         }
 
         // Al inicio del juego
-        if (this.economy.missions) {
-            await this.economy.missions.updateMissionProgress(userId, 'game_played');
-            await this.economy.missions.updateMissionProgress(userId, 'money_bet', betAmount);
+        if (this.missions) {
+            await this.missions.updateMissionProgress(userId, 'game_played');
+            await this.missions.updateMissionProgress(userId, 'money_bet', betAmount);
         }
         
         // Tirar el dado
@@ -569,10 +569,10 @@ class MinigamesSystem {
             }
 
             // Si gana el juego
-            if (this.economy.missions) {
-                await this.economy.missions.updateMissionProgress(userId, 'game_won');
-                await this.economy.missions.updateMissionProgress(userId, 'bet_won');
-                await this.economy.missions.updateMissionProgress(userId, 'money_earned_today', profit);
+            if (this.missions) {
+                await this.missions.updateMissionProgress(userId, 'game_won');
+                await this.missions.updateMissionProgress(userId, 'bet_won');
+                await this.missions.updateMissionProgress(userId, 'money_earned_today', profit);
             }
 
             let finalMessage = ''
@@ -702,9 +702,9 @@ class MinigamesSystem {
         }
 
         // Al inicio del juego
-        if (this.economy.missions) {
-            await this.economy.missions.updateMissionProgress(userId, 'game_played');
-            await this.economy.missions.updateMissionProgress(userId, 'money_bet', betAmount);
+        if (this.missions) {
+            await this.missions.updateMissionProgress(userId, 'game_played');
+            await this.missions.updateMissionProgress(userId, 'money_bet', betAmount);
         }
         
         // Generar número ganador
@@ -803,10 +803,10 @@ class MinigamesSystem {
             }
 
             // Si gana el juego
-            if (this.economy.missions) {
-                await this.economy.missions.updateMissionProgress(userId, 'game_won');
-                await this.economy.missions.updateMissionProgress(userId, 'bet_won');
-                await this.economy.missions.updateMissionProgress(userId, 'money_earned_today', profit);
+            if (this.missions) {
+                await this.missions.updateMissionProgress(userId, 'game_won');
+                await this.missions.updateMissionProgress(userId, 'bet_won');
+                await this.missions.updateMissionProgress(userId, 'money_earned_today', profit);
             }
 
             let finalMessage = ''
@@ -947,9 +947,9 @@ class MinigamesSystem {
         }
 
         // Al inicio del juego
-        if (this.economy.missions) {
-            await this.economy.missions.updateMissionProgress(userId, 'game_played');
-            await this.economy.missions.updateMissionProgress(userId, 'money_bet', betAmount);
+        if (this.missions) {
+            await this.missions.updateMissionProgress(userId, 'game_played');
+            await this.missions.updateMissionProgress(userId, 'money_bet', betAmount);
         }
         
         // Verificar si ya hay un juego activo
@@ -1260,10 +1260,10 @@ class MinigamesSystem {
                 }
 
                 // Si gana el juego
-                if (this.economy.missions) {
-                    await this.economy.missions.updateMissionProgress(userId, 'game_won');
-                    await this.economy.missions.updateMissionProgress(userId, 'bet_won');
-                    await this.economy.missions.updateMissionProgress(userId, 'money_earned_today', profit);
+                if (this.missions) {
+                    await this.missions.updateMissionProgress(userId, 'game_won');
+                    await this.missions.updateMissionProgress(userId, 'bet_won');
+                    await this.missions.updateMissionProgress(userId, 'money_earned_today', profit);
                 }
                 break;
             case 'win':
@@ -1302,10 +1302,10 @@ class MinigamesSystem {
                 }
 
                 // Si gana el juego
-                if (this.economy.missions) {
-                    await this.economy.missions.updateMissionProgress(userId, 'game_won');
-                    await this.economy.missions.updateMissionProgress(userId, 'bet_won');
-                    await this.economy.missions.updateMissionProgress(userId, 'money_earned_today', profit);
+                if (this.missions) {
+                    await this.missions.updateMissionProgress(userId, 'game_won');
+                    await this.missions.updateMissionProgress(userId, 'bet_won');
+                    await this.missions.updateMissionProgress(userId, 'money_earned_today', profit);
                 }
                 break;
             case 'push':
@@ -1563,9 +1563,9 @@ class MinigamesSystem {
         }
 
         // Al inicio del juego
-        if (this.economy.missions) {
-            await this.economy.missions.updateMissionProgress(userId, 'game_played');
-            await this.economy.missions.updateMissionProgress(userId, 'money_bet', betAmount);
+        if (this.missions) {
+            await this.missions.updateMissionProgress(userId, 'game_played');
+            await this.missions.updateMissionProgress(userId, 'money_bet', betAmount);
         }
         
         // Validar tipo de apuesta
@@ -1665,10 +1665,10 @@ class MinigamesSystem {
             }
 
             // Si gana el juego
-            if (this.economy.missions) {
-                await this.economy.missions.updateMissionProgress(userId, 'game_won');
-                await this.economy.missions.updateMissionProgress(userId, 'bet_won');
-                await this.economy.missions.updateMissionProgress(userId, 'money_earned_today', profit);
+            if (this.missions) {
+                await this.missions.updateMissionProgress(userId, 'game_won');
+                await this.missions.updateMissionProgress(userId, 'bet_won');
+                await this.missions.updateMissionProgress(userId, 'money_earned_today', profit);
             }
 
             let finalMessage = ''
@@ -1963,9 +1963,9 @@ class MinigamesSystem {
         }
     
         // Al inicio del juego
-        if (this.economy.missions) {
-            await this.economy.missions.updateMissionProgress(userId, 'game_played');
-            await this.economy.missions.updateMissionProgress(userId, 'money_bet', betAmount);
+        if (this.missions) {
+            await this.missions.updateMissionProgress(userId, 'game_played');
+            await this.missions.updateMissionProgress(userId, 'money_bet', betAmount);
         }
     
         // Verificar si ya hay una partida activa en el canal
@@ -2559,10 +2559,10 @@ class MinigamesSystem {
             }
 
             // Si gana el juego
-            if (this.economy.missions) {
-                await this.economy.missions.updateMissionProgress(winner.id, 'game_won');
-                await this.economy.missions.updateMissionProgress(winner.id, 'bet_won');
-                await this.economy.missions.updateMissionProgress(winner.id, 'money_earned_today', winnerPrize);
+            if (this.missions) {
+                await this.missions.updateMissionProgress(winner.id, 'game_won');
+                await this.missions.updateMissionProgress(winner.id, 'bet_won');
+                await this.missions.updateMissionProgress(winner.id, 'money_earned_today', winnerPrize);
             }    
             embed.setTitle('🏆 ¡TENEMOS UN GANADOR! 🏆')
                 .setDescription(`🎉 **¡${winner.displayName} sobrevivió a la ruleta rusa!**`)
@@ -2742,9 +2742,9 @@ class MinigamesSystem {
         }
 
         // Actualizar misiones
-        if (this.economy.missions) {
-            await this.economy.missions.updateMissionProgress(userId, 'game_played');
-            await this.economy.missions.updateMissionProgress(userId, 'money_bet', betAmount);
+        if (this.missions) {
+            await this.missions.updateMissionProgress(userId, 'game_played');
+            await this.missions.updateMissionProgress(userId, 'money_bet', betAmount);
         }
 
         // Verificar si ya hay una partida activa en el canal
@@ -3838,9 +3838,9 @@ class MinigamesSystem {
         await this.economy.addMoney(winnerId, finalEarnings, 'uno_win');
 
         // Actualizar estadísticas
-        if (this.economy.missions) {
-            await this.economy.missions.updateMissionProgress(winnerId, 'game_won');
-            await this.economy.missions.updateMissionProgress(winnerId, 'money_won', winnings);
+        if (this.missions) {
+            await this.missions.updateMissionProgress(winnerId, 'game_won');
+            await this.missions.updateMissionProgress(winnerId, 'money_won', winnings);
         }
 
         const embed = new EmbedBuilder()
