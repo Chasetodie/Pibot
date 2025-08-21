@@ -753,6 +753,11 @@ class LocalDatabase {
             );
         });
     }
+
+    // Método para obtener conexión (para el panel web)
+    getConnection() {
+        return this.db;
+    }
 }
 
 module.exports = LocalDatabase;

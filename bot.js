@@ -1,5 +1,4 @@
 const { Client, GatewayIntentBits, ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder } = require('discord.js');
-const express = require('express');
 const fs = require('fs');
 const path = require('path');
 const CommandHandler = require('./commands'); // Importar el manejador de comandos
@@ -16,10 +15,6 @@ const {
     AuctionSystem,
     CraftingSystem
 } = require('./things-shop');
-
-// Configuración del servidor web para mantener activo el bot
-const app = express();
-const PORT = process.env.PORT || 3000;
 
 // Archivo para guardar los contadores
 const countersFile = path.join(__dirname, 'counters.json');
@@ -137,62 +132,6 @@ economy.missions = missions;
 minigames.missions = missions;
 
 economy.shop = shop;
-
-// Rutas del servidor web
-app.get('/', (req, res) => {
-    res.send(`
-        <h1>Pibot Al Habla!</h1>
-        <p>Estado: <strong style="color: green;">ONLINE</strong></p>
-        <p>Última verificación: ${new Date().toLocaleString()}</p>
-        <p>Contadores actuales: Pibe ${counters.pibe}, Piba ${counters.piba}</p>
-        <hr>
-        <h3>Configuración:</h3>
-        <p>Pibe inicial: ${process.env.PIBE_COUNT || 0}</p>
-        <p>Piba inicial: ${process.env.PIBA_COUNT || 0}</p>
-    `);
-});
-
-app.get('/status', (req, res) => {
-    res.json({
-        status: 'online',
-        uptime: process.uptime(),
-        timestamp: new Date().toISOString(),
-        counters: counters,
-        environment: {
-            pibe_initial: process.env.PIBE_COUNT || 0,
-            piba_initial: process.env.PIBA_COUNT || 0
-        }
-    });
-});
-
-app.get('/reset/:pibe/:piba', (req, res) => {
-    const { pibe, piba } = req.params;
-    const pibeCount = parseInt(pibe);
-    const pibaCount = parseInt(piba);
-    
-    if (!isNaN(pibeCount) && !isNaN(pibaCount) && pibeCount >= 0 && pibaCount >= 0) {
-        counters.pibe = pibeCount;
-        counters.piba = pibaCount;
-        saveCounters(counters);
-        
-        res.json({
-            success: true,
-            message: `Contadores actualizados: Pibe ${pibeCount}, Piba ${pibaCount}`,
-            counters: counters
-        });
-    } else {
-        res.status(400).json({
-            success: false,
-            message: 'Números inválidos. Usa: /reset/18/5'
-        });
-    }
-});
-
-// Iniciar servidor web
-app.listen(PORT, () => {
-    console.log(`Servidor web corriendo en puerto ${PORT}`);
-    console.log(`URL del bot: ${process.env.RAILWAY_PUBLIC_DOMAIN ? `https://${process.env.RAILWAY_PUBLIC_DOMAIN}` : `http://localhost:${PORT}`}`);
-});
 
 // Evento cuando el bot está listo
 client.once('ready', async () => {
@@ -760,12 +699,4 @@ client.login(process.env.TOKEN).then(() => {
     console.log('🚀 Proceso de login iniciado...');
 }).catch(error => {
     console.error('❌ Error en el login:', error);
-
-
 });
-
-
-
-
-
-
