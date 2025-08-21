@@ -13,7 +13,7 @@ class LocalDatabase {
                 host: 'mysql.db.bot-hosting.net',
                 port: 3306,
                 user: 'u469192_ViTTwSY6wl',
-                password: 'dsNIqtcJ@i@t+WqLlCrF3J5!',
+                password: '!oLZ^vxR^ymBVqD5CXuvIYeL',
                 database: 's469192_PibotDB'
             });
             
