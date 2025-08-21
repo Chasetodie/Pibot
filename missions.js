@@ -12,7 +12,6 @@ class MissionsSystem {
 
         // ✅ AGREGAR: Rate limiting para updateMissionProgress
         this.updateCooldowns = new Map();
-        this.updateCooldownTime = 1000; // 1 segundo entre updates
         
         // Todas las misiones disponibles
         this.availableMissions = {
@@ -454,18 +453,10 @@ class MissionsSystem {
     }
     
     // Actualizar progreso de misiones
-    async updateMissionProgress(userId, actionType, value, maxChecks = 3, checkedInSession = new Set()) {
-        const lastUpdate = this.updateCooldowns.get(userId) || 0;
-        const now = Date.now();
-        
-        if (now - lastUpdate < this.updateCooldownTime) {
-            return []; // Skip si es muy frecuente
-        }
-        
-        this.updateCooldowns.set(userId, now);
-        
+    async updateMissionProgress(userId, actionType, value, maxChecks = 3, checkedInSession = new Set()) {        
         const cacheKey = `missions_${userId}`;
         let user = this.missionsCache.get(cacheKey);
+        const now = Date.now();
 
         if (!user || (now - user.timestamp) > this.cacheTimeout) {
             await this.initializeDailyMissions(userId);
