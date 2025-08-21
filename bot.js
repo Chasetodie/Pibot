@@ -121,15 +121,15 @@ setInterval(async () => {
 
 const betting = new BettingSystem(economy);
 
-/*const trades = new TradeSystem(shop);
+const trades = new TradeSystem(shop);
 trades.startCacheCleanup();
 
-const auctions = new AuctionSystem(shop);
+/*const auctions = new AuctionSystem(shop);
 
 const crafting = new CraftingSystem(shop);*/
 
 // Instancia del sistema de comandos mejorados
-const allCommands = new AllCommands(economy, shop, trades, auctions, crafting, events, betting);
+const allCommands = new AllCommands(economy, shop, trades/*, auctions, crafting*/, events, betting);
 
 economy.achievements = achievements;
 minigames.achievements = achievements;
@@ -723,7 +723,7 @@ client.on('interactionCreate', async (interaction) => {
             return;
         }
 
-/*        if (interaction.customId.startsWith('trade_accept_')) {
+        if (interaction.customId.startsWith('trade_accept_')) {
             try {
                 // Evitar spam
                 await interaction.deferReply({ ephemeral: true });
@@ -843,7 +843,7 @@ client.on('interactionCreate', async (interaction) => {
                 }
             }
         }
-*/
+
         try {
             if (interaction.customId === 'uno_show_hand') {
                 const gameKey = `uno_${interaction.channelId}`;
@@ -1115,3 +1115,4 @@ client.login(process.env.TOKEN).then(() => {
     console.error('❌ Error en el login:', error);
 
 });
+
