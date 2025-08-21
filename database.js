@@ -12,11 +12,11 @@ class LocalDatabase {
         console.log('🔍 Probando credenciales MySQL...');
         
         const credentials = {
-            host: 'mysql.db.bot-hosting.net',
+            host: 'sql3.freesqldatabase.com',
             port: 3306,
-            user: 'u469192_ViTTwSY6wl',
-            password: '!oLZ%5EvxR%5EymBVqD5CXuvIYeL',
-            database: 's469192_PibotDB'
+            user: 'sql3795651',
+            password: 'byPCRPuUN3',
+            database: 'sql3795651'
         };
         
         // Test 1: Solo host y puerto
@@ -89,7 +89,7 @@ class LocalDatabase {
 
     async init() {
         await this.testConnection();
-        
+
         try {
             // Usar pool en lugar de conexión única
             this.pool = mysql.createPool({
