@@ -393,13 +393,7 @@ client.on('interactionCreate', async (interaction) => {
                 await trades.database.updateTrade(tradeId, {
                     status: 'cancelled'
                 });
-                    
-                if (error) {
-                    console.error('Error cancelando trade:', error);
-                    await interaction.editReply({ content: '❌ Error al cancelar el intercambio.' });
-                    return;
-                }
-                
+                                  
                 // Responder exitosamente
                 await interaction.editReply({ content: '✅ Intercambio cancelado exitosamente.' });
                 
