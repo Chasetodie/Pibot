@@ -245,8 +245,6 @@ class LocalDatabase {
                     money_earned_today: 0
                 },
                 achievements: {},
-                created_at: new Date().toISOString(),
-                updated_at: new Date().toISOString()
             };
 
             await this.pool.execute(`
@@ -385,7 +383,7 @@ class LocalDatabase {
         try {
             await this.pool.execute(`
                 INSERT INTO trades (id, initiator, target, initiator_items, target_items, 
-                                initiator_money, target_money, status, created_at)
+                                initiator_money, target_money, status)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())
             `, [
                 tradeData.id, tradeData.initiator, tradeData.target,
@@ -476,7 +474,7 @@ class LocalDatabase {
         try {
             await this.pool.execute(`
                 INSERT INTO russian_games (id, channel_id, creator_id, bet_amount, players, 
-                                        phase, pot, created_at)
+                                        phase, pot)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)
             `, [
                 gameId,
@@ -562,7 +560,7 @@ class LocalDatabase {
         try {
             await this.pool.execute(`
                 INSERT INTO uno_games (id, creator_id, channel_id, bet_amount, 
-                                    players, phase, game_data, created_at)
+                                    players, phase, game_data)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)
             `, [
                 gameId,
