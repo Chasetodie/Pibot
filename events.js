@@ -155,45 +155,11 @@ class EventsSystem {
         setTimeout(() => {
             if (this.economy && this.economy.database) {
                 this.db = this.economy.database;
-                this.createEventsTable();
                 console.log('🎮 Base de datos de eventos inicializada');
             } else {
                 console.log('⚠️ Economy no disponible, usando eventos en memoria');
             }
         }, 1000);
-    }
-
-    // ✅ AGREGAR: Crear tabla de eventos
-    createEventsTable() {
-        if (!this.db) return;
-        
-        this.db.db.run(`
-            CREATE TABLE IF NOT EXISTS server_events (
-                id TEXT PRIMARY KEY,
-                type TEXT NOT NULL,
-                name TEXT NOT NULL,
-                description TEXT,
-                emoji TEXT,
-                color TEXT,
-                start_time TEXT NOT NULL,
-                end_time TEXT NOT NULL,
-                duration INTEGER NOT NULL,
-                multipliers TEXT DEFAULT '{}',
-                is_special BOOLEAN DEFAULT 0,
-                is_negative BOOLEAN DEFAULT 0,
-                is_rare BOOLEAN DEFAULT 0,
-                triggered_by TEXT,
-                participant_count INTEGER DEFAULT 0,
-                stats TEXT DEFAULT '{}',
-                updated_at TEXT DEFAULT CURRENT_TIMESTAMP
-            )
-        `, (err) => {
-            if (err) {
-                console.error('❌ Error creando tabla server_events:', err);
-            } else {
-                console.log('✅ Tabla server_events creada/verificada');
-            }
-        });
     }
     
     // ✅ REEMPLAZAR: loadEvents() para SQLite
