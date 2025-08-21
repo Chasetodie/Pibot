@@ -128,6 +128,12 @@ class TradeSystem {
                 target_accepted: tradeData.targetAccepted || tradeData.target_accepted || false,
                 status: tradeData.status || 'pending'
             };
+
+            console.log('Updating:');
+            console.log('tradeData.initiatorOffer:', tradeData.initiatorOffer);
+            console.log('tradeData.targetOffer:', tradeData.targetOffer);
+            console.log('tradeData.initiator_offer:', tradeData.initiator_offer);
+            console.log('tradeData.target_offer:', tradeData.target_offer);
             
             await this.database.updateTrade(tradeData.id, updateData);
             
