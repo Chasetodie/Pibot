@@ -516,11 +516,13 @@ class MissionsSystem {
                 };
                 break;
             case 'money_earned_today':
+                const currentDailyStats = user.daily_stats || {};
                 updateData.daily_stats = {
-                    ...user.daily_stats,
-                    money_earned_today: (user.daily_stats.money_earned_today || 0) + value
+                    ...currentDailyStats,
+                    money_earned_today: (currentDailyStats.money_earned_today || 0) + value
                 };
-                break;                
+                console.log(`💰 Nuevo money_earned_today: ${updateData.daily_stats.money_earned_today}`);
+                break;        
             case 'game_played':
                 updateData.daily_stats = {
                     ...user.daily_stats,
@@ -584,9 +586,7 @@ class MissionsSystem {
                 };
                 break;
         }
-
-        console.log(`📊 updateData.daily_stats después del switch:`, updateData.daily_stats);
-        
+       
         // Verificar progreso de cada misión
         for (const [missionId, status] of Object.entries(user.daily_missions)) {
             if (status === 'completed' || checkedInSession.has(missionId)) continue;
@@ -694,8 +694,6 @@ class MissionsSystem {
             case 'work':
                 return stats.work_today || 0;
             case 'money_earned_today':
-                console.log(`🔍 DEBUG getCurrentProgress - stats:`, stats);
-                console.log(`🔍 DEBUG - money_earned_today value:`, stats.money_earned_today);
                 return stats.money_earned_today || 0;
             case 'games':
                 return stats.games_today || 0;
