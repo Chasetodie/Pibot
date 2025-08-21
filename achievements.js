@@ -728,12 +728,7 @@ class AchievementsSystem {
             // CAMBIAR ESTO: en lugar de getAllUsers()
             console.log('[DEBUG] Obteniendo todos los usuarios...');
             
-            // Opción A: Si tienes acceso a Supabase directamente
-            const { data: allUsers, error } = await this.economy.supabase
-                .from('users')
-                .select('id');
-                
-            if (error) throw error;
+            const allUsers = await this.economy.getAllUsers();
             
             console.log(`[DEBUG] Encontrados ${allUsers.length} usuarios`);
             

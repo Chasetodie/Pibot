@@ -1,5 +1,4 @@
 const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, AttachmentBuilder } = require('discord.js');
-const { createClient } = require('@supabase/supabase-js');
 const fs = require('fs');
 const path = require('path');
 const EventsSystem = require('./events');
@@ -15,7 +14,6 @@ class MinigamesSystem {
         this.economy = economySystem;
         this.events = null;
         this.activeGames = new Map(); // Para manejar juegos en progreso
-        this.supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_ANON_KEY);
         
         // Configuración de minijuegos
         this.config = {
@@ -1872,14 +1870,7 @@ class MinigamesSystem {
 
     async getRussianGame(gameId) {
         try {
-            const { data, error } = await this.supabase
-                .from('russian_game')
-                .select('*')
-                .eq('id', gameId)
-                .single();
-            
-            if (error) return null;
-            return data;
+            return await this.economy.database.getRussianGame(gameId);
         } catch (error) {
             console.error('⚠️ Error obteniendo partida:', error);
             return null;
@@ -1888,21 +1879,7 @@ class MinigamesSystem {
 
     async createRussianGameInDB(gameId, gameData) {
         try {
-            const gameWithTimestamp = {
-                ...gameData,
-                id: gameId,
-                created_at: new Date().toISOString(),
-                updated_at: new Date().toISOString()
-            };
-            
-            const { data, error } = await this.supabase
-                .from('russian_game')
-                .insert([gameWithTimestamp])
-                .select()
-                .single();
-                
-            if (error) throw error;
-            return data;
+            return await this.economy.database.createRussianGame(gameId, gameData);
         } catch (error) {
             console.error('⚠️ Error creando partida:', error);
             throw error;
@@ -1911,17 +1888,7 @@ class MinigamesSystem {
 
     async updateRussianGame(gameId, updateData) {
         try {
-            const updateWithTimestamp = {
-                ...updateData,
-                updated_at: new Date().toISOString()
-            };
-            
-            const { error } = await this.supabase
-                .from('russian_game')
-                .update(updateWithTimestamp)
-                .eq('id', gameId);
-                
-            if (error) throw error;
+            await this.economy.database.updateRussianGame(gameId, updateData);
         } catch (error) {
             console.error('⚠️ Error actualizando partida:', error);
         }
@@ -1929,12 +1896,7 @@ class MinigamesSystem {
 
     async deleteRussianGame(gameId) {
         try {
-            const { error } = await this.supabase
-                .from('russian_game')
-                .delete()
-                .eq('id', gameId);
-                
-            if (error) throw error;
+            await this.economy.database.deleteRussianGame(gameId);
         } catch (error) {
             console.error('⚠️ Error eliminando partida:', error);
         }
@@ -2644,12 +2606,7 @@ class MinigamesSystem {
 
     async loadActiveRussianGames(client) {
         try {
-            const { data, error } = await this.supabase
-                .from('russian_game')
-                .select('*')
-                .in('phase', ['waiting', 'playing']);
-                
-            if (error) throw error;
+            const data = await this.economy.database.getActiveRussianGames();
             
             for (const gameData of data) {
                 const gameKey = gameData.id;
@@ -3934,27 +3891,20 @@ class MinigamesSystem {
     // Funciones de base de datos (adaptar a tu sistema)
     async createUnoGameInDB(gameId, gameData) {
         try {
-            // Limpiar datos para la base de datos
             const cleanGameData = {
                 ...gameData,
                 turn_timeout: null,
                 join_timeout: null
             };
             
-            const { error } = await this.supabase
-                .from('uno_games')
-                .insert({
-                    id: gameId,
-                    creator_id: gameData.creator_id,
-                    channel_id: gameData.channel_id,
-                    bet_amount: gameData.bet_amount,
-                    players: gameData.players,
-                    phase: gameData.phase,
-                    game_data: cleanGameData, // ← Usar datos limpios
-                    created_at: new Date()
-                });
-
-            if (error) console.error('Error creating UNO game:', error);
+            await this.economy.database.createUnoGame(gameId, {
+                creator_id: gameData.creator_id,
+                channel_id: gameData.channel_id,
+                bet_amount: gameData.bet_amount,
+                players: gameData.players,
+                phase: gameData.phase,
+                game_data: cleanGameData
+            });
         } catch (error) {
             console.error('Database error:', error);
         }
@@ -3971,17 +3921,11 @@ class MinigamesSystem {
         try {
             const cleanGameData = this.cleanGameDataForDB(gameData);
             
-            const { error } = await this.supabase
-                .from('uno_games')
-                .update({
-                    players: gameData.players,
-                    phase: gameData.phase,
-                    game_data: cleanGameData,
-                    updated_at: new Date()
-                })
-                .eq('id', gameData.id);
-
-            if (error) console.error('Error updating UNO game:', error);
+            await this.economy.database.updateUnoGame(gameData.id, {
+                players: gameData.players,
+                phase: gameData.phase,
+                game_data: cleanGameData
+            });
         } catch (error) {
             console.error('Database error:', error);
         }
@@ -3990,12 +3934,7 @@ class MinigamesSystem {
     async deleteUnoGameFromDB(gameId) {
         // Implementar según tu sistema
         try {
-            const { error } = await this.supabase
-                .from('uno_games')
-                .delete()
-                .eq('id', gameId);
-
-            if (error) console.error('Error deleting UNO game:', error);
+            await this.economy.database.deleteUnoGame(gameId);
         } catch (error) {
             console.error('Database error:', error);
         }
@@ -4054,16 +3993,8 @@ class MinigamesSystem {
 
     async loadActiveUnoGames(client) {
         try {
-            const { data, error } = await this.supabase
-                .from('uno_games')
-                .select('*')
-                .neq('phase', 'finished');
-    
-            if (error) {
-                console.error('Error loading UNO games:', error);
-                return;
-            }
-    
+            const data = await this.economy.database.getActiveUnoGames();
+
             for (let gameData of data) {
                 const game = gameData.game_data;
                 this.activeGames.set(game.id, game);
@@ -4074,7 +4005,7 @@ class MinigamesSystem {
                     //this.startTurnTimer(game, message);
                 }
             }
-    
+
             console.log(`Loaded ${data.length} active UNO games`);
         } catch (error) {
             console.error('Error connecting to database:', error);

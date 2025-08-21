@@ -1551,6 +1551,84 @@ class AllCommands {
                 case '>shopstats':
                     await this.shopStatsCommand(message);
                     break;
+                case '>backup':
+                case '>downloaddb':
+                    if (!message.member.permissions.has('Administrator') && message.author.id !== '488110147265232898') {
+                        return message.reply('❌ Solo mi creador puede usar este comando.');
+                    }
+                    
+                    try {
+                        const backupPath = await database.backup();
+                        
+                        // Enviar el archivo como attachment
+                        const attachment = new AttachmentBuilder(backupPath, { 
+                            name: `bot_backup_${Date.now()}.db` 
+                        });
+                        
+                        await message.reply({ 
+                            content: '📦 **Backup de la base de datos creado:**',
+                            files: [attachment] 
+                        });
+                        
+                        // Limpiar archivo temporal después de enviarlo
+                        setTimeout(() => {
+                            if (fs.existsSync(backupPath)) {
+                                fs.unlinkSync(backupPath);
+                            }
+                        }, 10000);
+                        
+                    } catch (error) {
+                        console.error('Error creando backup:', error);
+                        await message.reply('❌ Error creando el backup.');
+                    }
+
+                    break;
+                case '>syncdb':
+                case '>pushdb':
+                    if (message.author.id !== '488110147265232898') {
+                        return message.reply('❌ Solo mi creador puede sincronizar la base de datos.');
+                    }
+                    
+                    try {
+                        await message.reply('🔄 Sincronizando base de datos con GitHub...');
+                        
+                        // Comando git para agregar, commitear y pushear
+                        exec('git add bot_data.db && git commit -m "Auto-update database from bot" && git push', 
+                            (error, stdout, stderr) => {
+                                if (error) {
+                                    console.error('Git error:', error);
+                                    message.channel.send(`❌ **Error sincronizando:**\n\`\`\`${error.message}\`\`\``);
+                                } else {
+                                    console.log('Git stdout:', stdout);
+                                    if (stderr) console.log('Git stderr:', stderr);
+                                    message.channel.send('✅ **Base de datos sincronizada con GitHub!** 🚀');
+                                }
+                            }
+                        );
+                    } catch (error) {
+                        console.error('Sync error:', error);
+                        message.reply('❌ Error durante la sincronización.');
+                    }
+                case '>forcedb':
+                    if (message.author.id !== '488110147265232898') {
+                        return message.reply('❌ Solo mi creador puede usar este comando.');
+                    }
+                    
+                    try {
+                        await message.reply('🔄 Forzando sync de base de datos...');
+                        
+                        exec('git add bot_data.db && git commit --allow-empty -m "Force database sync" && git push', 
+                            (error, stdout, stderr) => {
+                                if (error) {
+                                    message.channel.send(`❌ **Error:**\n\`\`\`${error.message}\`\`\``);
+                                } else {
+                                    message.channel.send('✅ **Sync forzado completado!** 💪');
+                                }
+                            }
+                        );
+                    } catch (error) {
+                        message.reply('❌ Error en force sync.');
+                    }
                 case '>help':
                     await this.showHelp(message);
                     break;
@@ -1597,8 +1675,6 @@ class AllCommands {
                 { name: '🎮 Minijuegos', value: '`>games` - Ver lista de minijuegos', inline: false },
                 // Eventos
                 { name: '🎉 Eventos', value: '`>events` - Ver eventos activos', inline: false },
-                // Musica
-//                { name: '🎵 Música', value: '`>play <url>` - Reproducir música\n`>skip` - Saltar canción actual\n`>stop` - Detener reproducción\n`>pause` - Pausar reproducción\n`>resume` - Reanudar reproducción\n`>queue` - Ver cola de reproducción\n`>search` - Busca una canción junto a sus datos\n`>nowplaying` - Ver canción actual\n`>clearmusic` - Limpiar cola de reproducción', inline: false }
             )
             .setFooter({ text: 'Usa los comandos para interactuar con el bot.' })
             .setTimestamp();

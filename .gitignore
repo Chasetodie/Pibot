@@ -3,7 +3,12 @@
 
 # Archivos del sistema
 node_modules/
-users.json
 
 # Logs
 *.log
+
+# Ignorar backups temporales
+*.backup.*
+
+# Pero permitir la DB principal
+!bot_data.db

@@ -92,6 +92,38 @@ class LocalDatabase {
                 )
             `);
 
+            this.db.run(`
+                CREATE TABLE IF NOT EXISTS russian_games (
+                    id TEXT PRIMARY KEY,
+                    channel_id TEXT NOT NULL,
+                    creator_id TEXT NOT NULL,
+                    bet_amount INTEGER NOT NULL,
+                    players TEXT DEFAULT '[]',
+                    phase TEXT DEFAULT 'waiting',
+                    current_player_index INTEGER DEFAULT 0,
+                    bullet_position INTEGER DEFAULT 0,
+                    current_shot INTEGER DEFAULT 0,
+                    pot INTEGER DEFAULT 0,
+                    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+                )
+            `);
+
+            // Tabla para partidas UNO (si la usas)
+            this.db.run(`
+                CREATE TABLE IF NOT EXISTS uno_games (
+                    id TEXT PRIMARY KEY,
+                    creator_id TEXT NOT NULL,
+                    channel_id TEXT NOT NULL,
+                    bet_amount INTEGER NOT NULL,
+                    players TEXT DEFAULT '[]',
+                    phase TEXT DEFAULT 'waiting',
+                    game_data TEXT DEFAULT '{}',
+                    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+                )
+            `);
+
             console.log('🗃️ Tablas SQLite inicializadas');
         });
     }
@@ -407,17 +439,34 @@ class LocalDatabase {
 
     // Backup de la base de datos
     async backup() {
-        const backupPath = `${this.dbPath}.backup.${Date.now()}`;
+        const timestamp = Date.now();
+        const backupPath = `${this.dbPath}.backup.${timestamp}`;
+        
         return new Promise((resolve, reject) => {
-            const source = fs.createReadStream(this.dbPath);
-            const destination = fs.createWriteStream(backupPath);
-            
-            source.pipe(destination);
-            destination.on('close', () => {
-                console.log(`📦 Backup creado: ${backupPath}`);
-                resolve(backupPath);
-            });
-            destination.on('error', reject);
+            try {
+                // Crear copia del archivo
+                const source = fs.createReadStream(this.dbPath);
+                const destination = fs.createWriteStream(backupPath);
+                
+                source.pipe(destination);
+                
+                destination.on('close', () => {
+                    console.log(`📦 Backup creado: ${backupPath}`);
+                    resolve(backupPath);
+                });
+                
+                destination.on('error', (error) => {
+                    console.error('❌ Error creando backup:', error);
+                    reject(error);
+                });
+                
+                source.on('error', (error) => {
+                    console.error('❌ Error leyendo archivo:', error);
+                    reject(error);
+                });
+            } catch (error) {
+                reject(error);
+            }
         });
     }
 
@@ -502,6 +551,204 @@ class LocalDatabase {
                 function(err) {
                     if (err) reject(err);
                     else resolve({ changes: this.changes });
+                }
+            );
+        });
+    }
+
+    async getRussianGame(gameId) {
+        return new Promise((resolve, reject) => {
+            this.db.get('SELECT * FROM russian_games WHERE id = ?', [gameId], (err, row) => {
+                if (err) {
+                    reject(err);
+                } else {
+                    if (row) {
+                        row.players = JSON.parse(row.players || '[]');
+                    }
+                    resolve(row);
+                }
+            });
+        });
+    }
+
+    async createRussianGame(gameId, gameData) {
+        return new Promise((resolve, reject) => {
+            const query = `
+                INSERT INTO russian_games (id, channel_id, creator_id, bet_amount, players, 
+                                        phase, pot, created_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            `;
+            
+            this.db.run(query, [
+                gameId,
+                gameData.channel_id,
+                gameData.creator_id,
+                gameData.bet_amount,
+                JSON.stringify(gameData.players || []),
+                gameData.phase || 'waiting',
+                gameData.pot,
+                new Date().toISOString()
+            ], function(err) {
+                if (err) {
+                    reject(err);
+                } else {
+                    resolve({ id: gameId });
+                }
+            });
+        });
+    }
+
+    async updateRussianGame(gameId, updateData) {
+        return new Promise((resolve, reject) => {
+            const sets = [];
+            const values = [];
+
+            updateData.updated_at = new Date().toISOString();
+
+            for (const [key, value] of Object.entries(updateData)) {
+                sets.push(`${key} = ?`);
+                if (typeof value === 'object' && value !== null) {
+                    values.push(JSON.stringify(value));
+                } else {
+                    values.push(value);
+                }
+            }
+
+            values.push(gameId);
+
+            this.db.run(
+                `UPDATE russian_games SET ${sets.join(', ')} WHERE id = ?`,
+                values,
+                function(err) {
+                    if (err) {
+                        reject(err);
+                    } else {
+                        resolve({ changes: this.changes });
+                    }
+                }
+            );
+        });
+    }
+
+    async deleteRussianGame(gameId) {
+        return new Promise((resolve, reject) => {
+            this.db.run('DELETE FROM russian_games WHERE id = ?', [gameId], function(err) {
+                if (err) {
+                    reject(err);
+                } else {
+                    resolve({ changes: this.changes });
+                }
+            });
+        });
+    }
+
+    // Métodos para Russian Roulette
+    async getActiveRussianGames() {
+        return new Promise((resolve, reject) => {
+            this.db.all(
+                "SELECT * FROM russian_games WHERE phase IN ('waiting', 'playing')",
+                (err, rows) => {
+                    if (err) {
+                        reject(err);
+                    } else {
+                        const games = rows.map(row => {
+                            row.players = JSON.parse(row.players || '[]');
+                            return row;
+                        });
+                        resolve(games);
+                    }
+                }
+            );
+        });
+    }
+
+    // Métodos para UNO
+    async createUnoGame(gameId, gameData) {
+        return new Promise((resolve, reject) => {
+            const query = `
+                INSERT INTO uno_games (id, creator_id, channel_id, bet_amount, 
+                                    players, phase, game_data, created_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            `;
+            
+            this.db.run(query, [
+                gameId,
+                gameData.creator_id,
+                gameData.channel_id,
+                gameData.bet_amount,
+                JSON.stringify(gameData.players || []),
+                gameData.phase || 'waiting',
+                JSON.stringify(gameData.game_data || {}),
+                new Date().toISOString()
+            ], function(err) {
+                if (err) {
+                    reject(err);
+                } else {
+                    resolve({ id: gameId });
+                }
+            });
+        });
+    }
+
+    async updateUnoGame(gameId, updateData) {
+        return new Promise((resolve, reject) => {
+            const sets = [];
+            const values = [];
+
+            updateData.updated_at = new Date().toISOString();
+
+            for (const [key, value] of Object.entries(updateData)) {
+                sets.push(`${key} = ?`);
+                if (typeof value === 'object' && value !== null) {
+                    values.push(JSON.stringify(value));
+                } else {
+                    values.push(value);
+                }
+            }
+
+            values.push(gameId);
+
+            this.db.run(
+                `UPDATE uno_games SET ${sets.join(', ')} WHERE id = ?`,
+                values,
+                function(err) {
+                    if (err) {
+                        reject(err);
+                    } else {
+                        resolve({ changes: this.changes });
+                    }
+                }
+            );
+        });
+    }
+
+    async deleteUnoGame(gameId) {
+        return new Promise((resolve, reject) => {
+            this.db.run('DELETE FROM uno_games WHERE id = ?', [gameId], function(err) {
+                if (err) {
+                    reject(err);
+                } else {
+                    resolve({ changes: this.changes });
+                }
+            });
+        });
+    }
+
+    async getActiveUnoGames() {
+        return new Promise((resolve, reject) => {
+            this.db.all(
+                "SELECT * FROM uno_games WHERE phase != 'finished'",
+                (err, rows) => {
+                    if (err) {
+                        reject(err);
+                    } else {
+                        const games = rows.map(row => {
+                            row.players = JSON.parse(row.players || '[]');
+                            row.game_data = JSON.parse(row.game_data || '{}');
+                            return row;
+                        });
+                        resolve(games);
+                    }
                 }
             );
         });
