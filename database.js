@@ -15,7 +15,7 @@ class LocalDatabase {
                 host: 'mysql.db.bot-hosting.net',
                 port: 3306,
                 user: 'u469192_ViTTwSY6wl',
-                password: '!oLZ%5EvxR%5EymBVqD5CXuvIYeL',
+                password: encodeURIComponent('!oLZ^vxR^ymBVqD5CXuvIYeL'),
                 database: 's469192_PibotDB',
                 connectionLimit: 5, // ← Máximo 5 conexiones
                 acquireTimeout: 60000,
