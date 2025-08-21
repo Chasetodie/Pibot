@@ -161,7 +161,6 @@ class TradeSystem {
                 SELECT * FROM trades 
                 WHERE (initiator = ? OR target = ?) 
                 AND status = 'pending'
-                ORDER BY created_at DESC
                 LIMIT 1
             `, [userId, userId]);
 
