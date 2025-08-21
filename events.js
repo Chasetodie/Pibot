@@ -153,8 +153,8 @@ class EventsSystem {
     async initializeDatabase() {
         // Esperar a que economy esté listo
         setTimeout(() => {
-            if (this.economy && this.economy.db) {
-                this.db = this.economy.db;
+            if (this.economy && this.economy.database) {
+                this.db = this.economy.database;
                 this.createEventsTable();
                 console.log('🎮 Base de datos de eventos inicializada');
             } else {

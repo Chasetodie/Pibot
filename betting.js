@@ -5,7 +5,7 @@ class BettingSystem {
     constructor(economySystem) {
         this.economy = economySystem;
         
-        this.db = this.economy.db;
+        this.db = this.economy.database;
         
         this.config = {
             minBet: 100,

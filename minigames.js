@@ -1870,7 +1870,7 @@ class MinigamesSystem {
 
     async getRussianGame(gameId) {
         try {
-            return await this.economy.db.getRussianGame(gameId);
+            return await this.economy.database.getRussianGame(gameId);
         } catch (error) {
             console.error('⚠️ Error obteniendo partida:', error);
             return null;
@@ -1879,7 +1879,7 @@ class MinigamesSystem {
 
     async createRussianGameInDB(gameId, gameData) {
         try {
-            return await this.economy.db.createRussianGame(gameId, gameData);
+            return await this.economy.database.createRussianGame(gameId, gameData);
         } catch (error) {
             console.error('⚠️ Error creando partida:', error);
             throw error;
@@ -1888,7 +1888,7 @@ class MinigamesSystem {
 
     async updateRussianGame(gameId, updateData) {
         try {
-            await this.economy.db.updateRussianGame(gameId, updateData);
+            await this.economy.database.updateRussianGame(gameId, updateData);
         } catch (error) {
             console.error('⚠️ Error actualizando partida:', error);
         }
@@ -1896,7 +1896,7 @@ class MinigamesSystem {
 
     async deleteRussianGame(gameId) {
         try {
-            await this.economy.db.deleteRussianGame(gameId);
+            await this.economy.database.deleteRussianGame(gameId);
         } catch (error) {
             console.error('⚠️ Error eliminando partida:', error);
         }
@@ -2606,7 +2606,7 @@ class MinigamesSystem {
 
     async loadActiveRussianGames(client) {
         try {
-            const data = await this.economy.db.getActiveRussianGames();
+            const data = await this.economy.database.getActiveRussianGames();
             
             for (const gameData of data) {
                 const gameKey = gameData.id;
@@ -3897,7 +3897,7 @@ class MinigamesSystem {
                 join_timeout: null
             };
             
-            await this.economy.db.createUnoGame(gameId, {
+            await this.economy.database.createUnoGame(gameId, {
                 creator_id: gameData.creator_id,
                 channel_id: gameData.channel_id,
                 bet_amount: gameData.bet_amount,
@@ -3921,7 +3921,7 @@ class MinigamesSystem {
         try {
             const cleanGameData = this.cleanGameDataForDB(gameData);
             
-            await this.economy.db.updateUnoGame(gameData.id, {
+            await this.economy.database.updateUnoGame(gameData.id, {
                 players: gameData.players,
                 phase: gameData.phase,
                 game_data: cleanGameData
@@ -3934,7 +3934,7 @@ class MinigamesSystem {
     async deleteUnoGameFromDB(gameId) {
         // Implementar según tu sistema
         try {
-            await this.economy.db.deleteUnoGame(gameId);
+            await this.economy.database.deleteUnoGame(gameId);
         } catch (error) {
             console.error('Database error:', error);
         }
@@ -3993,7 +3993,7 @@ class MinigamesSystem {
 
     async loadActiveUnoGames(client) {
         try {
-            const data = await this.economy.db.getActiveUnoGames();
+            const data = await this.economy.database.getActiveUnoGames();
 
             for (let gameData of data) {
                 const game = gameData.game_data;

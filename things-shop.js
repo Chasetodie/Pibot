@@ -5,37 +5,6 @@ class AuctionSystem {
     constructor(shopSystem) {
         this.shop = shopSystem;
         this.activeAuctions = new Map(); // Caché en memoria
-        
-        // Crear tabla de subastas si no existe
-        this.createAuctionsTable();
-    }
-
-    // ✅ AGREGAR: Crear tabla de subastas
-    createAuctionsTable() {
-        if (!this.db) return;
-        
-        this.db.db.run(`
-            CREATE TABLE IF NOT EXISTS auctions (
-                id TEXT PRIMARY KEY,
-                seller TEXT NOT NULL,
-                item_id TEXT NOT NULL,
-                item_name TEXT NOT NULL,
-                starting_bid INTEGER NOT NULL,
-                current_bid INTEGER NOT NULL,
-                highest_bidder TEXT,
-                bids TEXT DEFAULT '[]',
-                ends_at TEXT NOT NULL,
-                active BOOLEAN DEFAULT 1,
-                created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-                completed_at TEXT
-            )
-        `, (err) => {
-            if (err) {
-                console.error('❌ Error creando tabla auctions:', err);
-            } else {
-                console.log('✅ Tabla auctions creada/verificada');
-            }
-        });
     }
 
     async saveAuctionToDb(auction) {
