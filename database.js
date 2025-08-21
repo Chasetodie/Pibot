@@ -54,7 +54,7 @@ class LocalDatabase {
                     stats TEXT,
                     bet_stats TEXT,
                     daily_missions TEXT,
-                    daily_missions_date TEXT DEFAULT NULL,
+                    daily_missions_date TEXT,
                     daily_stats TEXT,
                     achievements TEXT,
                     missions_reset_today BOOLEAN DEFAULT 0
@@ -68,9 +68,9 @@ class LocalDatabase {
                     name TEXT NOT NULL,
                     description TEXT,
                     price INTEGER NOT NULL,
-                    type TEXT DEFAULT 'consumable',
-                    category TEXT DEFAULT 'general',
-                    effects TEXT DEFAULT '{}',
+                    type TEXT,
+                    category TEXT,
+                    effects TEXT,
                     stock INTEGER DEFAULT -1,
                     available BOOLEAN DEFAULT 1
                 )
@@ -82,14 +82,14 @@ class LocalDatabase {
                     id TEXT PRIMARY KEY,
                     initiator TEXT NOT NULL,
                     target TEXT NOT NULL,
-                    initiator_items TEXT DEFAULT '{}',
-                    target_items TEXT DEFAULT '{}',
+                    initiator_items TEXT,
+                    target_items TEXT,
                     initiator_money INTEGER DEFAULT 0,
                     target_money INTEGER DEFAULT 0,
-                    status TEXT DEFAULT 'pending',
+                    status TEXT,
                     initiator_accepted BOOLEAN DEFAULT 0,
                     target_accepted BOOLEAN DEFAULT 0,
-                    completed_at TEXT DEFAULT NULL
+                    completed_at TEXT
                 )
             `);
 
@@ -99,8 +99,8 @@ class LocalDatabase {
                     channel_id TEXT NOT NULL,
                     creator_id TEXT NOT NULL,
                     bet_amount INTEGER NOT NULL,
-                    players TEXT DEFAULT '[]',
-                    phase TEXT DEFAULT 'waiting',
+                    players TEXT,
+                    phase TEXT,
                     current_player_index INTEGER DEFAULT 0,
                     bullet_position INTEGER DEFAULT 0,
                     current_shot INTEGER DEFAULT 0,
@@ -115,9 +115,9 @@ class LocalDatabase {
                     creator_id TEXT NOT NULL,
                     channel_id TEXT NOT NULL,
                     bet_amount INTEGER NOT NULL,
-                    players TEXT DEFAULT '[]',
-                    phase TEXT DEFAULT 'waiting',
-                    game_data TEXT DEFAULT '{}'
+                    players TEXT,
+                    phase TEXT,
+                    game_data TEXT
                 )
             `);
 
@@ -132,13 +132,13 @@ class LocalDatabase {
                     start_time TEXT,
                     end_time TEXT,
                     duration INTEGER,
-                    multipliers TEXT DEFAULT '{}',
+                    multipliers TEXT,
                     is_special BOOLEAN DEFAULT 0,
                     is_negative BOOLEAN DEFAULT 0,
                     is_rare BOOLEAN DEFAULT 0,
                     triggered_by TEXT,
                     participant_count INTEGER DEFAULT 0,
-                    stats TEXT DEFAULT '{}'
+                    stats TEXT
                 )
             `);
 
@@ -152,10 +152,10 @@ class LocalDatabase {
                     starting_bid INTEGER NOT NULL,
                     current_bid INTEGER,
                     highest_bidder TEXT,
-                    bids TEXT DEFAULT '[]',
+                    bids TEXT,
                     ends_at TEXT NOT NULL,
                     active BOOLEAN DEFAULT 1,
-                    completed_at TEXT DEFAULT NULL
+                    completed_at TEXT
                 )
             `);
 
