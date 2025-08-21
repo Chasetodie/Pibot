@@ -584,6 +584,8 @@ class MissionsSystem {
                 };
                 break;
         }
+
+        console.log(`📊 updateData.daily_stats después del switch:`, updateData.daily_stats);
         
         // Verificar progreso de cada misión
         for (const [missionId, status] of Object.entries(user.daily_missions)) {
@@ -692,6 +694,8 @@ class MissionsSystem {
             case 'work':
                 return stats.work_today || 0;
             case 'money_earned_today':
+                console.log(`🔍 DEBUG getCurrentProgress - stats:`, stats);
+                console.log(`🔍 DEBUG - money_earned_today value:`, stats.money_earned_today);
                 return stats.money_earned_today || 0;
             case 'games':
                 return stats.games_today || 0;
