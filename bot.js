@@ -156,7 +156,7 @@ economy.shop = shop;
     }
 
     // Ruta principal del panel (modificar la existente)
-    app.get('/admin', (req, res) => {
+    app.get('/', (req, res) => {
         res.send(`
         <!DOCTYPE html>
         <html>
