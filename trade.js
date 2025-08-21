@@ -4,10 +4,6 @@ class TradeSystem {
     constructor(shopSystem) {
         this.shop = shopSystem;
         this.database = this.shop.economy.database;
-
-        console.log('🔍 Debug database:', this.database);
-        console.log('🔍 Database connection:', this.database?.connection);
-
         this.tradeTimeout = 300000; // 5 minutos timeout
 
         // ✅ AGREGAR: Caché para trades activos
@@ -76,8 +72,7 @@ class TradeSystem {
                 UPDATE trades 
                 SET status = 'expired' 
                 WHERE status = 'pending' 
-                AND created_at < ?
-            `, [fiveMinutesAgo]);
+            `);
             
             // Limpiar caché de trades expirados
             for (const [tradeId, cached] of this.activeTradesCache) {
