@@ -1,7 +1,7 @@
 const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 
 class AllCommands {
-    constructor(economySystem, shopSystem, tradeSystem, auctionSystem, craftingSystem,  eventsSystem, bettingSystem, achievementsSystem) {
+    constructor(economySystem, shopSystem, tradeSystem/*, auctionSystem, craftingSystem*/,  eventsSystem, bettingSystem, achievementsSystem) {
         this.economy = economySystem;
         this.shop = shopSystem;
         this.trades = tradeSystem;
