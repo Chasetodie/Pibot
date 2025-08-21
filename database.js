@@ -9,13 +9,9 @@ class LocalDatabase {
 
     async init() {
         try {
-            this.db = await mysql.createConnection({
-                host: 'mysql.db.bot-hosting.net',
-                port: 3306,
-                user: 'u469192_ViTTwSY6wl',
-                password: '!oLZ%5EvxR%5EymBVqD5CXuvIYeL',
-                database: 's469192_PibotDB'
-            });
+            const connectionString = 'mysql://u469192_ViTTwSY6wl:!oLZ%5EvxR%5EymBVqD5CXuvIYeL@mysql.db.bot-hosting.net:3306/s469192_PibotDB';
+
+            this.db = await mysql.createConnection(connectionString);
             
             console.log('✅ MySQL conectado correctamente');
             await this.initTables();
