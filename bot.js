@@ -138,8 +138,37 @@ minigames.missions = missions;
 
 economy.shop = shop;
 
+// Ruta principal (página de inicio)
+app.get('/', (req, res) => {
+    res.send(`
+        <h1>Monilia Al Habla!</h1>
+        <p>Estado: <strong style="color: green;">ONLINE</strong></p>
+        <p>Última verificación: ${new Date().toLocaleString()}</p>
+        <p>Contadores actuales: Pibe ${counters.pibe}, Piba ${counters.piba}</p>
+        <hr>
+        <h3>Enlaces disponibles:</h3>
+        <ul>
+            <li><a href="/admin">Panel de Administración</a></li>
+            <li><a href="/status">Estado (JSON)</a></li>
+        </ul>
+        <hr>
+        <h3>Configuración:</h3>
+        <p>Pibe inicial: ${process.env.PIBE_COUNT || 0}</p>
+        <p>Piba inicial: ${process.env.PIBA_COUNT || 0}</p>
+    `);
+});
+
+// Justo antes de app.listen()
+app.get('/health', (req, res) => {
+    res.status(200).json({ status: 'OK', timestamp: new Date() });
+});
+
 app.listen(PORT, '0.0.0.0', () => {
-    console.log(`Servidor web corriendo en puerto ${PORT}`);
+    console.log(`🌐 Servidor web corriendo en puerto ${PORT} en todas las interfaces`);
+    console.log(`🔗 URLs disponibles:`);
+    console.log(`   - Salud: http://0.0.0.0:${PORT}/health`);
+    console.log(`   - Principal: http://0.0.0.0:${PORT}/`);
+    console.log(`   - Admin: http://0.0.0.0:${PORT}/admin`);
 });
 
 // Evento cuando el bot está listo
@@ -578,27 +607,16 @@ client.on('interactionCreate', async (interaction) => {
     }
 });
 
-// Agregar al inicio de messageCreate:
-const messageRateLimit = new Map();
-
 // Manejar mensajes (COMANDOS + XP + ECONOMÍA)
 client.on('messageCreate', async (message) => {
     // Ignorar mensajes de bots
     if (message.author.bot) return;
     
     // AGREGAR ESTO AL INICIO:
-    const now = Date.now();
     const userId = message.author.id;  
     const user = await economy.getUser(userId);
     const lastMessage = messageRateLimit.get(userId) || 0;
-
-    // Solo procesar un mensaje cada 10 segundos por usuario
-    if (now - lastMessage < 10000) {
-        return; // Skip procesamiento completo
-    }
-    
-    messageRateLimit.set(userId, now);
-    
+        
     // Procesar XP por mensaje (solo en servidores, no en DMs)
     if (message.guild) {
         // Aplicar modificadores de eventos a XP
