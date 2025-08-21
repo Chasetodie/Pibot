@@ -75,7 +75,7 @@ class LocalDatabase {
                     effects TEXT DEFAULT '{}',
                     stock INTEGER DEFAULT -1,
                     available BOOLEAN DEFAULT 1,
-                    created_at TEXT DEFAULT CURRENT_TIMESTAMP
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 )
             `);
 
@@ -92,7 +92,7 @@ class LocalDatabase {
                     status TEXT DEFAULT 'pending',
                     initiator_accepted BOOLEAN DEFAULT 0,
                     target_accepted BOOLEAN DEFAULT 0,
-                    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     completed_at TEXT DEFAULT NULL
                 )
             `);
@@ -109,8 +109,8 @@ class LocalDatabase {
                     bullet_position INTEGER DEFAULT 0,
                     current_shot INTEGER DEFAULT 0,
                     pot INTEGER DEFAULT 0,
-                    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-                    updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
                 )
             `);
 
@@ -124,8 +124,8 @@ class LocalDatabase {
                     players TEXT DEFAULT '[]',
                     phase TEXT DEFAULT 'waiting',
                     game_data TEXT DEFAULT '{}',
-                    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-                    updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
                 )
             `);
 
@@ -147,8 +147,8 @@ class LocalDatabase {
                     triggered_by TEXT,
                     participant_count INTEGER DEFAULT 0,
                     stats TEXT DEFAULT '{}',
-                    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-                    updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
                 )
             `);
 
@@ -165,7 +165,7 @@ class LocalDatabase {
                     bids TEXT DEFAULT '[]',
                     ends_at TEXT NOT NULL,
                     active BOOLEAN DEFAULT 1,
-                    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     completed_at TEXT DEFAULT NULL
                 )
             `);
