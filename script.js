@@ -122,6 +122,18 @@ class DatabaseMigrator {
       } else if (key.includes('user_id') || key.includes('chat_id') || key.includes('_id')) {
         // IDs externos también pueden ser muy grandes
         type = 'BIGINT';
+      } else if (key.includes('is_') || key.includes('has_') || key.includes('active') || key.includes('special')) {
+        // Campos booleanos
+        type = 'BOOLEAN DEFAULT FALSE';
+      } else if (key.includes('_at') || key.includes('date') || key.includes('time')) {
+        // Campos de fecha/hora
+        type = 'TIMESTAMP';
+      } else if (key.includes('amount') || key.includes('balance') || key.includes('price') || key.includes('cost')) {
+        // Campos monetarios/numéricos decimales
+        type = 'NUMERIC(15,2)';
+      } else if (key.includes('count') || key.includes('level') || key.includes('rank')) {
+        // Campos enteros
+        type = 'INTEGER DEFAULT 0';
       } else if (typeof value === 'number') {
         // Números grandes usar BIGINT, decimales usar NUMERIC
         if (Number.isInteger(value) && value > 2147483647) {
@@ -132,10 +144,8 @@ class DatabaseMigrator {
           type = 'NUMERIC';
         }
       } else if (typeof value === 'boolean') {
-        type = 'BOOLEAN';
+        type = 'BOOLEAN DEFAULT FALSE';
       } else if (value instanceof Date) {
-        type = 'TIMESTAMP';
-      } else if (key.includes('created_at') || key.includes('updated_at') || key.includes('_at')) {
         type = 'TIMESTAMP';
       } else if (typeof value === 'string' && value.length > 255) {
         type = 'TEXT';
@@ -143,17 +153,18 @@ class DatabaseMigrator {
         type = 'VARCHAR(255)';
       }
       
-      return `${key} ${type}`;
+      return `"${key}" ${type}`;
     });
 
     const createTableSQL = `
-      CREATE TABLE IF NOT EXISTS ${tableName} (
+      CREATE TABLE IF NOT EXISTS "${tableName}" (
         ${columns.join(',\n        ')}
       )
     `;
 
     console.log(`   🏗️  Creando/verificando tabla ${tableName}`);
-    console.log(`   🔧  Esquema: ${columns.join(', ')}`);
+    console.log(`   🔧  Esquema detectado:`);
+    columns.forEach(col => console.log(`      ${col}`));
     await this.renderDB.query(createTableSQL);
   }
 
@@ -257,11 +268,15 @@ class DatabaseMigrator {
 async function runMigration() {
   const migrator = new DatabaseMigrator();
   
-  // Migrar datos
-  await migrator.migrate();
-  
-  // Verificar migración (opcional)
-  await migrator.verifyMigration();
+  try {
+    // Migrar datos
+    await migrator.migrate();
+    
+    // Verificar migración (opcional)
+    await migrator.verifyMigration();
+  } catch (error) {
+    console.error('💥 Error fatal en migración:', error);
+  }
 }
 
 // Ejecutar si se llama directamente
@@ -269,4 +284,5 @@ if (require.main === module) {
   runMigration().catch(console.error);
 }
 
+module.exports = { DatabaseMigrator };
 module.exports = { DatabaseMigrator };
