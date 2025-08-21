@@ -1,71 +1,209 @@
 const { createClient } = require('@supabase/supabase-js');
-const LocalDatabase = require('./database');
+const { Pool } = require('pg');
 
-async function migrateFromSupabase() {
-    console.log('🚀 Iniciando migración...');
-    
-    // Conectar a ambas bases
-    const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_ANON_KEY);
-    const sqlite = new LocalDatabase();
+// 🔧 CONFIGURACIÓN
+const SUPABASE_CONFIG = {
+  url: 'https://tu-proyecto.supabase.co',
+  key: 'tu-anon-key-aqui'
+};
+
+const RENDER_CONFIG = {
+  connectionString: 'postgresql://usuario:password@host:puerto/database'
+  // O usa la Internal Database URL completa de Render
+};
+
+// 📊 TABLAS A MIGRAR (ajusta según tu esquema)
+const TABLES_TO_MIGRATE = [
+  'users',
+  'messages', 
+  'settings',
+  // Agrega tus tablas aquí
+];
+
+class DatabaseMigrator {
+  constructor() {
+    this.supabase = createClient(SUPABASE_CONFIG.url, SUPABASE_CONFIG.key);
+    this.renderDB = new Pool({ connectionString: RENDER_CONFIG.connectionString });
+  }
+
+  async migrate() {
+    console.log('🚀 Iniciando migración de Supabase a Render...\n');
     
     try {
-        // 1. Migrar USUARIOS
-        console.log('👥 Migrando usuarios...');
-        const { data: users } = await supabase.from('users').select('*');
-        
-        for (const user of users || []) {
-            await sqlite.db.run(`
-                INSERT OR REPLACE INTO users (
-                    id, balance, level, xp, total_xp, last_daily, last_work,
-                    last_robbery, last_coinflip, last_dice, last_roulette,
-                    last_lotto, last_blackjack, last_name_work, messages_count,
-                    items, stats, bet_stats, daily_missions, daily_missions_date,
-                    daily_stats, created_at, updated_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            `, [
-                user.id, user.balance, user.level, user.xp, user.total_xp,
-                user.last_daily, user.last_work, user.last_robbery,
-                user.last_coinflip, user.last_dice, user.last_roulette,
-                user.last_lotto, user.last_blackjack, user.last_name_work,
-                user.messages_count, JSON.stringify(user.items || {}),
-                JSON.stringify(user.stats || {}), JSON.stringify(user.bet_stats || {}),
-                JSON.stringify(user.daily_missions || {}), user.daily_missions_date,
-                JSON.stringify(user.daily_stats || {}), user.created_at, user.updated_at
-            ]);
-        }
-               
-        // 3. Migrar EVENTOS
-        console.log('🎮 Migrando eventos...');
-        const { data: events } = await supabase.from('server_events').select('*');
-        
-        for (const event of events || []) {
-            await sqlite.db.run(`
-                INSERT OR REPLACE INTO server_events (
-                    id, type, name, description, emoji, color,
-                    start_time, end_time, duration, multipliers,
-                    is_special, is_negative, is_rare, triggered_by,
-                    participant_count, stats, updated_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            `, [
-                event.id, event.type, event.name, event.description,
-                event.emoji, event.color, event.start_time, event.end_time,
-                event.duration, JSON.stringify(event.multipliers || {}),
-                event.is_special, event.is_negative, event.is_rare,
-                event.triggered_by, event.participant_count,
-                JSON.stringify(event.stats || {}), event.updated_at
-            ]);
-        }
-        
-        console.log('✅ ¡Migración completada!');
-        
+      // Probar conexiones
+      await this.testConnections();
+      
+      // Migrar cada tabla
+      for (const tableName of TABLES_TO_MIGRATE) {
+        await this.migrateTable(tableName);
+      }
+      
+      console.log('✅ ¡Migración completada exitosamente!');
+      
     } catch (error) {
-        console.error('❌ Error en migración:', error);
+      console.error('❌ Error en la migración:', error);
     } finally {
-        sqlite.close();
+      await this.renderDB.end();
     }
+  }
+
+  async testConnections() {
+    console.log('🔍 Probando conexiones...');
+    
+    // Probar Supabase
+    const { data, error } = await this.supabase
+      .from(TABLES_TO_MIGRATE[0])
+      .select('*')
+      .limit(1);
+    
+    if (error && error.code !== 'PGRST116') { // PGRST116 = tabla no encontrada
+      throw new Error(`Error conectando a Supabase: ${error.message}`);
+    }
+    
+    // Probar Render PostgreSQL
+    await this.renderDB.query('SELECT NOW()');
+    
+    console.log('✅ Conexiones establecidas\n');
+  }
+
+  async migrateTable(tableName) {
+    console.log(`📦 Migrando tabla: ${tableName}`);
+    
+    try {
+      // 1. Obtener datos de Supabase
+      const { data: supabaseData, error } = await this.supabase
+        .from(tableName)
+        .select('*');
+
+      if (error) {
+        console.log(`⚠️  Tabla ${tableName} no encontrada en Supabase, saltando...`);
+        return;
+      }
+
+      if (!supabaseData || supabaseData.length === 0) {
+        console.log(`📭 Tabla ${tableName} está vacía`);
+        return;
+      }
+
+      console.log(`   📊 ${supabaseData.length} registros encontrados`);
+
+      // 2. Crear tabla en Render si no existe
+      await this.createTableIfNotExists(tableName, supabaseData[0]);
+
+      // 3. Limpiar tabla destino (opcional)
+      await this.renderDB.query(`TRUNCATE TABLE ${tableName} RESTART IDENTITY CASCADE`);
+
+      // 4. Insertar datos en lotes
+      await this.insertDataInBatches(tableName, supabaseData);
+
+      console.log(`✅ Tabla ${tableName} migrada exitosamente\n`);
+
+    } catch (error) {
+      console.error(`❌ Error migrando ${tableName}:`, error.message);
+    }
+  }
+
+  async createTableIfNotExists(tableName, sampleRow) {
+    const columns = Object.keys(sampleRow).map(key => {
+      const value = sampleRow[key];
+      let type = 'TEXT';
+      
+      if (key === 'id') {
+        type = 'SERIAL PRIMARY KEY';
+      } else if (typeof value === 'number') {
+        type = Number.isInteger(value) ? 'INTEGER' : 'DECIMAL';
+      } else if (typeof value === 'boolean') {
+        type = 'BOOLEAN';
+      } else if (value instanceof Date) {
+        type = 'TIMESTAMP';
+      } else if (key.includes('created_at') || key.includes('updated_at')) {
+        type = 'TIMESTAMP';
+      }
+      
+      return `${key} ${type}`;
+    });
+
+    const createTableSQL = `
+      CREATE TABLE IF NOT EXISTS ${tableName} (
+        ${columns.join(',\n        ')}
+      )
+    `;
+
+    console.log(`   🏗️  Creando/verificando tabla ${tableName}`);
+    await this.renderDB.query(createTableSQL);
+  }
+
+  async insertDataInBatches(tableName, data, batchSize = 100) {
+    const columns = Object.keys(data[0]);
+    const placeholders = columns.map((_, i) => `$${i + 1}`).join(', ');
+    
+    const insertSQL = `
+      INSERT INTO ${tableName} (${columns.join(', ')}) 
+      VALUES (${placeholders})
+      ON CONFLICT (id) DO UPDATE SET
+      ${columns.filter(col => col !== 'id').map(col => `${col} = EXCLUDED.${col}`).join(', ')}
+    `;
+
+    console.log(`   💾 Insertando datos en lotes de ${batchSize}...`);
+
+    for (let i = 0; i < data.length; i += batchSize) {
+      const batch = data.slice(i, i + batchSize);
+      
+      for (const row of batch) {
+        const values = columns.map(col => {
+          let value = row[col];
+          // Convertir fechas ISO string a objetos Date
+          if (typeof value === 'string' && value.match(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/)) {
+            value = new Date(value);
+          }
+          return value;
+        });
+        
+        await this.renderDB.query(insertSQL, values);
+      }
+      
+      console.log(`   ⏳ Procesados ${Math.min(i + batchSize, data.length)}/${data.length} registros`);
+    }
+  }
+
+  // 🔍 MÉTODO OPCIONAL: Verificar migración
+  async verifyMigration() {
+    console.log('🔍 Verificando migración...\n');
+    
+    for (const tableName of TABLES_TO_MIGRATE) {
+      try {
+        // Contar en Supabase
+        const { count: supabaseCount } = await this.supabase
+          .from(tableName)
+          .select('*', { count: 'exact', head: true });
+
+        // Contar en Render
+        const renderResult = await this.renderDB.query(`SELECT COUNT(*) FROM ${tableName}`);
+        const renderCount = parseInt(renderResult.rows[0].count);
+
+        console.log(`📊 ${tableName}: Supabase=${supabaseCount} | Render=${renderCount} ${supabaseCount === renderCount ? '✅' : '❌'}`);
+        
+      } catch (error) {
+        console.log(`⚠️  Error verificando ${tableName}: ${error.message}`);
+      }
+    }
+  }
 }
 
-// Ejecutar si es llamado directamente
-if (require.main === module) {
-    migrateFromSupabase();
+// 🚀 EJECUTAR MIGRACIÓN
+async function runMigration() {
+  const migrator = new DatabaseMigrator();
+  
+  // Migrar datos
+  await migrator.migrate();
+  
+  // Verificar migración (opcional)
+  await migrator.verifyMigration();
 }
+
+// Ejecutar si se llama directamente
+if (require.main === module) {
+  runMigration().catch(console.error);
+}
+
+module.exports = { DatabaseMigrator };
