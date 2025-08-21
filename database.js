@@ -499,8 +499,6 @@ class LocalDatabase {
             const sets = [];
             const values = [];
 
-            updateData.updated_at = new Date().toISOString();
-
             for (const [key, value] of Object.entries(updateData)) {
                 sets.push(`${key} = ?`);
                 if (typeof value === 'object' && value !== null) {
@@ -583,8 +581,6 @@ class LocalDatabase {
         try {
             const sets = [];
             const values = [];
-
-            updateData.updated_at = new Date().toISOString();
 
             for (const [key, value] of Object.entries(updateData)) {
                 sets.push(`${key} = ?`);
