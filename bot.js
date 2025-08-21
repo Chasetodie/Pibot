@@ -587,6 +587,7 @@ client.on('messageCreate', async (message) => {
     if (message.author.bot) return;
     
     // AGREGAR ESTO AL INICIO:
+    const now = Date.now();
     const userId = message.author.id;  
     const user = await economy.getUser(userId);
     const lastMessage = messageRateLimit.get(userId) || 0;
