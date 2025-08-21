@@ -200,8 +200,7 @@ class TradeSystem {
     async completeTradeInDb(tradeId) {
         try {
             await this.database.updateTrade(tradeId, {
-                status: 'completed',
-                completed_at: new Date().toISOString()
+                status: 'completed'
             });
             
             // Remover del caché
@@ -613,8 +612,7 @@ class TradeSystem {
     async cancelTradeInDb(tradeId, reason = 'manual') {
         try {
             await this.database.updateTrade(tradeId, {
-                status: 'cancelled',
-                completed_at: new Date().toISOString()
+                status: 'cancelled'
             });
             
             // Remover del caché

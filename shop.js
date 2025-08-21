@@ -674,7 +674,7 @@ class ShopSystem {
             inventoryText += `└ ID: \`${itemId}\`\n\n`;
         }
         
-        embed.setDescription(inventoryText);
+        embed.setDescription(inventoryText || 'No tienes comprado ningun item');
         embed.addFields(
             { name: '💎 Valor Total', value: `${totalValue.toLocaleString('es-ES')} π-b$`, inline: true },
             { name: '📊 Items Únicos', value: `${Object.keys(userItems).length}`, inline: true }
