@@ -8,96 +8,17 @@ class LocalDatabase {
         this.init();
     }
 
-    async testConnection() {
-        console.log('🔍 Probando credenciales MySQL...');
-        
-        const credentials = {
-            host: 'sql3.freesqldatabase.com',
-            port: 3306,
-            user: 'sql3795651',
-            password: 'byPCRPuUN3',
-            database: 'sql3795651'
-        };
-        
-        // Test 1: Solo host y puerto
-        try {
-            console.log('📡 Test 1: Conectividad host...');
-            const testHost = await mysql.createConnection({
-                host: credentials.host,
-                port: credentials.port,
-                user: 'root', // Usuario dummy
-                password: 'dummy',
-                timeout: 5000
-            });
-            console.log('❌ No debería conectar con credenciales dummy');
-        } catch (err) {
-            if (err.code === 'ER_ACCESS_DENIED_ERROR') {
-                console.log('✅ Host accesible (error de credenciales esperado)');
-            } else {
-                console.log('❌ Problema de conectividad:', err.code);
-                return;
-            }
-        }
-        
-        // Test 2: Usuario correcto, contraseña dummy
-        try {
-            console.log('👤 Test 2: Usuario válido...');
-            const testUser = await mysql.createConnection({
-                host: credentials.host,
-                port: credentials.port,
-                user: credentials.user,
-                password: 'dummy_password',
-                timeout: 5000
-            });
-        } catch (err) {
-            if (err.code === 'ER_ACCESS_DENIED_ERROR') {
-                console.log('✅ Usuario existe (contraseña incorrecta esperada)');
-            } else {
-                console.log('❌ Usuario no existe o problema diferente:', err.code);
-            }
-        }
-        
-        // Test 3: Credenciales completas sin base de datos
-        try {
-            console.log('🔐 Test 3: Credenciales sin DB...');
-            const testCreds = await mysql.createConnection({
-                host: credentials.host,
-                port: credentials.port,
-                user: credentials.user,
-                password: credentials.password,
-                timeout: 5000
-            });
-            console.log('✅ Credenciales correctas');
-            await testCreds.end();
-            
-            // Test 4: Con base de datos
-            console.log('🗃️ Test 4: Acceso a base de datos...');
-            const testDB = await mysql.createConnection(credentials);
-            await testDB.execute('SELECT 1');
-            console.log('✅ Base de datos accesible');
-            await testDB.end();
-            
-        } catch (err) {
-            console.log('❌ Error en credenciales completas:', err.code, err.message);
-            
-            // Detalles adicionales
-            if (err.message.includes('static.249.39.108.65')) {
-                console.log('⚠️ Problema: Tu IP no está autorizada');
-            }
-        }
-    }
-
     async init() {
         await this.testConnection();
 
         try {
             // Usar pool en lugar de conexión única
             this.pool = mysql.createPool({
-                host: 'mysql.db.bot-hosting.net',
+                host: 'sql3.freesqldatabase.com',
                 port: 3306,
-                user: 'u469192_ViTTwSY6wl',
-                password: encodeURIComponent('!oLZ^vxR^ymBVqD5CXuvIYeL'),
-                database: 's469192_PibotDB',
+                user: 'sql3795651',
+                password: 'byPCRPuUN3',
+                database: 'sql3795651',
                 connectionLimit: 5, // ← Máximo 5 conexiones
                 acquireTimeout: 60000,
                 timeout: 60000,
