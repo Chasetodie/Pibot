@@ -82,14 +82,13 @@ class LocalDatabase {
                     id VARCHAR(255) PRIMARY KEY,
                     initiator TEXT NOT NULL,
                     target TEXT NOT NULL,
-                    initiator_items TEXT,
-                    target_items TEXT,
-                    initiator_money INTEGER DEFAULT 0,
-                    target_money INTEGER DEFAULT 0,
+                    initiator_offer TEXT,
+                    target_offer TEXT,
+                    initiator_money_offer INTEGER DEFAULT 0,
+                    target_money_offer INTEGER DEFAULT 0,
                     status TEXT,
                     initiator_accepted BOOLEAN DEFAULT 0,
-                    target_accepted BOOLEAN DEFAULT 0,
-                    completed_at TEXT
+                    target_accepted BOOLEAN DEFAULT 0
                 )
             `);
 
@@ -382,8 +381,8 @@ class LocalDatabase {
     async createTrade(tradeData) {
         try {
             await this.pool.execute(`
-                INSERT INTO trades (id, initiator, target, initiator_items, target_items, 
-                                initiator_money, target_money, status)
+                INSERT INTO trades (id, initiator, target, initiator_offer, target_offer, 
+                                initiator_money_offer, target_money_offer, initiator_accepted, target_accepted, status)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())
             `, [
                 tradeData.id, tradeData.initiator, tradeData.target,
