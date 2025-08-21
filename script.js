@@ -3,20 +3,24 @@ const { Pool } = require('pg');
 
 // 🔧 CONFIGURACIÓN
 const SUPABASE_CONFIG = {
-  url: 'https://tu-proyecto.supabase.co',
-  key: 'tu-anon-key-aqui'
+  url: process.env.SUPABASE_URL,
+  key: process.env.SUPABASE_KEY
 };
 
 const RENDER_CONFIG = {
-  connectionString: 'postgresql://usuario:password@host:puerto/database'
+  connectionString: process.env.DATABASE_URL
   // O usa la Internal Database URL completa de Render
 };
 
 // 📊 TABLAS A MIGRAR (ajusta según tu esquema)
 const TABLES_TO_MIGRATE = [
   'users',
-  'messages', 
-  'settings',
+  'auctions', 
+  'bets',
+  'russian_game',
+  'server_events',
+  'trades',
+  'uno_games'
   // Agrega tus tablas aquí
 ];
 
