@@ -17,10 +17,10 @@ const MissionsSystem = require('./missions');
 const ShopSystem = require('./shop');
 const AllCommands = require('./all-commands');
 //require('./admin-panel')(app); // Pasar el servidor express existente
-/*const {
+const {
     AuctionSystem,
     CraftingSystem
-} = require('./things-shop');*/
+} = require('./things-shop');
 
 // Archivo para guardar los contadores
 const countersFile = path.join(__dirname, 'counters.json');
@@ -124,12 +124,12 @@ const betting = new BettingSystem(economy);
 const trades = new TradeSystem(shop);
 trades.startCacheCleanup();
 
-/*const auctions = new AuctionSystem(shop);
+const auctions = new AuctionSystem(shop);
 
-const crafting = new CraftingSystem(shop);*/
+const crafting = new CraftingSystem(shop);
 
 // Instancia del sistema de comandos mejorados
-const allCommands = new AllCommands(economy, shop, trades/*, auctions, crafting*/, events, betting);
+const allCommands = new AllCommands(economy, shop, trades, auctions, crafting, events, betting);
 
 economy.achievements = achievements;
 minigames.achievements = achievements;
