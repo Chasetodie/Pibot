@@ -108,7 +108,7 @@ class TradeSystem {
                 timestamp: Date.now()
             });
             
-            console.log(`💾 Trade ${tradeData.id} guardado en SQLite`);
+            console.log(`💾 Trade ${tradeData.id} guardado en Database`);
             return true;
         } catch (error) {
             console.error('❌ Error guardando trade:', error);
@@ -179,8 +179,7 @@ class TradeSystem {
                     target_money_offer: trade.target_money || 0,
                     initiator_accepted: trade.initiator_accepted || false,
                     target_accepted: trade.target_accepted || false,
-                    status: trade.status,
-                    created_at: trade.created_at
+                    status: trade.status
                 };
                 
                 // Agregar al caché

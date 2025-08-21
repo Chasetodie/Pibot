@@ -100,7 +100,6 @@ class EconomySystem {
                 timestamp: Date.now()
             });
 
-            console.log(`💾 Usuario ${userId} actualizado en SQLite`);
             return updatedUser;
         } catch (error) {
             console.error('❌ Error actualizando usuario:', error);
