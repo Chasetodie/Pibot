@@ -515,7 +515,7 @@ class MissionsSystem {
                     work_today: (user.daily_stats.work_today || 0) + 1
                 };
                 break;
-            case 'money_earned':
+            case 'money_earned_today':
                 updateData.daily_stats = {
                     ...user.daily_stats,
                     money_earned_today: (user.daily_stats.money_earned_today || 0) + value

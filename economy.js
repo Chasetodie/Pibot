@@ -895,7 +895,7 @@ class EconomySystem {
         // *** NUEVO: ACTUALIZAR MISIONES ***
         if (this.missions) {
             const completedMissions = await this.missions.updateMissionProgress(userId, 'work');
-            const moneyMissions = await this.missions.updateMissionProgress(userId, 'money_earned', amount);
+            const moneyMissions = await this.missions.updateMissionProgress(userId, 'money_earned_today', amount);
             // Las notificaciones se manejan desde los comandos
         }
 

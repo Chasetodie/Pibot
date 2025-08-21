@@ -842,7 +842,7 @@ class AllCommands {
             // *** NUEVO: NOTIFICAR MISIONES COMPLETADAS ***
             if (this.economy.missions) {
                 const workMissions = await this.economy.missions.updateMissionProgress(userId, 'work');
-                const moneyMissions = await this.economy.missions.updateMissionProgress(userId, 'money_earned', result.amount);
+                const moneyMissions = await this.economy.missions.updateMissionProgress(userId, 'money_earned_today', result.amount);
                 
                 const allCompleted = [...workMissions, ...moneyMissions];
                 if (allCompleted.length > 0) {
@@ -891,7 +891,7 @@ class AllCommands {
         // *** NUEVO: NOTIFICAR MISIONES COMPLETADAS ***
         if (this.economy.missions) {
             const workMissions = await this.economy.missions.updateMissionProgress(userId, 'work');
-            const moneyMissions = await this.economy.missions.updateMissionProgress(userId, 'money_earned', result.amount);
+            const moneyMissions = await this.economy.missions.updateMissionProgress(userId, 'money_earned_today', result.amount);
             
             const allCompleted = [...workMissions, ...moneyMissions];
             if (allCompleted.length > 0) {

@@ -328,7 +328,7 @@ class MinigamesSystem {
             if (this.economy.missions) {
                 await this.economy.missions.updateMissionProgress(userId, 'game_won');
                 await this.economy.missions.updateMissionProgress(userId, 'bet_won');
-                await this.economy.missions.updateMissionProgress(userId, 'money_earned', profit);
+                await this.economy.missions.updateMissionProgress(userId, 'money_earned_today', profit);
             }
 
             let finalMessage = ''
@@ -572,7 +572,7 @@ class MinigamesSystem {
             if (this.economy.missions) {
                 await this.economy.missions.updateMissionProgress(userId, 'game_won');
                 await this.economy.missions.updateMissionProgress(userId, 'bet_won');
-                await this.economy.missions.updateMissionProgress(userId, 'money_earned', profit);
+                await this.economy.missions.updateMissionProgress(userId, 'money_earned_today', profit);
             }
 
             let finalMessage = ''
@@ -806,7 +806,7 @@ class MinigamesSystem {
             if (this.economy.missions) {
                 await this.economy.missions.updateMissionProgress(userId, 'game_won');
                 await this.economy.missions.updateMissionProgress(userId, 'bet_won');
-                await this.economy.missions.updateMissionProgress(userId, 'money_earned', profit);
+                await this.economy.missions.updateMissionProgress(userId, 'money_earned_today', profit);
             }
 
             let finalMessage = ''
@@ -1263,7 +1263,7 @@ class MinigamesSystem {
                 if (this.economy.missions) {
                     await this.economy.missions.updateMissionProgress(userId, 'game_won');
                     await this.economy.missions.updateMissionProgress(userId, 'bet_won');
-                    await this.economy.missions.updateMissionProgress(userId, 'money_earned', profit);
+                    await this.economy.missions.updateMissionProgress(userId, 'money_earned_today', profit);
                 }
                 break;
             case 'win':
@@ -1305,7 +1305,7 @@ class MinigamesSystem {
                 if (this.economy.missions) {
                     await this.economy.missions.updateMissionProgress(userId, 'game_won');
                     await this.economy.missions.updateMissionProgress(userId, 'bet_won');
-                    await this.economy.missions.updateMissionProgress(userId, 'money_earned', profit);
+                    await this.economy.missions.updateMissionProgress(userId, 'money_earned_today', profit);
                 }
                 break;
             case 'push':
@@ -1668,7 +1668,7 @@ class MinigamesSystem {
             if (this.economy.missions) {
                 await this.economy.missions.updateMissionProgress(userId, 'game_won');
                 await this.economy.missions.updateMissionProgress(userId, 'bet_won');
-                await this.economy.missions.updateMissionProgress(userId, 'money_earned', profit);
+                await this.economy.missions.updateMissionProgress(userId, 'money_earned_today', profit);
             }
 
             let finalMessage = ''
@@ -2562,7 +2562,7 @@ class MinigamesSystem {
             if (this.economy.missions) {
                 await this.economy.missions.updateMissionProgress(winner.id, 'game_won');
                 await this.economy.missions.updateMissionProgress(winner.id, 'bet_won');
-                await this.economy.missions.updateMissionProgress(winner.id, 'money_earned', winnerPrize);
+                await this.economy.missions.updateMissionProgress(winner.id, 'money_earned_today', winnerPrize);
             }    
             embed.setTitle('🏆 ¡TENEMOS UN GANADOR! 🏆')
                 .setDescription(`🎉 **¡${winner.displayName} sobrevivió a la ruleta rusa!**`)
