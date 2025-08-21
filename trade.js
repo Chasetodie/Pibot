@@ -371,6 +371,12 @@ class TradeSystem {
         // IMPORTANTE: También en formato DB
         tradeData.initiator_accepted = false;
         tradeData.target_accepted = false;
+
+        console.log('Después de agregar dinero:');
+        console.log('tradeData.initiatorOffer:', tradeData.initiatorOffer);
+        console.log('tradeData.targetOffer:', tradeData.targetOffer);
+        console.log('tradeData.initiator_offer:', tradeData.initiator_offer);
+        console.log('tradeData.target_offer:', tradeData.target_offer);
         
         await this.updateTradeEmbed(message.channel, tradeData);
         await message.reply(`✅ Agregado **${itemId}** x${quantity} a tu oferta.`);
@@ -521,10 +527,6 @@ class TradeSystem {
             const initiatorMoney = tradeData.initiatorMoneyOffer || tradeData.initiator_money_offer || 0;
             const targetMoney = tradeData.targetMoneyOffer || tradeData.target_money_offer || 0;
             
-            console.log('🔍 initiatorOffer:', initiatorOffer);
-            console.log('🔍 targetOffer:', targetOffer);
-            console.log('🔍 tipo:', typeof initiatorOffer, typeof targetOffer);
-
             // Verificar recursos antes de proceder
             if (!this.validateTradeResources(user1, initiatorOffer, initiatorMoney) ||
                 !this.validateTradeResources(user2, targetOffer, targetMoney)) {
