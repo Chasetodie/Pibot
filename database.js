@@ -96,7 +96,6 @@ class LocalDatabase {
         });
     }
 
-    // Obtener usuario (compatible con Supabase)
     async getUser(userId) {
         return new Promise((resolve, reject) => {
             this.db.get(
@@ -200,7 +199,6 @@ class LocalDatabase {
         });
     }
 
-    // Actualizar usuario (compatible con Supabase)
     async updateUser(userId, updateData) {
         return new Promise((resolve, reject) => {
             const sets = [];
@@ -423,8 +421,6 @@ class LocalDatabase {
         });
     }
 
-// AGREGAR AL FINAL del archivo database.js:
-
     // Métodos específicos para eventos
     async createServerEvent(eventData) {
         return new Promise((resolve, reject) => {
@@ -446,6 +442,68 @@ class LocalDatabase {
                 if (err) reject(err);
                 else resolve({ id: eventData.id });
             });
+        });
+    }
+
+    // Métodos específicos para subastas
+    async createAuction(auctionData) {
+        return new Promise((resolve, reject) => {
+            this.db.run(`
+                INSERT INTO auctions (
+                    id, seller, item_id, item_name, starting_bid,
+                    current_bid, highest_bidder, bids, ends_at, active
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            `, [
+                auctionData.id, auctionData.seller, auctionData.item_id,
+                auctionData.item_name, auctionData.starting_bid,
+                auctionData.current_bid, auctionData.highest_bidder,
+                JSON.stringify(auctionData.bids), auctionData.ends_at, 1
+            ], function(err) {
+                if (err) reject(err);
+                else resolve({ id: auctionData.id });
+            });
+        });
+    }
+
+    async getAuction(auctionId) {
+        return new Promise((resolve, reject) => {
+            this.db.get('SELECT * FROM auctions WHERE id = ?', [auctionId], (err, row) => {
+                if (err) {
+                    reject(err);
+                } else if (row) {
+                    row.bids = JSON.parse(row.bids || '[]');
+                    resolve(row);
+                } else {
+                    resolve(null);
+                }
+            });
+        });
+    }
+
+    async updateAuction(auctionId, updateData) {
+        return new Promise((resolve, reject) => {
+            const sets = [];
+            const values = [];
+
+            for (const [key, value] of Object.entries(updateData)) {
+                sets.push(`${key} = ?`);
+                if (typeof value === 'object' && value !== null) {
+                    values.push(JSON.stringify(value));
+                } else {
+                    values.push(value);
+                }
+            }
+
+            values.push(auctionId);
+
+            this.db.run(
+                `UPDATE auctions SET ${sets.join(', ')} WHERE id = ?`,
+                values,
+                function(err) {
+                    if (err) reject(err);
+                    else resolve({ changes: this.changes });
+                }
+            );
         });
     }
 }

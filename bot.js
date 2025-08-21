@@ -94,6 +94,7 @@ const minigames = new MinigamesSystem(economy);
 
 //Crear instancia del sistema de Misiones
 const missions = new MissionsSystem(economy);
+missions.startCacheCleanup();
 
 //Crear instancia del sistema de Achievements
 const achievements = new AchievementsSystem(economy);
@@ -118,8 +119,12 @@ setInterval(async () => {
 }, 6 * 60 * 60 * 1000);
 
 const betting = new BettingSystem(economy);
+
 const trades = new TradeSystem(shop);
+trades.startCacheCleanup();
+
 const auctions = new AuctionSystem(shop);
+
 const crafting = new CraftingSystem(shop);
 
 // Instancia del sistema de comandos mejorados
@@ -361,12 +366,7 @@ client.on('interactionCreate', async (interaction) => {
                 const tradeId = interaction.customId.replace('trade_accept_', '');
                 
                 // Obtener trade de la DB
-                const { data: tradeData } = await trades.supabase
-                    .from('trades')
-                    .select('*')
-                    .eq('id', tradeId)
-                    .eq('status', 'pending')
-                    .single();
+                const tradeData = await trades.db.getTrade(tradeId);
                     
                 if (!tradeData) {
                     await interaction.editReply({ content: '❌ Intercambio no encontrado o ya finalizado.' });
@@ -425,12 +425,7 @@ client.on('interactionCreate', async (interaction) => {
                 const tradeId = interaction.customId.replace('trade_cancel_', '');
                 
                 // Verificar que el trade existe y está activo
-                const { data: tradeData } = await trades.supabase
-                    .from('trades')
-                    .select('*')
-                    .eq('id', tradeId)
-                    .eq('status', 'pending')
-                    .single();
+                const tradeData = await trades.db.getTrade(tradeId);
                     
                 if (!tradeData) {
                     await interaction.editReply({ content: '❌ Intercambio no encontrado o ya finalizado.' });
@@ -444,13 +439,10 @@ client.on('interactionCreate', async (interaction) => {
                 }
                 
                 // Cancelar en la base de datos
-                const { error } = await trades.supabase
-                    .from('trades')
-                    .update({
-                        status: 'cancelled',
-                        completed_at: new Date().toISOString()
-                    })
-                    .eq('id', tradeId);
+                await trades.db.updateTrade(tradeId, {
+                    status: 'cancelled',
+                    completed_at: new Date().toISOString()
+                });
                     
                 if (error) {
                     console.error('Error cancelando trade:', error);

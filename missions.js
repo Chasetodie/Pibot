@@ -5,6 +5,14 @@ class MissionsSystem {
     constructor(economySystem) {
         this.economy = economySystem;
         this.events = null;
+
+        // ✅ AGREGAR: Caché para misiones
+        this.missionsCache = new Map();
+        this.cacheTimeout = 10 * 60 * 1000; // 10 minutos
+
+        // ✅ AGREGAR: Rate limiting para updateMissionProgress
+        this.updateCooldowns = new Map();
+        this.updateCooldownTime = 1000; // 1 segundo entre updates
         
         // Todas las misiones disponibles
         this.availableMissions = {
@@ -374,6 +382,16 @@ class MissionsSystem {
 
     
     async initializeDailyMissions(userId) {
+        const cacheKey = `missions_${userId}`;
+        const cached = this.missionsCache.get(cacheKey);
+        const now = Date.now();
+        
+        // Si hay caché válido, usar eso
+        if (cached && (now - cached.timestamp) < this.cacheTimeout) {
+            return cached.data.daily_missions || {};
+        }
+        
+        // Si no hay caché, obtener de DB normalmente
         const user = await this.economy.getUser(userId);
 
         // Resetear bandera si es necesario
@@ -415,14 +433,52 @@ class MissionsSystem {
             
             return newMissions;
         }
+
+        this.missionsCache.set(cacheKey, {
+            data: user,
+            timestamp: now
+        });
         
         return user.daily_missions || {};
+    }
+
+    startCacheCleanup() {
+        setInterval(() => {
+            const now = Date.now();
+            for (const [key, cached] of this.missionsCache) {
+                if (now - cached.timestamp > this.cacheTimeout) {
+                    this.missionsCache.delete(key);
+                }
+            }
+        }, 15 * 60 * 1000); // Limpiar cada 15 minutos
     }
     
     // Actualizar progreso de misiones
     async updateMissionProgress(userId, actionType, value = 1, maxChecks = 3, checkedInSession = new Set()) {
-        await this.initializeDailyMissions(userId);
-        const user = await this.economy.getUser(userId);
+        const lastUpdate = this.updateCooldowns.get(userId) || 0;
+        const now = Date.now();
+        
+        if (now - lastUpdate < this.updateCooldownTime) {
+            return []; // Skip si es muy frecuente
+        }
+        
+        this.updateCooldowns.set(userId, now);
+        
+        const cacheKey = `missions_${userId}`;
+        let user = this.missionsCache.get(cacheKey);
+
+        if (!user || (now - user.timestamp) > this.cacheTimeout) {
+            await this.initializeDailyMissions(userId);
+            user = await this.economy.getUser(userId);
+            
+            // Guardar en caché
+            this.missionsCache.set(cacheKey, {
+                data: user,
+                timestamp: now
+            });
+        } else {
+            user = user.data;
+        }
 
         if (maxChecks <= 0) {
             console.log(`⚠️ Límite de verificaciones alcanzado para ${userId}`);
@@ -614,7 +670,14 @@ class MissionsSystem {
         }
 
         // Actualizar base de datos
-        await this.economy.updateUser(userId, updateData);     
+        await this.economy.updateUser(userId, updateData);   
+        
+        // Actualizar caché con los nuevos datos
+        const updatedUser = await this.economy.getUser(userId);
+        this.missionsCache.set(cacheKey, {
+            data: updatedUser,
+            timestamp: Date.now()
+        });
         
         return completedMissions;
     }

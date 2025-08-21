@@ -1,5 +1,4 @@
 require('dotenv').config();
-const { createClient } = require('@supabase/supabase-js');
 const LocalDatabase = require('./database');
 const EventsSystem = require('./events');
 
@@ -45,7 +44,6 @@ class EconomySystem {
         this.activeRobberies = new Map();
     }
 
-    // Inicializar Supabase
     initializeDatabase() {
         try {
             this.db = new LocalDatabase();
@@ -89,7 +87,7 @@ class EconomySystem {
 
             // Crear nuevo usuario si no existe
             const newUser = {
-                id: userId, // En Supabase necesitamos especificar el ID
+                id: userId, // necesitamos especificar el ID
                 balance: 0,
                 level: 1,
                 xp: 0,
@@ -153,7 +151,7 @@ class EconomySystem {
                 timestamp: now
             });
 
-            console.log(`👤 Nuevo usuario creado en Supabase: ${userId}`);
+            console.log(`👤 Nuevo usuario creado en SQLite: ${userId}`);
             return createdUser;
 
         } catch (error) {
@@ -187,7 +185,7 @@ class EconomySystem {
                 timestamp: Date.now()
             });
 
-            console.log(`💾 Usuario ${userId} actualizado en Supabase`);
+            console.log(`💾 Usuario ${userId} actualizado en SQLite`);
             return updatedUser;
         } catch (error) {
             console.error('❌ Error actualizando usuario:', error);

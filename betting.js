@@ -1,6 +1,5 @@
 const { EmbedBuilder } = require('discord.js');
 require('dotenv').config();
-const { createClient } = require('@supabase/supabase-js');
 
 class BettingSystem {
     constructor(economySystem) {
@@ -17,7 +16,6 @@ class BettingSystem {
         };
     }
 
-    // ✅ CAMBIO: Obtener apuesta de Supabase
     async getBet(betId) {
         try {
             const bet = await this.db.getTrade(betId);
@@ -28,7 +26,6 @@ class BettingSystem {
         }
     }
 
-    // ✅ CAMBIO: Crear apuesta en Supabase
     async createBetInDB(betId, betData) {
         try {
             // Adaptar datos para usar la tabla trades
@@ -53,7 +50,6 @@ class BettingSystem {
         }
     }
 
-    // ✅ CAMBIO: Actualizar apuesta en Supabase
     async updateBet(betId, updateData) {
         try {
             await this.db.updateTrade(betId, updateData);
@@ -65,7 +61,6 @@ class BettingSystem {
         }
     }
 
-    // ✅ CAMBIO: Obtener apuestas activas del usuario en Supabase
     async getUserActiveBets(userId) {
         try {
             return new Promise((resolve, reject) => {
@@ -97,12 +92,15 @@ class BettingSystem {
         }
     }
 
-    // ✅ CAMBIO: Obtener todas las apuestas de Supabase
     async getAllBets() {
         try {
-            const { data: bets, error } = await this.supabase
-                .from('bets')
-                .select('*');
+            const bets = await new Promise((resolve, reject) => {
+                this.db.db.all('SELECT * FROM trades WHERE initiator_items LIKE "%bet_description%"', 
+                (err, rows) => {
+                    if (err) reject(err);
+                    else resolve(rows);
+                });
+            });
 
             if (error) {
                 throw error;
@@ -123,7 +121,6 @@ class BettingSystem {
         }
     }
 
-    // ✅ CAMBIO: Eliminar apuesta de Supabase
     async deleteBet(betId) {
         try {
             await new Promise((resolve, reject) => {

@@ -1,56 +1,145 @@
 const { EmbedBuilder } = require('discord.js');
-const { createClient } = require('@supabase/supabase-js');
 
 // 3. Sistema de subastas
 class AuctionSystem {
     constructor(shopSystem) {
         this.shop = shopSystem;
-        this.supabase = createClient(
-            process.env.SUPABASE_URL,
-            process.env.SUPABASE_ANON_KEY
-        );
+        this.db = this.shop.economy.db;
+        this.activeAuctions = new Map(); // Caché en memoria
+        
+        // Crear tabla de subastas si no existe
+        this.createAuctionsTable();
+    }
+
+    // ✅ AGREGAR: Crear tabla de subastas
+    createAuctionsTable() {
+        if (!this.db) return;
+        
+        this.db.db.run(`
+            CREATE TABLE IF NOT EXISTS auctions (
+                id TEXT PRIMARY KEY,
+                seller TEXT NOT NULL,
+                item_id TEXT NOT NULL,
+                item_name TEXT NOT NULL,
+                starting_bid INTEGER NOT NULL,
+                current_bid INTEGER NOT NULL,
+                highest_bidder TEXT,
+                bids TEXT DEFAULT '[]',
+                ends_at TEXT NOT NULL,
+                active BOOLEAN DEFAULT 1,
+                created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                completed_at TEXT
+            )
+        `, (err) => {
+            if (err) {
+                console.error('❌ Error creando tabla auctions:', err);
+            } else {
+                console.log('✅ Tabla auctions creada/verificada');
+            }
+        });
     }
 
     async saveAuctionToDb(auction) {
-        const { error } = await this.supabase
-            .from('auctions')
-            .insert({
-                id: auction.id,
-                seller: auction.seller,
-                item_id: auction.itemId,
-                item_name: auction.itemName,
-                starting_bid: auction.currentBid,
-                current_bid: auction.currentBid,
-                highest_bidder: auction.highestBidder,
-                bids: auction.bids,
-                ends_at: new Date(auction.endsAt).toISOString()
+        try {
+            await new Promise((resolve, reject) => {
+                this.db.db.run(`
+                    INSERT INTO auctions (
+                        id, seller, item_id, item_name, starting_bid,
+                        current_bid, highest_bidder, bids, ends_at, active
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                `, [
+                    auction.id,
+                    auction.seller,
+                    auction.itemId,
+                    auction.itemName,
+                    auction.currentBid,
+                    auction.currentBid,
+                    auction.highestBidder,
+                    JSON.stringify(auction.bids || []),
+                    new Date(auction.endsAt).toISOString(),
+                    1
+                ], (err) => {
+                    if (err) reject(err);
+                    else resolve();
+                });
             });
-        
-        return !error;
+            
+            // Agregar al caché
+            this.activeAuctions.set(auction.id, auction);
+            return true;
+        } catch (error) {
+            console.error('❌ Error guardando subasta:', error);
+            return false;
+        }
     }
 
     async updateBidInDb(auctionId, auction) {
-        const { error } = await this.supabase
-            .from('auctions')
-            .update({
-                current_bid: auction.currentBid,
-                highest_bidder: auction.highestBidder,
-                bids: auction.bids
-            })
-            .eq('id', auctionId);
-        
-        return !error;
+        try {
+            await new Promise((resolve, reject) => {
+                this.db.db.run(`
+                    UPDATE auctions 
+                    SET current_bid = ?, highest_bidder = ?, bids = ?
+                    WHERE id = ?
+                `, [
+                    auction.currentBid,
+                    auction.highestBidder,
+                    JSON.stringify(auction.bids || []),
+                    auctionId
+                ], (err) => {
+                    if (err) reject(err);
+                    else resolve();
+                });
+            });
+            
+            // Actualizar caché
+            this.activeAuctions.set(auctionId, auction);
+            return true;
+        } catch (error) {
+            console.error('❌ Error actualizando bid:', error);
+            return false;
+        }
     }
 
     async getAuctionFromDb(auctionId) {
-        const { data } = await this.supabase
-            .from('auctions')
-            .select('*')
-            .eq('id', auctionId)
-            .eq('active', true)
-            .single();
-        
-        return data;
+        try {
+            // Verificar caché primero
+            if (this.activeAuctions.has(auctionId)) {
+                return this.activeAuctions.get(auctionId);
+            }
+            
+            const auction = await new Promise((resolve, reject) => {
+                this.db.db.get(`
+                    SELECT * FROM auctions 
+                    WHERE id = ? AND active = 1
+                `, [auctionId], (err, row) => {
+                    if (err) reject(err);
+                    else resolve(row);
+                });
+            });
+            
+            if (auction) {
+                const auctionData = {
+                    id: auction.id,
+                    seller: auction.seller,
+                    item_id: auction.item_id,
+                    item_name: auction.item_name,
+                    current_bid: auction.current_bid,
+                    highest_bidder: auction.highest_bidder,
+                    bids: JSON.parse(auction.bids || '[]'),
+                    active: auction.active,
+                    created_at: auction.created_at
+                };
+                
+                // Agregar al caché
+                this.activeAuctions.set(auctionId, auctionData);
+                return auctionData;
+            }
+            
+            return null;
+        } catch (error) {
+            console.error('❌ Error obteniendo subasta:', error);
+            return null;
+        }
     }
     
     async createAuction(message, itemId, startingBid, duration = 3600000) { // 1 hora por defecto
@@ -232,27 +321,49 @@ class AuctionSystem {
 
     // 4. Agregar función para completar subasta:
     async completeAuctionInDb(auctionId) {
-        const { error } = await this.supabase
-            .from('auctions')
-            .update({
-                active: false,
-                completed_at: new Date().toISOString()
-            })
-            .eq('id', auctionId);
-        
-        return !error;
+        try {
+            await new Promise((resolve, reject) => {
+                this.db.db.run(`
+                    UPDATE auctions 
+                    SET active = 0, completed_at = ?
+                    WHERE id = ?
+                `, [new Date().toISOString(), auctionId], (err) => {
+                    if (err) reject(err);
+                    else resolve();
+                });
+            });
+            
+            // Remover del caché
+            this.activeAuctions.delete(auctionId);
+            return true;
+        } catch (error) {
+            console.error('❌ Error completando subasta:', error);
+            return false;
+        }
     }
 
     // 5. Agregar función para listar subastas activas:
     async getActiveAuctions() {
-        const { data } = await this.supabase
-            .from('auctions')
-            .select('*')
-            .eq('active', true)
-            .lt('ends_at', new Date().toISOString())
-            .order('created_at', { ascending: false });
-        
-        return data || [];
+        try {
+            const auctions = await new Promise((resolve, reject) => {
+                this.db.db.all(`
+                    SELECT * FROM auctions 
+                    WHERE active = 1 
+                    ORDER BY created_at DESC
+                `, (err, rows) => {
+                    if (err) reject(err);
+                    else resolve(rows || []);
+                });
+            });
+            
+            return auctions.map(auction => ({
+                ...auction,
+                bids: JSON.parse(auction.bids || '[]')
+            }));
+        } catch (error) {
+            console.error('❌ Error obteniendo subastas activas:', error);
+            return [];
+        }
     }
 }
 

@@ -1,16 +1,14 @@
-// 3. SISTEMA DE INTERCAMBIO COMPLETO - Crear archivo TradeSystem.js
-
 const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
-const { createClient } = require('@supabase/supabase-js');
 
 class TradeSystem {
     constructor(shopSystem) {
         this.shop = shopSystem;
-        this.supabase = createClient(
-            process.env.SUPABASE_URL,
-            process.env.SUPABASE_ANON_KEY
-        );
+        this.db = this.shop.economy.db;
         this.tradeTimeout = 300000; // 5 minutos timeout
+
+        // ✅ AGREGAR: Caché para trades activos
+        this.activeTradesCache = new Map();
+        this.cacheTimeout = 2 * 60 * 1000; // 2 minutos        
     }
 
     async acceptTradeButton(userId, tradeData) {
@@ -70,84 +68,161 @@ class TradeSystem {
         try {
             const fiveMinutesAgo = new Date(Date.now() - this.tradeTimeout);
             
-            const { error } = await this.supabase
-                .from('trades')
-                .update({ status: 'expired' })
-                .eq('status', 'pending')
-                .lt('created_at', fiveMinutesAgo.toISOString());
-                
-            if (error) console.error('Error limpiando trades:', error);
+            await new Promise((resolve, reject) => {
+                this.db.db.run(`
+                    UPDATE trades 
+                    SET status = 'expired' 
+                    WHERE status = 'pending' 
+                    AND created_at < ?
+                `, [fiveMinutesAgo.toISOString()], (err) => {
+                    if (err) reject(err);
+                    else resolve();
+                });
+            });
+            
+            // Limpiar caché de trades expirados
+            for (const [tradeId, cached] of this.activeTradesCache) {
+                if (Date.now() - cached.timestamp > this.tradeTimeout) {
+                    this.activeTradesCache.delete(tradeId);
+                }
+            }
+            
         } catch (error) {
-            console.error('Error en cleanup:', error);
+            console.error('❌ Error limpiando trades:', error);
         }
     }
 
     async saveTradeToDb(tradeData) {
-        const { data, error } = await this.supabase
-            .from('trades')
-            .insert({
+        try {
+            const tradeForDB = {
                 id: tradeData.id,
                 initiator: tradeData.initiator,
                 target: tradeData.target,
-                initiator_offer: tradeData.initiatorOffer,
-                target_offer: tradeData.targetOffer,
-                initiator_money_offer: tradeData.initiatorMoneyOffer,
-                target_money_offer: tradeData.targetMoneyOffer,
-                channel_id: tradeData.channel,
-                status: tradeData.status,
-                expires_at: new Date(Date.now() + this.tradeTimeout).toISOString()
+                initiator_items: JSON.stringify(tradeData.initiatorOffer || []),
+                target_items: JSON.stringify(tradeData.targetOffer || []),
+                initiator_money: tradeData.initiatorMoneyOffer || 0,
+                target_money: tradeData.targetMoneyOffer || 0,
+                status: tradeData.status || 'pending',
+                created_at: new Date().toISOString()
+            };
+            
+            await this.db.createTrade(tradeForDB);
+            
+            // Agregar al caché
+            this.activeTradesCache.set(tradeData.id, {
+                data: tradeData,
+                timestamp: Date.now()
             });
-        
-        if (error) console.error('Error guardando trade:', error);
-        return !error;
+            
+            console.log(`💾 Trade ${tradeData.id} guardado en SQLite`);
+            return true;
+        } catch (error) {
+            console.error('❌ Error guardando trade:', error);
+            return false;
+        }
     }
 
     async updateTradeInDb(tradeData) {
-        const updateData = {
-            initiator_offer: tradeData.initiatorOffer || tradeData.initiator_offer || [],
-            target_offer: tradeData.targetOffer || tradeData.target_offer || [],
-            initiator_money_offer: tradeData.initiatorMoneyOffer || tradeData.initiator_money_offer || 0,
-            target_money_offer: tradeData.targetMoneyOffer || tradeData.target_money_offer || 0,
-            initiator_accepted: tradeData.initiatorAccepted || tradeData.initiator_accepted || false,
-            target_accepted: tradeData.targetAccepted || tradeData.target_accepted || false,
-            status: tradeData.status || 'pending'
-        };
-        
-        console.log('Actualizando trade con:', updateData); // Para debug
-        
-        const { error } = await this.supabase
-            .from('trades')
-            .update(updateData)
-            .eq('id', tradeData.id);
-        
-        if (error) {
-            console.error('Error actualizando trade:', error);
+        try {
+            const updateData = {
+                initiator_items: JSON.stringify(tradeData.initiatorOffer || tradeData.initiator_offer || []),
+                target_items: JSON.stringify(tradeData.targetOffer || tradeData.target_offer || []),
+                initiator_money: tradeData.initiatorMoneyOffer || tradeData.initiator_money_offer || 0,
+                target_money: tradeData.targetMoneyOffer || tradeData.target_money_offer || 0,
+                initiator_accepted: tradeData.initiatorAccepted || tradeData.initiator_accepted || false,
+                target_accepted: tradeData.targetAccepted || tradeData.target_accepted || false,
+                status: tradeData.status || 'pending'
+            };
+            
+            await this.db.updateTrade(tradeData.id, updateData);
+            
+            // Actualizar caché
+            this.activeTradesCache.set(tradeData.id, {
+                data: tradeData,
+                timestamp: Date.now()
+            });
+            
+            return true;
+        } catch (error) {
+            console.error('❌ Error actualizando trade:', error);
+            return false;
         }
-        
-        return !error;
     }
 
     async getActiveTradeByUser(userId) {
-        const { data } = await this.supabase
-            .from('trades')
-            .select('*')
-            .or(`initiator.eq.${userId},target.eq.${userId}`)
-            .eq('status', 'pending')
-            .single();
-        
-        return data;
+        try {
+            // Verificar caché primero
+            for (const [tradeId, cached] of this.activeTradesCache) {
+                if (Date.now() - cached.timestamp < this.cacheTimeout) {
+                    const trade = cached.data;
+                    if ((trade.initiator === userId || trade.target === userId) && 
+                        trade.status === 'pending') {
+                        return trade;
+                    }
+                }
+            }
+            
+            // Si no está en caché, consultar DB
+            const trade = await new Promise((resolve, reject) => {
+                this.db.db.get(`
+                    SELECT * FROM trades 
+                    WHERE (initiator = ? OR target = ?) 
+                    AND status = 'pending'
+                    ORDER BY created_at DESC
+                    LIMIT 1
+                `, [userId, userId], (err, row) => {
+                    if (err) reject(err);
+                    else resolve(row);
+                });
+            });
+            
+            if (trade) {
+                // Convertir formato DB a formato JavaScript
+                const tradeData = {
+                    id: trade.id,
+                    initiator: trade.initiator,
+                    target: trade.target,
+                    initiator_offer: JSON.parse(trade.initiator_items || '[]'),
+                    target_offer: JSON.parse(trade.target_items || '[]'),
+                    initiator_money_offer: trade.initiator_money || 0,
+                    target_money_offer: trade.target_money || 0,
+                    initiator_accepted: trade.initiator_accepted || false,
+                    target_accepted: trade.target_accepted || false,
+                    status: trade.status,
+                    created_at: trade.created_at
+                };
+                
+                // Agregar al caché
+                this.activeTradesCache.set(trade.id, {
+                    data: tradeData,
+                    timestamp: Date.now()
+                });
+                
+                return tradeData;
+            }
+            
+            return null;
+        } catch (error) {
+            console.error('❌ Error obteniendo trade activo:', error);
+            return null;
+        }
     }
 
     async completeTradeInDb(tradeId) {
-        const { error } = await this.supabase
-            .from('trades')
-            .update({
+        try {
+            await this.db.updateTrade(tradeId, {
                 status: 'completed',
                 completed_at: new Date().toISOString()
-            })
-            .eq('id', tradeId);
-        
-        return !error;
+            });
+            
+            // Remover del caché
+            this.activeTradesCache.delete(tradeId);
+            
+            return true;
+        } catch (error) {
+            console.error('❌ Error completando trade en DB:', error);
+            return false;
+        }
     }
     
     // Iniciar intercambio
@@ -198,11 +273,7 @@ class TradeSystem {
         setTimeout(async () => {
             try {
                 // Verificar si el trade aún está activo
-                const { data: stillActive } = await this.supabase
-                    .from('trades')
-                    .select('status')
-                    .eq('id', tradeId)
-                    .single();
+                const stillActive = await this.db.getTrade(tradeId);
                 
                 if (stillActive && stillActive.status === 'pending') {
                     await this.cancelTradeInDb(tradeId, 'timeout');
@@ -249,6 +320,17 @@ class TradeSystem {
         });
         
         return tradeData;
+    }
+
+    startCacheCleanup() {
+        setInterval(() => {
+            const now = Date.now();
+            for (const [tradeId, cached] of this.activeTradesCache) {
+                if (now - cached.timestamp > this.cacheTimeout) {
+                    this.activeTradesCache.delete(tradeId);
+                }
+            }
+        }, 5 * 60 * 1000); // Limpiar cada 5 minutos
     }
     
     // Agregar item al intercambio
@@ -540,15 +622,20 @@ class TradeSystem {
     }
     
     async cancelTradeInDb(tradeId, reason = 'manual') {
-        const { error } = await this.supabase
-            .from('trades')
-            .update({
+        try {
+            await this.db.updateTrade(tradeId, {
                 status: 'cancelled',
                 completed_at: new Date().toISOString()
-            })
-            .eq('id', tradeId);
-        
-        return !error;
+            });
+            
+            // Remover del caché
+            this.activeTradesCache.delete(tradeId);
+            
+            return true;
+        } catch (error) {
+            console.error('❌ Error cancelando trade:', error);
+            return false;
+        }
     }
 
     // Validar recursos para intercambio
