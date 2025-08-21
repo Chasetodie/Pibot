@@ -92,12 +92,13 @@ class TradeSystem {
                 id: tradeData.id,
                 initiator: tradeData.initiator,
                 target: tradeData.target,
-                initiator_items: JSON.stringify(tradeData.initiatorOffer || []),
-                target_items: JSON.stringify(tradeData.targetOffer || []),
-                initiator_money: tradeData.initiatorMoneyOffer || 0,
-                target_money: tradeData.targetMoneyOffer || 0,
-                status: tradeData.status || 'pending',
-                created_at: new Date().toISOString()
+                initiator_offer: JSON.stringify(tradeData.initiatorOffer || []),
+                target_offer: JSON.stringify(tradeData.targetOffer || []),
+                initiator_money_offer: tradeData.initiatorMoneyOffer || 0,
+                target_money_offer: tradeData.targetMoneyOffer || 0,
+                initiator_accepted: tradeData.initiatorAccepted || false,
+                target_accepted: tradeData.targetAccepted || false,
+                status: tradeData.status || 'pending'
             };
             
             await this.database.createTrade(tradeForDB);
@@ -246,7 +247,6 @@ class TradeSystem {
             targetMoneyOffer: 0,
             initiatorAccepted: false,
             targetAccepted: false,
-            createdAt: Date.now(),
             channel: message.channel.id,
             status: 'pending'
         };
