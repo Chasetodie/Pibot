@@ -4,20 +4,26 @@ const fs = require('fs');
 
 class LocalDatabase {
     constructor() {
-        this.db = null;
+        this.pool = null;
+        this.init();
     }
 
     async init() {
         try {
-            this.db = await mysql.createConnection({
+            // Usar pool en lugar de conexión única
+            this.pool = mysql.createPool({
                 host: 'mysql.db.bot-hosting.net',
                 port: 3306,
                 user: 'u469192_ViTTwSY6wl',
-                password: encodeURIComponent('!oLZ^vxR^ymBVqD5CXuvIYeL'),
-                database: 's469192_PibotDB'
+                password: '!oLZ%5EvxR%5EymBVqD5CXuvIYeL',
+                database: 's469192_PibotDB',
+                connectionLimit: 5, // ← Máximo 5 conexiones
+                acquireTimeout: 60000,
+                timeout: 60000,
+                reconnect: true
             });
             
-            console.log('✅ MySQL conectado correctamente');
+            console.log('✅ MySQL Pool conectado');
             await this.initTables();
         } catch (err) {
             console.error('❌ Error conectando a MySQL:', err);
@@ -27,7 +33,7 @@ class LocalDatabase {
     async initTables() {
         try {
             // Tabla de usuarios principal
-            await this.db.execute(`
+            await this.pool.execute(`
                 CREATE TABLE IF NOT EXISTS users (
                     id VARCHAR(255) PRIMARY KEY,
                     balance INT DEFAULT 0,
@@ -58,7 +64,7 @@ class LocalDatabase {
             `);
 
             // Tabla para items de tienda
-            await this.db.execute(`
+            await this.pool.execute(`
                 CREATE TABLE IF NOT EXISTS shop_items (
                     id TEXT PRIMARY KEY,
                     name TEXT NOT NULL,
@@ -74,7 +80,7 @@ class LocalDatabase {
             `);
 
             // Tabla para trades
-            await this.db.execute(`
+            await this.pool.execute(`
                 CREATE TABLE IF NOT EXISTS trades (
                     id TEXT PRIMARY KEY,
                     initiator TEXT NOT NULL,
@@ -91,7 +97,7 @@ class LocalDatabase {
                 )
             `);
 
-            await this.db.execute(`
+            await this.pool.execute(`
                 CREATE TABLE IF NOT EXISTS russian_games (
                     id TEXT PRIMARY KEY,
                     channel_id TEXT NOT NULL,
@@ -109,7 +115,7 @@ class LocalDatabase {
             `);
 
             // Tabla para partidas UNO (si la usas)
-            await this.db.execute(`
+            await this.pool.execute(`
                 CREATE TABLE IF NOT EXISTS uno_games (
                     id TEXT PRIMARY KEY,
                     creator_id TEXT NOT NULL,
@@ -123,7 +129,7 @@ class LocalDatabase {
                 )
             `);
 
-            await this.db.execute(`
+            await this.pool.execute(`
 
                 CREATE TABLE IF NOT EXISTS server_events (
                     id TEXT PRIMARY KEY,
@@ -148,7 +154,7 @@ class LocalDatabase {
             `);
 
             // Tabla para subastas
-            await this.db.execute(`
+            await this.pool.execute(`
                 CREATE TABLE IF NOT EXISTS auctions (
                     id TEXT PRIMARY KEY,
                     seller TEXT NOT NULL,
@@ -175,11 +181,11 @@ class LocalDatabase {
 
     async getUser(userId) {
         try {
-            if (!this.db) {
+            if (!this.pool) {
                 await this.init();
             }
             
-            const [rows] = await this.db.execute(
+            const [rows] = await this.pool.execute(
                 'SELECT * FROM users WHERE id = ?',
                 [userId]
             );
@@ -245,7 +251,7 @@ class LocalDatabase {
                 updated_at: new Date().toISOString()
             };
 
-            await this.db.execute(`
+            await this.pool.execute(`
                 INSERT INTO users (
                     id, balance, level, xp, total_xp, last_daily, last_work,
                     last_robbery, last_coinflip, last_dice, last_roulette,
@@ -268,7 +274,6 @@ class LocalDatabase {
             return newUser;
         } catch (error) {
             console.error('❌ Error obteniendo usuario:', error);
-            console.error('❌ Detalles de la conexión DB:', this.db ? 'Conectada' : 'NULL');
             throw error;
         }
     }
@@ -294,7 +299,7 @@ class LocalDatabase {
 
             const query = `UPDATE users SET ${sets.join(', ')} WHERE id = ?`;
             
-            const [result] = await this.db.execute(query, values);
+            const [result] = await this.pool.execute(query, values);
             console.log(`💾 Usuario MySQL actualizado: ${userId}`);
             return { changes: result.affectedRows };
         } catch (error) {
@@ -305,7 +310,7 @@ class LocalDatabase {
 
     async getAllUsers() {
         try {
-            const [rows] = await this.db.execute('SELECT * FROM users');
+            const [rows] = await this.pool.execute('SELECT * FROM users');
             
             return rows.map(row => {
                 // Parsear campos JSON
@@ -324,7 +329,7 @@ class LocalDatabase {
 
     async getBalanceLeaderboard(limit = 10) {
         try {
-            const [rows] = await this.db.execute(
+            const [rows] = await this.pool.execute(
                 'SELECT id, balance, level, total_xp FROM users ORDER BY balance DESC LIMIT ?',
                 [limit]
             );
@@ -343,7 +348,7 @@ class LocalDatabase {
 
     async getLevelLeaderboard(limit = 10) {
         try {
-            const [rows] = await this.db.execute(
+            const [rows] = await this.pool.execute(
                 'SELECT id, balance, level, total_xp FROM users ORDER BY total_xp DESC LIMIT ?',
                 [limit]
             );
@@ -363,7 +368,7 @@ class LocalDatabase {
     // Métodos para shop_items
     async getShopItems() {
         try {
-            const [rows] = await this.db.execute(
+            const [rows] = await this.pool.execute(
                 'SELECT * FROM shop_items WHERE available = 1'
             );
             
@@ -380,7 +385,7 @@ class LocalDatabase {
     // Métodos para trades
     async createTrade(tradeData) {
         try {
-            await this.db.execute(`
+            await this.pool.execute(`
                 INSERT INTO trades (id, initiator, target, initiator_items, target_items, 
                                 initiator_money, target_money, status, created_at)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())
@@ -401,7 +406,7 @@ class LocalDatabase {
 
     async getTrade(tradeId) {
         try {
-            const [rows] = await this.db.execute(
+            const [rows] = await this.pool.execute(
                 'SELECT * FROM trades WHERE id = ?', 
                 [tradeId]
             );
@@ -435,7 +440,7 @@ class LocalDatabase {
 
             values.push(tradeId);
 
-            const [result] = await this.db.execute(
+            const [result] = await this.pool.execute(
                 `UPDATE trades SET ${sets.join(', ')} WHERE id = ?`,
                 values
             );
@@ -449,9 +454,9 @@ class LocalDatabase {
 
     // Cerrar conexión
     async close() {
-        if (this.db) {
+        if (this.pool) {
             try {
-                await this.db.end();
+                await this.pool.end();
                 console.log('✅ MySQL desconectado');
             } catch (error) {
                 console.error('❌ Error cerrando MySQL:', error);
@@ -482,7 +487,7 @@ class LocalDatabase {
     // Métodos específicos para eventos
     async createServerEvent(eventData) {
         return new Promise((resolve, reject) => {
-            this.db.run(`
+            this.pool.run(`
                 INSERT INTO server_events (
                     id, type, name, description, emoji, color,
                     start_time, end_time, duration, multipliers,
@@ -506,7 +511,7 @@ class LocalDatabase {
     // Métodos específicos para subastas
     async createAuction(auctionData) {
         try {
-            await this.db.execute(`
+            await this.pool.execute(`
                 INSERT INTO auctions (
                     id, seller, item_id, item_name, starting_bid,
                     current_bid, highest_bidder, bids, ends_at, active
@@ -527,7 +532,7 @@ class LocalDatabase {
 
     async getAuction(auctionId) {
         try {
-            const [rows] = await this.db.execute(
+            const [rows] = await this.pool.execute(
                 'SELECT * FROM auctions WHERE id = ?', 
                 [auctionId]
             );
@@ -560,7 +565,7 @@ class LocalDatabase {
 
             values.push(auctionId);
 
-            const [result] = await this.db.execute(
+            const [result] = await this.pool.execute(
                 `UPDATE auctions SET ${sets.join(', ')} WHERE id = ?`,
                 values
             );
@@ -574,7 +579,7 @@ class LocalDatabase {
 
     async getRussianGame(gameId) {
         return new Promise((resolve, reject) => {
-            this.db.get('SELECT * FROM russian_games WHERE id = ?', [gameId], (err, row) => {
+            this.pool.get('SELECT * FROM russian_games WHERE id = ?', [gameId], (err, row) => {
                 if (err) {
                     reject(err);
                 } else {
@@ -595,7 +600,7 @@ class LocalDatabase {
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)
             `;
             
-            this.db.run(query, [
+            this.pool.run(query, [
                 gameId,
                 gameData.channel_id,
                 gameData.creator_id,
@@ -635,7 +640,7 @@ class LocalDatabase {
 
             values.push(gameId);
 
-            this.db.run(
+            this.pool.run(
                 `UPDATE russian_games SET ${sets.join(', ')} WHERE id = ?`,
                 values,
                 function(err) {
@@ -651,7 +656,7 @@ class LocalDatabase {
 
     async deleteRussianGame(gameId) {
         return new Promise((resolve, reject) => {
-            this.db.run('DELETE FROM russian_games WHERE id = ?', [gameId], function(err) {
+            this.pool.run('DELETE FROM russian_games WHERE id = ?', [gameId], function(err) {
                 if (err) {
 
                     reject(err);
@@ -666,7 +671,7 @@ class LocalDatabase {
     // Métodos para Russian Roulette
     async getActiveRussianGames() {
         return new Promise((resolve, reject) => {
-            this.db.all(
+            this.pool.all(
                 "SELECT * FROM russian_games WHERE phase IN ('waiting', 'playing')",
                 (err, rows) => {
                     if (err) {
@@ -692,7 +697,7 @@ class LocalDatabase {
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)
             `;
             
-            this.db.run(query, [
+            this.pool.run(query, [
                 gameId,
                 gameData.creator_id,
                 gameData.channel_id,
@@ -729,7 +734,7 @@ class LocalDatabase {
 
             values.push(gameId);
 
-            this.db.run(
+            this.pool.run(
                 `UPDATE uno_games SET ${sets.join(', ')} WHERE id = ?`,
                 values,
                 function(err) {
@@ -745,7 +750,7 @@ class LocalDatabase {
 
     async deleteUnoGame(gameId) {
         return new Promise((resolve, reject) => {
-            this.db.run('DELETE FROM uno_games WHERE id = ?', [gameId], function(err) {
+            this.pool.run('DELETE FROM uno_games WHERE id = ?', [gameId], function(err) {
                 if (err) {
                     reject(err);
                 } else {
@@ -757,7 +762,7 @@ class LocalDatabase {
 
     async getActiveUnoGames() {
         return new Promise((resolve, reject) => {
-            this.db.all(
+            this.pool.all(
                 "SELECT * FROM uno_games WHERE phase != 'finished'",
                 (err, rows) => {
                     if (err) {
@@ -777,7 +782,7 @@ class LocalDatabase {
 
     // Método para obtener conexión (para el panel web)
     getConnection() {
-        return this.db;
+        return this.pool;
     }
 }
 
