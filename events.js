@@ -198,13 +198,32 @@ class EventsSystem {
 
     // ✅ REEMPLAZAR: saveEvent() para SQLite
     async saveEvent(eventId, eventData) {
-        if (!this.db) {
+        if (!this.database) {
             console.log('⚠️ Base de datos no disponible, evento no guardado:', eventId);
             return;
         }
         
         try {
-            await this.db.createServerEvent(eventData);
+            const mappedData = {
+                id: eventData.id,
+                type: eventData.type,
+                name: eventData.name,
+                description: eventData.description,
+                emoji: eventData.emoji,
+                color: eventData.color,
+                start_time: new Date(eventData.startTime).toISOString(),
+                end_time: new Date(eventData.endTime).toISOString(),
+                duration: eventData.duration,
+                multipliers: eventData.multipliers || {},
+                is_special: eventData.isSpecial || false,
+                is_negative: eventData.isNegative || false,
+                is_rare: eventData.isRare || false,
+                triggered_by: eventData.triggeredBy || null,
+                participant_count: eventData.participantCount || 0,
+                stats: eventData.stats || {}
+            };
+            
+            await this.database.createServerEvent(mappedData);
             console.log(`💾 Evento ${eventId} guardado en MySQL`);
         } catch (error) {
             console.error('❌ Error guardando evento en MySQL:', error);
