@@ -3,7 +3,6 @@ const express = require('express');
 const fs = require('fs');
 const path = require('path');
 const sqlite3 = require('sqlite3').verbose();
-const { Pool } = require('pg');
 const app = express();
 const PORT = process.env.PORT || 3000;
 const CommandHandler = require('./commands'); // Importar el manejador de comandos

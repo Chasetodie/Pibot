@@ -1,37 +1,34 @@
-const sqlite3 = require('sqlite3').verbose();
+const mysql = require('mysql2/promise');
 const path = require('path');
 const fs = require('fs');
 
 class LocalDatabase {
     constructor() {
-        this.dbPath = path.join(__dirname, 'bot_data.db');
         this.db = null;
         this.init();
     }
 
-    init() {
-        // Crear directorio si no existe
-        const dir = path.dirname(this.dbPath);
-        if (!fs.existsSync(dir)) {
-            fs.mkdirSync(dir, { recursive: true });
+    async init() {
+        try {
+            this.db = await mysql.createConnection({
+                host: 'mysql.db.bot-hosting.net',
+                port: 3306,
+                user: 'u469192_ViTTwSY6wl',
+                password: 'dsNIqtcJ@i@t+WqLlCrF3J5!',
+                database: 's469192_PibotDB'
+            });
+            
+            console.log('✅ MySQL conectado correctamente');
+            await this.initTables();
+        } catch (err) {
+            console.error('❌ Error conectando a MySQL:', err);
         }
-
-        this.db = new sqlite3.Database(this.dbPath, (err) => {
-            if (err) {
-                console.error('❌ Error conectando a SQLite:', err);
-            } else {
-                console.log('✅ SQLite conectado:', this.dbPath);
-            }
-        });
-
-
-        this.initTables();
     }
 
-    initTables() {
-        this.db.serialize(() => {
+    async initTables() {
+        try {
             // Tabla de usuarios principal
-            this.db.run(`
+            await this.db.execute(`
                 CREATE TABLE IF NOT EXISTS users (
                     id TEXT PRIMARY KEY,
                     balance INTEGER DEFAULT 0,
@@ -62,7 +59,7 @@ class LocalDatabase {
             `);
 
             // Tabla para items de tienda
-            this.db.run(`
+            await this.db.execute(`
                 CREATE TABLE IF NOT EXISTS shop_items (
                     id TEXT PRIMARY KEY,
                     name TEXT NOT NULL,
@@ -78,7 +75,7 @@ class LocalDatabase {
             `);
 
             // Tabla para trades
-            this.db.run(`
+            await this.db.execute(`
                 CREATE TABLE IF NOT EXISTS trades (
                     id TEXT PRIMARY KEY,
                     initiator TEXT NOT NULL,
@@ -95,7 +92,7 @@ class LocalDatabase {
                 )
             `);
 
-            this.db.run(`
+            await this.db.execute(`
                 CREATE TABLE IF NOT EXISTS russian_games (
                     id TEXT PRIMARY KEY,
                     channel_id TEXT NOT NULL,
@@ -113,7 +110,7 @@ class LocalDatabase {
             `);
 
             // Tabla para partidas UNO (si la usas)
-            this.db.run(`
+            await this.db.execute(`
                 CREATE TABLE IF NOT EXISTS uno_games (
                     id TEXT PRIMARY KEY,
                     creator_id TEXT NOT NULL,
@@ -127,7 +124,7 @@ class LocalDatabase {
                 )
             `);
 
-            this.db.run(`
+            await this.db.execute(`
 
                 CREATE TABLE IF NOT EXISTS server_events (
                     id TEXT PRIMARY KEY,
@@ -152,7 +149,7 @@ class LocalDatabase {
             `);
 
             // Tabla para subastas
-            this.db.run(`
+            await this.db.execute(`
                 CREATE TABLE IF NOT EXISTS auctions (
                     id TEXT PRIMARY KEY,
                     seller TEXT NOT NULL,
@@ -170,128 +167,118 @@ class LocalDatabase {
             `);
 
 
-            console.log('🗃️ Tablas SQLite inicializadas');
-        });
+            console.log('🗃️ Tablas MySQL inicializadas');
+        } catch (error) {
+            console.error('❌ Error creando tablas:', error);
+        }
     }
 
 
     async getUser(userId) {
-        return new Promise((resolve, reject) => {
-            this.db.get(
+        try {
+            const [rows] = await this.db.execute(
                 'SELECT * FROM users WHERE id = ?',
-                [userId],
-                (err, row) => {
-                    if (err) {
-                        reject(err);
-                        return;
-                    }
-
-                    if (row) {
-                        // Parsear JSON fields
-                        row.items = JSON.parse(row.items || '{}');
-                        row.stats = JSON.parse(row.stats || '{}');
-                        row.bet_stats = JSON.parse(row.bet_stats || '{}');
-                        row.daily_missions = JSON.parse(row.daily_missions || '{}');
-                        row.daily_stats = JSON.parse(row.daily_stats || '{}');
-
-                        
-                        resolve(row);
-                    } else {
-                        // Crear nuevo usuario
-                        const newUser = {
-                            id: userId,
-                            balance: 0,
-                            level: 1,
-                            xp: 0,
-                            total_xp: 0,
-                            last_daily: 0,
-                            last_work: 0,
-                            last_robbery: 0,
-                            last_coinflip: 0,
-                            last_dice: 0,
-                            last_roulette: 0,
-                            last_lotto: 0,
-                            last_blackjack: 0,
-                            last_name_work: "",
-                            messages_count: 0,
-                            items: {},
-                            stats: {
-                                totalEarned: 0,
-                                totalSpent: 0,
-                                dailyClaims: 0,
-                                work_count: 0,
-                                games_played: 0,
-                                lottery_wins: 0,
-                                robberies: 0,
-                                robberies_successful: 0,
-                                moneyStolen: 0,
-                                timesRobbed: 0,
-                                money_lost_to_robbers: 0,
-                                message_missions: "",
-                                message_achievements: ""
-                            },
-                            bet_stats: {
-                                wins: 0,
-                                losses: 0,
-                                total_won: 0,
-                                total_lost: 0,
-                                net_profit: 0
-                            },
-                            daily_missions: {},
-                            daily_missions_date: null,
-                            daily_stats: {
-                                messages_today: 0,
-                                work_today: 0,
-                                money_earned_today: 0
-                            },
-                            created_at: new Date().toISOString(),
-                            updated_at: new Date().toISOString()
-                        };
-
-                        this.db.run(`
-                            INSERT INTO users (
-                                id, balance, level, xp, total_xp, last_daily, last_work,
-                                last_robbery, last_coinflip, last_dice, last_roulette,
-                                last_lotto, last_blackjack, last_name_work, messages_count,
-                                items, stats, bet_stats, daily_missions, daily_missions_date,
-                                daily_stats, created_at, updated_at
-                            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                        `, [
-                            newUser.id, newUser.balance, newUser.level, newUser.xp, newUser.total_xp,
-                            newUser.last_daily, newUser.last_work, newUser.last_robbery,
-                            newUser.last_coinflip, newUser.last_dice, newUser.last_roulette,
-                            newUser.last_lotto, newUser.last_blackjack, newUser.last_name_work,
-                            newUser.messages_count, JSON.stringify(newUser.items),
-                            JSON.stringify(newUser.stats), JSON.stringify(newUser.bet_stats),
-                            JSON.stringify(newUser.daily_missions), newUser.daily_missions_date,
-                            JSON.stringify(newUser.daily_stats), newUser.created_at, newUser.updated_at
-                        ], function(err) {
-                            if (err) {
-                                reject(err);
-                            } else {
-                                console.log(`👤 Nuevo usuario SQLite creado: ${userId}`);
-                                resolve(newUser);
-                            }
-                        });
-                    }
-                }
+                [userId]
             );
-        });
+
+            if (rows.length > 0) {
+                const user = rows[0];
+                // Parsear campos JSON
+                user.items = user.items || {};
+                user.stats = user.stats || {};
+                user.bet_stats = user.bet_stats || {};
+                user.daily_missions = user.daily_missions || {};
+                user.daily_stats = user.daily_stats || {};
+                return user;
+            }
+
+            const newUser = {
+                id: userId,
+                balance: 0,
+                level: 1,
+                xp: 0,
+                total_xp: 0,
+                last_daily: 0,
+                last_work: 0,
+                last_robbery: 0,
+                last_coinflip: 0,
+                last_dice: 0,
+                last_roulette: 0,
+                last_lotto: 0,
+                last_blackjack: 0,
+                last_name_work: "",
+                messages_count: 0,
+                items: {},
+                stats: {
+                    totalEarned: 0,
+                    totalSpent: 0,
+                    dailyClaims: 0,
+                    work_count: 0,
+                    games_played: 0,
+                    lottery_wins: 0,
+                    robberies: 0,
+                    robberies_successful: 0,
+                    moneyStolen: 0,
+                    timesRobbed: 0,
+                    money_lost_to_robbers: 0,
+                    message_missions: "",
+                    message_achievements: ""
+                },
+                bet_stats: {
+                    wins: 0,
+                    losses: 0,
+                    total_won: 0,
+                    total_lost: 0,
+                    net_profit: 0
+                },
+                daily_missions: {},
+                daily_missions_date: null,
+                daily_stats: {
+                    messages_today: 0,
+                    work_today: 0,
+                    money_earned_today: 0
+                },
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString()
+            };
+
+            await this.db.execute(`
+                INSERT INTO users (
+                    id, balance, level, xp, total_xp, last_daily, last_work,
+                    last_robbery, last_coinflip, last_dice, last_roulette,
+                    last_lotto, last_blackjack, last_name_work, messages_count,
+                    items, stats, bet_stats, daily_missions, daily_missions_date,
+                    daily_stats
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            `, [
+                newUser.id, newUser.balance, newUser.level, newUser.xp, newUser.total_xp,
+                newUser.last_daily, newUser.last_work, newUser.last_robbery,
+                newUser.last_coinflip, newUser.last_dice, newUser.last_roulette,
+                newUser.last_lotto, newUser.last_blackjack, newUser.last_name_work,
+                newUser.messages_count, JSON.stringify(newUser.items),
+                JSON.stringify(newUser.stats), JSON.stringify(newUser.bet_stats),
+                JSON.stringify(newUser.daily_missions), newUser.daily_missions_date,
+                JSON.stringify(newUser.daily_stats)
+            ]);
+
+            console.log(`👤 Nuevo usuario MySQL creado: ${userId}`);
+            return newUser;
+        } catch (error) {
+            console.error('❌ Error obteniendo usuario:', error);
+            throw error;
+        }
     }
 
 
     async updateUser(userId, updateData) {
-        return new Promise((resolve, reject) => {
+        try {
             const sets = [];
             const values = [];
-
-            // Agregar updated_at automáticamente
-            updateData.updated_at = new Date().toISOString();
 
             for (const [key, value] of Object.entries(updateData)) {
                 sets.push(`${key} = ?`);
                 
-                // Convertir objetos a JSON
+                // Convertir objetos a JSON para MySQL
                 if (typeof value === 'object' && value !== null) {
                     values.push(JSON.stringify(value));
                 } else {
@@ -303,148 +290,133 @@ class LocalDatabase {
 
             const query = `UPDATE users SET ${sets.join(', ')} WHERE id = ?`;
             
-            this.db.run(query, values, function(err) {
-                if (err) {
-                    console.error('❌ Error actualizando usuario SQLite:', err);
-                    reject(err);
-                } else {
-                    console.log(`💾 Usuario SQLite actualizado: ${userId}`);
-                    resolve({ changes: this.changes });
-                }
-            });
-        });
+            const [result] = await this.db.execute(query, values);
+            console.log(`💾 Usuario MySQL actualizado: ${userId}`);
+            return { changes: result.affectedRows };
+        } catch (error) {
+            console.error('❌ Error actualizando usuario MySQL:', error);
+            throw error;
+        }
     }
 
-    // Obtener todos los usuarios
     async getAllUsers() {
-        return new Promise((resolve, reject) => {
-            this.db.all('SELECT * FROM users', (err, rows) => {
-                if (err) {
-                    reject(err);
-                    return;
-                }
-
-                const users = rows.map(row => {
-                    row.items = JSON.parse(row.items || '{}');
-                    row.stats = JSON.parse(row.stats || '{}');
-                    row.bet_stats = JSON.parse(row.bet_stats || '{}');
-                    row.daily_missions = JSON.parse(row.daily_missions || '{}');
-                    row.daily_stats = JSON.parse(row.daily_stats || '{}');
-                    return row;
-                });
-
-                resolve(users);
+        try {
+            const [rows] = await this.db.execute('SELECT * FROM users');
+            
+            return rows.map(row => {
+                // Parsear campos JSON
+                row.items = row.items || {};
+                row.stats = row.stats || {};
+                row.bet_stats = row.bet_stats || {};
+                row.daily_missions = row.daily_missions || {};
+                row.daily_stats = row.daily_stats || {};
+                return row;
             });
-        });
+        } catch (error) {
+            console.error('❌ Error obteniendo todos los usuarios:', error);
+            return [];
+        }
     }
 
-    // Obtener leaderboard por balance
     async getBalanceLeaderboard(limit = 10) {
-        return new Promise((resolve, reject) => {
-            this.db.all(
+        try {
+            const [rows] = await this.db.execute(
                 'SELECT id, balance, level, total_xp FROM users ORDER BY balance DESC LIMIT ?',
-                [limit],
-                (err, rows) => {
-                    if (err) {
-                        reject(err);
-                    } else {
-                        resolve(rows.map(row => ({
-                            userId: row.id,
-                            balance: row.balance,
-                            level: row.level,
-                            totalXp: row.total_xp
-                        })));
-                    }
-                }
+                [limit]
             );
-        });
+            
+            return rows.map(row => ({
+                userId: row.id,
+                balance: row.balance,
+                level: row.level,
+                totalXp: row.total_xp
+            }));
+        } catch (error) {
+            console.error('❌ Error obteniendo ranking de balance:', error);
+            return [];
+        }
     }
 
-    // Obtener leaderboard por nivel
     async getLevelLeaderboard(limit = 10) {
-        return new Promise((resolve, reject) => {
-            this.db.all(
+        try {
+            const [rows] = await this.db.execute(
                 'SELECT id, balance, level, total_xp FROM users ORDER BY total_xp DESC LIMIT ?',
-                [limit],
-                (err, rows) => {
-                    if (err) {
-                        reject(err);
-                    } else {
-                        resolve(rows.map(row => ({
-                            userId: row.id,
-                            level: row.level,
-                            totalXp: row.total_xp,
-                            balance: row.balance
-                        })));
-                    }
-                }
+                [limit]
             );
-        });
+            
+            return rows.map(row => ({
+                userId: row.id,
+                level: row.level,
+                totalXp: row.total_xp,
+                balance: row.balance
+            }));
+        } catch (error) {
+            console.error('❌ Error obteniendo ranking de niveles:', error);
+            return [];
+        }
     }
 
     // Métodos para shop_items
     async getShopItems() {
-        return new Promise((resolve, reject) => {
-            this.db.all(
-                'SELECT * FROM shop_items WHERE available = 1',
-                (err, rows) => {
-                    if (err) {
-                        reject(err);
-                    } else {
-                        const items = rows.map(row => {
-                            row.effects = JSON.parse(row.effects || '{}');
-                            return row;
-                        });
-                        resolve(items);
-                    }
-                }
+        try {
+            const [rows] = await this.db.execute(
+                'SELECT * FROM shop_items WHERE available = 1'
             );
-        });
+            
+            return rows.map(row => {
+                row.effects = row.effects || {};
+                return row;
+            });
+        } catch (error) {
+            console.error('❌ Error obteniendo items de tienda:', error);
+            return [];
+        }
     }
 
     // Métodos para trades
     async createTrade(tradeData) {
-        return new Promise((resolve, reject) => {
-            const query = `
+        try {
+            await this.db.execute(`
                 INSERT INTO trades (id, initiator, target, initiator_items, target_items, 
-                                  initiator_money, target_money, status, created_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-            `;
-            
-            this.db.run(query, [
+                                initiator_money, target_money, status, created_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())
+            `, [
                 tradeData.id, tradeData.initiator, tradeData.target,
                 JSON.stringify(tradeData.initiator_items || {}),
                 JSON.stringify(tradeData.target_items || {}),
                 tradeData.initiator_money || 0, tradeData.target_money || 0,
-                tradeData.status || 'pending', new Date().toISOString()
-            ], function(err) {
-                if (err) {
-                    reject(err);
-                } else {
-                    resolve({ id: tradeData.id });
-                }
-            });
-        });
+                tradeData.status || 'pending'
+            ]);
+            
+            return { id: tradeData.id };
+        } catch (error) {
+            console.error('❌ Error creando trade:', error);
+            throw error;
+        }
     }
 
     async getTrade(tradeId) {
-        return new Promise((resolve, reject) => {
-            this.db.get('SELECT * FROM trades WHERE id = ?', [tradeId], (err, row) => {
-                if (err) {
-                    reject(err);
-                } else if (row) {
-                    row.initiator_items = JSON.parse(row.initiator_items || '{}');
-                    row.target_items = JSON.parse(row.target_items || '{}');
-                    resolve(row);
-                } else {
-                    resolve(null);
-                }
-            });
-        });
+        try {
+            const [rows] = await this.db.execute(
+                'SELECT * FROM trades WHERE id = ?', 
+                [tradeId]
+            );
+            
+            if (rows.length > 0) {
+                const trade = rows[0];
+                trade.initiator_items = trade.initiator_items || {};
+                trade.target_items = trade.target_items || {};
+                return trade;
+            }
+            return null;
+        } catch (error) {
+            console.error('❌ Error obteniendo trade:', error);
+            return null;
+        }
     }
 
     async updateTrade(tradeId, updateData) {
-        return new Promise((resolve, reject) => {
+        try {
             const sets = [];
             const values = [];
 
@@ -459,64 +431,48 @@ class LocalDatabase {
 
             values.push(tradeId);
 
-            this.db.run(
+            const [result] = await this.db.execute(
                 `UPDATE trades SET ${sets.join(', ')} WHERE id = ?`,
-                values,
-                function(err) {
-                    if (err) {
-                        reject(err);
-                    } else {
-                        resolve({ changes: this.changes });
-                    }
-                }
+                values
             );
-        });
+            
+            return { changes: result.affectedRows };
+        } catch (error) {
+            console.error('❌ Error actualizando trade:', error);
+            throw error;
+        }
     }
 
     // Cerrar conexión
-    close() {
+    async close() {
         if (this.db) {
-            this.db.close((err) => {
-                if (err) {
-                    console.error('❌ Error cerrando SQLite:', err);
-                } else {
-                    console.log('✅ SQLite desconectado');
-                }
-            });
+            try {
+                await this.db.end();
+                console.log('✅ MySQL desconectado');
+            } catch (error) {
+                console.error('❌ Error cerrando MySQL:', error);
+            }
         }
     }
 
     // Backup de la base de datos
     async backup() {
-        const timestamp = Date.now();
-        const backupPath = `${this.dbPath}.backup.${timestamp}`;
-        
-        return new Promise((resolve, reject) => {
-            try {
-                // Crear copia del archivo
-                const source = fs.createReadStream(this.dbPath);
-                const destination = fs.createWriteStream(backupPath);
-                
-                source.pipe(destination);
-                
-                destination.on('close', () => {
-                    console.log(`📦 Backup creado: ${backupPath}`);
-                    resolve(backupPath);
-                });
-                
-                destination.on('error', (error) => {
-                    console.error('❌ Error creando backup:', error);
-                    reject(error);
-                });
-                
-                source.on('error', (error) => {
-                    console.error('❌ Error leyendo archivo:', error);
-                    reject(error);
-                });
-            } catch (error) {
-                reject(error);
-            }
-        });
+        try {
+            // Para MySQL, hacer backup de datos específicos
+            const backupData = {
+                users: await this.getAllUsers(),
+                timestamp: new Date().toISOString()
+            };
+            
+            const backupPath = `./backup_${Date.now()}.json`;
+            require('fs').writeFileSync(backupPath, JSON.stringify(backupData, null, 2));
+            
+            console.log(`📦 Backup creado: ${backupPath}`);
+            return backupPath;
+        } catch (error) {
+            console.error('❌ Error creando backup:', error);
+            throw error;
+        }
     }
 
     // Métodos específicos para eventos
@@ -545,8 +501,8 @@ class LocalDatabase {
 
     // Métodos específicos para subastas
     async createAuction(auctionData) {
-        return new Promise((resolve, reject) => {
-            this.db.run(`
+        try {
+            await this.db.execute(`
                 INSERT INTO auctions (
                     id, seller, item_id, item_name, starting_bid,
                     current_bid, highest_bidder, bids, ends_at, active
@@ -556,30 +512,36 @@ class LocalDatabase {
                 auctionData.item_name, auctionData.starting_bid,
                 auctionData.current_bid, auctionData.highest_bidder,
                 JSON.stringify(auctionData.bids), auctionData.ends_at, 1
-            ], function(err) {
-                if (err) reject(err);
-                else resolve({ id: auctionData.id });
-            });
-        });
+            ]);
+            
+            return { id: auctionData.id };
+        } catch (error) {
+            console.error('❌ Error creando subasta:', error);
+            throw error;
+        }
     }
 
     async getAuction(auctionId) {
-        return new Promise((resolve, reject) => {
-            this.db.get('SELECT * FROM auctions WHERE id = ?', [auctionId], (err, row) => {
-                if (err) {
-                    reject(err);
-                } else if (row) {
-                    row.bids = JSON.parse(row.bids || '[]');
-                    resolve(row);
-                } else {
-                    resolve(null);
-                }
-            });
-        });
+        try {
+            const [rows] = await this.db.execute(
+                'SELECT * FROM auctions WHERE id = ?', 
+                [auctionId]
+            );
+            
+            if (rows.length > 0) {
+                const auction = rows[0];
+                auction.bids = auction.bids || [];
+                return auction;
+            }
+            return null;
+        } catch (error) {
+            console.error('❌ Error obteniendo subasta:', error);
+            return null;
+        }
     }
 
     async updateAuction(auctionId, updateData) {
-        return new Promise((resolve, reject) => {
+        try {
             const sets = [];
             const values = [];
 
@@ -594,15 +556,16 @@ class LocalDatabase {
 
             values.push(auctionId);
 
-            this.db.run(
+            const [result] = await this.db.execute(
                 `UPDATE auctions SET ${sets.join(', ')} WHERE id = ?`,
-                values,
-                function(err) {
-                    if (err) reject(err);
-                    else resolve({ changes: this.changes });
-                }
+                values
             );
-        });
+            
+            return { changes: result.affectedRows };
+        } catch (error) {
+            console.error('❌ Error actualizando subasta:', error);
+            throw error;
+        }
     }
 
     async getRussianGame(gameId) {
