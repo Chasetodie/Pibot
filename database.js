@@ -11,14 +11,15 @@ class LocalDatabase {
     async init() {
         try {
             this.db = await mysql.createConnection({
-                host: 'mysql.db.bot-hosting.net',
-                port: 3306,
-                user: 'u469192_ViTTwSY6wl',
-                password: 'dsNIqtcJ@i@t+WqLlCrF3J5!',
-                database: 's469192_PibotDB'
+                host: process.env.DB_HOST,
+                port: parseInt(process.env.DB_PORT),
+                user: process.env.DB_USER,
+                password: process.env.DB_PASSWORD,
+                database: process.env.DB_NAME
             });
             
             console.log('✅ MySQL conectado correctamente');
+            console.log(`📊 Base de datos: ${process.env.DB_NAME}`);
             await this.initTables();
         } catch (err) {
             console.error('❌ Error conectando a MySQL:', err);

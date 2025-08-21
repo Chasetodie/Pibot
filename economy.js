@@ -46,11 +46,10 @@ class EconomySystem {
 
     initializeDatabase() {
         try {
-            this.db = new LocalDatabase();
-
-            console.log('🚀 SQLite inicializado correctamente');
+            this.database = new LocalDatabase();
+            console.log('🗄️ Base de datos MySQL inicializada correctamente');
         } catch (error) {
-            console.error('❌ Error inicializando SQLite:', error);
+            console.error('❌ Error inicializando base de datos MySQL:', error);
         }
     }
 
@@ -65,7 +64,7 @@ class EconomySystem {
         
         try {
             // ✅ NUEVO: Usar LocalDatabase
-            const user = await this.db.getUser(userId);
+            const user = await this.database.getUser(userId);
 
             // Guardar en cache
             this.userCache.set(userId, {
@@ -84,10 +83,10 @@ class EconomySystem {
     async updateUser(userId, updateData) {
         try {
             // ✅ NUEVO: Usar LocalDatabase
-            await this.db.updateUser(userId, updateData);
+            await this.database.updateUser(userId, updateData);
             
             // Obtener usuario actualizado para cache
-            const updatedUser = await this.db.getUser(userId);
+            const updatedUser = await this.database.getUser(userId);
             
             // Actualizar cache
             this.userCache.set(userId, {
@@ -119,7 +118,7 @@ class EconomySystem {
     async getAllUsers() {
         try {
             // ✅ NUEVO: Usar LocalDatabase
-            const users = await this.db.getAllUsers();
+            const users = await this.database.getAllUsers();
             return users;
         } catch (error) {
             console.error('❌ Error obteniendo todos los usuarios:', error);
@@ -430,8 +429,7 @@ class EconomySystem {
     async getBalanceLeaderboard(limit = 10) {
         try {
             // ✅ NUEVO: Usar LocalDatabase
-            const users = await this.db.getBalanceLeaderboard(limit);
-            return users;
+            return await this.database.getBalanceLeaderboard(limit);
         } catch (error) {
             console.error('❌ Error obteniendo ranking de balance:', error);
             return [];
@@ -441,8 +439,7 @@ class EconomySystem {
     async getLevelLeaderboard(limit = 10) {
         try {
             // ✅ NUEVO: Usar LocalDatabase
-            const users = await this.db.getLevelLeaderboard(limit);
-            return users;
+            return await this.database.getLevelLeaderboard(limit);
         } catch (error) {
             console.error('❌ Error obteniendo ranking de niveles:', error);
             return [];

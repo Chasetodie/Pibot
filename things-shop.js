@@ -4,7 +4,6 @@ const { EmbedBuilder } = require('discord.js');
 class AuctionSystem {
     constructor(shopSystem) {
         this.shop = shopSystem;
-        this.db = this.shop.economy.db;
         this.activeAuctions = new Map(); // Caché en memoria
         
         // Crear tabla de subastas si no existe
@@ -41,103 +40,47 @@ class AuctionSystem {
 
     async saveAuctionToDb(auction) {
         try {
-            await new Promise((resolve, reject) => {
-                this.db.db.run(`
-                    INSERT INTO auctions (
-                        id, seller, item_id, item_name, starting_bid,
-                        current_bid, highest_bidder, bids, ends_at, active
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                `, [
-                    auction.id,
-                    auction.seller,
-                    auction.itemId,
-                    auction.itemName,
-                    auction.currentBid,
-                    auction.currentBid,
-                    auction.highestBidder,
-                    JSON.stringify(auction.bids || []),
-                    new Date(auction.endsAt).toISOString(),
-                    1
-                ], (err) => {
-                    if (err) reject(err);
-                    else resolve();
-                });
+            await this.shop.economy.database.createAuction({
+                id: auction.id,
+                seller: auction.seller,
+                item_id: auction.itemId,
+                item_name: auction.itemName,
+                starting_bid: auction.currentBid,
+                current_bid: auction.currentBid,
+                highest_bidder: auction.highestBidder,
+                bids: auction.bids,
+                ends_at: new Date(auction.endsAt).toISOString()
             });
-            
-            // Agregar al caché
-            this.activeAuctions.set(auction.id, auction);
             return true;
         } catch (error) {
-            console.error('❌ Error guardando subasta:', error);
+            console.error('Error guardando subasta:', error);
             return false;
         }
     }
 
     async updateBidInDb(auctionId, auction) {
         try {
-            await new Promise((resolve, reject) => {
-                this.db.db.run(`
-                    UPDATE auctions 
-                    SET current_bid = ?, highest_bidder = ?, bids = ?
-                    WHERE id = ?
-                `, [
-                    auction.currentBid,
-                    auction.highestBidder,
-                    JSON.stringify(auction.bids || []),
-                    auctionId
-                ], (err) => {
-                    if (err) reject(err);
-                    else resolve();
-                });
+            await this.shop.economy.database.updateAuction(auctionId, {
+                current_bid: auction.currentBid,
+                highest_bidder: auction.highestBidder,
+                bids: auction.bids
             });
-            
-            // Actualizar caché
-            this.activeAuctions.set(auctionId, auction);
             return true;
         } catch (error) {
-            console.error('❌ Error actualizando bid:', error);
+            console.error('Error actualizando puja:', error);
             return false;
         }
     }
 
     async getAuctionFromDb(auctionId) {
         try {
-            // Verificar caché primero
-            if (this.activeAuctions.has(auctionId)) {
-                return this.activeAuctions.get(auctionId);
+            const auction = await this.shop.economy.database.getAuction(auctionId);
+            if (auction && auction.active) {
+                return auction;
             }
-            
-            const auction = await new Promise((resolve, reject) => {
-                this.db.db.get(`
-                    SELECT * FROM auctions 
-                    WHERE id = ? AND active = 1
-                `, [auctionId], (err, row) => {
-                    if (err) reject(err);
-                    else resolve(row);
-                });
-            });
-            
-            if (auction) {
-                const auctionData = {
-                    id: auction.id,
-                    seller: auction.seller,
-                    item_id: auction.item_id,
-                    item_name: auction.item_name,
-                    current_bid: auction.current_bid,
-                    highest_bidder: auction.highest_bidder,
-                    bids: JSON.parse(auction.bids || '[]'),
-                    active: auction.active,
-                    created_at: auction.created_at
-                };
-                
-                // Agregar al caché
-                this.activeAuctions.set(auctionId, auctionData);
-                return auctionData;
-            }
-            
             return null;
         } catch (error) {
-            console.error('❌ Error obteniendo subasta:', error);
+            console.error('Error obteniendo subasta:', error);
             return null;
         }
     }
@@ -322,22 +265,13 @@ class AuctionSystem {
     // 4. Agregar función para completar subasta:
     async completeAuctionInDb(auctionId) {
         try {
-            await new Promise((resolve, reject) => {
-                this.db.db.run(`
-                    UPDATE auctions 
-                    SET active = 0, completed_at = ?
-                    WHERE id = ?
-                `, [new Date().toISOString(), auctionId], (err) => {
-                    if (err) reject(err);
-                    else resolve();
-                });
+            await this.shop.economy.database.updateAuction(auctionId, {
+                active: false,
+                completed_at: new Date().toISOString()
             });
-            
-            // Remover del caché
-            this.activeAuctions.delete(auctionId);
             return true;
         } catch (error) {
-            console.error('❌ Error completando subasta:', error);
+            console.error('Error completando subasta:', error);
             return false;
         }
     }
@@ -345,23 +279,13 @@ class AuctionSystem {
     // 5. Agregar función para listar subastas activas:
     async getActiveAuctions() {
         try {
-            const auctions = await new Promise((resolve, reject) => {
-                this.db.db.all(`
-                    SELECT * FROM auctions 
-                    WHERE active = 1 
-                    ORDER BY created_at DESC
-                `, (err, rows) => {
-                    if (err) reject(err);
-                    else resolve(rows || []);
-                });
-            });
-            
-            return auctions.map(auction => ({
-                ...auction,
-                bids: JSON.parse(auction.bids || '[]')
-            }));
+            // Implementar una consulta personalizada en database.js si es necesario
+            const [rows] = await this.shop.economy.database.db.execute(
+                'SELECT * FROM auctions WHERE active = 1 AND ends_at > NOW() ORDER BY created_at DESC'
+            );
+            return rows || [];
         } catch (error) {
-            console.error('❌ Error obteniendo subastas activas:', error);
+            console.error('Error obteniendo subastas activas:', error);
             return [];
         }
     }
