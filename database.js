@@ -9,9 +9,13 @@ class LocalDatabase {
 
     async init() {
         try {
-            const connectionString = 'mysql://u469192_ViTTwSY6wl:!oLZ%5EvxR%5EymBVqD5CXuvIYeL@mysql.db.bot-hosting.net:3306/s469192_PibotDB';
-
-            this.db = await mysql.createConnection(connectionString);
+            this.db = await mysql.createConnection({
+                host: 'mysql.db.bot-hosting.net',
+                port: 3306,
+                user: 'u469192_ViTTwSY6wl',
+                password: encodeURIComponent('!oLZ^vxR^ymBVqD5CXuvIYeL'),
+                database: 's469192_PibotDB'
+            });
             
             console.log('✅ MySQL conectado correctamente');
             await this.initTables();
@@ -25,31 +29,31 @@ class LocalDatabase {
             // Tabla de usuarios principal
             await this.db.execute(`
                 CREATE TABLE IF NOT EXISTS users (
-                    id TEXT PRIMARY KEY,
-                    balance INTEGER DEFAULT 0,
-                    level INTEGER DEFAULT 1,
-                    xp INTEGER DEFAULT 0,
-                    total_xp INTEGER DEFAULT 0,
-                    last_daily INTEGER DEFAULT 0,
-                    last_work INTEGER DEFAULT 0,
-                    last_robbery INTEGER DEFAULT 0,
-                    last_coinflip INTEGER DEFAULT 0,
-                    last_dice INTEGER DEFAULT 0,
-                    last_roulette INTEGER DEFAULT 0,
-                    last_lotto INTEGER DEFAULT 0,
-                    last_blackjack INTEGER DEFAULT 0,
+                    id VARCHAR(255) PRIMARY KEY,
+                    balance INT DEFAULT 0,
+                    level INT DEFAULT 1,
+                    xp INT DEFAULT 0,
+                    total_xp INT DEFAULT 0,
+                    last_daily BIGINT DEFAULT 0,
+                    last_work BIGINT DEFAULT 0,
+                    last_robbery BIGINT DEFAULT 0,
+                    last_coinflip BIGINT DEFAULT 0,
+                    last_dice BIGINT DEFAULT 0,
+                    last_roulette BIGINT DEFAULT 0,
+                    last_lotto BIGINT DEFAULT 0,
+                    last_blackjack BIGINT DEFAULT 0,
                     last_name_work TEXT DEFAULT '',
-                    messages_count INTEGER DEFAULT 0,
-                    items TEXT DEFAULT '{}',
-                    stats TEXT DEFAULT '{}',
-                    bet_stats TEXT DEFAULT '{}',
-                    daily_missions TEXT DEFAULT '{}',
+                    messages_count INT DEFAULT 0,
+                    items JSON,
+                    stats JSON,
+                    bet_stats JSON,
+                    daily_missions JSON,
                     daily_missions_date TEXT DEFAULT NULL,
-                    daily_stats TEXT DEFAULT '{}',
-                    achievements TEXT DEFAULT '[]',
+                    daily_stats JSON,
+                    achievements JSON,
                     missions_reset_today BOOLEAN DEFAULT 0,
-                    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-                    updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
                 )
             `);
 
