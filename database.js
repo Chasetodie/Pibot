@@ -383,7 +383,7 @@ class LocalDatabase {
             await this.pool.execute(`
                 INSERT INTO trades (id, initiator, target, initiator_offer, target_offer, 
                                 initiator_money_offer, target_money_offer, initiator_accepted, target_accepted, status)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             `, [
                 tradeData.id, tradeData.initiator, tradeData.target,
                 JSON.stringify(tradeData.initiator_items || {}),
