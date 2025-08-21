@@ -484,8 +484,7 @@ class LocalDatabase {
                 gameData.bet_amount,
                 JSON.stringify(gameData.players || []),
                 gameData.phase || 'waiting',
-                gameData.pot,
-                new Date().toISOString()
+                gameData.pot
             ]);
             
             return { id: gameId };
@@ -570,8 +569,7 @@ class LocalDatabase {
                 gameData.bet_amount,
                 JSON.stringify(gameData.players || []),
                 gameData.phase || 'waiting',
-                JSON.stringify(gameData.game_data || {}),
-                new Date().toISOString()
+                JSON.stringify(gameData.game_data || {})
             ]);
             
             return { id: gameId };
