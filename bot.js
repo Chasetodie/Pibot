@@ -17,10 +17,10 @@ const MissionsSystem = require('./missions');
 const ShopSystem = require('./shop');
 const AllCommands = require('./all-commands');
 //require('./admin-panel')(app); // Pasar el servidor express existente
-const {
+/*const {
     AuctionSystem,
     CraftingSystem
-} = require('./things-shop');
+} = require('./things-shop');*/
 
 // Archivo para guardar los contadores
 const countersFile = path.join(__dirname, 'counters.json');
@@ -121,12 +121,12 @@ setInterval(async () => {
 
 const betting = new BettingSystem(economy);
 
-const trades = new TradeSystem(shop);
+/*const trades = new TradeSystem(shop);
 trades.startCacheCleanup();
 
 const auctions = new AuctionSystem(shop);
 
-const crafting = new CraftingSystem(shop);
+const crafting = new CraftingSystem(shop);*/
 
 // Instancia del sistema de comandos mejorados
 const allCommands = new AllCommands(economy, shop, trades, auctions, crafting, events, betting);
@@ -723,7 +723,7 @@ client.on('interactionCreate', async (interaction) => {
             return;
         }
 
-        if (interaction.customId.startsWith('trade_accept_')) {
+/*        if (interaction.customId.startsWith('trade_accept_')) {
             try {
                 // Evitar spam
                 await interaction.deferReply({ ephemeral: true });
@@ -843,7 +843,7 @@ client.on('interactionCreate', async (interaction) => {
                 }
             }
         }
-
+*/
         try {
             if (interaction.customId === 'uno_show_hand') {
                 const gameKey = `uno_${interaction.channelId}`;
@@ -1113,4 +1113,5 @@ client.login(process.env.TOKEN).then(() => {
     console.log('🚀 Proceso de login iniciado...');
 }).catch(error => {
     console.error('❌ Error en el login:', error);
+
 });
