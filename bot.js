@@ -11,6 +11,7 @@ const BettingSystem = require('./betting');
 const MissionsSystem = require('./missions');
 const ShopSystem = require('./shop');
 const AllCommands = require('./all-commands');
+require('./admin-panel')(app); // Pasar el servidor express existente
 const {
     AuctionSystem,
     CraftingSystem
