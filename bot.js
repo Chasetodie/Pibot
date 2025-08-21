@@ -390,9 +390,8 @@ client.on('interactionCreate', async (interaction) => {
                 }
                 
                 // Cancelar en la base de datos
-                await trades.db.updateTrade(tradeId, {
-                    status: 'cancelled',
-                    completed_at: new Date().toISOString()
+                await trades.database.updateTrade(tradeId, {
+                    status: 'cancelled'
                 });
                     
                 if (error) {

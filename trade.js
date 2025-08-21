@@ -11,11 +11,26 @@ class TradeSystem {
         this.cacheTimeout = 2 * 60 * 1000; // 2 minutos        
     }
 
+    safeJsonParse(jsonString, defaultValue = []) {
+        try {
+            if (typeof jsonString === 'string') {
+                // Si es string, parsearlo
+                const parsed = JSON.parse(jsonString);
+                // Si el resultado es otro string, parsearlo otra vez (doble codificación)
+                return typeof parsed === 'string' ? JSON.parse(parsed) : parsed;
+            }
+            return jsonString || defaultValue;
+        } catch (error) {
+            console.error('❌ Error parseando JSON:', error);
+            return defaultValue;
+        }
+    }
+
     async acceptTradeButton(userId, tradeData) {
         try {
             // Convertir datos de DB
-            tradeData.initiatorOffer = tradeData.initiator_offer || [];
-            tradeData.targetOffer = tradeData.target_offer || [];
+            tradeData.initiatorOffer = this.safeJsonParse(tradeData.initiator_offer, []);
+            tradeData.targetOffer = this.safeJsonParse(tradeData.target_offer, []);
             tradeData.initiatorMoneyOffer = tradeData.initiator_money_offer || 0;
             tradeData.targetMoneyOffer = tradeData.target_money_offer || 0;
             tradeData.initiatorAccepted = tradeData.initiator_accepted || false;
@@ -462,8 +477,8 @@ class TradeSystem {
         }
         
         // Convertir datos de DB a formato JavaScript
-        tradeData.initiatorOffer = tradeData.initiator_offer || [];
-        tradeData.targetOffer = tradeData.target_offer || [];
+        tradeData.initiatorOffer = this.safeJsonParse(tradeData.initiator_offer, []);
+        tradeData.targetOffer = this.safeJsonParse(tradeData.target_offer, []);
         tradeData.initiatorMoneyOffer = tradeData.initiator_money_offer || 0;
         tradeData.targetMoneyOffer = tradeData.target_money_offer || 0;
         tradeData.initiatorAccepted = tradeData.initiator_accepted || false;
@@ -528,8 +543,8 @@ class TradeSystem {
             const user2 = await this.shop.economy.getUser(tradeData.target);
             
             // Asegurar que los arrays existen
-            const initiatorOffer = tradeData.initiatorOffer || tradeData.initiator_offer || [];
-            const targetOffer = tradeData.targetOffer || tradeData.target_offer || [];
+            const initiatorOffer = this.safeJsonParse(tradeData.initiatorOffer || tradeData.initiator_offer, []);
+            const targetOffer = this.safeJsonParse(tradeData.targetOffer || tradeData.target_offer, []);
             const initiatorMoney = tradeData.initiatorMoneyOffer || tradeData.initiator_money_offer || 0;
             const targetMoney = tradeData.targetMoneyOffer || tradeData.target_money_offer || 0;
             
