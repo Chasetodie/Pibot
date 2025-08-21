@@ -5,7 +5,6 @@ const fs = require('fs');
 class LocalDatabase {
     constructor() {
         this.db = null;
-        this.init();
     }
 
     async init() {
@@ -176,6 +175,10 @@ class LocalDatabase {
 
     async getUser(userId) {
         try {
+            if (!this.db) {
+                await this.init();
+            }
+            
             const [rows] = await this.db.execute(
                 'SELECT * FROM users WHERE id = ?',
                 [userId]
@@ -265,6 +268,7 @@ class LocalDatabase {
             return newUser;
         } catch (error) {
             console.error('❌ Error obteniendo usuario:', error);
+            console.error('❌ Detalles de la conexión DB:', this.db ? 'Conectada' : 'NULL');
             throw error;
         }
     }
