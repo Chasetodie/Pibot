@@ -53,6 +53,8 @@ class LocalDatabase {
                     daily_missions TEXT DEFAULT '{}',
                     daily_missions_date TEXT DEFAULT NULL,
                     daily_stats TEXT DEFAULT '{}',
+                    achievements TEXT DEFAULT '[]',
+                    missions_reset_today BOOLEAN DEFAULT 0,
                     created_at TEXT DEFAULT CURRENT_TIMESTAMP,
                     updated_at TEXT DEFAULT CURRENT_TIMESTAMP
                 )
