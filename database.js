@@ -61,21 +61,6 @@ class LocalDatabase {
                 )
             `);
 
-            // Tabla para items de tienda
-            await this.pool.execute(`
-                CREATE TABLE IF NOT EXISTS shop_items (
-                    id VARCHAR(255) PRIMARY KEY,
-                    name TEXT NOT NULL,
-                    description TEXT,
-                    price INTEGER NOT NULL,
-                    type TEXT,
-                    category TEXT,
-                    effects TEXT,
-                    stock INTEGER DEFAULT -1,
-                    available BOOLEAN DEFAULT 1
-                )
-            `);
-
             // Tabla para trades
             await this.pool.execute(`
                 CREATE TABLE IF NOT EXISTS trades (
@@ -103,7 +88,8 @@ class LocalDatabase {
                     current_player_index INTEGER DEFAULT 0,
                     bullet_position INTEGER DEFAULT 0,
                     current_shot INTEGER DEFAULT 0,
-                    pot INTEGER DEFAULT 0
+                    pot INTEGER DEFAULT 0,
+                    processing BOOLEAN DEFAULT 1
                 )
             `);
 
@@ -475,8 +461,8 @@ class LocalDatabase {
         try {
             await this.pool.execute(`
                 INSERT INTO russian_games (id, channel_id, creator_id, bet_amount, players, 
-                                        phase, pot)
-                VALUES (?, ?, ?, ?, ?, ?, ?)
+                                        phase, pot, processing)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
             `, [
                 gameId,
                 gameData.channel_id,
@@ -484,7 +470,8 @@ class LocalDatabase {
                 gameData.bet_amount,
                 JSON.stringify(gameData.players || []),
                 gameData.phase || 'waiting',
-                gameData.pot
+                gameData.pot,
+                gameData.processing || 'true'
             ]);
             
             return { id: gameId };
