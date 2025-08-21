@@ -3,7 +3,7 @@ const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('
 class TradeSystem {
     constructor(shopSystem) {
         this.shop = shopSystem;
-        this.db = this.shop.economy.database;
+        this.database = this.shop.economy.database;
         this.tradeTimeout = 300000; // 5 minutos timeout
 
         // ✅ AGREGAR: Caché para trades activos
@@ -68,7 +68,7 @@ class TradeSystem {
         try {
             const fiveMinutesAgo = new Date(Date.now() - this.tradeTimeout);
             
-            await this.db.connection.execute(`
+            await this.database.connection.execute(`
                 UPDATE trades 
                 SET status = 'expired' 
                 WHERE status = 'pending' 
@@ -101,7 +101,7 @@ class TradeSystem {
                 created_at: new Date().toISOString()
             };
             
-            await this.db.createTrade(tradeForDB);
+            await this.database.createTrade(tradeForDB);
             
             // Agregar al caché
             this.activeTradesCache.set(tradeData.id, {
@@ -129,7 +129,7 @@ class TradeSystem {
                 status: tradeData.status || 'pending'
             };
             
-            await this.db.updateTrade(tradeData.id, updateData);
+            await this.database.updateTrade(tradeData.id, updateData);
             
             // Actualizar caché
             this.activeTradesCache.set(tradeData.id, {
@@ -158,7 +158,7 @@ class TradeSystem {
             }
             
             // Si no está en caché, consultar DB
-            const [rows] = await this.db.connection.execute(`
+            const [rows] = await this.database.connection.execute(`
                 SELECT * FROM trades 
                 WHERE (initiator = ? OR target = ?) 
                 AND status = 'pending'
@@ -202,7 +202,7 @@ class TradeSystem {
 
     async completeTradeInDb(tradeId) {
         try {
-            await this.db.updateTrade(tradeId, {
+            await this.database.updateTrade(tradeId, {
                 status: 'completed',
                 completed_at: new Date().toISOString()
             });
@@ -265,7 +265,7 @@ class TradeSystem {
         setTimeout(async () => {
             try {
                 // Verificar si el trade aún está activo
-                const stillActive = await this.db.getTrade(tradeId);
+                const stillActive = await this.database.getTrade(tradeId);
                 
                 if (stillActive && stillActive.status === 'pending') {
                     await this.cancelTradeInDb(tradeId, 'timeout');
@@ -615,7 +615,7 @@ class TradeSystem {
     
     async cancelTradeInDb(tradeId, reason = 'manual') {
         try {
-            await this.db.updateTrade(tradeId, {
+            await this.database.updateTrade(tradeId, {
                 status: 'cancelled',
                 completed_at: new Date().toISOString()
             });
