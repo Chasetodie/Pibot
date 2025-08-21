@@ -72,7 +72,7 @@ class TradeSystem {
         try {
             const fiveMinutesAgo = new Date(Date.now() - this.tradeTimeout);
             
-            await this.database.connection.execute(`
+            await this.database.pool.execute(`
                 UPDATE trades 
                 SET status = 'expired' 
                 WHERE status = 'pending' 
@@ -162,7 +162,7 @@ class TradeSystem {
             }
             
             // Si no está en caché, consultar DB
-            const [rows] = await this.database.connection.execute(`
+            const [rows] = await this.database.pool.execute(`
                 SELECT * FROM trades 
                 WHERE (initiator = ? OR target = ?) 
                 AND status = 'pending'
