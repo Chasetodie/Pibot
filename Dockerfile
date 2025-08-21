@@ -27,4 +27,4 @@ EXPOSE 3000
 EXPOSE 3000
 
 # Comando para iniciar el bot
-CMD ["node", "script.js"]
+CMD ["node", "bot.js"]
