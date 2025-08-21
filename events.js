@@ -198,7 +198,7 @@ class EventsSystem {
 
     // ✅ REEMPLAZAR: saveEvent() para SQLite
     async saveEvent(eventId, eventData) {
-        if (!this.database) {
+        if (!this.db) {
             console.log('⚠️ Base de datos no disponible, evento no guardado:', eventId);
             return;
         }
@@ -223,7 +223,7 @@ class EventsSystem {
                 stats: eventData.stats || {}
             };
             
-            await this.database.createServerEvent(mappedData);
+            await this.db.createServerEvent(mappedData);
             console.log(`💾 Evento ${eventId} guardado en MySQL`);
         } catch (error) {
             console.error('❌ Error guardando evento en MySQL:', error);
