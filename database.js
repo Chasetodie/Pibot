@@ -124,6 +124,47 @@ class LocalDatabase {
                 )
             `);
 
+            this.db.run(`
+                CREATE TABLE IF NOT EXISTS server_events (
+                    id TEXT PRIMARY KEY,
+                    type TEXT NOT NULL,
+                    name TEXT NOT NULL,
+                    description TEXT,
+                    emoji TEXT,
+                    color TEXT,
+                    start_time TEXT,
+                    end_time TEXT,
+                    duration INTEGER,
+                    multipliers TEXT DEFAULT '{}',
+                    is_special BOOLEAN DEFAULT 0,
+                    is_negative BOOLEAN DEFAULT 0,
+                    is_rare BOOLEAN DEFAULT 0,
+                    triggered_by TEXT,
+                    participant_count INTEGER DEFAULT 0,
+                    stats TEXT DEFAULT '{}',
+                    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+                )
+            `);
+
+            // Tabla para subastas
+            this.db.run(`
+                CREATE TABLE IF NOT EXISTS auctions (
+                    id TEXT PRIMARY KEY,
+                    seller TEXT NOT NULL,
+                    item_id TEXT,
+                    item_name TEXT NOT NULL,
+                    starting_bid INTEGER NOT NULL,
+                    current_bid INTEGER,
+                    highest_bidder TEXT,
+                    bids TEXT DEFAULT '[]',
+                    ends_at TEXT NOT NULL,
+                    active BOOLEAN DEFAULT 1,
+                    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                    completed_at TEXT DEFAULT NULL
+                )
+            `);
+
             console.log('🗃️ Tablas SQLite inicializadas');
         });
     }
