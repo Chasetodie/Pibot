@@ -5,8 +5,8 @@ class AllCommands {
         this.economy = economySystem;
         this.shop = shopSystem;
         this.trades = tradeSystem;
-        this.auctions = auctionSystem;
-        this.crafting = craftingSystem;
+        /*this.auctions = auctionSystem;
+        this.crafting = craftingSystem;*/
         this.events = eventsSystem;
         this.betting = bettingSystem;
         this.achievements = achievementsSystem;
