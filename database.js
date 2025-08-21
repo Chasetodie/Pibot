@@ -10,17 +10,17 @@ class LocalDatabase {
 
     async init() {
         try {
-            // Usar pool en lugar de conexión única
+            // Configuración corregida para mysql2
             this.pool = mysql.createPool({
                 host: 'sql3.freesqldatabase.com',
                 port: 3306,
                 user: 'sql3795651',
                 password: 'byPCRPuUN3',
                 database: 'sql3795651',
-                connectionLimit: 5, // ← Máximo 5 conexiones
-                acquireTimeout: 60000,
-                timeout: 60000,
-                reconnect: true
+                connectionLimit: 5,
+                waitForConnections: true,
+                queueLimit: 0
+                // Removidas opciones que causan warnings
             });
             
             console.log('✅ MySQL Pool conectado');
@@ -32,7 +32,7 @@ class LocalDatabase {
 
     async initTables() {
         try {
-            // Tabla de usuarios principal
+            // Tabla de usuarios principal - JSON cambiado a TEXT
             await this.pool.execute(`
                 CREATE TABLE IF NOT EXISTS users (
                     id VARCHAR(255) PRIMARY KEY,
@@ -50,13 +50,13 @@ class LocalDatabase {
                     last_blackjack BIGINT DEFAULT 0,
                     last_name_work TEXT DEFAULT '',
                     messages_count INT DEFAULT 0,
-                    items JSON,
-                    stats JSON,
-                    bet_stats JSON,
-                    daily_missions JSON,
+                    items TEXT DEFAULT '{}',
+                    stats TEXT DEFAULT '{}',
+                    bet_stats TEXT DEFAULT '{}',
+                    daily_missions TEXT DEFAULT '{}',
                     daily_missions_date TEXT DEFAULT NULL,
-                    daily_stats JSON,
-                    achievements JSON,
+                    daily_stats TEXT DEFAULT '{}',
+                    achievements TEXT DEFAULT '{}',
                     missions_reset_today BOOLEAN DEFAULT 0,
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
@@ -114,7 +114,7 @@ class LocalDatabase {
                 )
             `);
 
-            // Tabla para partidas UNO (si la usas)
+            // Tabla para partidas UNO
             await this.pool.execute(`
                 CREATE TABLE IF NOT EXISTS uno_games (
                     id TEXT PRIMARY KEY,
@@ -130,7 +130,6 @@ class LocalDatabase {
             `);
 
             await this.pool.execute(`
-
                 CREATE TABLE IF NOT EXISTS server_events (
                     id TEXT PRIMARY KEY,
                     type TEXT NOT NULL,
@@ -171,13 +170,21 @@ class LocalDatabase {
                 )
             `);
 
-
             console.log('🗃️ Tablas MySQL inicializadas');
         } catch (error) {
             console.error('❌ Error creando tablas:', error);
         }
     }
 
+    // Función helper para parsear JSON de manera segura
+    safeJsonParse(jsonString, defaultValue = {}) {
+        try {
+            return typeof jsonString === 'string' ? JSON.parse(jsonString) : jsonString;
+        } catch (error) {
+            console.error('❌ Error parseando JSON:', error);
+            return defaultValue;
+        }
+    }
 
     async getUser(userId) {
         try {
@@ -192,12 +199,13 @@ class LocalDatabase {
 
             if (rows.length > 0) {
                 const user = rows[0];
-                // Parsear campos JSON
-                user.items = user.items || {};
-                user.stats = user.stats || {};
-                user.bet_stats = user.bet_stats || {};
-                user.daily_missions = user.daily_missions || {};
-                user.daily_stats = user.daily_stats || {};
+                // Parsear campos JSON de manera segura
+                user.items = this.safeJsonParse(user.items, {});
+                user.stats = this.safeJsonParse(user.stats, {});
+                user.bet_stats = this.safeJsonParse(user.bet_stats, {});
+                user.daily_missions = this.safeJsonParse(user.daily_missions, {});
+                user.daily_stats = this.safeJsonParse(user.daily_stats, {});
+                user.achievements = this.safeJsonParse(user.achievements, {});
                 return user;
             }
 
@@ -247,6 +255,7 @@ class LocalDatabase {
                     work_today: 0,
                     money_earned_today: 0
                 },
+                achievements: {},
                 created_at: new Date().toISOString(),
                 updated_at: new Date().toISOString()
             };
@@ -257,8 +266,8 @@ class LocalDatabase {
                     last_robbery, last_coinflip, last_dice, last_roulette,
                     last_lotto, last_blackjack, last_name_work, messages_count,
                     items, stats, bet_stats, daily_missions, daily_missions_date,
-                    daily_stats
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    daily_stats, achievements
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             `, [
                 newUser.id, newUser.balance, newUser.level, newUser.xp, newUser.total_xp,
                 newUser.last_daily, newUser.last_work, newUser.last_robbery,
@@ -267,7 +276,7 @@ class LocalDatabase {
                 newUser.messages_count, JSON.stringify(newUser.items),
                 JSON.stringify(newUser.stats), JSON.stringify(newUser.bet_stats),
                 JSON.stringify(newUser.daily_missions), newUser.daily_missions_date,
-                JSON.stringify(newUser.daily_stats)
+                JSON.stringify(newUser.daily_stats), JSON.stringify(newUser.achievements)
             ]);
 
             console.log(`👤 Nuevo usuario MySQL creado: ${userId}`);
@@ -277,7 +286,6 @@ class LocalDatabase {
             throw error;
         }
     }
-
 
     async updateUser(userId, updateData) {
         try {
@@ -313,12 +321,13 @@ class LocalDatabase {
             const [rows] = await this.pool.execute('SELECT * FROM users');
             
             return rows.map(row => {
-                // Parsear campos JSON
-                row.items = row.items || {};
-                row.stats = row.stats || {};
-                row.bet_stats = row.bet_stats || {};
-                row.daily_missions = row.daily_missions || {};
-                row.daily_stats = row.daily_stats || {};
+                // Parsear campos JSON de manera segura
+                row.items = this.safeJsonParse(row.items, {});
+                row.stats = this.safeJsonParse(row.stats, {});
+                row.bet_stats = this.safeJsonParse(row.bet_stats, {});
+                row.daily_missions = this.safeJsonParse(row.daily_missions, {});
+                row.daily_stats = this.safeJsonParse(row.daily_stats, {});
+                row.achievements = this.safeJsonParse(row.achievements, {});
                 return row;
             });
         } catch (error) {
@@ -373,7 +382,7 @@ class LocalDatabase {
             );
             
             return rows.map(row => {
-                row.effects = row.effects || {};
+                row.effects = this.safeJsonParse(row.effects, {});
                 return row;
             });
         } catch (error) {
@@ -413,8 +422,8 @@ class LocalDatabase {
             
             if (rows.length > 0) {
                 const trade = rows[0];
-                trade.initiator_items = trade.initiator_items || {};
-                trade.target_items = trade.target_items || {};
+                trade.initiator_items = this.safeJsonParse(trade.initiator_items, {});
+                trade.target_items = this.safeJsonParse(trade.target_items, {});
                 return trade;
             }
             return null;
@@ -452,6 +461,199 @@ class LocalDatabase {
         }
     }
 
+    // IMPORTANTE: Los siguientes métodos siguen usando sintaxis SQLite (this.pool.run, this.pool.get, this.pool.all)
+    // Necesitan ser convertidos a MySQL syntax con this.pool.execute()
+
+    async getRussianGame(gameId) {
+        try {
+            const [rows] = await this.pool.execute(
+                'SELECT * FROM russian_games WHERE id = ?', 
+                [gameId]
+            );
+            
+            if (rows.length > 0) {
+                const game = rows[0];
+                game.players = this.safeJsonParse(game.players, []);
+                return game;
+            }
+            return null;
+        } catch (error) {
+            console.error('❌ Error obteniendo juego ruso:', error);
+            return null;
+        }
+    }
+
+    async createRussianGame(gameId, gameData) {
+        try {
+            await this.pool.execute(`
+                INSERT INTO russian_games (id, channel_id, creator_id, bet_amount, players, 
+                                        phase, pot, created_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            `, [
+                gameId,
+                gameData.channel_id,
+                gameData.creator_id,
+                gameData.bet_amount,
+                JSON.stringify(gameData.players || []),
+                gameData.phase || 'waiting',
+                gameData.pot,
+                new Date().toISOString()
+            ]);
+            
+            return { id: gameId };
+        } catch (error) {
+            console.error('❌ Error creando juego ruso:', error);
+            throw error;
+        }
+    }
+
+    async updateRussianGame(gameId, updateData) {
+        try {
+            const sets = [];
+            const values = [];
+
+            updateData.updated_at = new Date().toISOString();
+
+            for (const [key, value] of Object.entries(updateData)) {
+                sets.push(`${key} = ?`);
+                if (typeof value === 'object' && value !== null) {
+                    values.push(JSON.stringify(value));
+                } else {
+                    values.push(value);
+                }
+            }
+
+            values.push(gameId);
+
+            const [result] = await this.pool.execute(
+                `UPDATE russian_games SET ${sets.join(', ')} WHERE id = ?`,
+                values
+            );
+            
+            return { changes: result.affectedRows };
+        } catch (error) {
+            console.error('❌ Error actualizando juego ruso:', error);
+            throw error;
+        }
+    }
+
+    async deleteRussianGame(gameId) {
+        try {
+            const [result] = await this.pool.execute(
+                'DELETE FROM russian_games WHERE id = ?', 
+                [gameId]
+            );
+            
+            return { changes: result.affectedRows };
+        } catch (error) {
+            console.error('❌ Error eliminando juego ruso:', error);
+            throw error;
+        }
+    }
+
+    // Métodos para Russian Roulette
+    async getActiveRussianGames() {
+        try {
+            const [rows] = await this.pool.execute(
+                "SELECT * FROM russian_games WHERE phase IN ('waiting', 'playing')"
+            );
+            
+            return rows.map(row => {
+                row.players = this.safeJsonParse(row.players, []);
+                return row;
+            });
+        } catch (error) {
+            console.error('❌ Error obteniendo juegos rusos activos:', error);
+            return [];
+        }
+    }
+
+    // Métodos para UNO
+    async createUnoGame(gameId, gameData) {
+        try {
+            await this.pool.execute(`
+                INSERT INTO uno_games (id, creator_id, channel_id, bet_amount, 
+                                    players, phase, game_data, created_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            `, [
+                gameId,
+                gameData.creator_id,
+                gameData.channel_id,
+                gameData.bet_amount,
+                JSON.stringify(gameData.players || []),
+                gameData.phase || 'waiting',
+                JSON.stringify(gameData.game_data || {}),
+                new Date().toISOString()
+            ]);
+            
+            return { id: gameId };
+        } catch (error) {
+            console.error('❌ Error creando juego UNO:', error);
+            throw error;
+        }
+    }
+
+    async updateUnoGame(gameId, updateData) {
+        try {
+            const sets = [];
+            const values = [];
+
+            updateData.updated_at = new Date().toISOString();
+
+            for (const [key, value] of Object.entries(updateData)) {
+                sets.push(`${key} = ?`);
+                if (typeof value === 'object' && value !== null) {
+                    values.push(JSON.stringify(value));
+                } else {
+                    values.push(value);
+                }
+            }
+
+            values.push(gameId);
+
+            const [result] = await this.pool.execute(
+                `UPDATE uno_games SET ${sets.join(', ')} WHERE id = ?`,
+                values
+            );
+            
+            return { changes: result.affectedRows };
+        } catch (error) {
+            console.error('❌ Error actualizando juego UNO:', error);
+            throw error;
+        }
+    }
+
+    async deleteUnoGame(gameId) {
+        try {
+            const [result] = await this.pool.execute(
+                'DELETE FROM uno_games WHERE id = ?', 
+                [gameId]
+            );
+            
+            return { changes: result.affectedRows };
+        } catch (error) {
+            console.error('❌ Error eliminando juego UNO:', error);
+            throw error;
+        }
+    }
+
+    async getActiveUnoGames() {
+        try {
+            const [rows] = await this.pool.execute(
+                "SELECT * FROM uno_games WHERE phase != 'finished'"
+            );
+            
+            return rows.map(row => {
+                row.players = this.safeJsonParse(row.players, []);
+                row.game_data = this.safeJsonParse(row.game_data, {});
+                return row;
+            });
+        } catch (error) {
+            console.error('❌ Error obteniendo juegos UNO activos:', error);
+            return [];
+        }
+    }
+
     // Cerrar conexión
     async close() {
         if (this.pool) {
@@ -484,10 +686,10 @@ class LocalDatabase {
         }
     }
 
-    // Métodos específicos para eventos
+    // Métodos específicos para eventos - CORREGIDO para MySQL
     async createServerEvent(eventData) {
-        return new Promise((resolve, reject) => {
-            this.pool.run(`
+        try {
+            await this.pool.execute(`
                 INSERT INTO server_events (
                     id, type, name, description, emoji, color,
                     start_time, end_time, duration, multipliers,
@@ -501,11 +703,13 @@ class LocalDatabase {
                 JSON.stringify(eventData.multipliers), eventData.is_special,
                 eventData.is_negative, eventData.is_rare, eventData.triggered_by,
                 eventData.participant_count, JSON.stringify(eventData.stats)
-            ], function(err) {
-                if (err) reject(err);
-                else resolve({ id: eventData.id });
-            });
-        });
+            ]);
+            
+            return { id: eventData.id };
+        } catch (error) {
+            console.error('❌ Error creando evento:', error);
+            throw error;
+        }
     }
 
     // Métodos específicos para subastas
@@ -539,7 +743,7 @@ class LocalDatabase {
             
             if (rows.length > 0) {
                 const auction = rows[0];
-                auction.bids = auction.bids || [];
+                auction.bids = this.safeJsonParse(auction.bids, []);
                 return auction;
             }
             return null;
@@ -575,209 +779,6 @@ class LocalDatabase {
             console.error('❌ Error actualizando subasta:', error);
             throw error;
         }
-    }
-
-    async getRussianGame(gameId) {
-        return new Promise((resolve, reject) => {
-            this.pool.get('SELECT * FROM russian_games WHERE id = ?', [gameId], (err, row) => {
-                if (err) {
-                    reject(err);
-                } else {
-                    if (row) {
-                        row.players = JSON.parse(row.players || '[]');
-                    }
-                    resolve(row);
-                }
-            });
-        });
-    }
-
-    async createRussianGame(gameId, gameData) {
-        return new Promise((resolve, reject) => {
-            const query = `
-                INSERT INTO russian_games (id, channel_id, creator_id, bet_amount, players, 
-                                        phase, pot, created_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-            `;
-            
-            this.pool.run(query, [
-                gameId,
-                gameData.channel_id,
-                gameData.creator_id,
-                gameData.bet_amount,
-                JSON.stringify(gameData.players || []),
-                gameData.phase || 'waiting',
-                gameData.pot,
-                new Date().toISOString()
-            ], function(err) {
-                if (err) {
-                    reject(err);
-                } else {
-                    resolve({ id: gameId });
-                }
-            });
-        });
-    }
-
-    async updateRussianGame(gameId, updateData) {
-        return new Promise((resolve, reject) => {
-            const sets = [];
-            const values = [];
-
-
-            updateData.updated_at = new Date().toISOString();
-
-            for (const [key, value] of Object.entries(updateData)) {
-                sets.push(`${key} = ?`);
-
-
-                if (typeof value === 'object' && value !== null) {
-                    values.push(JSON.stringify(value));
-                } else {
-                    values.push(value);
-                }
-            }
-
-            values.push(gameId);
-
-            this.pool.run(
-                `UPDATE russian_games SET ${sets.join(', ')} WHERE id = ?`,
-                values,
-                function(err) {
-                    if (err) {
-                        reject(err);
-                    } else {
-                        resolve({ changes: this.changes });
-                    }
-                }
-            );
-        });
-    }
-
-    async deleteRussianGame(gameId) {
-        return new Promise((resolve, reject) => {
-            this.pool.run('DELETE FROM russian_games WHERE id = ?', [gameId], function(err) {
-                if (err) {
-
-                    reject(err);
-                } else {
-
-                    resolve({ changes: this.changes });
-                }
-            });
-        });
-    }
-
-    // Métodos para Russian Roulette
-    async getActiveRussianGames() {
-        return new Promise((resolve, reject) => {
-            this.pool.all(
-                "SELECT * FROM russian_games WHERE phase IN ('waiting', 'playing')",
-                (err, rows) => {
-                    if (err) {
-                        reject(err);
-                    } else {
-                        const games = rows.map(row => {
-                            row.players = JSON.parse(row.players || '[]');
-                            return row;
-                        });
-                        resolve(games);
-                    }
-                }
-            );
-        });
-    }
-
-    // Métodos para UNO
-    async createUnoGame(gameId, gameData) {
-        return new Promise((resolve, reject) => {
-            const query = `
-                INSERT INTO uno_games (id, creator_id, channel_id, bet_amount, 
-                                    players, phase, game_data, created_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-            `;
-            
-            this.pool.run(query, [
-                gameId,
-                gameData.creator_id,
-                gameData.channel_id,
-                gameData.bet_amount,
-                JSON.stringify(gameData.players || []),
-                gameData.phase || 'waiting',
-                JSON.stringify(gameData.game_data || {}),
-                new Date().toISOString()
-            ], function(err) {
-                if (err) {
-                    reject(err);
-                } else {
-                    resolve({ id: gameId });
-                }
-            });
-        });
-    }
-
-    async updateUnoGame(gameId, updateData) {
-        return new Promise((resolve, reject) => {
-            const sets = [];
-            const values = [];
-
-            updateData.updated_at = new Date().toISOString();
-
-            for (const [key, value] of Object.entries(updateData)) {
-                sets.push(`${key} = ?`);
-                if (typeof value === 'object' && value !== null) {
-                    values.push(JSON.stringify(value));
-                } else {
-                    values.push(value);
-                }
-            }
-
-            values.push(gameId);
-
-            this.pool.run(
-                `UPDATE uno_games SET ${sets.join(', ')} WHERE id = ?`,
-                values,
-                function(err) {
-                    if (err) {
-                        reject(err);
-                    } else {
-                        resolve({ changes: this.changes });
-                    }
-                }
-            );
-        });
-    }
-
-    async deleteUnoGame(gameId) {
-        return new Promise((resolve, reject) => {
-            this.pool.run('DELETE FROM uno_games WHERE id = ?', [gameId], function(err) {
-                if (err) {
-                    reject(err);
-                } else {
-                    resolve({ changes: this.changes });
-                }
-            });
-        });
-    }
-
-    async getActiveUnoGames() {
-        return new Promise((resolve, reject) => {
-            this.pool.all(
-                "SELECT * FROM uno_games WHERE phase != 'finished'",
-                (err, rows) => {
-                    if (err) {
-                        reject(err);
-                    } else {
-                        const games = rows.map(row => {
-                            row.players = JSON.parse(row.players || '[]');
-                            row.game_data = JSON.parse(row.game_data || '{}');
-                            return row;
-                        });
-                        resolve(games);
-                    }
-                }
-            );
-        });
     }
 
     // Método para obtener conexión (para el panel web)
