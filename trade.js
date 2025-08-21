@@ -517,7 +517,7 @@ class TradeSystem {
     // Cancelar intercambio
     async cancelTrade(tradeData, reason = 'manual') {
         const userId = message.author.id;
-        const tradeData = await this.getActiveTradeByUser(userId);
+        tradeData = await this.getActiveTradeByUser(userId);
         
         if (!tradeData) {
             await message.reply('❌ No tienes ningún intercambio activo.');
