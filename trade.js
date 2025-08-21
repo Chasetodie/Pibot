@@ -3,7 +3,7 @@ const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('
 class TradeSystem {
     constructor(shopSystem) {
         this.shop = shopSystem;
-        this.db = this.shop.economy.db;
+        this.db = this.shop.economy.database;
         this.tradeTimeout = 300000; // 5 minutos timeout
 
         // ✅ AGREGAR: Caché para trades activos
@@ -68,17 +68,12 @@ class TradeSystem {
         try {
             const fiveMinutesAgo = new Date(Date.now() - this.tradeTimeout);
             
-            await new Promise((resolve, reject) => {
-                this.db.db.run(`
-                    UPDATE trades 
-                    SET status = 'expired' 
-                    WHERE status = 'pending' 
-                    AND created_at < ?
-                `, [fiveMinutesAgo.toISOString()], (err) => {
-                    if (err) reject(err);
-                    else resolve();
-                });
-            });
+            await this.db.connection.execute(`
+                UPDATE trades 
+                SET status = 'expired' 
+                WHERE status = 'pending' 
+                AND created_at < ?
+            `, [fiveMinutesAgo]);
             
             // Limpiar caché de trades expirados
             for (const [tradeId, cached] of this.activeTradesCache) {
@@ -163,18 +158,15 @@ class TradeSystem {
             }
             
             // Si no está en caché, consultar DB
-            const trade = await new Promise((resolve, reject) => {
-                this.db.db.get(`
-                    SELECT * FROM trades 
-                    WHERE (initiator = ? OR target = ?) 
-                    AND status = 'pending'
-                    ORDER BY created_at DESC
-                    LIMIT 1
-                `, [userId, userId], (err, row) => {
-                    if (err) reject(err);
-                    else resolve(row);
-                });
-            });
+            const [rows] = await this.db.connection.execute(`
+                SELECT * FROM trades 
+                WHERE (initiator = ? OR target = ?) 
+                AND status = 'pending'
+                ORDER BY created_at DESC
+                LIMIT 1
+            `, [userId, userId]);
+
+            const trade = rows[0] || null;
             
             if (trade) {
                 // Convertir formato DB a formato JavaScript
