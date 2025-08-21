@@ -317,7 +317,7 @@ client.on('interactionCreate', async (interaction) => {
                 const tradeId = interaction.customId.replace('trade_accept_', '');
                 
                 // Obtener trade de la DB
-                const tradeData = await trades.db.getTrade(tradeId);
+                const tradeData = await trades.database.getTrade(tradeId);
                     
                 if (!tradeData) {
                     await interaction.editReply({ content: '❌ Intercambio no encontrado o ya finalizado.' });
@@ -376,7 +376,7 @@ client.on('interactionCreate', async (interaction) => {
                 const tradeId = interaction.customId.replace('trade_cancel_', '');
                 
                 // Verificar que el trade existe y está activo
-                const tradeData = await trades.db.getTrade(tradeId);
+                const tradeData = await trades.database.getTrade(tradeId);
                     
                 if (!tradeData) {
                     await interaction.editReply({ content: '❌ Intercambio no encontrado o ya finalizado.' });

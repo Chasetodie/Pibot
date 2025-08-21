@@ -119,10 +119,10 @@ class TradeSystem {
     async updateTradeInDb(tradeData) {
         try {
             const updateData = {
-                initiator_items: JSON.stringify(tradeData.initiatorOffer || tradeData.initiator_offer || []),
-                target_items: JSON.stringify(tradeData.targetOffer || tradeData.target_offer || []),
-                initiator_money: tradeData.initiatorMoneyOffer || tradeData.initiator_money_offer || 0,
-                target_money: tradeData.targetMoneyOffer || tradeData.target_money_offer || 0,
+                initiator_offer: JSON.stringify(tradeData.initiatorOffer || tradeData.initiator_offer || []),
+                target_offer: JSON.stringify(tradeData.targetOffer || tradeData.target_offer || []),
+                initiator_money_offer: tradeData.initiatorMoneyOffer || tradeData.initiator_money_offer || 0,
+                target_money_offer: tradeData.targetMoneyOffer || tradeData.target_money_offer || 0,
                 initiator_accepted: tradeData.initiatorAccepted || tradeData.initiator_accepted || false,
                 target_accepted: tradeData.targetAccepted || tradeData.target_accepted || false,
                 status: tradeData.status || 'pending'
