@@ -4,7 +4,7 @@ const { Pool } = require('pg');
 // 🔧 CONFIGURACIÓN
 const SUPABASE_CONFIG = {
   url: process.env.SUPABASE_URL,
-  key: process.env.SUPABASE_KEY
+  key: process.env.SUPABASE_ANON_KEY
 };
 
 const RENDER_CONFIG = {
