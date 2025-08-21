@@ -9,8 +9,6 @@ class LocalDatabase {
     }
 
     async init() {
-        await this.testConnection();
-
         try {
             // Usar pool en lugar de conexión única
             this.pool = mysql.createPool({
