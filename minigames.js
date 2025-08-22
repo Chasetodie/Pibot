@@ -129,7 +129,7 @@ class MinigamesSystem {
                 }
             }
             
-            console.log(`🧹 Cache cleanup: ${this.minigamesCache.size} trades en memoria`);
+            console.log(`🧹 Cache cleanup: ${this.minigamesCache.size} minijuegos en memoria`);
         }, 10 * 60 * 1000);
     }
 

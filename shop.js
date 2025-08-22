@@ -1,4 +1,5 @@
 const { EmbedBuilder, ActionRowBuilder, StringSelectMenuBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
+const heavyUsersCache = new Map();
 
 class ShopSystem {
     constructor(economySystem) {
@@ -446,13 +447,25 @@ class ShopSystem {
     
     // === TIENDA ===
     async showShop(message, category = 'all', page = 1) {
-        let items = Object.values(this.shopItems);
-        
-        if (category !== 'all') {
-            items = items.filter(item => item.category === category);
+        // OPTIMIZACIÓN: Solo cargar lo necesario
+        const itemsByCategory = {
+            'consumable': ['lucky_charm', 'energy_drink', 'double_xp_potion', 'anti_theft_shield'],
+            'permanent': ['vip_pass', 'money_magnet', 'work_boots'],
+            'cosmetic': ['golden_trophy', 'rainbow_badge'],
+            'mystery': ['mystery_box', 'premium_mystery_box']
+        };
+
+        let items;
+        if (category === 'all') {
+            // Solo cargar primeros 10 items para "all"
+            items = Object.values(this.shopItems).slice(0, 10);
+        } else {
+            // Solo cargar items de esa categoría
+            const categoryIds = itemsByCategory[category] || [];
+            items = categoryIds.map(id => this.shopItems[id]).filter(Boolean);
         }
         
-        const itemsPerPage = 5;
+        const itemsPerPage = 3;
         const startIndex = (page - 1) * itemsPerPage;
         const endIndex = startIndex + itemsPerPage;
         const pageItems = items.slice(startIndex, endIndex);
@@ -991,7 +1004,16 @@ class ShopSystem {
        
     // === OBTENER MULTIPLICADORES ACTIVOS ===
     async getActiveMultipliers(userId, action) {
-        const user = await this.economy.getUser(userId);
+        let user = heavyUsersCache.get(userId);
+        if (!user) {
+            user = await this.economy.getUser(userId);
+            const itemCount = Object.keys(user.items || {}).length;
+            if (itemCount > 5) {
+                heavyUsersCache.set(userId, user);
+                setTimeout(() => heavyUsersCache.delete(userId), 300000);
+            }
+        }
+        
         const activeEffects = user.activeEffects || {};
         const permanentEffects = user.permanentEffects || {};
         

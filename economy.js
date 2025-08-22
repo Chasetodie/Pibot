@@ -2,6 +2,9 @@ require('dotenv').config();
 const LocalDatabase = require('./database');
 const EventsSystem = require('./events');
 
+const richUC = new Map();
+const heavyUsersCache = new Map();
+
 class EconomySystem {
     constructor() {
         this.database = null;
@@ -131,7 +134,7 @@ class EconomySystem {
                 }
             }
             
-            console.log(`🧹 Cache cleanup: ${this.userCache.size} trades en memoria`);
+            console.log(`🧹 Cache cleanup: ${this.userCache.size} users? en memoria`);
         }, 10 * 60 * 1000);
     }
 
@@ -357,7 +360,7 @@ class EconomySystem {
     }
 
     // Procesar XP por mensaje (con cooldown)
-    async processMessageXp(userId) {       
+    async processMessageXp(userId) {      
         const now = Date.now();
         const lastXp = this.userCooldowns.get(userId) || 0;
 
@@ -366,10 +369,24 @@ class EconomySystem {
             return null; // Aún en cooldown
         }
 
+        // Cache para usuarios con muchos items
+        let userData = heavyUsersCache.get(userId);
+        if (!userData) {
+            userData = await this.getUser(userId); // UNA SOLA CARGA
+            
+            const itemCount = Object.keys(userData.items || {}).length;
+            if (userData.money > 1000000 || itemCount > 5) { // Rico O muchos items
+                heavyUsersCache.set(userId, userData);
+                setTimeout(() => heavyUsersCache.delete(userId), 300000);
+            }
+        }        
+
         this.userCooldowns.set(userId, now);
         
-        // Obtener usuario (ahora async)
-        const user = await this.getUser(userId);
+/*        // Obtener usuario (ahora async)
+        const user = await this.getUser(userId);*/
+
+        const user = userData;
         
         try {
             // Agregar XP (ahora async)

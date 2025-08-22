@@ -465,7 +465,7 @@ class MissionsSystem {
                 }
             }
             
-            console.log(`🧹 Cache cleanup: ${this.missionsCache.size} trades en memoria`);
+            console.log(`🧹 Cache cleanup: ${this.missionsCache.size} misiones en memoria`);
         }, 10 * 60 * 1000);
     }
     

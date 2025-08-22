@@ -338,7 +338,7 @@ class EventsSystem {
                 }
             }
             
-            console.log(`🧹 Cache cleanup: ${this.eventCache.size} trades en memoria`);
+            console.log(`🧹 Cache cleanup: ${this.eventCache.size} eventos en memoria`);
         }, 10 * 60 * 1000);
     }
     

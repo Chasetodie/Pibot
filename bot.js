@@ -32,7 +32,6 @@ if (typeof File === 'undefined') {
   };
 }
 
-
 // Función para cargar contadores (con variables de entorno como respaldo)
 function loadCounters() {
     try {
