@@ -5,6 +5,9 @@ const fs = require('fs');
 class LocalDatabase {
     constructor() {
         this.pool = null;
+        this.userCache = new Map();
+        this.cacheTimeout = 5 * 60 * 1000;
+        this.MAX_CACHE_SIZE = 500;
         this.init();
     }
 
@@ -17,7 +20,7 @@ class LocalDatabase {
                 user: 'sql3795651',
                 password: 'byPCRPuUN3',
                 database: 'sql3795651',
-                connectionLimit: 5,
+                connectionLimit: 3,
                 waitForConnections: true,
                 queueLimit: 0
                 // Removidas opciones que causan warnings
@@ -161,6 +164,11 @@ class LocalDatabase {
     }
 
     async getUser(userId) {
+        const cached = this.userCache.get(userId);
+        if (cached && (Date.now() - cached.timestamp) < this.cacheTimeout) {
+            return cached.data;
+        }
+        
         try {
             if (!this.pool) {
                 await this.init();
@@ -180,6 +188,20 @@ class LocalDatabase {
                 user.daily_missions = this.safeJsonParse(user.daily_missions || '{}', {});
                 user.daily_stats = this.safeJsonParse(user.daily_stats || '{}', {});
                 user.achievements = this.safeJsonParse(user.achievements || '{}', {});
+
+                // Guardar en caché antes de retornar
+                this.userCache.set(userId, {
+                    data: user, // o newUser
+                    timestamp: Date.now()
+                });
+                
+                // Limpiar caché si es muy grande
+                if (this.userCache.size > this.MAX_CACHE_SIZE) {
+                    const oldest = [...this.userCache.entries()]
+                        .sort((a, b) => a[1].timestamp - b[1].timestamp)[0];
+                    this.userCache.delete(oldest[0]);
+                }
+                
                 return user;
             }
 
@@ -251,6 +273,19 @@ class LocalDatabase {
                 JSON.stringify(newUser.daily_stats), JSON.stringify(newUser.achievements)
             ]);
 
+            // Guardar en caché antes de retornar
+            this.userCache.set(userId, {
+                data: user, // o newUser
+                timestamp: Date.now()
+            });
+                
+            // Limpiar caché si es muy grande
+            if (this.userCache.size > this.MAX_CACHE_SIZE) {
+                const oldest = [...this.userCache.entries()]
+                    .sort((a, b) => a[1].timestamp - b[1].timestamp)[0];
+                this.userCache.delete(oldest[0]);
+            }
+
             console.log(`👤 Nuevo usuario MySQL creado: ${userId}`);
             return newUser;
         } catch (error) {
@@ -280,6 +315,14 @@ class LocalDatabase {
             const query = `UPDATE users SET ${sets.join(', ')} WHERE id = ?`;
             
             const [result] = await this.pool.execute(query, values);
+
+            const cached = this.userCache.get(userId);
+            if (cached) {
+                // Actualizar datos en caché
+                Object.assign(cached.data, updateData);
+                cached.timestamp = Date.now();
+            }
+            
             return { changes: result.affectedRows };
         } catch (error) {
             console.error('❌ Error actualizando usuario MySQL:', error);
@@ -287,12 +330,31 @@ class LocalDatabase {
         }
     }
 
+    startCacheCleanup() {
+        setInterval(() => {
+            const now = Date.now();
+            let cleaned = 0;
+            
+            for (const [userId, cached] of this.userCache) {
+                if (now - cached.timestamp > this.cacheTimeout) {
+                    this.userCache.delete(userId);
+                    cleaned++;
+                }
+            }
+            
+            console.log(`🧹 Database cache: ${cleaned} usuarios limpiados, ${this.userCache.size} restantes`);
+        }, 10 * 60 * 1000); // Cada 10 minutos
+    }
+
     async getAllUsers() {
         try {
-            const [rows] = await this.pool.execute('SELECT * FROM users');
+            // CAMBIAR: No cargar TODOS los usuarios de una vez
+            // const [rows] = await this.pool.execute('SELECT * FROM users');
+            
+            // POR: Usar paginación
+            const [rows] = await this.pool.execute('SELECT * FROM users LIMIT 100');
             
             return rows.map(row => {
-                // Parsear campos JSON de manera segura
                 row.items = this.safeJsonParse(row.items, {});
                 row.stats = this.safeJsonParse(row.stats, {});
                 row.bet_stats = this.safeJsonParse(row.bet_stats, {});
@@ -302,7 +364,7 @@ class LocalDatabase {
                 return row;
             });
         } catch (error) {
-            console.error('❌ Error obteniendo todos los usuarios:', error);
+            console.error('❌ Error obteniendo usuarios:', error);
             return [];
         }
     }
