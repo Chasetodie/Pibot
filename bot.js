@@ -725,6 +725,24 @@ client.on('messageCreate', async (message) => {
 
     messageCount++;
     checkMessageRate();
+
+    // COMANDOS - SIN DELAYS ni restricciones
+    if (message.content.startsWith('>')) {
+        // Procesar comandos inmediatamente, sin cooldowns ni lotes
+        try {
+            await Promise.allSettled([
+                achievements.processCommand(message),
+                missions.processCommand(message), 
+                allCommands.processCommand(message),
+                shop.processCommand(message),
+                minigames.processCommand(message),
+                commandHandler.processCommand(message)
+            ]);
+        } catch (error) {
+            console.error('❌ Error comando:', error.message);
+        }
+        return; // Salir aquí para que no procese XP
+    }
     
     // MODO EMERGENCIA - Solo comandos críticos
     if (CONFIG.EMERGENCY_MODE) {
@@ -772,30 +790,6 @@ client.on('messageCreate', async (message) => {
         // Limitar tamaño de cola
         if (messageBatch.length > CONFIG.BATCH_SIZE * 3) {
             messageBatch.shift(); // Eliminar el más antiguo
-        }
-    }
-    
-    // COMANDOS - Todos pero con límites
-    if (message.content.startsWith('>')) {
-        try {
-            // Procesar TODOS los comandos pero con timeout
-            await Promise.race([
-                Promise.all([
-                    achievements.processCommand(message),
-                    missions.processCommand(message),
-                    allCommands.processCommand(message),
-                    shop.processCommand(message),
-                    minigames.processCommand(message),
-                    commandHandler.processCommand(message)
-                ]),
-                new Promise((_, reject) => 
-                    setTimeout(() => reject(new Error('Comando timeout')), 5000)
-                )
-            ]);
-        } catch (error) {
-            if (error.message !== 'Comando timeout') {
-                console.error('❌ Error comando:', error.message);
-            }
         }
     }
 });
@@ -945,6 +939,7 @@ client.login(process.env.TOKEN).then(() => {
 }).catch(error => {
     console.error('❌ Error en el login:', error);
 });*/
+
 
 
 
