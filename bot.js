@@ -68,16 +68,6 @@ const client = new Client({
         GatewayIntentBits.GuildVoiceStates,
     ],
     makeCache: () => new Map(), // Caché más pequeño
-    sweepers: {
-        messages: {
-            interval: 300, // 5 minutos
-            lifetime: 1800, // 30 minutos
-        },
-        users: {
-            interval: 3600, // 1 hora  
-            filter: () => user => user.bot && user.id !== client.user.id,
-        }
-    }
 });
 
 // Función para guardar contadores
@@ -161,7 +151,7 @@ const PROCESSING_QUEUE = [];
 
 // CONFIGURACIÓN AGRESIVA
 const CONFIG = {
-    XP_COOLDOWN: 10000,        // 10 segundos (aumentado)
+    XP_COOLDOWN: 3000,        // 10 segundos (aumentado)
     MAX_MESSAGES_PER_SECOND: 3, // Máximo 3 mensajes procesados por segundo
     MAX_CACHE_SIZE: 500,       // Reducido a 500
     BATCH_SIZE: 5,             // Procesar en lotes de 5
@@ -785,31 +775,27 @@ client.on('messageCreate', async (message) => {
         }
     }
     
-    // COMANDOS - Solo si empieza con prefijo
+    // COMANDOS - Todos pero con límites
     if (message.content.startsWith('>')) {
         try {
-            // Solo comandos esenciales
-            const command = message.content.split(' ')[0].toLowerCase();
-            
-            switch (command) {
-                case '!balance':
-                case '!bal':
-                    await allCommands.processCommand(message);
-                    break;
-                case '!shop':
-                    await shop.processCommand(message);
-                    break;
-                case '!rank':
-                case '!level':
-                    await commandHandler.processCommand(message);
-                    break;
-                // Agregar solo comandos críticos aquí
-                default:
-                    // Ignorar otros comandos por ahora
-                    break;
-            }
+            // Procesar TODOS los comandos pero con timeout
+            await Promise.race([
+                Promise.all([
+                    achievements.processCommand(message),
+                    missions.processCommand(message),
+                    allCommands.processCommand(message),
+                    shop.processCommand(message),
+                    minigames.processCommand(message),
+                    commandHandler.processCommand(message)
+                ]),
+                new Promise((_, reject) => 
+                    setTimeout(() => reject(new Error('Comando timeout')), 5000)
+                )
+            ]);
         } catch (error) {
-            console.error('❌ Error comando:', error.message);
+            if (error.message !== 'Comando timeout') {
+                console.error('❌ Error comando:', error.message);
+            }
         }
     }
 });
@@ -959,6 +945,7 @@ client.login(process.env.TOKEN).then(() => {
 }).catch(error => {
     console.error('❌ Error en el login:', error);
 });*/
+
 
 
 
