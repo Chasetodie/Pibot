@@ -155,6 +155,25 @@ missions.startCacheCleanup();
 events.startCacheCleanup();
 minigames.startCacheCleanup();
 
+const userCooldowns = new Map();
+const COOLDOWN_TIME = 3000;
+const MAX_CACHE_SIZE = 1000;
+
+cleanupCache() {
+    if (userCooldowns.size > MAX_CACHE_SIZE) {
+        const now = Date.now();
+        const entries = Array.from(userCooldowns.entries());
+        
+        // Ordenar por tiempo y mantener solo los más recientes
+        const recent = entries
+            .filter(([_, time]) => now - time < COOLDOWN_TIME * 2)
+            .slice(-MAX_CACHE_SIZE / 2);
+        
+        userCooldowns.clear();
+        recent.forEach(([userId, time]) => userCooldowns.set(userId, time));
+    }
+}
+
 app.listen(PORT, '0.0.0.0', () => {
     console.log(`🌐 Servidor web corriendo en puerto ${PORT} en todas las interfaces`);
     console.log(`🔗 URLs disponibles:`);
@@ -174,10 +193,20 @@ client.once('ready', async () => {
 
     setInterval(() => {
         const used = process.memoryUsage();
-        console.log(`📊 Memoria: ${Math.round(used.rss / 1024 / 1024)} MB`);
+        const heapUsedMB = Math.round(used.heapUsed / 1024 / 1024);
         
-        if (used.rss > 400 * 1024 * 1024) { // 400 MB
-            console.log('⚠️ MEMORIA ALTA - Limpiando cachés...');
+        console.log(`🔍 Memoria: ${heapUsedMB}MB | Cache usuarios: ${userCooldowns.size}`);
+        
+        // Si la memoria está alta, limpiar más agresivamente
+        if (heapUsedMB > 200) {
+            console.warn('⚠️ Memoria alta - limpiando cache');
+            userCooldowns.clear();
+            
+            // Forzar garbage collection si está disponible
+            if (global.gc) {
+                global.gc();
+                console.log('🧹 Garbage collection ejecutado');
+            }
         }
     }, 60000); // Cada minuto
     
@@ -605,19 +634,69 @@ client.on('messageCreate', async (message) => {
     if (message.author.bot) return;
     
     // AGREGAR ESTO AL INICIO:
-    const userId = message.author.id;  
+    const userId = message.author.id;
+    const now = Date.now();
+
+    // OPTIMIZACIÓN 3: Verificar cooldown para XP
+    const lastProcessed = userCooldowns.get(userId);
+    const canProcessXP = !lastProcessed || (now - lastProcessed) >= COOLDOWN_TIME;    
         
     // Procesar XP por mensaje (solo en servidores, no en DMs)
-    if (message.guild) {
+    if (message.guild && canProcessXP) {
+        userCooldowns.set(userId, now);
+
+        try {
+            const results = await Promise.allSettled([
+                // XP y nivel
+                economy.processMessageXp(userId),
+                // Achievements (solo si no está en cooldown)
+                achievements.checkAchievements(userId),
+                // Misiones básicas
+                missions.updateMissionProgress(userId, 'message')
+            ]);
+
+            // Procesar resultados
+            const [xpResult, achievementsResult, missionsResult] = results;            
+            // Manejar XP y level up
+            if (xpResult.status === 'fulfilled' && xpResult.value?.levelUp) {
+                const channelId = '1402824824971067442';
+                const channel = message.guild.channels.cache.get(channelId);
+                if (channel) {
+                    await handleLevelUp(message, xpResult.value, channel);
+                }
+            }
+            
+            // Manejar achievements
+            if (achievementsResult.status === 'fulfilled' && achievementsResult.value?.length > 0) {
+                await achievements.notifyAchievements(message, achievementsResult.value);
+            }
+            
+            // Manejar misiones completadas
+            if (missionsResult.status === 'fulfilled' && missionsResult.value?.length > 0) {
+                await missions.notifyCompletedMissions(message, missionsResult.value);
+            }
+            
+            // Procesar menciones solo si las hay
+            if (message.mentions.users.size > 0) {
+                const mentionsCount = message.mentions.users.size;
+                const mentionMissions = await missions.updateMissionProgress(userId, 'mention_made', mentionsCount);
+                if (mentionMissions.length > 0) {
+                    await missions.notifyCompletedMissions(message, mentionMissions);
+                }
+            }
+            
+        } catch (error) {
+            console.error('❌ Error procesando sistemas de XP:', error);
+        }
         // Aplicar modificadores de eventos a XP
         //const xpMod = events.applyEventModifiers(message.author.id, economy.config.xpPerMessage, 'message');
         
-        const channelId = '1402824824971067442'; // ID del canal de XP (puedes cambiarlo)
+/*        const channelId = '1402824824971067442'; // ID del canal de XP (puedes cambiarlo)
         const channel = message.guild.channels.cache.get(channelId);
 
-        const xpResult = await economy.processMessageXp(message.author.id/*, economy.config.xpPerMessage*/);
+        const xpResult = await economy.processMessageXp(message.author.id/*, economy.config.xpPerMessage);*/
         
-        // Si subió de nivel, notificar
+/*        // Si subió de nivel, notificar
         if (xpResult && xpResult.levelUp && channel) {
             const levelUpEmbed = new EmbedBuilder()
                 .setTitle('🎉 ¡Nuevo Nivel!')
@@ -687,8 +766,56 @@ client.on('messageCreate', async (message) => {
     await minigames.processCommand(message);
     
     // Luego procesar comandos normales (como !contadores, !reset, etc.)
-    await commandHandler.processCommand(message);
+    await commandHandler.processCommand(message);*/
+
+        // Limpiar cache periodicamente
+        if (Math.random() < 0.01) { // 1% de probabilidad
+            cleanupCache();
+        }
+    }
+
+    const prefix = '>'; // Ajusta tu prefijo aquí
+    if (message.content.startsWith(prefix)) {
+        try {
+            // Procesar comandos en paralelo con Promise.allSettled
+            await Promise.allSettled([
+                achievements.processCommand(message),
+                missions.processCommand(message),
+                allCommands.processCommand(message),
+                shop.processCommand(message),
+                minigames.processCommand(message),
+                commandHandler.processCommand(message)
+            ]);
+        } catch (error) {
+            console.error('❌ Error procesando comandos:', error);
+        }
+    }
 });
+
+async function handleLevelUp(message, xpResult, channel) {
+    try {
+        const levelUpEmbed = new EmbedBuilder()
+            .setTitle('🎉 ¡Nuevo Nivel!')
+            .setThumbnail(message.author.displayAvatarURL({ dynamic: true }))
+            .setDescription(`${message.author} alcanzó el **Nivel ${xpResult.newLevel}**`)
+            .addFields(
+                { name: '📈 XP Ganada', value: `+${xpResult.xpGained} XP`, inline: true },
+                { name: '🎁 Recompensa', value: `+${xpResult.reward} π-b$`, inline: true },
+                { name: '🏆 Niveles Subidos', value: `${xpResult.levelsGained}`, inline: true },
+                { name: '🎉 Extra por Eventos', value: `${xpResult.eventMessage || "No hay eventos Activos"}`, inline: false }
+            )
+            .setColor('#FFD700')
+            .setTimestamp();
+            
+        await channel.send({
+            content: `<@${message.author.id}>`,
+            embeds: [levelUpEmbed],
+            allowedMentions: { users: [message.author.id] }
+        });
+    } catch (error) {
+        console.error('❌ Error enviando notificación de nivel:', error);
+    }
+}
 
 // Manejo de errores
 client.on('error', (error) => {
@@ -697,6 +824,11 @@ client.on('error', (error) => {
 
 process.on('unhandledRejection', (error) => {
     console.error('⚠️ Unhandled promise rejection:', error);
+});
+
+process.on('uncaughtException', (error) => {
+    console.error('❌ Error crítico:', error);
+    process.exit(1); // El hosting lo reiniciará
 });
 
 // Proceso de cierre limpio
@@ -713,7 +845,7 @@ process.on('SIGINT', () => {
 });
 
 // En bot.js, donde tienes client.login()
-async function loginWithRetry(maxRetries = 3) {
+async loginWithRetry(maxRetries = 3) {
     for (let i = 0; i < maxRetries; i++) {
         try {
             await client.login(process.env.TOKEN);
@@ -742,5 +874,6 @@ client.login(process.env.TOKEN).then(() => {
 }).catch(error => {
     console.error('❌ Error en el login:', error);
 });*/
+
 
 
