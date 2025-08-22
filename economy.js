@@ -18,8 +18,8 @@ class EconomySystem {
             xpPerMessage: 10, // XP base por mensaje
             xpVariation: 5,  // Variación aleatoria del XP
             xpCooldown: 15000, // 15 segundos entre mensajes que dan XP
-            dailyAmount: 300,  // Cantidad base del daily
-            dailyVariation: 150, // Variación del daily
+            dailyAmount: 2500,  // Cantidad base del daily
+            dailyVariation: 1500, // Variación del daily
             levelUpReward: 50, // π-b Coins por subir de nivel
             xpPerLevel: 100,   // XP base necesaria para nivel 1
             levelMultiplier: 1.5 // Multiplicador de XP por nivel
@@ -609,8 +609,8 @@ class EconomySystem {
         return {
             success: true,
             amount: amount,
-            oldBalance: user.balance,
-            newBalance: user.balance + finalEarnings,
+            oldBalance: user.balance - finalEarnings,
+            newBalance: user.balance,
             eventMessage: eventMessage,
             finalEarnings: finalEarnings,
         };
@@ -899,8 +899,8 @@ class EconomySystem {
                 failed: true,
                 message: failMessage,
                 penalty: penalty,
-                oldBalance: user.balance,
-                newBalance: Math.max(0, user.balance - penalty),
+                oldBalance: Math.max(0, user.balance + penalty),
+                newBalance: Math.max(0, user.balance),
 
                 canWork: canWorkResult.canWork,
                 reason: canWorkResult.reason,
@@ -971,8 +971,8 @@ class EconomySystem {
             success: true,
             amount: amount,
             message: message,
-            oldBalance: user.balance,
-            newBalance: user.balance + finalEarnings,
+            oldBalance: user.balance - finalEarnings,
+            newBalance: user.balance,
             jobName: job.name,
             eventMessage: eventMessage,
             finalEarnings: finalEarnings,
@@ -1302,17 +1302,17 @@ isBeingRobbed(userId) {
                 
                 return {
                     success: true,
-                robberySuccess: true,
-                stolenAmount: stolenAmount,
-                clicks: robberyData.clicks,
-                maxClicks: this.robberyConfig.maxClicks,
-                efficiency: Math.round(clickEfficiency * 100),
-                robberOldBalance: robber.balance,
-                robberNewBalance: robber.balance + stolenAmount,
-                targetOldBalance: target.balance,
-                targetNewBalance: Math.max(0, target.balance - stolenAmount),
-                targetId: robberyData.targetId,
-                stealPercentage: Math.round(stealPercentage * 100)
+                    robberySuccess: true,
+                    stolenAmount: stolenAmount,
+                    clicks: robberyData.clicks,
+                    maxClicks: this.robberyConfig.maxClicks,
+                    efficiency: Math.round(clickEfficiency * 100),
+                    robberOldBalance: robber.balance,
+                    robberNewBalance: robber.balance + stolenAmount,
+                    targetOldBalance: target.balance,
+                    targetNewBalance: Math.max(0, target.balance - stolenAmount),
+                    targetId: robberyData.targetId,
+                    stealPercentage: Math.round(stealPercentage * 100)
                 };
                 
             } else {
@@ -1321,7 +1321,10 @@ isBeingRobbed(userId) {
                 const penalty = Math.floor(robber.balance * (this.robberyConfig.penaltyPercentage / 100));
                 
                 robberUpdateData.balance = Math.max(0, robber.balance - penalty);
-                robberUpdateData['stats.totalSpent'] = (robber.stats.totalSpent || 0) + penalty;
+                robberUpdateData.stats = {
+                    ...robber.stats,
+                    totalSpent: (robber.stats.totalSpent || 0) + penalty,
+                };   
                 
                 await this.updateUser(robberId, robberUpdateData);
                 
@@ -1329,14 +1332,14 @@ isBeingRobbed(userId) {
                 
                 return {
                     success: true,
-                robberySuccess: false,
-                penalty: penalty,
-                clicks: robberyData.clicks,
-                maxClicks: this.robberyConfig.maxClicks,
-                efficiency: Math.round(clickEfficiency * 100),
-                robberOldBalance: robber.balance,
-                robberNewBalance: Math.max(0, robber.balance - penalty),
-                targetId: robberyData.targetId
+                    robberySuccess: false,
+                    penalty: penalty,
+                    clicks: robberyData.clicks,
+                    maxClicks: this.robberyConfig.maxClicks,
+                    efficiency: Math.round(clickEfficiency * 100),
+                    robberOldBalance: robber.balance,
+                    robberNewBalance: Math.max(0, robber.balance - penalty),
+                    targetId: robberyData.targetId
                 };
             }
         } catch (error) {

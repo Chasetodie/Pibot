@@ -396,10 +396,10 @@ class AllCommands {
             .setDescription(`Has enviado **${this.formatNumber(amount)}** ${this.economy.config.currencySymbol} a ${targetUser}`)
             .addFields(
                 { name: '💰 Balance Anterior', value: `${this.formatNumber(userBalance.balance)} ${this.economy.config.currencySymbol}`, inline: true },
-                { name: '💰 Tu Balance Actual', value: `${this.formatNumber(result.beforeEvents)} ${this.economy.config.currencySymbol}`, inline: true },
+                { name: '💰 Tu Balance Actual', value: `${this.formatNumber(result.beforeEvents - amount)} ${this.economy.config.currencySymbol}`, inline: true },
                 { name: '💸 Dinero Enviado', value: `${this.formatNumber(amount)} ${this.economy.config.currencySymbol}`, inline: true },
                 { name: '💰 Balance Anterior del Destinatario', value: `${this.formatNumber(otherUserBalance.balance)} ${this.economy.config.currencySymbol}`, inline: true },
-                { name: '💰 Balance Actual del Destinatario', value: `${this.formatNumber(result.toBalance)} ${this.economy.config.currencySymbol}`, inline: true },
+                { name: '💰 Balance Actual del Destinatario', value: `${this.formatNumber(result.toBalance + amount)} ${this.economy.config.currencySymbol}`, inline: true },
                 { name: '🎉 Extra por Eventos', value: `${result.eventMessage || "No hay eventos Activos"} `, inline: false }
             )
             .setColor('#00FF00')
@@ -563,7 +563,7 @@ class AllCommands {
             .setTitle('✅ Se ha Entregado Exitosamente el Dinero')
             .setDescription(`Has dado **${this.formatNumber(amount)}** ${this.economy.config.currencySymbol} a ${targetUser}\nRazón: ${reason}`)
             .addFields(
-                { name: '💰 Balance de Destino', value: `${this.formatNumber(result)} ${this.economy.config.currencySymbol}`, inline: true }
+                { name: '💰 Balance de Destino', value: `${this.formatNumber(result - amount)} ${this.economy.config.currencySymbol}`, inline: true }
             )
             .setColor('#00FF00')
             .setTimestamp();
@@ -631,7 +631,7 @@ class AllCommands {
             .setTitle('✅ Se ha Quitado Exitosamente el Dinero')
             .setDescription(`Has quitado **${this.formatNumber(amount)}** ${this.economy.config.currencySymbol} a ${targetUser}\nRazón: ${reason}`)
             .addFields(
-                { name: '💰 Balance de Destino', value: `${this.formatNumber(result)} ${this.economy.config.currencySymbol}`, inline: true }
+                { name: '💰 Balance de Destino', value: `${this.formatNumber(result + amount)} ${this.economy.config.currencySymbol}`, inline: true }
             )
             .setColor('#00FF00')
             .setTimestamp();
@@ -1042,6 +1042,52 @@ class AllCommands {
         });
         
         let lastUpdate = Date.now();
+        let robberyFinished = false; // AGREGAR ESTA LÍNEA
+
+        // AGREGAR ESTA FUNCIÓN COMPLETA
+        const finishRobberyAndShowResult = async (reason = 'unknown') => {
+            if (robberyFinished) {
+                console.log(`⚠️ Robo ya fue finalizado, ignorando llamada desde: ${reason}`);
+                return;
+            }
+            
+            robberyFinished = true;
+            console.log(`🎯 Finalizando robo por: ${reason}`);
+            
+            const finishResult = await this.economy.finishRobbery(robberId);
+
+            // En lugar de mostrar el resultado inmediatamente, envía un mensaje separado
+            if (finishResult.success) {
+                // Esperar un poco para que se vea como mensaje separado
+                if (finishResult.robberySuccess) {
+                    // Mensaje de robo exitoso
+                    const successEmbed = new EmbedBuilder()
+                        .setColor('#ff0000')
+                            .setTitle('🦹‍♂️ ¡Robo Exitoso!')
+                            .setDescription(`<@${message.author.id}> robó **${finishResult.stolenAmount}** ${this.economy.config.currencySymbol} a <@${finishResult.targetId}>`)
+                            .addFields(
+                                { name: '💰 Cantidad robada', value: `${finishResult.stolenAmount} ${this.economy.config.currencySymbol}`, inline: true },
+                                { name: '🎯 Eficiencia', value: `${finishResult.efficiency}%`, inline: true },
+                                { name: '👆 Clicks', value: `${finishResult.clicks}/${finishResult.maxClicks}`, inline: true }
+                            );
+                        
+                        await message.channel.send({ embeds: [successEmbed] });
+                } else {
+                    // Mensaje de robo fallido
+                    const failEmbed = new EmbedBuilder()
+                        .setColor('#800080')
+                        .setTitle('🚨 ¡Robo Fallido!')
+                        .setDescription(`<@${message.author.id}> falló el robo y perdió **${finishResult.penalty}** ${this.economy.config.currencySymbol}`)
+                        .addFields(
+                            { name: '💸 Penalización', value: `${finishResult.penalty} ${this.economy.config.currencySymbol}`, inline: true },
+                            { name: '🎯 Eficiencia', value: `${finishResult.efficiency}%`, inline: true },
+                            { name: '👆 Clicks', value: `${finishResult.clicks}/${finishResult.maxClicks}`, inline: true }
+                        );
+                        
+                    await message.channel.send({ embeds: [failEmbed] });
+                }
+            }              
+        };
         
         collector.on('collect', async (interaction) => {
             // Solo el ladrón puede hacer click
@@ -1063,46 +1109,8 @@ class AllCommands {
             }
                 
             if (clickResult.reason === 'time_expired') {
-                // Tiempo expirado, finalizar robo AQUÍ
-                console.log('⏰ Finalizando robo por tiempo expirado en click handler');
-               
-                const finishResult = await this.economy.finishRobbery(robberId);
-                
-                // En lugar de mostrar el resultado inmediatamente, envía un mensaje separado
-                if (finishResult.success) {
-                    // Esperar un poco para que se vea como mensaje separado
-                    setTimeout(async () => {
-                        if (finishResult.robberySuccess) {
-                            // Mensaje de robo exitoso
-                            const successEmbed = new EmbedBuilder()
-                                .setColor('#ff0000')
-                                .setTitle('🦹‍♂️ ¡Robo Exitoso!')
-                                .setDescription(`<@${message.author.id}> robó **${finishResult.stolenAmount}** ${this.economy.config.currencySymbol} a <@${finishResult.targetId}>`)
-                                .addFields(
-                                    { name: '💰 Cantidad robada', value: `${finishResult.stolenAmount} ${this.economy.config.currencySymbol}`, inline: true },
-                                    { name: '🎯 Eficiencia', value: `${finishResult.efficiency}%`, inline: true },
-                                    { name: '👆 Clicks', value: `${finishResult.clicks}/${finishResult.maxClicks}`, inline: true }
-                                );
-                            
-                            await message.channel.send({ embeds: [successEmbed] });
-                        } else {
-                            // Mensaje de robo fallido
-                            const failEmbed = new EmbedBuilder()
-                                .setColor('#800080')
-                                .setTitle('🚨 ¡Robo Fallido!')
-                                .setDescription(`<@${message.author.id}> falló el robo y perdió **${finishResult.penalty}** ${this.economy.config.currencySymbol}`)
-                                .addFields(
-                                    { name: '💸 Penalización', value: `${finishResult.penalty} ${this.economy.config.currencySymbol}`, inline: true },
-                                    { name: '🎯 Eficiencia', value: `${finishResult.efficiency}%`, inline: true },
-                                    { name: '👆 Clicks', value: `${finishResult.clicks}/${finishResult.maxClicks}`, inline: true }
-                                );
-                            
-                            await message.channel.send({ embeds: [failEmbed] });
-                        }
-                    }, 1000); // 1 segundo de delay para que se vea separado
-                }
-                
-                collector.stop('finished');
+                await finishRobberyAndShowResult('time_expired');
+                collector.stop('time_expired');
                 return;
             }
             
@@ -1133,14 +1141,18 @@ class AllCommands {
             
             // Auto-finalizar si llegó al máximo
             if (clickResult.maxReached) {
-                console.log(`🎯 Máximo de clicks alcanzado, finalizando...`);
+                await finishRobberyAndShowResult('max_clicks');
                 collector.stop('max_clicks');
             }
         });
         
         collector.on('end', async (collected, reason) => {
-            // No hacer nada, el resultado ya se procesó en el click handler
             console.log(`🔍 Collector terminado - Razón: ${reason}`);
+            
+            // Solo finalizar si fue por timeout y no se ha finalizado ya
+            if (reason === 'time' && !robberyFinished) {
+                await finishRobberyAndShowResult('collector_timeout');
+            }
         });
     }
 

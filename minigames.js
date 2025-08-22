@@ -397,8 +397,8 @@ class MinigamesSystem {
                     { name: '🪙 Resultado', value: result === 'cara' ? '🟡 Cara' : '⚪ Cruz', inline: true },
                     { name: '🎯 Tu Elección', value: normalizedChoice === 'cara' ? '🟡 Cara' : '⚪ Cruz', inline: true },
                     { name: '💸 Perdiste', value: `${this.formatNumber(betAmount)} π-b$`, inline: true },
-                    { name: '💸 Balance Antiguo', value: `${this.formatNumber(user.balance)} π-b$`, inline: false },
-                    { name: '💳 Balance Actual', value: `${this.formatNumber(user.balance - betAmount)} π-b$`, inline: false }
+                    { name: '💸 Balance Antiguo', value: `${this.formatNumber(user.balance + betAmount)} π-b$`, inline: false },
+                    { name: '💳 Balance Actual', value: `${this.formatNumber(user.balance)} π-b$`, inline: false }
                 );
         }
 
@@ -638,8 +638,8 @@ class MinigamesSystem {
             embed.setDescription(`💸 **Perdiste...**`)
                 .addFields(
                     { name: '💰 Dinero Apostado', value: `${this.formatNumber(betAmount)} π-b$`, inline: false },
-                    { name: '💸 Balance Antiguo', value: `${this.formatNumber(user.balance)} π-b$`, inline: false },
-                    { name: '💳 Balance Actual', value: `${this.formatNumber(user.balance - betAmount)} π-b$`, inline: false },
+                    { name: '💸 Balance Antiguo', value: `${this.formatNumber(user.balance + betAmount)} π-b$`, inline: false },
+                    { name: '💳 Balance Actual', value: `${this.formatNumber(user.balance)} π-b$`, inline: false },
                 );
         }
 
@@ -888,8 +888,8 @@ class MinigamesSystem {
                 .addFields(
                     { name: '📊 Diferencia', value: `${difference} números`, inline: true },
                     { name: '💸 Perdiste', value: `${this.formatNumber(betAmount)} π-b$`, inline: true },
-                    { name: '💸 Balance Anterior', value: `${this.formatNumber(user.balance)} π-b$`, inline: false },
-                    { name: '💳 Balance Actual', value: `${this.formatNumber(user.balance - betAmount)} π-b$`, inline: false },
+                    { name: '💸 Balance Anterior', value: `${this.formatNumber(user.balance + betAmount)} π-b$`, inline: false },
+                    { name: '💳 Balance Actual', value: `${this.formatNumber(user.balance)} π-b$`, inline: false },
                     { name: '💡 Consejo', value: 'La lotería es pura suerte. ¡Cada número tiene la misma probabilidad!', inline: false }
                 );
         }
@@ -1401,13 +1401,13 @@ class MinigamesSystem {
         if (profit > 0) {
             embed.addFields(
                 { name: '💰 Ganancia', value: `+${this.formatNumber(profit)} π-b$`, inline: true },
-                { name: '💳 Balance Actual', value: `${this.formatNumber(user.balance + profit)} π-b$`, inline: true },
+                { name: '💳 Balance Actual', value: `${this.formatNumber(user.balance)} π-b$`, inline: true },
                 { name: '🎉 Extra por Eventos', value: `${eventMessage || "No hay eventos Activos"} `, inline: false }
             );
         } else if (profit < 0) {
             embed.addFields(
                 { name: '💸 Perdiste', value: `${this.formatNumber(Math.abs(profit))} π-b$`, inline: true },
-                { name: '💳 Balance Actual', value: `${this.formatNumber(user.balance + profit)} π-b$`, inline: true }
+                { name: '💳 Balance Actual', value: `${this.formatNumber(user.balance)} π-b$`, inline: true }
             );
         } else {
             embed.addFields(
@@ -1756,8 +1756,8 @@ class MinigamesSystem {
             resultEmbed.setDescription(`💸 **No ganaste esta vez...** ${encouragement}`)
                 .addFields(
                     { name: '💸 Perdiste', value: `${this.formatNumber(betAmount)} π-b$`, inline: true },
-                    { name: '💸 Balance Anterior', value: `${this.formatNumber(user.balance)} π-b$`, inline: false },
-                    { name: '💳 Balance Actual', value: `${this.formatNumber(user.balance - betAmount)} π-b$`, inline: false },
+                    { name: '💸 Balance Anterior', value: `${this.formatNumber(user.balance + betAmount)} π-b$`, inline: false },
+                    { name: '💳 Balance Actual', value: `${this.formatNumber(user.balance)} π-b$`, inline: false },
                     { name: '💡 Consejo', value: 'En la ruleta, cada giro es independiente. ¡No te rindas!', inline: false }
                 );
         }
@@ -2312,27 +2312,18 @@ class MinigamesSystem {
         }, this.config.russianRoulette.turnTime);
     }
     
-    async handleShoot(message, gameKey) {
-        console.log('🔫 handleShoot llamado:');
-        console.log('- gameKey:', gameKey);
-        console.log('- Juego existe:', !!this.activeGames.get(gameKey));
-        console.log('- Usuario:', message.author.id);
-        
+    async handleShoot(message, gameKey) {        
         const game = this.activeGames.get(gameKey);
         if (!game || game.phase !== 'playing') {
             await message.reply('❌ No hay ninguna partida activa o no es tu turno.');
             return;
         }
-
-        console.log('alive in 1');
-        
+       
         const currentPlayer = game.players[game.current_player_index];
         if (message.author.id !== currentPlayer.id) {
             await message.reply('❌ No es tu turno.');
             return;
         }
-
-        console.log('alive in 2');
 
         if (game.processing) {
             return;
@@ -2345,19 +2336,14 @@ class MinigamesSystem {
             game.turn_timeout = null;
         }
 
-        console.log('alive in 3');
-    
         await this.executeShot(game, message.author.id, message.client);
-        console.log('alive in 4');
     }
     
     async executeShot(game, playerId, client) {
         console.log(game.players.find(p => p.id === playerId));
         const currentPlayer = game.players.find(p => p.id === playerId);
         if (!currentPlayer) return;
-
-        console.log('ez');
-        
+       
         currentPlayer.shots++;
     
         // Verificar si es la bala
@@ -2365,8 +2351,6 @@ class MinigamesSystem {
     
         const embed = new EmbedBuilder()
             .setTimestamp();
-
-        console.log('ez2');
         
         if (isBullet) {
             // ¡BANG! El jugador muere
@@ -2434,8 +2418,6 @@ class MinigamesSystem {
             console.error('Error actualizando mensaje del juego: ', error);
         }
 
-        console.log('ez4');
-
         game.processing = false;
 
         await this.updateRussianGame(game.id, {
@@ -2447,8 +2429,6 @@ class MinigamesSystem {
     
         // VERIFICAR SI EL JUEGO DEBE TERMINAR
         const alivePlayers = game.players.filter(p => p.alive);
-
-        console.log('ez5');
         
         // Si solo queda 1 jugador vivo, terminar
         if (alivePlayers.length <= 1) {
@@ -2457,8 +2437,6 @@ class MinigamesSystem {
             }, 4000);
             return;
         }
-
-        console.log('ez6');
         
         // Si llegamos al 6to disparo y hay 2+ jugadores, recargar revólver
         if (game.current_shot === 6 && alivePlayers.length > 1 || !currentPlayer.alive) {
@@ -2473,7 +2451,6 @@ class MinigamesSystem {
             game.current_player_index = (game.current_player_index + 1) % game.players.length;
             await this.nextTurn(game, client);
         }, 4000);
-        console.log('ez7');
     }
 
     async reloadRevolver(game, client) {
