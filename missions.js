@@ -8,6 +8,7 @@ class MissionsSystem {
 
         // ✅ AGREGAR: Caché para misiones
         this.missionsCache = new Map();
+        this.MAX_CACHE_SIZE = 500;
         this.cacheTimeout = 10 * 60 * 1000; // 10 minutos
 
         // ✅ AGREGAR: Rate limiting para updateMissionProgress
@@ -444,12 +445,28 @@ class MissionsSystem {
     startCacheCleanup() {
         setInterval(() => {
             const now = Date.now();
+            
+            // Limpiar por tiempo
             for (const [key, cached] of this.missionsCache) {
                 if (now - cached.timestamp > this.cacheTimeout) {
                     this.missionsCache.delete(key);
                 }
             }
-        }, 15 * 60 * 1000); // Limpiar cada 15 minutos
+            
+            // Limpiar por tamaño si excede el límite
+            if (this.missionsCache.size > this.MAX_CACHE_SIZE) {
+                const entries = Array.from(this.missionsCache.entries());
+                const toDelete = entries
+                    .sort((a, b) => a[1].timestamp - b[1].timestamp)
+                    .slice(0, entries.length - this.MAX_CACHE_SIZE);
+                    
+                for (const [tradeId] of toDelete) {
+                    this.missionsCache.delete(tradeId);
+                }
+            }
+            
+            console.log(`🧹 Cache cleanup: ${this.missionsCache.size} trades en memoria`);
+        }, 5 * 60 * 1000);
     }
     
     // Actualizar progreso de misiones
