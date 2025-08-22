@@ -16,6 +16,9 @@ class EventsSystem {
         setTimeout(() => {
             this.loadEvents();
         }, 1000);
+
+        this.eventCache = new Map();
+        this.MAX_CACHE_SIZE = 500;
         
         // Definir tipos de eventos disponibles
         this.eventTypes = {
@@ -311,16 +314,31 @@ class EventsSystem {
         }
     }
 
-    // ✅ LIMPIEZA: Limpiar caché periódicamente
     startCacheCleanup() {
         setInterval(() => {
             const now = Date.now();
+            
+            // Limpiar por tiempo
             for (const [key, cached] of this.eventCache) {
                 if (now - cached.timestamp > this.cacheTimeout) {
                     this.eventCache.delete(key);
                 }
             }
-        }, 10 * 60 * 1000); // Limpiar cada 10 minutos
+            
+            // Limpiar por tamaño si excede el límite
+            if (this.eventCache.size > this.MAX_CACHE_SIZE) {
+                const entries = Array.from(this.eventCache.entries());
+                const toDelete = entries
+                    .sort((a, b) => a[1].timestamp - b[1].timestamp)
+                    .slice(0, entries.length - this.MAX_CACHE_SIZE);
+                    
+                for (const [tradeId] of toDelete) {
+                    this.eventCache.delete(tradeId);
+                }
+            }
+            
+            console.log(`🧹 Cache cleanup: ${this.eventCache.size} trades en memoria`);
+        }, 5 * 60 * 1000);
     }
     
     // Intentar crear un evento aleatorio
