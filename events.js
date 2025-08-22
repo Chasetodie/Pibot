@@ -19,7 +19,7 @@ class EventsSystem {
 
         this.eventCache = new Map();
         this.MAX_CACHE_SIZE = 500;
-        this.cacheTimeout = 0.1 * 60 * 1000;
+        this.cacheTimeout = 10 * 60 * 1000;
         
         // Definir tipos de eventos disponibles
         this.eventTypes = {
@@ -339,7 +339,7 @@ class EventsSystem {
             }
             
             console.log(`🧹 Cache cleanup: ${this.eventCache.size} trades en memoria`);
-        }, 0.1 * 60 * 1000);
+        }, 10 * 60 * 1000);
     }
     
     // Intentar crear un evento aleatorio
