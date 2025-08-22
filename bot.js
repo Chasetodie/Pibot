@@ -156,8 +156,23 @@ events.startCacheCleanup();
 minigames.startCacheCleanup();
 
 const userCooldowns = new Map();
-const COOLDOWN_TIME = 3000;
-const MAX_CACHE_SIZE = 1000;
+const messageBatch = [];
+const PROCESSING_QUEUE = [];
+
+// CONFIGURACIÓN AGRESIVA
+const CONFIG = {
+    XP_COOLDOWN: 10000,        // 10 segundos (aumentado)
+    MAX_MESSAGES_PER_SECOND: 3, // Máximo 3 mensajes procesados por segundo
+    MAX_CACHE_SIZE: 500,       // Reducido a 500
+    BATCH_SIZE: 5,             // Procesar en lotes de 5
+    PROCESSING_INTERVAL: 2000,  // Procesar cada 2 segundos
+    MEMORY_LIMIT: 150,         // MB límite antes de parar todo
+    EMERGENCY_MODE: false      // Modo emergencia
+};
+
+let isProcessing = false;
+let messageCount = 0;
+let lastSecond = Date.now();
 
 function cleanupCache() {
     if (userCooldowns.size > MAX_CACHE_SIZE) {
@@ -171,6 +186,87 @@ function cleanupCache() {
         
         userCooldowns.clear();
         recent.forEach(([userId, time]) => userCooldowns.set(userId, time));
+    }
+}
+
+function checkMessageRate() {
+    const now = Date.now();
+    if (now - lastSecond >= 1000) {
+        console.log(`📊 Mensajes/segundo: ${messageCount}`);
+        if (messageCount > CONFIG.MAX_MESSAGES_PER_SECOND * 3) {
+            CONFIG.EMERGENCY_MODE = true;
+            console.log('🚨 MODO EMERGENCIA ACTIVADO - Demasiados mensajes');
+        }
+        messageCount = 0;
+        lastSecond = now;
+    }
+}
+
+// LIMPIEZA AGRESIVA DE MEMORIA
+function aggressiveCleanup() {
+    userCooldowns.clear();
+    messageBatch.length = 0;
+    PROCESSING_QUEUE.length = 0;
+    
+    if (global.gc) {
+        global.gc();
+        console.log('🧹 Limpieza agresiva ejecutada');
+    }
+}
+
+// PROCESADOR DE LOTES (BATCH PROCESSING)
+async function processBatch() {
+    if (isProcessing || messageBatch.length === 0) return;
+    
+    isProcessing = true;
+    const batch = messageBatch.splice(0, CONFIG.BATCH_SIZE);
+    
+    console.log(`⚙️ Procesando lote de ${batch.length} mensajes`);
+    
+    for (const messageData of batch) {
+        try {
+            await processMessageSafe(messageData);
+        } catch (error) {
+            console.error('❌ Error en lote:', error.message);
+        }
+    }
+    
+    isProcessing = false;
+}
+
+// PROCESAMIENTO SEGURO DE MENSAJES
+async function processMessageSafe({ message, userId, now }) {
+    try {
+        // Solo XP, nada más
+        const xpResult = await Promise.race([
+            economy.processMessageXp(userId),
+            new Promise((_, reject) => 
+                setTimeout(() => reject(new Error('Timeout')), 3000)
+            )
+        ]);
+        
+        // Level up solo si es necesario
+        if (xpResult?.levelUp) {
+            const channelId = '1402824824971067442';
+            const channel = message.guild.channels.cache.get(channelId);
+            if (channel) {
+                await sendLevelUpSafe(message, xpResult, channel);
+            }
+        }
+        
+    } catch (error) {
+        console.error('❌ Error procesando mensaje:', error.message);
+    }
+}
+
+// LEVEL UP SEGURO Y SIMPLE
+async function sendLevelUpSafe(message, xpResult, channel) {
+    try {
+        await channel.send({
+            content: `🎉 ${message.author} subió a **Nivel ${xpResult.newLevel}**! (+${xpResult.xpGained} XP)`
+        });
+    } catch (error) {
+        console.error('❌ Error level up:', error.message);
     }
 }
 
@@ -637,157 +733,83 @@ client.on('messageCreate', async (message) => {
     const userId = message.author.id;
     const now = Date.now();
 
-    // OPTIMIZACIÓN 3: Verificar cooldown para XP
-    const lastProcessed = userCooldowns.get(userId);
-    const canProcessXP = !lastProcessed || (now - lastProcessed) >= COOLDOWN_TIME;    
-        
-    // Procesar XP por mensaje (solo en servidores, no en DMs)
-    if (message.guild && canProcessXP) {
-        userCooldowns.set(userId, now);
-
-        try {
-            const results = await Promise.allSettled([
-                // XP y nivel
-                economy.processMessageXp(userId),
-                // Achievements (solo si no está en cooldown)
-                achievements.checkAchievements(userId),
-                // Misiones básicas
-                missions.updateMissionProgress(userId, 'message')
-            ]);
-
-            // Procesar resultados
-            const [xpResult, achievementsResult, missionsResult] = results;            
-            // Manejar XP y level up
-            if (xpResult.status === 'fulfilled' && xpResult.value?.levelUp) {
-                const channelId = '1402824824971067442';
-                const channel = message.guild.channels.cache.get(channelId);
-                if (channel) {
-                    await handleLevelUp(message, xpResult.value, channel);
-                }
-            }
-            
-            // Manejar achievements
-            if (achievementsResult.status === 'fulfilled' && achievementsResult.value?.length > 0) {
-                await achievements.notifyAchievements(message, achievementsResult.value);
-            }
-            
-            // Manejar misiones completadas
-            if (missionsResult.status === 'fulfilled' && missionsResult.value?.length > 0) {
-                await missions.notifyCompletedMissions(message, missionsResult.value);
-            }
-            
-            // Procesar menciones solo si las hay
-            if (message.mentions.users.size > 0) {
-                const mentionsCount = message.mentions.users.size;
-                const mentionMissions = await missions.updateMissionProgress(userId, 'mention_made', mentionsCount);
-                if (mentionMissions.length > 0) {
-                    await missions.notifyCompletedMissions(message, mentionMissions);
-                }
-            }
-            
-        } catch (error) {
-            console.error('❌ Error procesando sistemas de XP:', error);
-        }
-        // Aplicar modificadores de eventos a XP
-        //const xpMod = events.applyEventModifiers(message.author.id, economy.config.xpPerMessage, 'message');
-        
-/*        const channelId = '1402824824971067442'; // ID del canal de XP (puedes cambiarlo)
-        const channel = message.guild.channels.cache.get(channelId);
-
-        const xpResult = await economy.processMessageXp(message.author.id/*, economy.config.xpPerMessage);*/
-        
-/*        // Si subió de nivel, notificar
-        if (xpResult && xpResult.levelUp && channel) {
-            const levelUpEmbed = new EmbedBuilder()
-                .setTitle('🎉 ¡Nuevo Nivel!')
-                .setThumbnail(message.author.displayAvatarURL({ dynamic: true }))
-                .setDescription(`${message.author} alcanzó el **Nivel ${xpResult.newLevel}**`)
-                .addFields(
-                    { name: '📈 XP Ganada', value: `+${xpResult.xpGained} XP`, inline: true },
-                    { name: '🎁 Recompensa', value: `+${xpResult.reward} π-b$`, inline: true },
-                    { name: '🏆 Niveles Subidos', value: `${xpResult.levelsGained}`, inline: true },
-                    { name: '🎉 Extra por Eventos', value: `${xpResult.eventMessage || "No hay eventos Activos"} `, inline: false }                    
-                )
-                .setColor('#FFD700')
-                .setTimestamp();
-                await channel.send({ 
-                    content: `<@${message.author.id}>`,
-                    embeds: [levelUpEmbed],
-                    allowedMentions: { users: [message.author.id] }
-                });
-        }
-
-        // *** NUEVO: VERIFICAR ACHIEVEMENTS DESPUÉS DE GANAR XP ***
-        try {
-            const newAchievements = await achievements.checkAchievements(userId);
-            if (newAchievements.length > 0) {
-                await achievements.notifyAchievements(message, newAchievements);
-            }
-        } catch (error) {
-            console.error('❌ Error verificando logros:', error);
-        }
-
-        // *** NUEVO: ACTUALIZAR PROGRESO DE MISIONES ***
-        try {
-            const completedMissions = await missions.updateMissionProgress(userId, 'message');
-            if (completedMissions.length > 0) {
-                await missions.notifyCompletedMissions(message, completedMissions);
-            }
-        } catch (error) {
-            console.error('❌ Error actualizando misiones:', error);
-        }
-
-        if (message.mentions.users.size > 0) {
-            try {
-                const mentionsCount = message.mentions.users.size;
-                const completedMissions = await missions.updateMissionProgress(userId, 'mention_made', mentionsCount);
-                if (completedMissions.length > 0) {
-                    await missions.notifyCompletedMissions(message, completedMissions);
-                }
-            } catch (error) {
-                console.error('❌ Error procesando menciones para misiones:', error);
-            }
-        }
-    }
-
-    // Procesar comandos de logros
-    await achievements.processCommand(message);
-
-    // Procesar comandos de misiones
-    await missions.processCommand(message);
-
-    // Procesar comandos mejorados (shop, betting, etc.)
-    await allCommands.processCommand(message);
-
-    // Procesar comandos de tienda
-    await shop.processCommand(message);
-   
-    //Procesar comandos de minijuegos
-    await minigames.processCommand(message);
+    messageCount++;
+    checkMessageRate();
     
-    // Luego procesar comandos normales (como !contadores, !reset, etc.)
-    await commandHandler.processCommand(message);*/
-
-        // Limpiar cache periodicamente
-        if (Math.random() < 0.01) { // 1% de probabilidad
-            cleanupCache();
+    // MODO EMERGENCIA - Solo comandos críticos
+    if (CONFIG.EMERGENCY_MODE) {
+        console.log('🚨 Modo emergencia - ignorando mensaje normal');
+        
+        // Solo procesar comandos administrativos
+        if (message.content.startsWith('>emergency') && message.author.id === '488110147265232898') {
+            if (message.content.includes('reset')) {
+                CONFIG.EMERGENCY_MODE = false;
+                aggressiveCleanup();
+                await message.reply('✅ Modo emergencia desactivado');
+            }
+            if (message.content.includes('status')) {
+                const used = process.memoryUsage();
+                await message.reply(`📊 Memoria: ${Math.round(used.heapUsed / 1024 / 1024)}MB | Cola: ${messageBatch.length}`);
+            }
+        }
+        return;
+    }
+    
+    // Verificar memoria antes de procesar
+    const memoryUsage = process.memoryUsage();
+    const memoryMB = Math.round(memoryUsage.heapUsed / 1024 / 1024);
+    
+    if (memoryMB > CONFIG.MEMORY_LIMIT) {
+        console.log(`🚨 Memoria crítica: ${memoryMB}MB - Activando modo emergencia`);
+        CONFIG.EMERGENCY_MODE = true;
+        aggressiveCleanup();
+        return;
+    }
+    
+    // Verificar cooldown ESTRICTO
+    const lastProcessed = userCooldowns.get(userId);
+    if (lastProcessed && (now - lastProcessed) < CONFIG.XP_COOLDOWN) {
+        return; // Ignorar completamente
+    }
+    
+    // Solo en servidores y con cooldown
+    if (message.guild) {
+        userCooldowns.set(userId, now);
+        
+        // Añadir a cola de procesamiento por lotes
+        messageBatch.push({ message, userId, now });
+        
+        // Limitar tamaño de cola
+        if (messageBatch.length > CONFIG.BATCH_SIZE * 3) {
+            messageBatch.shift(); // Eliminar el más antiguo
         }
     }
-
-    const prefix = '>'; // Ajusta tu prefijo aquí
-    if (message.content.startsWith(prefix)) {
+    
+    // COMANDOS - Solo si empieza con prefijo
+    if (message.content.startsWith('>')) {
         try {
-            // Procesar comandos en paralelo con Promise.allSettled
-            await Promise.allSettled([
-                achievements.processCommand(message),
-                missions.processCommand(message),
-                allCommands.processCommand(message),
-                shop.processCommand(message),
-                minigames.processCommand(message),
-                commandHandler.processCommand(message)
-            ]);
+            // Solo comandos esenciales
+            const command = message.content.split(' ')[0].toLowerCase();
+            
+            switch (command) {
+                case '!balance':
+                case '!bal':
+                    await allCommands.processCommand(message);
+                    break;
+                case '!shop':
+                    await shop.processCommand(message);
+                    break;
+                case '!rank':
+                case '!level':
+                    await commandHandler.processCommand(message);
+                    break;
+                // Agregar solo comandos críticos aquí
+                default:
+                    // Ignorar otros comandos por ahora
+                    break;
+            }
         } catch (error) {
-            console.error('❌ Error procesando comandos:', error);
+            console.error('❌ Error comando:', error.message);
         }
     }
 });
@@ -822,14 +844,77 @@ client.on('error', (error) => {
     console.error('❌ Error del cliente:', error);
 });
 
+// PROCESADOR DE LOTES AUTOMÁTICO
+setInterval(() => {
+    if (!CONFIG.EMERGENCY_MODE) {
+        processBatch();
+    }
+}, CONFIG.PROCESSING_INTERVAL);
+
+// MONITOR DE SISTEMA MÁS FRECUENTE
+setInterval(() => {
+    const used = process.memoryUsage();
+    const heapUsedMB = Math.round(used.heapUsed / 1024 / 1024);
+    
+    console.log(`🔍 Memoria: ${heapUsedMB}MB | Cola: ${messageBatch.length} | Cache: ${userCooldowns.size} | Emergencia: ${CONFIG.EMERGENCY_MODE}`);
+    
+    // Limpieza preventiva
+    if (heapUsedMB > CONFIG.MEMORY_LIMIT * 0.8) {
+        console.log('⚠️ Limpieza preventiva');
+        
+        // Limpiar cache más agresivamente
+        if (userCooldowns.size > CONFIG.MAX_CACHE_SIZE / 2) {
+            const entries = Array.from(userCooldowns.entries());
+            const recent = entries.slice(-CONFIG.MAX_CACHE_SIZE / 4);
+            userCooldowns.clear();
+            recent.forEach(([id, time]) => userCooldowns.set(id, time));
+        }
+        
+        // Reducir cola
+        if (messageBatch.length > CONFIG.BATCH_SIZE) {
+            messageBatch.splice(0, messageBatch.length - CONFIG.BATCH_SIZE);
+        }
+    }
+    
+    if (heapUsedMB > CONFIG.MEMORY_LIMIT) {
+        CONFIG.EMERGENCY_MODE = true;
+        aggressiveCleanup();
+    }
+    
+}, 30000); // Cada 30 segundos
+
 process.on('unhandledRejection', (error) => {
     console.error('⚠️ Unhandled promise rejection:', error);
 });
 
 process.on('uncaughtException', (error) => {
-    console.error('❌ Error crítico:', error);
-    process.exit(1); // El hosting lo reiniciará
+    console.error('❌ Error crítico:', error.message);
+    
+    // Intentar limpiar antes de morir
+    aggressiveCleanup();
+    
+    setTimeout(() => {
+        process.exit(1);
+    }, 1000);
 });
+
+// COMANDO DE EMERGENCIA PARA ADMINS
+process.on('SIGUSR1', () => {
+    console.log('📊 Estado de emergencia:');
+    console.log(`- Memoria: ${Math.round(process.memoryUsage().heapUsed / 1024 / 1024)}MB`);
+    console.log(`- Cola: ${messageBatch.length}`);
+    console.log(`- Cache: ${userCooldowns.size}`);
+    console.log(`- Modo emergencia: ${CONFIG.EMERGENCY_MODE}`);
+    aggressiveCleanup();
+});
+
+console.log('🚀 Bot iniciado con configuración anti-crash');
+console.log(`📋 Configuración:
+- XP Cooldown: ${CONFIG.XP_COOLDOWN/1000}s
+- Max mensajes/s: ${CONFIG.MAX_MESSAGES_PER_SECOND}
+- Límite memoria: ${CONFIG.MEMORY_LIMIT}MB
+- Tamaño lote: ${CONFIG.BATCH_SIZE}
+`);
 
 // Proceso de cierre limpio
 process.on('SIGINT', () => {
@@ -874,6 +959,7 @@ client.login(process.env.TOKEN).then(() => {
 }).catch(error => {
     console.error('❌ Error en el login:', error);
 });*/
+
 
 
 
