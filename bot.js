@@ -138,6 +138,7 @@ economy.startCacheCleanup();
 trades.startCacheCleanup();
 missions.startCacheCleanup();
 events.startCacheCleanup();
+minigames.startCacheCleanup();
 
 app.listen(PORT, '0.0.0.0', () => {
     console.log(`🌐 Servidor web corriendo en puerto ${PORT} en todas las interfaces`);
@@ -703,5 +704,6 @@ client.login(process.env.TOKEN).then(() => {
     console.error('❌ Error en el login:', error);
 
 });
+
 
 
