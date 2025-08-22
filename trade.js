@@ -27,6 +27,61 @@ class TradeSystem {
         }
     }
 
+    async loadActiveTrades() {
+        try {
+            const activeTrades = await this.database.getActiveTrades();
+            
+            for (let tradeData of activeTrades) {
+                // Convertir datos de DB a formato JavaScript
+                const trade = {
+                    id: tradeData.id,
+                    initiator: tradeData.initiator,
+                    target: tradeData.target,
+                    initiator_offer: this.safeJsonParse(tradeData.initiator_offer, []),
+                    target_offer: this.safeJsonParse(tradeData.target_offer, []),
+                    initiator_money_offer: tradeData.initiator_money_offer || 0,
+                    target_money_offer: tradeData.target_money_offer || 0,
+                    initiator_accepted: tradeData.initiator_accepted || false,
+                    target_accepted: tradeData.target_accepted || false,
+                    status: tradeData.status
+                };
+                
+                // Agregar al caché
+                this.activeTradesCache.set(trade.id, {
+                    data: trade,
+                    timestamp: Date.now()
+                });
+                
+                // Reanudar timeout automático para este trade
+                this.resumeTradeTimeout(trade);
+            }
+            
+            console.log(`✅ Cargados ${activeTrades.length} trades activos al caché`);
+        } catch (error) {
+            console.error('❌ Error cargando trades activos:', error);
+        }
+    }
+
+    // Método helper para reanudar timeouts
+    resumeTradeTimeout(trade) {
+        // Calcular tiempo restante (asumiendo 5 minutos desde creación)
+        const tradeAge = Date.now() - parseInt(trade.id.split('_')[2]); // timestamp del ID
+        const remainingTime = this.tradeTimeout - tradeAge;
+        
+        if (remainingTime > 0) {
+            setTimeout(async () => {
+                const stillActive = await this.database.getTrade(trade.id);
+                if (stillActive && stillActive.status === 'pending') {
+                    await this.cancelTradeInDb(trade.id, 'timeout_resume');
+                    console.log(`⏰ Trade ${trade.id} cancelado por timeout (reanudado)`);
+                }
+            }, remainingTime);
+        } else {
+            // El trade ya debería haber expirado, cancelarlo
+            this.cancelTradeInDb(trade.id, 'expired_on_load');
+        }
+    }
+
     async acceptTradeButton(userId, tradeData) {
         try {
             // Convertir datos de DB

@@ -684,6 +684,24 @@ class LocalDatabase {
         }
     }
 
+    async getActiveTrades() {
+        try {
+            const [rows] = await this.pool.execute(
+                "SELECT * FROM trades WHERE status = 'pending'"
+            );
+            
+            return rows.map(row => {
+                // Parsear JSON fields si es necesario
+                row.initiator_offer = this.safeJsonParse(row.initiator_offer, []);
+                row.target_offer = this.safeJsonParse(row.target_offer, []);
+                return row;
+            });
+        } catch (error) {
+            console.error('❌ Error obteniendo trades activos:', error);
+            return [];
+        }
+    }
+
     // Cerrar conexión
     async close() {
         if (this.pool) {

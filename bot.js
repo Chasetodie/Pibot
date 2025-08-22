@@ -289,6 +289,7 @@ client.once('ready', async () => {
     console.log(`🔧 Comandos disponibles: !contadores, !reset, !reload, !help`);
     await minigames.loadActiveRussianGames(client);
     await minigames.loadActiveUnoGames(client);
+    await trades.loadActiveTrades(client);
 
     setInterval(() => {
         const used = process.memoryUsage();
