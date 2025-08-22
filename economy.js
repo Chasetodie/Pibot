@@ -361,6 +361,12 @@ class EconomySystem {
 
     // Procesar XP por mensaje (con cooldown)
     async processMessageXp(userId) {      
+        // LOGGING TEMPORAL - añadir al inicio
+        const startMemory = process.memoryUsage().heapUsed;
+        const startTime = Date.now();
+        
+        console.log(`🔍 Procesando usuario: ${userId.slice(-4)}`);
+               
         const now = Date.now();
         const lastXp = this.userCooldowns.get(userId) || 0;
 
@@ -421,6 +427,20 @@ class EconomySystem {
             };
 
             await this.updateUser(userId, updateData);
+
+            // LOGGING AL FINAL - antes del return
+            const endMemory = process.memoryUsage().heapUsed;
+            const memoryDiff = endMemory - startMemory;
+            const timeDiff = Date.now() - startTime;
+            
+            if (memoryDiff > 1024 * 1024 || timeDiff > 500) { // >1MB o >500ms
+                console.log(`🚨 USUARIO PROBLEMÁTICO:
+                - ID: ${userId.slice(-4)}
+                - Memoria: +${Math.round(memoryDiff / 1024)}KB
+                - Tiempo: ${timeDiff}ms
+                - Items: ${Object.keys(user.items || {}).length}
+                - Dinero: ${user.balance || 0}`);
+            }
             
             return {
                 levelUp: result.levelUp,
