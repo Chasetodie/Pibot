@@ -159,7 +159,7 @@ const userCooldowns = new Map();
 const COOLDOWN_TIME = 3000;
 const MAX_CACHE_SIZE = 1000;
 
-cleanupCache() {
+function cleanupCache() {
     if (userCooldowns.size > MAX_CACHE_SIZE) {
         const now = Date.now();
         const entries = Array.from(userCooldowns.entries());
@@ -874,6 +874,7 @@ client.login(process.env.TOKEN).then(() => {
 }).catch(error => {
     console.error('❌ Error en el login:', error);
 });*/
+
 
 
 
