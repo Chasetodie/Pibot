@@ -693,63 +693,7 @@ client.on('interactionCreate', async (interaction) => {
         } catch (error) {
             console.error('Error en interacción de botón:', error);
             await interaction.reply({ content: '❌ Error al procesar la acción', ephemeral: true });
-        }
-        
-        if (interaction.customId === 'select_pibe') {
-            // Incrementar contador de pibes
-            counters.pibe++;
-            const nickname = `Pibe ${counters.pibe}`;
-            
-            // Cambiar apodo
-            await member.setNickname(nickname);
-            
-            // Guardar contadores
-            saveCounters(counters);
-            
-            // Responder al usuario
-            const successEmbed = new EmbedBuilder()
-                .setTitle('¡Apodo asignado!')
-                .setDescription(`Tu apodo ha sido cambiado a: **${nickname}**`)
-                .setColor('#00FF00')
-                .setFooter({ text: '¡Bienvenido al servidor!' });
-            
-            await interaction.reply({
-                embeds: [successEmbed],
-                flags: 64 // ephemeral
-            });
-            
-            console.log(`✅ ${interaction.user.tag} eligió Pibe y ahora es ${nickname}`);
-            
-        } else if (interaction.customId === 'select_piba') {
-            // Incrementar contador de pibas
-            counters.piba++;
-            const nickname = `Piba ${counters.piba}`;
-            
-            // Cambiar apodo
-            await member.setNickname(nickname);
-            
-            // Guardar contadores
-            saveCounters(counters);
-            
-            // Responder al usuario
-            const successEmbed = new EmbedBuilder()
-                .setTitle('¡Apodo asignado!')
-                .setDescription(`Tu apodo ha sido cambiado a: **${nickname}**`)
-                .setColor('#FF69B4')
-                .setFooter({ text: '¡Bienvenida al servidor!' });
-            
-            await interaction.reply({
-                embeds: [successEmbed],
-                flags: 64 // ephemeral
-            });
-            
-            console.log(`✅ ${interaction.user.tag} eligió Piba y ahora es ${nickname}`);
-        }
-
-        if (interaction.customId.startsWith('bj_')) {
-          await minigamesSystem.handleBlackjackButton(interaction);
-        }
-        
+        }        
     } catch (error) {
         console.error('❌ Error procesando selección:', error);
         
