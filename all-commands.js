@@ -1493,12 +1493,40 @@ class AllCommands {
                     break;
                 case '>auction':
                     if (args.length < 3) {
-                        await message.reply('❌ Uso: `>auction item_id precio_inicial [duración_en_minutos]`');
+                        const embed = new EmbedBuilder()
+                            .setTitle('🔨 Sistema de Subastas - Guía')
+                            .setDescription('Aprende a subastar tus items')
+                            .addFields(
+                                {
+                                    name: '📝 Comandos Básicos',
+                                    value: '`>auction item_id precio_inicial duracion_en_minutos` - Iniciar Subasta\n`>auctionshow` - Mostrar Subastas Activas\n`>bid auction_id cantidad` - Agregar dinero a la subasta',
+                                    inline: false
+                                },
+                                {
+                                    name: '⚠️ Reglas Importantes',
+                                    value: '• La subasta dura lo especificado por el usuario que la crea\n• Una vez terminada la subasta, se le dará el item a quien mas dinero dió',
+                                    inline: false
+                                },
+                                {
+                                    name: '🔄 Proceso paso a paso',
+                                    value: '1️⃣ Inicia la subasta con `>auction item_id precio_inicial duracion_en_minutos`\n2️⃣ Cualquiera usa `>bid auction_id cantidad` para seguir agregando dinero a la subasta\n4️⃣ ¡Subasta completada!',
+                                    inline: false
+                                },
+                                {
+                                    name: '💡 Ejemplos',
+                                    value: '`>auction lucky_charm 8000 5`\n`>bid <id> 8500`',
+                                    inline: false
+                                }
+                            )
+                            .setColor('#00FF00')
+                            .setTimestamp();
+                        
+                        await message.reply({ embeds: [embed] });
                         return;
                     }
                     const durations = parseInt(args[3]) || 60;
                     await this.auctions.createAuction(message, args[1], parseInt(args[2]), durations * 60000);
-                break;
+                    break;
                     
                 case '>bid':
                     if (args.length < 3) {
@@ -1508,8 +1536,8 @@ class AllCommands {
                     await this.auctions.placeBid(message, args[1], parseInt(args[2]));
                 break;
                     
-                case '>auctions':
-                case '>subastas':
+                case '>auctionshow':
+                case '>showsubastas':
                     const auctions = await this.auctions.getActiveAuctions();
                     if (auctions.length === 0) {
                         await message.reply('📋 No hay subastas activas.');
@@ -1532,12 +1560,11 @@ class AllCommands {
                     }
                     
                     await message.reply({ embeds: [embed] });
-                break;
+                    break;
                     
                 case '>recipes':
                     await this.crafting.showCraftingRecipes(message);
                     break;
-                    
                 case '>craft':
                     if (!args[1]) {
                         await message.reply('❌ Especifica la receta. Usa `>recipes` para ver las disponibles.');
