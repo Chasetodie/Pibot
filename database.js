@@ -280,7 +280,6 @@ class LocalDatabase {
             const query = `UPDATE users SET ${sets.join(', ')} WHERE id = ?`;
             
             const [result] = await this.pool.execute(query, values);
-            console.log(`💾 Usuario MySQL actualizado: ${userId}`);
             return { changes: result.affectedRows };
         } catch (error) {
             console.error('❌ Error actualizando usuario MySQL:', error);
