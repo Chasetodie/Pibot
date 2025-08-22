@@ -591,31 +591,39 @@ client.on('interactionCreate', async (interaction) => {
                     await interaction.reply({ content: '❌ No estás en esta partida', ephemeral: true });
                     return;
                 }
-                
-                try {
-                    const handString = player.hand.map((card, i) => 
-                        `${i}: ${minigames.getCardString(card)}`).join('\n');
-                    
-                    // Enviar por DM
-                    const embed = new EmbedBuilder()
-                        .setTitle('🎴 Tu mano de UNO')
-                        .setDescription(`\`\`\`${handString}\`\`\``)
-                        .setColor('#0099FF')
-                        .setFooter({ text: 'Usa >uplay <color> <valor> para jugar' });                    
-                    
-                    await interaction.user.send({ embeds: [embed] });
 
-//                    await user.send(`🎴 **Tu mano:**\n\`\`\`${handString}\`\`\``);
+                const handString = player.hand.map((card, i) => 
+                    `${i}: ${minigames.getCardString(card)}`).join('\n');
                     
+                // Enviar por DM
+                const embed = new EmbedBuilder()
+                    .setTitle('🎴 Tu mano de UNO')
+                    .setDescription(`\`\`\`${handString}\`\`\``)
+                    .setColor('#0099FF')
+                    .setFooter({ text: 'Usa >uplay <color> <valor> para jugar' });                    
+
+                let dmSent = false;
+
+                try {
+                    console.log(`📤 Intentando enviar DM a ${interaction.user.username} (${interaction.user.id})`);
+                    await interaction.user.send({ embeds: [embed] });
+                    console.log(`✅ DM enviado exitosamente a ${interaction.user.username}`);
+                    dmSent = true
+                    console.log(`✅ DM enviado exitosamente`);                    
+                } catch (dmError) {
+                    console.log(`❌ DM falló: ${dmError.message} (Código: ${dmError.code})`);
+                }
+
+                if (dmSent) {
                     // Confirmar en canal (ephemeral real porque es interaction)
                     await interaction.reply({
                         content: `🎴 **Tu mano:**\n\`\`\`${handString}\`\`\``, 
                         ephemeral: true 
                     });
-                    
-                } catch (error) {
-                    await interaction.reply({ 
-                        content: '❌ No puedo enviarte mensaje privado. Activa los DMs en tu configuración de privacidad.', 
+                } else {
+                    // Confirmar en canal (ephemeral real porque es interaction)
+                    await interaction.reply({
+                        content: `🎴 **Tu mano:**\n\`\`\`${handString}\`\`\``, 
                         ephemeral: true 
                     });
                 }
