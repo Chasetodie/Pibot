@@ -1510,7 +1510,7 @@ class AllCommands {
                     
                 case '>auctions':
                 case '>subastas':
-                    const auctions = await this.getActiveAuctions();
+                    const auctions = await this.auctions.getActiveAuctions();
                     if (auctions.length === 0) {
                         await message.reply('📋 No hay subastas activas.');
                         return;
