@@ -382,75 +382,39 @@ client.on('guildMemberAdd', async (member) => {
                     .setEmoji('🔴')
             );
 
-        let dmSent = false;
-
+        // En lugar de todo el bloque de dmSent = false y los try-catch
         try {
-            // Método 1: Crear canal DM primero
-            const dmChannel = await member.user.createDM();
-            await dmChannel.send({
-                embeds: [embed],
-                components: [row]
+            console.log(`📩 Intentando DM con REST API para ${member.user.tag}`);
+            
+            // Usar REST API directamente
+            const dmChannelResponse = await client.rest.post('/users/@me/channels', {
+                body: { recipient_id: member.user.id }
             });
-            dmSent = true;
-            console.log(`📩 Mensaje directo enviado a ${member.user.tag}`);
+            
+            await client.rest.post(`/channels/${dmChannelResponse.id}/messages`, {
+                body: {
+                    embeds: [embed.toJSON()],
+                    components: [row.toJSON()]
+                }
+            });
+            
+            console.log(`✅ DM enviado exitosamente a ${member.user.tag}`);
             
         } catch (dmError) {
-            console.log(`❌ DM falló (método 1): ${dmError.message}`);
+            console.log(`❌ DM falló con REST: ${dmError.message}`);
             
-            // Método 2: Usar client directo
-            try {
-                const targetUser = client.users.cache.get(member.user.id) || 
-                                  await client.users.fetch(member.user.id);
-                
-                await targetUser.send({
+            // Fallback al canal del servidor
+            const guild = member.guild;
+            const systemChannel = guild.systemChannel;
+            
+            if (systemChannel) {
+                await systemChannel.send({
+                    content: `${member.user}, no pude enviarte un mensaje directo. Selecciona tu categoría aquí:`,
                     embeds: [embed],
                     components: [row]
                 });
-                dmSent = true;
-                console.log(`📩 Mensaje directo enviado a ${member.user.tag} (método 2)`);
-                
-            } catch (dmError2) {
-                console.log(`❌ DM falló (método 2): ${dmError2.message}`);
             }
         }
-        
-        // Si no se pudo enviar DM, enviar en canal del servidor
-        if (!dmSent) {
-            console.log(`📢 Intentando enviar mensaje en canal para ${member.user.tag}`);
-            
-            try {
-                const guild = member.guild;
-                const systemChannel = guild.systemChannel;
-                
-                if (systemChannel) {
-                    await systemChannel.send({
-                        content: `${member.user}, no pude enviarte un mensaje directo. Por favor, selecciona tu categoría aquí:`,
-                        embeds: [embed],
-                        components: [row]
-                    });
-                    console.log(`📢 Mensaje enviado en canal del sistema para ${member.user.tag}`);
-                } else {
-                    // Buscar cualquier canal donde el bot pueda escribir
-                    const fallbackChannel = guild.channels.cache.find(channel => 
-                        channel.type === 0 && // Canal de texto
-                        channel.permissionsFor(guild.members.me).has('SendMessages')
-                    );
-                    
-                    if (fallbackChannel) {
-                        await fallbackChannel.send({
-                            content: `${member.user}, bienvenido/a al servidor. Selecciona tu categoría:`,
-                            embeds: [embed],
-                            components: [row]
-                        });
-                        console.log(`📢 Mensaje enviado en canal alternativo para ${member.user.tag}`);
-                    } else {
-                        console.log(`❌ No se encontró ningún canal disponible para ${member.user.tag}`);
-                    }
-                }
-            } catch (channelError) {
-                console.error('❌ Error enviando mensaje en canal:', channelError);
-            }
-        } 
     } catch (error) {
         console.error('❌ Error general procesando nuevo miembro:', error);
     }
@@ -497,6 +461,8 @@ client.on('interactionCreate', async (interaction) => {
                     return;
                 }
             }
+
+            console.log(`✅ Miembro encontrado: ${member.user.tag} en ${guild.name}`);
             
             // Procesar la selección
             let newNickname;
@@ -515,6 +481,13 @@ client.on('interactionCreate', async (interaction) => {
             }
             
             try {
+                if (!guild.members.me.permissions.has('ManageNicknames')) {
+                    await interaction.reply({
+                        content: `❌ No tengo permisos para cambiar apodos. Contacta a un administrador.`,
+                        flags: 64
+                    });
+                    return;
+                }
                 // Cambiar el apodo
                 await member.setNickname(newNickname);
                 
