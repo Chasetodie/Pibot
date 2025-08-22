@@ -5,6 +5,12 @@ class AchievementsSystem {
     constructor(economySystem) {
         this.economy = economySystem;
         this.events = null;
+
+        // AGREGAR después de this.events = null;
+        this.updateCooldowns = new Map();
+        this.achievementsCache = new Map();
+        this.MAX_CACHE_SIZE = 500;
+        this.cacheTimeout = 5 * 60 * 1000; // 5 minutos
         
         // Definir todos los logros disponibles
         this.achievements = {
@@ -241,6 +247,16 @@ class AchievementsSystem {
             'epic': '🟣',
             'legendary': '🟠'
         };
+
+        // AGREGAR al final del constructor:
+        setInterval(() => {
+            const now = Date.now();
+            for (const [key, timestamp] of this.updateCooldowns.entries()) {
+                if (now - timestamp > 60000) {
+                    this.updateCooldowns.delete(key);
+                }
+            }
+        }, 60000);
     }
 
     // NUEVO: Inicializar achievements de un usuario existente
@@ -341,7 +357,13 @@ class AchievementsSystem {
             }
             
             // Verificar si completó el logro
-            if (currentValue >= req.value) {
+            if (currentValue >= req.value && !checkedInSession.has(achievementId)) {
+                // Marcar como verificado en esta sesion
+                checkedInSession.add(achievementId);
+
+                // Actualizar también en el objeto user local para evitar re-verificación
+                user.achievements[achievementId] = 'completed';
+
                 // Marcar como completado en la base de datos
                 const updateData = {
                     achievements: {
@@ -426,8 +448,29 @@ class AchievementsSystem {
 
     // Verificar logros para un usuario (VERSION MEJORADA)
     async checkAchievements(userId, maxChecks = 3, checkedInSession = new Set()) {
+        const cooldownKey = `achievement_check_${userId}`;
+        if (this.updateCooldowns.has(cooldownKey)) {
+            const lastCheck = this.updateCooldowns.get(cooldownKey);
+            if (Date.now() - lastCheck < 2000) { // 2 segundos de cooldown
+                return [];
+            }
+        }
+        this.updateCooldowns.set(cooldownKey, Date.now());
+
         await this.initializeUserAchievements(userId);
-        const user = await this.economy.getUser(userId);
+        let user = await this.economy.getUser(userId);
+
+        const hasBalanceChecks = Object.keys(user.achievements || {}).some(achievementId => {
+            const achievement = this.achievements[achievementId];
+            return achievement && achievement.requirement.type === 'money_balance';
+        });
+
+        if (hasBalanceChecks) {
+            // Refrescar balance para achievements de dinero
+            const freshUser = await this.economy.getUser(userId);
+            user.balance = freshUser.balance;
+        }
+
         const unlockedAchievements = [];
 
         if (maxChecks <= 0) {
@@ -508,9 +551,12 @@ class AchievementsSystem {
             }
             
             // Verificar si completó el logro
-            if (currentValue >= req.value) {
+            if (currentValue >= req.value && !checkedInSession.has(achievementId)) {
                 // Marcar como verificado en esta sesion
                 checkedInSession.add(achievementId);
+
+                // Actualizar también en el objeto user local para evitar re-verificación
+                user.achievements[achievementId] = 'completed';
 
                 // Marcar como completado en la base de datos
                 const updateData = {

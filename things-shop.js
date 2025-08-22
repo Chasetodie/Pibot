@@ -104,10 +104,10 @@ class AuctionSystem {
                 { name: '⏰ Termina en', value: `${Math.floor(duration / 60000)} minutos`, inline: true }
             )
             .setColor('#FF6600')
-            .setFooter({ text: `🔨 ¡Nueva subasta! Usa \`>bid ${auctionId} <cantidad>\` para pujar.` });
+            .setFooter({ text: `🔨 ¡Nueva subasta! Copia el texto de este mensaje y usa \`>bid ${auctionId} <cantidad>\` para pujar.` });
         
         await message.reply({ 
-            content: `ID: ${auctionId}`,
+            content: `${auctionId}`,
             embeds: [embed] 
         });
         

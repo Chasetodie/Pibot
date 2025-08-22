@@ -274,6 +274,15 @@ class MissionsSystem {
             'epic': '🟣',
             'legendary': '🟠'
         };
+
+        setInterval(() => {
+            const now = Date.now();
+            for (const [key, timestamp] of this.updateCooldowns.entries()) {
+                if (now - timestamp > 60000) { // Limpiar después de 1 minuto
+                    this.updateCooldowns.delete(key);
+                }
+            }
+        }, 60000);
     }
     
     // Generar misiones del día (se ejecuta automáticamente a las 12 PM)
@@ -471,8 +480,24 @@ class MissionsSystem {
     
     // Actualizar progreso de misiones
     async updateMissionProgress(userId, actionType, value, maxChecks = 3, checkedInSession = new Set()) {        
+        const cooldownKey = `mission_update_${userId}`;
+        if (this.updateCooldowns.has(cooldownKey)) {
+            const lastUpdate = this.updateCooldowns.get(cooldownKey);
+            if (Date.now() - lastUpdate < 1000) { // 1 segundo de cooldown
+                return [];
+            }
+        }
+        this.updateCooldowns.set(cooldownKey, Date.now());
+
         const cacheKey = `missions_${userId}`;
         let user = this.missionsCache.get(cacheKey);
+
+        const today = this.getCurrentDay();
+        if (user.daily_missions_date !== today) {
+            console.log(`⚠️ Usuario ${userId} tiene misiones de fecha incorrecta`);
+            return [];
+        }
+
         const now = Date.now();
 
         if (!user || (now - user.timestamp) > this.cacheTimeout) {
@@ -486,6 +511,17 @@ class MissionsSystem {
             });
         } else {
             user = user.data;
+            
+            // ✅ AGREGAR: Para misiones de balance, refrescar el balance actual
+            const hasBalanceChecks = Object.keys(user.daily_missions || {}).some(missionId => {
+                const mission = this.availableMissions[missionId];
+                return mission && mission.type === 'balance_check';
+            });
+            
+            if (hasBalanceChecks) {
+                const freshUser = await this.economy.getUser(userId);
+                user.balance = freshUser.balance; // Actualizar solo el balance
+            }
         }
 
         if (maxChecks <= 0) {
@@ -603,15 +639,18 @@ class MissionsSystem {
             
             const currentProgress = this.getCurrentProgress(user, mission);
             
-            if (currentProgress >= mission.target) {
+            if (currentProgress >= mission.target && !updateData.daily_missions?.[missionId]) {
                 // Marcar como verificado en esta sesion
                 checkedInSession.add(missionId);
 
-                updateData.daily_missions = {
-                    ...user.daily_missions,
-                    [missionId]: 'completed'
-                };
+                if (!updateData.daily_missions) {
+                    updateData.daily_missions = { ...user.daily_missions };
+                }
+
+                updateData.daily_missions[missionId] = 'completed';
                 completedMissions.push(missionId);
+
+                user.daily_missions[missionId] = 'completed';
                 
                 // Dar recompensas
                 if (mission.reward.money) {
@@ -682,7 +721,7 @@ class MissionsSystem {
         await this.economy.updateUser(userId, updateData);   
         
         // Actualizar caché con los nuevos datos
-        const updatedUser = await this.economy.getUser(userId);
+        const updatedUser = { ...user, ...updateData};
         this.missionsCache.set(cacheKey, {
             data: updatedUser,
             timestamp: Date.now()
