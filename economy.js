@@ -39,6 +39,7 @@ class EconomySystem {
 
         // AGREGAR ESTAS LÍNEAS:
         this.userCache = new Map();
+        this.MAX_CACHE_SIZE = 1000;
         this.cacheTimeout = 5 * 60 * 1000; // 5 minutos        
         
         // Map para trackear robos activos
@@ -107,17 +108,32 @@ class EconomySystem {
         }
     }
 
-    // AGREGAR: Limpiar caché periódicamente
     startCacheCleanup() {
         setInterval(() => {
             const now = Date.now();
+            
+            // Limpiar por tiempo
             for (const [userId, cached] of this.userCache) {
                 if (now - cached.timestamp > this.cacheTimeout) {
                     this.userCache.delete(userId);
                 }
             }
-        }, 10 * 60 * 1000); // Limpiar cada 10 minutos
-    }    
+            
+            // Limpiar por tamaño si excede el límite
+            if (this.userCache.size > this.MAX_CACHE_SIZE) {
+                const entries = Array.from(this.userCache.entries());
+                const toDelete = entries
+                    .sort((a, b) => a[1].timestamp - b[1].timestamp)
+                    .slice(0, entries.length - this.MAX_CACHE_SIZE);
+                    
+                for (const [tradeId] of toDelete) {
+                    this.userCache.delete(tradeId);
+                }
+            }
+            
+            console.log(`🧹 Cache cleanup: ${this.userCache.size} trades en memoria`);
+        }, 5 * 60 * 1000);
+    }
 
     // Obtener todos los usuarios (MIGRADO)
     async getAllUsers() {
