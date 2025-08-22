@@ -845,7 +845,7 @@ process.on('SIGINT', () => {
 });
 
 // En bot.js, donde tienes client.login()
-async loginWithRetry(maxRetries = 3) {
+async function loginWithRetry(maxRetries = 3) {
     for (let i = 0; i < maxRetries; i++) {
         try {
             await client.login(process.env.TOKEN);
@@ -874,6 +874,7 @@ client.login(process.env.TOKEN).then(() => {
 }).catch(error => {
     console.error('❌ Error en el login:', error);
 });*/
+
 
 
 
