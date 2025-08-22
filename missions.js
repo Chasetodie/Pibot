@@ -529,7 +529,6 @@ class MissionsSystem {
                     ...currentDailyStats,
                     money_earned_today: (currentDailyStats.money_earned_today || 0) + value
                 };
-                console.log(`💰 Nuevo money_earned_today: ${updateData.daily_stats.money_earned_today}`);
                 break;        
             case 'game_played':
                 updateData.daily_stats = {

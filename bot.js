@@ -251,9 +251,23 @@ async function processMessageSafe({ message, userId, now }) {
 // LEVEL UP SEGURO Y SIMPLE
 async function sendLevelUpSafe(message, xpResult, channel) {
     try {
-        await channel.send({
-            content: `🎉 ${message.author} subió a **Nivel ${xpResult.newLevel}**! (+${xpResult.xpGained} XP)`
-        });
+        const levelUpEmbed = new EmbedBuilder()
+            .setTitle('🎉 ¡Nuevo Nivel!')
+            .setThumbnail(message.author.displayAvatarURL({ dynamic: true }))
+            .setDescription(`${message.author} alcanzó el **Nivel ${xpResult.newLevel}**`)
+            .addFields(
+                { name: '📈 XP Ganada', value: `+${xpResult.xpGained} XP`, inline: true },
+                { name: '🎁 Recompensa', value: `+${xpResult.reward} π-b$`, inline: true },
+                { name: '🏆 Niveles Subidos', value: `${xpResult.levelsGained}`, inline: true },
+                { name: '🎉 Extra por Eventos', value: `${xpResult.eventMessage || "No hay eventos Activos"} `, inline: false }                    
+            )
+            .setColor('#FFD700')
+            .setTimestamp();
+        await channel.send({ 
+            content: `<@${message.author.id}>`,
+            embeds: [levelUpEmbed],
+            allowedMentions: { users: [message.author.id] }
+        });        
     } catch (error) {
         console.error('❌ Error level up:', error.message);
     }
@@ -721,6 +735,7 @@ client.on('messageCreate', async (message) => {
     const userId = message.author.id;
     const now = Date.now();
 
+    await this.missions.updateMissionProgress(userId, 'message');
     messageCount++;
     checkMessageRate();
 

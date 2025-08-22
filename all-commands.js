@@ -395,11 +395,11 @@ class AllCommands {
             .setTitle('✅ Transferencia Exitosa')
             .setDescription(`Has enviado **${this.formatNumber(amount)}** ${this.economy.config.currencySymbol} a ${targetUser}`)
             .addFields(
-                { name: '💰 Balance Anterior', value: `${this.formatNumber(userBalance.balance)} ${this.economy.config.currencySymbol}`, inline: true },
-                { name: '💰 Tu Balance Actual', value: `${this.formatNumber(result.beforeEvents - amount)} ${this.economy.config.currencySymbol}`, inline: true },
+                { name: '💰 Balance Anterior', value: `${this.formatNumber(userBalance.balance + amount)} ${this.economy.config.currencySymbol}`, inline: true },
+                { name: '💰 Tu Balance Actual', value: `${this.formatNumber(result.beforeEvents)} ${this.economy.config.currencySymbol}`, inline: true },
                 { name: '💸 Dinero Enviado', value: `${this.formatNumber(amount)} ${this.economy.config.currencySymbol}`, inline: true },
-                { name: '💰 Balance Anterior del Destinatario', value: `${this.formatNumber(otherUserBalance.balance)} ${this.economy.config.currencySymbol}`, inline: true },
-                { name: '💰 Balance Actual del Destinatario', value: `${this.formatNumber(result.toBalance + amount)} ${this.economy.config.currencySymbol}`, inline: true },
+                { name: '💰 Balance Anterior del Destinatario', value: `${this.formatNumber(otherUserBalance.balance - amount)} ${this.economy.config.currencySymbol}`, inline: true },
+                { name: '💰 Balance Actual del Destinatario', value: `${this.formatNumber(result.toBalance)} ${this.economy.config.currencySymbol}`, inline: true },
                 { name: '🎉 Extra por Eventos', value: `${result.eventMessage || "No hay eventos Activos"} `, inline: false }
             )
             .setColor('#00FF00')
