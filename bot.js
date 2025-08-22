@@ -705,7 +705,7 @@ process.on('SIGINT', () => {
 async function loginWithRetry(maxRetries = 3) {
     for (let i = 0; i < maxRetries; i++) {
         try {
-            await client.login(process.env.DISCORD_TOKEN);
+            await client.login(process.env.TOKEN);
             console.log('✅ Bot conectado exitosamente');
             return;
         } catch (error) {
@@ -731,3 +731,4 @@ client.login(process.env.TOKEN).then(() => {
 }).catch(error => {
     console.error('❌ Error en el login:', error);
 });*/
+
