@@ -481,13 +481,6 @@ client.on('interactionCreate', async (interaction) => {
             }
             
             try {
-                if (!guild.members.me.permissions.has('ManageNicknames')) {
-                    await interaction.reply({
-                        content: `❌ No tengo permisos para cambiar apodos. Contacta a un administrador.`,
-                        flags: 64
-                    });
-                    return;
-                }
                 // Cambiar el apodo
                 await member.setNickname(newNickname);
                 
@@ -501,14 +494,21 @@ client.on('interactionCreate', async (interaction) => {
                 });
                 
                 console.log(`✅ Apodo asignado: ${member.user.tag} -> ${newNickname}`);
-                
             } catch (nicknameError) {
                 console.error(`❌ Error cambiando apodo:`, nicknameError);
                 
-                await interaction.reply({
-                    content: `❌ Hubo un error asignando tu apodo. Por favor contacta a un administrador.`,
-                    flags: 64 // ephemeral
-                });
+                // Verificar si es problema de permisos
+                if (nicknameError.code === 50013) {
+                    await interaction.reply({
+                        content: `❌ No tengo permisos para cambiar apodos. Contacta a un admin.`,
+                        flags: 64
+                    });
+                } else {
+                    await interaction.reply({
+                        content: `❌ Error asignando apodo. Inténtalo de nuevo.`,
+                        flags: 64
+                    });
+                }
             }
         }
 
