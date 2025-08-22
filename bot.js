@@ -604,14 +604,19 @@ client.on('interactionCreate', async (interaction) => {
 
                 let dmSent = false;
 
+                // En tu código:
                 try {
-                    console.log(`📤 Intentando enviar DM a ${interaction.user.username} (${interaction.user.id})`);
-                    await interaction.user.send({ embeds: [embed] });
-                    console.log(`✅ DM enviado exitosamente a ${interaction.user.username}`);
-                    dmSent = true
-                    console.log(`✅ DM enviado exitosamente`);                    
+                    console.log(`📤 Intentando DM para ${interaction.user.tag}`);
+                    
+                    // Usar client directamente
+                    const targetUser = interaction.client.users.cache.get(interaction.user.id) || 
+                                    await interaction.client.users.fetch(interaction.user.id);
+                    
+                    await targetUser.send({ embeds: [embed] });
+                    dmSent = true;
+                    console.log(`✅ DM enviado exitosamente`);
                 } catch (dmError) {
-                    console.log(`❌ DM falló: ${dmError.message} (Código: ${dmError.code})`);
+                    console.log(`❌ DM falló: ${dmError.message}`);
                 }
 
                 if (dmSent) {

@@ -2941,22 +2941,14 @@ class MinigamesSystem {
         if (valueName === 'reverse') valueName = 'reverse';
         
         // Para números, el formato probablemente sea diferente
-        const fileName = `card-${valueName}-${colorName}`;
-        console.log(`Nombre de imagen generado: ${fileName}.png`);
-        
+        const fileName = `card-${valueName}-${colorName}`;        
         return fileName;
     }
 
     // Obtener ruta completa de imagen
     getCardImagePath(card) {
         const imageName = this.getCardImageName(card);
-        const fullPath = path.join(__dirname, 'images', 'UnoImages', `${imageName}.png`);
-        
-        // DEBUG: Log para verificar rutas
-        console.log(`Buscando imagen: ${imageName}.png`);
-        console.log(`Ruta completa: ${fullPath}`);
-        console.log(`Existe: ${fs.existsSync(fullPath)}`);
-        
+        const fullPath = path.join(__dirname, 'images', 'UnoImages', `${imageName}.png`);        
         return fullPath;
     }
 
