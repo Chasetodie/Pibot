@@ -9,7 +9,7 @@ class MissionsSystem {
         // ✅ AGREGAR: Caché para misiones
         this.missionsCache = new Map();
         this.MAX_CACHE_SIZE = 500;
-        this.cacheTimeout = 1 * 60 * 1000; // 10 minutos
+        this.cacheTimeout = 0.1 * 60 * 1000; // 10 minutos
 
         // ✅ AGREGAR: Rate limiting para updateMissionProgress
         this.updateCooldowns = new Map();
@@ -466,7 +466,7 @@ class MissionsSystem {
             }
             
             console.log(`🧹 Cache cleanup: ${this.missionsCache.size} trades en memoria`);
-        }, 1 * 60 * 1000);
+        }, 0.1 * 60 * 1000);
     }
     
     // Actualizar progreso de misiones
