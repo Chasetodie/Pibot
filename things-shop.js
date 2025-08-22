@@ -187,7 +187,7 @@ class AuctionSystem {
 
         const embed = new EmbedBuilder()
             .setTitle('🔨 Resultado de la Subasta')
-            .setColor('#5fa8d8ff')
+            .setColor('#0000FF')
             .setTimestamp();
         
         if (auction.highestBidder) {
