@@ -424,6 +424,73 @@ class LocalDatabase {
         }
     }
 
+    async createAuction(auctionData) {
+        try {
+            await this.pool.execute(`
+                INSERT INTO auctions (id, seller, item_id, item_name, starting_bid, 
+                                    current_bid, highest_bidder, bids, ends_at, active)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            `, [
+                auctionData.id, auctionData.seller, auctionData.item_id,
+                auctionData.item_name, auctionData.starting_bid,
+                auctionData.current_bid, auctionData.highest_bidder,
+                JSON.stringify(auctionData.bids || []), auctionData.ends_at, true
+            ]);
+            
+            return { id: auctionData.id };
+        } catch (error) {
+            console.error('❌ Error creando subasta:', error);
+            throw error;
+        }
+    }
+
+    async getAuction(auctionId) {
+        try {
+            const [rows] = await this.pool.execute(
+                'SELECT * FROM auctions WHERE id = ?', 
+                [auctionId]
+            );
+            
+            if (rows.length > 0) {
+                const auction = rows[0];
+                auction.bids = this.safeJsonParse(auction.bids, []);
+                return auction;
+            }
+            return null;
+        } catch (error) {
+            console.error('❌ Error obteniendo subasta:', error);
+            return null;
+        }
+    }
+
+    async updateAuction(auctionId, updateData) {
+        try {
+            const sets = [];
+            const values = [];
+
+            for (const [key, value] of Object.entries(updateData)) {
+                sets.push(`${key} = ?`);
+                if (key === 'bids' && typeof value === 'object') {
+                    values.push(JSON.stringify(value));
+                } else {
+                    values.push(value);
+                }
+            }
+
+            values.push(auctionId);
+
+            const [result] = await this.pool.execute(
+                `UPDATE auctions SET ${sets.join(', ')} WHERE id = ?`,
+                values
+            );
+            
+            return { changes: result.affectedRows };
+        } catch (error) {
+            console.error('❌ Error actualizando subasta:', error);
+            throw error;
+        }
+    }
+
     // Métodos para trades
     async createTrade(tradeData) {
         try {
@@ -756,75 +823,6 @@ class LocalDatabase {
             return { id: eventData.id };
         } catch (error) {
             console.error('❌ Error creando evento:', error);
-            throw error;
-        }
-    }
-
-    // Métodos específicos para subastas
-    async createAuction(auctionData) {
-        try {
-            await this.pool.execute(`
-                INSERT INTO auctions (
-                    id, seller, item_id, item_name, starting_bid,
-                    current_bid, highest_bidder, bids, ends_at, active
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            `, [
-                auctionData.id, auctionData.seller, auctionData.item_id,
-                auctionData.item_name, auctionData.starting_bid,
-                auctionData.current_bid, auctionData.highest_bidder,
-                JSON.stringify(auctionData.bids), auctionData.ends_at, 1
-            ]);
-            
-            return { id: auctionData.id };
-        } catch (error) {
-            console.error('❌ Error creando subasta:', error);
-            throw error;
-        }
-    }
-
-    async getAuction(auctionId) {
-        try {
-            const [rows] = await this.pool.execute(
-                'SELECT * FROM auctions WHERE id = ?', 
-                [auctionId]
-            );
-            
-            if (rows.length > 0) {
-                const auction = rows[0];
-                auction.bids = this.safeJsonParse(auction.bids, []);
-                return auction;
-            }
-            return null;
-        } catch (error) {
-            console.error('❌ Error obteniendo subasta:', error);
-            return null;
-        }
-    }
-
-    async updateAuction(auctionId, updateData) {
-        try {
-            const sets = [];
-            const values = [];
-
-            for (const [key, value] of Object.entries(updateData)) {
-                sets.push(`${key} = ?`);
-                if (typeof value === 'object' && value !== null) {
-                    values.push(JSON.stringify(value));
-                } else {
-                    values.push(value);
-                }
-            }
-
-            values.push(auctionId);
-
-            const [result] = await this.pool.execute(
-                `UPDATE auctions SET ${sets.join(', ')} WHERE id = ?`,
-                values
-            );
-            
-            return { changes: result.affectedRows };
-        } catch (error) {
-            console.error('❌ Error actualizando subasta:', error);
             throw error;
         }
     }

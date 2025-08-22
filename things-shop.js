@@ -104,10 +104,10 @@ class AuctionSystem {
                 { name: '⏰ Termina en', value: `${Math.floor(duration / 60000)} minutos`, inline: true }
             )
             .setColor('#FF6600')
-            .setFooter({ text: `ID: ${auctionId}` });
+            .setFooter({ text: `🔨 ¡Nueva subasta! Usa \`>bid ${auctionId} <cantidad>\` para pujar.` });
         
         await message.reply({ 
-            content: `🔨 ¡Nueva subasta! Usa \`>bid ${auctionId} <cantidad>\` para pujar.`,
+            content: `ID: ${auctionId}`,
             embeds: [embed] 
         });
         
@@ -248,11 +248,13 @@ class AuctionSystem {
     // 5. Agregar función para listar subastas activas:
     async getActiveAuctions() {
         try {
-            // Implementar una consulta personalizada en database.js si es necesario
-            const [rows] = await this.shop.economy.database.db.execute(
-                'SELECT * FROM auctions WHERE active = 1 AND ends_at > NOW() ORDER BY created_at DESC'
+            const [rows] = await this.shop.economy.database.pool.execute(
+                'SELECT * FROM auctions WHERE active = 1 ORDER BY id DESC'
             );
-            return rows || [];
+            return rows.map(auction => ({
+                ...auction,
+                bids: this.shop.economy.database.safeJsonParse(auction.bids, [])
+            }));
         } catch (error) {
             console.error('Error obteniendo subastas activas:', error);
             return [];
