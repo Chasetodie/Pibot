@@ -726,6 +726,61 @@ client.on('interactionCreate', async (interaction) => {
     }
 });
 
+const userLastProcessed = new Map();
+const THROTTLE_TIME = 2000;
+
+async function processUserActivityOptimized(userId, message) {
+    // Throttling - evita procesamiento excesivo
+    const now = Date.now();
+    const lastTime = userLastProcessed.get(userId);
+    
+    if (lastTime && now - lastTime < THROTTLE_TIME) {
+        return; // Skip - ahorra RAM y CPU
+    }
+    
+    userLastProcessed.set(userId, now);
+    
+    // 2. Procesamiento en paralelo (no secuencial)
+    const mentionsCount = message.mentions.users.size;
+    
+    try {
+        const [achievementsResult, messageResult, mentionResult] = await Promise.allSettled([
+            achievements.checkAchievements(userId),
+            missions.updateMissionProgress(userId, 'message'),
+            mentionsCount > 0 ? missions.updateMissionProgress(userId, 'mention_made', mentionsCount) : []
+        ]);
+        
+        // Procesar solo resultados exitosos
+        const newAchievements = achievementsResult.status === 'fulfilled' ? achievementsResult.value : [];
+        const allMissions = [
+            ...(messageResult.status === 'fulfilled' ? messageResult.value : []),
+            ...(mentionResult.status === 'fulfilled' ? mentionResult.value : [])
+        ];
+        
+        // Notificaciones (sin await para no bloquear)
+        if (newAchievements.length > 0) {
+            achievements.notifyAchievements(message, newAchievements).catch(console.error);
+        }
+        
+        if (allMissions.length > 0) {
+            missions.notifyCompletedMissions(message, allMissions).catch(console.error);
+        }
+        
+    } catch (error) {
+        console.error('Error procesando actividad:', error);
+    }
+}
+
+// Limpieza automática
+setInterval(() => {
+    const cutoff = Date.now() - THROTTLE_TIME * 2;
+    for (const [userId, timestamp] of userLastProcessed.entries()) {
+        if (timestamp < cutoff) {
+            userLastProcessed.delete(userId);
+        }
+    }
+}, 60000);
+
 // Manejar mensajes (COMANDOS + XP + ECONOMÍA)
 client.on('messageCreate', async (message) => {
     // Ignorar mensajes de bots
@@ -735,7 +790,8 @@ client.on('messageCreate', async (message) => {
     const userId = message.author.id;
     const now = Date.now();
 
-    await missions.updateMissionProgress(userId, 'message');
+    await processUserActivityOptimized(userId, message);
+
     messageCount++;
     checkMessageRate();
 
