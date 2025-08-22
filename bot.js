@@ -14,6 +14,7 @@ const BettingSystem = require('./betting');
 const MissionsSystem = require('./missions');
 const ShopSystem = require('./shop');
 const AllCommands = require('./all-commands');
+const LocalDatabase = require('./database');
 //require('./admin-panel')(app); // Pasar el servidor express existente
 const {
     AuctionSystem,
@@ -98,6 +99,9 @@ const achievements = new AchievementsSystem(economy);
 
 //Crear instancia del sistema de Tienda
 const shop = new ShopSystem(economy);
+
+const database = new LocalDatabase();
+database.startCacheCleanup();
 
 //Crear instancia del sistema de Eventos
 const events = new EventsSystem(economy, client);
@@ -704,6 +708,7 @@ client.login(process.env.TOKEN).then(() => {
     console.error('❌ Error en el login:', error);
 
 });
+
 
 
 
