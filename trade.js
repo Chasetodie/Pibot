@@ -9,7 +9,7 @@ class TradeSystem {
         // ✅ AGREGAR: Caché para trades activos
         this.activeTradesCache = new Map();
         this.MAX_CACHE_SIZE = 500;
-        this.cacheTimeout = 1 * 60 * 1000; // 2 minutos        
+        this.cacheTimeout = 0.1 * 60 * 1000; // 2 minutos        
     }
 
     safeJsonParse(jsonString, defaultValue = []) {
@@ -358,7 +358,7 @@ class TradeSystem {
             }
             
             console.log(`🧹 Cache cleanup: ${this.activeTradesCache.size} trades en memoria`);
-        }, 1 * 60 * 1000);
+        }, 0.1 * 60 * 1000);
     }
     
     // Agregar item al intercambio
