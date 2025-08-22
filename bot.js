@@ -66,7 +66,18 @@ const client = new Client({
         GatewayIntentBits.DirectMessages,
         GatewayIntentBits.MessageContent,
         GatewayIntentBits.GuildVoiceStates,
-    ]
+    ],
+    makeCache: () => new Map(), // Caché más pequeño
+    sweepers: {
+        messages: {
+            interval: 300, // 5 minutos
+            lifetime: 1800, // 30 minutos
+        },
+        users: {
+            interval: 3600, // 1 hora  
+            filter: () => user => user.bot && user.id !== client.user.id,
+        }
+    }
 });
 
 // Función para guardar contadores
@@ -731,4 +742,5 @@ client.login(process.env.TOKEN).then(() => {
 }).catch(error => {
     console.error('❌ Error en el login:', error);
 });*/
+
 
