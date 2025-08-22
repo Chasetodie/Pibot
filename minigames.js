@@ -16,6 +16,7 @@ class MinigamesSystem {
         this.activeGames = new Map(); // Para manejar juegos en progreso
         this.minigamesCache = new Map();
         this.MAX_CACHE_SIZE = 500;
+        this.cacheTimeout = 1 * 60 * 1000;
         
         // Configuración de minijuegos
         this.config = {
@@ -129,7 +130,7 @@ class MinigamesSystem {
             }
             
             console.log(`🧹 Cache cleanup: ${this.minigamesCache.size} trades en memoria`);
-        }, 5 * 60 * 1000);
+        }, 1 * 60 * 1000);
     }
 
     // Verificar cooldown de usuario
