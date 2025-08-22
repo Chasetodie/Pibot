@@ -14,6 +14,8 @@ class MinigamesSystem {
         this.economy = economySystem;
         this.events = null;
         this.activeGames = new Map(); // Para manejar juegos en progreso
+        this.minigamesCache = new Map();
+        this.MAX_CACHE_SIZE = 500;
         
         // Configuración de minijuegos
         this.config = {
@@ -101,6 +103,33 @@ class MinigamesSystem {
         };
         
         this.cooldowns = new Map(); // Para cooldowns por usuario
+    }
+
+    startCacheCleanup() {
+        setInterval(() => {
+            const now = Date.now();
+            
+            // Limpiar por tiempo
+            for (const [minigamesId, cached] of this.minigamesCache) {
+                if (now - cached.timestamp > this.cacheTimeout) {
+                    this.minigamesCache.delete(minigamesId);
+                }
+            }
+            
+            // Limpiar por tamaño si excede el límite
+            if (this.minigamesCache.size > this.MAX_CACHE_SIZE) {
+                const entries = Array.from(this.minigamesCache.entries());
+                const toDelete = entries
+                    .sort((a, b) => a[1].timestamp - b[1].timestamp)
+                    .slice(0, entries.length - this.MAX_CACHE_SIZE);
+                    
+                for (const [minigamesId] of toDelete) {
+                    this.minigamesCache.delete(minigamesId);
+                }
+            }
+            
+            console.log(`🧹 Cache cleanup: ${this.minigamesCache.size} trades en memoria`);
+        }, 5 * 60 * 1000);
     }
 
     // Verificar cooldown de usuario
