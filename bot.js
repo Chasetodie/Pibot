@@ -584,14 +584,13 @@ client.on('interactionCreate', async (interaction) => {
                         `${i}: ${minigames.getCardString(card)}`).join('\n');
                     
                     // Enviar por DM
-                    const user = await interaction.user;
                     const embed = new EmbedBuilder()
                         .setTitle('🎴 Tu mano de UNO')
                         .setDescription(`\`\`\`${handString}\`\`\``)
                         .setColor('#0099FF')
                         .setFooter({ text: 'Usa >uplay <color> <valor> para jugar' });                    
                     
-                    await user.send({ embeds: [embed] });
+                    await interaction.user.send({ embeds: [embed] });
 
 //                    await user.send(`🎴 **Tu mano:**\n\`\`\`${handString}\`\`\``);
                     
@@ -939,6 +938,7 @@ client.login(process.env.TOKEN).then(() => {
 }).catch(error => {
     console.error('❌ Error en el login:', error);
 });*/
+
 
 
 
