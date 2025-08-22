@@ -142,7 +142,8 @@ class LocalDatabase {
                     highest_bidder TEXT,
                     bids TEXT,
                     ends_at TEXT NOT NULL,
-                    active BOOLEAN DEFAULT 1
+                    active BOOLEAN DEFAULT 1,
+                    channel_id TEXT
                 )
             `);
 
@@ -730,6 +731,22 @@ class LocalDatabase {
         } catch (error) {
             console.error('❌ Error eliminando juego UNO:', error);
             throw error;
+        }
+    }
+
+    // CAMBIAR getActiveAuctions() para que devuelva todos los campos:
+    async getActiveAuctions() {
+        try {
+            const [rows] = await this.pool.execute(
+                'SELECT * FROM auctions WHERE active = 1 ORDER BY id DESC'
+            );
+            return rows.map(auction => ({
+                ...auction,
+                bids: this.safeJsonParse(auction.bids, [])
+            }));
+        } catch (error) {
+            console.error('Error obteniendo subastas activas:', error);
+            return [];
         }
     }
 

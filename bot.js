@@ -290,6 +290,7 @@ client.once('ready', async () => {
     await minigames.loadActiveRussianGames(client);
     await minigames.loadActiveUnoGames(client);
     await trades.loadActiveTrades(client);
+    await auctions.loadActiveAuctions(client);
 
     setInterval(() => {
         const used = process.memoryUsage();

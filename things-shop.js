@@ -5,6 +5,22 @@ class AuctionSystem {
     constructor(shopSystem) {
         this.shop = shopSystem;
         this.activeAuctions = new Map(); // Caché en memoria
+
+        // AGREGAR al final del constructor para limpiar subastas vencidas cada 5 minutos:
+        setInterval(async () => {
+            try {
+                const [rows] = await this.shop.economy.database.pool.execute(
+                    "SELECT id FROM auctions WHERE active = 1 AND ends_at < NOW()"
+                );
+                
+                for (const row of rows) {
+                    console.log(`🔨 Limpiando subasta vencida: ${row.id}`);
+                    await this.endAuction(row.id);
+                }
+            } catch (error) {
+                console.error('Error limpiando subastas vencidas:', error);
+            }
+        }, 5 * 60 * 1000); // Cada 5 minutos
     }
 
     async saveAuctionToDb(auction) {
@@ -18,7 +34,8 @@ class AuctionSystem {
                 current_bid: auction.currentBid,
                 highest_bidder: auction.highestBidder,
                 bids: auction.bids,
-                ends_at: new Date(auction.endsAt).toISOString()
+                ends_at: new Date(auction.endsAt).toISOString(),
+                channel_id: auction.channelId
             });
             return true;
         } catch (error) {
@@ -80,7 +97,8 @@ class AuctionSystem {
             highestBidder: null,
             endsAt: Date.now() + duration,
             bids: [],
-            active: true
+            active: true,
+            channelId: message.channel.id
         };
         
         const saved = await this.saveAuctionToDb(auction);
@@ -112,7 +130,7 @@ class AuctionSystem {
         });
         
         // Programar fin de subasta
-        setTimeout(() => this.endAuction(auctionId), duration);
+        setTimeout(() => this.endAuction(auctionId, message.client), duration);
     }
     
     async placeBid(message, auctionId, bidAmount) {
@@ -180,15 +198,11 @@ class AuctionSystem {
             highestBidder: auctionData.highest_bidder,
             itemId: auctionData.item_id,
             itemName: auctionData.item_name,
-            seller: auctionData.seller
+            seller: auctionData.seller,
+            channelId: auctionData.channel_id
         };
         
         auction.active = false;
-
-        const embed = new EmbedBuilder()
-            .setTitle('🔨 Resultado de la Subasta')
-            .setColor('#0000FF')
-            .setTimestamp();
         
         if (auction.highestBidder) {
             // Transferir item al ganador
@@ -213,17 +227,6 @@ class AuctionSystem {
                 balance: seller.balance + auction.currentBid
             });
 
-            embed.setDescription(`🎉 **¡${auction.highestBidder} GANO LA SUBASTA!**`)
-                .addFields(
-                    { name: '🪙 Item', value: `${auction.item_name}`, inline: false },
-                    { name: '🎯 Rematador', value: `${auction.seller}`, inline: false },
-                    { name: '💰 Ganador', value: `${auction.highestBidder}`, inline: false },
-                    { name: '💸 Valor Inicial de la Subasta', value: `${auction.startingBid}`, inline: false },
-                    { name: '💳 Valor Final de la Subasta', value: `${auction.currentBid}`, inline: false },
-                );          
-                
-            await message.reply({ embeds: [embed] });        
-
             console.log(`🔨 Subasta ${auctionId} terminada. Ganador: ${auction.highestBidder}`);
         } else {
             // No hubo pujas, devolver item al vendedor
@@ -242,8 +245,36 @@ class AuctionSystem {
             
             await this.shop.economy.updateUser(auction.seller, { items: sellerItems });
 
-            await message.reply(`Nadie ha participado en la subasta, regresando item a ${auction.seller}`);
             console.log(`🔨 Subasta ${auctionId} terminada sin pujas.`);
+        }
+    
+        if (client && auction.channelId) {
+            try {
+                const channel = client.channels.cache.get(auction.channelId);
+                
+                if (channel) {
+                    const embed = new EmbedBuilder()
+                        .setTitle('🔨 Subasta Terminada')
+                        .setDescription(`Subasta de **${auction.itemName}** ha finalizado`)
+                        .setColor(auction.highestBidder ? '#00FF00' : '#FF6600')
+                        .setTimestamp();
+                    
+                    if (auction.highestBidder) {
+                        embed.addFields(
+                            { name: '🏆 Ganador', value: `<@${auction.highestBidder}>`, inline: true },
+                            { name: '💰 Precio Final', value: `${auction.currentBid.toLocaleString('es-ES')} π-b$`, inline: true }
+                        );
+                    } else {
+                        embed.addFields(
+                            { name: '❌ Sin Pujas', value: 'El item fue devuelto al vendedor', inline: false }
+                        );
+                    }
+                    
+                    await channel.send({ embeds: [embed] });
+                }
+            } catch (error) {
+                console.error('Error enviando embed de subasta:', error);
+            }
         }
 
         await this.completeAuctionInDb(auctionId);
@@ -262,19 +293,46 @@ class AuctionSystem {
         }
     }
 
-    // 5. Agregar función para listar subastas activas:
-    async getActiveAuctions() {
+    // AGREGAR después de getActiveAuctions():
+    async loadActiveAuctions(client) {
         try {
-            const [rows] = await this.shop.economy.database.pool.execute(
-                'SELECT * FROM auctions WHERE active = 1 ORDER BY id DESC'
-            );
-            return rows.map(auction => ({
-                ...auction,
-                bids: this.shop.economy.database.safeJsonParse(auction.bids, [])
-            }));
+            const data = await this.shop.economy.database.getActiveAuctions();
+
+            for (let auctionData of data) {
+                const auction = {
+                    id: auctionData.id,
+                    seller: auctionData.seller,
+                    itemId: auctionData.item_id,
+                    itemName: auctionData.item_name,
+                    currentBid: auctionData.current_bid,
+                    highestBidder: auctionData.highest_bidder,
+                    endsAt: new Date(auctionData.ends_at).getTime(),
+                    bids: this.shop.economy.database.safeJsonParse(auctionData.bids, []),
+                    active: auctionData.active,
+                    channelId: auctionData.channel_id
+                };
+
+                // Verificar si la subasta ya debería haber terminado
+                const now = Date.now();
+                const timeLeft = auction.endsAt - now;
+
+                if (timeLeft <= 0) {
+                    // La subasta ya debería haber terminado, terminarla ahora
+                    console.log(`🔨 Terminando subasta vencida: ${auction.id}`);
+                    await this.endAuction(auction.id, client);
+                } else {
+                    // Reanudar el timer
+                    console.log(`🔨 Reanudando subasta: ${auction.id} (${Math.floor(timeLeft / 60000)}m restantes)`);
+                    setTimeout(() => this.endAuction(auction.id, client), timeLeft);
+                    
+                    // Guardar en caché si lo usas
+                    this.activeAuctions.set(auction.id, auction);
+                }
+            }
+
+            console.log(`🔨 Cargadas ${data.length} subastas activas`);
         } catch (error) {
-            console.error('Error obteniendo subastas activas:', error);
-            return [];
+            console.error('❌ Error cargando subastas activas:', error);
         }
     }
 }
