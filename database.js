@@ -6,7 +6,7 @@ class LocalDatabase {
     constructor() {
         this.pool = null;
         this.userCache = new Map();
-        this.cacheTimeout = 0.2 * 60 * 1000;
+        this.cacheTimeout = 0.1 * 60 * 1000;
         this.MAX_CACHE_SIZE = 500;
         this.init();
     }
@@ -343,7 +343,7 @@ class LocalDatabase {
             }
             
             console.log(`🧹 Database cache: ${cleaned} usuarios limpiados, ${this.userCache.size} restantes`);
-        }, 0-2 * 60 * 1000); // Cada 10 minutos
+        }, 0.1 * 60 * 1000); // Cada 10 minutos
     }
 
     async getAllUsers() {
