@@ -39,7 +39,7 @@ class EconomySystem {
 
         // AGREGAR ESTAS LÍNEAS:
         this.userCache = new Map();
-        this.MAX_CACHE_SIZE = 1000;
+        this.MAX_CACHE_SIZE = 500;
         this.cacheTimeout = 5 * 60 * 1000; // 5 minutos        
         
         // Map para trackear robos activos
