@@ -3054,7 +3054,11 @@ class MinigamesSystem {
             new ButtonBuilder()
                 .setCustomId('uno_show_hand')
                 .setLabel('🎴 Ver mis cartas')
-                .setStyle(ButtonStyle.Primary)
+                .setStyle(ButtonStyle.Primary),
+            new ButtonBuilder()
+                .setCustomId('uno_draw_card')
+                .setLabel('🔄 Robar carta')
+                .setStyle(ButtonStyle.Secondary)
         );
 
         const attachment = this.createCardAttachment(topCard);

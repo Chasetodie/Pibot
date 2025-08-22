@@ -595,43 +595,11 @@ client.on('interactionCreate', async (interaction) => {
                 const handString = player.hand.map((card, i) => 
                     `${i}: ${minigames.getCardString(card)}`).join('\n');
                     
-                // Enviar por DM
-                const embed = new EmbedBuilder()
-                    .setTitle('🎴 Tu mano de UNO')
-                    .setDescription(`\`\`\`${handString}\`\`\``)
-                    .setColor('#0099FF')
-                    .setFooter({ text: 'Usa >uplay <color> <valor> para jugar' });                    
-
-                let dmSent = false;
-
-                // En tu código:
-                try {
-                    console.log(`📤 Intentando DM para ${interaction.user.tag}`);
-                    
-                    // Usar client directamente
-                    const targetUser = interaction.client.users.cache.get(interaction.user.id) || 
-                                    await interaction.client.users.fetch(interaction.user.id);
-                    
-                    await targetUser.send({ embeds: [embed] });
-                    dmSent = true;
-                    console.log(`✅ DM enviado exitosamente`);
-                } catch (dmError) {
-                    console.log(`❌ DM falló: ${dmError.message}`);
-                }
-
-                if (dmSent) {
-                    // Confirmar en canal (ephemeral real porque es interaction)
-                    await interaction.reply({
-                        content: `🎴 **Tu mano:**\n\`\`\`${handString}\`\`\``, 
-                        ephemeral: true 
-                    });
-                } else {
-                    // Confirmar en canal (ephemeral real porque es interaction)
-                    await interaction.reply({
-                        content: `🎴 **Tu mano:**\n\`\`\`${handString}\`\`\``, 
-                        ephemeral: true 
-                    });
-                }
+                // Confirmar en canal (ephemeral real porque es interaction)
+                await interaction.reply({
+                    content: `🎴 **Tu mano:**\n\`\`\`${handString}\`\`\``, 
+                    ephemeral: true 
+                });
             }
             
             if (interaction.customId === 'uno_draw_card') {
