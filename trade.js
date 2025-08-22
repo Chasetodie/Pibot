@@ -8,6 +8,7 @@ class TradeSystem {
 
         // ✅ AGREGAR: Caché para trades activos
         this.activeTradesCache = new Map();
+        this.MAX_CACHE_SIZE = 500;
         this.cacheTimeout = 2 * 60 * 1000; // 2 minutos        
     }
 
@@ -336,12 +337,28 @@ class TradeSystem {
     startCacheCleanup() {
         setInterval(() => {
             const now = Date.now();
+            
+            // Limpiar por tiempo
             for (const [tradeId, cached] of this.activeTradesCache) {
                 if (now - cached.timestamp > this.cacheTimeout) {
                     this.activeTradesCache.delete(tradeId);
                 }
             }
-        }, 5 * 60 * 1000); // Limpiar cada 5 minutos
+            
+            // Limpiar por tamaño si excede el límite
+            if (this.activeTradesCache.size > this.MAX_CACHE_SIZE) {
+                const entries = Array.from(this.activeTradesCache.entries());
+                const toDelete = entries
+                    .sort((a, b) => a[1].timestamp - b[1].timestamp)
+                    .slice(0, entries.length - this.MAX_CACHE_SIZE);
+                    
+                for (const [tradeId] of toDelete) {
+                    this.activeTradesCache.delete(tradeId);
+                }
+            }
+            
+            console.log(`🧹 Cache cleanup: ${this.activeTradesCache.size} trades en memoria`);
+        }, 5 * 60 * 1000);
     }
     
     // Agregar item al intercambio
