@@ -86,14 +86,12 @@ const commandHandler = new CommandHandler(counters, saveCounters);
 
 //Crear instancia del sistema de economia
 const economy = new EconomySystem();
-economy.startCacheCleanup();
 
 //Crear instancia del sistema de Minijuegos
 const minigames = new MinigamesSystem(economy);
 
 //Crear instancia del sistema de Misiones
 const missions = new MissionsSystem(economy);
-missions.startCacheCleanup();
 
 //Crear instancia del sistema de Achievements
 const achievements = new AchievementsSystem(economy);
@@ -120,7 +118,6 @@ setInterval(async () => {
 const betting = new BettingSystem(economy);
 
 const trades = new TradeSystem(shop);
-trades.startCacheCleanup();
 
 const auctions = new AuctionSystem(shop);
 
@@ -136,6 +133,11 @@ economy.missions = missions;
 minigames.missions = missions;
 
 economy.shop = shop;
+
+economy.startCacheCleanup();
+trades.startCacheCleanup();
+missions.startCacheCleanup();
+events.startCacheCleanup();
 
 app.listen(PORT, '0.0.0.0', () => {
     console.log(`🌐 Servidor web corriendo en puerto ${PORT} en todas las interfaces`);
@@ -153,7 +155,16 @@ client.once('ready', async () => {
     console.log(`🔧 Comandos disponibles: !contadores, !reset, !reload, !help`);
     await minigames.loadActiveRussianGames(client);
     await minigames.loadActiveUnoGames(client);
-  
+
+    setInterval(() => {
+        const used = process.memoryUsage();
+        console.log(`📊 Memoria: ${Math.round(used.rss / 1024 / 1024)} MB`);
+        
+        if (used.rss > 400 * 1024 * 1024) { // 400 MB
+            console.log('⚠️ MEMORIA ALTA - Limpiando cachés...');
+        }
+    }, 60000); // Cada minuto
+    
     // Establecer el guild para eventos
     const guild = client.guilds.cache.get('1404905496644685834'); // ← Cambiar por tu ID real
     if (guild) {
@@ -692,4 +703,5 @@ client.login(process.env.TOKEN).then(() => {
     console.error('❌ Error en el login:', error);
 
 });
+
 
