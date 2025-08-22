@@ -382,33 +382,77 @@ client.on('guildMemberAdd', async (member) => {
                     .setEmoji('🔴')
             );
 
-        // Enviar mensaje directo al usuario
-        await member.send({
-            embeds: [embed],
-            components: [row]
-        });
+        let dmSent = false;
 
-        console.log(`📩 Mensaje directo enviado a ${member.user.tag}`);
-        
-    } catch (error) {
-        console.error('❌ Error enviando mensaje directo:', error);
-        
-        // Si no se puede enviar DM, intentar enviar mensaje en un canal del servidor
         try {
-            const guild = member.guild;
-            const systemChannel = guild.systemChannel;
+            // Método 1: Crear canal DM primero
+            const dmChannel = await member.user.createDM();
+            await dmChannel.send({
+                embeds: [embed],
+                components: [row]
+            });
+            dmSent = true;
+            console.log(`📩 Mensaje directo enviado a ${member.user.tag}`);
             
-            if (systemChannel) {
-                await systemChannel.send({
-                    content: `${member.user}, no pude enviarte un mensaje directo. Por favor, selecciona tu categoría aquí:`,
+        } catch (dmError) {
+            console.log(`❌ DM falló (método 1): ${dmError.message}`);
+            
+            // Método 2: Usar client directo
+            try {
+                const targetUser = client.users.cache.get(member.user.id) || 
+                                  await client.users.fetch(member.user.id);
+                
+                await targetUser.send({
                     embeds: [embed],
                     components: [row]
                 });
-                console.log(`📢 Mensaje enviado en canal del sistema para ${member.user.tag}`);
+                dmSent = true;
+                console.log(`📩 Mensaje directo enviado a ${member.user.tag} (método 2)`);
+                
+            } catch (dmError2) {
+                console.log(`❌ DM falló (método 2): ${dmError2.message}`);
             }
-        } catch (channelError) {
-            console.error('❌ Error enviando mensaje en canal:', channelError);
         }
+        
+        // Si no se pudo enviar DM, enviar en canal del servidor
+        if (!dmSent) {
+            console.log(`📢 Intentando enviar mensaje en canal para ${member.user.tag}`);
+            
+            try {
+                const guild = member.guild;
+                const systemChannel = guild.systemChannel;
+                
+                if (systemChannel) {
+                    await systemChannel.send({
+                        content: `${member.user}, no pude enviarte un mensaje directo. Por favor, selecciona tu categoría aquí:`,
+                        embeds: [embed],
+                        components: [row]
+                    });
+                    console.log(`📢 Mensaje enviado en canal del sistema para ${member.user.tag}`);
+                } else {
+                    // Buscar cualquier canal donde el bot pueda escribir
+                    const fallbackChannel = guild.channels.cache.find(channel => 
+                        channel.type === 0 && // Canal de texto
+                        channel.permissionsFor(guild.members.me).has('SendMessages')
+                    );
+                    
+                    if (fallbackChannel) {
+                        await fallbackChannel.send({
+                            content: `${member.user}, bienvenido/a al servidor. Selecciona tu categoría:`,
+                            embeds: [embed],
+                            components: [row]
+                        });
+                        console.log(`📢 Mensaje enviado en canal alternativo para ${member.user.tag}`);
+                    } else {
+                        console.log(`❌ No se encontró ningún canal disponible para ${member.user.tag}`);
+                    }
+                }
+            } catch (channelError) {
+                console.error('❌ Error enviando mensaje en canal:', channelError);
+            }
+        } 
+    } catch (error) {
+        console.error('❌ Error general procesando nuevo miembro:', error);
     }
 });
 
@@ -417,39 +461,81 @@ client.on('interactionCreate', async (interaction) => {
     if (!interaction.isStringSelectMenu() && !interaction.isButton()) return;
 
     try {
-        // Si la interacción viene de un DM, necesitamos encontrar el guild y member
-        let member;
-        let guild;
-        
-        if (interaction.guild) {
-            // La interacción viene del servidor
-            guild = interaction.guild;
-            member = interaction.member;
-        } else {
-            // La interacción viene de un DM, necesitamos encontrar el servidor
-            // Buscar en todos los servidores donde está el bot
-            const guilds = client.guilds.cache;
+        if (interaction.customId === 'select_pibe' || interaction.customId === 'select_piba') {
+            // Si la interacción viene de un DM, necesitamos encontrar el guild y member
+            let member;
+            let guild;
             
-            for (const [guildId, guildObj] of guilds) {
-                try {
-                    const foundMember = await guildObj.members.fetch(interaction.user.id);
-                    if (foundMember) {
-                        guild = guildObj;
-                        member = foundMember;
-                        break;
+            if (interaction.guild) {
+                // La interacción viene del servidor
+                guild = interaction.guild;
+                member = interaction.member;
+            } else {
+                // La interacción viene de un DM, necesitamos encontrar el servidor
+                // Buscar en todos los servidores donde está el bot
+                const guilds = client.guilds.cache;
+                
+                for (const [guildId, guildObj] of guilds) {
+                    try {
+                        const foundMember = await guildObj.members.fetch(interaction.user.id);
+                        if (foundMember) {
+                            guild = guildObj;
+                            member = foundMember;
+                            break;
+                        }
+                    } catch (error) {
+                        // El usuario no está en este servidor, continuar
+                        continue;
                     }
-                } catch (error) {
-                    // El usuario no está en este servidor, continuar
-                    continue;
+                }
+                
+                if (!member || !guild) {
+                    await interaction.reply({
+                        content: 'No pude encontrarte en ningún servidor. Asegúrate de estar en el servidor antes de usar los botones.',
+                        flags: 64 // ephemeral
+                    });
+                    return;
                 }
             }
             
-            if (!member || !guild) {
+            // Procesar la selección
+            let newNickname;
+            let selectedType;
+            
+            if (interaction.customId === 'select_pibe') {
+                counters.pibe++;
+                newNickname = `Pibe ${counters.pibe}`;
+                selectedType = 'Pibe';
+                console.log(`🔵 Nuevo pibe: ${newNickname}`);
+            } else {
+                counters.piba++;
+                newNickname = `Piba ${counters.piba}`;
+                selectedType = 'Piba';
+                console.log(`🔴 Nueva piba: ${newNickname}`);
+            }
+            
+            try {
+                // Cambiar el apodo
+                await member.setNickname(newNickname);
+                
+                // Guardar contadores
+                saveCounters(counters);
+                
+                // Responder al usuario
                 await interaction.reply({
-                    content: 'No pude encontrarte en ningún servidor. Asegúrate de estar en el servidor antes de usar los botones.',
+                    content: `✅ ¡Perfecto! Te asigné el apodo: **${newNickname}**`,
                     flags: 64 // ephemeral
                 });
-                return;
+                
+                console.log(`✅ Apodo asignado: ${member.user.tag} -> ${newNickname}`);
+                
+            } catch (nicknameError) {
+                console.error(`❌ Error cambiando apodo:`, nicknameError);
+                
+                await interaction.reply({
+                    content: `❌ Hubo un error asignando tu apodo. Por favor contacta a un administrador.`,
+                    flags: 64 // ephemeral
+                });
             }
         }
 
