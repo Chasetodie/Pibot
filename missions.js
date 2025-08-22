@@ -492,12 +492,6 @@ class MissionsSystem {
         const cacheKey = `missions_${userId}`;
         let user = this.missionsCache.get(cacheKey);
 
-        const today = this.getCurrentDay();
-        if (user.daily_missions_date !== today) {
-            console.log(`⚠️ Usuario ${userId} tiene misiones de fecha incorrecta`);
-            return [];
-        }
-
         const now = Date.now();
 
         if (!user || (now - user.timestamp) > this.cacheTimeout) {

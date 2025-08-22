@@ -235,8 +235,7 @@ class AuctionSystem {
     async completeAuctionInDb(auctionId) {
         try {
             await this.shop.economy.database.updateAuction(auctionId, {
-                active: false,
-                completed_at: new Date().toISOString()
+                active: false
             });
             return true;
         } catch (error) {

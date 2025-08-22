@@ -142,8 +142,7 @@ class LocalDatabase {
                     highest_bidder TEXT,
                     bids TEXT,
                     ends_at TEXT NOT NULL,
-                    active BOOLEAN DEFAULT 1,
-                    completed_at TEXT
+                    active BOOLEAN DEFAULT 1
                 )
             `);
 
