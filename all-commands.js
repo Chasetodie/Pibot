@@ -1225,7 +1225,7 @@ class AllCommands {
             };
         }
         
-        await economy.updateUser(targetUser.id, { items: userItems });
+        await this.economy.updateUser(targetUser.id, { items: userItems });
         
         await message.reply(
             `✅ Se ha dado **${item.name} x${quantity}** a ${targetUser.displayName}.`
