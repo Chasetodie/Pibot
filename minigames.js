@@ -377,8 +377,8 @@ class MinigamesSystem {
                     { name: '🪙 Resultado', value: result === 'cara' ? '🟡 Cara' : '⚪ Cruz', inline: true },
                     { name: '🎯 Tu Elección', value: normalizedChoice === 'cara' ? '🟡 Cara' : '⚪ Cruz', inline: true },
                     { name: '💰 Ganancia', value: `+${this.formatNumber(profit)} π-b$`, inline: true },
-                    { name: '💸 Balance Antiguo', value: `${this.formatNumber(user.balance)} π-b$`, inline: false },
-                    { name: '💳 Balance Actual', value: `${this.formatNumber(user.balance + profit)} π-b$`, inline: false },
+                    { name: '💸 Balance Antiguo', value: `${this.formatNumber(user.balance - profit)} π-b$`, inline: false },
+                    { name: '💳 Balance Actual', value: `${this.formatNumber(user.balance)} π-b$`, inline: false },
                     { name: '🎉 Extra por Eventos', value: `${finalMessage || "No hay eventos Activos"} `, inline: false }
                 );
         } else {
@@ -620,8 +620,8 @@ class MinigamesSystem {
                 .addFields(
                     { name: '💰 Multiplicador', value: `x${multiplier}`, inline: true },
                     { name: '💰 Ganancia', value: `+${this.formatNumber(profit)} π-b$`, inline: false },
-                    { name: '💸 Balance Antiguo', value: `${this.formatNumber(user.balance)} π-b$`, inline: false },
-                    { name: '💳 Balance Actual', value: `${this.formatNumber(user.balance + profit)} π-b$`, inline: false },
+                    { name: '💸 Balance Antiguo', value: `${this.formatNumber(user.balance - profit)} π-b$`, inline: false },
+                    { name: '💳 Balance Actual', value: `${this.formatNumber(user.balance)} π-b$`, inline: false },
                     { name: '🎉 Extra por Eventos', value: `${finalMessage || "No hay eventos Activos"} `, inline: false }
                 );
         } else {
@@ -856,8 +856,8 @@ class MinigamesSystem {
                     { name: '🎊 ¡Increíble!', value: `¡Acertaste el número exacto!`, inline: false },
                     { name: '💎 Multiplicador', value: `x${this.config.lottery.winMultiplier}`, inline: true },
                     { name: '🤑 Ganancia Total', value: `+${this.formatNumber(profit)} π-b$`, inline: true },
-                    { name: '💸 Balance Anterior', value: `${this.formatNumber(user.balance)} π-b$`, inline: false },
-                    { name: '💳 Balance Actual', value: `${this.formatNumber(user.balance + profit)} π-b$ 🚀`, inline: false },
+                    { name: '💸 Balance Anterior', value: `${this.formatNumber(user.balance - profit)} π-b$`, inline: false },
+                    { name: '💳 Balance Actual', value: `${this.formatNumber(user.balance)} π-b$ 🚀`, inline: false },
                     { name: '🎉 Extra por Eventos', value: `${finalMessage || "No hay eventos Activos"} `, inline: false }
                 );
         } else {
@@ -1717,8 +1717,8 @@ class MinigamesSystem {
                     { name: '🎊 ¡Felicidades!', value: `¡Tu apuesta fue correcta!`, inline: false },
                     { name: '💎 Multiplicador', value: `x${multiplier}`, inline: true },
                     { name: '🤑 Ganancia Total', value: `+${this.formatNumber(profit)} π-b$`, inline: true },
-                    { name: '💸 Balance Anterior', value: `${this.formatNumber(user.balance)} π-b$`, inline: false },
-                    { name: '💳 Balance Actual', value: `${this.formatNumber(user.balance + profit)} π-b$ 🚀`, inline: false },
+                    { name: '💸 Balance Anterior', value: `${this.formatNumber(user.balance - profit)} π-b$`, inline: false },
+                    { name: '💳 Balance Actual', value: `${this.formatNumber(user.balance)} π-b$ 🚀`, inline: false },
                     { name: '🎉 Extra por Eventos', value: `${finalMessage || "No hay eventos Activos"} `, inline: false }
                 );
     
