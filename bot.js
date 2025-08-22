@@ -701,14 +701,33 @@ process.on('SIGINT', () => {
     process.exit(0);
 });
 
-// Iniciar el bot
+// En bot.js, donde tienes client.login()
+async function loginWithRetry(maxRetries = 3) {
+    for (let i = 0; i < maxRetries; i++) {
+        try {
+            await client.login(process.env.DISCORD_TOKEN);
+            console.log('✅ Bot conectado exitosamente');
+            return;
+        } catch (error) {
+            console.error(`❌ Intento ${i + 1} fallido:`, error.message);
+            
+            if (i < maxRetries - 1) {
+                console.log(`⏳ Reintentando en 5 segundos...`);
+                await new Promise(resolve => setTimeout(resolve, 5000));
+            }
+        }
+    }
+    
+    console.error('❌ No se pudo conectar después de varios intentos');
+    process.exit(1);
+}
+
+// Usar esta función en lugar de client.login() directo
+loginWithRetry();
+
+/*// Iniciar el bot
 client.login(process.env.TOKEN).then(() => {
     console.log('🚀 Proceso de login iniciado...');
 }).catch(error => {
     console.error('❌ Error en el login:', error);
-
-});
-
-
-
-
+});*/
