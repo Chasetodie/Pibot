@@ -184,6 +184,11 @@ class AuctionSystem {
         };
         
         auction.active = false;
+
+        const embed = new EmbedBuilder()
+            .setTitle('🔨 Resultado de la Subasta')
+            .setColor('#5fa8d8ff')
+            .setTimestamp();
         
         if (auction.highestBidder) {
             // Transferir item al ganador
@@ -207,7 +212,18 @@ class AuctionSystem {
             await this.shop.economy.updateUser(auction.seller, {
                 balance: seller.balance + auction.currentBid
             });
-            
+
+            embed.setDescription(`🎉 **¡${auction.highestBidder} GANO LA SUBASTA!**`)
+                .addFields(
+                    { name: '🪙 Item', value: `${auction.item_name}`, inline: false },
+                    { name: '🎯 Rematador', value: `${auction.seller}`, inline: false },
+                    { name: '💰 Ganador', value: `${auction.highestBidder}`, inline: false },
+                    { name: '💸 Valor Inicial de la Subasta', value: `${auction.startingBid}`, inline: false },
+                    { name: '💳 Valor Final de la Subasta', value: `${auction.currentBid}`, inline: false },
+                );          
+                
+            await message.reply({ embeds: [embed] });        
+
             console.log(`🔨 Subasta ${auctionId} terminada. Ganador: ${auction.highestBidder}`);
         } else {
             // No hubo pujas, devolver item al vendedor
@@ -225,9 +241,11 @@ class AuctionSystem {
             }
             
             await this.shop.economy.updateUser(auction.seller, { items: sellerItems });
+
+            await message.reply(`Nadie ha participado en la subasta, regresando item a ${auction.seller}`);
             console.log(`🔨 Subasta ${auctionId} terminada sin pujas.`);
         }
-        
+
         await this.completeAuctionInDb(auctionId);
     }
 
