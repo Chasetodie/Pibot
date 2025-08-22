@@ -735,7 +735,7 @@ client.on('messageCreate', async (message) => {
     const userId = message.author.id;
     const now = Date.now();
 
-    await this.missions.updateMissionProgress(userId, 'message');
+    await missions.updateMissionProgress(userId, 'message');
     messageCount++;
     checkMessageRate();
 
