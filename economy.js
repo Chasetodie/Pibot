@@ -40,7 +40,7 @@ class EconomySystem {
         // AGREGAR ESTAS LÍNEAS:
         this.userCache = new Map();
         this.MAX_CACHE_SIZE = 500;
-        this.cacheTimeout = 5 * 60 * 1000; // 5 minutos        
+        this.cacheTimeout = 1 * 60 * 1000; // 5 minutos        
         
         // Map para trackear robos activos
         this.activeRobberies = new Map();
@@ -132,7 +132,7 @@ class EconomySystem {
             }
             
             console.log(`🧹 Cache cleanup: ${this.userCache.size} trades en memoria`);
-        }, 5 * 60 * 1000);
+        }, 1 * 60 * 1000);
     }
 
     // Obtener todos los usuarios (MIGRADO)
