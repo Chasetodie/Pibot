@@ -1538,7 +1538,7 @@ class AllCommands {
                     
                 case '>auctionshow':
                 case '>showsubastas':
-                    const auctions = await this.auctions.getActiveAuctions();
+                    const auctions = await this.economy.database.getActiveAuctions();
                     if (auctions.length === 0) {
                         await message.reply('📋 No hay subastas activas.');
                         return;
