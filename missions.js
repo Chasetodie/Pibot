@@ -360,8 +360,9 @@ class MissionsSystem {
     // Obtener el día actual en formato YYYY-MM-DD
     getCurrentDay() {
         const now = new Date();
+        const ecuadorOffset = -5;
         // Convertir a zona horaria de Ecuador (UTC-5)
-        const ecuadorTime = new Date(now.getTime() - (5 * 60 * 60 * 1000));
+        const ecuadorTime = new Date(now.getTime() - (ecuadorOffset * 60 * 60 * 1000));
         return ecuadorTime.toISOString().split('T')[0]; // Formato YYYY-MM-DD
     }
 
@@ -399,7 +400,8 @@ class MissionsSystem {
 
     async checkAndResetAllMissions() {
         const now = new Date();
-        const ecuadorTime = new Date(now.getTime() - (5 * 60 * 60 * 1000));
+        const ecuadorOffset = -5;
+        const ecuadorTime = new Date(now.getTime() - (ecuadorOffset * 60 * 60 * 1000));
         const currentHour = ecuadorTime.getHours();
         const currentMinute = ecuadorTime.getMinutes();
         
@@ -888,7 +890,8 @@ class MissionsSystem {
         const now = new Date();
         
         // Obtener tiempo actual en Ecuador (UTC-5)
-        const ecuadorTime = new Date(now.getTime() - (5 * 60 * 60 * 1000));
+        const ecuadorOffset = -5;
+        const ecuadorTime = new Date(now.getTime() - (ecuadorOffset * 60 * 60 * 1000));
         
         // Calcular próxima medianoche en Ecuador
         const nextMidnight = new Date(ecuadorTime);
@@ -896,17 +899,21 @@ class MissionsSystem {
         nextMidnight.setHours(0, 0, 0, 0); // 00:00:00
         
         // Convertir la próxima medianoche de Ecuador a UTC para comparar
-        const nextMidnightUTC = new Date(nextMidnight.getTime() + (5 * 60 * 60 * 1000));
+        const nextMidnightUTC = new Date(nextMidnight.getTime() + (ecuadorOffset * 60 * 60 * 1000));
         
         // Calcular diferencia
         const timeDifference = nextMidnightUTC.getTime() - now.getTime();
+
+        if (timeDifference < 0) {
+            return `Menos de 1m`;
+        }
         
         // Convertir a horas y minutos
         const totalMinutes = Math.floor(timeDifference / (1000 * 60));
         const hours = Math.floor(totalMinutes / 60);
         const minutes = totalMinutes % 60;
         
-        // Formatear mensaje
+        // Formatear mensajereturn `Menos de 1m`;
         if (hours > 0) {
             return `${hours}h ${minutes}m`;
         } else if (minutes > 0) {
