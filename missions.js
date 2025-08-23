@@ -283,6 +283,12 @@ class MissionsSystem {
                 }
             }
         }, 60000);
+
+        // Iniciar sistema de reset automático
+        this.startDailyReset();
+        
+        // Limpiar caché periódicamente
+        this.startCacheCleanup();
     }
     
     // Generar misiones del día (se ejecuta automáticamente a las 12 PM)
@@ -359,6 +365,11 @@ class MissionsSystem {
         return ecuadorTime.toISOString().split('T')[0]; // Formato YYYY-MM-DD
     }
 
+    isNewDay(lastResetDate) {
+        const today = this.getCurrentDay();
+        return !lastResetDate || lastResetDate !== today;
+    }
+
     // Agregar esta función después de getCurrentDay()
     resetDailyFlag(user) {
         const now = new Date();
@@ -374,17 +385,39 @@ class MissionsSystem {
     
     // Verificar si es hora de resetear misiones (12 PM)
     shouldResetMissions(user) {
+        return this.isNewDay(user.daily_missions_date); // Mismo día, no resetear
+    }
+
+    startDailyReset() {
+        // Verificar cada minuto si es medianoche en Ecuador
+        setInterval(() => {
+            this.checkAndResetAllMissions();
+        }, 60000); // Cada minuto
+        
+        console.log('🕛 Sistema de reset automático iniciado');
+    }
+
+    async checkAndResetAllMissions() {
         const now = new Date();
-        // Convertir a zona horaria de Ecuador (UTC-5)
         const ecuadorTime = new Date(now.getTime() - (5 * 60 * 60 * 1000));
-        const today = ecuadorTime.toISOString().split('T')[0];
+        const currentHour = ecuadorTime.getHours();
+        const currentMinute = ecuadorTime.getMinutes();
         
-        const userMissionsDate = user.daily_missions_date;
-        
-        // Solo resetear si es un día diferente Y ya pasaron las 12 PM, o si es el mismo día pero aún no se han reseteado hoy después de las 12 PM
-        if (!userMissionsDate) return true; // Primera vez del usuario
-        if (userMissionsDate !== today) return true; // Día diferente
-        return false; // Mismo día, no resetear
+        // Solo ejecutar a las 00:00 (medianoche)
+        if (currentHour === 0 && currentMinute === 0) {
+            console.log('🌅 Iniciando reset automático de misiones...');
+            
+            // Aquí podrías resetear para todos los usuarios activos
+            // o marcar una bandera global para que se reseteen cuando interactúen
+            
+            // Opción 1: Limpiar caché para forzar regeneración
+            this.missionsCache.clear();
+            
+            // Opción 2: Si tienes una lista de usuarios activos, puedes resetearlos
+            // await this.resetAllActiveMissions();
+            
+            console.log('✅ Reset automático completado');
+        }
     }
     
     // Inicializar misiones diarias para un usuario
@@ -397,7 +430,11 @@ class MissionsSystem {
         
         // Si hay caché válido, usar eso
         if (cached && (now - cached.timestamp) < this.cacheTimeout) {
-            return cached.data.daily_missions || {};
+            // Pero también verificar si es un nuevo día
+            const user = cached.data;
+            if (!this.shouldResetMissions(user)) {
+                return user.daily_missions || {};
+            }
         }
         
         // Si no hay caché, obtener de DB normalmente
@@ -410,6 +447,8 @@ class MissionsSystem {
         }
         
         if (this.shouldResetMissions(user)) {
+            console.log(`🔄 Reseteando misiones para usuario ${userId}`);
+            
             const newMissions = this.generateDailyMissions();
             const today = this.getCurrentDay();
             
@@ -438,9 +477,17 @@ class MissionsSystem {
             };
             
             await this.economy.updateUser(userId, updateData);
+
+            // Actualizar caché
+            const updatedUser = { ...user, ...updateData };
+            this.missionsCache.set(cacheKey, {
+                data: updatedUser,
+                timestamp: now
+            });
+            
             console.log(`🎯 Misiones diarias inicializadas para ${userId}`);
             
-            return newMissions;
+            return updateData.daily_missions;
         }
 
         this.missionsCache.set(cacheKey, {
