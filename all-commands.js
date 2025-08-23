@@ -1584,9 +1584,9 @@ class AllCommands {
                 case '>vip':
                     await this.vipCommand(message);
                     break;
-                case '>giveitem':
+                /*case '>giveitem':
                     await this.giveItemCommand(message, args);
-                    break;
+                    break;*/
                 case '>shopstats':
                     await this.shopStatsCommand(message);
                     break;
