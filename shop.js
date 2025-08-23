@@ -1194,7 +1194,7 @@ class ShopSystem {
                     await this.showShop(message, category, page);
                     break;
                     
-                case '>buy':
+                /*case '>buy':
                 case '>comprar':
                     if (!args[1]) {
                         await message.reply('❌ Especifica el ID del item. Ejemplo: `>buy lucky_charm`');
@@ -1222,7 +1222,7 @@ class ShopSystem {
                         return;
                     }
                     await this.useItem(message, args.slice(1).join(' '));
-                    break;
+                    break;*/
             }
         } catch (error) {
             console.error('❌ Error en sistema de tienda:', error);
