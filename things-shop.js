@@ -271,10 +271,13 @@ class AuctionSystem {
                     }
                     
                     await channel.send({ embeds: [embed] });
+                    console.log(`🔨 Embed enviado para subasta ${auctionId}`);
                 }
             } catch (error) {
                 console.error('Error enviando embed de subasta:', error);
             }
+        } else {
+            console.log(`ℹ️ Subasta ${auctionId} terminada sin notificación (client: ${!!client}, channelId: ${auction.channelId})`);
         }
 
         await this.completeAuctionInDb(auctionId);
