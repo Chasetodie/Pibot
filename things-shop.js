@@ -188,7 +188,7 @@ class AuctionSystem {
         await this.updateBidInDb(auctionId, auction);
     }
     
-    async endAuction(auctionId) {
+    async endAuction(auctionId, client = null) {
         const auctionData = await this.getAuctionFromDb(auctionId);
         if (!auctionData || !auctionData.active) return;
 
