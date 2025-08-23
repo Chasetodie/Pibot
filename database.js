@@ -428,13 +428,14 @@ class LocalDatabase {
         try {
             await this.pool.execute(`
                 INSERT INTO auctions (id, seller, item_id, item_name, starting_bid, 
-                                    current_bid, highest_bidder, bids, ends_at, active)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                                    current_bid, highest_bidder, bids, ends_at, active, channel_id)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             `, [
                 auctionData.id, auctionData.seller, auctionData.item_id,
                 auctionData.item_name, auctionData.starting_bid,
                 auctionData.current_bid, auctionData.highest_bidder,
-                JSON.stringify(auctionData.bids || []), auctionData.ends_at, true
+                JSON.stringify(auctionData.bids || []), auctionData.ends_at, true,
+                auctionData.channel_id
             ]);
             
             return { id: auctionData.id };
