@@ -874,26 +874,46 @@ class MissionsSystem {
             inline: false
         });
         
-        // Mostrar tiempo restante para reset (12 PM Ecuador)
-        const now = new Date();
-        const ecuadorTime = new Date(now.getTime() - (5 * 60 * 60 * 1000));
-        
-        // CAMBIAR: Calcular próximo reset a medianoche
-        let nextReset = new Date(ecuadorTime);
-        nextReset.setDate(nextReset.getDate() + 1); // Próximo día
-        nextReset.setHours(0, 0, 0, 0); // A las 00:00
-        
-        // Convertir de vuelta a UTC para comparar con 'now'
-        const nextResetUTC = new Date(nextReset.getTime() + (5 * 60 * 60 * 1000));
-        const timeLeft = nextResetUTC.getTime() - now.getTime();
-        const hoursLeft = Math.floor(timeLeft / (1000 * 60 * 60));
-        const minutesLeft = Math.floor((timeLeft % (1000 * 60 * 60)) / (1000 * 60));
+        const timeUntilReset = this.getTimeUntilMissionReset();
         
         embed.setFooter({ 
-            text: `⏰ Nuevas misiones en: ${hoursLeft}h ${minutesLeft}m`
+            text: `⏰ Nuevas misiones en: ${timeUntilReset}`
         });
         
         await message.reply({ embeds: [embed] });
+    }
+
+    // ✅ NUEVA FUNCIÓN: Calcular tiempo hasta el próximo reset
+    getTimeUntilMissionReset() {
+        const now = new Date();
+        
+        // Obtener tiempo actual en Ecuador (UTC-5)
+        const ecuadorTime = new Date(now.getTime() - (5 * 60 * 60 * 1000));
+        
+        // Calcular próxima medianoche en Ecuador
+        const nextMidnight = new Date(ecuadorTime);
+        nextMidnight.setDate(nextMidnight.getDate() + 1); // Siguiente día
+        nextMidnight.setHours(0, 0, 0, 0); // 00:00:00
+        
+        // Convertir la próxima medianoche de Ecuador a UTC para comparar
+        const nextMidnightUTC = new Date(nextMidnight.getTime() + (5 * 60 * 60 * 1000));
+        
+        // Calcular diferencia
+        const timeDifference = nextMidnightUTC.getTime() - now.getTime();
+        
+        // Convertir a horas y minutos
+        const totalMinutes = Math.floor(timeDifference / (1000 * 60));
+        const hours = Math.floor(totalMinutes / 60);
+        const minutes = totalMinutes % 60;
+        
+        // Formatear mensaje
+        if (hours > 0) {
+            return `${hours}h ${minutes}m`;
+        } else if (minutes > 0) {
+            return `${minutes}m`;
+        } else {
+            return `Menos de 1m`;
+        }
     }
     
     // Crear barra de progreso
