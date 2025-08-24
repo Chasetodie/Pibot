@@ -774,9 +774,6 @@ class AllCommands {
             });
             
             await message.reply({ embeds: [embed] });
-            if (result.hitLimit) {
-                await message.reply(`⚠️ **Límite alcanzado:** No pudiste recibir todo el dinero porque tienes el máximo permitido (${this.formatNumber(this.economy.config.maxBalance)} π-b$).`);
-            }
             return;
         }
         
@@ -850,6 +847,9 @@ class AllCommands {
                 .setTimestamp();
             
             await message.reply({ embeds: [embed] });
+            if (result.hitLimit) {
+                await message.reply(`⚠️ **Límite alcanzado:** No pudiste recibir todo el dinero porque tienes el máximo permitido (${this.formatNumber(this.economy.config.maxBalance)} π-b$).`);
+            }
 
             // *** NUEVO: VERIFICAR ACHIEVEMENTS DESPUÉS DE TRABAJAR ***
             if (result.success && this.achievements) {
@@ -1100,7 +1100,7 @@ class AllCommands {
                         
                         await message.channel.send({ embeds: [successEmbed] });
                         
-                        if (result.hitLimit) {
+                        if (finishResult.hitLimit) {
                             await message.reply(`⚠️ **Límite alcanzado:** No pudiste recibir todo el dinero porque tienes el máximo permitido (${this.formatNumber(this.economy.config.maxBalance)} π-b$).`);
                         }
                 } else {
