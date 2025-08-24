@@ -619,7 +619,7 @@ class MissionsSystem {
                 break;
                 
             case 'bet_won':
-                updateData.daily_stats.bets_won_today: (user.daily_stats.bets_won_today || 0) + 1;
+                updateData.daily_stats.bets_won_today = (user.daily_stats.bets_won_today || 0) + 1;
                 break;
                 
             case 'successful_robbery':
