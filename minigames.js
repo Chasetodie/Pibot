@@ -2489,6 +2489,8 @@ class MinigamesSystem {
         await this.updateRussianGame(game.id, {
             players: game.players,
             current_shot: game.current_shot,
+            current_player_index: game.current_player_index,
+            bullet_position: game.bullet_position,
             processing: game.processing,
             // Agregar cualquier otro campo que haya cambiado
         });

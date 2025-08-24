@@ -590,8 +590,8 @@ class LocalDatabase {
         try {
             await this.pool.execute(`
                 INSERT INTO russian_games (id, channel_id, creator_id, bet_amount, players, 
-                                        phase, pot, processing)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                                        phase, current_player_index, bullet_position, current_shot, pot, processing)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             `, [
                 gameId,
                 gameData.channel_id,
@@ -599,6 +599,9 @@ class LocalDatabase {
                 gameData.bet_amount,
                 JSON.stringify(gameData.players || []),
                 gameData.phase || 'waiting',
+                gameData.current_player_index,
+                gameData.bullet_position,
+                gameData.current_shot,
                 gameData.pot,
                 gameData.processing || 'true'
             ]);
