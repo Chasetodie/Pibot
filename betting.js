@@ -61,7 +61,7 @@ class BettingSystem {
     async getAllBets() {
         try {
             const [rows] = await this.db.pool.execute(
-                'SELECT * FROM trades WHERE initiator_offer LIKE "%bet_description%"'
+                'SELECT * FROM bets WHERE amount'
             );
 
             if (!rows || rows.length === 0) return {};
@@ -215,7 +215,7 @@ class BettingSystem {
             const [rows] = await this.db.pool.execute(`
                 SELECT * FROM bets 
                 WHERE challenger = ? AND opponent = ? AND status = 'pending'
-                AND amount LIKE '%bet_description%'
+                AND amount = ?'
             `, [challengerUser.id, opponentId]);
 
             if (!rows || rows.length === 0) {
@@ -294,7 +294,7 @@ class BettingSystem {
             const [rows] = await this.db.pool.execute(`
                 SELECT * FROM bets 
                 WHERE challenger = ? AND opponent = ? AND status = 'pending'
-                AND amount LIKE '%bet_description%'
+                AND amount = ?
             `, [challengerUser.id, opponentId]);
 
             if (!rows || rows.length === 0) {

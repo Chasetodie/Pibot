@@ -892,7 +892,7 @@ class LocalDatabase {
                 SELECT * FROM bets 
                 WHERE (challenger = ? OR opponent = ?) 
                 AND status IN ('pending', 'active')
-                AND amount LIKE '%bet_description%'
+                AND amount = ?'
             `, [userId, userId]);
             
             return rows.map(row => ({
@@ -920,7 +920,7 @@ class LocalDatabase {
 
             if (rows.length > 0) {
                 const bet = rows[0];
-                bet.description = this.safeJsonParse(trade.initiator_offer, {}).bet_description || 'Sin descripción';
+                bet.description = this.safeJsonParse(bet.amount, {}).bet_description || 'Sin descripción';
                 return bet;
             }
             return null;
