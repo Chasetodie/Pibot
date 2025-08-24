@@ -194,6 +194,10 @@ class AllCommands {
                 .setFooter({ text: 'Vuelve mañana para más π-b Coins!' });
 
             await message.reply({ embeds: [embed] });
+            // AÑADIR ESTO:
+            if (result.hitLimit) {
+                await message.reply(`⚠️ **Límite alcanzado:** No pudiste recibir todo el dinero porque tienes el máximo permitido (${this.formatNumber(this.economy.config.maxBalance)} π-b$).`);
+            }
             return;
         }
         
@@ -770,6 +774,9 @@ class AllCommands {
             });
             
             await message.reply({ embeds: [embed] });
+            if (result.hitLimit) {
+                await message.reply(`⚠️ **Límite alcanzado:** No pudiste recibir todo el dinero porque tienes el máximo permitido (${this.formatNumber(this.economy.config.maxBalance)} π-b$).`);
+            }
             return;
         }
         
@@ -983,6 +990,9 @@ class AllCommands {
                 case 'already_robbing':
                     errorMessage = 'Ya tienes un robo en progreso';
                     break;
+                case 'robber_rich':
+                    errorMessage = 'Limite de dinero alcanzado';
+                    break;
                 default:
                     errorMessage = 'No puedes robar en este momento';
             }
@@ -1089,6 +1099,10 @@ class AllCommands {
                             );
                         
                         await message.channel.send({ embeds: [successEmbed] });
+                        
+                        if (result.hitLimit) {
+                            await message.reply(`⚠️ **Límite alcanzado:** No pudiste recibir todo el dinero porque tienes el máximo permitido (${this.formatNumber(this.economy.config.maxBalance)} π-b$).`);
+                        }
                 } else {
                     // Mensaje de robo fallido
                     const failEmbed = new EmbedBuilder()
