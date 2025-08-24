@@ -140,7 +140,7 @@ class EventsSystem {
             'money_rain': 0.12,     // 12%
             'lucky_hour': 0.01,     // 1%
             'fever_time': 0.11,     // 11%
-            'charity_event': 0.05,  // 5%
+            'charity_event': 0.02,  // 2%
             'treasure_hunt': 0.07,  // 7%
             'market_crash': 0.10//,   // 10%
             //'server_anniversary': 0.01 // 1% (muy raro)
