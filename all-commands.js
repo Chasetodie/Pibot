@@ -240,27 +240,32 @@ class AllCommands {
             }
         }
 
-        // *** NUEVO: NOTIFICAR MISIONES COMPLETADAS ***
+        // ✅ CAMBIAR ESTA PARTE:
         if (this.economy.missions) {
-            const completedMissions = await this.economy.missions.updateMissionProgress(userId, 'daily_claimed');
-            if (completedMissions.length > 0) {
-                await this.economy.missions.notifyCompletedMissions(message, completedMissions);
+            const dailyMissions = await this.economy.missions.updateMissionProgress(userId, 'daily_claimed');
+            // ✅ AGREGAR ESTA LÍNEA:
+            const moneyMissions = await this.economy.missions.updateMissionProgress(userId, 'money_earned_today', result.amount);
+            
+            // ✅ COMBINAR AMBOS RESULTADOS:
+            const allCompleted = [...dailyMissions, ...moneyMissions];
+            if (allCompleted.length > 0) {
+                await this.economy.missions.notifyCompletedMissions(message, allCompleted);
             }
         }
 
-            // Verificar tesoros al final
-            for (const event of this.events.getActiveEvents()) {
-                if (event.type === 'treasure_hunt') {
-                    const treasures = await this.events.checkSpecialEvents(userId, 'general');
+        // Verificar tesoros al final
+        for (const event of this.events.getActiveEvents()) {
+            if (event.type === 'treasure_hunt') {
+                const treasures = await this.events.checkSpecialEvents(userId, 'general');
                     
-                    for (const treasure of treasures) {
-                        if (treasure.type === 'treasure') {
-                            message.reply(`🗺️ **¡Tesoro encontrado!**\n${treasure.description}`);
-                        }
+                for (const treasure of treasures) {
+                    if (treasure.type === 'treasure') {
+                        message.reply(`🗺️ **¡Tesoro encontrado!**\n${treasure.description}`);
                     }
-                    break;
                 }
+                break;
             }
+        }
     }
 
     // Comando !level - Ver información detallada de nivel

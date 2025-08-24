@@ -274,12 +274,6 @@ class MinigamesSystem {
             return;
         }
 
-        // Al inicio del juego
-        if (this.missions) {
-            await this.missions.updateMissionProgress(userId, 'game_played');
-            await this.missions.updateMissionProgress(userId, 'money_bet', betAmount);
-        }
-
         let winChance = 0.5; // 50% base
         let luckMessage = '';
        
@@ -362,13 +356,6 @@ class MinigamesSystem {
                 await this.achievements.updateStats(userId, 'money_bet', betAmount);
             }            
 
-            // Si gana el juego
-            if (this.missions) {
-                await this.missions.updateMissionProgress(userId, 'game_won');
-                await this.missions.updateMissionProgress(userId, 'bet_won');
-                await this.missions.updateMissionProgress(userId, 'money_earned_today', profit);
-            }
-
             let finalMessage = ''
 
             if (eventMessage === '')
@@ -427,6 +414,27 @@ class MinigamesSystem {
                 break;
             }
         }   
+
+        if (this.missions) {
+            // Siempre actualizar que jugó y apostó
+            const gameMissions = await this.missions.updateMissionProgress(userId, 'game_played');
+            const betMissions = await this.missions.updateMissionProgress(userId, 'money_bet', betAmount);
+            
+            let allCompleted = [...gameMissions, ...betMissions];
+            
+            if (won) {
+                // Solo si ganó
+                const winMissions = await this.missions.updateMissionProgress(userId, 'game_won');
+                const betWonMissions = await this.missions.updateMissionProgress(userId, 'bet_won');
+                const moneyMissions = await this.missions.updateMissionProgress(userId, 'money_earned_today', finalEarnings);
+                
+                allCompleted = [...allCompleted, ...winMissions, ...betWonMissions, ...moneyMissions];
+            }
+            
+            if (allCompleted.length > 0) {
+                await this.missions.notifyCompletedMissions(message, allCompleted);
+            }
+        }
 
         await message.reply({ embeds: [embed] });
     }
@@ -503,12 +511,6 @@ class MinigamesSystem {
         if (!canDiceResult.canDicePlay) {
             await message.reply(`⏰ Debes esperar ${this.formatTime(canDiceResult.timeLeft)} antes de jugar otra vez`);
             return;
-        }
-
-        // Al inicio del juego
-        if (this.missions) {
-            await this.missions.updateMissionProgress(userId, 'game_played');
-            await this.missions.updateMissionProgress(userId, 'money_bet', betAmount);
         }
         
         // Tirar el dado
@@ -617,13 +619,6 @@ class MinigamesSystem {
                 await this.achievements.updateStats(userId, 'money_bet', betAmount);
             }
 
-            // Si gana el juego
-            if (this.missions) {
-                await this.missions.updateMissionProgress(userId, 'game_won');
-                await this.missions.updateMissionProgress(userId, 'bet_won');
-                await this.missions.updateMissionProgress(userId, 'money_earned_today', profit);
-            }
-
             let finalMessage = ''
 
             if (eventMessage === '')
@@ -678,6 +673,27 @@ class MinigamesSystem {
                 break;
             }
         }   
+
+        if (this.missions) {
+            // Siempre actualizar que jugó y apostó
+            const gameMissions = await this.missions.updateMissionProgress(userId, 'game_played');
+            const betMissions = await this.missions.updateMissionProgress(userId, 'money_bet', betAmount);
+            
+            let allCompleted = [...gameMissions, ...betMissions];
+            
+            if (won) {
+                // Solo si ganó
+                const winMissions = await this.missions.updateMissionProgress(userId, 'game_won');
+                const betWonMissions = await this.missions.updateMissionProgress(userId, 'bet_won');
+                const moneyMissions = await this.missions.updateMissionProgress(userId, 'money_earned_today', finalEarnings);
+                
+                allCompleted = [...allCompleted, ...winMissions, ...betWonMissions, ...moneyMissions];
+            }
+            
+            if (allCompleted.length > 0) {
+                await this.missions.notifyCompletedMissions(message, allCompleted);
+            }
+        }
 
         await message.reply({ embeds: [embed] });
     }
@@ -751,12 +767,6 @@ class MinigamesSystem {
         if (!canLotteryResult.canLottery) {
             await message.reply(`⏰ Debes esperar ${this.formatTime(canLotteryResult.timeLeft)} antes de jugar otra vez`);  
             return;
-        }
-
-        // Al inicio del juego
-        if (this.missions) {
-            await this.missions.updateMissionProgress(userId, 'game_played');
-            await this.missions.updateMissionProgress(userId, 'money_bet', betAmount);
         }
         
         // Generar número ganador
@@ -862,13 +872,6 @@ class MinigamesSystem {
                 await this.achievements.updateStats(userId, 'money_bet', betAmount);
             }
 
-            // Si gana el juego
-            if (this.missions) {
-                await this.missions.updateMissionProgress(userId, 'game_won');
-                await this.missions.updateMissionProgress(userId, 'bet_won');
-                await this.missions.updateMissionProgress(userId, 'money_earned_today', profit);
-            }
-
             let finalMessage = ''
 
             if (eventMessage === '')
@@ -940,6 +943,27 @@ class MinigamesSystem {
                 break;
             }
         }   
+
+        if (this.missions) {
+            // Siempre actualizar que jugó y apostó
+            const gameMissions = await this.missions.updateMissionProgress(userId, 'game_played');
+            const betMissions = await this.missions.updateMissionProgress(userId, 'money_bet', betAmount);
+            
+            let allCompleted = [...gameMissions, ...betMissions];
+            
+            if (won) {
+                // Solo si ganó
+                const winMissions = await this.missions.updateMissionProgress(userId, 'game_won');
+                const betWonMissions = await this.missions.updateMissionProgress(userId, 'bet_won');
+                const moneyMissions = await this.missions.updateMissionProgress(userId, 'money_earned_today', finalEarnings);
+                
+                allCompleted = [...allCompleted, ...winMissions, ...betWonMissions, ...moneyMissions];
+            }
+            
+            if (allCompleted.length > 0) {
+                await this.missions.notifyCompletedMissions(message, allCompleted);
+            }
+        }
     
         await reply.edit({ embeds: [resultEmbed] });
     }
@@ -1007,12 +1031,6 @@ class MinigamesSystem {
         if (!canBlackJackResult.canBlackJack) {
             await message.reply(`⏰ Debes esperar ${this.formatTime(canBlackJackResult.timeLeft)} antes de jugar otra vez`);
             return;
-        }
-
-        // Al inicio del juego
-        if (this.missions) {
-            await this.missions.updateMissionProgress(userId, 'game_played');
-            await this.missions.updateMissionProgress(userId, 'money_bet', betAmount);
         }
         
         // Verificar si ya hay un juego activo
@@ -1331,13 +1349,6 @@ class MinigamesSystem {
                     await this.achievements.updateStats(userId, 'game_won');
                     await this.achievements.updateStats(userId, 'money_bet', finalBet);
                 }
-
-                // Si gana el juego
-                if (this.missions) {
-                    await this.missions.updateMissionProgress(userId, 'game_won');
-                    await this.missions.updateMissionProgress(userId, 'bet_won');
-                    await this.missions.updateMissionProgress(userId, 'money_earned_today', profit);
-                }
                 break;
             case 'win':
             case 'dealer_bust':
@@ -1381,12 +1392,6 @@ class MinigamesSystem {
                     await this.achievements.updateStats(userId, 'money_bet', finalBet);
                 }
 
-                // Si gana el juego
-                if (this.missions) {
-                    await this.missions.updateMissionProgress(userId, 'game_won');
-                    await this.missions.updateMissionProgress(userId, 'bet_won');
-                    await this.missions.updateMissionProgress(userId, 'money_earned_today', profit);
-                }
                 break;
             case 'push':
                 resultText = '🤝 **¡EMPATE!**';
@@ -1470,6 +1475,27 @@ class MinigamesSystem {
         }
     
         embed.setTimestamp(); 
+
+        if (this.missions) {
+            // Siempre actualizar que jugó y apostó
+            const gameMissions = await this.missions.updateMissionProgress(userId, 'game_played');
+            const betMissions = await this.missions.updateMissionProgress(userId, 'money_bet', betAmount);
+            
+            let allCompleted = [...gameMissions, ...betMissions];
+            
+            if (profit > 0) {
+                // Solo si ganó
+                const winMissions = await this.missions.updateMissionProgress(userId, 'game_won');
+                const betWonMissions = await this.missions.updateMissionProgress(userId, 'bet_won');
+                const moneyMissions = await this.missions.updateMissionProgress(userId, 'money_earned_today', finalEarnings);
+                
+                allCompleted = [...allCompleted, ...winMissions, ...betWonMissions, ...moneyMissions];
+            }
+            
+            if (allCompleted.length > 0) {
+                await this.missions.notifyCompletedMissions(message, allCompleted);
+            }
+        }
     
         // Enviar resultado
         if (messageOrInteraction && messageOrInteraction.editReply) {
@@ -1645,12 +1671,6 @@ class MinigamesSystem {
             await message.reply(`⏰ Debes esperar ${this.formatTime(canRouletteResult.timeLeft)} antes de jugar otra vez`);
             return;
         }
-
-        // Al inicio del juego
-        if (this.missions) {
-            await this.missions.updateMissionProgress(userId, 'game_played');
-            await this.missions.updateMissionProgress(userId, 'money_bet', betAmount);
-        }
         
         // Validar tipo de apuesta
         const validBet = this.validateRouletteBet(betType);
@@ -1756,13 +1776,6 @@ class MinigamesSystem {
                 await this.achievements.updateStats(userId, 'money_bet', betAmount);
             }
 
-            // Si gana el juego
-            if (this.missions) {
-                await this.missions.updateMissionProgress(userId, 'game_won');
-                await this.missions.updateMissionProgress(userId, 'bet_won');
-                await this.missions.updateMissionProgress(userId, 'money_earned_today', profit);
-            }
-
             let finalMessage = ''
 
             if (eventMessage === '')
@@ -1841,6 +1854,27 @@ class MinigamesSystem {
                 break;
             }
         }  
+
+        if (this.missions) {
+            // Siempre actualizar que jugó y apostó
+            const gameMissions = await this.missions.updateMissionProgress(userId, 'game_played');
+            const betMissions = await this.missions.updateMissionProgress(userId, 'money_bet', betAmount);
+            
+            let allCompleted = [...gameMissions, ...betMissions];
+            
+            if (won) {
+                // Solo si ganó
+                const winMissions = await this.missions.updateMissionProgress(userId, 'game_won');
+                const betWonMissions = await this.missions.updateMissionProgress(userId, 'bet_won');
+                const moneyMissions = await this.missions.updateMissionProgress(userId, 'money_earned_today', finalEarnings);
+                
+                allCompleted = [...allCompleted, ...winMissions, ...betWonMissions, ...moneyMissions];
+            }
+            
+            if (allCompleted.length > 0) {
+                await this.missions.notifyCompletedMissions(message, allCompleted);
+            }
+        }
 
         await reply.edit({ embeds: [resultEmbed] });
     }
@@ -2057,11 +2091,17 @@ class MinigamesSystem {
             await message.reply(`❌ No tienes suficientes π-b Coins. Tu balance: ${this.formatNumber(user.balance)} π-b$`);
             return;
         }
-    
-        // Al inicio del juego
+
         if (this.missions) {
-            await this.missions.updateMissionProgress(userId, 'game_played');
-            await this.missions.updateMissionProgress(userId, 'money_bet', betAmount);
+            // Siempre actualizar que jugó y apostó
+            const gameMissions = await this.missions.updateMissionProgress(userId, 'game_played');
+            const betMissions = await this.missions.updateMissionProgress(userId, 'money_bet', betAmount);
+            
+            let allCompleted = [...gameMissions, ...betMissions];
+
+            if (allCompleted.length > 0) {
+                await this.missions.notifyCompletedMissions(message, allCompleted);
+            }
         }
     
         // Verificar si ya hay una partida activa en el canal
@@ -2639,13 +2679,7 @@ class MinigamesSystem {
                 await this.achievements.updateStats(winner.id, 'game_played');
                 await this.achievements.updateStats(winner.id, 'game_won');
             }
-
-            // Si gana el juego
-            if (this.missions) {
-                await this.missions.updateMissionProgress(winner.id, 'game_won');
-                await this.missions.updateMissionProgress(winner.id, 'bet_won');
-                await this.missions.updateMissionProgress(winner.id, 'money_earned_today', winnerPrize);
-            }    
+ 
             embed.setTitle('🏆 ¡TENEMOS UN GANADOR! 🏆')
                 .setDescription(`🎉 **¡${winner.displayName} sobrevivió a la ruleta rusa!**`)
                 .setColor('#FFD700')
@@ -2680,6 +2714,23 @@ class MinigamesSystem {
                 await this.economy.addMoney(player.id, game.bet_amount, 'russian_roulette_refund');
             }
         }
+
+        if (this.missions) {            
+            if (won) {
+                let allCompleted = [];
+                
+                // Solo si ganó
+                const winMissions = await this.missions.updateMissionProgress(winner.id, 'game_won');
+                const betWonMissions = await this.missions.updateMissionProgress(winner.id, 'bet_won');
+                const moneyMissions = await this.missions.updateMissionProgress(winner.id, 'money_earned_today', finalEarnings);
+                
+                allCompleted = [...allCompleted, ...winMissions, ...betWonMissions, ...moneyMissions];
+            }
+            
+            if (allCompleted.length > 0) {
+                await this.missions.notifyCompletedMissions(message, allCompleted);
+            }
+        }        
 
         try {
             await this.deleteRussianGame(`russian_${game.channel_id}`);
@@ -2827,10 +2878,16 @@ class MinigamesSystem {
             return;
         }
 
-        // Actualizar misiones
         if (this.missions) {
-            await this.missions.updateMissionProgress(userId, 'game_played');
-            await this.missions.updateMissionProgress(userId, 'money_bet', betAmount);
+            // Siempre actualizar que jugó y apostó
+            const gameMissions = await this.missions.updateMissionProgress(userId, 'game_played');
+            const betMissions = await this.missions.updateMissionProgress(userId, 'money_bet', betAmount);
+            
+            let allCompleted = [...gameMissions, ...betMissions];
+
+            if (allCompleted.length > 0) {
+                await this.missions.notifyCompletedMissions(message, allCompleted);
+            }
         }
 
         // Verificar si ya hay una partida activa en el canal
@@ -3925,12 +3982,6 @@ class MinigamesSystem {
 
         const addResult = await this.economy.addMoney(winnerId, finalEarnings, 'uno_win');
         finalEarnings = addResult.actualAmount;
-        
-        // Actualizar estadísticas
-        if (this.missions) {
-            await this.missions.updateMissionProgress(winnerId, 'game_won');
-            await this.missions.updateMissionProgress(winnerId, 'money_won', winnings);
-        }
 
         const embed = new EmbedBuilder()
             .setTitle('🎴 UNO - ¡GANADOR!')
@@ -3943,6 +3994,23 @@ class MinigamesSystem {
             )
             .setColor('#FFD700')
             .setTimestamp();
+
+        if (this.missions) {            
+            let allCompleted = [];
+            
+            if (won) {
+                // Solo si ganó
+                const winMissions = await this.missions.updateMissionProgress(winnerId, 'game_won');
+                const betWonMissions = await this.missions.updateMissionProgress(winnerId, 'bet_won');
+                const moneyMissions = await this.missions.updateMissionProgress(winnerId, 'money_earned_today', finalEarnings);
+                
+                allCompleted = [...allCompleted, ...winMissions, ...betWonMissions, ...moneyMissions];
+            }
+            
+            if (allCompleted.length > 0) {
+                await this.missions.notifyCompletedMissions(message, allCompleted);
+            }
+        }        
 
         await message.reply({ embeds: [embed] });
         if (addResult.hitLimit) {

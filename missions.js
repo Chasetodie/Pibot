@@ -360,10 +360,18 @@ class MissionsSystem {
     // Obtener el día actual en formato YYYY-MM-DD
     getCurrentDay() {
         const now = new Date();
-        const ecuadorOffset = -5;
-        // Convertir a zona horaria de Ecuador (UTC-5)
-        const ecuadorTime = new Date(now.getTime() - (ecuadorOffset * 60 * 60 * 1000));
-        return ecuadorTime.toISOString().split('T')[0]; // Formato YYYY-MM-DD
+        const ecuadorOffset = -5; // UTC-5
+        
+        // ✅ CAMBIAR: Usar getTimezoneOffset() para ser más preciso
+        const ecuadorTime = new Date(now.getTime() + (now.getTimezoneOffset() * 60000) + (-5 * 3600000));
+        
+        const dateString = ecuadorTime.toISOString().split('T')[0];
+        
+        // ✅ AGREGAR log para debug
+        console.log(`🕐 Ecuador time: ${ecuadorTime.toISOString()}`);
+        console.log(`📅 Date string: ${dateString}`);
+        
+        return dateString;
     }
 
     isNewDay(lastResetDate) {
@@ -596,6 +604,11 @@ class MissionsSystem {
         const completedMissions = [];
 
         updateData.daily_stats = { ...user.daily_stats };
+
+        if (actionType === 'mention_made') {
+            console.log(`🔍 MENTION DEBUG - userId: ${userId}, value: ${value}`);
+            console.log(`📊 Current mentions_made_today: ${user.daily_stats?.mentions_made_today || 0}`);
+        }
         
         // Actualizar estadísticas diarias según el tipo de acción
         switch (actionType) {
@@ -649,7 +662,7 @@ class MissionsSystem {
                 break;
 
             case 'mention_made':
-                updateData.daily_stats.mentions_made_today = (user.daily_stats.mentions_made_today || 0) + 1;
+                updateData.daily_stats.mentions_made_today = (user.daily_stats.mentions_made_today || 0) + value;
                 break;
         }
 

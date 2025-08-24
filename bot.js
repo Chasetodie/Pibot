@@ -730,11 +730,20 @@ async function processUserActivityOptimized(userId, message) {
     const mentionsCount = message.mentions.users.size;
     
     try {
-        const [achievementsResult, messageResult, mentionResult] = await Promise.allSettled([
+        // ✅ Ejecutar siempre las dos principales
+        const [achievementsResult, messageResult] = await Promise.allSettled([
             achievements.checkAchievements(userId),
-            missions.updateMissionProgress(userId, 'message'),
-            mentionsCount > 0 ? missions.updateMissionProgress(userId, 'mention_made', mentionsCount) : []
+            missions.updateMissionProgress(userId, 'message')
         ]);
+        
+        // ✅ Ejecutar menciones por separado si es necesario
+        let mentionResult = { status: 'fulfilled', value: [] };
+        if (mentionsCount > 0) {
+            console.log(`👥 Procesando ${mentionsCount} menciones para ${userId}`); // ← Debug
+            mentionResult = await Promise.allSettled([
+                missions.updateMissionProgress(userId, 'mention_made', mentionsCount)
+            ]).then(results => results[0]);
+        }
         
         // Procesar solo resultados exitosos
         const newAchievements = achievementsResult.status === 'fulfilled' ? achievementsResult.value : [];
@@ -742,6 +751,11 @@ async function processUserActivityOptimized(userId, message) {
             ...(messageResult.status === 'fulfilled' ? messageResult.value : []),
             ...(mentionResult.status === 'fulfilled' ? mentionResult.value : [])
         ];
+
+        // ✅ AGREGAR debug
+        if (mentionsCount > 0) {
+            console.log(`📊 Resultado menciones:`, mentionResult);
+        }
         
         // Notificaciones (sin await para no bloquear)
         if (newAchievements.length > 0) {
