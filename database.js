@@ -88,7 +88,7 @@ class LocalDatabase {
                     opponent TEXT NOT NULL,
                     amount INTEGER DEFAULT 0,
                     description TEXT,
-                    status TEXT DEFAULT 'pending',
+                    status TEXT,
                     expires_at BIGINT DEFAULT NULL,
                     channel_id TEXT DEFAULT NULL
                 )
