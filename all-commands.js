@@ -366,6 +366,14 @@ class AllCommands {
             await message.reply('❌ La cantidad mínima a transferir es 10 π-b Coins.');
             return;
         }
+
+        // AÑADIR esto:
+        const targetUserData = await this.economy.getUser(targetUser.id);
+        if (targetUserData.balance + amount > this.economy.config.maxBalance) {
+            const spaceLeft = this.economy.config.maxBalance - targetUserData.balance;
+            await message.reply(`❌ ${targetUser.displayName} alcanzaría el límite máximo de 10M π-b$. Solo puedes enviar ${this.formatNumber(spaceLeft)} π-b$ más.`);
+            return;
+        }
         
         // Realizar transferencia
         const userBalance = await this.economy.getUser(message.author.id);
@@ -553,6 +561,13 @@ class AllCommands {
         const amount = parseInt(args[2]);
         if (isNaN(amount) || amount <= 0) {
             await message.reply('❌ La cantidad debe ser un número positivo.');
+            return;
+        }
+
+        const targetUserData = await this.economy.getUser(targetUser.id);
+        if (targetUserData.balance + amount > this.economy.config.maxBalance) {
+            const spaceLeft = this.economy.config.maxBalance - targetUserData.balance;
+            await message.reply(`❌ El usuario alcanzaría el límite máximo. Solo puedes agregar ${this.formatNumber(spaceLeft)} π-b$ más.`);
             return;
         }
 
