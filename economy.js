@@ -603,20 +603,6 @@ class EconomySystem {
             const completedMissions = await this.missions.updateMissionProgress(userId, 'daily_claimed');
             // No notificar aquí porque se hace desde el comando
         }
-
-        // Verificar tesoros al final
-        for (const event of this.events.getActiveEvents()) {
-            if (event.type === 'treasure_hunt') {
-                const treasures = await this.events.checkSpecialEvents(userId, 'general');
-                    
-                for (const treasure of treasures) {
-                    if (treasure.type === 'treasure') {
-                        message.reply(`🗺️ **¡Tesoro encontrado!**\n${treasure.description}`);
-                    }
-                }
-                break;
-            }
-        }   
         
         return {
             success: true,
@@ -962,23 +948,8 @@ class EconomySystem {
             const completedMissions = await this.missions.updateMissionProgress(userId, 'work');
             const moneyMissions = await this.missions.updateMissionProgress(userId, 'money_earned_today', amount);
             // Las notificaciones se manejan desde los comandos
-        }
+        }            
 
-            // Verificar tesoros al final
-            for (const event of this.events.getActiveEvents()) {
-                if (event.type === 'treasure_hunt') {
-                    const treasures = await this.events.checkSpecialEvents(userId, 'general');
-                    
-                    for (const treasure of treasures) {
-                        if (treasure.type === 'treasure') {
-                            message.reply(`🗺️ **¡Tesoro encontrado!**\n${treasure.description}`);
-                        }
-                    }
-                    break;
-                }
-            }            
-
-        
         return {
             success: true,
             amount: amount,
