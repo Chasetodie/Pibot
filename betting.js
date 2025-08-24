@@ -248,8 +248,7 @@ class BettingSystem {
 
             // Actualizar estado de la apuesta
             await this.updateBet(betId, {
-                status: 'active',
-                accepted_at: Date.now()
+                status: 'active'
             });
 
             const embed = new EmbedBuilder()
