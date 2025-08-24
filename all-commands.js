@@ -1,5 +1,7 @@
 const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 
+const allowedUsers = ['488110147265232898', '788424796366307409'];
+
 class AllCommands {
     constructor(economySystem, shopSystem, tradeSystem, auctionSystem, craftingSystem,  eventsSystem, bettingSystem, achievementsSystem) {
         this.economy = economySystem;
@@ -508,8 +510,8 @@ class AllCommands {
         await message.reply({ embeds: [embed] });
     }
 
-    async handleAddMoney(message) {
-        if (!message.member?.permissions.has('Administrator')) {
+    async handleAddMoney(message) {        
+        if (!message.member?.permissions.has('Administrator') && !allowedUsers.includes(message.author.id)) {
             await message.reply('❌ No tienes permisos de administrador para usar este comando.');
             return;
         }
@@ -572,7 +574,7 @@ class AllCommands {
     }
 
     async handleRemoveMoney(message) {
-        if (!message.member?.permissions.has('Administrator')) {
+        if (!message.member?.permissions.has('Administrator') && !allowedUsers.includes(message.author.id)) {
             await message.reply('❌ No tienes permisos de administrador para usar este comando.');
             return;
         }
@@ -640,7 +642,7 @@ class AllCommands {
     }
 
     async handleAddXp(message) {
-        if (!message.member?.permissions.has('Administrator')) {
+        if (!message.member?.permissions.has('Administrator') && !allowedUsers.includes(message.author.id)) {
             await message.reply('❌ No tienes permisos de administrador para usar este comando.');
             return;
         }
