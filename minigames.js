@@ -2612,7 +2612,7 @@ class MinigamesSystem {
                 }
             }     
 
-            const userData = await this.economy.getUser(userId);
+            const userData = await this.economy.getUser(winner.id);
             if (userData.balance + finalEarnings > this.economy.config.maxBalance) {
                 const spaceLeft = this.economy.config.maxBalance - userData.balance;
                 finalEarnings = Math.min(finalEarnings, spaceLeft);
@@ -3915,7 +3915,7 @@ class MinigamesSystem {
             }
         }        
 
-        const userData = await this.economy.getUser(userId);
+        const userData = await this.economy.getUser(winnerId);
         if (userData.balance + finalEarnings > this.economy.config.maxBalance) {
             const spaceLeft = this.economy.config.maxBalance - userData.balance;
             finalEarnings = Math.min(finalEarnings, spaceLeft);
