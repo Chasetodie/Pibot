@@ -722,10 +722,12 @@ class MissionsSystem {
                         finalEarnings = Math.min(finalEarnings, spaceLeft);
                     }
                     
-                    updateData.balance = user.balance + finalEarnings;
+                    const addResult = await this.economy.addMoney(userId, finalEarnings, 'mission_reward');
+                    updateData.balance = addResult.newBalance;
+                    finalEarnings = addResult.actualAmount;
+                    
                     updateData.stats = {
                         ...user.stats,
-                        totalEarned: (user.stats.totalEarned || 0) + finalEarnings,
                         message_missions: eventMessage
                     };
                 }
