@@ -194,10 +194,6 @@ class AllCommands {
                 .setFooter({ text: 'Vuelve mañana para más π-b Coins!' });
 
             await message.reply({ embeds: [embed] });
-            // AÑADIR ESTO:
-            if (result.hitLimit) {
-                await message.reply(`⚠️ **Límite alcanzado:** No pudiste recibir todo el dinero porque tienes el máximo permitido (${this.formatNumber(this.economy.config.maxBalance)} π-b$).`);
-            }
             return;
         }
         
@@ -227,6 +223,10 @@ class AllCommands {
             .setTimestamp();
         
         await message.reply({ embeds: [embed] });
+            // AÑADIR ESTO:
+            if (result.hitLimit) {
+                await message.reply(`⚠️ **Límite alcanzado:** No pudiste recibir todo el dinero porque tienes el máximo permitido (${this.formatNumber(this.economy.config.maxBalance)} π-b$).`);
+            }
     
         // *** NUEVO: VERIFICAR ACHIEVEMENTS DESPUÉS DEL DAILY ***
         if (this.achievements) {
@@ -247,6 +247,20 @@ class AllCommands {
                 await this.economy.missions.notifyCompletedMissions(message, completedMissions);
             }
         }
+
+            // Verificar tesoros al final
+            for (const event of this.events.getActiveEvents()) {
+                if (event.type === 'treasure_hunt') {
+                    const treasures = await this.events.checkSpecialEvents(userId, 'general');
+                    
+                    for (const treasure of treasures) {
+                        if (treasure.type === 'treasure') {
+                            message.reply(`🗺️ **¡Tesoro encontrado!**\n${treasure.description}`);
+                        }
+                    }
+                    break;
+                }
+            }
     }
 
     // Comando !level - Ver información detallada de nivel
@@ -922,6 +936,20 @@ class AllCommands {
                 await this.economy.missions.notifyCompletedMissions(message, allCompleted);
             }
         }
+
+            // Verificar tesoros al final
+            for (const event of this.events.getActiveEvents()) {
+                if (event.type === 'treasure_hunt') {
+                    const treasures = await this.events.checkSpecialEvents(userId, 'general');
+                    
+                    for (const treasure of treasures) {
+                        if (treasure.type === 'treasure') {
+                            message.reply(`🗺️ **¡Tesoro encontrado!**\n${treasure.description}`);
+                        }
+                    }
+                    break;
+                }
+            }
     }    
 
     async handleRobberyCommand(message, args) {
