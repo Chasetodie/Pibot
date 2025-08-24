@@ -623,24 +623,15 @@ class MissionsSystem {
                 break;
                 
             case 'successful_robbery':
-                updateData.daily_stats = {
-                    ...user.daily_stats,
-                    successful_robberies_today: (user.daily_stats.successful_robberies_today || 0) + 1
-                };
+                updateData.daily_stats.successful_robberies_today = (user.daily_stats.successful_robberies_today || 0) + 1;
                 break;
                 
             case 'daily_claimed':
-                updateData.daily_stats = {
-                    ...user.daily_stats,
-                    daily_claimed_today: true
-                };
+                updateData.daily_stats.daily_claimed_today = true;
                 break;
-                
+
             case 'mention_made':
-                updateData.daily_stats = {
-                    ...user.daily_stats,
-                    mentions_made_today: (user.daily_stats.mentions_made_today || 0) + 1
-                };
+                updateData.daily_stats.mentions_made_today = (user.daily_stats.mentions_made_today || 0) + 1;
                 break;
         }
        
