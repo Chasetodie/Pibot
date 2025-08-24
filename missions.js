@@ -589,10 +589,6 @@ class MissionsSystem {
             }
         }
 
-        console.log(`🔍 Debug ${userId}: actionType=${actionType}, value=${value}`);
-        console.log(`📊 Daily stats:`, user.daily_stats);
-        console.log(`🎯 Daily missions:`, user.daily_missions);        
-
         if (maxChecks <= 0) {
             console.log(`⚠️ Límite de verificaciones alcanzado para ${userId}`);
             return [];
@@ -891,39 +887,13 @@ class MissionsSystem {
     // ✅ NUEVA FUNCIÓN: Calcular tiempo hasta el próximo reset
     getTimeUntilMissionReset() {
         const now = new Date();
+        const ecuadorTime = new Date(now.getTime() + (now.getTimezoneOffset() * 60000) + (-5 * 3600000));
         
-        // Obtener tiempo actual en Ecuador (UTC-5)
-        const ecuadorOffset = -5;
-        const ecuadorTime = new Date(now.getTime() - (ecuadorOffset * 60 * 60 * 1000));
+        // Horas hasta medianoche
+        const hoursUntilMidnight = 23 - ecuadorTime.getHours();
+        const minutesUntilMidnight = 59 - ecuadorTime.getMinutes();
         
-        // Calcular próxima medianoche en Ecuador
-        const nextMidnight = new Date(ecuadorTime);
-        nextMidnight.setDate(nextMidnight.getDate() + 1); // Siguiente día
-        nextMidnight.setHours(0, 0, 0, 0); // 00:00:00
-        
-        // Convertir la próxima medianoche de Ecuador a UTC para comparar
-        const nextMidnightUTC = new Date(nextMidnight.getTime() + (ecuadorOffset * 60 * 60 * 1000));
-        
-        // Calcular diferencia
-        const timeDifference = nextMidnightUTC.getTime() - now.getTime();
-
-        if (timeDifference < 0) {
-            return `Menos de 1m`;
-        }
-        
-        // Convertir a horas y minutos
-        const totalMinutes = Math.floor(timeDifference / (1000 * 60));
-        const hours = Math.floor(totalMinutes / 60);
-        const minutes = totalMinutes % 60;
-        
-        // Formatear mensajereturn `Menos de 1m`;
-        if (hours > 0) {
-            return `${hours}h ${minutes}m`;
-        } else if (minutes > 0) {
-            return `${minutes}m`;
-        } else {
-            return `Menos de 1m`;
-        }
+        return `${hoursUntilMidnight}h ${minutesUntilMidnight}m`;
     }
     
     // Crear barra de progreso
