@@ -588,6 +588,11 @@ class AchievementsSystem {
                         }
                     }
 
+                    if (user.balance + finalEarnings > this.economy.config.maxBalance) {
+                        const spaceLeft = this.economy.config.maxBalance - user.balance;
+                        finalEarnings = Math.min(finalEarnings, spaceLeft);
+                    }
+
                     updateData.balance = user.balance + finalEarnings;
                     updateData.stats = {
                         ...user.stats,
