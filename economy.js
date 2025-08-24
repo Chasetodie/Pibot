@@ -156,6 +156,8 @@ class EconomySystem {
         const user = await this.getUser(userId);
 
         const newBalance = Math.min(user.balance + amount, this.config.maxBalance);
+        const actualAmount = newBalance - user.balance;
+        
         const updateData = {
             balance: newBalance,
             stats: {
@@ -163,11 +165,19 @@ class EconomySystem {
                 totalEarned: (user.stats.totalEarned || 0) + amount
             }
         }
+
+        if (actualAmount < amount) {
+            console.log(`💰 Usuario ${userId} alcanzó límite: quería ${amount}, solo se agregó ${actualAmount}`);
+        }        
         
-        console.log(`💰 +${amount} ${this.config.currencySymbol} para ${userId} (${reason})`);
+        //console.log(`💰 +${amount} ${this.config.currencySymbol} para ${userId} (${reason})`);
         await this.updateUser(userId, updateData);
        
-        return user.balance;
+        return {
+            newBalance,
+            actualAmount,
+            hitLimit: actualAmount < amount
+        };
     }
 
     // Quitar dinero a un usuario
@@ -570,13 +580,13 @@ class EconomySystem {
                 break;
             }
         }
+
+        const addResult = await this.addMoney(userId, finalEarnings, 'daily_reward');
               
         const updateData = {
             last_daily: Date.now(),
-            balance: user.balance + finalEarnings,
             stats: {
                 ...user.stats,
-                totalEarned: user.stats.totalEarned + finalEarnings,
                 dailyClaims: user.stats.dailyClaims + 1
             }
         }
@@ -611,10 +621,11 @@ class EconomySystem {
         return {
             success: true,
             amount: amount,
-            oldBalance: user.balance - finalEarnings,
-            newBalance: user.balance,
+            oldBalance: user.balance,
+            newBalance: addResult.newBalance,
             eventMessage: eventMessage,
-            finalEarnings: finalEarnings,
+            finalEarnings: addResult.actualAmount,
+            hitLimit: addResult.hitLimit
         };
     }
 
@@ -942,9 +953,8 @@ class EconomySystem {
             }
         }
         
-        updateData.balance = user.balance + finalEarnings;
-        updateData.stats.totalEarned = (user.stats?.totalEarned || 0) + finalEarnings;
-        
+        const addResult = await this.addMoney(userId, finalEarnings, 'work_reward');
+
         await this.updateUser(userId, updateData); // ← Reemplaza saveUsers()
         
         // *** NUEVO: ACTUALIZAR MISIONES ***
@@ -973,11 +983,12 @@ class EconomySystem {
             success: true,
             amount: amount,
             message: message,
-            oldBalance: user.balance - finalEarnings,
-            newBalance: user.balance,
+            oldBalance: user.balance,
+            newBalance: addResult.newBalance,
             jobName: job.name,
             eventMessage: eventMessage,
-            finalEarnings: finalEarnings,
+            finalEarnings: addResult.actualAmount,
+            hitLimit: addResult.hitLimit,
 
             canWork: canWorkResult.canWork,
             reason: canWorkResult.reason,
@@ -1037,6 +1048,14 @@ isBeingRobbed(userId) {
                 reason: 'target_too_poor', 
                 minBalance: this.robberyConfig.minTargetBalance 
             };
+        }
+
+        if (robber.balance >= this.config.maxBalance) {
+            return {
+                canRob: false,
+                reason: 'robber_rich',
+                maxBalance: this.config.maxBalance
+            }
         }
 
         const protection = await this.shop.isProtectedFromTheft(targetId);
@@ -1272,12 +1291,12 @@ isBeingRobbed(userId) {
                     console.log(`⚠️ Cantidad robada es 0, target muy pobre`);
                     return { success: false, reason: 'target_too_poor_now' };
                 }
+
+                const addResult = await this.addMoney(robberId, stolenAmount, 'rob_reward');
                 
                 // Actualizar balances
-                robberUpdateData.balance = robber.balance + stolenAmount;
                 robberUpdateData.stats = {
                     ...robber.stats,
-                    totalEarned: (robber.stats.totalEarned || 0) + stolenAmount,
                     robberies_successful: (robber.stats.robberies_successful || 0) + 1,
                     moneyStolen: (robber.stats.moneyStolen || 0) + stolenAmount,
                 };                
@@ -1310,11 +1329,12 @@ isBeingRobbed(userId) {
                     maxClicks: this.robberyConfig.maxClicks,
                     efficiency: Math.round(clickEfficiency * 100),
                     robberOldBalance: robber.balance,
-                    robberNewBalance: robber.balance + stolenAmount,
+                    robberNewBalance: addResult.newBalance,
                     targetOldBalance: target.balance,
                     targetNewBalance: Math.max(0, target.balance - stolenAmount),
                     targetId: robberyData.targetId,
-                    stealPercentage: Math.round(stealPercentage * 100)
+                    stealPercentage: Math.round(stealPercentage * 100),
+                    hitLimit: addResult.hitLimit
                 };
                 
             } else {
