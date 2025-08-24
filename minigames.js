@@ -343,6 +343,12 @@ class MinigamesSystem {
                     eventMessage = `🎉 **Aniversario del Servidor** (+${finalEarnings - profit} π-b$)`
                 }
             }
+
+            const userData = await this.economy.getUser(userId);
+            if (userData.balance + finalEarnings > this.economy.config.maxBalance) {
+                const spaceLeft = this.economy.config.maxBalance - userData.balance;
+                finalEarnings = Math.min(finalEarnings, spaceLeft);
+            }
             
             await this.economy.addMoney(userId, finalEarnings, 'coinflip_win');            
             await this.economy.updateUser(userId, updateData);
@@ -587,6 +593,12 @@ class MinigamesSystem {
                     eventMessage = `🎉 **Aniversario del Servidor** (+${finalEarnings - profit} π-b$)`
                 }
             }
+
+            const userData = await this.economy.getUser(userId);
+            if (userData.balance + finalEarnings > this.economy.config.maxBalance) {
+                const spaceLeft = this.economy.config.maxBalance - userData.balance;
+                finalEarnings = Math.min(finalEarnings, spaceLeft);
+            }
                        
             await this.economy.addMoney(userId, finalEarnings, 'dice_win');
             await this.economy.updateUser(userId, updateData);
@@ -813,6 +825,12 @@ class MinigamesSystem {
                     finalEarnings = Math.floor(profit * 2);
                     eventMessage = `🎉 **Aniversario del Servidor** (+${finalEarnings - profit} π-b$)`
                 }
+            }
+
+            const userData = await this.economy.getUser(userId);
+            if (userData.balance + finalEarnings > this.economy.config.maxBalance) {
+                const spaceLeft = this.economy.config.maxBalance - userData.balance;
+                finalEarnings = Math.min(finalEarnings, spaceLeft);
             }
             
             await this.economy.addMoney(userId, finalEarnings, 'lottery_win');     
@@ -1280,6 +1298,12 @@ class MinigamesSystem {
                     }
                 }
 
+                const userData = await this.economy.getUser(userId);
+                if (userData.balance + finalEarnings > this.economy.config.maxBalance) {
+                    const spaceLeft = this.economy.config.maxBalance - userData.balance;
+                    finalEarnings = Math.min(finalEarnings, spaceLeft);
+                }
+
                 await this.economy.addMoney(userId, finalEarnings, 'blackjack_win');
 
                 // *** NUEVO: ACTUALIZAR ESTADÍSTICAS DE ACHIEVEMENTS ***
@@ -1320,6 +1344,12 @@ class MinigamesSystem {
                         finalEarnings = Math.floor(profit * 2);
                         eventMessage = `🎉 **Aniversario del Servidor** (+${finalEarnings - profit} π-b$)`
                     }
+                }
+
+                const userData = await this.economy.getUser(userId);
+                if (userData.balance + finalEarnings > this.economy.config.maxBalance) {
+                    const spaceLeft = this.economy.config.maxBalance - userData.balance;
+                    finalEarnings = Math.min(finalEarnings, spaceLeft);
                 }
                 
                 await this.economy.addMoney(userId, finalEarnings, 'blackjack_win');
@@ -1682,6 +1712,12 @@ class MinigamesSystem {
                     finalEarnings = Math.floor(profit * 2);
                     eventMessage = `🎉 **Aniversario del Servidor** (+${finalEarnings - profit} π-b$)`
                 }
+            }
+
+            const userData = await this.economy.getUser(userId);
+            if (userData.balance + finalEarnings > this.economy.config.maxBalance) {
+                const spaceLeft = this.economy.config.maxBalance - userData.balance;
+                finalEarnings = Math.min(finalEarnings, spaceLeft);
             }
             
             await this.economy.addMoney(userId, finalEarnings, 'roulette_win');
@@ -2545,6 +2581,12 @@ class MinigamesSystem {
                     eventMessage = `🎉 **Aniversario del Servidor** (+${finalEarnings - profit} π-b$)`
                 }
             }     
+
+            const userData = await this.economy.getUser(userId);
+            if (userData.balance + finalEarnings > this.economy.config.maxBalance) {
+                const spaceLeft = this.economy.config.maxBalance - userData.balance;
+                finalEarnings = Math.min(finalEarnings, spaceLeft);
+            }
             
             await this.economy.addMoney(winner.id, finalEarnings, 'russian_roulette_win');
             
@@ -3837,6 +3879,12 @@ class MinigamesSystem {
                 eventMessage = `🎉 **Aniversario del Servidor** (+${finalEarnings - winnings} π-b$)`
             }
         }        
+
+        const userData = await this.economy.getUser(userId);
+        if (userData.balance + finalEarnings > this.economy.config.maxBalance) {
+            const spaceLeft = this.economy.config.maxBalance - userData.balance;
+            finalEarnings = Math.min(finalEarnings, spaceLeft);
+        }
 
         await this.economy.addMoney(winnerId, finalEarnings, 'uno_win');
 
