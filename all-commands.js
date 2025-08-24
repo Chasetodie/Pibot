@@ -1,6 +1,6 @@
 const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 
-const allowedUsers = ['488110147265232898', '788424796366307409'];
+const allowedUsers = ['488110147265232898', '788424796366307409', '1402028858223362238'];
 
 class AllCommands {
     constructor(economySystem, shopSystem, tradeSystem, auctionSystem, craftingSystem,  eventsSystem, bettingSystem, achievementsSystem) {
