@@ -80,6 +80,20 @@ class LocalDatabase {
                 )
             `);
 
+            // Tabla para apuestas
+            await this.pool.execute(`
+                CREATE TABLE IF NOT EXISTS bets (
+                    id VARCHAR(255) PRIMARY KEY,
+                    challenger TEXT NOT NULL,
+                    opponent TEXT NOT NULL,
+                    amount INTEGER DEFAULT 0,
+                    description TEXT,
+                    status TEXT DEFAULT 'pending',
+                    expires_at BIGINT DEFAULT NULL,
+                    channel_id TEXT DEFAULT NULL
+                )
+            `);            
+
             await this.pool.execute(`
                 CREATE TABLE IF NOT EXISTS russian_games (
                     id VARCHAR(255) PRIMARY KEY,
@@ -843,6 +857,89 @@ class LocalDatabase {
             return { id: eventData.id };
         } catch (error) {
             console.error('❌ Error creando evento:', error);
+            throw error;
+        }
+    }
+
+    async createBet(betData) {
+        try {
+            await this.pool.execute(`
+                INSERT INTO bets (
+                    id, challenger, opponent, amount, description,
+                    status, expires_at, channel_id
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            `, [
+                betData.id,
+                betData.challenger,
+                betData.opponent,
+                betData.amount,
+                JSON.stringify({ bet_description: betData.description }),
+                betData.status || 'pending',
+                betData.expires_at,
+                betData.channel_id
+            ]);
+            
+            return { id: betData.id };
+        } catch (error) {
+            console.error('❌ Error creando apuesta:', error);
+            throw error;
+        }
+    }
+
+    async getUserBets(userId) {
+        try {
+            const [rows] = await this.pool.execute(`
+                SELECT * FROM bets 
+                WHERE (challenger = ? OR opponent = ?) 
+                AND status IN ('pending', 'active')
+                AND amount LIKE '%bet_description%'
+            `, [userId, userId]);
+            
+            return rows.map(row => ({
+                id: row.id,
+                challenger: row.challenger,
+                opponent: row.opponent,
+                amount: row.amount,
+                description: this.safeJsonParse(row.amount, {}).bet_description || 'Sin descripción',
+                status: row.status,
+                expires_at: row.expires_at,
+                channel_id: row.channel_id
+            }));
+        } catch (error) {
+            console.error('❌ Error obteniendo apuestas del usuario:', error);
+            return [];
+        }
+    }
+
+    async getBet(betId) {
+        try {
+            const [rows] = await this.pool.execute(
+                'SELECT * FROM bets WHERE id = ?', 
+                [betId]
+            );
+
+            if (rows.length > 0) {
+                const bet = rows[0];
+                bet.description = this.safeJsonParse(trade.initiator_offer, {}).bet_description || 'Sin descripción';
+                return bet;
+            }
+            return null;
+        } catch (error) {
+            console.error('❌ Error obteniendo apuesta:', error);
+            return null;
+        }
+    }
+
+    async deleteBet(betId) {
+        try {
+            const [result] = await this.pool.execute(
+                'DELETE FROM bets WHERE id = ?', 
+                [betId]
+            );
+            
+            return { changes: result.affectedRows };
+        } catch (error) {
+            console.error('❌ Error eliminando apuesta:', error);
             throw error;
         }
     }
