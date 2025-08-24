@@ -389,6 +389,10 @@ class MinigamesSystem {
                     { name: '💳 Balance Actual', value: `${this.formatNumber(user.balance)} π-b$`, inline: false },
                     { name: '🎉 Extra por Eventos', value: `${finalMessage || "No hay eventos Activos"} `, inline: false }
                 );
+
+            if (addResult.hitLimit) {
+                await message.reply(`⚠️ **Límite alcanzado:** No pudiste recibir todo el dinero porque tienes el máximo permitido (${this.formatNumber(this.economy.config.maxBalance)} π-b$).`);
+            }
         } else {
             await this.economy.removeMoney(userId, betAmount, 'coinflip_loss');            
             await this.economy.updateUser(userId, updateData);
@@ -425,10 +429,6 @@ class MinigamesSystem {
         }   
 
         await message.reply({ embeds: [embed] });
-
-        if (addResult.hitLimit) {
-            await message.reply(`⚠️ **Límite alcanzado:** No pudiste recibir todo el dinero porque tienes el máximo permitido (${this.formatNumber(this.economy.config.maxBalance)} π-b$).`);
-        }
     }
 
     async canDice(userId) {
@@ -643,6 +643,9 @@ class MinigamesSystem {
                     { name: '💳 Balance Actual', value: `${this.formatNumber(user.balance)} π-b$`, inline: false },
                     { name: '🎉 Extra por Eventos', value: `${finalMessage || "No hay eventos Activos"} `, inline: false }
                 );
+            if (addResult.hitLimit) {
+                await message.reply(`⚠️ **Límite alcanzado:** No pudiste recibir todo el dinero porque tienes el máximo permitido (${this.formatNumber(this.economy.config.maxBalance)} π-b$).`);
+            }
         } else {
             await this.economy.removeMoney(userId, betAmount, 'dice_loss');
             await this.economy.updateUser(userId, updateData);
@@ -677,10 +680,6 @@ class MinigamesSystem {
         }   
 
         await message.reply({ embeds: [embed] });
-
-        if (addResult.hitLimit) {
-            await message.reply(`⚠️ **Límite alcanzado:** No pudiste recibir todo el dinero porque tienes el máximo permitido (${this.formatNumber(this.economy.config.maxBalance)} π-b$).`);
-        }
     }
 
     async canLottery(userId) {
@@ -891,6 +890,9 @@ class MinigamesSystem {
                     { name: '💳 Balance Actual', value: `${this.formatNumber(user.balance)} π-b$ 🚀`, inline: false },
                     { name: '🎉 Extra por Eventos', value: `${finalMessage || "No hay eventos Activos"} `, inline: false }
                 );
+            if (addResult.hitLimit) {
+                await message.reply(`⚠️ **Límite alcanzado:** No pudiste recibir todo el dinero porque tienes el máximo permitido (${this.formatNumber(this.economy.config.maxBalance)} π-b$).`);
+            }
         } else {
             await this.economy.removeMoney(userId, betAmount, 'lottery_loss');
             await this.economy.updateUser(userId, updateData);
@@ -940,10 +942,6 @@ class MinigamesSystem {
         }   
     
         await reply.edit({ embeds: [resultEmbed] });
-
-        if (addResult.hitLimit) {
-            await message.reply(`⚠️ **Límite alcanzado:** No pudiste recibir todo el dinero porque tienes el máximo permitido (${this.formatNumber(this.economy.config.maxBalance)} π-b$).`);
-        }
     }
 
     async canBlackJack(userId) {
@@ -1793,7 +1791,11 @@ class MinigamesSystem {
                     value: '¡Increíble suerte! Acertaste el número exacto.', 
                     inline: false 
                 });
-            }          
+            } 
+
+            if (addResult.hitLimit) {
+                await message.reply(`⚠️ **Límite alcanzado:** No pudiste recibir todo el dinero porque tienes el máximo permitido (${this.formatNumber(this.economy.config.maxBalance)} π-b$).`);
+            }
         } else {
             await this.economy.removeMoney(userId, betAmount, 'roulette_loss');
             await this.economy.updateUser(userId, updateData);
@@ -1841,10 +1843,6 @@ class MinigamesSystem {
         }  
 
         await reply.edit({ embeds: [resultEmbed] });
-
-        if (addResult.hitLimit) {
-            await message.reply(`⚠️ **Límite alcanzado:** No pudiste recibir todo el dinero porque tienes el máximo permitido (${this.formatNumber(this.economy.config.maxBalance)} π-b$).`);
-        }
     }
     
     // Métodos auxiliares para la ruleta
@@ -2662,6 +2660,10 @@ class MinigamesSystem {
                     { name: '🔫 Bala Estaba En', value: `Disparo ${game.bullet_position}/6`, inline: true },
                     { name: '🎉 Extra por Eventos', value: `${eventMessage || "No hay eventos Activos"} `, inline: false }
                 );
+
+            if (addResult.hitLimit) {
+                await channel.send(`⚠️ **Límite alcanzado para ${winner.id}:** No pudiste recibir todo el dinero porque tienes el máximo permitido (${this.formatNumber(this.economy.config.maxBalance)} π-b$).`);
+            }
         } else {
             // Todos murieron (teóricamente imposible, pero por seguridad)
             embed.setTitle('💀 ¡TODOS ELIMINADOS!')
@@ -2681,10 +2683,6 @@ class MinigamesSystem {
             await this.deleteRussianGame(`russian_${game.channel_id}`);
             const channel = await client.channels.fetch(game.channel_id);
             await channel.send({ embeds: [embed] });
-
-            if (addResult.hitLimit) {
-                await channel.send(`⚠️ **Límite alcanzado para ${winner.id}:** No pudiste recibir todo el dinero porque tienes el máximo permitido (${this.formatNumber(this.economy.config.maxBalance)} π-b$).`);
-            }
         } catch (error) {
             console.error('Error actualizando mensaje final del juego:', error);
         }
