@@ -416,6 +416,11 @@ class BettingSystem {
         const loserId = winner === 'challenger' ? bet.opponent : bet.challenger;
 
         // Dar premio al ganador
+        const winnerData = await this.economy.getUser(winnerId);
+        if (winnerData.balance + winnerAmount > this.economy.config.maxBalance) {
+            const spaceLeft = this.economy.config.maxBalance - winnerData.balance;
+            winnerAmount = Math.min(winnerAmount, spaceLeft);
+        }
         await this.economy.addMoney(winnerId, winnerAmount, 'bet_win');
         
         // Actualizar estadísticas
