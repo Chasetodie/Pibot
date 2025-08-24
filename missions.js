@@ -386,7 +386,17 @@ class MissionsSystem {
     
     // Verificar si es hora de resetear misiones (12 PM)
     shouldResetMissions(user) {
-        return this.isNewDay(user.daily_missions_date); // Mismo día, no resetear
+        const today = this.getCurrentDay();
+        const userLastReset = user.daily_missions_date;
+        
+        // ✅ AGREGAR logs para debug
+        console.log(`🔍 Reset check - Today: ${today}, User last reset: ${userLastReset}`);
+        
+        // Si es diferente día, necesita reset
+        const needsReset = !userLastReset || userLastReset !== today;
+        console.log(`📅 Needs reset: ${needsReset}`);
+        
+        return needsReset;
     }
 
     startDailyReset() {
@@ -441,6 +451,10 @@ class MissionsSystem {
         
         // Si no hay caché, obtener de DB normalmente
         const user = await this.economy.getUser(userId);
+
+        console.log(`👤 User ${userId} - Last reset: ${user.daily_missions_date}`);
+        console.log(`📅 Current day: ${this.getCurrentDay()}`);
+        console.log(`🔄 Should reset: ${this.shouldResetMissions(user)}`);
 
         // Resetear bandera si es necesario
         const flagReset = this.resetDailyFlag(user);
@@ -567,6 +581,10 @@ class MissionsSystem {
             }
         }
 
+        console.log(`🔍 Debug ${userId}: actionType=${actionType}, value=${value}`);
+        console.log(`📊 Daily stats:`, user.daily_stats);
+        console.log(`🎯 Daily missions:`, user.daily_missions);        
+
         if (maxChecks <= 0) {
             console.log(`⚠️ Límite de verificaciones alcanzado para ${userId}`);
             return [];
@@ -634,6 +652,8 @@ class MissionsSystem {
                 updateData.daily_stats.mentions_made_today = (user.daily_stats.mentions_made_today || 0) + 1;
                 break;
         }
+
+        console.log(`📝 UpdateData:`, updateData);
        
         // Verificar progreso de cada misión
         for (const [missionId, status] of Object.entries(user.daily_missions)) {
@@ -731,6 +751,7 @@ class MissionsSystem {
 
         // Actualizar base de datos
         await this.economy.updateUser(userId, updateData);   
+        Object.assign(user, updateData);
         
         // Actualizar caché con los nuevos datos
         const updatedUser = { ...user, ...updateData};
