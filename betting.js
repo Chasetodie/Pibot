@@ -215,7 +215,7 @@ class BettingSystem {
             const [rows] = await this.db.pool.execute(`
                 SELECT * FROM bets 
                 WHERE challenger = ? AND opponent = ? AND status = 'pending'
-                AND amount = ?'
+                AND amount = ?
             `, [challengerUser.id, opponentId]);
 
             if (!rows || rows.length === 0) {
