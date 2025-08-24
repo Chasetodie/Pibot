@@ -892,7 +892,6 @@ class LocalDatabase {
                 SELECT * FROM bets 
                 WHERE (challenger = ? OR opponent = ?) 
                 AND status IN ('pending', 'active')
-                AND amount = ?
             `, [userId, userId]);
             
             return rows.map(row => ({
