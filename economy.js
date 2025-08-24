@@ -22,7 +22,8 @@ class EconomySystem {
             dailyVariation: 1500, // Variación del daily
             levelUpReward: 50, // π-b Coins por subir de nivel
             xpPerLevel: 100,   // XP base necesaria para nivel 1
-            levelMultiplier: 1.5 // Multiplicador de XP por nivel
+            levelMultiplier: 1.5, // Multiplicador de XP por nivel
+            maxBalance: 10000000, // Limite de 10 millones
         };
         
         this.userCooldowns = new Map(); // Para controlar cooldowns de XP
@@ -154,8 +155,9 @@ class EconomySystem {
     async addMoney(userId, amount, reason = 'unknown') {
         const user = await this.getUser(userId);
 
+        const newBalance = Math.min(user.balance + amount, this.config.maxBalance);
         const updateData = {
-            balance: user.balance + amount,
+            balance: newBalance,
             stats: {
                 ...user.stats,
                 totalEarned: (user.stats.totalEarned || 0) + amount
