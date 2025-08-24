@@ -396,11 +396,13 @@ class AchievementsSystem {
                             eventMessage = `🎉 **Aniversario del Servidor** (+${finalEarnings - achievement.reward.money} π-b$)`
                         }
                     }
-
-                    updateData.balance = user.balance + finalEarnings;
+                    
+                    const addResult = await this.economy.addMoney(userId, finalEarnings, 'achievement_reward');
+                    updateData.balance = addResult.newBalance;
+                    finalEarnings = addResult.actualAmount;
+                    
                     updateData.stats = {
                         ...user.stats,
-                        totalEarned: (user.stats.totalEarned || 0) + finalEarnings,
                         message_achievements: eventMessage
                     };
                 }
