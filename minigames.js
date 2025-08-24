@@ -350,7 +350,9 @@ class MinigamesSystem {
                 finalEarnings = Math.min(finalEarnings, spaceLeft);
             }
             
-            await this.economy.addMoney(userId, finalEarnings, 'coinflip_win');            
+            const addResult = await this.economy.addMoney(userId, finalEarnings, 'coinflip_win');
+            finalEarnings = addResult.actualAmount; // Usar cantidad real
+            
             await this.economy.updateUser(userId, updateData);
 
             // *** NUEVO: ACTUALIZAR ESTADÍSTICAS DE ACHIEVEMENTS ***
@@ -423,6 +425,10 @@ class MinigamesSystem {
         }   
 
         await message.reply({ embeds: [embed] });
+
+        if (addResult.hitLimit) {
+            await message.reply(`⚠️ **Límite alcanzado:** No pudiste recibir todo el dinero porque tienes el máximo permitido (${this.formatNumber(this.economy.config.maxBalance)} π-b$).`);
+        }
     }
 
     async canDice(userId) {
@@ -600,7 +606,8 @@ class MinigamesSystem {
                 finalEarnings = Math.min(finalEarnings, spaceLeft);
             }
                        
-            await this.economy.addMoney(userId, finalEarnings, 'dice_win');
+            const addResult = await this.economy.addMoney(userId, finalEarnings, 'dice_win');
+            finalEarnings = addResult.actualAmount;
             await this.economy.updateUser(userId, updateData);
 
             // *** NUEVO: ACTUALIZAR ESTADÍSTICAS DE ACHIEVEMENTS ***
@@ -670,6 +677,10 @@ class MinigamesSystem {
         }   
 
         await message.reply({ embeds: [embed] });
+
+        if (addResult.hitLimit) {
+            await message.reply(`⚠️ **Límite alcanzado:** No pudiste recibir todo el dinero porque tienes el máximo permitido (${this.formatNumber(this.economy.config.maxBalance)} π-b$).`);
+        }
     }
 
     async canLottery(userId) {
@@ -833,7 +844,9 @@ class MinigamesSystem {
                 finalEarnings = Math.min(finalEarnings, spaceLeft);
             }
             
-            await this.economy.addMoney(userId, finalEarnings, 'lottery_win');     
+            const addResult = await this.economy.addMoney(userId, finalEarnings, 'lottery_win');     
+            finalEarnings = addResult.actualAmount;
+            
             // AGREGAR ESTAS LÍNEAS:
             const updateDataLottery = {
                 stats: {
@@ -927,6 +940,10 @@ class MinigamesSystem {
         }   
     
         await reply.edit({ embeds: [resultEmbed] });
+
+        if (addResult.hitLimit) {
+            await message.reply(`⚠️ **Límite alcanzado:** No pudiste recibir todo el dinero porque tienes el máximo permitido (${this.formatNumber(this.economy.config.maxBalance)} π-b$).`);
+        }
     }
 
     async canBlackJack(userId) {
@@ -1271,6 +1288,8 @@ class MinigamesSystem {
 
         let finalEarnings = 0;
         let eventMessage = '';
+
+        let addResult;
         
         switch (result) {
             case 'blackjack':
@@ -1304,8 +1323,9 @@ class MinigamesSystem {
                     finalEarnings = Math.min(finalEarnings, spaceLeft);
                 }
 
-                await this.economy.addMoney(userId, finalEarnings, 'blackjack_win');
-
+                addResult = await this.economy.addMoney(userId, finalEarnings, 'blackjack_win');
+                finalEarnings = addResult.actualAmount;
+                
                 // *** NUEVO: ACTUALIZAR ESTADÍSTICAS DE ACHIEVEMENTS ***
                 if (this.achievements) {
                     await this.achievements.updateStats(userId, 'game_played');
@@ -1352,8 +1372,9 @@ class MinigamesSystem {
                     finalEarnings = Math.min(finalEarnings, spaceLeft);
                 }
                 
-                await this.economy.addMoney(userId, finalEarnings, 'blackjack_win');
-
+                addResult = await this.economy.addMoney(userId, finalEarnings, 'blackjack_win');
+                finalEarnings = addResult.actualAmount;
+                
                 // *** NUEVO: ACTUALIZAR ESTADÍSTICAS DE ACHIEVEMENTS ***
                 if (this.achievements) {
                     await this.achievements.updateStats(userId, 'game_played');
@@ -1456,6 +1477,10 @@ class MinigamesSystem {
             await messageOrInteraction.editReply({ embeds: [embed], components: [] });
         } else if (messageOrInteraction && messageOrInteraction.reply) {
             await messageOrInteraction.reply({ embeds: [embed] });
+        }
+
+        if (addResult.hitLimit) {
+            await messageOrInteraction.reply(`⚠️ **Límite alcanzado:** No pudiste recibir todo el dinero porque tienes el máximo permitido (${this.formatNumber(this.economy.config.maxBalance)} π-b$).`);
         }
 
         // Verificar tesoros al final
@@ -1720,7 +1745,9 @@ class MinigamesSystem {
                 finalEarnings = Math.min(finalEarnings, spaceLeft);
             }
             
-            await this.economy.addMoney(userId, finalEarnings, 'roulette_win');
+            const addResult = await this.economy.addMoney(userId, finalEarnings, 'roulette_win');
+            finalEarnings = addResult.actualAmount;
+            
             await this.economy.updateUser(userId, updateData);
     
             // *** ACTUALIZAR ESTADÍSTICAS DE ACHIEVEMENTS ***
@@ -1813,6 +1840,10 @@ class MinigamesSystem {
         }  
 
         await reply.edit({ embeds: [resultEmbed] });
+
+        if (addResult.hitLimit) {
+            await message.reply(`⚠️ **Límite alcanzado:** No pudiste recibir todo el dinero porque tienes el máximo permitido (${this.formatNumber(this.economy.config.maxBalance)} π-b$).`);
+        }
     }
     
     // Métodos auxiliares para la ruleta
@@ -2588,7 +2619,8 @@ class MinigamesSystem {
                 finalEarnings = Math.min(finalEarnings, spaceLeft);
             }
             
-            await this.economy.addMoney(winner.id, finalEarnings, 'russian_roulette_win');
+            const addResult = await this.economy.addMoney(winner.id, finalEarnings, 'russian_roulette_win');
+            finalEarnings = addResult.actualAmount;
             
             // Establecer cooldown para el ganador
             this.setCooldown(winner.id, 'russianRoulette');
@@ -2648,6 +2680,10 @@ class MinigamesSystem {
             await this.deleteRussianGame(`russian_${game.channel_id}`);
             const channel = await client.channels.fetch(game.channel_id);
             await channel.send({ embeds: [embed] });
+
+            if (addResult.hitLimit) {
+                await channel.send(`⚠️ **Límite alcanzado para ${winner.id}:** No pudiste recibir todo el dinero porque tienes el máximo permitido (${this.formatNumber(this.economy.config.maxBalance)} π-b$).`);
+            }
         } catch (error) {
             console.error('Error actualizando mensaje final del juego:', error);
         }
@@ -3886,8 +3922,9 @@ class MinigamesSystem {
             finalEarnings = Math.min(finalEarnings, spaceLeft);
         }
 
-        await this.economy.addMoney(winnerId, finalEarnings, 'uno_win');
-
+        const addResult = await this.economy.addMoney(winnerId, finalEarnings, 'uno_win');
+        finalEarnings = addResult.actualAmount;
+        
         // Actualizar estadísticas
         if (this.missions) {
             await this.missions.updateMissionProgress(winnerId, 'game_won');
@@ -3907,7 +3944,10 @@ class MinigamesSystem {
             .setTimestamp();
 
         await message.reply({ embeds: [embed] });
-
+        if (addResult.hitLimit) {
+            await message.reply(`⚠️ **Límite alcanzado:** No pudiste recibir todo el dinero porque tienes el máximo permitido (${this.formatNumber(this.economy.config.maxBalance)} π-b$).`);
+        }
+        
         // Limpiar juego
         this.activeGames.delete(game.id);
         await this.deleteUnoGameFromDB(game.id);
