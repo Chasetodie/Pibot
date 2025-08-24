@@ -1290,6 +1290,7 @@ class MinigamesSystem {
         let eventMessage = '';
 
         let addResult;
+        let userData;
         
         switch (result) {
             case 'blackjack':
@@ -1317,7 +1318,7 @@ class MinigamesSystem {
                     }
                 }
 
-                const userData = await this.economy.getUser(userId);
+                userData = await this.economy.getUser(userId);
                 if (userData.balance + finalEarnings > this.economy.config.maxBalance) {
                     const spaceLeft = this.economy.config.maxBalance - userData.balance;
                     finalEarnings = Math.min(finalEarnings, spaceLeft);
@@ -1366,7 +1367,7 @@ class MinigamesSystem {
                     }
                 }
 
-                const userData = await this.economy.getUser(userId);
+                userData = await this.economy.getUser(userId);
                 if (userData.balance + finalEarnings > this.economy.config.maxBalance) {
                     const spaceLeft = this.economy.config.maxBalance - userData.balance;
                     finalEarnings = Math.min(finalEarnings, spaceLeft);
