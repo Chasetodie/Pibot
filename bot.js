@@ -739,7 +739,6 @@ async function processUserActivityOptimized(userId, message) {
         // ✅ Ejecutar menciones por separado si es necesario
         let mentionResult = { status: 'fulfilled', value: [] };
         if (mentionsCount > 0) {
-            console.log(`👥 Procesando ${mentionsCount} menciones para ${userId}`); // ← Debug
             mentionResult = await Promise.allSettled([
                 missions.updateMissionProgress(userId, 'mention_made', mentionsCount)
             ]).then(results => results[0]);
@@ -751,11 +750,6 @@ async function processUserActivityOptimized(userId, message) {
             ...(messageResult.status === 'fulfilled' ? messageResult.value : []),
             ...(mentionResult.status === 'fulfilled' ? mentionResult.value : [])
         ];
-
-        // ✅ AGREGAR debug
-        if (mentionsCount > 0) {
-            console.log(`📊 Resultado menciones:`, mentionResult);
-        }
         
         // Notificaciones (sin await para no bloquear)
         if (newAchievements.length > 0) {

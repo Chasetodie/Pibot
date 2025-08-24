@@ -366,11 +366,7 @@ class MissionsSystem {
         const ecuadorTime = new Date(now.getTime() + (now.getTimezoneOffset() * 60000) + (-5 * 3600000));
         
         const dateString = ecuadorTime.toISOString().split('T')[0];
-        
-        // ✅ AGREGAR log para debug
-        console.log(`🕐 Ecuador time: ${ecuadorTime.toISOString()}`);
-        console.log(`📅 Date string: ${dateString}`);
-        
+                
         return dateString;
     }
 
@@ -396,13 +392,9 @@ class MissionsSystem {
     shouldResetMissions(user) {
         const today = this.getCurrentDay();
         const userLastReset = user.daily_missions_date;
-        
-        // ✅ AGREGAR logs para debug
-        console.log(`🔍 Reset check - Today: ${today}, User last reset: ${userLastReset}`);
-        
+               
         // Si es diferente día, necesita reset
         const needsReset = !userLastReset || userLastReset !== today;
-        console.log(`📅 Needs reset: ${needsReset}`);
         
         return needsReset;
     }
@@ -600,11 +592,6 @@ class MissionsSystem {
         const completedMissions = [];
 
         updateData.daily_stats = { ...user.daily_stats };
-
-        if (actionType === 'mention_made') {
-            console.log(`🔍 MENTION DEBUG - userId: ${userId}, value: ${value}`);
-            console.log(`📊 Current mentions_made_today: ${user.daily_stats?.mentions_made_today || 0}`);
-        }
         
         // Actualizar estadísticas diarias según el tipo de acción
         switch (actionType) {
@@ -661,8 +648,6 @@ class MissionsSystem {
                 updateData.daily_stats.mentions_made_today = (user.daily_stats.mentions_made_today || 0) + value;
                 break;
         }
-
-        console.log(`📝 UpdateData:`, updateData);
        
         // Verificar progreso de cada misión
         for (const [missionId, status] of Object.entries(user.daily_missions)) {

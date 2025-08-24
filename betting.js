@@ -19,6 +19,11 @@ class BettingSystem {
     async getBet(betId) {
         try {
             const bet = await this.db.getTrade(betId);
+            if (bet) {
+                // Asegurar que los campos JSON estén parseados
+                bet.initiator_offer = this.db.safeJsonParse(bet.initiator_offer, {});
+                bet.target_offer = this.db.safeJsonParse(bet.target_offer, {});
+            }
             return bet;
         } catch (error) {
             console.error('❌ Error obteniendo apuesta:', error);
@@ -28,21 +33,22 @@ class BettingSystem {
 
     async createBetInDB(betId, betData) {
         try {
-            // Adaptar datos para usar la tabla trades
+            // ✅ USAR ESTRUCTURA CORRECTA DE TRADES PARA APUESTAS
             const tradeData = {
                 id: betId,
                 initiator: betData.challenger,
                 target: betData.opponent,
-                initiator_money: betData.amount,
-                target_money: betData.amount,
-                initiator_items: { bet_description: betData.description },
-                target_items: {},
-                status: betData.status,
-                created_at: new Date().toISOString()
+                initiator_offer: JSON.stringify({ bet_description: betData.description }), // ← CAMBIO: initiator_offer en lugar de initiator_items
+                target_offer: JSON.stringify({}),
+                initiator_money_offer: betData.amount,    // ← CAMBIO: usar los campos correctos
+                target_money_offer: betData.amount,
+                status: betData.status || 'pending',
+                initiator_accepted: false,
+                target_accepted: false
             };
             
             await this.db.createTrade(tradeData);
-            console.log(`🎲 Nueva apuesta creada en SQLite: ${betId}`);
+            console.log(`🎲 Nueva apuesta creada en MySQL: ${betId}`);
             return tradeData;
         } catch (error) {
             console.error('❌ Error creando apuesta:', error);
@@ -63,29 +69,24 @@ class BettingSystem {
 
     async getUserActiveBets(userId) {
         try {
-            return new Promise((resolve, reject) => {
-                this.db.db.all(`
-                    SELECT * FROM trades 
-                    WHERE (initiator = ? OR target = ?) 
-                    AND status IN ('pending', 'active')
-                    AND initiator_items LIKE '%bet_description%'
-                `, [userId, userId], (err, rows) => {
-                    if (err) {
-                        reject(err);
-                    } else {
-                        const bets = rows.map(row => ({
-                            id: row.id,
-                            challenger: row.initiator,
-                            opponent: row.target,
-                            amount: row.initiator_money,
-                            description: JSON.parse(row.initiator_items).bet_description,
-                            status: row.status,
-                            created_at: row.created_at
-                        }));
-                        resolve(bets);
-                    }
-                });
-            });
+            const [rows] = await this.db.pool.execute(`
+                SELECT * FROM trades 
+                WHERE (initiator = ? OR target = ?) 
+                AND status IN ('pending', 'active')
+                AND initiator_offer LIKE '%bet_description%'
+            `, [userId, userId]);
+            
+            const bets = rows.map(row => ({
+                id: row.id,
+                challenger: row.initiator,
+                opponent: row.target,
+                amount: row.initiator_money_offer,
+                description: this.db.safeJsonParse(row.initiator_offer, {}).bet_description || 'Sin descripción',
+                status: row.status,
+                created_at: row.created_at
+            }));
+            
+            return bets;
         } catch (error) {
             console.error('❌ Error obteniendo apuestas del usuario:', error);
             return [];
@@ -94,23 +95,15 @@ class BettingSystem {
 
     async getAllBets() {
         try {
-            const bets = await new Promise((resolve, reject) => {
-                this.db.db.all('SELECT * FROM trades WHERE initiator_items LIKE "%bet_description%"', 
-                (err, rows) => {
-                    if (err) reject(err);
-                    else resolve(rows);
-                });
-            });
+            const [rows] = await this.db.pool.execute(
+                'SELECT * FROM trades WHERE initiator_offer LIKE "%bet_description%"'
+            );
 
-            if (error) {
-                throw error;
-            }
-
-            if (!bets || bets.length === 0) return {};
+            if (!rows || rows.length === 0) return {};
 
             // Convertir array a objeto con ID como key
             const betsObject = {};
-            bets.forEach(bet => {
+            rows.forEach(bet => {
                 betsObject[bet.id] = bet;
             });
 
@@ -123,13 +116,8 @@ class BettingSystem {
 
     async deleteBet(betId) {
         try {
-            await new Promise((resolve, reject) => {
-                this.db.db.run('DELETE FROM trades WHERE id = ?', [betId], (err) => {
-                    if (err) reject(err);
-                    else resolve();
-                });
-            });
-            console.log(`🗑️ Apuesta ${betId} eliminada de SQLite`);
+            await this.db.pool.execute('DELETE FROM trades WHERE id = ?', [betId]);
+            console.log(`🗑️ Apuesta ${betId} eliminada de MySQL`);
         } catch (error) {
             console.error('❌ Error eliminando apuesta:', error);
             throw error;
@@ -259,16 +247,11 @@ class BettingSystem {
         
         // ✅ CAMBIAR: Buscar apuesta pendiente en SQLite
         try {
-            const pendingBets = await new Promise((resolve, reject) => {
-                this.db.db.all(`
-                    SELECT * FROM trades 
-                    WHERE initiator = ? AND target = ? AND status = 'pending'
-                    AND initiator_items LIKE '%bet_description%'
-                `, [challengerUser.id, opponentId], (err, rows) => {
-                    if (err) reject(err);
-                    else resolve(rows);
-                });
-            });
+            const [pendingBets] = await this.db.pool.execute(`
+                SELECT * FROM trades 
+                WHERE initiator = ? AND target = ? AND status = 'pending'
+                AND initiator_offer LIKE '%bet_description%'
+            `, [challengerUser.id, opponentId]);
 
             if (!pendingBets || pendingBets.length === 0) {
                 await message.reply('❌ No hay apuestas pendientes de este usuario hacia ti.');
@@ -280,26 +263,26 @@ class BettingSystem {
                 id: pendingBets[0].id,
                 challenger: pendingBets[0].initiator,
                 opponent: pendingBets[0].target,
-                amount: pendingBets[0].initiator_money,
-                description: JSON.parse(pendingBets[0].initiator_items).bet_description
+                amount: pendingBets[0].initiator_money_offer,  // ← CAMBIO
+                description: this.db.safeJsonParse(pendingBets[0].initiator_offer, {}).bet_description || 'Sin descripción'  // ← CAMBIO
             };
 
             const betId = bet.id;
     
-            const challengerData = await this.economy.getUser(bet.challenger);
-            const opponentData = await this.economy.getUser(bet.opponent);
+            const challengerData = await this.economy.getUser(bet.initiator);
+            const opponentData = await this.economy.getUser(bet.target);
     
-            if (challengerData.balance < bet.amount) {
+            if (challengerData.balance < bet.initiator_money_offer) {
                 await this.deleteBet(betId);
                 return message.reply('❌ El retador ya no tiene suficientes fondos.');
             }
-            if (opponentData.balance < bet.amount) {
+            if (opponentData.balance < bet.initiator_money_offer) {
                 return message.reply('❌ No tienes suficientes fondos para esta apuesta.');
             }
     
             // Retirar dinero de ambos usuarios
-            await this.economy.removeMoney(bet.challenger, bet.amount, 'bet_escrow');
-            await this.economy.removeMoney(bet.opponent, bet.amount, 'bet_escrow');
+            await this.economy.removeMoney(bet.initiator, bet.initiator_money_offer, 'bet_escrow');
+            await this.economy.removeMoney(bet.target, bet.initiator_money_offer, 'bet_escrow');
     
             // Actualizar estado de la apuesta
             await this.updateBet(betId, {
@@ -311,15 +294,15 @@ class BettingSystem {
                 .setTitle('✅ Apuesta Aceptada')
                 .setDescription('La apuesta está ahora activa!')
                 .addFields(
-                    { name: '⚔️ Retador', value: `<@${bet.challenger}>`, inline: true },
-                    { name: '🛡️ Oponente', value: `<@${bet.opponent}>`, inline: true },
-                    { name: '💰 Cantidad', value: `${this.formatNumber(bet.amount)} π-b$ cada uno`, inline: true },
+                    { name: '⚔️ Retador', value: `<@${bet.initiator}>`, inline: true },
+                    { name: '🛡️ Oponente', value: `<@${bet.target}>`, inline: true },
+                    { name: '💰 Cantidad', value: `${this.formatNumber(bet.initiator_money_offer)} π-b$ cada uno`, inline: true },
                     { name: '🎯 Descripción', value: bet.description, inline: false },
                     { name: '📝 Resolución', value: `\`>resolvebet ${betId} challenger\` o \`>resolvebet ${betId} opponent\``, inline: false },
                     { name: '🔄 Cancelar', value: `\`>cancelbet ${betId}\``, inline: false }
                 )
                 .setColor('#00FF00')
-                .setFooter({ text: `ID: ${betId}` })
+                .setFooter({ text: `Copia este mensaje para obtener la id de la apuesta. ID: ${betId}` })
                 .setTimestamp();
     
             await message.reply({ 
@@ -346,29 +329,24 @@ class BettingSystem {
         
         // ✅ CAMBIAR: Buscar apuesta pendiente en SQLite
         try {
-            const pendingBets = await new Promise((resolve, reject) => {
-                this.db.db.all(`
-                    SELECT * FROM trades 
-                    WHERE initiator = ? AND target = ? AND status = 'pending'
-                    AND initiator_items LIKE '%bet_description%'
-                `, [challengerUser.id, opponentId], (err, rows) => {
-                    if (err) reject(err);
-                    else resolve(rows);
-                });
-            });
+            const [pendingBets] = await this.db.pool.execute(`
+                SELECT * FROM trades 
+                WHERE initiator = ? AND target = ? AND status = 'pending'
+                AND initiator_offer LIKE '%bet_description%'
+            `, [challengerUser.id, opponentId]);
 
             if (!pendingBets || pendingBets.length === 0) {
                 await message.reply('❌ No hay apuestas pendientes de este usuario hacia ti.');
                 return;
             }
 
-            // Convertir formato
+            // Y cambiar el parseo:
             const bet = {
                 id: pendingBets[0].id,
                 challenger: pendingBets[0].initiator,
                 opponent: pendingBets[0].target,
-                amount: pendingBets[0].initiator_money,
-                description: JSON.parse(pendingBets[0].initiator_items).bet_description
+                amount: pendingBets[0].initiator_money_offer,  // ← CAMBIO
+                description: this.db.safeJsonParse(pendingBets[0].initiator_offer, {}).bet_description || 'Sin descripción'  // ← CAMBIO
             };
 
             const betId = bet.id;
@@ -377,7 +355,7 @@ class BettingSystem {
         
             const embed = new EmbedBuilder()
                 .setTitle('❌ Apuesta Rechazada')
-                .setDescription(`<@${bet.opponent}> rechazó la apuesta de <@${bet.challenger}>`)
+                .setDescription(`<@${bet.target}> rechazó la apuesta de <@${bet.initiator}>`)
                 .setColor('#FF0000')
                 .setTimestamp();
         
@@ -401,7 +379,7 @@ class BettingSystem {
             return message.reply('❌ Esta apuesta no está activa.');
         }
         
-        if (message.author.id !== bet.challenger && message.author.id !== bet.opponent) {
+        if (message.author.id !== bet.initiator && message.author.id !== bet.target) {
             return message.reply('❌ Solo los participantes pueden resolver esta apuesta.');
         }
 
@@ -409,11 +387,11 @@ class BettingSystem {
             return message.reply('❌ El ganador debe ser "challenger" o "opponent".');
         }
 
-        const totalPot = bet.amount * 2;
+        const totalPot = bet.initiator_money_offer * 2;
         const houseFee = Math.floor(totalPot * this.config.houseFee);
         const winnerAmount = totalPot - houseFee;
-        const winnerId = winner === 'challenger' ? bet.challenger : bet.opponent;
-        const loserId = winner === 'challenger' ? bet.opponent : bet.challenger;
+        const winnerId = winner === 'challenger' ? bet.initiator : bet.target;
+        const loserId = winner === 'challenger' ? bet.target : bet.initiator;
 
         // Dar premio al ganador
         const winnerData = await this.economy.getUser(winnerId);
@@ -424,7 +402,7 @@ class BettingSystem {
         await this.economy.addMoney(winnerId, winnerAmount, 'bet_win');
         
         // Actualizar estadísticas
-        await this.updateBetStats(winnerId, loserId, bet.amount);
+        await this.updateBetStats(winnerId, loserId, bet.initiator_money_offer);
 
         // Si gana la apuesta
         if (this.economy.missions) {
@@ -460,19 +438,19 @@ class BettingSystem {
             return message.reply('❌ Esta apuesta no está activa.');
         }
         
-        if (message.author.id !== bet.challenger && message.author.id !== bet.opponent) {
+        if (message.author.id !== bet.initiator && message.author.id !== bet.target) {
             return message.reply('❌ Solo los participantes pueden cancelar esta apuesta.');
         }
 
         // Devolver dinero a ambos participantes
-        await this.economy.addMoney(bet.challenger, bet.amount, 'bet_refund');
-        await this.economy.addMoney(bet.opponent, bet.amount, 'bet_refund');
+        await this.economy.addMoney(bet.initiator, bet.initiator_money_offer, 'bet_refund');
+        await this.economy.addMoney(bet.target, bet.initiator_money_offer, 'bet_refund');
 
         const embed = new EmbedBuilder()
             .setTitle('🔄 Apuesta Cancelada')
             .setDescription('La apuesta fue cancelada y los fondos devueltos')
             .addFields(
-                { name: '💰 Fondos Devueltos', value: `${this.formatNumber(bet.amount)} π-b$ a cada participante`, inline: false }
+                { name: '💰 Fondos Devueltos', value: `${this.formatNumber(bet.initiator_money_offer)} π-b$ a cada participante`, inline: false }
             )
             .setColor('#808080')
             .setTimestamp();
@@ -507,8 +485,8 @@ class BettingSystem {
             .setTimestamp();
 
         for (const bet of userBets) {
-            const isChallenger = bet.challenger === message.author.id;
-            const opponentId = isChallenger ? bet.opponent : bet.challenger;
+            const isChallenger = bet.initiator === message.author.id;
+            const opponentId = isChallenger ? bet.target : bet.initiator;
             const role = isChallenger ? 'Retador' : 'Oponente';
             let statusText = bet.status === 'pending' ? '⏳ Esperando respuesta' : '🔴 Activa - Esperando resolución';
 
@@ -524,7 +502,7 @@ class BettingSystem {
 
             embed.addFields({
                 name: `${role} vs ${opponentName}`,
-                value: `**Cantidad:** ${this.formatNumber(bet.amount)} π-b$\n**Descripción:** ${bet.description}\n**Estado:** ${statusText}\n**ID:** \`${bet.id}\``,
+                value: `**Cantidad:** ${this.formatNumber(bet.initiator_money_offer)} π-b$\n**Descripción:** ${bet.description}\n**Estado:** ${statusText}\n**ID:** \`${bet.id}\``,
                 inline: false
             });
         }
