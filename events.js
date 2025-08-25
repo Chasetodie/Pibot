@@ -965,12 +965,22 @@ class EventsSystem {
                 shouldPing = false; // Sin ping al expirar
             }
             
+let pingContent = '';
+let mentions = { parse: [] };
+
+if (shouldPing) {
+    const eventosRole = channel.guild.roles.cache.find(role => role.name === 'eventos');
+    if (eventosRole) {
+        pingContent = `<@&${eventosRole.id}>`;
+        mentions = { parse: ['roles'] };
+    }
+}
+
 await channel.send({
-    content: shouldPing ? '@here' : '',
+    content: pingContent,
     embeds: [embed],
-    allowedMentions: shouldPing ? { parse: ['everyone'] } : { parse: [] }
+    allowedMentions: mentions
 });
-            
         } catch (error) {
             console.error('❌ Error enviando anuncio de evento:', error);
         }
