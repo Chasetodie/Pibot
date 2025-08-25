@@ -1,4 +1,5 @@
 const { EmbedBuilder } = require('discord.js');
+const EVENTOS_ROLE_ID = '1409356197722718228'; // ← Reemplazar con el ID real
 
 class EventsSystem {
     constructor(economySystem, client = null) {
@@ -964,23 +965,12 @@ class EventsSystem {
                 
                 shouldPing = false; // Sin ping al expirar
             }
-            
-let pingContent = '';
-let mentions = { parse: [] };
-
-if (shouldPing) {
-    const eventosRole = channel.guild.roles.cache.find(role => role.name === 'eventos');
-    if (eventosRole) {
-        pingContent = `<@&${eventosRole.id}>`;
-        mentions = { parse: ['roles'] };
-    }
-}
-
-await channel.send({
-    content: pingContent,
-    embeds: [embed],
-    allowedMentions: mentions
-});
+                        
+            await channel.send({
+                content: shouldPing ? `<@&${EVENTOS_ROLE_ID}>` : '',
+                embeds: [embed],
+                allowedMentions: shouldPing ? { parse: ['roles'] } : { parse: [] }
+            });
         } catch (error) {
             console.error('❌ Error enviando anuncio de evento:', error);
         }
