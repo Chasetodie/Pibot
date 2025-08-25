@@ -267,7 +267,7 @@ class BettingSystem {
                 .setTimestamp();
 
             await message.reply({ 
-                content: `ID: ${betId}`,
+                content: `${betId}`,
                 embeds: [embed],
             });
             
@@ -328,7 +328,7 @@ class BettingSystem {
             return message.reply('❌ Esta apuesta no está activa.');
         }
         
-        if (message.author.id !== bet.initiator && message.author.id !== bet.target) {
+        if (message.author.id !== bet.challenger && message.author.id !== bet.opponent) {
             return message.reply('❌ Solo los participantes pueden resolver esta apuesta.');
         }
 
@@ -336,11 +336,11 @@ class BettingSystem {
             return message.reply('❌ El ganador debe ser "challenger" o "opponent".');
         }
 
-        const totalPot = bet.initiator_money_offer * 2;
+        const totalPot = bet.amount * 2;
         const houseFee = Math.floor(totalPot * this.config.houseFee);
         const winnerAmount = totalPot - houseFee;
-        const winnerId = winner === 'challenger' ? bet.initiator : bet.target;
-        const loserId = winner === 'challenger' ? bet.target : bet.initiator;
+        const winnerId = winner === 'challenger' ? bet.challenger : bet.opponent;
+        const loserId = winner === 'challenger' ? bet.opponent : bet.challenger;
 
         // Dar premio al ganador
         const winnerData = await this.economy.getUser(winnerId);
@@ -351,7 +351,7 @@ class BettingSystem {
         await this.economy.addMoney(winnerId, winnerAmount, 'bet_win');
         
         // Actualizar estadísticas
-        await this.updateBetStats(winnerId, loserId, bet.initiator_money_offer);
+        await this.updateBetStats(winnerId, loserId, bet.amount);
 
         // Si gana la apuesta
         if (this.economy.missions) {
@@ -387,19 +387,19 @@ class BettingSystem {
             return message.reply('❌ Esta apuesta no está activa.');
         }
         
-        if (message.author.id !== bet.initiator && message.author.id !== bet.target) {
+        if (message.author.id !== bet.challenger && message.author.id !== bet.opponent) {
             return message.reply('❌ Solo los participantes pueden cancelar esta apuesta.');
         }
 
         // Devolver dinero a ambos participantes
-        await this.economy.addMoney(bet.initiator, bet.initiator_money_offer, 'bet_refund');
-        await this.economy.addMoney(bet.target, bet.initiator_money_offer, 'bet_refund');
+        await this.economy.addMoney(bet.challenger, bet.amount, 'bet_refund');
+        await this.economy.addMoney(bet.opponent, bet.amount, 'bet_refund');
 
         const embed = new EmbedBuilder()
             .setTitle('🔄 Apuesta Cancelada')
             .setDescription('La apuesta fue cancelada y los fondos devueltos')
             .addFields(
-                { name: '💰 Fondos Devueltos', value: `${this.formatNumber(bet.initiator_money_offer)} π-b$ a cada participante`, inline: false }
+                { name: '💰 Fondos Devueltos', value: `${this.formatNumber(bet.amount)} π-b$ a cada participante`, inline: false }
             )
             .setColor('#808080')
             .setTimestamp();
@@ -434,8 +434,8 @@ class BettingSystem {
             .setTimestamp();
 
         for (const bet of userBets) {
-            const isChallenger = bet.initiator === message.author.id;
-            const opponentId = isChallenger ? bet.target : bet.initiator;
+            const isChallenger = bet.challenger === message.author.id;
+            const opponentId = isChallenger ? bet.opponent : bet.challenger;
             const role = isChallenger ? 'Retador' : 'Oponente';
             let statusText = bet.status === 'pending' ? '⏳ Esperando respuesta' : '🔴 Activa - Esperando resolución';
 
@@ -451,7 +451,7 @@ class BettingSystem {
 
             embed.addFields({
                 name: `${role} vs ${opponentName}`,
-                value: `**Cantidad:** ${this.formatNumber(bet.initiator_money_offer)} π-b$\n**Descripción:** ${bet.description}\n**Estado:** ${statusText}\n**ID:** \`${bet.id}\``,
+                value: `**Cantidad:** ${this.formatNumber(bet.amount)} π-b$\n**Descripción:** ${bet.description}\n**Estado:** ${statusText}\n**ID:** \`${bet.id}\``,
                 inline: false
             });
         }
