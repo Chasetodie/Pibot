@@ -39,8 +39,8 @@ class BettingSystem {
 
     async updateBet(betId, updateData) {
         try {
-            await this.db.updateTrade(betId, updateData);
-            console.log(`💾 Apuesta ${betId} actualizada en SQLite`);
+            await this.db.updateBets(betId, updateData);
+            console.log(`💾 Apuesta ${betId} actualizada en MySQL`);
             return { changes: 1 };
         } catch (error) {
             console.error('❌ Error actualizando apuesta:', error);
