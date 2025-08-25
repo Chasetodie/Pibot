@@ -550,6 +550,34 @@ class LocalDatabase {
         }
     }
 
+    async updateBets(betId, updateData) {
+        try {
+            const sets = [];
+            const values = [];
+
+            for (const [key, value] of Object.entries(updateData)) {
+                sets.push(`${key} = ?`);
+                if (typeof value === 'object' && value !== null) {
+                    values.push(JSON.stringify(value));
+                } else {
+                    values.push(value);
+                }
+            }
+
+            values.push(betId);
+
+            const [result] = await this.pool.execute(
+                `UPDATE bets SET ${sets.join(', ')} WHERE id = ?`,
+                values
+            );
+            
+            return { changes: result.affectedRows };
+        } catch (error) {
+            console.error('❌ Error actualizando trade:', error);
+            throw error;
+        }
+    }
+
     async updateTrade(tradeId, updateData) {
         try {
             const sets = [];
