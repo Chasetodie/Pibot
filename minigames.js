@@ -315,12 +315,13 @@ class MinigamesSystem {
             .setColor(won ? '#00FF00' : '#FF0000')
             .setTimestamp();
 
-        if (won) {
-            const winAmount = Math.floor(betAmount * this.config.coinflip.winMultiplier);
-            const profit = winAmount - betAmount;
-            let finalEarnings = profit;
-            let eventMessage = '';
 
+        const winAmount = Math.floor(betAmount * this.config.coinflip.winMultiplier);
+        const profit = winAmount - betAmount;
+        let finalEarnings = profit;
+        let eventMessage = '';
+        
+        if (won) {
             for (const event of this.events.getActiveEvents()) {
                 if (event.type === 'fever_time') {
                     finalEarnings = Math.floor(profit * 1.5); // 🔥 +30%
@@ -579,12 +580,12 @@ class MinigamesSystem {
             )
             .setTimestamp();
 
+        const winAmount = Math.floor(betAmount * multiplier);
+        const profit = winAmount - betAmount;
+        let finalEarnings = profit;
+        let eventMessage = '';
+        
         if (won) {
-            const winAmount = Math.floor(betAmount * multiplier);
-            const profit = winAmount - betAmount;
-            let finalEarnings = profit;
-            let eventMessage = '';
-
             for (const event of this.events.getActiveEvents()) {
                 if (event.type === 'fever_time') {
                     finalEarnings = Math.floor(profit * 1.5); // 🔥 +30%
@@ -822,14 +823,14 @@ class MinigamesSystem {
                 { name: '💰 Apuesta', value: `${this.formatNumber(betAmount)} π-b$`, inline: true }
             )
             .setTimestamp();
-    
-        if (won) {
-            const winAmount = betAmount * this.config.lottery.winMultiplier;
+
+const winAmount = betAmount * this.config.lottery.winMultiplier;
             const profit = winAmount - betAmount;
 
             let finalEarnings = profit;
             let eventMessage = '';
-
+        
+        if (won) {
             for (const event of this.events.getActiveEvents()) {
                 if (event.type === 'fever_time') {
                     finalEarnings = Math.floor(profit * 1.5); // 🔥 +30%
@@ -1732,15 +1733,15 @@ class MinigamesSystem {
                 { name: '💰 Apuesta', value: `${this.formatNumber(betAmount)} π-b$`, inline: true }
             )
             .setTimestamp();
-    
-        if (won) {
-            const multiplier = this.config.roulette.payouts[validBet.type];
+        
+const multiplier = this.config.roulette.payouts[validBet.type];
             const winAmount = Math.floor(betAmount * multiplier);
             const profit = winAmount - betAmount;
 
             let finalEarnings = profit;
             let eventMessage = '';
-
+        
+        if (won) {
             for (const event of this.events.getActiveEvents()) {
                 if (event.type === 'fever_time') {
                     finalEarnings = Math.floor(profit * 1.5); // 🔥 +30%
@@ -2629,13 +2630,13 @@ class MinigamesSystem {
     
         let embed = new EmbedBuilder()
             .setTimestamp();
+
+        let finalEarnings = winnerPrize;
+            let eventMessage = '';
     
         if (survivors.length === 1) {
             // Un ganador
             const winner = survivors[0];
-
-            let finalEarnings = winnerPrize;
-            let eventMessage = '';
 
             for (const event of this.events.getActiveEvents()) {
                 if (event.type === 'fever_time') {
