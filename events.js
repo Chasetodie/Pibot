@@ -13,11 +13,6 @@ class EventsSystem {
         this.announcementChannelId = '1404905496644685834'; // Cambia esto al ID de tu canal de anuncios
         this.guild = null;
 
-        // Cargar eventos después de un breve delay para asegurar conexión
-        setTimeout(() => {
-            this.loadEvents();
-        }, 1000);
-
         this.eventCache = new Map();
         this.MAX_CACHE_SIZE = 500;
         this.cacheTimeout = 10 * 60 * 1000;
@@ -157,14 +152,15 @@ class EventsSystem {
     // ✅ AGREGAR: Inicializar base de datos
     async initializeDatabase() {
         // Esperar a que economy esté listo
-        setTimeout(() => {
-            if (this.economy && this.economy.database) {
-                this.db = this.economy.database;
-                console.log('🎮 Base de datos de eventos inicializada');
-            } else {
-                console.log('⚠️ Economy no disponible, usando eventos en memoria');
-            }
-        }, 1000);
+            setTimeout(async () => {
+                if (this.economy && this.economy.database) {
+                    this.db = this.economy.database;
+                    console.log('🎮 Base de datos de eventos inicializada');
+                    await this.loadEvents(); // Mover aquí
+                } else {
+                    console.log('⚠️ Economy no disponible, usando eventos en memoria');
+                }
+            }, 1000);
     }
     
     // QUITAR todo el bloque de Supabase y REEMPLAZAR por:
@@ -209,27 +205,49 @@ class EventsSystem {
         }
         
         try {
-            const mappedData = {
-                id: eventData.id,
-                type: eventData.type,
-                name: eventData.name,
-                description: eventData.description,
-                emoji: eventData.emoji,
-                color: eventData.color,
-                start_time: new Date(eventData.startTime).toISOString(),
-                end_time: new Date(eventData.endTime).toISOString(),
-                duration: eventData.duration,
-                multipliers: eventData.multipliers || {},
-                is_special: eventData.isSpecial || false,
-                is_negative: eventData.isNegative || false,
-                is_rare: eventData.isRare || false,
-                triggered_by: eventData.triggeredBy || null,
-                participant_count: eventData.participantCount || 0,
-                stats: eventData.stats || {}
-            };
+            // PRIMERO: Verificar si existe
+            const [existing] = await this.db.pool.execute(
+                'SELECT id FROM server_events WHERE id = ?',
+                [eventId]
+            );
             
-            await this.db.createServerEvent(mappedData);
-            console.log(`💾 Evento ${eventId} guardado en MySQL`);
+            if (existing.length > 0) {
+                // ACTUALIZAR evento existente (incluyendo estadísticas)
+                await this.db.pool.execute(`
+                    UPDATE server_events SET 
+                        participant_count = ?, 
+                        stats = ?
+                    WHERE id = ?
+                `, [
+                    eventData.participantCount || 0,
+                    JSON.stringify(eventData.stats || {}),
+                    eventId
+                ]);
+            } else {
+                // CREAR nuevo evento
+                const mappedData = {
+                    id: eventData.id,
+                    type: eventData.type,
+                    name: eventData.name,
+                    description: eventData.description,
+                    emoji: eventData.emoji,
+                    color: eventData.color,
+                    start_time: new Date(eventData.startTime).toISOString(),
+                    end_time: new Date(eventData.endTime).toISOString(),
+                    duration: eventData.duration,
+                    multipliers: eventData.multipliers || {},
+                    is_special: eventData.isSpecial || false,
+                    is_negative: eventData.isNegative || false,
+                    is_rare: eventData.isRare || false,
+                    triggered_by: eventData.triggeredBy || null,
+                    participant_count: eventData.participantCount || 0,
+                    stats: eventData.stats || {}
+                };
+                
+                await this.db.createServerEvent(mappedData);
+            }
+            
+            console.log(`💾 Evento ${eventId} guardado/actualizado en MySQL`);
         } catch (error) {
             console.error('❌ Error guardando evento en MySQL:', error);
         }
@@ -292,23 +310,12 @@ class EventsSystem {
         if (!this.db || updates.length === 0) return;
         
         try {
-            await new Promise((resolve, reject) => {
-                this.db.db.serialize(() => {
-                    this.db.db.run('BEGIN TRANSACTION');
-                    
-                    for (const update of updates) {
-                        this.db.db.run(
-                            'UPDATE server_events SET stats = ?, updated_at = ? WHERE id = ?',
-                            [JSON.stringify(update.stats), new Date().toISOString(), update.eventId]
-                        );
-                    }
-                    
-                    this.db.db.run('COMMIT', (err) => {
-                        if (err) reject(err);
-                        else resolve();
-                    });
-                });
-            });
+            for (const update of updates) {
+                await this.db.pool.execute(
+                    'UPDATE server_events SET stats = ? WHERE id = ?',
+                    [JSON.stringify(update.stats), update.eventId]
+                );
+            }
             
             console.log(`📊 ${updates.length} estadísticas de eventos actualizadas`);
         } catch (error) {
