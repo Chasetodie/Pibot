@@ -1121,8 +1121,8 @@ class MinigamesSystem {
 
         if (this.missions) {
             // Siempre actualizar que jugó y apostó
-            const gameMissions = await this.missions.updateMissionProgress(userId, 'game_played');
-            const betMissions = await this.missions.updateMissionProgress(userId, 'money_bet', betAmount);
+            const gameMissions = await this.missions.updateMissionProgress(gameState.userId, 'game_played');
+            const betMissions = await this.missions.updateMissionProgress(gameState.userId, 'money_bet', betAmount);
             
             let allCompleted = [...gameMissions, ...betMissions];
                         
@@ -2722,9 +2722,9 @@ class MinigamesSystem {
             if (this.missions) {
                 let allCompleted = [];
 
-                const winMissions = await this.missions.updateMissionProgress(userId, 'game_won');
-                const betWonMissions = await this.missions.updateMissionProgress(userId, 'bet_won');
-                const moneyMissions = await this.missions.updateMissionProgress(userId, 'money_earned_today', finalEarnings);
+                const winMissions = await this.missions.updateMissionProgress(winner.id, 'game_won');
+                const betWonMissions = await this.missions.updateMissionProgress(winner.id, 'bet_won');
+                const moneyMissions = await this.missions.updateMissionProgress(winner.id, 'money_earned_today', finalEarnings);
                     
                 allCompleted = [...allCompleted, ...winMissions, ...betWonMissions, ...moneyMissions];
                 
@@ -4034,9 +4034,9 @@ class MinigamesSystem {
             if (this.missions) {
                 let allCompleted = [];
 
-                const winMissions = await this.missions.updateMissionProgress(userId, 'game_won');
-                const betWonMissions = await this.missions.updateMissionProgress(userId, 'bet_won');
-                const moneyMissions = await this.missions.updateMissionProgress(userId, 'money_earned_today', finalEarnings);
+                const winMissions = await this.missions.updateMissionProgress(winnerId, 'game_won');
+                const betWonMissions = await this.missions.updateMissionProgress(winnerId, 'bet_won');
+                const moneyMissions = await this.missions.updateMissionProgress(winnerId, 'money_earned_today', finalEarnings);
                     
                 allCompleted = [...allCompleted, ...winMissions, ...betWonMissions, ...moneyMissions];
                 
