@@ -305,24 +305,6 @@ class EventsSystem {
         });
     }
 
-    // ✅ OPTIMIZACIÓN: Batch updates para estadísticas
-    async batchUpdateEventStats(updates) {
-        if (!this.db || updates.length === 0) return;
-        
-        try {
-            for (const update of updates) {
-                await this.db.pool.execute(
-                    'UPDATE server_events SET stats = ? WHERE id = ?',
-                    [JSON.stringify(update.stats), update.eventId]
-                );
-            }
-            
-            console.log(`📊 ${updates.length} estadísticas de eventos actualizadas`);
-        } catch (error) {
-            console.error('❌ Error en batch update de estadísticas:', error);
-        }
-    }
-
     startCacheCleanup() {
         setInterval(() => {
             const now = Date.now();
@@ -473,16 +455,13 @@ class EventsSystem {
         if (cached) {
             // Solo actualizar estadísticas si hay eventos aplicados
             if (cached.appliedEvents.length > 0) {
-                const updates = cached.appliedEvents.map(event => ({
-                    eventId: event.id,
-                    stats: {
-                        ...event.stats,
-                        messagesAffected: (event.stats.messagesAffected || 0) + 1
+                for (const cachedEvent of cached.appliedEvents) {
+                    const realEvent = this.activeEvents[cachedEvent.id];
+                    if (realEvent) {
+                        realEvent.stats.messagesAffected = (realEvent.stats.messagesAffected || 0) + 1;
+                        await this.saveEvent(realEvent.id, realEvent);
                     }
-                }));
-                
-                // Batch update asíncrono
-                setTimeout(() => this.batchUpdateEventStats(updates), 100);
+                }
             }
             
             return {
@@ -534,7 +513,12 @@ class EventsSystem {
                 }
             }));
             
-            setTimeout(() => this.batchUpdateEventStats(updates), 100);
+            // Actualizar inmediatamente en memoria y base de datos
+            for (const event of appliedEvents) {
+                event.stats.messagesAffected = (event.stats.messagesAffected || 0) + 1;
+                this.activeEvents[event.id] = event;
+                await this.saveEvent(event.id, event);
+            }
         }
         
         return {
@@ -631,6 +615,8 @@ class EventsSystem {
         
         if (appliedEvents.length > 0) {
             for (const event of appliedEvents) {
+                // Actualizar el evento en memoria también
+                this.activeEvents[event.id] = event;
                 await this.saveEvent(event.id, event);
             }
         }
