@@ -68,8 +68,8 @@ class EventsSystem {
                 description: 'Dona dinero y recibe bonificaciones especiales',
                 emoji: '❤️',
                 color: '#FF69B4',
-                minDuration: 7200000,  // 2 horas
-                maxDuration: 21600000, // 6 horas
+                minDuration: 900000,  // 15 minutos
+                maxDuration: 1800000, // 30 minutos
                 special: true
             },
             'treasure_hunt': {
