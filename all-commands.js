@@ -1,7 +1,7 @@
 const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 
 class AllCommands {
-    constructor(client, economySystem, shopSystem, tradeSystem, auctionSystem, craftingSystem,  eventsSystem, bettingSystem, achievementsSystem) {
+    constructor(economySystem, shopSystem, tradeSystem, auctionSystem, craftingSystem,  eventsSystem, bettingSystem, achievementsSystem) {
         this.economy = economySystem;
         this.shop = shopSystem;
         this.trades = tradeSystem;
@@ -10,7 +10,6 @@ class AllCommands {
         this.events = eventsSystem;
         this.betting = bettingSystem;
         this.achievements = achievementsSystem;
-        this.client = client;
     }
 
     // Formatear tiempo restante para daily
@@ -616,10 +615,10 @@ class AllCommands {
             // Intentar múltiples métodos para obtener el usuario
             let owner;
             try {
-                owner = await this.client.users.fetch(ownerId, { force: true });
+                owner = await client.users.fetch(ownerId, { force: true });
             } catch (fetchError) {
                 // Si fetch falla, buscar en caché
-                owner = this.client.users.cache.get(ownerId);
+                owner = client.users.cache.get(ownerId);
             }
             
             if (!owner) {
@@ -1076,7 +1075,7 @@ class AllCommands {
         let targetUser = message.mentions.users.first();
         if (!targetUser && args[0]) {
             try {
-                targetUser = await this.client.users.fetch(args[0]);
+                targetUser = await message.client.users.fetch(args[0]);
             } catch (error) {
                 const errorEmbed = new EmbedBuilder()
                     .setColor('#ff4444')
