@@ -942,14 +942,7 @@ class EconomySystem {
         
         const addResult = await this.addMoney(userId, finalEarnings, 'work_reward');
 
-        await this.updateUser(userId, updateData); // ← Reemplaza saveUsers()
-        
-        // *** NUEVO: ACTUALIZAR MISIONES ***
-        if (this.missions) {
-            const completedMissions = await this.missions.updateMissionProgress(userId, 'work');
-            const moneyMissions = await this.missions.updateMissionProgress(userId, 'money_earned_today', amount);
-            // Las notificaciones se manejan desde los comandos
-        }            
+        await this.updateUser(userId, updateData); // ← Reemplaza saveUsers()    
 
         return {
             success: true,
