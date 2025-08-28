@@ -854,6 +854,7 @@ class EventsSystem {
         }
         
         const activeEvents = this.getActiveEvents();
+        const eventsFromCode = this.eventTypes[eventType];
         
         if (activeEvents.length === 0) {
             await message.reply('❌ No hay eventos activos para mostrar estadísticas.');
@@ -887,7 +888,7 @@ class EventsSystem {
             }
             
             embed.addFields({
-                name: `${event.emoji} ${event.name}`,
+                name: `${eventsFromCode.emoji} ${event.name}`,
                 value: statsText,
                 inline: true
             });

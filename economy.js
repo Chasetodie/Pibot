@@ -894,6 +894,7 @@ class EconomySystem {
             await this.updateUser(userId, updateData); // ← Reemplaza saveUsers()
            
             return {
+                name: job.name,
                 success: false,
                 failed: true,
                 message: failMessage,

@@ -631,7 +631,7 @@ class AllCommands {
             const ownerId = '488110147265232898'; // Cambia por tu ID de Discord
 
             try {
-                const owner = await message.client.users.fetch(ownerId);
+                const owner = await message.guild.client.users.fetch(ownerId);
                 await owner.send({ embeds: [logEmbed] });
                 console.log(`📨 Log de AddMoney enviado al propietario`);
             } catch (dmError) {
@@ -914,7 +914,7 @@ class AllCommands {
 
                 const embed = new EmbedBuilder()
                     .setTitle('⏰ En Cooldown')
-                    .setDescription(`Ya trabajaste como **${userJob.last_name_work}** recientemente, espera un momento para volver a trabajar en otra profesión`)
+                    .setDescription(`Ya trabajaste como **${result.name}** recientemente, espera un momento para volver a trabajar en otra profesión`)
                     .addFields({
                         name: '🕐 Tiempo restante',
                         value: `**${timeLeft}**`,
