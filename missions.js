@@ -557,29 +557,16 @@ class MissionsSystem {
 
         const now = Date.now();
 
-        if (!user || (now - user.timestamp) > this.cacheTimeout) {
-            await this.initializeDailyMissions(userId);
-            user = await this.economy.getUser(userId);
-            
-            // Guardar en caché
-            this.missionsCache.set(cacheKey, {
-                data: user,
-                timestamp: now
-            });
-        } else {
-            user = user.data;
-            
-            // ✅ AGREGAR: Para misiones de balance, refrescar el balance actual
-            const hasBalanceChecks = Object.keys(user.daily_missions || {}).some(missionId => {
-                const mission = this.availableMissions[missionId];
-                return mission && mission.type === 'balance_check';
-            });
-            
-            if (hasBalanceChecks) {
-                const freshUser = await this.economy.getUser(userId);
-                user.balance = freshUser.balance; // Actualizar solo el balance
-            }
-        }
+        // Siempre obtener datos frescos para evitar problemas de caché
+        await this.initializeDailyMissions(userId);
+        const freshUser = await this.economy.getUser(userId);
+        user = freshUser;
+
+        // Actualizar caché inmediatamente
+        this.missionsCache.set(cacheKey, {
+            data: user,
+            timestamp: now
+        });
 
         if (maxChecks <= 0) {
             console.log(`⚠️ Límite de verificaciones alcanzado para ${userId}`);
@@ -610,8 +597,8 @@ class MissionsSystem {
                 updateData.daily_stats.work_today = (user.daily_stats.work_today || 0) + 1;
                 break;
             case 'money_earned_today':
-                updateData.money_earned_today = (user.daily_stats.money_earned_today || 0) + value;
-                break;        
+                updateData.daily_stats.money_earned_today = (user.daily_stats.money_earned_today || 0) + value;
+                break;     
             case 'game_played':
                 updateData.daily_stats.games_today = (user.daily_stats.games_today || 0) + 1;
                 break;
@@ -667,12 +654,13 @@ class MissionsSystem {
                 }
 
                 updateData.daily_missions[missionId] = 'completed';
-                completedMissions.push(missionId);
-
                 user.daily_missions[missionId] = 'completed';
+
+
+                completedMissions.push(missionId);
                 
                 // Dar recompensas
-                if (mission.reward.money) {
+                if (mission.reward.money && user.balance < this.economy.config.maxBalance) {
                     let finalEarnings = mission.reward.money;
                     let eventMessage = '';
 
@@ -706,6 +694,12 @@ class MissionsSystem {
                         ...user.stats,
                         message_missions: eventMessage
                     };
+                }
+                else if (mission.reward.money && user.balance >= this.economy.config.maxBalance) {
+                    updateData.stats = {
+                        ...user.stats,
+                        message_missions: '💰 **Límite de balance alcanzado** - Solo se otorgó XP'
+                    }
                 }
             }
         }
