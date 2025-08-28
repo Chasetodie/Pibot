@@ -1425,19 +1425,19 @@ class AllCommands {
                 case '>rob':
                     await this.handleRobberyCommand(message, args)
                     break;
-                case '>addmoney':
+                /*case '>addmoney':
                 case '>givemoney':
                 case '>givem':
                 case '>addm':
                     await this.handleAddMoney(message);
-                    break;
+                    break;*/
                 case '>removemoney':
                 case '>removem':
                     await this.handleRemoveMoney(message);
                     break;
-                case '>addxp':
+                /*case '>addxp':
                     await this.handleAddXp(message);
-                    break;          
+                    break;          */
 
                 // Betting
                 case '>bet':

@@ -546,7 +546,7 @@ class MissionsSystem {
         const cooldownKey = `mission_update_${userId}`;
         if (this.updateCooldowns.has(cooldownKey)) {
             const lastUpdate = this.updateCooldowns.get(cooldownKey);
-            if (Date.now() - lastUpdate < 1000) { // 1 segundo de cooldown
+            if (Date.now() - lastUpdate < 100) { // 1 segundo de cooldown
                 return [];
             }
         }
@@ -739,7 +739,10 @@ class MissionsSystem {
 
         // Actualizar base de datos
         await this.economy.updateUser(userId, updateData);   
-        Object.assign(user, updateData);
+        user = { ...user, ...updateData };
+        if (updateData.daily_stats) {
+            user.daily_stats = { ...user.daily_stats, ...updateData.daily_stats };
+        }
         
         // Actualizar caché con los nuevos datos
         const updatedUser = { ...user, ...updateData};
@@ -747,6 +750,10 @@ class MissionsSystem {
             data: updatedUser,
             timestamp: Date.now()
         });
+
+        // DEBUG: Log para ver qué se está actualizando
+        console.log(`🔍 Usuario ${userId} - Actualizando stats:`, JSON.stringify(updateData.daily_stats, null, 2));
+        console.log(`🔍 Usuario ${userId} - Estado antes:`, JSON.stringify(user.daily_stats, null, 2));
         
         return completedMissions;
     }
