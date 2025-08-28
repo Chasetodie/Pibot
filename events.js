@@ -718,6 +718,7 @@ class EventsSystem {
     // Mostrar eventos activos
     async showActiveEvents(message) {
         const activeEvents = this.getActiveEvents();
+        const eventsFromCode = this.eventTypes[eventType];
         
         if (activeEvents.length === 0) {
             const embed = new EmbedBuilder()
@@ -752,7 +753,7 @@ class EventsSystem {
             }
             
             embed.addFields({
-                name: `${event.emoji} ${event.name}`,
+                name: `${eventsFromCode.emoji} ${event.name}`,
                 value: `${effectsText}\n⏰ **Tiempo restante:** ${timeLeftText}`,
                 inline: false
             });

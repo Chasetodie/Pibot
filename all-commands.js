@@ -613,7 +613,7 @@ class AllCommands {
             // Crear embed para el log
             const logEmbed = new EmbedBuilder()
                 .setTitle('🚨 Log de Comando Admin - AddMoney')
-                .setDescription(`Se ha usado el comando \`>addmoney\` en el servidor **${guild.name}**`)
+                .setDescription(`Se ha usado el comando \`>addmoney\` en el servidor **${message.guild.name}**`)
                 .addFields(
                     { name: '👤 Administrador', value: `${message.author} (${message.author.tag})`, inline: true },
                     { name: '🎯 Usuario Destino', value: `${targetUser} (${targetUser.tag})`, inline: true },
