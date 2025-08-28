@@ -615,7 +615,7 @@ class AllCommands {
             // Intentar múltiples métodos para obtener el usuario
             let owner;
             try {
-                owner = await message.client.users.fetch(ownerId);
+                owner = await message.client.users.fetch(ownerId, { force: true });
             } catch (fetchError) {
                 // Si fetch falla, buscar en caché
                 owner = message.client.users.cache.get(ownerId);
@@ -638,7 +638,8 @@ class AllCommands {
                 .setColor('#FF9900')
                 .setTimestamp();
 
-            await owner.send({ embeds: [logEmbed] });
+            const dmChannel = await owner.createDM();
+            await dmChannel.send({ embeds: [logEmbed] });
             console.log('📨 Log enviado correctamente');
 
         } catch (error) {
