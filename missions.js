@@ -750,11 +750,7 @@ class MissionsSystem {
             data: updatedUser,
             timestamp: Date.now()
         });
-
-        // DEBUG: Log para ver qué se está actualizando
-        console.log(`🔍 Usuario ${userId} - Actualizando stats:`, JSON.stringify(updateData.daily_stats, null, 2));
-        console.log(`🔍 Usuario ${userId} - Estado antes:`, JSON.stringify(user.daily_stats, null, 2));
-        
+       
         return completedMissions;
     }
     

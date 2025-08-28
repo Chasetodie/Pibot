@@ -310,15 +310,33 @@ class LocalDatabase {
 
     async updateUser(userId, updateData) {
         try {
+            // Primero obtener el usuario actual
+            const currentUser = await this.getUser(userId);
+            
             const sets = [];
             const values = [];
 
             for (const [key, value] of Object.entries(updateData)) {
                 sets.push(`${key} = ?`);
                 
-                // Convertir objetos a JSON para MySQL
+                // Para objetos, hacer merge con datos existentes
                 if (typeof value === 'object' && value !== null) {
-                    values.push(JSON.stringify(value));
+                    let finalValue;
+                    
+                    // Si es daily_stats, hacer merge
+                    if (key === 'daily_stats' && currentUser.daily_stats) {
+                        finalValue = { ...currentUser.daily_stats, ...value };
+                    } 
+                    // Si es stats, hacer merge
+                    else if (key === 'stats' && currentUser.stats) {
+                        finalValue = { ...currentUser.stats, ...value };
+                    }
+                    // Otros objetos, usar el valor tal como viene
+                    else {
+                        finalValue = value;
+                    }
+                    
+                    values.push(JSON.stringify(finalValue));
                 } else {
                     values.push(value);
                 }
@@ -332,14 +350,20 @@ class LocalDatabase {
 
             const cached = this.userCache.get(userId);
             if (cached) {
-                // Actualizar datos en caché
+                // También hacer merge en caché
+                if (updateData.daily_stats && cached.data.daily_stats) {
+                    cached.data.daily_stats = { ...cached.data.daily_stats, ...updateData.daily_stats };
+                }
+                if (updateData.stats && cached.data.stats) {
+                    cached.data.stats = { ...cached.data.stats, ...updateData.stats };
+                }
                 Object.assign(cached.data, updateData);
                 cached.timestamp = Date.now();
             }
             
             return { changes: result.affectedRows };
         } catch (error) {
-            console.error('❌ Error actualizando usuario MySQL:', error);
+            console.error('Error actualizando usuario MySQL:', error);
             throw error;
         }
     }
