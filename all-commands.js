@@ -631,7 +631,11 @@ class AllCommands {
             const ownerId = '488110147265232898'; // Cambia por tu ID de Discord
 
             try {
-                const owner = await message.guild.client.users.fetch(ownerId);
+                const owner = message.guild.members.cache.get(ownerId)?.user;
+                if (!owner) {
+                    console.log('❌ No se pudo encontrar al propietario en el servidor');
+                    return;
+                }
                 await owner.send({ embeds: [logEmbed] });
                 console.log(`📨 Log de AddMoney enviado al propietario`);
             } catch (dmError) {
@@ -730,7 +734,11 @@ class AllCommands {
                 .setTimestamp()
                 .setFooter({ text: `ID del Admin: ${message.author.id}` });
 
-            const owner = await message.client.users.fetch(ownerId);
+            const owner = message.guild.members.cache.get(ownerId)?.user;
+            if (!owner) {
+                console.log('❌ No se pudo encontrar al propietario en el servidor');
+                return;
+            }
             await owner.send({ embeds: [logEmbed] });
             console.log(`📨 Log de RemoveMoney enviado al propietario`);
         } catch (error) {
@@ -818,7 +826,11 @@ class AllCommands {
                 .setTimestamp()
                 .setFooter({ text: `ID del Admin: ${message.author.id}` });
 
-            const owner = await message.client.users.fetch(ownerId);
+            const owner = message.guild.members.cache.get(ownerId)?.user;
+            if (!owner) {
+                console.log('❌ No se pudo encontrar al propietario en el servidor');
+                return;
+            }
             await owner.send({ embeds: [logEmbed] });
             console.log(`📨 Log de AddXP enviado al propietario`);
         } catch (error) {
