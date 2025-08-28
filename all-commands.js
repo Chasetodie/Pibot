@@ -1,7 +1,5 @@
 const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 
-const allowedUsers = ['488110147265232898', '788424796366307409', '1402028858223362238'];
-
 class AllCommands {
     constructor(economySystem, shopSystem, tradeSystem, auctionSystem, craftingSystem,  eventsSystem, bettingSystem, achievementsSystem) {
         this.economy = economySystem;
@@ -542,7 +540,7 @@ class AllCommands {
     }
 
     async handleAddMoney(message) {        
-        if (!message.member?.permissions.has('Administrator') && !allowedUsers.includes(message.author.id)) {
+        if (!message.member?.permissions.has('Administrator')) {
             await message.reply('❌ No tienes permisos de administrador para usar este comando.');
             return;
         }
@@ -574,7 +572,7 @@ class AllCommands {
             await message.reply('❌ Debes mencionar a un usuario válido.');
             return;
         }
-              
+            
         if (targetUser.bot) {
             await message.reply('❌ No puedes dar dinero a bots.');
             return;
@@ -609,10 +607,44 @@ class AllCommands {
             .setTimestamp();
         
         await message.reply({ embeds: [embed] });
+
+        // ENVIAR LOG POR DM A TODOS LOS ADMINISTRADORES
+        try {
+            // Crear embed para el log
+            const logEmbed = new EmbedBuilder()
+                .setTitle('🚨 Log de Comando Admin - AddMoney')
+                .setDescription(`Se ha usado el comando \`>addmoney\` en el servidor **${guild.name}**`)
+                .addFields(
+                    { name: '👤 Administrador', value: `${message.author} (${message.author.tag})`, inline: true },
+                    { name: '🎯 Usuario Destino', value: `${targetUser} (${targetUser.tag})`, inline: true },
+                    { name: '💰 Cantidad', value: `${this.formatNumber(amount)} π-b$`, inline: true },
+                    { name: '📝 Razón', value: reason, inline: false },
+                    { name: '🏦 Balance Anterior', value: `${this.formatNumber(result - amount)} π-b$`, inline: true },
+                    { name: '🏦 Balance Nuevo', value: `${this.formatNumber(result)} π-b$`, inline: true },
+                    { name: '📍 Canal', value: `${message.channel}`, inline: true }
+                )
+                .setColor('#FF9900')
+                .setTimestamp()
+                .setFooter({ text: `ID del Admin: ${message.author.id}` });
+
+            // Tu ID de usuario (reemplaza con tu ID real)
+            const ownerId = '488110147265232898'; // Cambia por tu ID de Discord
+
+            try {
+                const owner = await message.client.users.fetch(ownerId);
+                await owner.send({ embeds: [logEmbed] });
+                console.log(`📨 Log de AddMoney enviado al propietario`);
+            } catch (dmError) {
+                console.log(`❌ No se pudo enviar DM al propietario: ${dmError.message}`);
+            }
+        } catch (error) {
+            console.error('❌ Error enviando logs por DM:', error);
+            // No mostramos el error al usuario para que no sepa del sistema de logs
+        }
     }
 
     async handleRemoveMoney(message) {
-        if (!message.member?.permissions.has('Administrator') && !allowedUsers.includes(message.author.id)) {
+        if (!message.member?.permissions.has('Administrator')) {
             await message.reply('❌ No tienes permisos de administrador para usar este comando.');
             return;
         }
@@ -676,11 +708,38 @@ class AllCommands {
             .setColor('#00FF00')
             .setTimestamp();
             
-        await message.reply({ embeds: [embed] });      
+        await message.reply({ embeds: [embed] });
+        
+        // ENVIAR LOG POR DM AL PROPIETARIO
+        try {
+            const ownerId = '488110147265232898'; // Cambia por tu ID de Discord
+            
+            const logEmbed = new EmbedBuilder()
+                .setTitle('🚨 Log de Comando Admin - RemoveMoney')
+                .setDescription(`Se ha usado el comando \`>removemoney\` en el servidor **${message.guild.name}**`)
+                .addFields(
+                    { name: '👤 Administrador', value: `${message.author} (${message.author.tag})`, inline: true },
+                    { name: '🎯 Usuario Destino', value: `${targetUser} (${targetUser.tag})`, inline: true },
+                    { name: '💸 Cantidad Removida', value: `${this.formatNumber(amount)} π-b$`, inline: true },
+                    { name: '📝 Razón', value: reason, inline: false },
+                    { name: '🏦 Balance Anterior', value: `${this.formatNumber(result + amount)} π-b$`, inline: true },
+                    { name: '🏦 Balance Nuevo', value: `${this.formatNumber(result)} π-b$`, inline: true },
+                    { name: '📍 Canal', value: `${message.channel}`, inline: true }
+                )
+                .setColor('#FF0000')
+                .setTimestamp()
+                .setFooter({ text: `ID del Admin: ${message.author.id}` });
+
+            const owner = await message.client.users.fetch(ownerId);
+            await owner.send({ embeds: [logEmbed] });
+            console.log(`📨 Log de RemoveMoney enviado al propietario`);
+        } catch (error) {
+            console.error('❌ Error enviando log por DM:', error);
+        }
     }
 
     async handleAddXp(message) {
-        if (!message.member?.permissions.has('Administrator') && !allowedUsers.includes(message.author.id)) {
+        if (!message.member?.permissions.has('Administrator')) {
             await message.reply('❌ No tienes permisos de administrador para usar este comando.');
             return;
         }
@@ -738,6 +797,33 @@ class AllCommands {
             .setColor('#00FF00')
             .setTimestamp();
         await message.channel.send({ embeds: [embed] });
+
+        // ENVIAR LOG POR DM AL PROPIETARIO
+        try {
+            const ownerId = '488110147265232898'; // Cambia por tu ID de Discord
+            
+            const logEmbed = new EmbedBuilder()
+                .setTitle('🚨 Log de Comando Admin - AddXP')
+                .setDescription(`Se ha usado el comando \`>addxp\` en el servidor **${message.guild.name}**`)
+                .addFields(
+                    { name: '👤 Administrador', value: `${message.author} (${message.author.tag})`, inline: true },
+                    { name: '🎯 Usuario Destino', value: `${targetUser} (${targetUser.tag})`, inline: true },
+                    { name: '⭐ XP Agregado', value: `${this.formatNumber(baseXP)} XP`, inline: true },
+                    { name: '📝 Razón', value: reason, inline: false },
+                    { name: '🎖️ Nivel Actual', value: `${xpResult.newLevel || 'Sin cambio'}`, inline: true },
+                    { name: '🆙 Subió de Nivel', value: xpResult.levelUp ? '✅ Sí' : '❌ No', inline: true },
+                    { name: '📍 Canal', value: `${message.channel}`, inline: true }
+                )
+                .setColor('#9932CC')
+                .setTimestamp()
+                .setFooter({ text: `ID del Admin: ${message.author.id}` });
+
+            const owner = await message.client.users.fetch(ownerId);
+            await owner.send({ embeds: [logEmbed] });
+            console.log(`📨 Log de AddXP enviado al propietario`);
+        } catch (error) {
+            console.error('❌ Error enviando log por DM:', error);
+        }
 
         // Si subió de nivel, notificar
         if (xpResult && xpResult.levelUp) {
@@ -1425,19 +1511,19 @@ class AllCommands {
                 case '>rob':
                     await this.handleRobberyCommand(message, args)
                     break;
-                /*case '>addmoney':
+                case '>addmoney':
                 case '>givemoney':
                 case '>givem':
                 case '>addm':
                     await this.handleAddMoney(message);
-                    break;*/
+                    break;
                 case '>removemoney':
                 case '>removem':
                     await this.handleRemoveMoney(message);
                     break;
-                /*case '>addxp':
+                case '>addxp':
                     await this.handleAddXp(message);
-                    break;          */
+                    break;          
 
                 // Betting
                 case '>bet':
