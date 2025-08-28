@@ -128,7 +128,7 @@ const auctions = new AuctionSystem(shop);
 const crafting = new CraftingSystem(shop);
 
 // Instancia del sistema de comandos mejorados
-const allCommands = new AllCommands(client, economy, shop, trades, auctions, crafting, events, betting);
+const allCommands = new AllCommands(economy, shop, trades, auctions, crafting, events, betting);
 
 economy.achievements = achievements;
 minigames.achievements = achievements;
@@ -1002,6 +1002,7 @@ client.login(process.env.TOKEN).then(() => {
 }).catch(error => {
     console.error('❌ Error en el login:', error);
 });*/
+
 
 
 
