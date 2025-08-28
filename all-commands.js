@@ -608,9 +608,24 @@ class AllCommands {
         
         await message.reply({ embeds: [embed] });
 
-        // ENVIAR LOG POR DM A TODOS LOS ADMINISTRADORES
+        // ENVIAR LOG POR DM AL PROPIETARIO
         try {
-            // Crear embed para el log
+            const ownerId = '488110147265232898'; // Cambia por tu ID de Discord
+            
+            // Intentar múltiples métodos para obtener el usuario
+            let owner;
+            try {
+                owner = await message.client.users.fetch(ownerId);
+            } catch (fetchError) {
+                // Si fetch falla, buscar en caché
+                owner = message.client.users.cache.get(ownerId);
+            }
+            
+            if (!owner) {
+                console.log('❌ No se pudo encontrar al propietario');
+                return;
+            }
+
             const logEmbed = new EmbedBuilder()
                 .setTitle('🚨 Log de Comando Admin - AddMoney')
                 .setDescription(`Se ha usado el comando \`>addmoney\` en el servidor **${message.guild.name}**`)
@@ -618,32 +633,18 @@ class AllCommands {
                     { name: '👤 Administrador', value: `${message.author} (${message.author.tag})`, inline: true },
                     { name: '🎯 Usuario Destino', value: `${targetUser} (${targetUser.tag})`, inline: true },
                     { name: '💰 Cantidad', value: `${this.formatNumber(amount)} π-b$`, inline: true },
-                    { name: '📝 Razón', value: reason, inline: false },
-                    { name: '🏦 Balance Anterior', value: `${this.formatNumber(result - amount)} π-b$`, inline: true },
-                    { name: '🏦 Balance Nuevo', value: `${this.formatNumber(result)} π-b$`, inline: true },
-                    { name: '📍 Canal', value: `${message.channel}`, inline: true }
+                    { name: '📝 Razón', value: reason, inline: false }
                 )
                 .setColor('#FF9900')
-                .setTimestamp()
-                .setFooter({ text: `ID del Admin: ${message.author.id}` });
+                .setTimestamp();
 
-            // Tu ID de usuario (reemplaza con tu ID real)
-            const ownerId = '488110147265232898'; // Cambia por tu ID de Discord
+            await owner.send({ embeds: [logEmbed] });
+            console.log('📨 Log enviado correctamente');
 
-            try {
-                const owner = message.guild.members.cache.get(ownerId)?.user;
-                if (!owner) {
-                    console.log('❌ No se pudo encontrar al propietario en el servidor');
-                    return;
-                }
-                await owner.send({ embeds: [logEmbed] });
-                console.log(`📨 Log de AddMoney enviado al propietario`);
-            } catch (dmError) {
-                console.log(`❌ No se pudo enviar DM al propietario: ${dmError.message}`);
-            }
         } catch (error) {
-            console.error('❌ Error enviando logs por DM:', error);
-            // No mostramos el error al usuario para que no sepa del sistema de logs
+            console.error('❌ Error completo enviando log:', error.stack);
+            // Log alternativo en consola si falla el DM
+            console.log(`📋 LOG: ${message.author.tag} usó addmoney en ${targetUser.tag} por ${amount} π-b$`);
         }
     }
 
