@@ -601,7 +601,7 @@ class AllCommands {
             .setTitle('✅ Se ha Entregado Exitosamente el Dinero')
             .setDescription(`Has dado **${this.formatNumber(amount)}** ${this.economy.config.currencySymbol} a ${targetUser}\nRazón: ${reason}`)
             .addFields(
-                { name: '💰 Balance de Destino', value: `${this.formatNumber(result - amount)} ${this.economy.config.currencySymbol}`, inline: true }
+                { name: '💰 Balance de Destino', value: `${this.formatNumber(result.newBalance - amount)} ${this.economy.config.currencySymbol}`, inline: true }
             )
             .setColor('#00FF00')
             .setTimestamp();
