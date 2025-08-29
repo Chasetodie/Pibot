@@ -888,8 +888,11 @@ class MissionsSystem {
     }
     
     // Notificar misiones completadas
-    async notifyCompletedMissions(message, completedMissions, userId = message.author.id) {
+    async notifyCompletedMissions(message, completedMissions, userId = '') {
         if (completedMissions.length === 0) return;
+
+        if (userId === '')
+            userId = message.author.id;
 
         const user = await this.economy.getUser(userId);
         
