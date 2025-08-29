@@ -888,10 +888,10 @@ class MissionsSystem {
     }
     
     // Notificar misiones completadas
-    async notifyCompletedMissions(message, completedMissions) {
+    async notifyCompletedMissions(message, completedMissions, userId = message.author.id) {
         if (completedMissions.length === 0) return;
 
-        const user = await this.economy.getUser(message.author.id);
+        const user = await this.economy.getUser(userId);
         
         for (const missionId of completedMissions) {
             const mission = this.availableMissions[missionId];
@@ -924,7 +924,7 @@ class MissionsSystem {
             await message.channel.send({ 
                 content: `<@${message.author.id}>`,
                 embeds: [embed],
-                allowedMentions: { users: [message.author.id] }
+                allowedMentions: { users: [userId] }
             });
         }
     }
