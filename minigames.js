@@ -1387,7 +1387,7 @@ class MinigamesSystem {
                     allCompleted = [...allCompleted, ...winMissions, ...betWonMissions, ...moneyMissions];
                     
                     if (allCompleted.length > 0) {
-                        await this.missions.notifyCompletedMissions(messageOrInteraction, allCompleted);
+                        await this.missions.notifyCompletedMissions(messageOrInteraction, allCompleted, userId);
                     }
                 }                
                 break;
