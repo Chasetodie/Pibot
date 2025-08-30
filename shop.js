@@ -1063,6 +1063,330 @@ class ShopSystem {
         }
     }
 
+    // === LIMPIAR EFECTOS EXPIRADOS (ejecutar periódicamente) ===
+    async cleanupExpiredEffects(userId) {
+        const user = await this.economy.getUser(userId);
+        const activeEffects = user.activeEffects || {};
+        
+        let hasChanges = false;
+        const now = Date.now();
+        
+        for (const [itemId, effects] of Object.entries(activeEffects)) {
+            if (!Array.isArray(effects)) continue;
+            
+            const validEffects = effects.filter(effect => {
+                // Mantener efectos sin expiración o que no han expirado
+                if (!effect.expiresAt) return true;
+                return effect.expiresAt > now;
+            });
+            
+            if (validEffects.length !== effects.length) {
+                hasChanges = true;
+                if (validEffects.length === 0) {
+                    delete activeEffects[itemId];
+                } else {
+                    activeEffects[itemId] = validEffects;
+                }
+            }
+        }
+        
+        if (hasChanges) {
+            await this.economy.updateUser(userId, { activeEffects });
+        }
+        
+        return hasChanges;
+    }
+
+    // === VERIFICAR Y APLICAR EFECTOS EN TRABAJOS ===
+    async applyWorkEffects(userId, baseAmount, baseCooldown) {
+        await this.cleanupExpiredEffects(userId);
+        
+        const multipliers = await this.getActiveMultipliers(userId, 'work');
+        const finalAmount = Math.floor(baseAmount * multipliers.multiplier);
+        const finalCooldown = Math.floor(baseCooldown * (1 - multipliers.reduction));
+        
+        // Decrementar usos si aplica
+        await this.decrementItemUses(userId, 'work');
+        
+        return {
+            amount: finalAmount,
+            cooldown: Math.max(finalCooldown, 1000), // Mínimo 1 segundo
+            multiplierApplied: multipliers.multiplier > 1
+        };
+    }
+
+    // === VERIFICAR Y APLICAR EFECTOS EN JUEGOS ===
+    async applyGameEffects(userId, baseAmount, baseSuccessRate = 0.5) {
+        await this.cleanupExpiredEffects(userId);
+        
+        const user = await this.economy.getUser(userId);
+        const activeEffects = user.activeEffects || {};
+        const permanentEffects = user.permanentEffects || {};
+        
+        let multiplier = 1.0;
+        let luckBoost = 0;
+        
+        // Efectos temporales
+        for (const [itemId, effects] of Object.entries(activeEffects)) {
+            for (const effect of effects) {
+                if (effect.expiresAt && effect.expiresAt < Date.now()) continue;
+                if (!effect.targets.includes('games') && !effect.targets.includes('all')) continue;
+                
+                if (effect.multiplier) multiplier *= effect.multiplier;
+                if (effect.boost) luckBoost += effect.boost;
+            }
+        }
+        
+        // Efectos permanentes
+        for (const effect of Object.values(permanentEffects)) {
+            if (!effect.targets || (!effect.targets.includes('games') && !effect.targets.includes('all'))) continue;
+            
+            if (effect.multiplier) multiplier *= effect.multiplier;
+            if (effect.boost) luckBoost += effect.boost;
+        }
+        
+        // Aplicar efectos VIP
+        const vipEffects = await this.getVipMultipliers(userId, 'games');
+        multiplier *= vipEffects.multiplier;
+        luckBoost += vipEffects.luckBoost;
+        
+        const finalAmount = Math.floor(baseAmount * multiplier);
+        const finalSuccessRate = Math.min(baseSuccessRate + luckBoost, 0.95); // Máximo 95%
+        
+        await this.decrementItemUses(userId, 'games');
+        
+        return {
+            amount: finalAmount,
+            successRate: finalSuccessRate,
+            multiplierApplied: multiplier > 1,
+            luckApplied: luckBoost > 0
+        };
+    }
+
+    // === APLICAR EFECTOS DE XP ===
+    async applyXpEffects(userId, baseXp) {
+        await this.cleanupExpiredEffects(userId);
+        
+        const multipliers = await this.getActiveMultipliers(userId, 'all');
+        const user = await this.economy.getUser(userId);
+        const activeEffects = user.activeEffects || {};
+        
+        let xpMultiplier = 1.0;
+        
+        // Buscar específicamente multiplicadores de XP
+        for (const [itemId, effects] of Object.entries(activeEffects)) {
+            for (const effect of effects) {
+                if (effect.type === 'xp_multiplier' || effect.type === 'xp_tornado') {
+                    if (effect.expiresAt && effect.expiresAt < Date.now()) continue;
+                    if (effect.multiplier) xpMultiplier *= effect.multiplier;
+                }
+            }
+        }
+        
+        return Math.floor(baseXp * xpMultiplier);
+    }
+
+    // === DECREMENTAR USOS DE ITEMS ===
+    async decrementItemUses(userId, action) {
+        const user = await this.economy.getUser(userId);
+        const activeEffects = user.activeEffects || {};
+        
+        let hasChanges = false;
+        
+        for (const [itemId, effects] of Object.entries(activeEffects)) {
+            for (let i = effects.length - 1; i >= 0; i--) {
+                const effect = effects[i];
+                
+                // Solo decrementar si el efecto aplica a esta acción
+                if (!effect.targets.includes(action) && !effect.targets.includes('all')) continue;
+                
+                if (effect.usesLeft && effect.usesLeft > 0) {
+                    effect.usesLeft -= 1;
+                    hasChanges = true;
+                    
+                    if (effect.usesLeft <= 0) {
+                        effects.splice(i, 1);
+                        if (effects.length === 0) {
+                            delete activeEffects[itemId];
+                        }
+                    }
+                }
+            }
+        }
+        
+        if (hasChanges) {
+            await this.economy.updateUser(userId, { activeEffects });
+        }
+    }
+
+    // === VERIFICAR SI TIENE COOLDOWN ACTIVO ===
+    async hasNoCooldownActive(userId) {
+        const user = await this.economy.getUser(userId);
+        const activeEffects = user.activeEffects || {};
+        
+        // Verificar botas de velocidad
+        if (activeEffects['speed_boots']) {
+            for (const effect of activeEffects['speed_boots']) {
+                if (effect.type === 'no_cooldown' && effect.expiresAt > Date.now()) {
+                    return true;
+                }
+            }
+        }
+        
+        // Verificar VIP
+        const vipEffects = await this.getVipMultipliers(userId, 'all');
+        return vipEffects.noCooldown;
+    }
+
+    // === PROCESAR INGRESOS PASIVOS ===
+    async processPassiveIncome(userId) {
+        const user = await this.economy.getUser(userId);
+        const permanentEffects = user.permanentEffects || {};
+        
+        if (!permanentEffects['auto_worker']) return { amount: 0, generated: false };
+        
+        const effect = permanentEffects['auto_worker'];
+        const lastClaim = user.lastPassiveIncome || 0;
+        const now = Date.now();
+        
+        // Verificar si ha pasado 1 hora
+        if (now - lastClaim < effect.interval) {
+            return { amount: 0, generated: false };
+        }
+        
+        const amount = Math.floor(Math.random() * (effect.maxAmount - effect.minAmount + 1)) + effect.minAmount;
+        
+        await this.economy.updateUser(userId, {
+            balance: user.balance + amount,
+            lastPassiveIncome: now
+        });
+        
+        return { amount, generated: true };
+    }
+
+    // === OBTENER INFO DE EFECTOS ACTIVOS ===
+    async getActiveEffectsInfo(userId) {
+        await this.cleanupExpiredEffects(userId);
+        
+        const user = await this.economy.getUser(userId);
+        const activeEffects = user.activeEffects || {};
+        const permanentEffects = user.permanentEffects || {};
+        
+        const info = {
+            temporary: [],
+            permanent: [],
+            vip: null
+        };
+        
+        // Efectos temporales
+        for (const [itemId, effects] of Object.entries(activeEffects)) {
+            const item = this.shopItems[itemId];
+            if (!item) continue;
+            
+            for (const effect of effects) {
+                let timeLeft = '';
+                if (effect.expiresAt) {
+                    const remaining = Math.max(0, effect.expiresAt - Date.now());
+                    const minutes = Math.floor(remaining / 60000);
+                    const seconds = Math.floor((remaining % 60000) / 1000);
+                    timeLeft = `${minutes}m ${seconds}s`;
+                } else if (effect.usesLeft) {
+                    timeLeft = `${effect.usesLeft} uso${effect.usesLeft > 1 ? 's' : ''}`;
+                }
+                
+                info.temporary.push({
+                    name: item.name,
+                    timeLeft,
+                    type: effect.type
+                });
+            }
+        }
+        
+        // Efectos permanentes
+        for (const [itemId, effect] of Object.entries(permanentEffects)) {
+            const item = this.shopItems[itemId];
+            if (!item) continue;
+            
+            if (effect.type === 'vip_membership') {
+                const remaining = effect.appliedAt + effect.duration - Date.now();
+                if (remaining > 0) {
+                    const days = Math.floor(remaining / (24 * 60 * 60 * 1000));
+                    const hours = Math.floor((remaining % (24 * 60 * 60 * 1000)) / (60 * 60 * 1000));
+                    info.vip = {
+                        tier: this.getVipTier(effect.benefits),
+                        timeLeft: `${days}d ${hours}h`
+                    };
+                }
+            } else {
+                info.permanent.push({
+                    name: item.name,
+                    type: effect.type
+                });
+            }
+        }
+        
+        return info;
+    }
+
+    // === COMANDO PARA VER EFECTOS ===
+    async showActiveEffects(message) {
+        const info = await this.getActiveEffectsInfo(message.author.id);
+        
+        const embed = new EmbedBuilder()
+            .setTitle('⚡ Tus Efectos Activos')
+            .setColor('#FF6B35')
+            .setThumbnail(message.author.displayAvatarURL({ dynamic: true }));
+        
+        if (info.temporary.length === 0 && info.permanent.length === 0 && !info.vip) {
+            embed.setDescription('No tienes efectos activos en este momento.');
+            await message.reply({ embeds: [embed] });
+            return;
+        }
+        
+        if (info.vip) {
+            embed.addFields({
+                name: '👑 Estado VIP',
+                value: `**${info.vip.tier}**\nTiempo restante: ${info.vip.timeLeft}`,
+                inline: false
+            });
+        }
+        
+        if (info.temporary.length > 0) {
+            const tempText = info.temporary.map(e => 
+                `• **${e.name}** - ${e.timeLeft}`
+            ).join('\n');
+            
+            embed.addFields({
+                name: '⏱️ Efectos Temporales',
+                value: tempText,
+                inline: false
+            });
+        }
+        
+        if (info.permanent.length > 0) {
+            const permText = info.permanent.map(e => 
+                `• **${e.name}**`
+            ).join('\n');
+            
+            embed.addFields({
+                name: '💎 Efectos Permanentes',
+                value: permText,
+                inline: false
+            });
+        }
+        
+        await message.reply({ embeds: [embed] });
+    }
+    
+    // === AUTO-LIMPIAR EFECTOS (llamar cada 5 minutos) ===
+    async autoCleanupAll() {
+        // Esta función debería ser llamada periódicamente
+        console.log('🧹 Limpiando efectos expirados...');
+        
+        // Aquí necesitarías una lista de usuarios activos
+        // Por ahora es un placeholder - implementar según tu sistema
+    }
+    
     async isProtectedFromTheft(userId) {
         const user = await this.economy.getUser(userId);
         const activeEffects = user.activeEffects || {};
@@ -1194,7 +1518,7 @@ class ShopSystem {
                     await this.showShop(message, category, page);
                     break;
                     
-                /*case '>buy':
+                case '>buy':
                 case '>comprar':
                     if (!args[1]) {
                         await message.reply('❌ Especifica el ID del item. Ejemplo: `>buy lucky_charm`');
@@ -1222,7 +1546,11 @@ class ShopSystem {
                         return;
                     }
                     await this.useItem(message, args.slice(1).join(' '));
-                    break;*/
+                    break;
+                case '>efectos':
+                case '>effects':
+                    await this.showActiveEffects(message);
+                    break;
             }
         } catch (error) {
             console.error('❌ Error en sistema de tienda:', error);
