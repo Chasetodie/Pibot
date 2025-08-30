@@ -1305,6 +1305,7 @@ class MinigamesSystem {
     }
     
     async finishBlackjack(messageOrInteraction, gameState, result) {
+        console.log(`${messageOrInteraction}`);
         gameState.finished = true;
         this.activeGames.delete(`blackjack_${gameState.userId}`);
         
