@@ -5,85 +5,85 @@ class ShopSystem {
     constructor(economySystem) {
         this.economy = economySystem;
         
-        // Catálogo completo de items
         this.shopItems = {
             // === CONSUMIBLES TEMPORALES ===
             'lucky_charm': {
                 id: 'lucky_charm',
                 name: '🍀 Amuleto de Suerte',
                 description: 'Aumenta tus ganancias en trabajos y juegos por 2 horas',
-                price: 2500,
+                price: 100000,
                 category: 'consumable',
                 rarity: 'uncommon',
                 effect: {
                     type: 'multiplier',
                     targets: ['work', 'games'],
-                    multiplier: 1.5,
-                    duration: 7200 // 2 horas en segundos
+                    multiplier: 1.25,
+                    duration: 7200
                 },
                 stackable: true,
-                maxStack: 10
+                maxStack: 5
             },
             'energy_drink': {
                 id: 'energy_drink',
                 name: '⚡ Bebida Energética',
                 description: 'Reduce el cooldown de trabajos a la mitad por 1 hora',
-                price: 1500,
+                price: 75000,
                 category: 'consumable',
                 rarity: 'common',
                 effect: {
                     type: 'cooldown_reduction',
                     targets: ['work'],
-                    reduction: 0.5, // 50% reducción
-                    duration: 3600 // 1 hora
+                    reduction: 0.5,
+                    duration: 3600
                 },
                 stackable: true,
-                maxStack: 15
+                maxStack: 10
             },
             'double_xp_potion': {
                 id: 'double_xp_potion',
                 name: '📚 Poción de Doble XP',
                 description: 'Duplica toda la experiencia ganada por 30 minutos',
-                price: 3000,
+                price: 250000,
                 category: 'consumable',
                 rarity: 'rare',
                 effect: {
                     type: 'xp_multiplier',
                     targets: ['all'],
                     multiplier: 2.0,
-                    duration: 1800 // 30 minutos
+                    duration: 1800
                 },
                 stackable: true,
-                maxStack: 5
+                maxStack: 3
             },
             'robbery_kit': {
                 id: 'robbery_kit',
                 name: '🔧 Kit de Robo',
-                description: 'Aumenta 30% probabilidad de éxito en robos por 1 uso',
-                price: 2000,
+                description: 'Aumenta 20% probabilidad de éxito en robos por 1 uso',
+                price: 120000,
                 category: 'consumable',
                 rarity: 'uncommon',
                 effect: {
                     type: 'success_boost',
                     targets: ['robbery'],
-                    boost: 0.3,
-                    uses: 1 // Solo 1 uso
+                    boost: 0.2,
+                    uses: 1
                 },
                 stackable: true,
-                maxStack: 20
+                maxStack: 10
             },
-            
+
             // === ITEMS PERMANENTES ===
             'vip_pass': {
                 id: 'vip_pass',
                 name: '👑 Pase VIP',
-                description: 'Acceso permanente a comandos VIP y bonificaciones especiales',
-                price: 25000,
-                category: 'permanent',
+                description: 'Acceso permanente a comandos VIP y bonificaciones especiales por 30 días',
+                price: 1000000,
+                category: 'special',
                 rarity: 'epic',
                 effect: {
                     type: 'permanent_upgrade',
-                    benefits: ['vip_commands', 'daily_bonus', 'priority_support']
+                    benefits: ['vip_commands', 'daily_bonus', 'priority_support'],
+                    duration: 604800 // 7 Dias
                 },
                 stackable: false,
                 maxStack: 1
@@ -92,7 +92,7 @@ class ShopSystem {
                 id: 'money_magnet',
                 name: '🧲 Imán de Dinero',
                 description: '+10% ganancias permanentes en todos los comandos',
-                price: 15000,
+                price: 2500000,
                 category: 'permanent',
                 rarity: 'rare',
                 effect: {
@@ -106,31 +106,28 @@ class ShopSystem {
             'work_boots': {
                 id: 'work_boots',
                 name: '👢 Botas de Trabajo',
-                description: 'Reduce permanentemente el cooldown de trabajo en 20%',
-                price: 8000,
+                description: 'Reduce permanentemente el cooldown de trabajo en 15%',
+                price: 500000,
                 category: 'permanent',
                 rarity: 'uncommon',
                 effect: {
                     type: 'permanent_cooldown',
                     targets: ['work'],
-                    reduction: 0.2
+                    reduction: 0.15
                 },
                 stackable: false,
                 maxStack: 1
             },
-            
+
             // === DECORATIVOS ===
             'golden_trophy': {
                 id: 'golden_trophy',
                 name: '🏆 Trofeo Dorado',
                 description: 'Muestra tu estatus de campeón en tu perfil',
-                price: 5000,
+                price: 200000,
                 category: 'cosmetic',
                 rarity: 'uncommon',
-                effect: {
-                    type: 'cosmetic',
-                    display: 'profile_trophy'
-                },
+                effect: { type: 'cosmetic', display: 'profile_trophy' },
                 stackable: false,
                 maxStack: 1
             },
@@ -138,61 +135,52 @@ class ShopSystem {
                 id: 'rainbow_badge',
                 name: '🌈 Insignia Arcoíris',
                 description: 'Una hermosa insignia que aparece en tu perfil',
-                price: 3500,
+                price: 150000,
                 category: 'cosmetic',
                 rarity: 'common',
-                effect: {
-                    type: 'cosmetic',
-                    display: 'profile_badge'
-                },
+                effect: { type: 'cosmetic', display: 'profile_badge' },
                 stackable: false,
                 maxStack: 1
             },
-            
+
             // === ESPECIALES ===
             'mystery_box': {
                 id: 'mystery_box',
                 name: '📦 Caja Misteriosa',
-                description: 'Contiene un item aleatorio del valor de 1000-10000 π-b$',
-                price: 4000,
+                description: 'Contiene un item aleatorio del valor de 100K-500K π-b$',
+                price: 200000,
                 category: 'mystery',
                 rarity: 'rare',
-                effect: {
-                    type: 'mystery',
-                    minValue: 1000,
-                    maxValue: 10000
-                },
+                effect: { type: 'mystery', minValue: 100000, maxValue: 500000 },
                 stackable: true,
-                maxStack: 50
+                maxStack: 20
             },
-
             'anti_theft_shield': {
                 id: 'anti_theft_shield',
                 name: '🛡️ Escudo Antirrobo',
                 description: 'Te protege de robos por 24 horas',
-                price: 8000,
+                price: 300000,
                 category: 'consumable',
                 rarity: 'epic',
                 effect: {
                     type: 'protection',
                     targets: ['robbery'],
-                    duration: 86400 // 24 horas en segundos
+                    duration: 86400
                 },
                 stackable: true,
-                maxStack: 5
+                maxStack: 3
             },
-
             'permanent_vault': {
                 id: 'permanent_vault',
                 name: '🏦 Bóveda Permanente',
-                description: 'Protección permanente contra robos (reduce probabilidad 80%)',
-                price: 25000,
+                description: 'Protección permanente contra robos (reduce probabilidad 60%)',
+                price: 3000000,
                 category: 'permanent',
                 rarity: 'legendary',
                 effect: {
                     type: 'permanent_protection',
                     targets: ['robbery'],
-                    reduction: 0.8 // Reduce 80% probabilidad de ser robado
+                    reduction: 0.6 // antes 0.8, nerf
                 },
                 stackable: false,
                 maxStack: 1
@@ -202,68 +190,46 @@ class ShopSystem {
             'mega_luck_potion': {
                 id: 'mega_luck_potion',
                 name: '🍀 Mega Poción de Suerte',
-                description: 'Aumenta dramáticamente la suerte en todos los juegos por 1 hora',
-                price: 5000,
+                description: 'Aumenta la suerte en todos los juegos por 1 hora',
+                price: 300000,
                 category: 'consumable',
                 rarity: 'epic',
-                effect: {
-                    type: 'luck_boost',
-                    targets: ['games', 'all'],
-                    boost: 0.25, // +25% probabilidad de ganar
-                    duration: 3600 // 1 hora
-                },
+                effect: { type: 'luck_boost', targets: ['games'], boost: 0.2, duration: 3600 },
                 stackable: true,
-                maxStack: 5
+                maxStack: 3
             },
-
             'speed_boots': {
                 id: 'speed_boots',
                 name: '👟 Botas de Velocidad',
-                description: 'Elimina todos los cooldowns por 20 minutos',
-                price: 7500,
+                description: 'Reduce todos los cooldowns en 70% por 20 minutos',
+                price: 500000,
                 category: 'consumable',
                 rarity: 'rare',
-                effect: {
-                    type: 'no_cooldown',
-                    targets: ['all'],
-                    duration: 1200 // 20 minutos
-                },
+                effect: { type: 'cooldown_reduction', targets: ['all'], reduction: 0.7, duration: 1200 },
                 stackable: true,
-                maxStack: 3
+                maxStack: 2
             },
-
             'xp_tornado': {
                 id: 'xp_tornado',
                 name: '🌪️ Tornado de XP',
-                description: 'x5 XP de todos los mensajes por 15 minutos',
-                price: 4500,
+                description: 'x3 XP de todos los mensajes por 15 minutos',
+                price: 400000,
                 category: 'consumable',
                 rarity: 'epic',
-                effect: {
-                    type: 'xp_multiplier',
-                    targets: ['all'],
-                    multiplier: 5.0,
-                    duration: 900 // 15 minutos
-                },
+                effect: { type: 'xp_multiplier', targets: ['all'], multiplier: 3.0, duration: 900 },
                 stackable: true,
-                maxStack: 3
+                maxStack: 2
             },
-
             'golden_pickaxe': {
                 id: 'golden_pickaxe',
                 name: '⛏️ Pico Dorado',
-                description: 'Triplica las ganancias de trabajo por 3 usos',
-                price: 6000,
+                description: 'Duplica las ganancias de trabajo por 3 usos',
+                price: 450000,
                 category: 'consumable',
                 rarity: 'rare',
-                effect: {
-                    type: 'work_multiplier',
-                    targets: ['work'],
-                    multiplier: 3.0,
-                    uses: 3
-                },
+                effect: { type: 'work_multiplier', targets: ['work'], multiplier: 2.0, uses: 3 },
                 stackable: true,
-                maxStack: 10
+                maxStack: 5
             },
 
             // === NUEVOS ITEMS PERMANENTES ===
@@ -271,54 +237,36 @@ class ShopSystem {
                 id: 'diamond_membership',
                 name: '💎 Membresía Diamante',
                 description: 'Membresía premium por 30 días con beneficios exclusivos',
-                price: 50000,
+                price: 5000000,
                 category: 'permanent',
                 rarity: 'legendary',
                 effect: {
                     type: 'vip_membership',
-                    duration: 30 * 24 * 60 * 60 * 1000, // 30 días en ms
-                    benefits: [
-                        'no_cooldowns',
-                        'double_earnings',
-                        'luck_boost',
-                        'priority_support',
-                        'exclusive_commands',
-                        'custom_nickname'
-                    ]
+                    duration: 30 * 24 * 60 * 60 * 1000,
+                    benefits: ['no_cooldowns','double_earnings','luck_boost','priority_support','exclusive_commands','custom_nickname']
                 },
                 stackable: false,
                 maxStack: 1
             },
-
             'luck_charm_permanent': {
                 id: 'luck_charm_permanent',
                 name: '🍀 Amuleto de Suerte Permanente',
-                description: '+15% suerte permanente en todos los juegos',
-                price: 20000,
+                description: '+10% suerte permanente en todos los juegos',
+                price: 1500000,
                 category: 'permanent',
                 rarity: 'epic',
-                effect: {
-                    type: 'permanent_luck',
-                    targets: ['games', 'all'],
-                    boost: 0.15
-                },
+                effect: { type: 'permanent_luck', targets: ['games'], boost: 0.1 },
                 stackable: false,
                 maxStack: 1
             },
-
             'auto_worker': {
                 id: 'auto_worker',
                 name: '🤖 Trabajador Automático',
-                description: 'Genera dinero pasivo cada hora (500-1500 π-b$)',
-                price: 35000,
+                description: 'Genera dinero pasivo cada hora (5k–15k π-b$)',
+                price: 4000000,
                 category: 'permanent',
                 rarity: 'legendary',
-                effect: {
-                    type: 'passive_income',
-                    minAmount: 500,
-                    maxAmount: 1500,
-                    interval: 3600000 // 1 hora en ms
-                },
+                effect: { type: 'passive_income', minAmount: 5000, maxAmount: 15000, interval: 3600000 },
                 stackable: false,
                 maxStack: 1
             },
@@ -328,32 +276,23 @@ class ShopSystem {
                 id: 'custom_nickname_token',
                 name: '🏷️ Token de Apodo Personalizado',
                 description: 'Permite cambiar tu apodo una vez',
-                price: 8000,
+                price: 200000,
                 category: 'special',
                 rarity: 'rare',
-                effect: {
-                    type: 'nickname_change',
-                    uses: 1
-                },
+                effect: { type: 'nickname_change', uses: 1 },
                 stackable: true,
-                maxStack: 5
+                maxStack: 3
             },
-
             'premium_mystery_box': {
                 id: 'premium_mystery_box',
                 name: '🎁 Caja Premium Misteriosa',
-                description: 'Contiene items raros o legendarios (5000-25000 π-b$ valor)',
-                price: 12000,
+                description: 'Contiene items raros o legendarios (250K-2M π-b$ valor)',
+                price: 500000,
                 category: 'mystery',
                 rarity: 'epic',
-                effect: {
-                    type: 'premium_mystery',
-                    minValue: 5000,
-                    maxValue: 25000,
-                    rarityBonus: true
-                },
+                effect: { type: 'premium_mystery', minValue: 250000, maxValue: 2000000, rarityBonus: true },
                 stackable: true,
-                maxStack: 20
+                maxStack: 10
             },
 
             // === NUEVOS COSMÉTICOS ===
@@ -361,49 +300,38 @@ class ShopSystem {
                 id: 'diamond_crown',
                 name: '👑 Corona de Diamante',
                 description: 'Una corona brillante que muestra tu estatus real',
-                price: 15000,
+                price: 750000,
                 category: 'cosmetic',
                 rarity: 'legendary',
-                effect: {
-                    type: 'cosmetic',
-                    display: 'profile_crown',
-                    prestige: 10
-                },
+                effect: { type: 'cosmetic', display: 'profile_crown', prestige: 10 },
                 stackable: false,
                 maxStack: 1
             },
-
             'fire_badge': {
                 id: 'fire_badge',
                 name: '🔥 Insignia de Fuego',
                 description: 'Una insignia ardiente para los más activos',
-                price: 6000,
+                price: 250000,
                 category: 'cosmetic',
                 rarity: 'epic',
-                effect: {
-                    type: 'cosmetic',
-                    display: 'profile_badge',
-                    prestige: 5
-                },
+                effect: { type: 'cosmetic', display: 'profile_badge', prestige: 5 },
                 stackable: false,
                 maxStack: 1
             },
-
             'vip_frame': {
                 id: 'vip_frame',
                 name: '🖼️ Marco VIP',
                 description: 'Un marco dorado para tu perfil que demuestra tu estatus VIP',
-                price: 12000,
+                price: 400000,
                 category: 'cosmetic',
                 rarity: 'epic',
-                effect: {
-                    type: 'cosmetic',
-                    display: 'profile_frame'
-                },
+                effect: { type: 'cosmetic', display: 'profile_frame' },
                 stackable: false,
                 maxStack: 1
             }
         };
+
+
         
         // Colores por rareza
         this.rarityColors = {

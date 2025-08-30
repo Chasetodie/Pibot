@@ -351,8 +351,8 @@ class CraftingSystem {
                 name: '🍀✨ Super Amuleto de Suerte',
                 description: 'Versión mejorada del amuleto normal (x2.0 multiplicador, 4 horas)',
                 ingredients: [
-                    { id: 'lucky_charm', quantity: 3 },
-                    { id: 'double_xp_potion', quantity: 1 }
+                    { id: 'lucky_charm', quantity: 5 },
+                    { id: 'double_xp_potion', quantity: 2 }
                 ],
                 result: {
                     id: 'super_lucky_charm',
@@ -365,17 +365,19 @@ class CraftingSystem {
                         duration: 14400 // 4 horas
                     },
                     stackable: true,
-                    maxStack: 5
+                    maxStack: 3
                 }
             },
+
             'master_toolkit': {
                 id: 'master_toolkit',
                 name: '🔧⚡ Kit Maestro',
                 description: 'Reduce todos los cooldowns permanentemente en 30%',
                 ingredients: [
-                    { id: 'work_boots', quantity: 1 },
-                    { id: 'energy_drink', quantity: 5 },
-                    { id: 'robbery_kit', quantity: 3 }
+                    { id: 'work_boots', quantity: 2 },
+                    { id: 'energy_drink', quantity: 10 },
+                    { id: 'robbery_kit', quantity: 5 },
+                    { id: 'golden_pickaxe', quantity: 1 }
                 ],
                 result: {
                     id: 'master_toolkit',
@@ -390,13 +392,14 @@ class CraftingSystem {
                     maxStack: 1
                 }
             },
+
             'mega_luck_craft': {
                 id: 'mega_luck_craft',
                 name: '🍀✨ Mega Poción de Suerte',
-                description: 'Combina 3 amuletos de suerte para crear algo más poderoso',
+                description: 'Una potente mezcla de suerte concentrada',
                 ingredients: [
-                    { id: 'lucky_charm', quantity: 3 },
-                    { id: 'energy_drink', quantity: 2 }
+                    { id: 'lucky_charm', quantity: 4 },
+                    { id: 'energy_drink', quantity: 3 }
                 ],
                 result: {
                     id: 'mega_luck_potion',
@@ -406,7 +409,7 @@ class CraftingSystem {
                         type: 'luck_boost',
                         targets: ['games', 'all'],
                         boost: 0.25,
-                        duration: 3600
+                        duration: 5400 // 1h 30m
                     },
                     stackable: true,
                     maxStack: 5
@@ -416,23 +419,23 @@ class CraftingSystem {
             'speed_boots_craft': {
                 id: 'speed_boots_craft',
                 name: '👟⚡ Botas de Velocidad Supremas',
-                description: 'Combina varios items para crear las botas definitivas',
+                description: 'Reduce todos los cooldowns a cero temporalmente',
                 ingredients: [
-                    { id: 'work_boots', quantity: 1 },
-                    { id: 'energy_drink', quantity: 5 },
-                    { id: 'robbery_kit', quantity: 3 }
+                    { id: 'work_boots', quantity: 2 },
+                    { id: 'energy_drink', quantity: 8 },
+                    { id: 'lucky_charm', quantity: 2 }
                 ],
                 result: {
                     id: 'speed_boots',
                     category: 'consumable',
-                    rarity: 'rare',
+                    rarity: 'epic',
                     effect: {
                         type: 'no_cooldown',
                         targets: ['all'],
-                        duration: 1200
+                        duration: 1800 // 30 min
                     },
                     stackable: true,
-                    maxStack: 3
+                    maxStack: 2
                 }
             },
 
@@ -442,9 +445,9 @@ class CraftingSystem {
                 description: 'El item más exclusivo - requiere muchos recursos',
                 ingredients: [
                     { id: 'vip_pass', quantity: 1 },
-                    { id: 'money_magnet', quantity: 1 },
-                    { id: 'golden_trophy', quantity: 2 },
-                    { id: 'premium_mystery_box', quantity: 3 }
+                    { id: 'money_magnet', quantity: 2 },
+                    { id: 'golden_trophy', quantity: 3 },
+                    { id: 'premium_mystery_box', quantity: 5 }
                 ],
                 result: {
                     id: 'diamond_membership',
@@ -452,7 +455,7 @@ class CraftingSystem {
                     rarity: 'legendary',
                     effect: {
                         type: 'vip_membership',
-                        duration: 30 * 24 * 60 * 60 * 1000,
+                        duration: 30 * 24 * 60 * 60 * 1000, // 30 días
                         benefits: [
                             'no_cooldowns',
                             'double_earnings', 
@@ -472,8 +475,8 @@ class CraftingSystem {
                 name: '🌪️📚 Tornado de XP',
                 description: 'Fusiona pociones de XP para algo épico',
                 ingredients: [
-                    { id: 'double_xp_potion', quantity: 4 },
-                    { id: 'lucky_charm', quantity: 2 }
+                    { id: 'double_xp_potion', quantity: 5 },
+                    { id: 'lucky_charm', quantity: 3 }
                 ],
                 result: {
                     id: 'xp_tornado',
@@ -482,8 +485,8 @@ class CraftingSystem {
                     effect: {
                         type: 'xp_multiplier',
                         targets: ['all'],
-                        multiplier: 5.0,
-                        duration: 900
+                        multiplier: 3.0,
+                        duration: 1200 // 20 min
                     },
                     stackable: true,
                     maxStack: 3
@@ -495,9 +498,9 @@ class CraftingSystem {
                 name: '⛏️💎 Pico Dorado Legendario',
                 description: 'El mejor tool para trabajar',
                 ingredients: [
-                    { id: 'work_boots', quantity: 2 },
+                    { id: 'work_boots', quantity: 3 },
                     { id: 'money_magnet', quantity: 1 },
-                    { id: 'lucky_charm', quantity: 3 }
+                    { id: 'lucky_charm', quantity: 4 }
                 ],
                 result: {
                     id: 'golden_pickaxe',
@@ -507,7 +510,7 @@ class CraftingSystem {
                         type: 'work_multiplier',
                         targets: ['work'],
                         multiplier: 3.0,
-                        uses: 3
+                        uses: 5
                     },
                     stackable: true,
                     maxStack: 10
@@ -520,7 +523,7 @@ class CraftingSystem {
                 description: 'Permite personalizar tu apodo con estilo',
                 ingredients: [
                     { id: 'rainbow_badge', quantity: 2 },
-                    { id: 'golden_trophy', quantity: 1 }
+                    { id: 'golden_trophy', quantity: 2 }
                 ],
                 result: {
                     id: 'custom_nickname_token',
@@ -535,25 +538,212 @@ class CraftingSystem {
                 }
             },
 
-            'master_toolkit': {
-                id: 'master_toolkit',
-                name: '🔧⚡ Kit Maestro',
-                description: 'Reduce todos los cooldowns permanentemente en 30%',
+            // 🔮 Amuleto Cósmico (más fuerte que el super lucky charm)
+            'cosmic_charm_craft': {
+                id: 'cosmic_charm_craft',
+                name: '🔮✨ Amuleto Cósmico',
+                description: 'Un amuleto místico con poderes cósmicos (x3.0 multiplicador, 2 horas)',
                 ingredients: [
-                    { id: 'work_boots', quantity: 1 },
-                    { id: 'energy_drink', quantity: 5 },
-                    { id: 'robbery_kit', quantity: 3 }
+                    { id: 'super_lucky_charm', quantity: 2 },
+                    { id: 'xp_tornado', quantity: 1 }
                 ],
                 result: {
-                    id: 'master_toolkit',
-                    category: 'permanent',
+                    id: 'cosmic_charm',
+                    category: 'consumable',
                     rarity: 'legendary',
                     effect: {
-                        type: 'permanent_cooldown',
-                        targets: ['all'],
-                        reduction: 0.3
+                        type: 'multiplier',
+                        targets: ['work', 'games'],
+                        multiplier: 3.0,
+                        duration: 7200 // 2 horas
                     },
-                    stackable: false,
+                    stackable: true,
+                    maxStack: 3
+                }
+            },
+
+            // 🛡️ Escudo de Fortuna
+            'fortune_shield_craft': {
+                id: 'fortune_shield_craft',
+                name: '🛡️🍀 Escudo de Fortuna',
+                description: 'Protege contra pérdidas en robos durante 1 hora',
+                ingredients: [
+                    { id: 'robbery_kit', quantity: 2 },
+                    { id: 'lucky_charm', quantity: 1 }
+                ],
+                result: {
+                    id: 'fortune_shield',
+                    category: 'consumable',
+                    rarity: 'rare',
+                    effect: {
+                        type: 'anti_robbery',
+                        duration: 3600
+                    },
+                    stackable: true,
+                    maxStack: 5
+                }
+            },
+
+            // 🏆 Cofre Épico
+            'epic_chest_craft': {
+                id: 'epic_chest_craft',
+                name: '📦🏆 Cofre Épico',
+                description: 'Un cofre misterioso que contiene recompensas raras',
+                ingredients: [
+                    { id: 'premium_mystery_box', quantity: 2 },
+                    { id: 'golden_trophy', quantity: 1 }
+                ],
+                result: {
+                    id: 'epic_chest',
+                    category: 'special',
+                    rarity: 'epic',
+                    effect: {
+                        type: 'open_chest',
+                        rewards: [
+                            { id: 'lucky_charm', chance: 0.4 },
+                            { id: 'double_xp_potion', chance: 0.3 },
+                            { id: 'money_magnet', chance: 0.2 },
+                            { id: 'golden_pickaxe', chance: 0.1 }
+                        ]
+                    },
+                    stackable: true,
+                    maxStack: 5
+                }
+            },
+
+            // ⚡ Poción Turbo
+            'turbo_potion_craft': {
+                id: 'turbo_potion_craft',
+                name: '⚡🥤 Poción Turbo',
+                description: 'Reduce cooldowns en 50% por 20 minutos',
+                ingredients: [
+                    { id: 'energy_drink', quantity: 3 },
+                    { id: 'work_boots', quantity: 1 }
+                ],
+                result: {
+                    id: 'turbo_potion',
+                    category: 'consumable',
+                    rarity: 'epic',
+                    effect: {
+                        type: 'cooldown_reduction',
+                        reduction: 0.5,
+                        duration: 1200
+                    },
+                    stackable: true,
+                    maxStack: 5
+                }
+            },
+
+            // 💀 Guantes del Ladrón Maestro
+            'master_gloves_craft': {
+                id: 'master_gloves_craft',
+                name: '💀🧤 Guantes del Ladrón Maestro',
+                description: 'Mejora la efectividad de los robos (+50% éxito, 10 usos)',
+                ingredients: [
+                    { id: 'robbery_kit', quantity: 5 },
+                    { id: 'energy_drink', quantity: 2 }
+                ],
+                result: {
+                    id: 'master_gloves',
+                    category: 'consumable',
+                    rarity: 'epic',
+                    effect: {
+                        type: 'robbery_boost',
+                        successRate: 0.5,
+                        uses: 10
+                    },
+                    stackable: true,
+                    maxStack: 2
+                }
+            },
+
+            // 🍀 Lucky Charm → Super Lucky Charm → Cosmic Charm → Infinity Charm
+            'infinity_charm_craft': {
+                id: 'infinity_charm_craft',
+                name: '♾️🍀 Amuleto Infinito',
+                description: 'El amuleto definitivo. (x5.0 multiplicador, 3 horas)',
+                ingredients: [
+                    { id: 'cosmic_charm', quantity: 2 },
+                    { id: 'xp_tornado', quantity: 2 }
+                ],
+                result: {
+                    id: 'infinity_charm',
+                    category: 'consumable',
+                    rarity: 'mythic',
+                    effect: {
+                        type: 'multiplier',
+                        targets: ['work', 'games'],
+                        multiplier: 5.0,
+                        duration: 10800 // 3 horas
+                    },
+                    stackable: true,
+                    maxStack: 1
+                }
+            },
+
+            // ⚒️ Golden Pickaxe → Diamond Pickaxe → Eternal Pickaxe
+            'diamond_pickaxe_craft': {
+                id: 'diamond_pickaxe_craft',
+                name: '💎⛏️ Pico de Diamante',
+                description: 'Un pico mejorado para minería (+50% drops)',
+                ingredients: [
+                    { id: 'golden_pickaxe', quantity: 1 },
+                    { id: 'money_magnet', quantity: 1 }
+                ],
+                result: {
+                    id: 'diamond_pickaxe',
+                    category: 'tool',
+                    rarity: 'epic',
+                    effect: {
+                        type: 'mining_boost',
+                        multiplier: 1.5,
+                        durability: 200
+                    },
+                    stackable: false
+                }
+            },
+
+            'eternal_pickaxe_craft': {
+                id: 'eternal_pickaxe_craft',
+                name: '♾️⛏️ Pico Eterno',
+                description: 'El pico definitivo, nunca se rompe',
+                ingredients: [
+                    { id: 'diamond_pickaxe', quantity: 1 },
+                    { id: 'super_lucky_charm', quantity: 2 }
+                ],
+                result: {
+                    id: 'eternal_pickaxe',
+                    category: 'tool',
+                    rarity: 'legendary',
+                    effect: {
+                        type: 'mining_boost',
+                        multiplier: 2.5,
+                        durability: Infinity
+                    },
+                    stackable: false
+                }
+            },
+
+            // 💀 Robbery Kit → Master Gloves → Phantom Gloves
+            'phantom_gloves_craft': {
+                id: 'phantom_gloves_craft',
+                name: '👻🧤 Guantes Fantasma',
+                description: 'Permiten robar sin riesgo de ser atrapado (15 usos)',
+                ingredients: [
+                    { id: 'master_gloves', quantity: 1 },
+                    { id: 'fortune_shield', quantity: 1 }
+                ],
+                result: {
+                    id: 'phantom_gloves',
+                    category: 'consumable',
+                    rarity: 'mythic',
+                    effect: {
+                        type: 'robbery_boost',
+                        successRate: 1.0,
+                        safe: true,
+                        uses: 15
+                    },
+                    stackable: true,
                     maxStack: 1
                 }
             }
