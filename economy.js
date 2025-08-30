@@ -843,7 +843,7 @@ class EconomySystem {
 
         if (now - lastWork < effectiveCooldown) {
             const timeLeft = effectiveCooldown - (now - lastWork);
-            return { canWork: false, reason: 'cooldown', timeLeft: timeLeft };
+            return { canWork: false, reason: 'cooldown', timeLeft: timeLeft, name: job.name };
         }
         
         return { canWork: true };
@@ -854,6 +854,7 @@ class EconomySystem {
         if (!canWorkResult.canWork) 
         {
             return{
+                name: canWorkResult.name,
                 canWork: canWorkResult.canWork,
                 reason: canWorkResult.reason,
                 requiredLevel: canWorkResult.requiredLevel,
