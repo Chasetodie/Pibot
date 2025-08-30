@@ -411,7 +411,7 @@ class MissionsSystem {
     async checkAndResetAllMissions() {
         const now = new Date();
         const ecuadorOffset = -5;
-        const ecuadorTime = new Date(now.getTime() - (ecuadorOffset * 60 * 60 * 1000));
+        const ecuadorTime = new Date(now.getTime() + (now.getTimezoneOffset() * 60000) + (-5 * 3600000));
         const currentHour = ecuadorTime.getHours();
         const currentMinute = ecuadorTime.getMinutes();
         
