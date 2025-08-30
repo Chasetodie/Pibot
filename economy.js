@@ -597,12 +597,6 @@ class EconomySystem {
         if (this.achievements) {
             await this.achievements.updateStats(userId, 'daily_claimed');
         }
-
-        // *** NUEVO: ACTUALIZAR MISIONES ***
-        if (this.missions) {
-            const completedMissions = await this.missions.updateMissionProgress(userId, 'daily_claimed');
-            // No notificar aquí porque se hace desde el comando
-        }
         
         return {
             success: true,
