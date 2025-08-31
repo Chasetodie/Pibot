@@ -1588,14 +1588,14 @@ class ShopSystem {
         
         try {
             switch (command) {
-                case '>shop':
+/*                case '>shop':
                 case '>tienda':
                     const category = args[1] || 'all';
                     const page = parseInt(args[2]) || 1;
                     await this.showShop(message, category, page);
                     break;
                     
-/*                case '>buy':
+                case '>buy':
                 case '>comprar':
                     if (!args[1]) {
                         await message.reply('❌ Especifica el ID del item. Ejemplo: `>buy lucky_charm`');
