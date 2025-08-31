@@ -58,7 +58,7 @@ class ShopSystem {
             'robbery_kit': {
                 id: 'robbery_kit',
                 name: '🔧 Kit de Robo',
-                description: 'Aumenta 20% probabilidad de éxito en robos por 1 uso',
+                description: 'Aumenta 30% probabilidad de éxito en robos por 1 uso',
                 price: 120000,
                 category: 'consumable',
                 rarity: 'uncommon',
@@ -73,21 +73,6 @@ class ShopSystem {
             },
 
             // === ITEMS PERMANENTES ===
-            'vip_pass': {
-                id: 'vip_pass',
-                name: '👑 Pase VIP',
-                description: 'Acceso permanente a comandos VIP y bonificaciones especiales por 30 días',
-                price: 1000000,
-                category: 'special',
-                rarity: 'epic',
-                effect: {
-                    type: 'permanent_upgrade',
-                    benefits: ['vip_commands', 'daily_bonus', 'priority_support'],
-                    duration: 604800 // 7 Dias
-                },
-                stackable: false,
-                maxStack: 1
-            },
             'money_magnet': {
                 id: 'money_magnet',
                 name: '🧲 Imán de Dinero',
@@ -106,7 +91,7 @@ class ShopSystem {
             'work_boots': {
                 id: 'work_boots',
                 name: '👢 Botas de Trabajo',
-                description: 'Reduce permanentemente el cooldown de trabajo en 15%',
+                description: 'Reduce permanentemente el cooldown de trabajo en 20%',
                 price: 500000,
                 category: 'permanent',
                 rarity: 'uncommon',
@@ -190,7 +175,7 @@ class ShopSystem {
             'mega_luck_potion': {
                 id: 'mega_luck_potion',
                 name: '🍀 Mega Poción de Suerte',
-                description: 'Aumenta la suerte en todos los juegos por 1 hora',
+                description: 'Aumenta la probabilidad de ganar en juegos +25% por 1h 30m',
                 price: 300000,
                 category: 'consumable',
                 rarity: 'epic',
@@ -201,7 +186,7 @@ class ShopSystem {
             'speed_boots': {
                 id: 'speed_boots',
                 name: '👟 Botas de Velocidad',
-                description: 'Reduce todos los cooldowns en 70% por 20 minutos',
+                description: 'Elimina el cooldown por 30 minutos',
                 price: 500000,
                 category: 'consumable',
                 rarity: 'rare',
@@ -212,7 +197,7 @@ class ShopSystem {
             'xp_tornado': {
                 id: 'xp_tornado',
                 name: '🌪️ Tornado de XP',
-                description: 'x3 XP de todos los mensajes por 15 minutos',
+                description: 'x3 XP de todos los mensajes por 20 minutos',
                 price: 400000,
                 category: 'consumable',
                 rarity: 'epic',
@@ -223,7 +208,7 @@ class ShopSystem {
             'golden_pickaxe': {
                 id: 'golden_pickaxe',
                 name: '⛏️ Pico Dorado',
-                description: 'Duplica las ganancias de trabajo por 3 usos',
+                description: 'Duplica las ganancias de trabajo por 5 usos',
                 price: 450000,
                 category: 'consumable',
                 rarity: 'rare',
@@ -233,12 +218,12 @@ class ShopSystem {
             },
 
             // === NUEVOS ITEMS PERMANENTES ===
-            'diamond_membership': {
-                id: 'diamond_membership',
-                name: '💎 Membresía Diamante',
-                description: 'Membresía premium por 30 días con beneficios exclusivos',
+            'vip_pass': {
+                id: 'vip_pass',
+                name: '💎 Pase VIP',
+                description: 'Acceso a comandos VIP y bonificaciones especiales por 30 días',
                 price: 5000000,
-                category: 'permanent',
+                category: 'special',
                 rarity: 'legendary',
                 effect: {
                     type: 'vip_membership',
@@ -251,7 +236,7 @@ class ShopSystem {
             'luck_charm_permanent': {
                 id: 'luck_charm_permanent',
                 name: '🍀 Amuleto de Suerte Permanente',
-                description: '+10% suerte permanente en todos los juegos',
+                description: '+15% suerte permanente en todos los juegos',
                 price: 1500000,
                 category: 'permanent',
                 rarity: 'epic',
