@@ -967,6 +967,16 @@ class MissionsSystem {
                         targetUser = message.mentions.users.first();
                     }
                     await this.showUserMissions(message, targetUser);
+                    break;                    
+                case '>blockmissions':
+                case '>bloquearnotifs':
+                    await this.toggleMissionNotifications(message.author.id, true);
+                    await message.reply('🔇 **Notificaciones de misiones bloqueadas**\nSeguirás completando misiones, pero no recibirás notificaciones.\n💡 Usa `>unblockmissions` para reactivarlas.');
+                    break;
+                case '>unblockmissions':
+                case '>desbloquearnotifs':
+                    await this.toggleMissionNotifications(message.author.id, false);
+                    await message.reply('🔔 **Notificaciones de misiones reactivadas**\nVolverás a recibir notificaciones cuando completes misiones.');
                     break;
             }
         } catch (error) {
