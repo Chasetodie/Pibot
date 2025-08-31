@@ -60,7 +60,8 @@ class LocalDatabase {
                     daily_missions_date TEXT,
                     daily_stats TEXT,
                     achievements TEXT,
-                    missions_reset_today BOOLEAN DEFAULT 0
+                    missions_reset_today BOOLEAN DEFAULT 0,
+                    missions_notifications_blocked BOOLEAN DEFAULT 0
                 )
             `);
 
