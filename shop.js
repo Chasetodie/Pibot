@@ -358,25 +358,16 @@ class ShopSystem {
     
     // === TIENDA ===
     async showShop(message, category = 'all', page = 1) {
-        // OPTIMIZACIÓN: Solo cargar lo necesario
-        const itemsByCategory = {
-            'consumable': ['lucky_charm', 'energy_drink', 'double_xp_potion', 'anti_theft_shield'],
-            'permanent': ['vip_pass', 'money_magnet', 'work_boots'],
-            'cosmetic': ['golden_trophy', 'rainbow_badge'],
-            'mystery': ['mystery_box', 'premium_mystery_box']
-        };
-
+        // Remover esta optimización y usar:
         let items;
         if (category === 'all') {
-            // Solo cargar primeros 10 items para "all"
-            items = Object.values(this.shopItems).slice(0, 10);
+            items = Object.values(this.shopItems);
         } else {
-            // Solo cargar items de esa categoría
-            const categoryIds = itemsByCategory[category] || [];
-            items = categoryIds.map(id => this.shopItems[id]).filter(Boolean);
+            // Filtrar automáticamente por categoría
+            items = Object.values(this.shopItems).filter(item => item.category === category);
         }
         
-        const itemsPerPage = 3;
+        const itemsPerPage = 5;
         const startIndex = (page - 1) * itemsPerPage;
         const endIndex = startIndex + itemsPerPage;
         const pageItems = items.slice(startIndex, endIndex);
