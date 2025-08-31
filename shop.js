@@ -72,6 +72,58 @@ class ShopSystem {
                 maxStack: 10
             },
 
+            // Turbo Potion
+            'turbo_potion': {
+                id: 'turbo_potion',
+                name: '⚡🧪 Poción Turbo',
+                description: 'Reduce todos los cooldowns en 50% durante 30 minutos',
+                category: 'consumable',
+                rarity: 'rare',
+                price: 1500,
+                effect: {
+                    type: 'cooldown_reduction',
+                    targets: ['all'],
+                    reduction: 0.5,
+                    duration: 1800
+                },
+                stackable: true,
+                maxStack: 5
+            },
+            
+            // Fortune Shield
+            'fortune_shield': {
+                id: 'fortune_shield',
+                name: '🛡️🍀 Escudo de la Fortuna',
+                description: 'Protege contra pérdidas y fallos durante 1 hora',
+                category: 'consumable',
+                rarity: 'epic',
+                price: 2500,
+                effect: {
+                    type: 'protection',
+                    prevents: ['robbery_fail', 'money_loss'],
+                    duration: 3600
+                },
+                stackable: true,
+                maxStack: 2
+            },
+            
+            // XP Booster
+            'xp_booster': {
+                id: 'xp_booster',
+                name: '📚✨ XP Booster',
+                description: 'Incrementa la experiencia ganada en 50% durante 1 hora',
+                category: 'consumable',
+                rarity: 'rare',
+                price: 1000,
+                effect: {
+                    type: 'xp_multiplier',
+                    multiplier: 1.5,
+                    duration: 3600
+                },
+                stackable: true,
+                maxStack: 5
+            },            
+
             // === ITEMS PERMANENTES ===
             'money_magnet': {
                 id: 'money_magnet',
