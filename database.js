@@ -168,12 +168,17 @@ class LocalDatabase {
         }
     }
 
-    // Función helper para parsear JSON de manera segura
     safeJsonParse(jsonString, defaultValue = {}) {
         try {
-            return typeof jsonString === 'string' ? JSON.parse(jsonString) : jsonString;
+            // Si no es string o está vacío, devolver defaultValue
+            if (typeof jsonString !== 'string' || jsonString.trim() === '') {
+                return defaultValue;
+            }
+            
+            return JSON.parse(jsonString);
         } catch (error) {
             console.error('❌ Error parseando JSON:', error);
+            console.error('❌ String problemático:', jsonString); // Para debug
             return defaultValue;
         }
     }
