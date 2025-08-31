@@ -153,18 +153,7 @@ class MissionsSystem {
                 reward: { money: 1500, xp: 750 },
                 rarity: 'rare'
             },
-            
-            // Misiones de nivel
-            'level_up_once': {
-                id: 'level_up_once',
-                name: '📈 Crecimiento',
-                description: 'Sube de nivel al menos una vez',
-                type: 'level_ups',
-                target: 1,
-                reward: { money: 800, xp: 400 },
-                rarity: 'uncommon'
-            },
-            
+                        
             // Misiones de balance
             'maintain_balance_10k': {
                 id: 'maintain_balance_10k',
