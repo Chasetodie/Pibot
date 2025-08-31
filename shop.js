@@ -315,8 +315,6 @@ class ShopSystem {
                 maxStack: 1
             }
         };
-
-
         
         // Colores por rareza
         this.rarityColors = {
@@ -690,7 +688,7 @@ class ShopSystem {
         }
     }
     
-    // === PROCESAR USO DE ITEM ===
+    // 6. ACTUALIZAR processItemUse() - agregar caso para 'special'
     async processItemUse(userId, itemId, item) {
         const user = await this.economy.getUser(userId);
         
@@ -699,15 +697,18 @@ class ShopSystem {
                 return await this.applyConsumableEffect(userId, itemId, item);
             case 'permanent':
                 return await this.applyPermanentEffect(userId, itemId, item);
+            case 'special': // NUEVO CASO
+                if (item.id === 'vip_pass') {
+                    return await this.applyVipPass(userId, itemId, item);
+                }
+                if (item.effect.type === 'nickname_change') {
+                    return await this.handleNicknameChange(userId, item);
+                }
+                return { success: false, message: 'Item especial no implementado.' };
             case 'mystery':
                 return await this.openMysteryBox(userId, item);
             case 'cosmetic':
                 return { success: true, message: `${item.name} ahora está equipado en tu perfil.` };
-            case 'special':
-                if (item.effect.type === 'nickname_change') {
-                    return await this.handleNicknameChange(userId, item);
-                }    
-                return { success: false, message: 'Item especial no implementado.' };
             default:
                 return { success: false, message: 'Este item no se puede usar.' };
         }
@@ -846,9 +847,34 @@ class ShopSystem {
         };
     }
     
-    // === APLICAR EFECTO PERMANENTE ===
+    // 3. ACTUALIZAR applyPermanentEffect() - manejar VIP como especial
     async applyPermanentEffect(userId, itemId, item) {
         const user = await this.economy.getUser(userId);
+        
+        // NUEVO: Manejar VIP Pass como caso especial
+        if (item.id === 'vip_pass') {
+            const permanentEffects = user.permanentEffects || {};
+            
+            if (permanentEffects[itemId]) {
+                return { success: false, message: 'Ya tienes VIP activo.' };
+            }
+            
+            permanentEffects[itemId] = {
+                type: item.effect.type,
+                duration: item.effect.duration,
+                benefits: item.effect.benefits,
+                appliedAt: Date.now()
+            };
+            
+            await this.economy.updateUser(userId, { permanentEffects });
+            
+            return { 
+                success: true, 
+                message: `¡VIP activado por 30 días! Disfruta de todos los beneficios premium.` 
+            };
+        }
+        
+        // Resto del código permanece igual...
         const permanentEffects = user.permanentEffects || {};
         
         if (permanentEffects[itemId]) {
@@ -860,6 +886,7 @@ class ShopSystem {
             targets: item.effect.targets,
             multiplier: item.effect.multiplier,
             reduction: item.effect.reduction,
+            boost: item.effect.boost, // NUEVO: agregar boost para permanent_luck
             benefits: item.effect.benefits,
             appliedAt: Date.now()
         };
@@ -915,7 +942,7 @@ class ShopSystem {
         };
     }
        
-    // === OBTENER MULTIPLICADORES ACTIVOS ===
+    // 1. ACTUALIZAR getActiveMultipliers() - agregar casos para nuevos tipos
     async getActiveMultipliers(userId, action) {
         let user = heavyUsersCache.get(userId);
         if (!user) {
@@ -941,17 +968,27 @@ class ShopSystem {
                 
                 if (effect.multiplier) totalMultiplier *= effect.multiplier;
                 if (effect.reduction) totalReduction += effect.reduction;
+                
+                // NUEVO: Manejar work_multiplier específicamente
+                if (effect.type === 'work_multiplier' && action === 'work') {
+                    totalMultiplier *= effect.multiplier;
+                }
             }
         }
         
         // Efectos permanentes
         for (const [itemId, effect] of Object.entries(permanentEffects)) {
-            if (!effect.targets.includes(action) && !effect.targets.includes('all')) continue;
+            if (!effect.targets || (!effect.targets.includes(action) && !effect.targets.includes('all'))) continue;
             
             if (effect.multiplier) totalMultiplier *= effect.multiplier;
             if (effect.reduction) totalReduction += effect.reduction;
+            
+            // NUEVO: Manejar permanent_luck
+            if (effect.type === 'permanent_luck' && (action === 'games' || action === 'all')) {
+                // La suerte se maneja en applyGameEffects, pero podemos trackearla aquí
+            }
         }
-
+    
         const vipMultipliers = await this.getVipMultipliers(userId, action);
         totalMultiplier *= vipMultipliers.multiplier;
         
@@ -1028,7 +1065,7 @@ class ShopSystem {
         };
     }
 
-    // === VERIFICAR Y APLICAR EFECTOS EN JUEGOS ===
+    // 2. ACTUALIZAR applyGameEffects() - agregar soporte para permanent_luck
     async applyGameEffects(userId, baseAmount, baseSuccessRate = 0.5) {
         await this.cleanupExpiredEffects(userId);
         
@@ -1047,15 +1084,22 @@ class ShopSystem {
                 
                 if (effect.multiplier) multiplier *= effect.multiplier;
                 if (effect.boost) luckBoost += effect.boost;
+                
+                // NUEVO: Manejar luck_boost específicamente
+                if (effect.type === 'luck_boost') {
+                    luckBoost += effect.boost;
+                }
             }
         }
         
-        // Efectos permanentes
-        for (const effect of Object.values(permanentEffects)) {
-            if (!effect.targets || (!effect.targets.includes('games') && !effect.targets.includes('all'))) continue;
-            
-            if (effect.multiplier) multiplier *= effect.multiplier;
-            if (effect.boost) luckBoost += effect.boost;
+        // Efectos permanentes - AGREGAR ESTE BLOQUE
+        for (const [itemId, effect] of Object.entries(permanentEffects)) {
+            if (effect.type === 'permanent_luck' && effect.targets.includes('games')) {
+                luckBoost += effect.boost;
+            }
+            if (effect.targets && (effect.targets.includes('games') || effect.targets.includes('all'))) {
+                if (effect.multiplier) multiplier *= effect.multiplier;
+            }
         }
         
         // Aplicar efectos VIP
@@ -1064,7 +1108,7 @@ class ShopSystem {
         luckBoost += vipEffects.luckBoost;
         
         const finalAmount = Math.floor(baseAmount * multiplier);
-        const finalSuccessRate = Math.min(baseSuccessRate + luckBoost, 0.95); // Máximo 95%
+        const finalSuccessRate = Math.min(baseSuccessRate + luckBoost, 0.95);
         
         await this.decrementItemUses(userId, 'games');
         
@@ -1299,32 +1343,109 @@ class ShopSystem {
         // Aquí necesitarías una lista de usuarios activos
         // Por ahora es un placeholder - implementar según tu sistema
     }
-    
-    async isProtectedFromTheft(userId) {
+
+    // 5. NUEVA FUNCIÓN: Manejar cooldowns mejorados
+    async getCooldownReduction(userId, action) {
         const user = await this.economy.getUser(userId);
         const activeEffects = user.activeEffects || {};
         const permanentEffects = user.permanentEffects || {};
         
-        // Verificar protección temporal (escudo)
-        if (activeEffects['anti_theft_shield']) {
-            for (const effect of activeEffects['anti_theft_shield']) {
-                if (effect.expiresAt && effect.expiresAt > Date.now()) {
-                    return { protected: true, type: 'shield' };
+        let reduction = 0;
+        
+        // Efectos temporales
+        for (const [itemId, effects] of Object.entries(activeEffects)) {
+            for (const effect of effects) {
+                if (effect.expiresAt && effect.expiresAt < Date.now()) continue;
+                if (!effect.targets.includes(action) && !effect.targets.includes('all')) continue;
+                
+                if (effect.type === 'cooldown_reduction' && effect.reduction) {
+                    reduction += effect.reduction;
                 }
             }
         }
         
-        // Verificar bóveda permanente
-        if (permanentEffects['permanent_vault']) {
-            const roll = Math.random();
-            if (roll < 0.8) { // 80% probabilidad de protección
-                return { protected: true, type: 'vault' };
+        // Efectos permanentes
+        for (const effect of Object.values(permanentEffects)) {
+            if (effect.type === 'permanent_cooldown' && effect.targets && effect.targets.includes(action)) {
+                reduction += effect.reduction;
             }
         }
         
-        return { protected: false };
+        // VIP
+        const vipEffects = await this.getVipMultipliers(userId, action);
+        if (vipEffects.noCooldown) {
+            reduction = 1.0; // 100% reducción = sin cooldown
+        }
+        
+        return Math.min(reduction, 0.95); // Máximo 95% reducción
     }
 
+    // 4. NUEVA FUNCIÓN: Verificar protección contra robos (actualizada)
+    async getTheftProtection(userId) {
+        const user = await this.economy.getUser(userId);
+        const activeEffects = user.activeEffects || {};
+        const permanentEffects = user.permanentEffects || {};
+        
+        let protection = 0; // 0 = sin protección, 1 = protección completa
+        
+        // Verificar escudo antirrobo temporal
+        if (activeEffects['anti_theft_shield']) {
+            for (const effect of activeEffects['anti_theft_shield']) {
+                if (effect.type === 'protection' && effect.expiresAt > Date.now()) {
+                    return { protected: true, type: 'shield', reduction: 1.0 };
+                }
+            }
+        }
+        
+        // Verificar bóveda permanente (ACTUALIZADO: ahora 60% en vez de 80%)
+        if (permanentEffects['permanent_vault']) {
+            protection = 0.6; // 60% reducción
+        }
+        
+        if (protection > 0) {
+            const roll = Math.random();
+            if (roll < protection) {
+                return { protected: true, type: 'vault', reduction: protection };
+            }
+        }
+        
+        return { protected: false, reduction: 0 };
+    }
+
+    // === APLICAR VIP PASS ===
+    async applyVipPass(userId, itemId, item) {
+        const user = await this.economy.getUser(userId);
+        const permanentEffects = user.permanentEffects || {};
+        
+        // Verificar si ya tiene VIP activo
+        if (permanentEffects[itemId]) {
+            const now = Date.now();
+            const expiresAt = permanentEffects[itemId].appliedAt + permanentEffects[itemId].duration;
+            
+            if (now < expiresAt) {
+                return { success: false, message: 'Ya tienes VIP activo.' };
+            } else {
+                // VIP expirado, se puede renovar
+                delete permanentEffects[itemId];
+            }
+        }
+        
+        permanentEffects[itemId] = {
+            type: item.effect.type,
+            duration: item.effect.duration,
+            benefits: item.effect.benefits,
+            appliedAt: Date.now()
+        };
+        
+        await this.economy.updateUser(userId, { permanentEffects });
+        
+        const days = Math.floor(item.effect.duration / (24 * 60 * 60 * 1000));
+        return { 
+            success: true, 
+            message: `¡VIP activado por ${days} días! Disfruta de: sin cooldowns, doble ganancias, +20% suerte y comandos exclusivos.` 
+        };
+    }
+    
     // Verificar si el usuario tiene VIP activo con tiempo
     async hasActiveVip(userId) {
         const user = await this.economy.getUser(userId);
@@ -1431,7 +1552,7 @@ class ShopSystem {
                     await this.showShop(message, category, page);
                     break;
                     
-                case '>buy':
+/*                case '>buy':
                 case '>comprar':
                     if (!args[1]) {
                         await message.reply('❌ Especifica el ID del item. Ejemplo: `>buy lucky_charm`');
@@ -1439,7 +1560,7 @@ class ShopSystem {
                     }
                     const quantity = parseInt(args[2]) || 1;
                     await this.buyItem(message, args[1], quantity);
-                    break;
+                    break;*/
                     
                 case '>bag':
                 case '>inventario':
@@ -1451,7 +1572,7 @@ class ShopSystem {
                     await this.showBag(message, targetUser);
                     break;
                     
-                case '>useitem':
+/*                case '>useitem':
                 case '>usar':
                 case '>use':
                     if (!args[1]) {
@@ -1463,7 +1584,7 @@ class ShopSystem {
                 case '>efectos':
                 case '>effects':
                     await this.showActiveEffects(message);
-                    break;
+                    break;*/
             }
         } catch (error) {
             console.error('❌ Error en sistema de tienda:', error);
