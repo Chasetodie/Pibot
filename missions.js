@@ -853,12 +853,17 @@ class MissionsSystem {
             value: missionText || 'Sin misiones disponibles',
             inline: false
         });
+
+        const notificationsBlocked = await this.areMissionNotificationsBlocked(userId);
         
         const timeUntilReset = this.getTimeUntilMissionReset();
+
+        let footerText = `⏰ Nuevas misiones en: ${timeUntilReset}`;
+        if (notificationsBlocked) {
+            footerText += ' | 🔇 Notificaciones desactivadas';
+        }
         
-        embed.setFooter({ 
-            text: `⏰ Nuevas misiones en: ${timeUntilReset}`
-        });
+        embed.setFooter({ text: footerText });
         
         await message.reply({ embeds: [embed] });
     }
@@ -883,12 +888,32 @@ class MissionsSystem {
         
         return '█'.repeat(filledLength) + '░'.repeat(emptyLength);
     }
+
+    async toggleMissionNotifications(userId, block = true) {
+        const updateData = {
+            missions_notifications_blocked: block
+        };
+        
+        await this.economy.updateUser(userId, updateData);
+        return block;
+    }
+    
+    async areMissionNotificationsBlocked(userId) {
+        const user = await this.economy.getUser(userId);
+        return user.missions_notifications_blocked || false;
+    }
     
     // Notificar misiones completadas
     async notifyCompletedMissions(message, completedMissions) {
         if (completedMissions.length === 0) return;
 
         const userId = message.author?.id || message.user?.id;
+
+        const notificationsBlocked = await this.areMissionNotificationsBlocked(userId);
+        if (notificationsBlocked) {
+            return;
+        }
+        
         const user = await this.economy.getUser(userId);
         
         for (const missionId of completedMissions) {
