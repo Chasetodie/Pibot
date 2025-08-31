@@ -6,6 +6,8 @@ class MissionsSystem {
         this.economy = economySystem;
         this.events = null;
 
+        this.lastResetDay = null;
+        
         // ✅ AGREGAR: Caché para misiones
         this.missionsCache = new Map();
         this.MAX_CACHE_SIZE = 500;
@@ -403,30 +405,25 @@ class MissionsSystem {
         // Verificar cada minuto si es medianoche en Ecuador
         setInterval(() => {
             this.checkAndResetAllMissions();
-        }, 60000); // Cada minuto
+        }, 30000); // 30 segundos en lugar de 60
         
         console.log('🕛 Sistema de reset automático iniciado');
     }
 
     async checkAndResetAllMissions() {
         const now = new Date();
-        const ecuadorOffset = -5;
         const ecuadorTime = new Date(now.getTime() + (now.getTimezoneOffset() * 60000) + (-5 * 3600000));
         const currentHour = ecuadorTime.getHours();
         const currentMinute = ecuadorTime.getMinutes();
+
+        const currentDay = ecuadorTime.toISOString().split('T')[0];
         
         // Solo ejecutar a las 00:00 (medianoche)
         if (currentHour === 0 && currentMinute === 0) {
             console.log('🌅 Iniciando reset automático de misiones...');
             
-            // Aquí podrías resetear para todos los usuarios activos
-            // o marcar una bandera global para que se reseteen cuando interactúen
-            
-            // Opción 1: Limpiar caché para forzar regeneración
+            this.lastResetDay = currentDay;
             this.missionsCache.clear();
-            
-            // Opción 2: Si tienes una lista de usuarios activos, puedes resetearlos
-            // await this.resetAllActiveMissions();
             
             console.log('✅ Reset automático completado');
         }
