@@ -450,7 +450,7 @@ class ShopSystem {
             // 🎁 Cofre Premium
             'premium_chest': {
                 id: 'premium_chest',
-                category: 'special',
+                category: 'mistery',
                 name: '🎁 Cofre Premium',
                 price: 900000,
                 description: 'Un cofre misterioso con recompensas valiosas',
@@ -476,7 +476,7 @@ class ShopSystem {
             // 🏆 Cofre Legendario
             'legendary_chest': {
                 id: 'legendary_chest',
-                category: 'special',
+                category: 'mistery',
                 name: '🏆 Cofre Legendario',
                 price: 1000000,
                 description: 'Un cofre extremadamente raro con ítems únicos',
@@ -640,8 +640,13 @@ class ShopSystem {
                         },
                         {
                             label: 'Especiales',
-                            value: 'mystery',
+                            value: 'special',
                             emoji: '🎁'
+                        },
+                        {
+                            label: 'Cofres',
+                            value: 'mystery',
+                            emoji: '🗝️'
                         }
                     ])
             );
