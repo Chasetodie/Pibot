@@ -46,7 +46,7 @@ class AllCommands {
 
     // FUNCIÓN AUXILIAR: Obtener efectos VIP para mostrar en perfil
     async getVipStatus(userId) {
-        const vipInfo = await this.shopSystem.hasActiveVip(userId);
+        const vipInfo = await this.shop.hasActiveVip(userId);
         
         if (!vipInfo.hasVip) {
             return { hasVip: false, display: '' };
@@ -85,7 +85,7 @@ class AllCommands {
         const avatarUrl = targetUser ? targetUser.displayAvatarURL({ dynamic: true }) : message.author.displayAvatarURL({ dynamic: true });
 
         // OBTENER COSMÉTICOS Y VIP
-        const cosmeticsDisplay = await this.shopSystem.getCosmeticsDisplay(userId);
+        const cosmeticsDisplay = await this.shop.getCosmeticsDisplay(userId);
         const vipStatus = await this.getVipStatus(userId);
         
         // CREAR TÍTULO CON DECORACIONES
@@ -157,7 +157,7 @@ class AllCommands {
         // MOSTRAR COSMÉTICOS
         if (cosmeticsDisplay.hasCosmetics && cosmeticsDisplay.equipped.length > 0) {
             const cosmeticsText = cosmeticsDisplay.equipped
-                .map(cosmetic => `${this.shopSystem.getCosmeticEmoji(cosmetic.id)} **${cosmetic.name}**`)
+                .map(cosmetic => `${this.shop.getCosmeticEmoji(cosmetic.id)} **${cosmetic.name}**`)
                 .join('\n');
             
             embed.addFields({
