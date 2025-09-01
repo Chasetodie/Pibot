@@ -967,7 +967,7 @@ class EconomySystem {
             }
             
             // Consumir efectos de uso limitado
-            await this.shop.consumeUsageEffects(userId, 'work');
+            //await this.shop.consumeUsageEffects(userId, 'work');
         }
 
         // ✅ 3. FINALMENTE aplicar VIP
