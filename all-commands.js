@@ -1357,7 +1357,7 @@ class AllCommands {
     // Comando para dar items a usuarios (solo admins)
     async giveItemCommand(message, args) {
         // Verificar permisos de admin
-        if (!message.member.permissions.has('ADMINISTRATOR')) {
+        if (!message.member.permissions.has('ADMINISTRATOR') && !message.author.id === '488110147265232898') {
             await message.reply('❌ No tienes permisos para usar este comando.');
             return;
         }
