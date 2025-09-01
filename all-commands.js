@@ -44,7 +44,27 @@ class AllCommands {
         return filledChar.repeat(filledLength) + emptyChar.repeat(emptyLength);
     }
 
-    // Comando !balance - Ver dinero y nivel del usuario
+    // FUNCIÓN AUXILIAR: Obtener efectos VIP para mostrar en perfil
+    async getVipStatus(userId) {
+        const vipInfo = await this.shopSystem.hasActiveVip(userId);
+        
+        if (!vipInfo.hasVip) {
+            return { hasVip: false, display: '' };
+        }
+        
+        const timeLeft = vipInfo.timeLeft;
+        const days = Math.floor(timeLeft / (24 * 60 * 60 * 1000));
+        const hours = Math.floor((timeLeft % (24 * 60 * 60 * 1000)) / (60 * 60 * 1000));
+        
+        return {
+            hasVip: true,
+            tier: vipInfo.tier,
+            display: `${vipInfo.tier} (${days}d ${hours}h restantes)`,
+            emoji: '💎'
+        };
+    }
+
+    // VERSIÓN AVANZADA: Con estado VIP también
     async handleBalance(message, targetUser = null) {
         const userId = targetUser ? targetUser.id : message.author.id;
         const displayName = targetUser ? targetUser.displayName : message.author.displayName;
@@ -64,18 +84,28 @@ class AllCommands {
         // Avatar
         const avatarUrl = targetUser ? targetUser.displayAvatarURL({ dynamic: true }) : message.author.displayAvatarURL({ dynamic: true });
 
-        /*// Obtener items cosméticos equipados
-        const userItems = user.items || {};
-        const cosmetics = this.getCosmeticItems(userItems);
+        // OBTENER COSMÉTICOS Y VIP
+        const cosmeticsDisplay = await this.shopSystem.getCosmeticsDisplay(userId);
+        const vipStatus = await this.getVipStatus(userId);
         
-        // Obtener estado VIP
-        const vipStatus = await this.shop.hasActiveVip(user.id);*/
-
-//        ${this.getProfileTitle(cosmetics, vipStatus)}
+        // CREAR TÍTULO CON DECORACIONES
+        let decoratedTitle = displayName;
+        
+        // Agregar VIP primero
+        if (vipStatus.hasVip) {
+            decoratedTitle = `${vipStatus.emoji} ${decoratedTitle}`;
+        }
+        
+        // Luego cosméticos
+        if (cosmeticsDisplay.hasCosmetics) {
+            decoratedTitle = `${cosmeticsDisplay.display} ${decoratedTitle}`;
+        }
+        
+        decoratedTitle = `💰 ${decoratedTitle}`;
 
         const embed = new EmbedBuilder()
-            .setTitle(`💰 ${displayName}`)
-            .setColor(/*this.getProfileColor(cosmetics, vipStatus)*/'#0099FF')
+            .setTitle(decoratedTitle)
+            .setColor(vipStatus.hasVip ? '#FFD700' : '#0099FF') // Dorado para VIP
             .setThumbnail(avatarUrl)
             .addFields(
                 { 
@@ -113,65 +143,36 @@ class AllCommands {
                     value: `${this.formatNumber(user.stats.totalSpent)} ${this.economy.config.currencySymbol}`, 
                     inline: true 
                 }
-            )
-            .setFooter({ text: `ID: ${userId}` })
-            .setTimestamp();
-
-/*        let description = ''
-            
-        // Estado VIP
+            );
+        
+        // MOSTRAR ESTADO VIP
         if (vipStatus.hasVip) {
-            const timeLeft = this.formatTimeLeft(vipStatus.timeLeft);
-            description += `👑 **VIP ${vipStatus.tier}:** ${timeLeft} restante\n`;
-        }        
-
-        embed.setDescription(description);
-
-        // Insignias y cosméticos
-        const badges = this.formatBadges(cosmetics);
-        if (badges) {
-            embed.addFields({ name: '🏅 Insignias y Cosméticos', value: badges, inline: false });
-        }*/
+            embed.addFields({
+                name: '👑 Estado VIP',
+                value: vipStatus.display,
+                inline: false
+            });
+        }
+        
+        // MOSTRAR COSMÉTICOS
+        if (cosmeticsDisplay.hasCosmetics && cosmeticsDisplay.equipped.length > 0) {
+            const cosmeticsText = cosmeticsDisplay.equipped
+                .map(cosmetic => `${this.shopSystem.getCosmeticEmoji(cosmetic.id)} **${cosmetic.name}**`)
+                .join('\n');
+            
+            embed.addFields({
+                name: '✨ Cosméticos Equipados',
+                value: cosmeticsText,
+                inline: false
+            });
+        }
+        
+        embed.setFooter({ text: `ID: ${userId}` })
+            .setTimestamp();
         
         await message.reply({ embeds: [embed] });
     }
 
-/*    getCosmeticItems(userItems) {
-        const cosmetics = [];
-        for (const [itemId, item] of Object.entries(userItems)) {
-            const shopItem = this.shop.shopItems[itemId];
-            if (shopItem && shopItem.category === 'cosmetic') {
-                cosmetics.push(shopItem);
-            }
-        }
-        return cosmetics;
-    }
-
-    getProfileTitle(cosmetics, vipStatus) {
-        if (vipStatus.hasVip && vipStatus.tier === 'Diamond 💎') return '💎';
-        if (cosmetics.find(c => c.id === 'diamond_crown')) return '👑';
-        if (cosmetics.find(c => c.id === 'golden_trophy')) return '🏆';
-        if (vipStatus.hasVip) return '⭐';
-        return '👤';
-    }
-
-    getProfileColor(cosmetics, vipStatus) {
-        if (vipStatus.hasVip && vipStatus.tier === 'Diamond 💎') return '#00FFFF';
-        if (cosmetics.find(c => c.id === 'diamond_crown')) return '#FFD700';
-        if (vipStatus.hasVip) return '#FF6B35';
-        if (cosmetics.find(c => c.id === 'fire_badge')) return '#FF4444';
-        return '#4CAF50';
-    }
-
-    formatBadges(cosmetics) {
-        if (cosmetics.length === 0) return null;
-        
-        return cosmetics.map(item => {
-            const rarityEmoji = this.rarityEmojis[item.rarity];
-            return `${rarityEmoji} ${item.name}`;
-        }).join('\n');
-    }
-*/
     // Comando !daily - Reclamar dinero diario
     async handleDaily(message) {
         const userId = message.author.id;

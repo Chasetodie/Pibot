@@ -365,6 +365,89 @@ class ShopSystem {
                 effect: { type: 'cosmetic', display: 'profile_frame' },
                 stackable: false,
                 maxStack: 1
+            },
+
+            // 💰 Bolsa Misteriosa
+            'mystery_bag': {
+                id: 'mystery_bag',
+                price: 50000,
+                category: 'special',
+                name: '💰 Bolsa Misteriosa',
+                description: 'Contiene una cantidad aleatoria de dinero',
+                rarity: 'rare',
+                effect: {
+                    type: 'random_money',
+                    min: 500,
+                    max: 5000
+                },
+                stackable: true,
+                maxStack: 10
+            },
+
+            // ✨ Skin Dorada
+            'golden_skin': {
+                price: 1000000,
+                id: 'golden_skin',
+                category: 'cosmetic',
+                name: '✨ Golden Skin',
+                description: 'Un objeto puramente cosmético para presumir',
+                rarity: 'legendary',
+                effect: {
+                    type: 'cosmetic'
+                },
+                stackable: false
+            },
+
+            // 🎁 Cofre Premium
+            'premium_chest': {
+                id: 'premium_chest',
+                category: 'special',
+                name: '🎁 Cofre Premium',
+                price: 900000,
+                description: 'Un cofre misterioso con recompensas valiosas',
+                rarity: 'epic',
+                effect: {
+                    type: 'open_chest',
+                    rewards: [
+                        { id: 'lucky_charm', chance: 0.25 },
+                        { id: 'super_lucky_charm', chance: 0.15 },
+                        { id: 'cosmic_charm', chance: 0.08 },
+                        { id: 'xp_booster', chance: 0.12 },
+                        { id: 'mystery_bag', chance: 0.2 },
+                        { id: 'energy_drink', chance: 0.1 },
+                        { id: 'golden_pickaxe', chance: 0.05 },
+                        { id: 'diamond_pickaxe', chance: 0.02 },
+                        { id: 'fortune_shield', chance: 0.03 }
+                    ]
+                },
+                stackable: true,
+                maxStack: 10
+            },
+
+            // 🏆 Cofre Legendario
+            'legendary_chest': {
+                id: 'legendary_chest',
+                category: 'special',
+                name: '🏆 Cofre Legendario',
+                price: 1000000,
+                description: 'Un cofre extremadamente raro con ítems únicos',
+                rarity: 'legendary',
+                effect: {
+                    type: 'open_chest',
+                    rewards: [
+                        { id: 'cosmic_charm', chance: 0.2 },
+                        { id: 'infinity_charm', chance: 0.05 },
+                        { id: 'eternal_pickaxe', chance: 0.05 },
+                        { id: 'phantom_gloves', chance: 0.05 },
+                        { id: 'xp_booster', chance: 0.15 },
+                        { id: 'vip_pass', chance: 0.1 },
+                        { id: 'golden_skin', chance: 0.05 },
+                        { id: 'mystery_bag', chance: 0.15 },
+                        { id: 'fortune_shield', chance: 0.2 }
+                    ]
+                },
+                stackable: true,
+                maxStack: 5
             }
         };
         
@@ -668,6 +751,20 @@ class ShopSystem {
                 embed.addFields({ name: '⚡ Efectos Activos', value: effectsText, inline: false });
             }
         }
+
+        const cosmeticsDisplay = await this.getCosmeticsDisplay(userId);
+        if (cosmeticsDisplay.hasCosmetics) {
+            const cosmeticsText = cosmeticsDisplay.equipped.map(cosmetic => {
+                const status = cosmetic.equipped ? '✅' : '❌';
+                return `${status} **${cosmetic.name}**`;
+            }).join('\n');
+            
+            embed.addFields({ 
+                name: '✨ Cosméticos', 
+                value: cosmeticsText, 
+                inline: false 
+            });
+        }
         
         embed.setFooter({ text: 'Usa >useitem <id> para usar un item' });
         
@@ -731,7 +828,7 @@ class ShopSystem {
         }
     }
     
-    // 6. ACTUALIZAR processItemUse() - agregar caso para 'special'
+    // 1. ACTUALIZAR processItemUse() - agregar los nuevos casos especiales
     async processItemUse(userId, itemId, item) {
         const user = await this.economy.getUser(userId);
         
@@ -740,21 +837,204 @@ class ShopSystem {
                 return await this.applyConsumableEffect(userId, itemId, item);
             case 'permanent':
                 return await this.applyPermanentEffect(userId, itemId, item);
-            case 'special': // NUEVO CASO
+            case 'special':
+                // Casos especiales existentes
                 if (item.id === 'vip_pass') {
                     return await this.applyVipPass(userId, itemId, item);
                 }
                 if (item.effect.type === 'nickname_change') {
                     return await this.handleNicknameChange(userId, item);
                 }
+                // NUEVOS CASOS
+                if (item.effect.type === 'random_money') {
+                    return await this.openMoneyBag(userId, item);
+                }
+                if (item.effect.type === 'open_chest') {
+                    return await this.openChest(userId, item);
+                }
                 return { success: false, message: 'Item especial no implementado.' };
             case 'mystery':
                 return await this.openMysteryBox(userId, item);
             case 'cosmetic':
-                return { success: true, message: `${item.name} ahora está equipado en tu perfil.` };
+                return await this.applyCosmeticItem(userId, itemId, item);
             default:
                 return { success: false, message: 'Este item no se puede usar.' };
         }
+    }
+
+    // 2. NUEVA FUNCIÓN: Abrir bolsa misteriosa
+    async openMoneyBag(userId, item) {
+        const amount = Math.floor(Math.random() * (item.effect.max - item.effect.min + 1)) + item.effect.min;
+        
+        const user = await this.economy.getUser(userId);
+        await this.economy.updateUser(userId, { 
+            balance: user.balance + amount 
+        });
+        
+        return {
+            success: true,
+            message: `💰 ¡Abriste la bolsa misteriosa y encontraste **${amount.toLocaleString('es-ES')} π-b$**!`
+        };
+    }
+
+    // 3. NUEVA FUNCIÓN: Aplicar items cosméticos
+    async applyCosmeticItem(userId, itemId, item) {
+        const user = await this.economy.getUser(userId);
+        const cosmetics = user.cosmetics || {};
+        
+        // Agregar cosmético al inventario de cosméticos
+        cosmetics[itemId] = {
+            id: itemId,
+            name: item.name,
+            equipped: true,
+            obtainedAt: Date.now()
+        };
+
+        if (cosmetics[itemId]) {
+            return { 
+                success: false, 
+                message: `Ya tienes **${item.name}** equipado. Usa \`>equip ${itemId}\` para desequiparlo.` 
+            };
+        }
+        
+        await this.economy.updateUser(userId, { cosmetics });
+        
+        return {
+            success: true,
+            message: `✨ **${item.name}** ahora está equipado en tu perfil. ¡Se ve increíble!`
+        };
+    }
+
+    // 4. NUEVA FUNCIÓN: Abrir cofres con recompensas aleatorias
+    async openChest(userId, item) {
+        const rewards = item.effect.rewards;
+        if (!rewards || rewards.length === 0) {
+            return { success: false, message: 'Este cofre está vacío.' };
+        }
+        
+        // Calcular probabilidades acumulativas
+        let totalChance = 0;
+        const cumulativeRewards = rewards.map(reward => {
+            totalChance += reward.chance;
+            return {
+                ...reward,
+                cumulativeChance: totalChance
+            };
+        });
+        
+        // Seleccionar recompensa aleatoria
+        const roll = Math.random();
+        const selectedReward = cumulativeRewards.find(reward => roll <= reward.cumulativeChance);
+        
+        if (!selectedReward) {
+            // Fallback si algo sale mal
+            return await this.openMoneyBag(userId, { 
+                effect: { min: 1000, max: 10000 } 
+            });
+        }
+        
+        // Verificar si el item de recompensa existe
+        const rewardItem = this.shopItems[selectedReward.id];
+        if (!rewardItem) {
+            // Si el item no existe, dar dinero equivalente
+            const amount = Math.floor(Math.random() * 5000) + 2000;
+            const user = await this.economy.getUser(userId);
+            await this.economy.updateUser(userId, { balance: user.balance + amount });
+            
+            return {
+                success: true,
+                message: `📦 El cofre contenía **${amount.toLocaleString('es-ES')} π-b$** en lugar del item previsto.`
+            };
+        }
+        
+        // Agregar el item al inventario del usuario
+        const user = await this.economy.getUser(userId);
+        const userItems = user.items || {};
+        
+        if (userItems[selectedReward.id]) {
+            userItems[selectedReward.id].quantity += 1;
+        } else {
+            userItems[selectedReward.id] = {
+                id: selectedReward.id,
+                quantity: 1,
+                purchaseDate: new Date().toISOString(),
+                obtainedFrom: 'chest'
+            };
+        }
+        
+        await this.economy.updateUser(userId, { items: userItems });
+        
+        const rarityEmoji = this.rarityEmojis[rewardItem.rarity] || '⚪';
+        
+        return {
+            success: true,
+            message: `🎁 ¡Felicidades! Del cofre obtuviste ${rarityEmoji} **${rewardItem.name}**!\n\n${rewardItem.description}`
+        };
+    }
+
+    // 5. NUEVA FUNCIÓN: Mostrar cosméticos equipados en perfil
+    async getCosmeticsDisplay(userId) {
+        const user = await this.economy.getUser(userId);
+        const cosmetics = user.cosmetics || {};
+        
+        const equipped = Object.values(cosmetics).filter(cosmetic => cosmetic.equipped);
+        
+        if (equipped.length === 0) {
+            return { hasCosmetics: false, display: '' };
+        }
+        
+        let display = '';
+        const badges = equipped.filter(c => c.id.includes('badge') || c.id.includes('trophy'));
+        const frames = equipped.filter(c => c.id.includes('frame'));
+        const crowns = equipped.filter(c => c.id.includes('crown'));
+        const skins = equipped.filter(c => c.id.includes('skin'));
+        
+        if (crowns.length > 0) display += '👑 ';
+        if (frames.length > 0) display += '🖼️ ';
+        if (badges.length > 0) display += badges.map(b => this.getCosmeticEmoji(b.id)).join(' ') + ' ';
+        if (skins.length > 0) display += '✨ ';
+        
+        return {
+            hasCosmetics: true,
+            display: display.trim(),
+            equipped: equipped
+        };
+    }
+
+    // 6. FUNCIÓN AUXILIAR: Obtener emoji del cosmético
+    getCosmeticEmoji(cosmeticId) {
+        const emojiMap = {
+            'golden_trophy': '🏆',
+            'rainbow_badge': '🌈',
+            'diamond_crown': '👑',
+            'fire_badge': '🔥',
+            'vip_frame': '🖼️',
+            'golden_skin': '✨'
+        };
+        
+        return emojiMap[cosmeticId] || '⭐';
+    }
+
+    // 7. NUEVA FUNCIÓN: Equipar/desequipar cosméticos
+    async toggleCosmetic(message, cosmeticId) {
+        const userId = message.author.id;
+        const user = await this.economy.getUser(userId);
+        const cosmetics = user.cosmetics || {};
+        
+        if (!cosmetics[cosmeticId]) {
+            await message.reply('❌ No tienes ese cosmético. Revisa tu inventario con `>bag`.');
+            return;
+        }
+        
+        const cosmetic = cosmetics[cosmeticId];
+        cosmetic.equipped = !cosmetic.equipped;
+        
+        await this.economy.updateUser(userId, { cosmetics });
+        
+        const status = cosmetic.equipped ? 'equipado' : 'desequipado';
+        const emoji = this.getCosmeticEmoji(cosmeticId);
+        
+        await message.reply(`${emoji} **${cosmetic.name}** ${status} correctamente.`);
     }
 
     async handleNicknameChange(userId, item) {
@@ -1055,6 +1335,25 @@ class ShopSystem {
             await this.economy.updateUser(userId, { activeTokens });
         }
     }
+
+    // 9. VALIDACIÓN: Verificar que items referenciados en cofres existan
+    validateChestRewards(item) {
+        if (item.effect.type !== 'open_chest') return true;
+        
+        const invalidItems = [];
+        for (const reward of item.effect.rewards) {
+            if (!this.shopItems[reward.id]) {
+                invalidItems.push(reward.id);
+            }
+        }
+        
+        if (invalidItems.length > 0) {
+            console.warn(`⚠️  Items no encontrados en ${item.id}:`, invalidItems);
+            return false;
+        }
+        
+        return true;
+    }    
 
     // === LIMPIAR EFECTOS EXPIRADOS (ejecutar periódicamente) ===
     async cleanupExpiredEffects(userId) {
@@ -1582,13 +1881,17 @@ class ShopSystem {
     // === COMANDOS ===
     async processCommand(message) {
         if (message.author.bot) return;
+
+        if (!message.member?.permissions.has('Administrator') && !message.author.id === '488110147265232898') {
+            return;
+        }
         
         const args = message.content.toLowerCase().split(' ');
         const command = args[0];
         
         try {
             switch (command) {
-/*                case '>shop':
+                case '>shop':
                 case '>tienda':
                     const category = args[1] || 'all';
                     const page = parseInt(args[2]) || 1;
@@ -1603,7 +1906,7 @@ class ShopSystem {
                     }
                     const quantity = parseInt(args[2]) || 1;
                     await this.buyItem(message, args[1], quantity);
-                    break;*/
+                    break;
                     
                 case '>bag':
                 case '>inventario':
@@ -1615,7 +1918,7 @@ class ShopSystem {
                     await this.showBag(message, targetUser);
                     break;
                     
-/*                case '>useitem':
+                case '>useitem':
                 case '>usar':
                 case '>use':
                     if (!args[1]) {
@@ -1627,7 +1930,32 @@ class ShopSystem {
                 case '>efectos':
                 case '>effects':
                     await this.showActiveEffects(message);
-                    break;*/
+                    break;
+                    
+                case '>cosmetics':
+                case '>cosmeticos':
+                    const cosmeticsDisplay = await this.getCosmeticsDisplay(message.author.id);
+                    if (!cosmeticsDisplay.hasCosmetics) {
+                        await message.reply('No tienes cosméticos equipados.');
+                        return;
+                    }
+                    
+                    const embed = new EmbedBuilder()
+                        .setTitle('Tus Cosméticos')
+                        .setDescription(cosmeticsDisplay.display)
+                        .setColor('#FFD700');
+                    
+                    await message.reply({ embeds: [embed] });
+                    break;
+
+                case '>equip':
+                case '>equipar':
+                    if (!args[1]) {
+                        await message.reply('Especifica el ID del cosmético. Ejemplo: `>equip golden_skin`');
+                        return;
+                    }
+                    await this.toggleCosmetic(message, args[1]);
+                    break;
             }
         } catch (error) {
             console.error('❌ Error en sistema de tienda:', error);
