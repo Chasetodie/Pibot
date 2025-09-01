@@ -1749,9 +1749,9 @@ class AllCommands {
                 case '>vipstatus':
                     await this.shop.showVipStatus(message);
                     break;
-                /*case '>giveitem':
+                case '>giveitem':
                     await this.giveItemCommand(message, args);
-                    break;*/
+                    break;
                 case '>shopstats':
                     await this.shopStatsCommand(message);
                     break;
