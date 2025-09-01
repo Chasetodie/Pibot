@@ -1013,7 +1013,7 @@ class AllCommands {
                     value: `${this.formatNumber(result.newBalance)} π-b$`,
                     inline: true
                 },
-                { name: '🎉 Bonificaciones', value: this.formatBonusMessages(eventMessage, itemMessage, vipMessage), inline: false }
+                //{ name: '🎉 Bonificaciones', value: this.formatBonusMessages(eventMessage, itemMessage, vipMessage), inline: false }
             )
             .setColor('#28a745')
             .setTimestamp();
