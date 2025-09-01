@@ -849,6 +849,27 @@ class EconomySystem {
         return { canWork: true };
     }
 
+    // Después del método canWork(), AGREGAR:
+    async applyWorkItemEffects(userId, baseAmount, jobCooldown) {
+        if (!this.shop) return { amount: baseAmount, cooldown: jobCooldown };
+        
+        let finalAmount = baseAmount;
+        let finalCooldown = jobCooldown;
+        
+        const modifiers = await this.shop.getActiveMultipliers(userId, 'work');
+        
+        // Aplicar multiplicadores de dinero
+        finalAmount = Math.floor(finalAmount * modifiers.multiplier);
+        
+        // Aplicar reducción de cooldown
+        finalCooldown = Math.floor(finalCooldown * (1 - modifiers.reduction));
+        
+        // Consumir efectos de uso limitado
+        await this.shop.consumeUsageEffects(userId, 'work');
+        
+        return { amount: finalAmount, cooldown: finalCooldown };
+    }
+
     async doWork(userId, jobType) {
         const canWorkResult = await this.canWork(userId, jobType);
         if (!canWorkResult.canWork) 
@@ -907,7 +928,7 @@ class EconomySystem {
         
         // Trabajo exitoso
         const variation = Math.floor(Math.random() * (job.variation * 2)) - job.variation;
-        let amount = Math.max(50, job.baseReward + variation);
+        let amount = Math.max(50, job.baseReward + variation);       
         const message = job.messages[Math.floor(Math.random() * job.messages.length)];
         let eventMessage = '';
         let finalEarnings = amount;
@@ -934,6 +955,31 @@ class EconomySystem {
                 break;
             }
         }
+
+        // ✅ 2. DESPUÉS aplicar multiplicadores de items
+        let itemMessage = '';
+        if (this.shop) {
+            const modifiers = await this.shop.getActiveMultipliers(userId, 'work');
+            if (modifiers.multiplier > 1) {
+                const beforeItems = finalEarnings;
+                finalEarnings = Math.floor(finalEarnings * modifiers.multiplier);
+                itemMessage = `✨ **Items Activos** (+${finalEarnings - beforeItems} π-b$)`;
+            }
+            
+            // Consumir efectos de uso limitado
+            await this.shop.consumeUsageEffects(userId, 'work');
+        }
+
+        // ✅ 3. FINALMENTE aplicar VIP
+        let vipMessage = '';
+        if (this.shop) {
+            const vipMultipliers = await this.shop.getVipMultipliers(userId, 'work');
+            if (vipMultipliers.multiplier > 1) {
+                const beforeVip = finalEarnings;
+                finalEarnings = Math.floor(finalEarnings * vipMultipliers.multiplier);
+                vipMessage = `👑 **VIP Activo** (+${finalEarnings - beforeVip} π-b$)`;
+            }
+        }
         
         const addResult = await this.addMoney(userId, finalEarnings, 'work_reward');
 
@@ -958,30 +1004,40 @@ class EconomySystem {
         };
     }
 
-    // PROBLEMA 1: Prevenir transferencias durante robos activos
-// Agrega este método a tu clase EconomySystem:
+    // Después del método getUserNumber(), AGREGAR:
+    formatBonusMessages(eventMsg, itemMsg, vipMsg) {
+        const messages = [eventMsg, itemMsg, vipMsg].filter(msg => msg && msg.trim() !== '');
+        
+        if (messages.length === 0) {
+            return "No hay bonificaciones activas";
+        }
+        
+        return messages.join('\n');
+    }
 
-// Verificar si un usuario está siendo robado
-isBeingRobbed(userId) {
-    for (const [robberId, robberyData] of this.activeRobberies) {
-        if (robberyData.targetId === userId) {
-            const now = Date.now();
-            const timeElapsed = now - robberyData.startTime;
-            
-            // Solo si el robo está dentro del tiempo límite
-            if (timeElapsed <= this.robberyConfig.buttonTimeLimit) {
-                return {
-                    beingRobbed: true,
-                    robberId: robberId,
-                    timeLeft: this.robberyConfig.buttonTimeLimit - timeElapsed
-                };
+    // PROBLEMA 1: Prevenir transferencias durante robos activos
+    // Agrega este método a tu clase EconomySystem:
+
+    // Verificar si un usuario está siendo robado
+    isBeingRobbed(userId) {
+        for (const [robberId, robberyData] of this.activeRobberies) {
+            if (robberyData.targetId === userId) {
+                const now = Date.now();
+                const timeElapsed = now - robberyData.startTime;
+                
+                // Solo si el robo está dentro del tiempo límite
+                if (timeElapsed <= this.robberyConfig.buttonTimeLimit) {
+                    return {
+                        beingRobbed: true,
+                        robberId: robberId,
+                        timeLeft: this.robberyConfig.buttonTimeLimit - timeElapsed
+                    };
+                }
             }
         }
+        return { beingRobbed: false };
     }
-    return { beingRobbed: false };
-}
     
-
     // Verificar si puede robar
     async canRob(robberId, targetId) {
         const robber = await this.getUser(robberId);
@@ -1000,6 +1056,17 @@ isBeingRobbed(userId) {
                 requiredLevel: this.robberyConfig.levelRequirement 
             };
         }
+
+        if (this.shop) {
+            const protection = await this.shop.isProtectedFromTheft(targetId);
+            if (protection.protected) {
+                return { 
+                    canRob: false, 
+                    reason: 'target_protected',
+                    protectionType: protection.type
+                };
+            }
+        }        
         
         // Verificar que el objetivo tenga suficiente dinero
         if (target.balance < this.robberyConfig.minTargetBalance) {
@@ -1018,9 +1085,16 @@ isBeingRobbed(userId) {
             }
         }
 
-        const protection = await this.shop.isProtectedFromTheft(targetId);
-        if (protection.protected) {
-            return message.reply(`🛡️ ${targetUser} está protegido contra robos!`);
+        // AGREGAR ESTA VERIFICACIÓN:
+        if (this.shop) {
+            const protection = await this.shop.isProtectedFromTheft(targetId);
+            if (protection.protected) {
+                return { 
+                    canRob: false, 
+                    reason: 'target_protected',
+                    protectionType: protection.type
+                };
+            }
         }
         
         // Verificar cooldown

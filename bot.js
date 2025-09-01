@@ -88,9 +88,6 @@ const commandHandler = new CommandHandler(counters, saveCounters);
 //Crear instancia del sistema de economia
 const economy = new EconomySystem();
 
-//Crear instancia del sistema de Minijuegos
-const minigames = new MinigamesSystem(economy);
-
 //Crear instancia del sistema de Misiones
 const missions = new MissionsSystem(economy);
 
@@ -99,6 +96,9 @@ const achievements = new AchievementsSystem(economy);
 
 //Crear instancia del sistema de Tienda
 const shop = new ShopSystem(economy);
+
+//Crear instancia del sistema de Minijuegos
+const minigames = new MinigamesSystem(economy, shop);
 
 const database = new LocalDatabase();
 database.startCacheCleanup();
@@ -802,6 +802,20 @@ setInterval(() => {
         }
     }
 }, 60000);
+
+// Limpiar efectos expirados cada 5 minutos
+setInterval(async () => {
+    if (shop && shop.cleanupExpiredEffects) {
+        await shop.cleanupExpiredEffects();
+    }
+}, 5 * 60 * 1000);
+
+// Sistema de ingresos pasivos (cada hora)
+setInterval(async () => {
+    if (shop) {
+        await shop.processPassiveIncome();
+    }
+}, 60 * 60 * 1000); // Cada hora
 
 // Manejar mensajes (COMANDOS + XP + ECONOMÍA)
 client.on('messageCreate', async (message) => {

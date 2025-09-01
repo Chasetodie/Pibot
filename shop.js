@@ -367,6 +367,55 @@ class ShopSystem {
                 maxStack: 1
             },
 
+            'health_potion': {
+                id: 'health_potion',
+                name: '💊 Poción de Salud',
+                description: 'Protege contra penalizaciones de juegos fallidos por 1 hora',
+                price: 2500,
+                category: 'consumable',
+                rarity: 'uncommon',
+                effect: {
+                    type: 'penalty_protection',
+                    targets: ['games', 'work'],
+                    duration: 3600 // 1 hora
+                },
+                stackable: true,
+                maxStack: 10
+            },
+
+            'experience_multiplier': {
+                id: 'experience_multiplier',
+                name: '📈 Multiplicador de EXP',
+                description: 'x3 EXP en todos los comandos por 45 minutos',
+                price: 4000,
+                category: 'consumable',
+                rarity: 'rare',
+                effect: {
+                    type: 'xp_multiplier',
+                    targets: ['all'],
+                    multiplier: 3.0,
+                    duration: 2700 // 45 minutos
+                },
+                stackable: true,
+                maxStack: 5
+            },
+
+            'instant_cooldown_reset': {
+                id: 'instant_cooldown_reset',
+                name: '⚡ Reset Instantáneo',
+                description: 'Elimina todos los cooldowns inmediatamente (1 uso)',
+                price: 5000,
+                category: 'consumable',
+                rarity: 'epic',
+                effect: {
+                    type: 'instant_cooldown_reset',
+                    targets: ['all'],
+                    uses: 1
+                },
+                stackable: true,
+                maxStack: 3
+            },
+
             // 💰 Bolsa Misteriosa
             'mystery_bag': {
                 id: 'mystery_bag',
@@ -834,6 +883,10 @@ class ShopSystem {
         
         switch (item.category) {
             case 'consumable':
+                if (item.effect.type === 'instant_cooldown_reset') {
+                    return await this.resetAllCooldowns(userId, item);
+                }
+
                 return await this.applyConsumableEffect(userId, itemId, item);
             case 'permanent':
                 return await this.applyPermanentEffect(userId, itemId, item);
@@ -1055,6 +1108,45 @@ class ShopSystem {
         };
     }
 
+    // Después del método handleNicknameChange(), AGREGAR:
+    async resetAllCooldowns(userId, item) {
+        const user = await this.economy.getUser(userId);
+        
+        const updateData = {
+            last_daily: 0,
+            last_work: 0,
+            last_robbery: 0,
+            last_coinflip: 0,
+            last_dice: 0,
+            last_roulette: 0,
+            last_lotto: 0,
+            last_blackjack: 0
+        };
+        
+        await this.economy.updateUser(userId, updateData);
+        
+        return {
+            success: true,
+            message: '⚡ ¡Todos los cooldowns han sido eliminados! Puedes usar cualquier comando ahora.'
+        };
+    }
+
+    // Método para verificar protección contra penalizaciones
+    async hasGameProtection(userId) {
+        const user = await this.economy.getUser(userId);
+        const activeEffects = user.activeEffects || {};
+        
+        for (const [itemId, effects] of Object.entries(activeEffects)) {
+            for (const effect of effects) {
+                if (effect.type === 'penalty_protection' && effect.expiresAt > Date.now()) {
+                    return true;
+                }
+            }
+        }
+        
+        return false;
+    }
+
     async setCustomNickname(message, nickname) {
         const userId = message.author.id;
         const user = await this.economy.getUser(userId);
@@ -1245,6 +1337,25 @@ class ShopSystem {
         const wonItem = possibleItems[Math.floor(Math.random() * possibleItems.length)];
         const user = await this.economy.getUser(userId);
         const userItems = user.items || {};
+
+        // AGREGAR AQUÍ (después de seleccionar wonItem, ANTES de updateUser):
+        if (item.effect.rarityBonus) {
+            // Premium mystery box - chance de items raros
+            const rarityRoll = Math.random();
+            let selectedRarity = 'common';
+            
+            if (rarityRoll < 0.05) selectedRarity = 'legendary';      // 5%
+            else if (rarityRoll < 0.15) selectedRarity = 'epic';      // 10%
+            else if (rarityRoll < 0.35) selectedRarity = 'rare';      // 20%
+            else if (rarityRoll < 0.65) selectedRarity = 'uncommon';  // 30%
+            
+            const rarityItems = possibleItems.filter(i => i.rarity === selectedRarity);
+            if (rarityItems.length > 0) {
+                const newWonItem = rarityItems[Math.floor(Math.random() * rarityItems.length)];
+                console.log(`🎁 Premium box: ${wonItem.name} -> ${newWonItem.name} (${selectedRarity})`);
+                wonItem = newWonItem; // Reemplazar el item ganado
+            }
+        }
         
         if (userItems[wonItem.id]) {
             userItems[wonItem.id].quantity += 1;
@@ -1263,6 +1374,33 @@ class ShopSystem {
             success: true, 
             message: `¡Felicidades! Obtuviste ${rarityEmoji} **${wonItem.name}**!` 
         };
+    }
+
+    // Después del método setCustomNickname(), AGREGAR:
+    async showVipStatus(message) {
+        const userId = message.author.id;
+        const vipStatus = await this.hasActiveVip(userId);
+        
+        if (!vipStatus.hasVip) {
+            await message.reply('❌ No tienes membresía VIP activa. ¡Compra una en la tienda!');
+            return;
+        }
+        
+        const timeLeft = vipStatus.timeLeft;
+        const days = Math.floor(timeLeft / (24 * 60 * 60 * 1000));
+        const hours = Math.floor((timeLeft % (24 * 60 * 60 * 1000)) / (60 * 60 * 1000));
+        
+        const embed = new EmbedBuilder()
+            .setTitle('👑 Estado VIP')
+            .setDescription(`¡Tienes membresía **${vipStatus.tier}** activa!`)
+            .addFields(
+                { name: '⏰ Tiempo Restante', value: `${days} días, ${hours} horas`, inline: true },
+                { name: '🎁 Beneficios Activos', value: '• Sin cooldowns\n• Ganancias x2\n• +20% suerte\n• Comandos exclusivos', inline: false }
+            )
+            .setColor('#FFD700')
+            .setTimestamp();
+        
+        await message.reply({ embeds: [embed] });
     }
        
     // 1. ACTUALIZAR getActiveMultipliers() - agregar casos para nuevos tipos
@@ -1876,6 +2014,40 @@ class ShopSystem {
             canUse: false,
             reason: 'Tu nivel VIP no incluye comandos exclusivos.'
         };
+    }
+
+    // Después del método processItemUse(), AGREGAR:
+    async processPassiveIncome() {
+        console.log('💰 Procesando ingresos pasivos...');
+        
+        try {
+            const allUsers = await this.economy.getAllUsers();
+            
+            for (const user of allUsers) {
+                const permanentEffects = user.permanentEffects || {};
+                
+                for (const [itemId, effect] of Object.entries(permanentEffects)) {
+                    if (effect.type === 'passive_income') {
+                        const lastPayout = user.lastPassivePayout || 0;
+                        const now = Date.now();
+                        
+                        // Si ha pasado 1 hora (3600000 ms)
+                        if (now - lastPayout >= 3600000) {
+                            const amount = Math.floor(
+                                Math.random() * (effect.maxAmount - effect.minAmount) + effect.minAmount
+                            );
+                            
+                            await this.economy.addMoney(user.id, amount, 'passive_income');
+                            await this.economy.updateUser(user.id, { lastPassivePayout: now });
+                            
+                            console.log(`💰 Ingreso pasivo: ${amount} π-b$ para ${user.id}`);
+                        }
+                    }
+                }
+            }
+        } catch (error) {
+            console.error('❌ Error procesando ingresos pasivos:', error);
+        }
     }
     
     // === COMANDOS ===

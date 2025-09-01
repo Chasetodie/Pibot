@@ -10,8 +10,9 @@ const UNO_SPECIAL_CARDS = ['Skip', 'Reverse', '+2'];
 const UNO_WILD_CARDS = ['Wild', 'Wild+4'];
 
 class MinigamesSystem {
-    constructor(economySystem) {
+    constructor(economySystem, shopSystem) {
         this.economy = economySystem;
+        this.shop = shopSystem;
         this.events = null;
         this.activeGames = new Map(); // Para manejar juegos en progreso
         this.minigamesCache = new Map();
@@ -276,6 +277,15 @@ class MinigamesSystem {
 
         let winChance = 0.5; // 50% base
         let luckMessage = '';
+
+        // AGREGAR ESTAS LÍNEAS:
+        if (this.shop) {
+            const luckBoost = await this.shop.getActiveMultipliers(userId, 'games');
+            if (luckBoost.luckBoost) {
+                winChance += luckBoost.luckBoost;
+                luckMessage = `🍀 **Boost de Suerte** (+${Math.round(luckBoost.luckBoost * 100)}% probabilidad)`;
+            }
+        }
        
         for (const event of this.events.getActiveEvents()) {
             if (event.type === 'lucky_hour') {
@@ -328,11 +338,19 @@ class MinigamesSystem {
         }
 
         const winAmount = Math.floor(betAmount * this.config.coinflip.winMultiplier);
-        const profit = winAmount - betAmount;
+        let profit = winAmount - betAmount;
         let finalEarnings = profit;
         let eventMessage = '';
         
         if (won) {
+            if (this.shop) {
+                const modifiers = await this.shop.getActiveMultipliers(userId, 'games');
+                profit = Math.floor(profit * modifiers.multiplier);
+                               
+                // Consumir efectos de uso limitado
+                await this.shop.consumeUsageEffects(userId, 'games');
+            }
+            
             for (const event of this.events.getActiveEvents()) {
                 if (event.type === 'fever_time') {
                     finalEarnings = Math.floor(profit * 1.5); // 🔥 +30%

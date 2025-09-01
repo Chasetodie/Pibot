@@ -1013,7 +1013,7 @@ class AllCommands {
                     value: `${this.formatNumber(result.newBalance)} π-b$`,
                     inline: true
                 },
-                { name: '🎉 Extra por Eventos', value: `${result.eventMessage || "No hay eventos Activos"} `, inline: false },
+                { name: '🎉 Bonificaciones', value: this.formatBonusMessages(eventMessage, itemMessage, vipMessage), inline: false }
             )
             .setColor('#28a745')
             .setTimestamp();
@@ -1739,15 +1739,15 @@ class AllCommands {
                     break;
 
                 case '>setnick':
-                    if (!args[1]) {
-                        await message.reply('❌ Especifica tu apodo: `>setnick <tu_apodo>`');
-                        return;
-                    }
+                    const nick = message.content.split(' ');
                     const nickname = args.slice(1).join(' ');
                     await this.shop.setCustomNickname(message, nickname);
                     break;                  
                 case '>vip':
                     await this.vipCommand(message);
+                    break;
+                case '>vipstatus':
+                    await this.shop.showVipStatus(message);
                     break;
                 /*case '>giveitem':
                     await this.giveItemCommand(message, args);
