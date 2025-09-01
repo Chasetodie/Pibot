@@ -803,7 +803,7 @@ setInterval(() => {
     }
 }, 60000);
 
-// Limpiar efectos expirados cada 5 minutos
+/*// Limpiar efectos expirados cada 5 minutos
 setInterval(async () => {
     if (shop && shop.cleanupExpiredEffects) {
         await shop.cleanupExpiredEffects();
@@ -815,7 +815,7 @@ setInterval(async () => {
     if (shop) {
         await shop.processPassiveIncome();
     }
-}, 60 * 60 * 1000); // Cada hora
+}, 60 * 60 * 1000); // Cada hora*/
 
 // Manejar mensajes (COMANDOS + XP + ECONOMÍA)
 client.on('messageCreate', async (message) => {
@@ -1044,6 +1044,7 @@ client.login(process.env.TOKEN).then(() => {
 }).catch(error => {
     console.error('❌ Error en el login:', error);
 });*/
+
 
 
 
