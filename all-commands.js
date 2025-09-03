@@ -1357,6 +1357,8 @@ async handleBalance(message, targetUser = null) {
 
     // Comando para dar items a usuarios (solo admins)
     async giveItemCommand(message, args) {
+        if (message.author.bot) return;
+        
         // Verificar permisos de admin
         if (!message.member?.permissions.has('Administrator') && !message.author.id === '488110147265232898') {
             await message.reply('❌ No tienes permisos para usar este comando.');
@@ -1380,6 +1382,17 @@ async handleBalance(message, targetUser = null) {
         
         const user = await this.economy.getUser(targetUser.id);
         const userItems = user.items || {};
+        const currentQuantity = userItems[itemId] ? userItems[itemId].quantity : 0;
+        
+        if (!item.stackable && currentQuantity >= 1) {
+            await message.reply(`❌ **${item.name}** no es stackeable y ya lo tienes.`);
+            return;
+        }
+        
+        if (currentQuantity + quantity > item.maxStack) {
+            await message.reply(`❌ No puedes tener más de **${item.maxStack}** de este item.`);
+            return;
+        }
         
         if (userItems[itemId]) {
             userItems[itemId].quantity += quantity;
