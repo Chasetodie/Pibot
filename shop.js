@@ -2148,23 +2148,30 @@ class ShopSystem {
                 case '>cosmetics':
                 case '>cosmeticos':
                     const cosmeticsDisplay = await this.getCosmeticsDisplay(message.author.id);
+       
+                    const embedCF = new EmbedBuilder()
+                        .setTitle('⚡ Tus Efectos Activos')
+                        .setColor('#FF6B35')
+                        .setThumbnail(message.author.displayAvatarURL({ dynamic: true }));
+               
                     if (!cosmeticsDisplay.hasCosmetics) {
-                        await message.reply('No tienes cosméticos equipados.');
+                        embedCF.setDescription('No tienes cosmeticos activos en este momento.');
+                        await message.reply({ embeds: [embedCF] });
                         return;
                     }
                     
-                    const embed = new EmbedBuilder()
+                    const embedC = new EmbedBuilder()
                         .setTitle('Tus Cosméticos')
                         .setDescription(cosmeticsDisplay.display)
                         .setColor('#FFD700');
                     
-                    await message.reply({ embeds: [embed] });
+                    await message.reply({ embeds: [embedC] });
                     break;
 
                 case '>equip':
                 case '>equipar':
                     if (!args[1]) {
-                        await message.reply('Especifica el ID del cosmético. Ejemplo: `>equip golden_skin`');
+                        await message.reply('❌ Especifica el ID del cosmético.\nEjemplo: `>equip golden_skin`');
                         return;
                     }
                     await this.toggleCosmetic(message, args[1]);
