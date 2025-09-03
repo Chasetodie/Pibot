@@ -294,6 +294,19 @@ class EconomySystem {
         return Math.floor(this.config.xpPerLevel * Math.pow(this.config.levelMultiplier, level - 2));
     }
 
+    calculateScaledXp(user) {
+        const baseXp = this.config.xpPerMessage;
+        
+        // Exponencial para niveles altos
+        if (user.level <= 15) {
+            return baseXp + Math.floor(user.level * 1); // +1 por nivel hasta 15
+        } else {
+            // Exponencial: nivel^1.5 para niveles altos
+            const exponentialBonus = Math.floor(Math.pow(user.level, 1.5));
+            return baseXp + exponentialBonus;
+        }
+    }
+
     // Calcular nivel basado en XP total
     getLevelFromXp(totalXp) {
         let level = 1;
@@ -313,7 +326,7 @@ class EconomySystem {
         const variation = Math.floor(Math.random() * (this.config.xpVariation * 2)) - this.config.xpVariation;
         const xpGained = Math.max(1, baseXp + variation);
         const modifiers = await this.shop.getActiveMultipliers(userId, 'all');
-        let finalXp = Math.floor(this.config.xpPerMessage + (user.level * 1.5));
+        let finalXp = this.calculateScaledXp(user);
 
         if (modifiers.multiplier > 1) {
             finalXp = Math.floor(xpGained * modifiers.multiplier);        
