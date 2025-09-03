@@ -313,7 +313,7 @@ class EconomySystem {
         const variation = Math.floor(Math.random() * (this.config.xpVariation * 2)) - this.config.xpVariation;
         const xpGained = Math.max(1, baseXp + variation);
         const modifiers = await this.shop.getActiveMultipliers(userId, 'all');
-        let finalXp = Math.floor(this.config.xpPerMessage + (user.level * 1.0));
+        let finalXp = Math.floor(this.config.xpPerMessage + (user.level * 1.5));
 
         if (modifiers.multiplier > 1) {
             finalXp = Math.floor(xpGained * modifiers.multiplier);        
