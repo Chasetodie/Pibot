@@ -975,7 +975,23 @@ class ShopSystem {
 
     async applyCosmeticItem(userId, itemId, item) {
         const user = await this.economy.getUser(userId);
-        const cosmetics = user.cosmetics || {};
+        
+        let cosmetics = user.cosmetics || {};
+
+        // Si cosmetics es string, parsearlo
+        if (typeof cosmetics === 'string') {
+            try {
+                cosmetics = JSON.parse(cosmetics);
+            } catch (error) {
+                console.log('❌ Error parseando cosmetics, reseteando:', error);
+                cosmetics = {};
+            }
+        }
+        
+        // Si no es objeto, resetear
+        if (typeof cosmetics !== 'object' || Array.isArray(cosmetics)) {
+            cosmetics = {};
+        }
         
         // Si ya lo tiene equipado, desequiparlo
         if (cosmetics[itemId]) {
@@ -1074,26 +1090,32 @@ class ShopSystem {
     // 5. NUEVA FUNCIÓN: Mostrar cosméticos equipados en perfil
     async getCosmeticsDisplay(userId) {
         const user = await this.economy.getUser(userId);
-        const cosmetics = user.cosmetics || {};
         
-        if (Object.keys(cosmetics).length === 0) {
-            return { hasCosmetics: false, display: '' };
+        // ✅ ARREGLO: Manejar cosmetics como string
+        let cosmetics = user.cosmetics || {};
+        
+        if (typeof cosmetics === 'string') {
+            try {
+                cosmetics = JSON.parse(cosmetics);
+            } catch (error) {
+                cosmetics = {};
+            }
+        }
+        
+        if (typeof cosmetics !== 'object' || Object.keys(cosmetics).length === 0) {
+            return { hasCosmetics: false, display: 'No tienes cosméticos equipados.' }; // ✅ Nunca string vacío
         }
         
         let display = '';
         
         for (const [itemId, cosmeticData] of Object.entries(cosmetics)) {
             const item = this.shopItems[itemId];
-            if (!item) continue; // Si el item no existe, saltar
+            if (!item) continue;
             
-            // Obtener emoji del nombre del item (primer emoji)
             const emojiMatch = item.name.match(/[\u{1F600}-\u{1F64F}]|[\u{1F300}-\u{1F5FF}]|[\u{1F680}-\u{1F6FF}]|[\u{1F1E0}-\u{1F1FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]/u);
             const emoji = emojiMatch ? emojiMatch[0] : '✨';
             
-            // Obtener rareza
             const rarityEmoji = this.rarityEmojis[item.rarity] || '⚪';
-            
-            // Formatear fecha de equipado
             const equippedDate = new Date(cosmeticData.obtainedAt).toLocaleDateString('es-ES');
             
             display += `${rarityEmoji} ${emoji} **${item.name}**\n`;
@@ -1101,7 +1123,10 @@ class ShopSystem {
             display += `└ Equipado el: ${equippedDate}\n\n`;
         }
         
-        return { hasCosmetics: true, display: display.trim() };
+        return { 
+            hasCosmetics: true, 
+            display: display.trim() || 'Error cargando cosméticos.' // ✅ Fallback si está vacío
+        };
     }
 
     // 6. FUNCIÓN AUXILIAR: Obtener emoji del cosmético
