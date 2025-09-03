@@ -864,19 +864,27 @@ async getEquippedCosmetics(userId) {
             }
         }
 
-        const cosmeticsDisplay = await this.getCosmeticsDisplay(userId);
-        if (cosmeticsDisplay.hasCosmetics) {
-            const cosmeticsText = cosmeticsDisplay.equipped.map(cosmetic => {
-                const status = cosmetic.equipped ? '✅' : '❌';
-                return `${status} **${cosmetic.name}**`;
-            }).join('\n');
-            
-            embed.addFields({ 
-                name: '✨ Cosméticos', 
-                value: cosmeticsText, 
-                inline: false 
-            });
+        // ✅ ARREGLO: Usar getEquippedCosmetics en lugar de getCosmeticsDisplay
+const equippedCosmetics = await this.getEquippedCosmetics(userId);
+if (equippedCosmetics.length > 0) {
+    let cosmeticsText = '';
+    for (const cosmetic of equippedCosmetics) {
+        const item = this.shopItems[cosmetic.id];
+        if (item) {
+            const emojiMatch = item.name.match(/[\u{1F600}-\u{1F64F}]|[\u{1F300}-\u{1F5FF}]|[\u{1F680}-\u{1F6FF}]|[\u{1F1E0}-\u{1F1FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]/u);
+            const emoji = emojiMatch ? emojiMatch[0] : '✨';
+            cosmeticsText += `✅ ${emoji} **${item.name}** \`${cosmetic.id}\`\n`;
         }
+    }
+    
+    if (cosmeticsText) {
+        embed.addFields({ 
+            name: '✨ Cosméticos Equipados', 
+            value: cosmeticsText.trim(), 
+            inline: false 
+        });
+    }
+}
         
         embed.setFooter({ text: 'Usa >useitem <id> para usar un item' });
         
