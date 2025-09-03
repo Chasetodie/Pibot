@@ -85,7 +85,7 @@ async handleBalance(message, targetUser = null) {
     const avatarUrl = targetUser ? targetUser.displayAvatarURL({ dynamic: true }) : message.author.displayAvatarURL({ dynamic: true });
 
     // ✅ ARREGLO: Obtener cosméticos correctamente
-    const equippedCosmetics = await this.getEquippedCosmetics(userId);
+    const equippedCosmetics = await this.shop.getEquippedCosmetics(userId);
     const vipStatus = await this.getVipStatus(userId);
     
     // ✅ ARREGLO: Crear título más simple
