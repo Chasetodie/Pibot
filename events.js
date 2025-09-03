@@ -43,8 +43,8 @@ class EventsSystem {
                 emoji: '🍀',
                 color: '#32CD32',
                 multiplier: { luck: 1.3 },
-                minDuration: 1800000, // 30 minutos
-                maxDuration: 3600000  // 1 hora
+                minDuration: 300000, // 30 minutos
+                maxDuration: 600000  // 10 minutos
             },
             'fever_time': {
                 name: '🔥 Tiempo Fiebre',
@@ -60,16 +60,16 @@ class EventsSystem {
                     missions: 1.4, 
                     achievements: 1.6
                 },
-                minDuration: 2700000, // 45 minutos
-                maxDuration: 5400000  // 1.5 horas
+                minDuration: 900000, // 15 minutos
+                maxDuration: 1800000   // 30 minutos
             },
             'charity_event': {
                 name: '❤️ Evento de Caridad',
                 description: 'Dona dinero y recibe bonificaciones especiales',
                 emoji: '❤️',
                 color: '#FF69B4',
-                minDuration: 900000,  // 15 minutos
-                maxDuration: 1800000, // 30 minutos
+                minDuration: 600000,  // 10 minutos
+                maxDuration: 900000, // 15 minutos
                 special: true
             },
             'treasure_hunt': {
@@ -277,7 +277,7 @@ class EventsSystem {
         setInterval(async () => {
             await this.tryCreateRandomEvent();
             console.log('🔄 Verificando eventos automáticos...');
-        }, 1800000); // 30 minutos
+        }, 3600000); // 30 minutos
 
         // Limpiar eventos expirados cada 1 minutos
         setInterval(async () => {
@@ -662,19 +662,19 @@ class EventsSystem {
                 let treasureDescription = '';
                 let rewardType = 'money';
                 
-                if (treasureType < 0.6) {
-                    // 60% - Tesoro de dinero normal
+                if (treasureType < 0.55) {
+                    // 55% - Tesoro de dinero normal
                     treasureReward = Math.floor(Math.random() * 2000) + 500; // 500-2500
                     treasureDescription = `Cofre de monedas: ${treasureReward} π-b$`;
                     rewardType = 'money';
-                } else if (treasureType < 0.85) {
-                    // 25% - Tesoro de dinero premium
+                } else if (treasureType < 0.70) {
+                    // 15% - Tesoro de dinero premium
                     treasureReward = Math.floor(Math.random() * 3000) + 1500; // 1500-4500
                     treasureDescription = `Cofre dorado: ${treasureReward} π-b$`;
                     rewardType = 'premium_money';
                 } else {
-                    // 15% - Tesoro de XP
-                    xpBonus = Math.floor(Math.random() * 100) + 50; // 50-150 XP
+                    // 30% - Tesoro de XP
+                    xpBonus = Math.floor(Math.random() * 500) + 50; // 50-550 XP
                     treasureDescription = `Pergamino ancestral: +${xpBonus} XP`;
                     rewardType = 'xp';
                 }
