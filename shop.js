@@ -539,6 +539,42 @@ class ShopSystem {
             timestamp: Date.now()
         });
     }
+
+    // 4. Función para consumir efectos de uso limitado
+    async consumeUsageEffects(userId, action) {
+        const user = await this.getUser(userId);
+        const activeEffects = user.activeEffects || {};
+        let updated = false;
+        
+        for (const [itemId, effects] of Object.entries(activeEffects)) {
+            for (let i = effects.length - 1; i >= 0; i--) {
+                const effect = effects[i];
+                
+                // Solo procesar efectos que afecten esta acción
+                if (!effect.targets.includes(action) && !effect.targets.includes('all')) continue;
+                
+                // Solo efectos con usos limitados
+                if (!effect.usesLeft) continue;
+                
+                effect.usesLeft--;
+                
+                if (effect.usesLeft <= 0) {
+                    effects.splice(i, 1);
+                    updated = true;
+                }
+            }
+            
+            // Limpiar arrays vacíos
+            if (effects.length === 0) {
+                delete activeEffects[itemId];
+                updated = true;
+            }
+        }
+        
+        if (updated) {
+            await this.updateUser(userId, { activeEffects });
+        }
+    }
     
     // === TIENDA ===
     async showShop(message, category = 'all', page = 1) {

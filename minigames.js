@@ -348,7 +348,7 @@ class MinigamesSystem {
                 profit = Math.floor(profit * modifiers.multiplier);
                                
                 // Consumir efectos de uso limitado
-                //await this.shop.consumeUsageEffects(userId, 'games');
+                await this.shop.consumeUsageEffects(userId, 'games');
             }
             
             for (const event of this.events.getActiveEvents()) {
