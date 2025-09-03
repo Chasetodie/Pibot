@@ -399,24 +399,32 @@ class MissionsSystem {
         console.log('🕛 Sistema de reset automático iniciado');
     }
 
-async checkAndResetAllMissions() {
-    const now = new Date();
-    // Usar la misma fórmula que getCurrentDay()
-    const ecuadorTime = new Date(now.getTime() + (now.getTimezoneOffset() * 60000) + (-5 * 3600000));
-    
-    const currentHour = ecuadorTime.getHours();
-    const currentMinute = ecuadorTime.getMinutes();
-    const currentDay = ecuadorTime.toISOString().split('T')[0];
-    
-    if (currentHour === 0 && currentMinute === 0 && this.lastResetDay !== currentDay) {
-        console.log('🌅 Iniciando reset automático de misiones...');
+    async checkAndResetAllMissions() {
+        const now = new Date();
+        const ecuadorTime = new Date(now.getTime() + (now.getTimezoneOffset() * 60000) + (-5 * 3600000));
         
-        this.lastResetDay = currentDay;
-        this.missionsCache.clear();
+        const currentDay = ecuadorTime.toISOString().split('T')[0];
         
-        console.log('✅ Reset automático completado');
+        // LOGS PARA DEBUG
+        console.log(`📅 Día actual: ${currentDay}`);
+        console.log(`📅 Último reset: ${this.lastResetDay}`);
+        console.log(`🔄 ¿Cambió el día?: ${currentDay !== this.lastResetDay}`);
+        
+        // Si cambió el día, hacer reset
+        if (this.lastResetDay && currentDay !== this.lastResetDay) {
+            console.log('🌅 Iniciando reset automático de misiones...');
+            console.log(`🔄 Cambio detectado: ${this.lastResetDay} → ${currentDay}`);
+            
+            this.lastResetDay = currentDay;
+            this.missionsCache.clear();
+            
+            console.log('✅ Reset automático completado');
+        } else if (!this.lastResetDay) {
+            // Primera vez que se ejecuta, solo establecer el día actual
+            this.lastResetDay = currentDay;
+            console.log(`🎯 Día inicial establecido: ${currentDay}`);
+        }
     }
-}
     
     // Inicializar misiones diarias para un usuario
 
