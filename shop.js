@@ -1848,52 +1848,37 @@ if (equippedCosmetics.length > 0) {
         return info;
     }
 
-    // === COMANDO PARA VER EFECTOS ===
     async showActiveEffects(message) {
-        const info = await this.getActiveEffectsInfo(message.author.id);
+        const user = await this.economy.getUser(message.author.id);
+        const permanentEffects = user.permanentEffects || {};
         
-        const embed = new EmbedBuilder()
-            .setTitle('⚡ Tus Efectos Activos')
-            .setColor('#FF6B35')
-            .setThumbnail(message.author.displayAvatarURL({ dynamic: true }));
-        
-        if (info.temporary.length === 0 && info.permanent.length === 0 && !info.vip) {
-            embed.setDescription('No tienes efectos activos en este momento.');
-            await message.reply({ embeds: [embed] });
+        if (Object.keys(permanentEffects).length === 0) {
+            await message.reply('📝 No tienes efectos permanentes activos.');
             return;
         }
         
-        if (info.vip) {
-            embed.addFields({
-                name: '👑 Estado VIP',
-                value: `**${info.vip.tier}**\nTiempo restante: ${info.vip.timeLeft}`,
-                inline: false
-            });
+        const embed = new EmbedBuilder()
+            .setTitle('⚡ Tus Efectos Permanentes Activos')
+            .setColor('#9932CC')
+            .setThumbnail(message.author.displayAvatarURL({ dynamic: true }))
+            .setTimestamp();
+        
+        let effectsText = '';
+        
+        for (const [itemId, effect] of Object.entries(permanentEffects)) {
+            const item = this.shopItems[itemId];
+            if (!item) continue;
+            
+            const rarityEmoji = this.rarityEmojis[item.rarity];
+            const appliedDate = new Date(effect.appliedAt).toLocaleDateString('es-ES');
+            
+            effectsText += `${rarityEmoji} **${item.name}**\n`;
+            effectsText += `├ Aplicado: ${appliedDate}\n`;
+            effectsText += `└ Remover: \`>removeeffect ${itemId}\`\n\n`;
         }
         
-        if (info.temporary.length > 0) {
-            const tempText = info.temporary.map(e => 
-                `• **${e.name}** - ${e.timeLeft}`
-            ).join('\n');
-            
-            embed.addFields({
-                name: '⏱️ Efectos Temporales',
-                value: tempText,
-                inline: false
-            });
-        }
-        
-        if (info.permanent.length > 0) {
-            const permText = info.permanent.map(e => 
-                `• **${e.name}**`
-            ).join('\n');
-            
-            embed.addFields({
-                name: '💎 Efectos Permanentes',
-                value: permText,
-                inline: false
-            });
-        }
+        embed.setDescription(effectsText);
+        embed.setFooter({ text: 'Usa >removeeffect <item_id> para desactivar un efecto' });
         
         await message.reply({ embeds: [embed] });
     }
@@ -2038,7 +2023,6 @@ if (equippedCosmetics.length > 0) {
 
     // Obtener tier de VIP basado en beneficios
     getVipTier(benefits) {
-        if (benefits.includes('diamond_membership')) return 'Diamond 💎';
         if (benefits.includes('custom_nickname')) return 'Premium 👑';
         return 'VIP ⭐';
     }  
@@ -2133,6 +2117,103 @@ if (equippedCosmetics.length > 0) {
         }
     }
     
+    async removePermanentEffect(message, itemId) {
+        const userId = message.author.id;
+        const user = await this.economy.getUser(userId);
+        const permanentEffects = user.permanentEffects || {};
+        
+        // Verificar que el usuario tiene el efecto activo
+        if (!permanentEffects[itemId]) {
+            await message.reply(`❌ No tienes el efecto de **${itemId}** activo.`);
+            return;
+        }
+        
+        const item = this.shopItems[itemId];
+        if (!item) {
+            await message.reply('❌ Item no encontrado.');
+            return;
+        }
+        
+        // ✅ CONFIRMACIÓN para items costosos
+        const expensiveItems = ['diamond_membership', 'auto_worker', 'permanent_vault'];
+        if (expensiveItems.includes(itemId) || item.price > 20000) {
+            
+            // Sistema de confirmación similar al de subastas
+            if (!this.removalConfirmations) {
+                this.removalConfirmations = new Map();
+            }
+            
+            const pendingConfirmation = this.removalConfirmations.get(userId);
+            if (pendingConfirmation && pendingConfirmation.itemId === itemId) {
+                // Confirmar y proceder
+                this.removalConfirmations.delete(userId);
+            } else {
+                // Solicitar confirmación
+                this.removalConfirmations.set(userId, {
+                    itemId: itemId,
+                    timestamp: Date.now()
+                });
+                
+                const embed = new EmbedBuilder()
+                    .setTitle('⚠️ Confirmación de Remoción')
+                    .setDescription(`¿Estás seguro de que quieres remover el efecto permanente?`)
+                    .addFields(
+                        { name: '📦 Item', value: `${this.rarityEmojis[item.rarity]} **${item.name}**`, inline: true },
+                        { name: '💎 Valor Original', value: `${item.price.toLocaleString('es-ES')} π-b$`, inline: true },
+                        { name: '⚠️ Importante', value: `Al remover este efecto, el item volverá a tu inventario y podrás venderlo/subastarlo, pero perderás todos los beneficios permanentes.`, inline: false },
+                        { name: '🔄 Para Reactivar', value: `Tendrás que usar el item otra vez con \`>useitem ${itemId}\``, inline: false }
+                    )
+                    .setColor('#FF6600')
+                    .setFooter({ text: 'Usa el mismo comando otra vez en 30 segundos para confirmar' });
+                
+                await message.reply({ embeds: [embed] });
+                
+                // Limpiar confirmación después de 30 segundos
+                setTimeout(() => {
+                    this.removalConfirmations.delete(userId);
+                }, 30000);
+                
+                return;
+            }
+        }
+        
+        // ✅ Remover el efecto permanente
+        const newPermanentEffects = { ...permanentEffects };
+        delete newPermanentEffects[itemId];
+        
+        // ✅ Devolver el item al inventario
+        const userItems = user.items || {};
+        const newItems = { ...userItems };
+        
+        if (newItems[itemId]) {
+            newItems[itemId].quantity += 1;
+        } else {
+            newItems[itemId] = {
+                id: itemId,
+                quantity: 1,
+                purchaseDate: new Date().toISOString()
+            };
+        }
+        
+        // Actualizar usuario
+        await this.economy.updateUser(userId, { 
+            permanentEffects: newPermanentEffects,
+            items: newItems
+        });
+        
+        const embed = new EmbedBuilder()
+            .setTitle('✅ Efecto Removido')
+            .setDescription(`El efecto permanente de **${item.name}** ha sido desactivado.`)
+            .addFields(
+                { name: '📦 Item Devuelto', value: `**${item.name}** ha vuelto a tu inventario.`, inline: true },
+                { name: '🔄 Reactivar', value: `Usa \`>useitem ${itemId}\` para reactivar el efecto.`, inline: true }
+            )
+            .setColor('#00FF00')
+            .setTimestamp();
+        
+        await message.reply({ embeds: [embed] });
+    }
+
     // === COMANDOS ===
     async processCommand(message) {
         if (message.author.bot) return;
@@ -2185,6 +2266,15 @@ if (equippedCosmetics.length > 0) {
                 case '>efectos':
                 case '>effects':
                     await this.showActiveEffects(message);
+                    break;
+                
+                case '>removeeffect':
+                case '>quitarefecto':
+                    if (!args[1]) {
+                        await message.reply('❌ Especifica el ID del item cuyo efecto quieres quitar. Ejemplo: `>removeeffect auto_worker`');
+                        return;
+                    }
+                    await this.removePermanentEffect(message, args[1]);
                     break;
                     
                 case '>cosmetics':

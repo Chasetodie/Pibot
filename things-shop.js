@@ -4,6 +4,7 @@ const { EmbedBuilder } = require('discord.js');
 class AuctionSystem {
     constructor(shopSystem) {
         this.shop = shopSystem;
+        this.pendingConfirmations = new Map();
         this.activeAuctions = new Map(); // Caché en memoria
 
         // AGREGAR al final del constructor para limpiar subastas vencidas cada 5 minutos:
@@ -76,6 +77,7 @@ class AuctionSystem {
         const user = await this.shop.economy.getUser(userId);
         const userItems = user.items || {};
         
+        // ✅ Verificar que el item existe en el inventario
         if (!userItems[itemId] || userItems[itemId].quantity < 1) {
             await message.reply(`❌ No tienes **${itemId}** para subastar.`);
             return;
@@ -85,6 +87,84 @@ class AuctionSystem {
         if (!item) {
             await message.reply('❌ Item no válido.');
             return;
+        }
+
+        // ✅ NUEVO: Verificar precio mínimo (50% del valor original)
+        const minimumPrice = Math.floor(item.price * 0.5);
+        if (startingBid < minimumPrice) {
+            await message.reply(`❌ El precio inicial debe ser al menos **${minimumPrice.toLocaleString('es-ES')} π-b$** (50% del valor original de **${item.name}**).`);
+            return;
+        }
+
+        // ✅ NUEVO: Verificar items permanentes ya aplicados
+        if (item.category === 'permanent') {
+            const hasActiveEffect = await this.hasActivePermanentEffect(userId, itemId);
+            if (hasActiveEffect) {
+                await message.reply(`❌ No puedes subastar **${item.name}** porque ya tienes el efecto permanente activo. Solo se pueden subastar items permanentes sin usar.`);
+                return;
+            }
+        }
+
+        // ✅ NUEVO: Verificar si es cosmético equipado
+        if (item.category === 'cosmetic') {
+            const cosmetics = user.cosmetics || {};
+            
+            // Si cosmetics es string, parsearlo
+            let cosmeticsObj = cosmetics;
+            if (typeof cosmetics === 'string') {
+                try {
+                    cosmeticsObj = JSON.parse(cosmetics);
+                } catch (error) {
+                    cosmeticsObj = {};
+                }
+            }
+            
+            // Verificar si está equipado
+            if (cosmeticsObj[itemId] && cosmeticsObj[itemId].equipped) {
+                await message.reply(`❌ No puedes subastar **${item.name}** porque lo tienes equipado. Usa \`>useitem ${itemId}\` para desequiparlo primero.`);
+                return;
+            }
+        }
+        
+        // ✅ NUEVO: Sistema de confirmación para items únicos/importantes
+        const importantItems = ['money_magnet', 'work_boots', 'permanent_vault', 'auto_worker', 'luck_charm_permanent'];
+        if (importantItems.includes(itemId) || (!item.stackable && item.rarity === 'legendary')) {
+            
+            // Si ya hay una confirmación pendiente, procesar
+            const pendingConfirmation = this.pendingConfirmations.get(userId);
+            if (pendingConfirmation && pendingConfirmation.itemId === itemId && pendingConfirmation.startingBid === startingBid) {
+                // Limpiar confirmación y proceder
+                this.pendingConfirmations.delete(userId);
+            } else {
+                // Solicitar confirmación
+                this.pendingConfirmations.set(userId, {
+                    itemId,
+                    startingBid,
+                    duration,
+                    timestamp: Date.now()
+                });
+                
+                const embed = new EmbedBuilder()
+                    .setTitle('⚠️ Confirmación Requerida')
+                    .setDescription(`Estás a punto de subastar un item único/valioso:`)
+                    .addFields(
+                        { name: '📦 Item', value: `${this.shop.rarityEmojis[item.rarity]} **${item.name}**`, inline: true },
+                        { name: '💰 Precio Inicial', value: `${startingBid.toLocaleString('es-ES')} π-b$`, inline: true },
+                        { name: '💎 Valor Original', value: `${item.price.toLocaleString('es-ES')} π-b$`, inline: true },
+                        { name: '⚠️ Advertencia', value: `Este es un item ${item.rarity} y ${!item.stackable ? 'único' : 'valioso'}. Una vez subastado, no podrás recuperarlo a menos que lo vuelvas a comprar.`, inline: false }
+                    )
+                    .setColor('#FF9900')
+                    .setFooter({ text: 'Usa el mismo comando otra vez en los próximos 30 segundos para confirmar' });
+                
+                await message.reply({ embeds: [embed] });
+                
+                // Limpiar confirmación después de 30 segundos
+                setTimeout(() => {
+                    this.pendingConfirmations.delete(userId);
+                }, 30000);
+                
+                return;
+            }
         }
         
         const auctionId = `${userId}_${itemId}_${Date.now()}`;
@@ -132,7 +212,31 @@ class AuctionSystem {
         // Programar fin de subasta
         setTimeout(() => this.endAuction(auctionId, message.client), duration);
     }
+
+    async hasActivePermanentEffect(userId, itemId) {
+        const user = await this.shop.economy.getUser(userId);
+        const permanentEffects = user.permanentEffects || {};
+        
+        // Verificar si el usuario ya tiene el efecto permanente de este item
+        return permanentEffects.hasOwnProperty(itemId);
+    }
     
+    async isItemEquipped(userId, itemId) {
+        const user = await this.shop.economy.getUser(userId);
+        const cosmetics = user.cosmetics || {};
+        
+        let cosmeticsObj = cosmetics;
+        if (typeof cosmetics === 'string') {
+            try {
+                cosmeticsObj = JSON.parse(cosmetics);
+            } catch (error) {
+                return false;
+            }
+        }
+        
+        return cosmeticsObj[itemId] && cosmeticsObj[itemId].equipped;
+    }
+
     async placeBid(message, auctionId, bidAmount) {
         const auction = await this.getAuctionFromDb(auctionId);
         if (!auction || !auction.active) {
