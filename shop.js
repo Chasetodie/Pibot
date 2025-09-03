@@ -2150,8 +2150,8 @@ class ShopSystem {
                     const cosmeticsDisplay = await this.getCosmeticsDisplay(message.author.id);
        
                     const embedCF = new EmbedBuilder()
-                        .setTitle('⚡ Tus Efectos Activos')
-                        .setColor('#FF6B35')
+                        .setTitle('✨ Tus Cosmeticos Activos')
+                        .setColor('#FFD700')
                         .setThumbnail(message.author.displayAvatarURL({ dynamic: true }));
                
                     if (!cosmeticsDisplay.hasCosmetics) {
@@ -2160,12 +2160,9 @@ class ShopSystem {
                         return;
                     }
                     
-                    const embedC = new EmbedBuilder()
-                        .setTitle('Tus Cosméticos')
-                        .setDescription(cosmeticsDisplay.display)
-                        .setColor('#FFD700');
+                    embedCF.setDescription(cosmeticsDisplay.display)
                     
-                    await message.reply({ embeds: [embedC] });
+                    await message.reply({ embeds: [embedCF]});
                     break;
 
                 case '>equip':
