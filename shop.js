@@ -564,7 +564,7 @@ async getEquippedCosmetics(userId) {
 
     // 4. Función para consumir efectos de uso limitado
     async consumeUsageEffects(userId, action) {
-        const user = await this.getUser(userId);
+        const user = await this.economy.getUser(userId);
         const activeEffects = user.activeEffects || {};
         let updated = false;
         
