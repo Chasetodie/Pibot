@@ -522,6 +522,28 @@ class ShopSystem {
         this.cacheTimeout = 10 * 60 * 1000; // 10 minutos para items        
     }
 
+async getEquippedCosmetics(userId) {
+    const user = await this.economy.getUser(userId);
+    
+    // ✅ Manejar cosmetics como string o objeto
+    let cosmetics = user.cosmetics || {};
+    
+    if (typeof cosmetics === 'string') {
+        try {
+            cosmetics = JSON.parse(cosmetics);
+        } catch (error) {
+            cosmetics = {};
+        }
+    }
+    
+    if (typeof cosmetics !== 'object') {
+        return [];
+    }
+    
+    // Devolver array de cosméticos equipados
+    return Object.values(cosmetics).filter(cosmetic => cosmetic.equipped);
+}
+    
     // AGREGAR esta función:
     getCachedItems() {
         const cached = this.itemCache.get('shop_items');
