@@ -328,7 +328,7 @@ async handleBalance(message, targetUser = null) {
                 },
                 { 
                     name: '⚡ XP por Mensaje', 
-                    value: `${this.economy.config.xpPerMessage}±${this.economy.config.xpVariation}`, 
+                    value: `Base: ${this.economy.config.xpPerMessage} + Bonus por nivel (×0.5)\nEjemplos: Nivel 1 = ${this.economy.config.xpPerMessage}, Nivel 10 = ${this.economy.config.xpPerMessage + 5}, Nivel 50 = ${this.economy.config.xpPerMessage + 25}\n±${this.economy.config.xpVariation} variación`,
                     inline: true 
                 }
             )
