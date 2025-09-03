@@ -1076,28 +1076,32 @@ class ShopSystem {
         const user = await this.economy.getUser(userId);
         const cosmetics = user.cosmetics || {};
         
-        const equipped = Object.values(cosmetics).filter(cosmetic => cosmetic.equipped);
-        
-        if (equipped.length === 0) {
+        if (Object.keys(cosmetics).length === 0) {
             return { hasCosmetics: false, display: '' };
         }
         
         let display = '';
-        const badges = equipped.filter(c => c.id.includes('badge') || c.id.includes('trophy'));
-        const frames = equipped.filter(c => c.id.includes('frame'));
-        const crowns = equipped.filter(c => c.id.includes('crown'));
-        const skins = equipped.filter(c => c.id.includes('skin'));
         
-        if (crowns.length > 0) display += '👑 ';
-        if (frames.length > 0) display += '🖼️ ';
-        if (badges.length > 0) display += badges.map(b => this.getCosmeticEmoji(b.id)).join(' ') + ' ';
-        if (skins.length > 0) display += '✨ ';
+        for (const [itemId, cosmeticData] of Object.entries(cosmetics)) {
+            const item = this.shopItems[itemId];
+            if (!item) continue; // Si el item no existe, saltar
+            
+            // Obtener emoji del nombre del item (primer emoji)
+            const emojiMatch = item.name.match(/[\u{1F600}-\u{1F64F}]|[\u{1F300}-\u{1F5FF}]|[\u{1F680}-\u{1F6FF}]|[\u{1F1E0}-\u{1F1FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]/u);
+            const emoji = emojiMatch ? emojiMatch[0] : '✨';
+            
+            // Obtener rareza
+            const rarityEmoji = this.rarityEmojis[item.rarity] || '⚪';
+            
+            // Formatear fecha de equipado
+            const equippedDate = new Date(cosmeticData.obtainedAt).toLocaleDateString('es-ES');
+            
+            display += `${rarityEmoji} ${emoji} **${item.name}**\n`;
+            display += `├ **ID:** \`${itemId}\`\n`;
+            display += `└ Equipado el: ${equippedDate}\n\n`;
+        }
         
-        return {
-            hasCosmetics: true,
-            display: display.trim(),
-            equipped: equipped
-        };
+        return { hasCosmetics: true, display: display.trim() };
     }
 
     // 6. FUNCIÓN AUXILIAR: Obtener emoji del cosmético
@@ -2131,21 +2135,26 @@ class ShopSystem {
                 case '>cosmetics':
                 case '>cosmeticos':
                     const cosmeticsDisplay = await this.getCosmeticsDisplay(message.author.id);
-       
+
                     const embedCF = new EmbedBuilder()
-                        .setTitle('✨ Tus Cosmeticos Activos')
+                        .setTitle('✨ Tus Cosméticos Activos')
                         .setColor('#FFD700')
                         .setThumbnail(message.author.displayAvatarURL({ dynamic: true }));
-               
+
                     if (!cosmeticsDisplay.hasCosmetics) {
-                        embedCF.setDescription('No tienes cosmeticos activos en este momento.');
+                        embedCF.setDescription('No tienes cosméticos activos en este momento.\n\n💡 *Compra cosméticos en la tienda con `>shop cosmetic`*');
                         await message.reply({ embeds: [embedCF] });
                         return;
                     }
                     
-                    embedCF.setDescription(cosmeticsDisplay.display)
+                    embedCF.setDescription(cosmeticsDisplay.display);
+                    embedCF.addFields({
+                        name: '📋 Información',
+                        value: 'Usa `>useitem <item_id>` para desequipar un cosmético',
+                        inline: false
+                    });
                     
-                    await message.reply({ embeds: [embedCF]});
+                    await message.reply({ embeds: [embedCF] });
                     break;
             }
         } catch (error) {
