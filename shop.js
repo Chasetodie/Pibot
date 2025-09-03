@@ -895,15 +895,17 @@ class ShopSystem {
         const result = await this.processItemUse(message.author.id, itemId, item);
         
         if (result.success) {
-            // Reducir cantidad del item
-            const newItems = { ...userItems };
-            newItems[itemId].quantity -= 1;
-            
-            if (newItems[itemId].quantity <= 0) {
-                delete newItems[itemId];
+            // ✅ ARREGLO: Solo reducir cantidad si NO es cosmético
+            if (item.category !== 'cosmetic') {
+                const newItems = { ...userItems };
+                newItems[itemId].quantity -= 1;
+                
+                if (newItems[itemId].quantity <= 0) {
+                    delete newItems[itemId];
+                }
+                
+                await this.economy.updateUser(message.author.id, { items: newItems });
             }
-            
-            await this.economy.updateUser(message.author.id, { items: newItems });
             
             const rarityEmoji = this.rarityEmojis[item.rarity];
             const embed = new EmbedBuilder()
@@ -971,25 +973,28 @@ class ShopSystem {
         };
     }
 
-    // 3. NUEVA FUNCIÓN: Aplicar items cosméticos
     async applyCosmeticItem(userId, itemId, item) {
         const user = await this.economy.getUser(userId);
         const cosmetics = user.cosmetics || {};
         
-        // Agregar cosmético al inventario de cosméticos
+        // Si ya lo tiene equipado, desequiparlo
+        if (cosmetics[itemId]) {
+            delete cosmetics[itemId];
+            await this.economy.updateUser(userId, { cosmetics });
+            
+            return { 
+                success: true, 
+                message: `✨ **${item.name}** ha sido desequipado de tu perfil.` 
+            };
+        }
+        
+        // Si no lo tiene, equiparlo
         cosmetics[itemId] = {
             id: itemId,
             name: item.name,
             equipped: true,
             obtainedAt: Date.now()
         };
-
-        if (cosmetics[itemId]) {
-            return { 
-                success: false, 
-                message: `Ya tienes **${item.name}** equipado. Usa \`>equip ${itemId}\` para desequiparlo.` 
-            };
-        }
         
         await this.economy.updateUser(userId, { cosmetics });
         
@@ -1107,28 +1112,6 @@ class ShopSystem {
         };
         
         return emojiMap[cosmeticId] || '⭐';
-    }
-
-    // 7. NUEVA FUNCIÓN: Equipar/desequipar cosméticos
-    async toggleCosmetic(message, cosmeticId) {
-        const userId = message.author.id;
-        const user = await this.economy.getUser(userId);
-        const cosmetics = user.cosmetics || {};
-        
-        if (!cosmetics[cosmeticId]) {
-            await message.reply('❌ No tienes ese cosmético. Revisa tu inventario con `>bag`.');
-            return;
-        }
-        
-        const cosmetic = cosmetics[cosmeticId];
-        cosmetic.equipped = !cosmetic.equipped;
-        
-        await this.economy.updateUser(userId, { cosmetics });
-        
-        const status = cosmetic.equipped ? 'equipado' : 'desequipado';
-        const emoji = this.getCosmeticEmoji(cosmeticId);
-        
-        await message.reply(`${emoji} **${cosmetic.name}** ${status} correctamente.`);
     }
 
     async handleNicknameChange(userId, item) {
@@ -2163,15 +2146,6 @@ class ShopSystem {
                     embedCF.setDescription(cosmeticsDisplay.display)
                     
                     await message.reply({ embeds: [embedCF]});
-                    break;
-
-                case '>equip':
-                case '>equipar':
-                    if (!args[1]) {
-                        await message.reply('❌ Especifica el ID del cosmético.\nEjemplo: `>equip golden_skin`');
-                        return;
-                    }
-                    await this.toggleCosmetic(message, args[1]);
                     break;
             }
         } catch (error) {
