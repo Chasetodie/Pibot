@@ -405,10 +405,10 @@ class MissionsSystem {
         
         const currentDay = ecuadorTime.toISOString().split('T')[0];
         
-        // LOGS PARA DEBUG
+/*        // LOGS PARA DEBUG
         console.log(`📅 Día actual: ${currentDay}`);
         console.log(`📅 Último reset: ${this.lastResetDay}`);
-        console.log(`🔄 ¿Cambió el día?: ${currentDay !== this.lastResetDay}`);
+        console.log(`🔄 ¿Cambió el día?: ${currentDay !== this.lastResetDay}`);*/
         
         // Si cambió el día, hacer reset
         if (this.lastResetDay && currentDay !== this.lastResetDay) {
