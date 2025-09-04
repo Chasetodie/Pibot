@@ -420,14 +420,14 @@ class ShopSystem {
             'mystery_bag': {
                 id: 'mystery_bag',
                 price: 50000,
-                category: 'special',
+                category: 'mystery',
                 name: '💰 Bolsa Misteriosa',
                 description: 'Contiene una cantidad aleatoria de dinero',
                 rarity: 'rare',
                 effect: {
                     type: 'random_money',
-                    min: 500,
-                    max: 5000
+                    min: 5000,
+                    max: 50000
                 },
                 stackable: true,
                 maxStack: 10
@@ -1409,6 +1409,7 @@ if (equippedCosmetics.length > 0) {
             // Dar dinero si no hay items
             const amount = Math.floor(Math.random() * (item.effect.maxValue - item.effect.minValue)) + item.effect.minValue;
             const user = await this.economy.getUser(userId);
+            console.log(amount);
             await this.economy.updateUser(userId, { balance: user.balance + amount });
             
             return { 
