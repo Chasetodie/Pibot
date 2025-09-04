@@ -1417,7 +1417,7 @@ if (equippedCosmetics.length > 0) {
             };
         }
         
-        const wonItem = possibleItems[Math.floor(Math.random() * possibleItems.length)];
+        let wonItem = possibleItems[Math.floor(Math.random() * possibleItems.length)];
         const user = await this.economy.getUser(userId);
         const userItems = user.items || {};
 
