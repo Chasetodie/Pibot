@@ -467,9 +467,7 @@ class ShopSystem {
                         { id: 'golden_pickaxe', chance: 0.05 },
                         { id: 'diamond_pickaxe', chance: 0.02 },
                         { id: 'fortune_shield', chance: 0.03 }
-                    ],
-                    min: 5000,
-                    max: 50000
+                    ]
                 },
                 stackable: true,
                 maxStack: 10
@@ -495,9 +493,7 @@ class ShopSystem {
                         { id: 'golden_skin', chance: 0.05 },
                         { id: 'mystery_bag', chance: 0.15 },
                         { id: 'fortune_shield', chance: 0.2 }
-                    ],
-                    min: 5000,
-                    max: 50000
+                    ]
                 },
                 stackable: true,
                 maxStack: 5
@@ -975,15 +971,14 @@ if (equippedCosmetics.length > 0) {
                 if (item.effect.type === 'nickname_change') {
                     return await this.handleNicknameChange(userId, item);
                 }
-                // NUEVOS CASOS
+                return { success: false, message: 'Item especial no implementado.' };
+            case 'mystery':
                 if (item.effect.type === 'random_money') {
                     return await this.openMoneyBag(userId, item);
                 }
                 if (item.effect.type === 'open_chest') {
                     return await this.openChest(userId, item);
                 }
-                return { success: false, message: 'Item especial no implementado.' };
-            case 'mystery':
                 return await this.openMysteryBox(userId, item);
             case 'cosmetic':
                 return await this.applyCosmeticItem(userId, itemId, item);
