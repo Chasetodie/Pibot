@@ -489,7 +489,7 @@ class ShopSystem {
                         { id: 'eternal_pickaxe', chance: 0.05 },
                         { id: 'phantom_gloves', chance: 0.05 },
                         { id: 'xp_booster', chance: 0.15 },
-                        { id: 'vip_pass', chance: 0.1 },
+                        { id: 'instant_cooldown_reset', chance: 0.1 },
                         { id: 'golden_skin', chance: 0.05 },
                         { id: 'mystery_bag', chance: 0.15 },
                         { id: 'fortune_shield', chance: 0.2 }

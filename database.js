@@ -62,7 +62,9 @@ class LocalDatabase {
                     achievements TEXT,
                     missions_reset_today BOOLEAN DEFAULT 0,
                     missions_notifications_blocked BOOLEAN DEFAULT 0,
-                    cosmetics TEXT
+                    cosmetics TEXT,
+                    permanentEffects TEXT,
+                    activeEffects TEXT
                 )
             `);
 
