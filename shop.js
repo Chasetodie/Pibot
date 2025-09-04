@@ -1417,40 +1417,61 @@ if (equippedCosmetics.length > 0) {
             };
         }
         
-        let wonItem = possibleItems[Math.floor(Math.random() * possibleItems.length)];
         const user = await this.economy.getUser(userId);
         const userItems = user.items || {};
-
-        // AGREGAR AQUÍ (después de seleccionar wonItem, ANTES de updateUser):
-        if (item.effect.rarityBonus) {
-            // Premium mystery box - chance de items raros
-            const rarityRoll = Math.random();
-            let selectedRarity = 'common';
+        
+        // ✅ ARREGLO: Filtrar items que el usuario ya tiene y no son stackeables
+        const availableItems = possibleItems.filter(possibleItem => {
+            // Si el item es stackeable, siempre está disponible
+            if (possibleItem.stackable) {
+                return true;
+            }
             
-            if (rarityRoll < 0.05) selectedRarity = 'legendary';      // 5%
-            else if (rarityRoll < 0.15) selectedRarity = 'epic';      // 10%
-            else if (rarityRoll < 0.35) selectedRarity = 'rare';      // 20%
-            else if (rarityRoll < 0.65) selectedRarity = 'uncommon';  // 30%
+            // Si no es stackeable, verificar que el usuario no lo tenga
+            return !userItems[possibleItem.id] || userItems[possibleItem.id].quantity <= 0;
+        });
+        
+        // Si no hay items disponibles (todos los no-stackeables ya los tiene), dar dinero
+        if (availableItems.length === 0) {
+            const amount = Math.floor(Math.random() * (item.effect.maxValue - item.effect.minValue)) + item.effect.minValue;
+            await this.economy.updateUser(userId, { balance: user.balance + amount });
             
-            const rarityItems = possibleItems.filter(i => i.rarity === selectedRarity);
-            if (rarityItems.length > 0) {
-                const newWonItem = rarityItems[Math.floor(Math.random() * rarityItems.length)];
-                console.log(`🎁 Premium box: ${wonItem.name} -> ${newWonItem.name} (${selectedRarity})`);
-                wonItem = newWonItem; // Reemplazar el item ganado
+            return { 
+                success: true, 
+                message: `¡Ya tienes todos los items únicos disponibles! En su lugar obtuviste **${amount.toLocaleString('es-ES')} π-b$**!` 
+            };
+        }
+        
+        // ✅ Seleccionar de los items disponibles
+        const wonItem = availableItems[Math.floor(Math.random() * availableItems.length)];
+        const newItems = { ...userItems };
+        
+        // ✅ VERIFICACIÓN EXTRA: Double-check para cosméticos
+        if (wonItem.category === 'cosmetic' && !wonItem.stackable) {
+            if (newItems[wonItem.id] && newItems[wonItem.id].quantity > 0) {
+                // Si por alguna razón llegamos aquí, dar dinero en su lugar
+                const amount = wonItem.price;
+                await this.economy.updateUser(userId, { balance: user.balance + amount });
+                
+                return { 
+                    success: true, 
+                    message: `¡Ya tienes **${wonItem.name}**! En su lugar obtuviste **${amount.toLocaleString('es-ES')} π-b$**!` 
+                };
             }
         }
         
-        if (userItems[wonItem.id]) {
-            userItems[wonItem.id].quantity += 1;
+        // Agregar el item
+        if (newItems[wonItem.id]) {
+            newItems[wonItem.id].quantity += 1;
         } else {
-            userItems[wonItem.id] = {
+            newItems[wonItem.id] = {
                 id: wonItem.id,
                 quantity: 1,
                 purchaseDate: new Date().toISOString()
             };
         }
         
-        await this.economy.updateUser(userId, { items: userItems });
+        await this.economy.updateUser(userId, { items: newItems });
         
         const rarityEmoji = this.rarityEmojis[wonItem.rarity];
         return { 
