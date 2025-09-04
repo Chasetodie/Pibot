@@ -980,7 +980,12 @@ if (equippedCosmetics.length > 0) {
                 }
                 return { success: false, message: 'Item especial no implementado.' };
             case 'mystery':
-                return await this.openMysteryBox(userId, item);
+                const mysteryResult = await this.openMysteryBox(userId, item);
+                if (mysteryResult.newItems) {
+                    // Guardar los items aquí
+                    await this.economy.updateUser(userId, { items: mysteryResult.newItems });
+                }
+                return mysteryResult;
             case 'cosmetic':
                 return await this.applyCosmeticItem(userId, itemId, item);
             default:
@@ -1482,14 +1487,20 @@ if (equippedCosmetics.length > 0) {
             console.log(`🆕 Agregando nuevo item: ${wonItem.id}`);
         }
         
-        console.log(`💾 Guardando items del usuario...`);
+/*        console.log(`💾 Guardando items del usuario...`);
         await this.economy.updateUser(userId, { items: newItems });
         console.log(`✅ Items guardados correctamente`);
+
+        // ✅ AGREGAR ESTO para verificar que se guardó:
+        const userAfterUpdate = await this.economy.getUser(userId);
+        console.log(`🔍 Items después de guardar:`, Object.keys(userAfterUpdate.items || {}));
+        console.log(`🔍 anti_theft_shield quantity:`, userAfterUpdate.items?.anti_theft_shield?.quantity);*/
         
         const rarityEmoji = this.rarityEmojis[wonItem.rarity];
         return { 
             success: true, 
-            message: `¡Felicidades! Obtuviste ${rarityEmoji} **${wonItem.name}**!` 
+            message: `¡Felicidades! Obtuviste ${rarityEmoji} **${wonItem.name}**!`,
+            newItems: newItems
         };
     }
 
