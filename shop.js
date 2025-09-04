@@ -404,7 +404,7 @@ class ShopSystem {
                 id: 'instant_cooldown_reset',
                 name: '⚡ Reset Instantáneo',
                 description: 'Elimina todos los cooldowns inmediatamente (1 uso)',
-                price: 5000,
+                price: 1500000,
                 category: 'consumable',
                 rarity: 'epic',
                 effect: {
