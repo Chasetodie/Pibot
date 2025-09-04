@@ -188,7 +188,7 @@ class ShopSystem {
                 price: 200000,
                 category: 'mystery',
                 rarity: 'rare',
-                effect: { type: 'mystery', minValue: 100000, maxValue: 500000 },
+                effect: { type: 'mystery', min: 100000, max: 500000 },
                 stackable: true,
                 maxStack: 20
             },
@@ -327,7 +327,7 @@ class ShopSystem {
                 price: 500000,
                 category: 'mystery',
                 rarity: 'epic',
-                effect: { type: 'premium_mystery', minValue: 250000, maxValue: 2000000, rarityBonus: true },
+                effect: { type: 'premium_mystery', min: 250000, max: 2000000, rarityBonus: true },
                 stackable: true,
                 maxStack: 10
             },
@@ -1404,8 +1404,8 @@ if (equippedCosmetics.length > 0) {
     // === ABRIR CAJA MISTERIOSA ===
     async openMysteryBox(userId, item) {
         const possibleItems = Object.values(this.shopItems).filter(i => 
-            i.price >= item.effect.minValue && 
-            i.price <= item.effect.maxValue &&
+            i.price >= item.effect.min && 
+            i.price <= item.effect.max &&
             i.id !== 'mystery_box'
         );
         
@@ -1438,7 +1438,7 @@ if (equippedCosmetics.length > 0) {
         
         // Si no hay items disponibles (todos los no-stackeables ya los tiene), dar dinero
         if (availableItems.length === 0) {
-            const amount = Math.floor(Math.random() * (item.effect.maxValue - item.effect.minValue)) + item.effect.minValue;
+            const amount = Math.floor(Math.random() * (item.effect.max - item.effect.min)) + item.effect.min;
             await this.economy.updateUser(userId, { balance: user.balance + amount });
             
             return { 
