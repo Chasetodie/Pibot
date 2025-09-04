@@ -1399,13 +1399,18 @@ if (equippedCosmetics.length > 0) {
     
     // === ABRIR CAJA MISTERIOSA ===
     async openMysteryBox(userId, item) {
+        console.log(`🎁 Usuario ${userId} abriendo caja: ${item.name}`);
+
         const possibleItems = Object.values(this.shopItems).filter(i => 
             i.price >= item.effect.minValue && 
             i.price <= item.effect.maxValue &&
             i.id !== 'mystery_box'
         );
         
+        console.log(`📦 Items posibles encontrados: ${possibleItems.length}`);
+
         if (possibleItems.length === 0) {
+            console.log('❌ No hay items posibles, dando dinero');
             // Dar dinero si no hay items
             const amount = Math.floor(Math.random() * (item.effect.maxValue - item.effect.minValue)) + item.effect.minValue;
             const user = await this.economy.getUser(userId);
@@ -1419,20 +1424,23 @@ if (equippedCosmetics.length > 0) {
         
         const user = await this.economy.getUser(userId);
         const userItems = user.items || {};
+        console.log(`👤 Items del usuario:`, Object.keys(userItems));
         
         // ✅ ARREGLO: Filtrar items que el usuario ya tiene y no son stackeables
         const availableItems = possibleItems.filter(possibleItem => {
-            // Si el item es stackeable, siempre está disponible
             if (possibleItem.stackable) {
                 return true;
             }
-            
-            // Si no es stackeable, verificar que el usuario no lo tenga
-            return !userItems[possibleItem.id] || userItems[possibleItem.id].quantity <= 0;
+            const hasItem = userItems[possibleItem.id] && userItems[possibleItem.id].quantity > 0;
+            console.log(`🔍 ${possibleItem.name} (${possibleItem.id}): stackeable=${possibleItem.stackable}, tieneItem=${hasItem}`);
+            return !hasItem;
         });
+
+        console.log(`✅ Items disponibles después del filtro: ${availableItems.length}`);
         
         // Si no hay items disponibles (todos los no-stackeables ya los tiene), dar dinero
         if (availableItems.length === 0) {
+            console.log('❌ No hay items disponibles, dando dinero');
             const amount = Math.floor(Math.random() * (item.effect.maxValue - item.effect.minValue)) + item.effect.minValue;
             await this.economy.updateUser(userId, { balance: user.balance + amount });
             
@@ -1444,6 +1452,7 @@ if (equippedCosmetics.length > 0) {
         
         // ✅ Seleccionar de los items disponibles
         const wonItem = availableItems[Math.floor(Math.random() * availableItems.length)];
+        console.log(`🎉 Item ganado: ${wonItem.name} (${wonItem.id})`);
         const newItems = { ...userItems };
         
         // ✅ VERIFICACIÓN EXTRA: Double-check para cosméticos
@@ -1463,15 +1472,19 @@ if (equippedCosmetics.length > 0) {
         // Agregar el item
         if (newItems[wonItem.id]) {
             newItems[wonItem.id].quantity += 1;
+            console.log(`📈 Incrementando cantidad de ${wonItem.id}: ${newItems[wonItem.id].quantity}`);
         } else {
             newItems[wonItem.id] = {
                 id: wonItem.id,
                 quantity: 1,
                 purchaseDate: new Date().toISOString()
             };
+            console.log(`🆕 Agregando nuevo item: ${wonItem.id}`);
         }
         
+        console.log(`💾 Guardando items del usuario...`);
         await this.economy.updateUser(userId, { items: newItems });
+        console.log(`✅ Items guardados correctamente`);
         
         const rarityEmoji = this.rarityEmojis[wonItem.rarity];
         return { 
