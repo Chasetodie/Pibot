@@ -573,7 +573,7 @@ async getEquippedCosmetics(userId) {
                 const effect = effects[i];
                 
                 // Solo procesar efectos que afecten esta acción
-                if (!effect.targets.includes(action) && !effect.targets.includes('all')) continue;
+                //if (!effect.targets.includes(action) && !effect.targets.includes('all')) continue;
                 
                 // Solo efectos con usos limitados
                 if (!effect.usesLeft) continue;
