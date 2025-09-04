@@ -3421,7 +3421,7 @@ class MinigamesSystem {
                 
                 console.log(`🚨 VENTANA CALLOUT CREADA PARA: ${userId}`);
                 
-        //        await message.reply(`🎴 <@${userId}> tiene 1 carta... 👀\n*Los otros jugadores tienen 10 segundos para usar \`>unocallout\` si no dijo UNO*`);
+                await message.reply(`🎴 <@${userId}> tiene 1 carta... 👀\n*Los otros jugadores tienen 10 segundos para usar \`>unocallout\` si no dijo UNO*`);
             }
         }
 
