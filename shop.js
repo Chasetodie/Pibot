@@ -1546,7 +1546,7 @@ if (equippedCosmetics.length > 0) {
         for (const [itemId, effects] of Object.entries(activeEffects)) {
             for (const effect of effects) {
                 if (effect.expiresAt && effect.expiresAt < Date.now()) continue;
-                if (!effect.targets.includes(action) && !effect.targets.includes('all')) continue;
+                //if (!effect.targets.includes(action) && !effect.targets.includes('all')) continue;
                 
                 if (effect.multiplier) totalMultiplier *= effect.multiplier;
                 if (effect.reduction) totalReduction += effect.reduction;
@@ -1560,7 +1560,7 @@ if (equippedCosmetics.length > 0) {
         
         // Efectos permanentes
         for (const [itemId, effect] of Object.entries(permanentEffects)) {
-            if (!effect.targets || (!effect.targets.includes(action) && !effect.targets.includes('all'))) continue;
+            //if (!effect.targets || (!effect.targets.includes(action) && !effect.targets.includes('all'))) continue;
             
             if (effect.multiplier) totalMultiplier *= effect.multiplier;
             if (effect.reduction) totalReduction += effect.reduction;
