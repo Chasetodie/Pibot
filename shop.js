@@ -467,7 +467,9 @@ class ShopSystem {
                         { id: 'golden_pickaxe', chance: 0.05 },
                         { id: 'diamond_pickaxe', chance: 0.02 },
                         { id: 'fortune_shield', chance: 0.03 }
-                    ]
+                    ],
+                    min: 5000,
+                    max: 50000
                 },
                 stackable: true,
                 maxStack: 10
@@ -493,7 +495,9 @@ class ShopSystem {
                         { id: 'golden_skin', chance: 0.05 },
                         { id: 'mystery_bag', chance: 0.15 },
                         { id: 'fortune_shield', chance: 0.2 }
-                    ]
+                    ],
+                    min: 5000,
+                    max: 50000
                 },
                 stackable: true,
                 maxStack: 5
@@ -1407,7 +1411,7 @@ if (equippedCosmetics.length > 0) {
         
         if (possibleItems.length === 0) {
             // Dar dinero si no hay items
-            const amount = Math.floor(Math.random() * (item.effect.maxValue - item.effect.minValue)) + item.effect.minValue;
+            const amount = Math.floor(Math.random() * (item.effect.max - item.effect.min)) + item.effect.min;
             const user = await this.economy.getUser(userId);
             console.log(amount);
             await this.economy.updateUser(userId, { balance: user.balance + amount });
