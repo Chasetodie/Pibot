@@ -1070,7 +1070,7 @@ class EconomySystem {
             };
         }
 
-        if (this.shop) {
+        /*if (this.shop) {
             const protection = await this.shop.isProtectedFromTheft(targetId);
             if (protection.protected) {
                 return { 
@@ -1079,7 +1079,7 @@ class EconomySystem {
                     protectionType: protection.type
                 };
             }
-        }        
+        }*/        
         
         // Verificar que el objetivo tenga suficiente dinero
         if (target.balance < this.robberyConfig.minTargetBalance) {
