@@ -940,8 +940,8 @@ class EconomySystem {
         }
         
         // Trabajo exitoso
-        const variation = Math.floor(Math.random() * (job.variation * 2)) - job.variation;
-        let amount = Math.max(50, job.baseReward + variation);       
+        const variation = Math.floor(Math.random() * job.variation) - Math.floor(job.variation * 0.3);
+        let amount = Math.max(job.baseReward * 0.5, job.baseReward + variation);       
         const message = job.messages[Math.floor(Math.random() * job.messages.length)];
         let eventMessage = '';
         let finalEarnings = amount;
@@ -1003,7 +1003,7 @@ class EconomySystem {
             amount: amount,
             message: message,
             oldBalance: user.balance,
-            newBalance: addResult.newBalance,
+            newBalance: user.balance + finalEarnings,
             jobName: job.name,
             eventMessage: eventMessage,
             finalEarnings: addResult.actualAmount,
