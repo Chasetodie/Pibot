@@ -1051,8 +1051,7 @@ class AchievementsSystem {
                         name: 'Recompensas',
                         value: `${achievement.reward.money ? `+${this.formatNumber(achievement.reward.money)} π-b$` : ''}\n${achievement.reward.xp ? `+${this.formatNumber(achievement.reward.xp)} XP` : ''}`.trim(),
                         inline: true
-                    },
-                    { name: '🎉 Extra por Eventos', value: `${user.stats.message_achievements && user.stats.message_achievements2 || "No hay eventos Activos"} `, inline: false }                
+                    }
                 )
                 .setTimestamp();
 
