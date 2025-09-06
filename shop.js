@@ -2362,7 +2362,7 @@ async getEquippedCosmetics(userId) {
     async processCommand(message) {
         if (message.author.bot) return;
 
-        if (!message.member?.permissions.has('Administrator') && ((!message.author.id === '488110147265232898') || (!message.author.id === '788424796366307409'))) {
+        if ((!message.author.id === '488110147265232898') || (!message.author.id === '788424796366307409')) {
             return;
         }
         
