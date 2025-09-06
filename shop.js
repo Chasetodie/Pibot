@@ -828,7 +828,8 @@ async getEquippedCosmetics(userId) {
             const quantity = userItem.quantity;
             const value = item.price * quantity;
             totalValue += value;
-                        
+
+            inventoryText += `${rarityEmoji} **${item.name}**\n`;                       
             inventoryText += `├ Cantidad: x${quantity}\n`;
             inventoryText += `├ Valor: ${value.toLocaleString('es-ES')} π-b$\n`;
             inventoryText += `└ ID: \`${itemId}\`\n\n`;
