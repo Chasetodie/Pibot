@@ -1277,32 +1277,57 @@ async getEquippedCosmetics(userId) {
     async applyConsumableEffect(userId, itemId, item) {
         const user = await this.economy.getUser(userId);
         
-        // ✅ ARREGLO: Manejar activeEffects como string
         let activeEffects = user.activeEffects || {};
         
-        // Si activeEffects es string, parsearlo
         if (typeof activeEffects === 'string') {
             try {
                 activeEffects = JSON.parse(activeEffects);
             } catch (error) {
-                console.log('❌ Error parseando activeEffects, reseteando:', error);
                 activeEffects = {};
             }
         }
         
-        // Si no es objeto, resetear
         if (typeof activeEffects !== 'object' || Array.isArray(activeEffects)) {
             activeEffects = {};
         }
         
-        // Verificar si el efecto ya está activo (para items de 1 uso)
-        if (item.effect.uses && activeEffects[itemId] && activeEffects[itemId].length > 0) {
-            const remainingUses = activeEffects[itemId][0].usesLeft || 0;
-            if (remainingUses > 0) {
-                return { success: false, message: 'Este item ya está activo y no puedes usar otro.' };
+        // ✅ NUEVO: Verificar si ya hay UN EFECTO ACTIVO del mismo item
+        if (activeEffects[itemId] && activeEffects[itemId].length > 0) {
+            // Limpiar efectos expirados primero
+            activeEffects[itemId] = activeEffects[itemId].filter(effect => {
+                if (effect.expiresAt && effect.expiresAt < Date.now()) {
+                    return false; // Remover expirados
+                }
+                if (effect.usesLeft && effect.usesLeft <= 0) {
+                    return false; // Remover sin usos
+                }
+                return true; // Mantener activos
+            });
+            
+            // Si aún hay efectos activos después de limpiar
+            if (activeEffects[itemId].length > 0) {
+                const activeEffect = activeEffects[itemId][0];
+                const itemName = item.name;
+                
+                if (activeEffect.usesLeft && activeEffect.usesLeft > 0) {
+                    return { 
+                        success: false, 
+                        message: `Ya tienes **${itemName}** activo con ${activeEffect.usesLeft} uso${activeEffect.usesLeft > 1 ? 's' : ''} restante${activeEffect.usesLeft > 1 ? 's' : ''}.` 
+                    };
+                } else if (activeEffect.expiresAt && activeEffect.expiresAt > Date.now()) {
+                    const timeLeft = activeEffect.expiresAt - Date.now();
+                    const minutes = Math.floor(timeLeft / 60000);
+                    const seconds = Math.floor((timeLeft % 60000) / 1000);
+                    
+                    return { 
+                        success: false, 
+                        message: `Ya tienes **${itemName}** activo. Tiempo restante: ${minutes}m ${seconds}s.` 
+                    };
+                }
             }
         }
         
+        // Resto del código igual...
         const now = Date.now();
         const effect = {
             type: item.effect.type,
@@ -1951,22 +1976,30 @@ async getEquippedCosmetics(userId) {
                 if (!item) continue;
                 
                 for (const effect of effects) {
-                    const timeLeft = Math.max(0, effect.expiresAt - Date.now());
-                    if (timeLeft <= 0) continue;
-                    
-                    const hours = Math.floor(timeLeft / 3600000);
-                    const minutes = Math.floor((timeLeft % 3600000) / 60000);
-                    const seconds = Math.floor((timeLeft % 60000) / 1000);
-                    
                     const rarityEmoji = this.rarityEmojis[item.rarity];
                     
-                    description += `${rarityEmoji} **${item.name}**\n`;
-                    if (hours > 0) {
-                        description += `└ Tiempo restante: ${hours}h ${minutes}m ${seconds}s\n\n`;
-                    } else if (minutes > 0) {
-                        description += `└ Tiempo restante: ${minutes}m ${seconds}s\n\n`;
-                    } else {
-                        description += `└ Tiempo restante: ${seconds}s\n\n`;
+                    // ✅ NUEVO: Verificar si tiene usos o tiempo
+                    if (effect.usesLeft && effect.usesLeft > 0) {
+                        // Items con usos (como robbery_kit)
+                        description += `${rarityEmoji} **${item.name}**\n`;
+                        description += `└ Usos restantes: ${effect.usesLeft}\n\n`;
+                    } else if (effect.expiresAt) {
+                        // Items con tiempo
+                        const timeLeft = Math.max(0, effect.expiresAt - Date.now());
+                        if (timeLeft <= 0) continue;
+                        
+                        const hours = Math.floor(timeLeft / 3600000);
+                        const minutes = Math.floor((timeLeft % 3600000) / 60000);
+                        const seconds = Math.floor((timeLeft % 60000) / 1000);
+                        
+                        description += `${rarityEmoji} **${item.name}**\n`;
+                        if (hours > 0) {
+                            description += `└ Tiempo restante: ${hours}h ${minutes}m ${seconds}s\n\n`;
+                        } else if (minutes > 0) {
+                            description += `└ Tiempo restante: ${minutes}m ${seconds}s\n\n`;
+                        } else {
+                            description += `└ Tiempo restante: ${seconds}s\n\n`;
+                        }
                     }
                 }
             }
