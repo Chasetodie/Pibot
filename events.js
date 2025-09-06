@@ -56,9 +56,7 @@ class EventsSystem {
                     work: 1.3, 
                     cooldown: 0.5, 
                     daily: 1.2, 
-                    minigames: 1.5, 
-                    missions: 1.4, 
-                    achievements: 1.6
+                    minigames: 1.5
                 },
                 minDuration: 900000, // 15 minutos
                 maxDuration: 1800000   // 30 minutos
@@ -90,9 +88,7 @@ class EventsSystem {
                     work: 0.7, 
                     daily: 0.8, 
                     cooldown: 0.4,
-                    minigames: 1.5, 
-                    missions: 0.8, 
-                    achievements: 0.8
+                    minigames: 1.5
                 },
                 minDuration: 1800000, // 30 minutos
                 maxDuration: 3600000, // 1 hora
@@ -119,9 +115,7 @@ class EventsSystem {
                     work: 2, 
                     daily: 2, 
                     cooldown: 0.3,
-                    minigames: 2, 
-                    missions: 2, 
-                    achievements: 2
+                    minigames: 2
                 },
                 minDuration: 14400000, // 4 horas
                 maxDuration: 86400000, // 24 horas
@@ -538,7 +532,7 @@ class EventsSystem {
         let loss = 0;     
         
         for (const event of this.getActiveEvents()) {
-            if (event.multipliers.work || event.multipliers.daily || event.multipliers.minigames || event.multipliers.missions || event.multipliers.achievements)  // Verificar si hay modificadores de dinero
+            if (event.multipliers.work || event.multipliers.daily || event.multipliers.minigames)  // Verificar si hay modificadores de dinero
             {
                 if(event.multipliers.work && context === 'work') {
                     multiplier = event.multipliers.work;
@@ -548,12 +542,6 @@ class EventsSystem {
                 }
                 else if(event.multipliers.minigames && context === 'minigames') {
                     multiplier = event.multipliers.minigames;
-                }
-                else if(event.multipliers.missions && context === 'missions') {
-                    multiplier = event.multipliers.missions;
-                }
-                else if(event.multipliers.achievements && context === 'achievements') {
-                    multiplier = event.multipliers.achievements;
                 }
 
                 switch (event.type) {
