@@ -1304,7 +1304,24 @@ if (equippedCosmetics.length > 0) {
     // === APLICAR EFECTO CONSUMIBLE ===
     async applyConsumableEffect(userId, itemId, item) {
         const user = await this.economy.getUser(userId);
-        const activeEffects = user.activeEffects || {};
+        
+        // ✅ ARREGLO: Manejar activeEffects como string
+        let activeEffects = user.activeEffects || {};
+        
+        // Si activeEffects es string, parsearlo
+        if (typeof activeEffects === 'string') {
+            try {
+                activeEffects = JSON.parse(activeEffects);
+            } catch (error) {
+                console.log('❌ Error parseando activeEffects, reseteando:', error);
+                activeEffects = {};
+            }
+        }
+        
+        // Si no es objeto, resetear
+        if (typeof activeEffects !== 'object' || Array.isArray(activeEffects)) {
+            activeEffects = {};
+        }
         
         // Verificar si el efecto ya está activo (para items de 1 uso)
         if (item.effect.uses && activeEffects[itemId] && activeEffects[itemId].length > 0) {
@@ -1540,8 +1557,24 @@ if (equippedCosmetics.length > 0) {
             }
         }
         
-        const activeEffects = user.activeEffects || {};
-        const permanentEffects = user.permanentEffects || {};
+        let activeEffects = user.activeEffects || {};
+        if (typeof activeEffects === 'string') {
+            try {
+                activeEffects = JSON.parse(activeEffects);
+            } catch (error) {
+                activeEffects = {};
+            }
+        }
+        
+        let permanentEffects = user.permanentEffects || {};
+        if (typeof permanentEffects === 'string') {
+            try {
+                permanentEffects = JSON.parse(permanentEffects);
+            } catch (error) {
+                permanentEffects = {};
+            }
+        }
+
         
         let totalMultiplier = 1.0;
         let totalReduction = 0.0;
