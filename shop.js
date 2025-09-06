@@ -1556,6 +1556,42 @@ async getEquippedCosmetics(userId) {
         
         await message.reply({ embeds: [embed] });
     }
+
+    async getSuccessBoost(userId, action) {
+        const user = await this.economy.getUser(userId);
+        
+        let activeEffects = user.activeEffects || {};
+        if (typeof activeEffects === 'string') {
+            try {
+                activeEffects = JSON.parse(activeEffects);
+            } catch (error) {
+                activeEffects = {};
+            }
+        }
+        
+        let totalBoost = 0;
+        
+        // Buscar efectos de success_boost para la acción específica
+        for (const [itemId, effects] of Object.entries(activeEffects)) {
+            if (!Array.isArray(effects)) continue;
+            
+            for (const effect of effects) {
+                // Verificar que el efecto esté activo
+                if (effect.expiresAt && effect.expiresAt < Date.now()) continue;
+                if (effect.usesLeft && effect.usesLeft <= 0) continue;
+                
+                // Verificar que sea el tipo correcto y para la acción correcta
+                if (effect.type === 'success_boost') {
+                    const targets = effect.targets || [];
+                    if (targets.includes(action) || targets.includes('all')) {
+                        totalBoost += effect.boost || 0;
+                    }
+                }
+            }
+        }
+        
+        return Math.min(totalBoost, 0.95); // Máximo 95% boost
+    }
        
     // 1. ACTUALIZAR getActiveMultipliers() - agregar casos para nuevos tipos
     async getActiveMultipliers(userId, action) {

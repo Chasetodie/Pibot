@@ -1270,9 +1270,14 @@ class EconomySystem {
             const baseSuccessChance = 1 - this.robberyConfig.failChance;
             const finalSuccessChance = baseSuccessChance + (clickEfficiency * 0.3); // Bonus por clicks
 
+            const successBoost = await this.shop.getSuccessBoost(robberId, 'robbery');
+            const finalChance = Math.min(finalSuccessChance + successBoost, 0.95);
+
             console.log(`🎲 Probabilidad de éxito: ${finalSuccessChance * 100}%`);
+            console.log(`🔧 Boost de kit: ${successBoost*100}%`);
+            console.log(`✅ Probabilidad final: ${finalChance*100}%`);
             
-            const success = Math.random() < finalSuccessChance;
+            const success = Math.random() < finalChance;
             
             // Actualizar cooldown del ladrón
             const robberUpdateData = {
