@@ -567,39 +567,42 @@ async getEquippedCosmetics(userId) {
     }
 
     // 4. Función para consumir efectos de uso limitado
-    async consumeUsageEffects(userId, action) {
+    async consumeItemUse(userId, itemId) {
         const user = await this.economy.getUser(userId);
-        const activeEffects = user.activeEffects || {};
-        let updated = false;
         
-        for (const [itemId, effects] of Object.entries(activeEffects)) {
-            for (let i = effects.length - 1; i >= 0; i--) {
-                const effect = effects[i];
+        let activeEffects = user.activeEffects || {};
+        if (typeof activeEffects === 'string') {
+            try {
+                activeEffects = JSON.parse(activeEffects);
+            } catch (error) {
+                activeEffects = {};
+            }
+        }
+        
+        if (!activeEffects[itemId] || !activeEffects[itemId].length) {
+            return false; // No hay efectos activos
+        }
+        
+        // Reducir usos del primer efecto activo
+        const effect = activeEffects[itemId][0];
+        if (effect.usesLeft && effect.usesLeft > 0) {
+            effect.usesLeft -= 1;
+            
+            // Si se acabaron los usos, remover el efecto
+            if (effect.usesLeft <= 0) {
+                activeEffects[itemId].shift(); // Remover primer elemento
                 
-                // Solo procesar efectos que afecten esta acción
-                //if (!effect.targets.includes(action) && !effect.targets.includes('all')) continue;
-                
-                // Solo efectos con usos limitados
-                if (!effect.usesLeft) continue;
-                
-                effect.usesLeft--;
-                
-                if (effect.usesLeft <= 0) {
-                    effects.splice(i, 1);
-                    updated = true;
+                // Si no quedan más efectos, remover el array completo
+                if (activeEffects[itemId].length === 0) {
+                    delete activeEffects[itemId];
                 }
             }
             
-            // Limpiar arrays vacíos
-            if (effects.length === 0) {
-                delete activeEffects[itemId];
-                updated = true;
-            }
+            await this.economy.updateUser(userId, { activeEffects });
+            return true;
         }
         
-        if (updated) {
-            await this.updateUser(userId, { activeEffects });
-        }
+        return false;
     }
     
     // === TIENDA ===

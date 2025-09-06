@@ -1052,7 +1052,7 @@ class EconomySystem {
     }
     
     // Verificar si puede robar
-    async canRob(robberId, targetId) {
+    async canRob(robberId, targetId, message) {
         const robber = await this.getUser(robberId);
         const target = await this.getUser(targetId);
         
@@ -1112,6 +1112,11 @@ class EconomySystem {
         if (this.activeRobberies.has(robberId)) {
             return { canRob: false, reason: 'already_robbing' };
         }
+
+        const consumedUse = await this.shop.consumeItemUse(robberId, 'robbery_kit');
+        if (consumedUse) {
+            await message.channel.send('🔧 Has usado 1 uso de tu **Kit de Robo**.');
+        }
         
         return { canRob: true };
     }
@@ -1150,8 +1155,8 @@ class EconomySystem {
     }
 
     // Iniciar un robo
-    async startRobbery(robberId, targetId) {
-        const canRobResult = await this.canRob(robberId, targetId);
+    async startRobbery(robberId, targetId, message) {
+        const canRobResult = await this.canRob(robberId, targetId, message);
         
         if (!canRobResult.canRob) {
             return canRobResult;

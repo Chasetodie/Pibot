@@ -1142,7 +1142,7 @@ async handleBalance(message, targetUser = null) {
         }
         
         // Iniciar el robo
-        const robberyResult = await this.economy.startRobbery(robberId, targetId);
+        const robberyResult = await this.economy.startRobbery(robberId, targetId, message);
         
         if (!robberyResult.success) {
             const errorEmbed = new EmbedBuilder()
