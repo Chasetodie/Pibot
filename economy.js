@@ -1089,7 +1089,7 @@ class EconomySystem {
 
         // AGREGAR ESTA VERIFICACIÓN:
         if (this.shop) {
-            const protection = await this.shop.isProtectedFromTheft(targetId);
+            const protection = await this.shop.getTheftProtection(targetId);
             if (protection.protected) {
                 return { 
                     canRob: false, 
