@@ -299,10 +299,10 @@ class EconomySystem {
         
         // Exponencial para niveles altos
         if (user.level <= 15) {
-            return baseXp + Math.floor(user.level * 1); // +1 por nivel hasta 15
+            return baseXp + Math.floor(user.level * 1.3); // +1 por nivel hasta 15
         } else {
             // Exponencial: nivel^1.5 para niveles altos
-            const exponentialBonus = Math.floor(Math.pow(user.level, 1.5));
+            const exponentialBonus = Math.floor(Math.pow(user.level, 1.75));
             return baseXp + exponentialBonus;
         }
     }
@@ -615,7 +615,7 @@ class EconomySystem {
             success: true,
             amount: amount,
             oldBalance: user.balance,
-            newBalance: addResult.newBalance,
+            newBalance: user.balance + finalEarnings,
             eventMessage: eventMessage,
             finalEarnings: addResult.actualAmount,
             hitLimit: addResult.hitLimit
