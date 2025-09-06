@@ -935,8 +935,7 @@ getTimeUntilMissionReset() {
                         name: '🎁 Recompensas',
                         value: rewards.join('\n'),
                         inline: true
-                    },
-                    { name: '🎉 Extra por Eventos', value: `${user.stats.message_missions && user.stats.message_missions2 || "No hay eventos Activos"} `, inline: false }
+                    }
                 );
             }
             
