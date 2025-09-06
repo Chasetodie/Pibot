@@ -1368,10 +1368,21 @@ if (equippedCosmetics.length > 0) {
     // 3. ACTUALIZAR applyPermanentEffect() - manejar VIP como especial
     async applyPermanentEffect(userId, itemId, item) {
         const user = await this.economy.getUser(userId);
+
+        // ✅ AGREGAR ESTAS LÍNEAS:
+        let permanentEffects = user.permanentEffects || {};
+        
+        if (typeof permanentEffects === 'string') {
+            try {
+                permanentEffects = JSON.parse(permanentEffects);
+            } catch (error) {
+                permanentEffects = {};
+            }
+        }
         
         // NUEVO: Manejar VIP Pass como caso especial
         if (item.id === 'vip_pass') {
-            const permanentEffects = user.permanentEffects || {};
+//            const permanentEffects = user.permanentEffects || {};
             
             if (permanentEffects[itemId]) {
                 return { success: false, message: 'Ya tienes VIP activo.' };
@@ -1393,7 +1404,7 @@ if (equippedCosmetics.length > 0) {
         }
         
         // Resto del código permanece igual...
-        const permanentEffects = user.permanentEffects || {};
+//        const permanentEffects = user.permanentEffects || {};
         
         if (permanentEffects[itemId]) {
             return { success: false, message: 'Ya tienes este efecto permanente activo.' };
