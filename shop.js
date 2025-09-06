@@ -292,7 +292,11 @@ class ShopSystem {
                 price: 1500000,
                 category: 'permanent',
                 rarity: 'epic',
-                effect: { type: 'permanent_luck', targets: ['games'], boost: 0.1 },
+                effect: { 
+                    type: 'permanent_luck', 
+                    targets: ['games', 'gambling'], 
+                    boost: 0.15 
+                },
                 stackable: false,
                 maxStack: 1
             },
@@ -1541,15 +1545,23 @@ if (equippedCosmetics.length > 0) {
         
         let totalMultiplier = 1.0;
         let totalReduction = 0.0;
+        let totalLuckBoost = 0.0;
         
         // Efectos temporales
         for (const [itemId, effects] of Object.entries(activeEffects)) {
+            if (!Array.isArray(effects)) continue;
+            
             for (const effect of effects) {
                 if (effect.expiresAt && effect.expiresAt < Date.now()) continue;
-                //if (!effect.targets.includes(action) && !effect.targets.includes('all')) continue;
+
+                const targets = effect.targets || [];
+                if (!Array.isArray(targets)) continue;
+                
+                if (!targets.includes(action) && !targets.includes('all')) continue;
                 
                 if (effect.multiplier) totalMultiplier *= effect.multiplier;
                 if (effect.reduction) totalReduction += effect.reduction;
+                if (effect.boost) totalLuckBoost += effect.boost;
                 
                 // NUEVO: Manejar work_multiplier específicamente
                 if (effect.type === 'work_multiplier' && action === 'work') {
@@ -1560,21 +1572,31 @@ if (equippedCosmetics.length > 0) {
         
         // Efectos permanentes
         for (const [itemId, effect] of Object.entries(permanentEffects)) {
-            //if (!effect.targets || (!effect.targets.includes(action) && !effect.targets.includes('all'))) continue;
+            const targets = effect.targets || [];
+            if (!Array.isArray(targets)) continue;
+            
+            if (!targets.includes(action) && !targets.includes('all')) continue;
             
             if (effect.multiplier) totalMultiplier *= effect.multiplier;
             if (effect.reduction) totalReduction += effect.reduction;
             
             // NUEVO: Manejar permanent_luck
-            if (effect.type === 'permanent_luck' && (action === 'games' || action === 'all')) {
-                // La suerte se maneja en applyGameEffects, pero podemos trackearla aquí
+            if (effect.type === 'permanent_luck') {
+                if (action === 'games' || action === 'gambling' || action === 'all') {
+                    totalLuckBoost += effect.boost || 0.15;
+                }
             }
         }
     
         const vipMultipliers = await this.getVipMultipliers(userId, action);
         totalMultiplier *= vipMultipliers.multiplier;
+        totalLuckBoost += vipMultipliers.luckBoost || 0;
         
-        return { multiplier: totalMultiplier, reduction: Math.min(totalReduction, 0.9) };
+        return { 
+            multiplier: totalMultiplier, 
+            reduction: Math.min(totalReduction, 0.9),
+            luckBoost: Math.min(totalLuckBoost, 0.95)
+        };
     }
 
     async cleanupExpiredTokens(userId) {
@@ -1667,57 +1689,19 @@ if (equippedCosmetics.length > 0) {
     }
 
     // 2. ACTUALIZAR applyGameEffects() - agregar soporte para permanent_luck
-    async applyGameEffects(userId, baseAmount, baseSuccessRate = 0.5) {
-        await this.cleanupExpiredEffects(userId);
+    async applyGameEffects(userId, baseChance = 0.5) {
+        const effects = await this.getActiveMultipliers(userId, 'games');
         
-        const user = await this.economy.getUser(userId);
-        const activeEffects = user.activeEffects || {};
-        const permanentEffects = user.permanentEffects || {};
+        // Aplicar luck boost a la probabilidad
+        let finalChance = baseChance + effects.luckBoost;
         
-        let multiplier = 1.0;
-        let luckBoost = 0;
-        
-        // Efectos temporales
-        for (const [itemId, effects] of Object.entries(activeEffects)) {
-            for (const effect of effects) {
-                if (effect.expiresAt && effect.expiresAt < Date.now()) continue;
-                if (!effect.targets.includes('games') && !effect.targets.includes('all')) continue;
-                
-                if (effect.multiplier) multiplier *= effect.multiplier;
-                if (effect.boost) luckBoost += effect.boost;
-                
-                // NUEVO: Manejar luck_boost específicamente
-                if (effect.type === 'luck_boost') {
-                    luckBoost += effect.boost;
-                }
-            }
-        }
-        
-        // Efectos permanentes - AGREGAR ESTE BLOQUE
-        for (const [itemId, effect] of Object.entries(permanentEffects)) {
-            if (effect.type === 'permanent_luck' && effect.targets.includes('games')) {
-                luckBoost += effect.boost;
-            }
-            if (effect.targets && (effect.targets.includes('games') || effect.targets.includes('all'))) {
-                if (effect.multiplier) multiplier *= effect.multiplier;
-            }
-        }
-        
-        // Aplicar efectos VIP
-        const vipEffects = await this.getVipMultipliers(userId, 'games');
-        multiplier *= vipEffects.multiplier;
-        luckBoost += vipEffects.luckBoost;
-        
-        const finalAmount = Math.floor(baseAmount * multiplier);
-        const finalSuccessRate = Math.min(baseSuccessRate + luckBoost, 0.95);
-        
-        await this.decrementItemUses(userId, 'games');
+        // Límite máximo de suerte (no más de 95%)
+        finalChance = Math.min(finalChance, 0.95);
         
         return {
-            amount: finalAmount,
-            successRate: finalSuccessRate,
-            multiplierApplied: multiplier > 1,
-            luckApplied: luckBoost > 0
+            chance: finalChance,
+            multiplier: effects.multiplier,
+            luckBoost: effects.luckBoost
         };
     }
 
@@ -1914,6 +1898,12 @@ if (equippedCosmetics.length > 0) {
             effectsText += `├ Aplicado: ${appliedDate}\n`;
             effectsText += `└ Remover: \`>removeeffect ${itemId}\`\n\n`;
         }
+
+        // ✅ ARREGLO: Nunca permitir description vacío
+        if (!effectsText.trim()) {
+            await message.reply('📝 No tienes efectos permanentes válidos activos.');
+            return;
+        }        
         
         embed.setDescription(effectsText);
         embed.setFooter({ text: 'Usa >removeeffect <item_id> para desactivar un efecto' });
