@@ -1069,17 +1069,6 @@ class EconomySystem {
                 requiredLevel: this.robberyConfig.levelRequirement 
             };
         }
-
-        /*if (this.shop) {
-            const protection = await this.shop.isProtectedFromTheft(targetId);
-            if (protection.protected) {
-                return { 
-                    canRob: false, 
-                    reason: 'target_protected',
-                    protectionType: protection.type
-                };
-            }
-        }*/        
         
         // Verificar que el objetivo tenga suficiente dinero
         if (target.balance < this.robberyConfig.minTargetBalance) {
