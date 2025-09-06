@@ -805,7 +805,6 @@ async getEquippedCosmetics(userId) {
         
         const user = await this.economy.getUser(userId);
         const userItems = user.items || {};
-        const activeEffects = user.activeEffects || {};
         
         if (Object.keys(userItems).length === 0) {
             await message.reply(`📦 ${displayName} no tiene items en su inventario.`);
@@ -829,12 +828,7 @@ async getEquippedCosmetics(userId) {
             const quantity = userItem.quantity;
             const value = item.price * quantity;
             totalValue += value;
-            
-            // Verificar si hay efectos activos
-            const hasActiveEffect = activeEffects[itemId] && activeEffects[itemId].length > 0;
-            const activeText = hasActiveEffect ? ' 🔥' : '';
-            
-            inventoryText += `${rarityEmoji} **${item.name}**${activeText}\n`;
+                        
             inventoryText += `├ Cantidad: x${quantity}\n`;
             inventoryText += `├ Valor: ${value.toLocaleString('es-ES')} π-b$\n`;
             inventoryText += `└ ID: \`${itemId}\`\n\n`;
@@ -846,49 +840,27 @@ async getEquippedCosmetics(userId) {
             { name: '📊 Items Únicos', value: `${Object.keys(userItems).length}`, inline: true }
         );
         
-        // Mostrar efectos activos
-        if (Object.keys(activeEffects).length > 0) {
-            let effectsText = '';
-            for (const [itemId, effects] of Object.entries(activeEffects)) {
-                const item = this.shopItems[itemId];
-                if (!item || !effects.length) continue;
-                
-                for (const effect of effects) {
-                    const timeLeft = Math.max(0, effect.expiresAt - Date.now());
-                    if (timeLeft <= 0) continue;
-                    
-                    const minutes = Math.floor(timeLeft / 60000);
-                    const seconds = Math.floor((timeLeft % 60000) / 1000);
-                    effectsText += `🔥 **${item.name}**: ${minutes}m ${seconds}s restantes\n`;
+        // ✅ ARREGLO: Usar getEquippedCosmetics en lugar de getCosmeticsDisplay
+        const equippedCosmetics = await this.getEquippedCosmetics(userId);
+        if (equippedCosmetics.length > 0) {
+            let cosmeticsText = '';
+            for (const cosmetic of equippedCosmetics) {
+                const item = this.shopItems[cosmetic.id];
+                if (item) {
+                    const emojiMatch = item.name.match(/[\u{1F600}-\u{1F64F}]|[\u{1F300}-\u{1F5FF}]|[\u{1F680}-\u{1F6FF}]|[\u{1F1E0}-\u{1F1FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]/u);
+                    const emoji = emojiMatch ? emojiMatch[0] : '✨';
+                    cosmeticsText += `✅ ${emoji} **${item.name}** \`${cosmetic.id}\`\n`;
                 }
             }
-            
-            if (effectsText) {
-                embed.addFields({ name: '⚡ Efectos Activos', value: effectsText, inline: false });
+        
+            if (cosmeticsText) {
+                embed.addFields({ 
+                    name: '✨ Cosméticos Equipados', 
+                    value: cosmeticsText.trim(), 
+                    inline: false 
+                });
             }
         }
-
-        // ✅ ARREGLO: Usar getEquippedCosmetics en lugar de getCosmeticsDisplay
-const equippedCosmetics = await this.getEquippedCosmetics(userId);
-if (equippedCosmetics.length > 0) {
-    let cosmeticsText = '';
-    for (const cosmetic of equippedCosmetics) {
-        const item = this.shopItems[cosmetic.id];
-        if (item) {
-            const emojiMatch = item.name.match(/[\u{1F600}-\u{1F64F}]|[\u{1F300}-\u{1F5FF}]|[\u{1F680}-\u{1F6FF}]|[\u{1F1E0}-\u{1F1FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]/u);
-            const emoji = emojiMatch ? emojiMatch[0] : '✨';
-            cosmeticsText += `✅ ${emoji} **${item.name}** \`${cosmetic.id}\`\n`;
-        }
-    }
-    
-    if (cosmeticsText) {
-        embed.addFields({ 
-            name: '✨ Cosméticos Equipados', 
-            value: cosmeticsText.trim(), 
-            inline: false 
-        });
-    }
-}
         
         embed.setFooter({ text: 'Usa >useitem <id> para usar un item' });
         
@@ -1916,41 +1888,108 @@ if (equippedCosmetics.length > 0) {
 
     async showActiveEffects(message) {
         const user = await this.economy.getUser(message.author.id);
-        const permanentEffects = user.permanentEffects || {};
         
-        if (Object.keys(permanentEffects).length === 0) {
-            await message.reply('📝 No tienes efectos permanentes activos.');
+        // Parsear efectos
+        let permanentEffects = user.permanentEffects || {};
+        let activeEffects = user.activeEffects || {};
+        
+        if (typeof permanentEffects === 'string') {
+            try {
+                permanentEffects = JSON.parse(permanentEffects);
+            } catch (error) {
+                permanentEffects = {};
+            }
+        }
+        
+        if (typeof activeEffects === 'string') {
+            try {
+                activeEffects = JSON.parse(activeEffects);
+            } catch (error) {
+                activeEffects = {};
+            }
+        }
+        
+        const hasPermanent = Object.keys(permanentEffects).length > 0;
+        const hasTemporary = Object.keys(activeEffects).length > 0;
+        
+        if (!hasPermanent && !hasTemporary) {
+            await message.reply('📝 No tienes efectos activos.');
             return;
         }
         
         const embed = new EmbedBuilder()
-            .setTitle('⚡ Tus Efectos Permanentes Activos')
+            .setTitle('⚡ Tus Efectos Activos')
             .setColor('#9932CC')
             .setThumbnail(message.author.displayAvatarURL({ dynamic: true }))
             .setTimestamp();
         
-        let effectsText = '';
+        let description = '';
         
-        for (const [itemId, effect] of Object.entries(permanentEffects)) {
-            const item = this.shopItems[itemId];
-            if (!item) continue;
-            
-            const rarityEmoji = this.rarityEmojis[item.rarity];
-            const appliedDate = new Date(effect.appliedAt).toLocaleDateString('es-ES');
-            
-            effectsText += `${rarityEmoji} **${item.name}**\n`;
-            effectsText += `├ Aplicado: ${appliedDate}\n`;
-            effectsText += `└ Remover: \`>removeeffect ${itemId}\`\n\n`;
+        // ✅ EFECTOS PERMANENTES (removibles)
+        if (hasPermanent) {
+            description += '**🔒 EFECTOS PERMANENTES**\n';
+            for (const [itemId, effect] of Object.entries(permanentEffects)) {
+                const item = this.shopItems[itemId];
+                if (!item) continue;
+                
+                const rarityEmoji = this.rarityEmojis[item.rarity];
+                const appliedDate = new Date(effect.appliedAt).toLocaleDateString('es-ES');
+                
+                description += `${rarityEmoji} **${item.name}**\n`;
+                description += `├ Aplicado: ${appliedDate}\n`;
+                description += `└ Remover: \`>removeeffect ${itemId}\`\n\n`;
+            }
         }
-
-        // ✅ ARREGLO: Nunca permitir description vacío
-        if (!effectsText.trim()) {
-            await message.reply('📝 No tienes efectos permanentes válidos activos.');
-            return;
-        }        
         
-        embed.setDescription(effectsText);
-        embed.setFooter({ text: 'Usa >removeeffect <item_id> para desactivar un efecto' });
+        // ✅ EFECTOS TEMPORALES (solo visualizar)
+        if (hasTemporary) {
+            description += '**⏰ EFECTOS TEMPORALES**\n';
+            for (const [itemId, effects] of Object.entries(activeEffects)) {
+                if (!Array.isArray(effects)) continue;
+                
+                const item = this.shopItems[itemId];
+                if (!item) continue;
+                
+                for (const effect of effects) {
+                    const timeLeft = Math.max(0, effect.expiresAt - Date.now());
+                    if (timeLeft <= 0) continue;
+                    
+                    const hours = Math.floor(timeLeft / 3600000);
+                    const minutes = Math.floor((timeLeft % 3600000) / 60000);
+                    const seconds = Math.floor((timeLeft % 60000) / 1000);
+                    
+                    const rarityEmoji = this.rarityEmojis[item.rarity];
+                    
+                    description += `${rarityEmoji} **${item.name}**\n`;
+                    if (hours > 0) {
+                        description += `└ Tiempo restante: ${hours}h ${minutes}m ${seconds}s\n\n`;
+                    } else if (minutes > 0) {
+                        description += `└ Tiempo restante: ${minutes}m ${seconds}s\n\n`;
+                    } else {
+                        description += `└ Tiempo restante: ${seconds}s\n\n`;
+                    }
+                }
+            }
+        }
+        
+        if (!description.trim()) {
+            await message.reply('📝 No tienes efectos válidos activos.');
+            return;
+        }
+        
+        embed.setDescription(description);
+        
+        // Footer diferente según lo que tenga
+        let footerText = '';
+        if (hasPermanent && hasTemporary) {
+            footerText = 'Usa >removeeffect <item_id> para quitar efectos permanentes';
+        } else if (hasPermanent) {
+            footerText = 'Usa >removeeffect <item_id> para desactivar un efecto';
+        } else {
+            footerText = 'Los efectos temporales expiran automáticamente';
+        }
+        
+        embed.setFooter({ text: footerText });
         
         await message.reply({ embeds: [embed] });
     }
