@@ -195,14 +195,14 @@ class ShopSystem {
             'anti_theft_shield': {
                 id: 'anti_theft_shield',
                 name: '🛡️ Escudo Antirrobo',
-                description: 'Te protege de robos por 24 horas',
-                price: 300000,
+                description: 'Te protege de robos por 3 horas',
+                price: 500000,
                 category: 'consumable',
                 rarity: 'epic',
                 effect: {
                     type: 'protection',
                     targets: ['robbery'],
-                    duration: 86400
+                    duration: 10800
                 },
                 stackable: true,
                 maxStack: 3

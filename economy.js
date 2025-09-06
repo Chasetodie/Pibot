@@ -1112,12 +1112,7 @@ class EconomySystem {
         if (this.activeRobberies.has(robberId)) {
             return { canRob: false, reason: 'already_robbing' };
         }
-
-        const consumedUse = await this.shop.consumeItemUse(robberId, 'robbery_kit');
-        if (consumedUse) {
-            await message.channel.send('🔧 Has usado 1 uso de tu **Kit de Robo**.');
-        }
-        
+       
         return { canRob: true };
     }
 
