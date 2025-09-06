@@ -2115,15 +2115,40 @@ async getEquippedCosmetics(userId) {
     // 4. NUEVA FUNCIÓN: Verificar protección contra robos (actualizada)
     async getTheftProtection(userId) {
         const user = await this.economy.getUser(userId);
-        const activeEffects = user.activeEffects || {};
-        const permanentEffects = user.permanentEffects || {};
+
+        let activeEffects = user.activeEffects || {};
+        if (typeof activeEffects === 'string') {
+            try {
+                activeEffects = JSON.parse(activeEffects);
+            } catch (error) {
+                activeEffects = {};
+            }
+        }
+
+        let permanentEffects = user.permanentEffects || {};
+        if (typeof permanentEffects === 'string') {
+            try {
+                permanentEffects = JSON.parse(permanentEffects);
+            } catch (error) {
+                permanentEffects = {};
+            }
+        }
         
         let protection = 0; // 0 = sin protección, 1 = protección completa
+
+        // ✅ TAMBIÉN AGREGAR LOGS PARA DEBUG:
+        console.log(`🛡️ Verificando protección para usuario: ${userId}`);
+        console.log(`🔍 activeEffects keys:`, Object.keys(activeEffects));
+        console.log(`🔍 anti_theft_shield presente:`, !!activeEffects['anti_theft_shield']);
         
         // Verificar escudo antirrobo temporal
         if (activeEffects['anti_theft_shield']) {
+            console.log(`🛡️ Encontrado anti_theft_shield:`, activeEffects['anti_theft_shield']);
+            
             for (const effect of activeEffects['anti_theft_shield']) {
+                console.log(`⏰ Efecto expira en:`, effect.expiresAt, 'Ahora:', Date.now());
                 if (effect.type === 'protection' && effect.expiresAt > Date.now()) {
+                    console.log(`✅ Protección activa!`);
                     return { protected: true, type: 'shield', reduction: 1.0 };
                 }
             }

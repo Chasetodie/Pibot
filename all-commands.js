@@ -1220,7 +1220,7 @@ async handleBalance(message, targetUser = null) {
 
             const consumedUse = await this.shop.consumeItemUse(robberId, 'robbery_kit');
             if (consumedUse) {
-                await message.channel.send('🔧 Has usado 1 uso de tu **Kit de Robo**.');
+                await message.channel.reply('🔧 Has usado 1 uso de tu **Kit de Robo**.');
             }
 
             // En lugar de mostrar el resultado inmediatamente, envía un mensaje separado
