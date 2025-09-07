@@ -878,7 +878,7 @@ class EconomySystem {
         finalCooldown = Math.floor(finalCooldown * (1 - modifiers.reduction));
         
         // Consumir efectos de uso limitado
-        await this.shop.consumeUsageEffects(userId, 'work');
+        await this.shop.consumeItemUse(userId, 'work');
         
         return { amount: finalAmount, cooldown: finalCooldown };
     }
@@ -980,7 +980,7 @@ class EconomySystem {
             }
             
             // Consumir efectos de uso limitado
-            await this.shop.consumeUsageEffects(userId, 'work');
+            await this.shop.consumeItemUse(userId, 'work');
         }
 
         // ✅ 3. FINALMENTE aplicar VIP
