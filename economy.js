@@ -1091,6 +1091,24 @@ class EconomySystem {
         if (this.shop) {
             const protection = await this.shop.getTheftProtection(targetId);
             if (protection.protected) {
+            const robberUpdateData = {
+                last_robbery: Date.now(),
+                stats: {
+                    ...robber.stats,
+                    robberies: (robber.stats.robberies || 0) + 1,
+                },
+            };
+
+                const penalty = Math.floor(robber.balance * (this.robberyConfig.penaltyPercentage / 100));
+                
+                robberUpdateData.balance = Math.max(0, robber.balance - penalty);
+                robberUpdateData.stats = {
+                    ...robber.stats,
+                    totalSpent: (robber.stats.totalSpent || 0) + penalty,
+                };
+                
+                await this.updateUser(robberId, robberUpdateData);
+                
                 return { 
                     canRob: false, 
                     reason: 'target_protected',
