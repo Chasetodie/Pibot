@@ -283,12 +283,10 @@ class MissionsSystem {
     }
 
     // Función helper para obtener fecha/hora de Ecuador
-    getEcuadorTime() {
-        const now = new Date();
-        // Crear fecha específicamente para zona horaria de Ecuador (UTC-5)
-        const ecuadorTime = new Date(now.toLocaleString("en-US", {timeZone: "America/Guayaquil"}));
-        return ecuadorTime;
-    }
+getEcuadorTime() {
+    const now = new Date();
+    return new Date(now.toLocaleString("en-US", {timeZone: "America/Guayaquil"}));
+}
     
     // Generar misiones del día (se ejecuta automáticamente a las 12 PM)
     generateDailyMissions() {
@@ -357,10 +355,15 @@ class MissionsSystem {
     }
     
     // Obtener el día actual en formato YYYY-MM-DD
-    getCurrentDay() {
-        const ecuadorTime = this.getEcuadorTime();
-        return ecuadorTime.toISOString().split('T')[0];
-    }
+getCurrentDay() {
+    const ecuadorTime = this.getEcuadorTime();
+    // Usar getFullYear, getMonth, getDate en lugar de toISOString
+    const year = ecuadorTime.getFullYear();
+    const month = String(ecuadorTime.getMonth() + 1).padStart(2, '0');
+    const day = String(ecuadorTime.getDate()).padStart(2, '0');
+    
+    return `${year}-${month}-${day}`;
+}
 
     isNewDay(lastResetDate) {
         const today = this.getCurrentDay();
@@ -400,29 +403,28 @@ class MissionsSystem {
         console.log('🕛 Sistema de reset automático iniciado');
     }
 
-    async checkAndResetAllMissions() {
-        const ecuadorTime = this.getEcuadorTime();
-        const currentDay = ecuadorTime.toISOString().split('T')[0];
+async checkAndResetAllMissions() {
+    const ecuadorTime = this.getEcuadorTime();
+    const currentDay = this.getCurrentDay();
+    
+    console.log(`📅 Día actual Ecuador: ${currentDay} (${ecuadorTime.toLocaleString()})`);
+    console.log(`📅 Último reset: ${this.lastResetDay}`);
+    console.log(`🔄 ¿Cambió el día?: ${this.lastResetDay !== currentDay}`);
+    
+    if (this.lastResetDay && currentDay !== this.lastResetDay) {
+        console.log('🌅 Iniciando reset automático de misiones...');
         
-        console.log(`📅 Día actual Ecuador: ${currentDay} (${ecuadorTime.toLocaleString()})`);
-        console.log(`📅 Último reset: ${this.lastResetDay}`);
+        this.lastResetDay = currentDay;
+        this.missionsCache.clear();
         
-        if (this.lastResetDay && currentDay !== this.lastResetDay) {
-            console.log('🌅 Iniciando reset automático de misiones...');
-            
-            this.lastResetDay = currentDay;
-            this.missionsCache.clear();
-            
-            console.log('✅ Reset automático completado');
-        } else if (!this.lastResetDay) {
-            this.lastResetDay = currentDay;
-            console.log(`🎯 Día inicial establecido: ${currentDay}`);
-        }
+        console.log('✅ Reset automático completado');
+    } else if (!this.lastResetDay) {
+        this.lastResetDay = currentDay;
+        console.log(`🎯 Día inicial establecido: ${currentDay}`);
     }
+}
     
     // Inicializar misiones diarias para un usuario
-
-    
     async initializeDailyMissions(userId) {
         const cacheKey = `missions_${userId}`;
         const cached = this.missionsCache.get(cacheKey);
