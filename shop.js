@@ -2143,15 +2143,9 @@ async getEquippedCosmetics(userId) {
         }
         
         let protection = 0; // 0 = sin protección, 1 = protección completa
-
-        // ✅ TAMBIÉN AGREGAR LOGS PARA DEBUG:
-        console.log(`🛡️ Verificando protección para usuario: ${userId}`);
-        console.log(`🔍 activeEffects keys:`, Object.keys(activeEffects));
-        console.log(`🔍 anti_theft_shield presente:`, !!activeEffects['anti_theft_shield']);
         
         // Verificar escudo antirrobo temporal
         if (activeEffects['anti_theft_shield']) {
-            console.log(`🛡️ Encontrado anti_theft_shield:`, activeEffects['anti_theft_shield']);
             
             for (const effect of activeEffects['anti_theft_shield']) {
                 console.log(`⏰ Efecto expira en:`, effect.expiresAt, 'Ahora:', Date.now());
