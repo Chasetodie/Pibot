@@ -1014,6 +1014,7 @@ async handleBalance(message, targetUser = null) {
                     value: `${this.formatNumber(result.newBalance)} π-b$`,
                     inline: true
                 },
+                { name: '🎉 Extra por Eventos', value: `${result.eventMessage || "No hay eventos Activos"} `, inline: false },
                 //{ name: '🎉 Bonificaciones', value: this.formatBonusMessages(eventMessage, itemMessage, vipMessage), inline: false }
             )
             .setColor('#28a745')
