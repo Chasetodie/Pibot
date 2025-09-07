@@ -2451,7 +2451,7 @@ async getEquippedCosmetics(userId) {
                     await this.showShop(message, category, page);
                     break;
                     
-                case '>buy':
+                /*case '>buy':
                 case '>comprar':
                     if (!args[1]) {
                         await message.reply('❌ Especifica el ID del item. Ejemplo: `>buy lucky_charm`');
@@ -2459,7 +2459,7 @@ async getEquippedCosmetics(userId) {
                     }
                     const quantity = parseInt(args[2]) || 1;
                     await this.buyItem(message, args[1], quantity);
-                    break;
+                    break;*/
                     
                 case '>bag':
                 case '>inventario':
