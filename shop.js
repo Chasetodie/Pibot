@@ -1720,7 +1720,15 @@ async getEquippedCosmetics(userId) {
     // === LIMPIAR EFECTOS EXPIRADOS (ejecutar periódicamente) ===
     async cleanupExpiredEffects(userId) {
         const user = await this.economy.getUser(userId);
-        const activeEffects = user.activeEffects || {};
+        let activeEffects = user.activeEffects || {};
+
+        if (typeof activeEffects === 'string') {
+            try {
+                activeEffects = JSON.parse(activeEffects);
+            } catch (error) {
+                activeEffects = {};
+            }
+        }       
         
         let hasChanges = false;
         const now = Date.now();

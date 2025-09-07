@@ -1128,6 +1128,15 @@ async handleBalance(message, targetUser = null) {
                 case 'robber_rich':
                     errorMessage = 'Limite de dinero alcanzado';
                     break;
+                case 'target_protected':
+                    if (canRobResult.protectionType === 'shield') {
+                        errorMessage = `🛡️ ¡Rayos! **${targetUser.displayName}** tiene un **Escudo Antirrobo** activado. Tu intento de robo rebotó como una pelota de goma. 🏀`;
+                    } else if (canRobResult.protectionType === 'vault') {
+                        errorMessage = `🏦 **${targetUser.displayName}** guardó su dinero en una **Bóveda Permanente**. Intentaste forzarla pero era más dura que una nuez. 🥜`;
+                    } else {
+                        errorMessage = `🛡️ **${targetUser.displayName}** está muy bien protegido. Parece que invirtió sabiamente en seguridad. 💰`;
+                    }
+                    break;
                 default:
                     errorMessage = 'No puedes robar en este momento';
             }
