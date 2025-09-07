@@ -629,8 +629,8 @@ class EconomySystem {
                 name: '🚚 Delivery',
                 cooldown: 60 * 60 * 1000, // 1 hora
                 codeName: 'delivery',
-                baseReward: 150,
-                variation: 100,
+                baseReward: 1500,
+                variation: 1000,
                 levelRequirement: 1,
                 failChance: 0.05, // 5% de fallar
                 messages: [
@@ -650,8 +650,8 @@ class EconomySystem {
                 name: '💻 Programador',
                 cooldown: 60 * 60 * 1000, // 1 hora
                 codeName: 'programmer',
-                baseReward: 250,
-                variation: 150,
+                baseReward: 2500,
+                variation: 1500,
                 levelRequirement: 5,
                 failChance: 0.1, // 10% de fallar
                 messages: [
@@ -671,8 +671,8 @@ class EconomySystem {
                 name: '🚪 Abre Puertas Oxxo',
                 cooldown: 60 * 60 * 3000, // 3 hora
                 codeName: 'abrepuertasoxxo',
-                baseReward: 1200,
-                variation: 900,
+                baseReward: 12000,
+                variation: 9000,
                 levelRequirement: 9,
                 failChance: 0.40, // 75% de fallar
                 messages: [
@@ -691,8 +691,8 @@ class EconomySystem {
                 name: '👨‍⚕️ Doctor',
                 cooldown: 60 * 60 * 1000, // 1 hora
                 codeName: 'doctor',
-                baseReward: 400,
-                variation: 200,
+                baseReward: 4000,
+                variation: 2000,
                 levelRequirement: 10,
                 failChance: 0.15, // 15% de fallar
                 messages: [
@@ -712,8 +712,8 @@ class EconomySystem {
                 name: '🥼 Botarga de Doctor Simi',
                 cooldown: 60 * 60 * 1000, // 1 hora
                 codeName: 'botargadrsimi',
-                baseReward: 700,
-                variation: 500,
+                baseReward: 7000,
+                variation: 5000,
                 levelRequirement: 12,
                 failChance: 0.2, // 20% de fallar
                 messages: [
@@ -733,8 +733,8 @@ class EconomySystem {
                 name: '🕵️ Actividad Sospechosa',
                 cooldown: 60 * 60 * 1000, // 1 hora
                 codeName: 'criminal',
-                baseReward: 600,
-                variation: 400,
+                baseReward: 6000,
+                variation: 4000,
                 levelRequirement: 15,
                 failChance: 0.3, // 30% de fallar
                 messages: [
@@ -755,8 +755,8 @@ class EconomySystem {
                 name: '🚬 Vendedor del Punto',
                 cooldown: 60 * 60 * 1000, // 1 hora
                 codeName: 'vendedordelpunto',
-                baseReward: 1200,
-                variation: 1500,
+                baseReward: 12000,
+                variation: 15000,
                 levelRequirement: 15,
                 failChance: 0.35, // 35% de fallar
                 messages: [
@@ -778,8 +778,8 @@ class EconomySystem {
                 name: '👙 Vendedora de Nudes',
                 cooldown: 60 * 60 * 1000, // 1 hora
                 codeName: 'ofseller',
-                baseReward: 1000,
-                variation: 800,
+                baseReward: 10000,
+                variation: 8000,
                 levelRequirement: 20,
                 failChance: 0.2, // 20% de fallar
                 messages: [
@@ -800,8 +800,8 @@ class EconomySystem {
                 name: '👻 Investigador Paranormal',
                 cooldown: 60 * 60 * 1000, // 1 hora
                 codeName: 'paranormalinv',
-                baseReward: 1500,
-                variation: 1300,
+                baseReward: 15000,
+                variation: 13000,
                 levelRequirement: 25,
                 failChance: 0.30, // 30% de fallar
                 messages: [
