@@ -1060,14 +1060,6 @@ async handleBalance(message, targetUser = null) {
     }    
 
     async handleRobberyCommand(message, args) {
-        console.log(`🐛 DEBUG - Iniciando robo:`, {
-            robberId,
-            targetId,
-            hasShop: !!this.shop,
-            hasEconomy: !!this.economy,
-            activeRobberiesSize: this.economy.activeRobberies?.size
-        });
-
         const robberId = message.author.id;
         
         // Verificar que se mencionó a alguien
@@ -1098,6 +1090,14 @@ async handleBalance(message, targetUser = null) {
         }
         
         const targetId = targetUser.id;
+
+        console.log(`🐛 DEBUG - Iniciando robo:`, {
+            robberId,
+            targetId,
+            hasShop: !!this.shop,
+            hasEconomy: !!this.economy,
+            activeRobberiesSize: this.economy.activeRobberies?.size
+        });
         
         // Verificar que no sea un bot
         if (targetUser.bot) {
