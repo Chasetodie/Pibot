@@ -1151,35 +1151,60 @@ class EconomySystem {
 
     // Iniciar un robo
     async startRobbery(robberId, targetId) {
-        const canRobResult = await this.canRob(robberId, targetId);
-        
-        if (!canRobResult.canRob) {
-            return canRobResult;
-        }
-        
-        // Crear datos del robo activo
-        const robberyData = {
-            robberId: robberId,
-            targetId: targetId,
-            startTime: Date.now(),
-            clicks: 0,
-            maxClicks: this.robberyConfig.maxClicks,
-            timeLimit: this.robberyConfig.buttonTimeLimit
-        };
-        
-        this.activeRobberies.set(robberId, robberyData);
-        
-        // Auto-cleanup después del tiempo límite
-        setTimeout(() => {
-            if (this.activeRobberies.has(robberId)) {
-                this.activeRobberies.delete(robberId);
+        try {
+            console.log(`🎯 Intentando iniciar robo: ${robberId} -> ${targetId}`);
+            
+            const canRobResult = await this.canRob(robberId, targetId);
+            console.log(`🔍 Resultado de canRob:`, canRobResult);
+            
+            if (!canRobResult.canRob) {
+                console.log(`❌ No puede robar - Razón: ${canRobResult.reason}`);
+                return canRobResult;
             }
-        }, this.robberyConfig.buttonTimeLimit + 5000); // +5 segundos de gracia
-        
-        return {
-            success: true,
-            robberyData: robberyData
-        };
+            
+            // Verificar si ya hay un robo activo (doble verificación)
+            if (this.activeRobberies.has(robberId)) {
+                console.log(`❌ Ya hay robo activo para ${robberId}`);
+                return { success: false, reason: 'already_robbing' };
+            }
+            
+            // Crear datos del robo activo
+            const robberyData = {
+                robberId: robberId,
+                targetId: targetId,
+                startTime: Date.now(),
+                clicks: 0,
+                maxClicks: this.robberyConfig.maxClicks,
+                timeLimit: this.robberyConfig.buttonTimeLimit
+            };
+            
+            console.log(`📊 Datos del robo creados:`, robberyData);
+            
+            this.activeRobberies.set(robberId, robberyData);
+            console.log(`✅ Robo agregado al Map. Total activos: ${this.activeRobberies.size}`);
+            
+            // Auto-cleanup después del tiempo límite
+            setTimeout(() => {
+                if (this.activeRobberies.has(robberId)) {
+                    console.log(`🧹 Auto-cleanup de robo expirado: ${robberId}`);
+                    this.activeRobberies.delete(robberId);
+                }
+            }, this.robberyConfig.buttonTimeLimit + 5000); // +5 segundos de gracia
+            
+            console.log(`🎉 Robo iniciado exitosamente para ${robberId}`);
+            return {
+                success: true,
+                robberyData: robberyData
+            };
+            
+        } catch (error) {
+            console.error(`❌ ERROR en startRobbery:`, error);
+            return { 
+                success: false, 
+                reason: 'start_error',
+                error: error.message 
+            };
+        }
     }
     
     // Procesar click en botón de robo

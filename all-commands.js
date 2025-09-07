@@ -1060,6 +1060,14 @@ async handleBalance(message, targetUser = null) {
     }    
 
     async handleRobberyCommand(message, args) {
+        console.log(`🐛 DEBUG - Iniciando robo:`, {
+            robberId,
+            targetId,
+            hasShop: !!this.shop,
+            hasEconomy: !!this.economy,
+            activeRobberiesSize: this.economy.activeRobberies?.size
+        });
+
         const robberId = message.author.id;
         
         // Verificar que se mencionó a alguien
@@ -1154,10 +1162,32 @@ async handleBalance(message, targetUser = null) {
         const robberyResult = await this.economy.startRobbery(robberId, targetId);
         
         if (!robberyResult.success) {
+            console.log(`❌ Robo falló para ${robberId}:`, robberyResult);
+            
+            let errorMessage = 'Hubo un problema al iniciar el robo. Inténtalo de nuevo.';
+            
+            // Mensajes específicos según la razón
+            switch (robberyResult.reason) {
+                case 'start_error':
+                    errorMessage = `Error interno: ${robberyResult.error || 'Desconocido'}`;
+                    break;
+                case 'already_robbing':
+                    errorMessage = 'Ya tienes un robo en progreso';
+                    break;
+                case 'target_protected':
+                    const protectionText = robberyResult.protectionType === 'vault' 
+                        ? 'tiene una **Bóveda Permanente** que lo protege'
+                        : 'está protegido por un **Escudo Antirrobo**';
+                    errorMessage = `${targetUser.username} ${protectionText}`;
+                    break;
+                default:
+                    errorMessage = `No se pudo iniciar el robo: ${robberyResult.reason || 'Razón desconocida'}`;
+            }
+            
             const errorEmbed = new EmbedBuilder()
                 .setColor('#ff4444')
                 .setTitle('❌ Error al iniciar robo')
-                .setDescription('Hubo un problema al iniciar el robo. Inténtalo de nuevo.')
+                .setDescription(errorMessage)
                 .setTimestamp();
             
             return message.reply({ embeds: [errorEmbed] });
