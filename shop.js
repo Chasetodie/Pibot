@@ -217,7 +217,7 @@ class ShopSystem {
                 effect: {
                     type: 'permanent_protection',
                     targets: ['robbery'],
-                    reduction: 0.6 // antes 0.8, nerf
+                    reduction: 0.8 // antes 0.8, nerf
                 },
                 stackable: false,
                 maxStack: 1

@@ -1052,7 +1052,7 @@ class EconomySystem {
     }
     
     // Verificar si puede robar
-    async canRob(robberId, targetId, message) {
+    async canRob(robberId, targetId) {
         const robber = await this.getUser(robberId);
         const target = await this.getUser(targetId);
         
@@ -1150,8 +1150,8 @@ class EconomySystem {
     }
 
     // Iniciar un robo
-    async startRobbery(robberId, targetId, message) {
-        const canRobResult = await this.canRob(robberId, targetId, message);
+    async startRobbery(robberId, targetId) {
+        const canRobResult = await this.canRob(robberId, targetId);
         
         if (!canRobResult.canRob) {
             return canRobResult;
@@ -1263,7 +1263,7 @@ class EconomySystem {
             // Calcular probabilidad de éxito basada en clicks
             const clickEfficiency = Math.min(robberyData.clicks / this.robberyConfig.maxClicks, 1);
             const baseSuccessChance = 1 - this.robberyConfig.failChance;
-            const finalSuccessChance = baseSuccessChance + (clickEfficiency * 0.3); // Bonus por clicks
+            const finalSuccessChance = baseSuccessChance + (clickEfficiency * 0.2); // Bonus por clicks
 
             const successBoost = await this.shop.getSuccessBoost(robberId, 'robbery');
             const finalChance = Math.min(finalSuccessChance + successBoost, 0.95);
