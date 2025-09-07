@@ -2156,9 +2156,15 @@ async getEquippedCosmetics(userId) {
             }
         }
         
-        // Verificar bóveda permanente (ACTUALIZADO: ahora 60% en vez de 80%)
+        // Verificar bóveda permanente
         if (permanentEffects['permanent_vault']) {
-            protection = 0.6; // 60% reducción
+            const vaultEffect = permanentEffects['permanent_vault'];
+            if (vaultEffect && vaultEffect.reduction) {
+                const roll = Math.random();
+                if (roll < vaultEffect.reduction) { // Usar el valor del item (0.8 = 80%)
+                    return { protected: true, type: 'vault' };
+                }
+            }
         }
         
         if (protection > 0) {
