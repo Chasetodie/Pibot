@@ -824,6 +824,8 @@ class MinigamesSystem {
                 games_played: (user.stats.games_played || 0) + 1
             }
         };
+
+        await this.economy.updateUser(userId, updateData);
     
         // Crear embed del resultado con animación
         const loadingEmbed = new EmbedBuilder()
@@ -1759,6 +1761,8 @@ class MinigamesSystem {
                 games_played: (user.stats.games_played || 0) + 1
             }
         };
+
+        await this.economy.updateUser(userId, updateData);
     
         // Crear embed con animación de giro
         const loadingEmbed = new EmbedBuilder()
