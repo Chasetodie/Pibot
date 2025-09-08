@@ -166,7 +166,7 @@ class LocalDatabase {
             `);
 
 // Agregar después de la tabla de auctions
-this.db.run(`
+await this.pool.execute(`
     CREATE TABLE IF NOT EXISTS crafting_queue (
         id TEXT PRIMARY KEY,
         user_id TEXT NOT NULL,
