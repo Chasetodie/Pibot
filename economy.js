@@ -1110,6 +1110,7 @@ class EconomySystem {
                 await this.updateUser(robberId, robberUpdateData);
                 
                 return { 
+                    penaltyBal: penalty,
                     canRob: false, 
                     reason: 'target_protected',
                     protectionType: protection.type
