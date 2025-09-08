@@ -1095,7 +1095,7 @@ if (success) {
 }
             
             // Actualizar inventario
-            const success = await updateUserItems(message.author.id, newItems);
+            /*const success = await updateUserItems(message.author.id, newItems);
             
             if (success) {
                 const rarityEmoji = getRarityEmoji(recipe.result.rarity);
@@ -1126,7 +1126,7 @@ if (success) {
                 await message.channel.send({ embeds: [embed] });
             } else {
                 message.reply('❌ Error al craftear el item.');
-            }
+            }*/
             
         } catch (error) {
             console.error('Error crafteando item:', error);
