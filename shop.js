@@ -610,7 +610,7 @@ async getEquippedCosmetics(userId) {
         // Remover esta optimización y usar:
         let items;
         if (category === 'all') {
-            items = Object.values(this.shopItems);
+            items = Object.values(this.shopItems).filter(item => !item.chestOnly);
         } else {
             // Filtrar automáticamente por categoría
             items = Object.values(this.shopItems).filter(item => item.category === category);
