@@ -24,6 +24,10 @@ class AuctionSystem {
         }, 5 * 60 * 1000); // Cada 5 minutos
     }
 
+calculateMinimumIncrement(currentBid) {
+    return Math.floor(currentBid * 0.05); // 5% o mínimo 10 coins
+}
+
     async saveAuctionToDb(auction) {
         try {
             await this.shop.economy.database.createAuction({
@@ -199,6 +203,7 @@ class AuctionSystem {
             .addFields(
                 { name: '📦 Item', value: `${this.shop.rarityEmojis[item.rarity]} **${item.name}**`, inline: true },
                 { name: '💰 Puja Inicial', value: `${startingBid.toLocaleString('es-ES')} π-b$`, inline: true },
+{ name: '📈 Incremento Mínimo', value: `${Math.floor(startingBid * 0.05).toLocaleString('es-ES')} π-b$`, inline: true },
                 { name: '⏰ Termina en', value: `${Math.floor(duration / 60000)} minutos`, inline: true }
             )
             .setColor('#FF6600')
@@ -255,10 +260,11 @@ class AuctionSystem {
             return;
         }
         
-        if (bidAmount <= auction.currentBid) {
-            await message.reply(`❌ Tu puja debe ser mayor a **${auction.currentBid.toLocaleString('es-ES')} π-b$**.`);
-            return;
-        }
+        const minimumIncrement = Math.floor(auction.currentBid * 0.05); // 5% o mínimo 10 coins
+if (bidAmount < auction.currentBid + minimumIncrement) {
+    await message.reply(`❌ Tu puja debe ser al menos **${(auction.currentBid + minimumIncrement).toLocaleString('es-ES')} π-b$** (incremento mínimo: ${minimumIncrement.toLocaleString('es-ES')} π-b$).`);
+    return;
+}
         
         const user = await this.shop.economy.getUser(userId);
         if (user.balance < bidAmount) {
