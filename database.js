@@ -165,6 +165,20 @@ class LocalDatabase {
                 )
             `);
 
+// Agregar después de la tabla de auctions
+this.db.run(`
+    CREATE TABLE IF NOT EXISTS crafting_queue (
+        id TEXT PRIMARY KEY,
+        user_id TEXT NOT NULL,
+        recipe_id TEXT NOT NULL,
+        recipe_name TEXT NOT NULL,
+        completes_at TEXT NOT NULL,
+        status TEXT,
+        result_item_id TEXT NOT NULL,
+        result_quantity INTEGER DEFAULT 1
+    )
+`);
+
             console.log('🗃️ Tablas MySQL inicializadas');
         } catch (error) {
             console.error('❌ Error creando tablas:', error);
