@@ -884,6 +884,81 @@ class CraftingSystem {
         
         return newItems;
     }
+
+async addToCraftingQueue(craftId, userId, recipeId, recipe, completesAt) {
+    const { error } = await this.shop.economy.db.run(`
+        INSERT INTO crafting_queue (id, user_id, recipe_id, recipe_name, completes_at, result_item_id, result_quantity)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+    `, [
+        craftId, userId, recipeId, recipe.name,
+        new Date(completesAt).toISOString(),
+        recipe.result.id, 1
+    ]);
+    
+    return !error;
+}
+
+async completeCraft(craftId) {
+    // Obtener datos del craft
+    const craft = await this.shop.economy.db.get(
+        'SELECT * FROM crafting_queue WHERE id = ? AND status = ?',
+        [craftId, 'in_progress']
+    );
+    
+    if (!craft) return;
+    
+    // Dar el item al usuario
+    const user = await this.shop.economy.getUser(craft.user_id);
+    const newItems = { ...user.items || {} };
+    
+    if (newItems[craft.result_item_id]) {
+        newItems[craft.result_item_id].quantity += craft.result_quantity;
+    } else {
+        newItems[craft.result_item_id] = {
+            id: craft.result_item_id,
+            quantity: craft.result_quantity,
+            purchaseDate: new Date().toISOString()
+        };
+    }
+    
+    await this.shop.economy.updateUser(craft.user_id, { items: newItems });
+    
+    // Marcar como completado
+    await this.shop.economy.db.run(
+        'UPDATE crafting_queue SET status = ? WHERE id = ?',
+        ['completed', craftId]
+    );
+    
+    console.log(`✅ Craft completado: ${craft.recipe_name} para usuario ${craft.user_id}`);
+}
+
+async showCraftingQueue(message) {
+    const userId = message.author.id;
+    const crafts = await this.shop.economy.db.all(
+        'SELECT * FROM crafting_queue WHERE user_id = ? AND status = ? ORDER BY completes_at ASC',
+        [userId, 'in_progress']
+    );
+    
+    if (crafts.length === 0) {
+        return message.reply('📭 No tienes crafteos en progreso.');
+    }
+    
+    let queueText = '';
+    crafts.forEach(craft => {
+        const timeLeft = new Date(craft.completes_at).getTime() - Date.now();
+        const minutes = Math.max(0, Math.floor(timeLeft / 60000));
+        queueText += `🔨 **${craft.recipe_name}**\n`;
+        queueText += `└ Completa en: ${minutes > 0 ? `${minutes} minutos` : 'Listo!'}\n\n`;
+    });
+    
+    const embed = {
+        color: 0xffaa00,
+        title: '🔨 **COLA DE CRAFTEO**',
+        description: queueText
+    };
+    
+    await message.channel.send({ embeds: [embed] });
+}
     
     async showCraftingRecipes(message) {
         try {
@@ -985,14 +1060,39 @@ class CraftingSystem {
             const newItems = this.consumeMaterials(userItems, recipe.ingredients);
             
             // Agregar item crafteado
-            const resultId = recipe.result.id;
-            const quantity = 1; // Por defecto 1, pero podrías agregarlo al result si quieres
-            
-            if (newItems[resultId]) {
-                newItems[resultId] += quantity;
-            } else {
-                newItems[resultId] = quantity;
+            // En lugar de dar el item inmediatamente, agregarlo a la cola
+const craftId = `${message.author.id}_${Date.now()}`;
+const completesAt = Date.now() + recipe.craftTime;
+
+const success = await this.addToCraftingQueue(craftId, message.author.id, recipeId, recipe, completesAt);
+
+if (success) {
+    const minutes = Math.floor(recipe.craftTime / 60000);
+    const embed = {
+        color: 0xffaa00,
+        title: '🔨 **CRAFTEO INICIADO**',
+        description: `Comenzaste a craftear **${recipe.name}**`,
+        fields: [
+            {
+                name: '⏱️ Tiempo de Crafteo',
+                value: `${minutes} minutos`,
+                inline: true
+            },
+            {
+                name: '🎯 Se completará',
+                value: `<t:${Math.floor(completesAt/1000)}:R>`,
+                inline: true
             }
+        ]
+    };
+    
+    await message.channel.send({ embeds: [embed] });
+    
+    // Programar finalización
+    setTimeout(() => this.completeCraft(craftId), recipe.craftTime);
+} else {
+    message.reply('❌ Error iniciando el crafteo.');
+}
             
             // Actualizar inventario
             const success = await updateUserItems(message.author.id, newItems);
