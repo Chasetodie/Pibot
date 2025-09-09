@@ -662,7 +662,7 @@ class EventsSystem {
                     rewardType = 'premium_money';
                 } else {
                     // 30% - Tesoro de XP
-                    xpBonus = Math.floor(Math.random() * 500) + 50; // 50-550 XP
+                    xpBonus = Math.floor(Math.random() * 1000) + 500; // 500-1500 XP
                     treasureDescription = `Pergamino ancestral: +${xpBonus} XP`;
                     rewardType = 'xp';
                 }
