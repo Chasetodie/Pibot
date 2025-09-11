@@ -779,7 +779,7 @@ class CraftingSystem {
                 description: 'Permiten robar sin riesgo de ser atrapado (15 usos)',
                 craftTime: 21600000, // 6 horas
                 ingredients: [
-                    { id: 'master_gloves', quantity: 1 },
+                    { id: 'master_gloves_craft', quantity: 1 },
                     { id: 'fortune_shield', quantity: 1 }
                 ],
                 result: {
@@ -908,12 +908,12 @@ class CraftingSystem {
             const timeLeft = completesAt - now;
             
             if (timeLeft <= 0) {
-                queueText += `**${index + 1}.** 🔨 **${craft.recipe_name}** ✅ **COMPLETADO**\n\n`;
+                queueText += `**${index + 1}.** 🔨 **${craft.emoji} ${craft.recipe_name}** ✅ **COMPLETADO**\n\n`;
             } else {
                 const minutes = Math.floor(timeLeft / 60000);
                 const seconds = Math.floor((timeLeft % 60000) / 1000);
                 const timeString = minutes > 0 ? `${minutes}m ${seconds}s` : `${seconds}s`;
-                queueText += `**${index + 1}.** 🔨 **${craft.recipe_name}**\n`;
+                queueText += `**${index + 1}.** 🔨 **${craft.emoji} ${craft.recipe_name}**\n`;
                 queueText += `└ Completa en: ${timeString}\n\n`;
             }
         });
