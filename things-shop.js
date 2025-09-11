@@ -870,27 +870,35 @@ class CraftingSystem {
         try {
             const channel = await this.client.channels.fetch(craft.channel_id);
             if (channel) {
+
+                const recipe = this.CRAFTING_RECIPES[craft.recipe_id];
+                const realItemName = recipe ? recipe.name : craft.recipe_name;
+
                 const embed = {
                     color: 0x00ff00,
                     title: '🔨 ¡Crafteo Completado!',
-                    description: `<@${craft.user_id}> tu **${craft.recipe_name}** está listo!\n\nRevisa tu inventario con \`>inventory\``,
+                    description: `<@${craft.user_id}> tu **${realItemName}** está listo!\n\nRevisa tu inventario con \`>bag\``,
                     fields: [
                         {
                             name: '📦 Item Obtenido',
-                            value: craft.recipe_name,
+                            value: realItemName,
                             inline: true
                         }
                     ],
                     timestamp: new Date().toISOString()
                 };
                 
-                await channel.send({ embeds: [embed] });
+                await channel.send({
+                    content: `<@${craft.user_id}>`,
+                    embeds: [embed],
+                    allowedMentions: { users: [craft.user_id]}
+                });
             }
         } catch (error) {
             console.log(`Error notificando crafteo completado: ${error.message}`);
         }
         
-        console.log(`✅ Craft completado: ${craft.recipe_name} para usuario ${craft.user_id}`);
+        console.log(`✅ Craft completado: ${realItemName} para usuario ${craft.user_id}`);
     }
 
     async showCraftingQueue(message) {
@@ -906,14 +914,18 @@ class CraftingSystem {
             const completesAt = new Date(craft.completes_at).getTime();
             const now = Date.now();
             const timeLeft = completesAt - now;
+
+            // Obtener nombre real con emojis
+            const recipe = this.CRAFTING_RECIPES[craft.recipe_id];
+            const realItemName = recipe ? recipe.name : craft.recipe_name;
             
             if (timeLeft <= 0) {
-                queueText += `**${index + 1}.** 🔨 **${craft.recipe_name}** ✅ **COMPLETADO**\n\n`;
+                queueText += `**${index + 1}.** 🔨 **${realItemName}** ✅ **COMPLETADO**\n\n`;
             } else {
                 const minutes = Math.floor(timeLeft / 60000);
                 const seconds = Math.floor((timeLeft % 60000) / 1000);
                 const timeString = minutes > 0 ? `${minutes}m ${seconds}s` : `${seconds}s`;
-                queueText += `**${index + 1}.** 🔨 **${craft.recipe_name}**\n`;
+                queueText += `**${index + 1}.** 🔨 **${realItemName}**\n`;
                 queueText += `└ Completa en: ${timeString}\n\n`;
             }
         });
@@ -1137,7 +1149,11 @@ embed.fields.push({
                 crafts.forEach((craft, index) => {
                     const timeLeft = new Date(craft.completes_at).getTime() - Date.now();
                     const minutes = Math.max(0, Math.floor(timeLeft / 60000));
-                    craftList += `**${index + 1}.** ${craft.recipe_name} (${minutes} min restantes)\n`;
+                    
+                    const recipe = this.CRAFTING_RECIPES[craft.recipe_id];
+                    const realItemName = recipe ? recipe.name : craft.recipe_name;
+                    
+                    craftList += `**${index + 1}.** ${realItemName} (${minutes} min restantes)\n`;
                 });
                 
                 const embed = {
