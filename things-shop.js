@@ -828,7 +828,7 @@ class CraftingSystem {
     }
 
     async addToCraftingQueue(craftId, userId, recipeId, recipe, completesAt, channelId) {
-        await this.shop.economy.db.addCraftToQueue({
+        await this.shop.economy.database.addCraftToQueue({
             id: craftId,
             user_id: userId,
             recipe_id: recipeId,
