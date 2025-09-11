@@ -1791,12 +1791,12 @@ async handleBalance(message, targetUser = null) {
                     break;
                     
                 case '>craft':
-                    if (!args[1]) {
-                        await message.reply('❌ Especifica la receta. Usa `>recipes` para ver las disponibles.');
-                        return;
-                    }
-                    await this.crafting.craftItem(message, args[1]);
-                    break;
+    if (!args[1]) {
+        await message.reply('❌ Especifica la receta. Usa `>recipes` para ver las disponibles.');
+        return;
+    }
+    await this.crafting.craftItem(message, args.slice(1)); // Pasar array desde el segundo elemento
+    break;
                     
                 case '>queue':
                 case '>craftqueue':
