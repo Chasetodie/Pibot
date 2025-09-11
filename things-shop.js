@@ -987,7 +987,7 @@ embed.fields.push({
                 return message.reply('❌ Receta no encontrada. Usa `>recipes` para ver las disponibles.');
             }
             
-            const userData = await getUser(message.author.id);
+            const userData = await this.shop.economy.getUser(message.author.id);
             if (!userData) {
                 return message.reply('❌ Usuario no registrado.');
             }
