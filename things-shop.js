@@ -827,15 +827,16 @@ class CraftingSystem {
         return newItems;
     }
 
-    async addToCraftingQueue(craftId, userId, recipeId, recipe, completesAt) {
-        await this.shop.economy.database.addCraftToQueue({
+    async addToCraftingQueue(craftId, userId, recipeId, recipe, completesAt, channelId) {
+        await this.shop.economy.db.addCraftToQueue({
             id: craftId,
             user_id: userId,
             recipe_id: recipeId,
             recipe_name: recipe.name,
             completes_at: new Date(completesAt).toISOString(),
             result_item_id: recipe.result.id,
-            result_quantity: 1
+            result_quantity: 1,
+            channel_id: channelId
         });
     }
 
@@ -865,41 +866,28 @@ class CraftingSystem {
         // Marcar como completado
         await this.shop.economy.database.completeCraftInDB(craftId);
         
-        // Notificar en el canal en lugar de DM
+        // Notificar en el canal donde se inició el craft
         try {
-            // Buscar un canal donde el usuario haya escrito recientemente
-            const guild = this.client.guilds.cache.first(); // O la guild específica donde esté tu bot
-            if (guild) {
-                const member = await guild.members.fetch(craft.user_id).catch(() => null);
-                if (member) {
-                    // Buscar el canal general o el último canal donde escribió
-                    const channel = guild.channels.cache.find(ch => 
-                        ch.name.includes('general') || 
-                        ch.name.includes('bot') ||
-                        ch.name.includes('comando')
-                    ) || guild.channels.cache.find(ch => ch.type === 0); // Primer canal de texto
-                    
-                    if (channel) {
-                        const embed = {
-                            color: 0x00ff00,
-                            title: '🔨 ¡Crafteo Completado!',
-                            description: `<@${craft.user_id}> tu **${craft.recipe_name}** está listo!\n\nRevisa tu inventario con \`>inventory\``,
-                            fields: [
-                                {
-                                    name: '📦 Item Obtenido',
-                                    value: craft.recipe_name,
-                                    inline: true
-                                }
-                            ],
-                            timestamp: new Date().toISOString()
-                        };
-                        
-                        await channel.send({ embeds: [embed] });
-                    }
-                }
+            const channel = await this.client.channels.fetch(craft.channel_id);
+            if (channel) {
+                const embed = {
+                    color: 0x00ff00,
+                    title: '🔨 ¡Crafteo Completado!',
+                    description: `<@${craft.user_id}> tu **${craft.recipe_name}** está listo!\n\nRevisa tu inventario con \`>inventory\``,
+                    fields: [
+                        {
+                            name: '📦 Item Obtenido',
+                            value: craft.recipe_name,
+                            inline: true
+                        }
+                    ],
+                    timestamp: new Date().toISOString()
+                };
+                
+                await channel.send({ embeds: [embed] });
             }
         } catch (error) {
-            console.log(`Error notificando crafteo completado para ${craft.user_id}: ${error.message}`);
+            console.log(`Error notificando crafteo completado: ${error.message}`);
         }
         
         console.log(`✅ Craft completado: ${craft.recipe_name} para usuario ${craft.user_id}`);
@@ -1062,7 +1050,7 @@ embed.fields.push({
             await this.shop.economy.updateUser(message.author.id, { items: newItems });
 
             try {
-                await this.addToCraftingQueue(craftId, message.author.id, recipeId, recipe, completesAt);
+                await this.addToCraftingQueue(craftId, message.author.id, recipeId, recipe, completesAt, message.channel.id);
                 
                 const minutes = Math.floor(recipe.craftTime / 60000);
                 const embed = {

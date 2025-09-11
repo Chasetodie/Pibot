@@ -175,7 +175,8 @@ class LocalDatabase {
                     completes_at TEXT NOT NULL,
                     status TEXT,
                     result_item_id TEXT NOT NULL,
-                    result_quantity INTEGER DEFAULT 1
+                    result_quantity INTEGER DEFAULT 1,
+                    channel_id TEXT
                 )
             `);
 
@@ -242,8 +243,8 @@ class LocalDatabase {
     async addCraftToQueue(craftData) {
         try {
             await this.pool.execute(`
-                INSERT INTO crafting_queue (id, user_id, recipe_id, recipe_name, completes_at, result_item_id, result_quantity, status)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                INSERT INTO crafting_queue (id, user_id, recipe_id, recipe_name, completes_at, result_item_id, result_quantity, status, channel_id)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
             `, [
                 craftData.id,
                 craftData.user_id,
@@ -252,7 +253,8 @@ class LocalDatabase {
                 craftData.completes_at,
                 craftData.result_item_id,
                 craftData.result_quantity,
-                'in_progress'
+                'in_progress',
+                craftData.channel_id
             ]);
             return true;
         } catch (error) {
