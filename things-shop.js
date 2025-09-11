@@ -937,11 +937,23 @@ class CraftingSystem {
                 
                 const rarityEmoji = this.getRarityEmoji(recipe.result.rarity);
                 
-                embed.fields.push({
-                    name: `\n${rarityEmoji} ${recipe.name} (ID: ${recipe.id})`,
-                    value: `${recipe.description}\nDuración del crafteo: ${recipe.craftTime}\n**Materiales:**\n${requirements}\n\n`,
-                    inline: false
-                });
+// Calcular tiempo de crafteo
+const craftTimeMinutes = Math.floor(recipe.craftTime / 60000);
+const craftTimeHours = Math.floor(craftTimeMinutes / 60);
+let timeString;
+
+if (craftTimeHours > 0) {
+    const remainingMinutes = craftTimeMinutes % 60;
+    timeString = remainingMinutes > 0 ? `${craftTimeHours}h ${remainingMinutes}m` : `${craftTimeHours}h`;
+} else {
+    timeString = `${craftTimeMinutes}m`;
+}
+
+embed.fields.push({
+    name: `\n${rarityEmoji} ${recipe.name} (ID: ${recipe.id})`,
+    value: `${recipe.description}\n**Materiales:**\n${requirements}**⏱️ Tiempo de Crafteo:** ${timeString}\n\n`,
+    inline: false
+});
             });
             
             await message.channel.send({ embeds: [embed] });
