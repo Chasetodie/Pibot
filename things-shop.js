@@ -893,12 +893,12 @@ class CraftingSystem {
                     embeds: [embed],
                     allowedMentions: { users: [craft.user_id]}
                 });
+
+                console.log(`✅ Craft completado: ${realItemName} para usuario ${craft.user_id}`);
             }
         } catch (error) {
             console.log(`Error notificando crafteo completado: ${error.message}`);
-        }
-        
-        console.log(`✅ Craft completado: ${realItemName} para usuario ${craft.user_id}`);
+        }        
     }
 
     async showCraftingQueue(message) {
@@ -1048,6 +1048,25 @@ embed.fields.push({
                 };
                 
                 return message.channel.send({ embeds: [embed] });
+            }
+
+            // Verificar límites de stack del item a craftear
+            const resultItem = recipe.result;
+            const currentQuantity = userItems[resultItem.id] ? userItems[resultItem.id].quantity : 0;
+
+            // Verificar si es stackeable
+            if (!resultItem.stackable && currentQuantity >= 1) {
+                return message.reply(`❌ **${recipe.name}** no es stackeable y ya tienes uno.`);
+            }
+
+            // Verificar límite máximo
+            if (resultItem.maxStack && currentQuantity >= resultItem.maxStack) {
+                return message.reply(`❌ Ya tienes el máximo permitido de **${recipe.name}** (${resultItem.maxStack}/${resultItem.maxStack}).`);
+            }
+
+            // Verificar si al craftear uno más se excede el límite
+            if (resultItem.maxStack && (currentQuantity + 1) > resultItem.maxStack) {
+                return message.reply(`❌ Craftear **${recipe.name}** excedería el límite máximo (${currentQuantity + 1}/${resultItem.maxStack}).`);
             }
             
             // Consumir materiales usando el nuevo formato
