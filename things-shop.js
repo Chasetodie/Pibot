@@ -825,7 +825,7 @@ class CraftingSystem {
     }
 
     async addToCraftingQueue(craftId, userId, recipeId, recipe, completesAt) {
-        await this.shop.economy.db.addCraftToQueue({
+        await this.shop.economy.database.addCraftToQueue({
             id: craftId,
             user_id: userId,
             recipe_id: recipeId,
@@ -838,7 +838,7 @@ class CraftingSystem {
 
     async completeCraft(craftId) {
         // Obtener datos del craft
-        const crafts = await this.shop.economy.db.getCompletedCrafts();
+        const crafts = await this.shop.economy.database.getCompletedCrafts();
         const craft = crafts.find(c => c.id === craftId);
         
         if (!craft) return;
@@ -860,7 +860,7 @@ class CraftingSystem {
         await this.shop.economy.updateUser(craft.user_id, { items: newItems });
         
         // Marcar como completado
-        await this.shop.economy.db.completeCraftInDB(craftId);
+        await this.shop.economy.database.completeCraftInDB(craftId);
         
         // Notificar al usuario
         try {
@@ -891,7 +891,7 @@ class CraftingSystem {
 
     async showCraftingQueue(message) {
         const userId = message.author.id;
-        const crafts = await this.shop.economy.db.getCraftingQueue(userId);
+        const crafts = await this.shop.economy.database.getCraftingQueue(userId);
         
         if (crafts.length === 0) {
             return message.reply('📭 No tienes crafteos en progreso.');
@@ -1100,7 +1100,7 @@ class CraftingSystem {
             
             // Si no especifica ID, mostrar lista para cancelar
             if (!args[0]) {
-                const crafts = await this.shop.economy.db.getCraftingQueue(userId);
+                const crafts = await this.shop.economy.database.getCraftingQueue(userId);
                 
                 if (crafts.length === 0) {
                     return message.reply('❌ No tienes crafteos en progreso para cancelar.');
@@ -1124,7 +1124,7 @@ class CraftingSystem {
             }
             
             // Obtener crafteos del usuario
-            const crafts = await this.shop.economy.db.getCraftingQueue(userId);
+            const crafts = await this.shop.economy.database.getCraftingQueue(userId);
             const craftIndex = parseInt(args[0]) - 1;
             
             if (isNaN(craftIndex) || craftIndex < 0 || craftIndex >= crafts.length) {
@@ -1139,7 +1139,7 @@ class CraftingSystem {
             }
             
             // Cancelar en la base de datos
-            const success = await this.shop.economy.db.cancelCraft(craftToCancel.id);
+            const success = await this.shop.economy.database.cancelCraft(craftToCancel.id);
             
             if (!success) {
                 return message.reply('❌ Error cancelando el crafteo.');
@@ -1195,7 +1195,7 @@ class CraftingSystem {
     }
 
     async checkCompletedCrafts() {
-        const completedCrafts = await this.shop.economy.db.getCompletedCrafts();
+        const completedCrafts = await this.shop.economy.database.getCompletedCrafts();
         
         for (const craft of completedCrafts) {
             await this.completeCraft(craft.id);
