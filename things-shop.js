@@ -802,7 +802,8 @@ class CraftingSystem {
     // 2. CAMBIAR LA FUNCIÓN hasRequiredMaterials por:
     hasRequiredMaterials(userItems, ingredients) {
         for (const ingredient of ingredients) {
-            const userQuantity = userItems[ingredient.id] || 0;
+            const userItem = userItems[ingredient.id];
+            const userQuantity = userItem ? userItem.quantity : 0;  // Usar .quantity
             if (userQuantity < ingredient.quantity) {
                 return false;
             }
@@ -815,9 +816,11 @@ class CraftingSystem {
         const newItems = { ...userItems };
         
         for (const ingredient of ingredients) {
-            newItems[ingredient.id] -= ingredient.quantity;
-            if (newItems[ingredient.id] <= 0) {
-                delete newItems[ingredient.id];
+            if (newItems[ingredient.id]) {
+                newItems[ingredient.id].quantity -= ingredient.quantity;  // Usar .quantity
+                if (newItems[ingredient.id].quantity <= 0) {
+                    delete newItems[ingredient.id];
+                }
             }
         }
         
@@ -880,7 +883,9 @@ class CraftingSystem {
                     timestamp: new Date().toISOString()
                 };
                 
-                await user.send({ embeds: [embed] });
+                await user.send({ embeds: [embed] }).catch(() => {
+                    console.log(`No se pudo enviar DM al usuario ${craft.user_id}`);
+                });
             }
         } catch (error) {
             console.log(`No se pudo notificar al usuario ${craft.user_id}: ${error.message}`);
@@ -899,7 +904,9 @@ class CraftingSystem {
         
         let queueText = '';
         crafts.forEach((craft, index) => {
-            const timeLeft = new Date(craft.completes_at).getTime() - Date.now();
+            const completesAt = new Date(craft.completes_at).getTime();
+            const now = Date.now();
+            const timeLeft = completesAt - now;
             const minutes = Math.max(0, Math.floor(timeLeft / 60000));
             queueText += `**${index + 1}.** 🔨 **${craft.recipe_name}**\n`;
             queueText += `└ Completa en: ${minutes > 0 ? `${minutes} minutos` : 'Listo!'}\n\n`;
