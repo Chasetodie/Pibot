@@ -1789,12 +1789,52 @@ async handleBalance(message, targetUser = null) {
                 case '>recipes':
                     await this.crafting.showCraftingRecipes(message);
                     break;
+                    
                 case '>craft':
                     if (!args[1]) {
                         await message.reply('❌ Especifica la receta. Usa `>recipes` para ver las disponibles.');
                         return;
                     }
                     await this.crafting.craftItem(message, args[1]);
+                    break;
+                    
+                case '>queue':
+                case '>craftqueue':
+                    await this.crafting.showCraftingQueue(message);
+                    break;
+                
+                case '>cancelcraft':
+                    if (!args[1]) {
+                        // Mostrar embed de ayuda
+                        const helpEmbed = {
+                            color: 0x3498db,
+                            title: '🚫 Cancelar Crafteo - Ayuda',
+                            description: 'Este comando te permite cancelar crafteos en progreso.',
+                            fields: [
+                                {
+                                    name: '📋 Uso',
+                                    value: '`>cancelcraft` - Ver lista de crafteos\n`>cancelcraft <número>` - Cancelar crafteo específico',
+                                    inline: false
+                                },
+                                {
+                                    name: '⚠️ Importante',
+                                    value: 'Solo recibirás el **80%** de los materiales de vuelta.',
+                                    inline: false
+                                },
+                                {
+                                    name: '📝 Ejemplos',
+                                    value: '`>cancelcraft` - Ver tus crafteos\n`>cancelcraft 1` - Cancelar el crafteo #1\n`>cancelcraft 2` - Cancelar el crafteo #2',
+                                    inline: false
+                                }
+                            ],
+                            footer: { text: 'Usa >queue para ver todos tus crafteos activos' }
+                        };
+                        
+                        await message.channel.send({ embeds: [helpEmbed] });
+                        return;
+                    }
+                    
+                    await this.crafting.cancelCraft(message, args.slice(1));
                     break;
 
                 case '>setnick':

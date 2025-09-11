@@ -203,7 +203,7 @@ calculateMinimumIncrement(currentBid) {
             .addFields(
                 { name: '📦 Item', value: `${this.shop.rarityEmojis[item.rarity]} **${item.name}**`, inline: true },
                 { name: '💰 Puja Inicial', value: `${startingBid.toLocaleString('es-ES')} π-b$`, inline: true },
-{ name: '📈 Incremento Mínimo', value: `${Math.floor(startingBid * 0.05).toLocaleString('es-ES')} π-b$`, inline: true },
+                { name: '📈 Incremento Mínimo', value: `${Math.floor(startingBid * 0.05).toLocaleString('es-ES')} π-b$`, inline: true },
                 { name: '⏰ Termina en', value: `${Math.floor(duration / 60000)} minutos`, inline: true }
             )
             .setColor('#FF6600')
@@ -452,14 +452,17 @@ if (bidAmount < auction.currentBid + minimumIncrement) {
 
 // 4. Sistema de crafteo
 class CraftingSystem {
-    constructor(shopSystem) {
+    constructor(shopSystem, client) {
+        setInterval(() => this.checkCompletedCrafts(), 60000);
         this.shop = shopSystem;
+        this.client = client;
 
         this.CRAFTING_RECIPES = {
             'super_lucky_charm': {
                 id: 'super_lucky_charm',
                 name: '🍀✨ Super Amuleto de Suerte',
                 description: 'Versión mejorada del amuleto normal (x2.0 multiplicador, 4 horas)',
+                craftTime: 3600000, // 1 hora
                 ingredients: [
                     { id: 'lucky_charm', quantity: 5 },
                     { id: 'double_xp_potion', quantity: 2 }
@@ -471,11 +474,11 @@ class CraftingSystem {
                     effect: {
                         type: 'multiplier',
                         targets: ['work', 'games'],
-                        multiplier: 2.0,
-                        duration: 14400 // 4 horas
+                        multiplier: 1.5,
+                        duration: 10800 // 3 horas
                     },
                     stackable: true,
-                    maxStack: 3
+                    maxStack: 2
                 }
             },
 
@@ -483,6 +486,7 @@ class CraftingSystem {
                 id: 'master_toolkit',
                 name: '🔧⚡ Kit Maestro',
                 description: 'Reduce todos los cooldowns permanentemente en 30%',
+                craftTime: 10800000, // 3 horas
                 ingredients: [
                     { id: 'work_boots', quantity: 2 },
                     { id: 'energy_drink', quantity: 10 },
@@ -507,6 +511,7 @@ class CraftingSystem {
                 id: 'mega_luck_craft',
                 name: '🍀✨ Mega Poción de Suerte',
                 description: 'Una potente mezcla de suerte concentrada',
+                craftTime: 3600000, // 1 hora
                 ingredients: [
                     { id: 'lucky_charm', quantity: 4 },
                     { id: 'energy_drink', quantity: 3 }
@@ -530,6 +535,7 @@ class CraftingSystem {
                 id: 'speed_boots_craft',
                 name: '👟⚡ Botas de Velocidad Supremas',
                 description: 'Reduce todos los cooldowns a cero temporalmente',
+                craftTime: 3600000, // 1 hora
                 ingredients: [
                     { id: 'work_boots', quantity: 2 },
                     { id: 'energy_drink', quantity: 8 },
@@ -549,41 +555,11 @@ class CraftingSystem {
                 }
             },
 
-            'diamond_membership_craft': {
-                id: 'diamond_membership_craft',
-                name: '💎👑 Membresía Diamante',
-                description: 'El item más exclusivo - requiere muchos recursos',
-                ingredients: [
-                    { id: 'vip_pass', quantity: 1 },
-                    { id: 'money_magnet', quantity: 2 },
-                    { id: 'golden_trophy', quantity: 3 },
-                    { id: 'premium_mystery_box', quantity: 5 }
-                ],
-                result: {
-                    id: 'diamond_membership',
-                    category: 'permanent',
-                    rarity: 'legendary',
-                    effect: {
-                        type: 'vip_membership',
-                        duration: 30 * 24 * 60 * 60 * 1000, // 30 días
-                        benefits: [
-                            'no_cooldowns',
-                            'double_earnings', 
-                            'luck_boost',
-                            'priority_support',
-                            'exclusive_commands',
-                            'custom_nickname'
-                        ]
-                    },
-                    stackable: false,
-                    maxStack: 1
-                }
-            },
-
             'xp_tornado_craft': {
                 id: 'xp_tornado_craft',
                 name: '🌪️📚 Tornado de XP',
                 description: 'Fusiona pociones de XP para algo épico',
+                craftTime: 3600000, // 1 hora
                 ingredients: [
                     { id: 'double_xp_potion', quantity: 5 },
                     { id: 'lucky_charm', quantity: 3 }
@@ -603,34 +579,11 @@ class CraftingSystem {
                 }
             },
 
-            'golden_pickaxe_craft': {
-                id: 'golden_pickaxe_craft', 
-                name: '⛏️💎 Pico Dorado Legendario',
-                description: 'El mejor tool para trabajar',
-                ingredients: [
-                    { id: 'work_boots', quantity: 3 },
-                    { id: 'money_magnet', quantity: 1 },
-                    { id: 'lucky_charm', quantity: 4 }
-                ],
-                result: {
-                    id: 'golden_pickaxe',
-                    category: 'consumable',
-                    rarity: 'rare',
-                    effect: {
-                        type: 'work_multiplier',
-                        targets: ['work'],
-                        multiplier: 3.0,
-                        uses: 5
-                    },
-                    stackable: true,
-                    maxStack: 10
-                }
-            },
-
             'nickname_token_craft': {
                 id: 'nickname_token_craft',
                 name: '🏷️✨ Token de Apodo VIP',
                 description: 'Permite personalizar tu apodo con estilo',
+                craftTime: 1800000, // 30 minutos
                 ingredients: [
                     { id: 'rainbow_badge', quantity: 2 },
                     { id: 'golden_trophy', quantity: 2 }
@@ -653,6 +606,7 @@ class CraftingSystem {
                 id: 'cosmic_charm_craft',
                 name: '🔮✨ Amuleto Cósmico',
                 description: 'Un amuleto místico con poderes cósmicos (x3.0 multiplicador, 2 horas)',
+                craftTime: 10800000, // 3 horas
                 ingredients: [
                     { id: 'super_lucky_charm', quantity: 2 },
                     { id: 'xp_tornado', quantity: 1 }
@@ -664,33 +618,11 @@ class CraftingSystem {
                     effect: {
                         type: 'multiplier',
                         targets: ['work', 'games'],
-                        multiplier: 3.0,
-                        duration: 7200 // 2 horas
+                        multiplier: 2.5,
+                        duration: 5400 // 1.5 horas
                     },
                     stackable: true,
-                    maxStack: 3
-                }
-            },
-
-            // 🛡️ Escudo de Fortuna
-            'fortune_shield_craft': {
-                id: 'fortune_shield_craft',
-                name: '🛡️🍀 Escudo de Fortuna',
-                description: 'Protege contra pérdidas en robos durante 1 hora',
-                ingredients: [
-                    { id: 'robbery_kit', quantity: 2 },
-                    { id: 'lucky_charm', quantity: 1 }
-                ],
-                result: {
-                    id: 'fortune_shield',
-                    category: 'consumable',
-                    rarity: 'rare',
-                    effect: {
-                        type: 'anti_robbery',
-                        duration: 3600
-                    },
-                    stackable: true,
-                    maxStack: 5
+                    maxStack: 2
                 }
             },
 
@@ -699,6 +631,7 @@ class CraftingSystem {
                 id: 'epic_chest_craft',
                 name: '📦🏆 Cofre Épico',
                 description: 'Un cofre misterioso que contiene recompensas raras',
+                craftTime: 3600000, // 1 hora
                 ingredients: [
                     { id: 'premium_mystery_box', quantity: 2 },
                     { id: 'golden_trophy', quantity: 1 }
@@ -726,6 +659,7 @@ class CraftingSystem {
                 id: 'turbo_potion_craft',
                 name: '⚡🥤 Poción Turbo',
                 description: 'Reduce cooldowns en 50% por 20 minutos',
+                craftTime: 3600000, // 1 hora
                 ingredients: [
                     { id: 'energy_drink', quantity: 3 },
                     { id: 'work_boots', quantity: 1 }
@@ -749,6 +683,7 @@ class CraftingSystem {
                 id: 'master_gloves_craft',
                 name: '💀🧤 Guantes del Ladrón Maestro',
                 description: 'Mejora la efectividad de los robos (+50% éxito, 10 usos)',
+                craftTime: 3600000, // 1 hora
                 ingredients: [
                     { id: 'robbery_kit', quantity: 5 },
                     { id: 'energy_drink', quantity: 2 }
@@ -772,6 +707,7 @@ class CraftingSystem {
                 id: 'infinity_charm_craft',
                 name: '♾️🍀 Amuleto Infinito',
                 description: 'El amuleto definitivo. (x5.0 multiplicador, 3 horas)',
+                craftTime: 21600000, // 6 horas 
                 ingredients: [
                     { id: 'cosmic_charm', quantity: 2 },
                     { id: 'xp_tornado', quantity: 2 }
@@ -796,6 +732,7 @@ class CraftingSystem {
                 id: 'diamond_pickaxe_craft',
                 name: '💎⛏️ Pico de Diamante',
                 description: 'Un pico mejorado para minería (+50% drops)',
+                craftTime: 3600000, // 1 hora
                 ingredients: [
                     { id: 'golden_pickaxe', quantity: 1 },
                     { id: 'money_magnet', quantity: 1 }
@@ -817,6 +754,7 @@ class CraftingSystem {
                 id: 'eternal_pickaxe_craft',
                 name: '♾️⛏️ Pico Eterno',
                 description: 'El pico definitivo, nunca se rompe',
+                craftTime: 10800000, // 3 horas
                 ingredients: [
                     { id: 'diamond_pickaxe', quantity: 1 },
                     { id: 'super_lucky_charm', quantity: 2 }
@@ -839,6 +777,7 @@ class CraftingSystem {
                 id: 'phantom_gloves_craft',
                 name: '👻🧤 Guantes Fantasma',
                 description: 'Permiten robar sin riesgo de ser atrapado (15 usos)',
+                craftTime: 21600000, // 6 horas
                 ingredients: [
                     { id: 'master_gloves', quantity: 1 },
                     { id: 'fortune_shield', quantity: 1 }
@@ -885,80 +824,96 @@ class CraftingSystem {
         return newItems;
     }
 
-async addToCraftingQueue(craftId, userId, recipeId, recipe, completesAt) {
-    const { error } = await this.shop.economy.db.run(`
-        INSERT INTO crafting_queue (id, user_id, recipe_id, recipe_name, completes_at, result_item_id, result_quantity)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
-    `, [
-        craftId, userId, recipeId, recipe.name,
-        new Date(completesAt).toISOString(),
-        recipe.result.id, 1
-    ]);
-    
-    return !error;
-}
+    async addToCraftingQueue(craftId, userId, recipeId, recipe, completesAt) {
+        await this.shop.economy.db.addCraftToQueue({
+            id: craftId,
+            user_id: userId,
+            recipe_id: recipeId,
+            recipe_name: recipe.name,
+            completes_at: new Date(completesAt).toISOString(),
+            result_item_id: recipe.result.id,
+            result_quantity: 1
+        });
+    }
 
-async completeCraft(craftId) {
-    // Obtener datos del craft
-    const craft = await this.shop.economy.db.get(
-        'SELECT * FROM crafting_queue WHERE id = ? AND status = ?',
-        [craftId, 'in_progress']
-    );
-    
-    if (!craft) return;
-    
-    // Dar el item al usuario
-    const user = await this.shop.economy.getUser(craft.user_id);
-    const newItems = { ...user.items || {} };
-    
-    if (newItems[craft.result_item_id]) {
-        newItems[craft.result_item_id].quantity += craft.result_quantity;
-    } else {
-        newItems[craft.result_item_id] = {
-            id: craft.result_item_id,
-            quantity: craft.result_quantity,
-            purchaseDate: new Date().toISOString()
+    async completeCraft(craftId) {
+        // Obtener datos del craft
+        const crafts = await this.shop.economy.db.getCompletedCrafts();
+        const craft = crafts.find(c => c.id === craftId);
+        
+        if (!craft) return;
+        
+        // Dar el item al usuario
+        const user = await this.shop.economy.getUser(craft.user_id);
+        const newItems = { ...user.items || {} };
+        
+        if (newItems[craft.result_item_id]) {
+            newItems[craft.result_item_id].quantity += craft.result_quantity;
+        } else {
+            newItems[craft.result_item_id] = {
+                id: craft.result_item_id,
+                quantity: craft.result_quantity,
+                purchaseDate: new Date().toISOString()
+            };
+        }
+        
+        await this.shop.economy.updateUser(craft.user_id, { items: newItems });
+        
+        // Marcar como completado
+        await this.shop.economy.db.completeCraftInDB(craftId);
+        
+        // Notificar al usuario
+        try {
+            const user = await this.client.users.fetch(craft.user_id);
+            if (user) {
+                const embed = {
+                    color: 0x00ff00,
+                    title: '🔨 ¡Crafteo Completado!',
+                    description: `Tu **${craft.recipe_name}** está listo!`,
+                    fields: [
+                        {
+                            name: '📦 Item Obtenido',
+                            value: craft.recipe_name,
+                            inline: true
+                        }
+                    ],
+                    timestamp: new Date().toISOString()
+                };
+                
+                await user.send({ embeds: [embed] });
+            }
+        } catch (error) {
+            console.log(`No se pudo notificar al usuario ${craft.user_id}: ${error.message}`);
+        }
+        
+        console.log(`✅ Craft completado: ${craft.recipe_name} para usuario ${craft.user_id}`);
+    }
+
+    async showCraftingQueue(message) {
+        const userId = message.author.id;
+        const crafts = await this.shop.economy.db.getCraftingQueue(userId);
+        
+        if (crafts.length === 0) {
+            return message.reply('📭 No tienes crafteos en progreso.');
+        }
+        
+        let queueText = '';
+        crafts.forEach((craft, index) => {
+            const timeLeft = new Date(craft.completes_at).getTime() - Date.now();
+            const minutes = Math.max(0, Math.floor(timeLeft / 60000));
+            queueText += `**${index + 1}.** 🔨 **${craft.recipe_name}**\n`;
+            queueText += `└ Completa en: ${minutes > 0 ? `${minutes} minutos` : 'Listo!'}\n\n`;
+        });
+        
+        const embed = {
+            color: 0xffaa00,
+            title: '🔨 **COLA DE CRAFTEO**',
+            description: queueText,
+            footer: { text: 'Usa >cancelcraft <número> para cancelar un crafteo' }
         };
+        
+        await message.channel.send({ embeds: [embed] });
     }
-    
-    await this.shop.economy.updateUser(craft.user_id, { items: newItems });
-    
-    // Marcar como completado
-    await this.shop.economy.db.run(
-        'UPDATE crafting_queue SET status = ? WHERE id = ?',
-        ['completed', craftId]
-    );
-    
-    console.log(`✅ Craft completado: ${craft.recipe_name} para usuario ${craft.user_id}`);
-}
-
-async showCraftingQueue(message) {
-    const userId = message.author.id;
-    const crafts = await this.shop.economy.db.all(
-        'SELECT * FROM crafting_queue WHERE user_id = ? AND status = ? ORDER BY completes_at ASC',
-        [userId, 'in_progress']
-    );
-    
-    if (crafts.length === 0) {
-        return message.reply('📭 No tienes crafteos en progreso.');
-    }
-    
-    let queueText = '';
-    crafts.forEach(craft => {
-        const timeLeft = new Date(craft.completes_at).getTime() - Date.now();
-        const minutes = Math.max(0, Math.floor(timeLeft / 60000));
-        queueText += `🔨 **${craft.recipe_name}**\n`;
-        queueText += `└ Completa en: ${minutes > 0 ? `${minutes} minutos` : 'Listo!'}\n\n`;
-    });
-    
-    const embed = {
-        color: 0xffaa00,
-        title: '🔨 **COLA DE CRAFTEO**',
-        description: queueText
-    };
-    
-    await message.channel.send({ embeds: [embed] });
-}
     
     async showCraftingRecipes(message) {
         try {
@@ -984,7 +939,7 @@ async showCraftingQueue(message) {
                 
                 embed.fields.push({
                     name: `\n${rarityEmoji} ${recipe.name} (ID: ${recipe.id})`,
-                    value: `${recipe.description}\n**Materiales:**\n${requirements}\n\n`,
+                    value: `${recipe.description}\nDuración del crafteo: ${recipe.craftTime}\n**Materiales:**\n${requirements}\n\n`,
                     inline: false
                 });
             });
@@ -1061,38 +1016,43 @@ async showCraftingQueue(message) {
             
             // Agregar item crafteado
             // En lugar de dar el item inmediatamente, agregarlo a la cola
-const craftId = `${message.author.id}_${Date.now()}`;
-const completesAt = Date.now() + recipe.craftTime;
+            const craftId = `${message.author.id}_${Date.now()}`;
+            const completesAt = Date.now() + recipe.craftTime;
 
-const success = await this.addToCraftingQueue(craftId, message.author.id, recipeId, recipe, completesAt);
+            // Actualizar inventario (consumir materiales)
+            await this.shop.economy.updateUser(message.author.id, { items: newItems });
 
-if (success) {
-    const minutes = Math.floor(recipe.craftTime / 60000);
-    const embed = {
-        color: 0xffaa00,
-        title: '🔨 **CRAFTEO INICIADO**',
-        description: `Comenzaste a craftear **${recipe.name}**`,
-        fields: [
-            {
-                name: '⏱️ Tiempo de Crafteo',
-                value: `${minutes} minutos`,
-                inline: true
-            },
-            {
-                name: '🎯 Se completará',
-                value: `<t:${Math.floor(completesAt/1000)}:R>`,
-                inline: true
+            try {
+                await this.addToCraftingQueue(craftId, message.author.id, recipeId, recipe, completesAt);
+                
+                const minutes = Math.floor(recipe.craftTime / 60000);
+                const embed = {
+                    color: 0xffaa00,
+                    title: '🔨 **CRAFTEO INICIADO**',
+                    description: `Comenzaste a craftear **${recipe.name}**`,
+                    fields: [
+                        {
+                            name: '⏱️ Tiempo de Crafteo',
+                            value: `${minutes} minutos`,
+                            inline: true
+                        },
+                        {
+                            name: '🎯 Se completará',
+                            value: `<t:${Math.floor(completesAt/1000)}:R>`,
+                            inline: true
+                        }
+                    ]
+                };
+                
+                await message.channel.send({ embeds: [embed] });
+                
+                // Programar finalización
+                setTimeout(() => this.completeCraft(craftId), recipe.craftTime);
+                
+            } catch (error) {
+                console.error('Error iniciando crafteo:', error);
+                message.reply('❌ Error iniciando el crafteo.');
             }
-        ]
-    };
-    
-    await message.channel.send({ embeds: [embed] });
-    
-    // Programar finalización
-    setTimeout(() => this.completeCraft(craftId), recipe.craftTime);
-} else {
-    message.reply('❌ Error iniciando el crafteo.');
-}
             
             // Actualizar inventario
             /*const success = await updateUserItems(message.author.id, newItems);
@@ -1131,6 +1091,114 @@ if (success) {
         } catch (error) {
             console.error('Error crafteando item:', error);
             message.reply('❌ Error al procesar el crafteo.');
+        }
+    }
+
+    async cancelCraft(message, args) {
+        try {
+            const userId = message.author.id;
+            
+            // Si no especifica ID, mostrar lista para cancelar
+            if (!args[0]) {
+                const crafts = await this.shop.economy.db.getCraftingQueue(userId);
+                
+                if (crafts.length === 0) {
+                    return message.reply('❌ No tienes crafteos en progreso para cancelar.');
+                }
+                
+                let craftList = '';
+                crafts.forEach((craft, index) => {
+                    const timeLeft = new Date(craft.completes_at).getTime() - Date.now();
+                    const minutes = Math.max(0, Math.floor(timeLeft / 60000));
+                    craftList += `**${index + 1}.** ${craft.recipe_name} (${minutes} min restantes)\n`;
+                });
+                
+                const embed = {
+                    color: 0xffaa00,
+                    title: '🔨 Crafteos en Progreso',
+                    description: `${craftList}\nUsa \`>cancelcraft <número>\` para cancelar uno.`,
+                    footer: { text: '⚠️ Cancelar devolverá el 80% de los materiales' }
+                };
+                
+                return message.channel.send({ embeds: [embed] });
+            }
+            
+            // Obtener crafteos del usuario
+            const crafts = await this.shop.economy.db.getCraftingQueue(userId);
+            const craftIndex = parseInt(args[0]) - 1;
+            
+            if (isNaN(craftIndex) || craftIndex < 0 || craftIndex >= crafts.length) {
+                return message.reply('❌ Número de craft inválido. Usa `>cancelcraft` para ver la lista.');
+            }
+            
+            const craftToCancel = crafts[craftIndex];
+            const recipe = this.CRAFTING_RECIPES[craftToCancel.recipe_id];
+            
+            if (!recipe) {
+                return message.reply('❌ Error: receta no encontrada.');
+            }
+            
+            // Cancelar en la base de datos
+            const success = await this.shop.economy.db.cancelCraft(craftToCancel.id);
+            
+            if (!success) {
+                return message.reply('❌ Error cancelando el crafteo.');
+            }
+            
+            // Devolver materiales (80% para evitar abuso)
+            const user = await this.shop.economy.getUser(userId);
+            const userItems = { ...user.items || {} };
+            
+            const materialsReturned = [];
+            recipe.ingredients.forEach(ingredient => {
+                const returnQuantity = Math.floor(ingredient.quantity * 0.8); // 80% de devolución
+                
+                if (returnQuantity > 0) {
+                    if (userItems[ingredient.id]) {
+                        userItems[ingredient.id].quantity += returnQuantity;
+                    } else {
+                        userItems[ingredient.id] = {
+                            id: ingredient.id,
+                            quantity: returnQuantity,
+                            purchaseDate: new Date().toISOString()
+                        };
+                    }
+                    
+                    const item = this.shop.shopItems[ingredient.id];
+                    const itemName = item ? item.name : ingredient.id;
+                    materialsReturned.push(`${returnQuantity}x ${itemName}`);
+                }
+            });
+            
+            // Actualizar inventario
+            await this.shop.economy.updateUser(userId, { items: userItems });
+            
+            const embed = {
+                color: 0xff6600,
+                title: '🚫 Crafteo Cancelado',
+                description: `**${craftToCancel.recipe_name}** ha sido cancelado.`,
+                fields: [
+                    {
+                        name: '📦 Materiales Devueltos (80%)',
+                        value: materialsReturned.join('\n') || 'Ninguno',
+                        inline: false
+                    }
+                ]
+            };
+            
+            await message.channel.send({ embeds: [embed] });
+            
+        } catch (error) {
+            console.error('Error cancelando craft:', error);
+            message.reply('❌ Error al cancelar el crafteo.');
+        }
+    }
+
+    async checkCompletedCrafts() {
+        const completedCrafts = await this.shop.economy.db.getCompletedCrafts();
+        
+        for (const craft of completedCrafts) {
+            await this.completeCraft(craft.id);
         }
     }
 }

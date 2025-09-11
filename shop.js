@@ -316,11 +316,11 @@ class ShopSystem {
             'custom_nickname_token': {
                 id: 'custom_nickname_token',
                 name: '🏷️ Token de Apodo Personalizado',
-                description: 'Permite cambiar tu apodo una vez',
+                description: 'Item para craftear un Token de Apodo VIP',
                 price: 200000,
                 category: 'special',
                 rarity: 'rare',
-                effect: { type: 'nickname_change', uses: 1 },
+                //effect: { type: 'nickname_change', uses: 1 },
                 stackable: true,
                 maxStack: 3
             },
@@ -456,7 +456,7 @@ class ShopSystem {
                 id: 'premium_chest',
                 category: 'mystery',
                 name: '🎁 Cofre Premium',
-                price: 900000,
+                price: 1500000,
                 description: 'Un cofre misterioso con recompensas valiosas',
                 rarity: 'epic',
                 effect: {
@@ -482,7 +482,7 @@ class ShopSystem {
                 id: 'legendary_chest',
                 category: 'mystery',
                 name: '🏆 Cofre Legendario',
-                price: 1000000,
+                price: 2000000,
                 description: 'Un cofre extremadamente raro con ítems únicos',
                 rarity: 'legendary',
                 effect: {
@@ -501,6 +501,100 @@ class ShopSystem {
                 },
                 stackable: true,
                 maxStack: 5
+            },
+
+            // Items para cofres legendarios
+            'super_lucky_charm': {
+                id: 'super_lucky_charm',
+                name: '🍀✨ Super Amuleto de Suerte',
+                description: 'Versión mejorada del amuleto normal (x2.0 multiplicador, 4 horas)',
+                category: 'consumable',
+                rarity: 'epic',
+                effect: {
+                    type: 'multiplier',
+                    targets: ['work', 'games'],
+                    multiplier: 1.5,
+                    duration: 10800 // 3 horas
+                },
+                chestOnly: true,
+                stackable: true,
+                maxStack: 2
+            },
+            'cosmic_charm': {
+                id: 'cosmic_charm',
+                name: '🔮✨ Amuleto Cósmico',
+                description: 'Un amuleto místico con poderes cósmicos (x3.0 multiplicador, 2 horas)',
+                category: 'consumable',
+                rarity: 'legendary',
+                effect: {
+                    type: 'multiplier',
+                    targets: ['work', 'games'],
+                    multiplier: 2.5,
+                    duration: 5400 // 1.5 horas
+                },
+                chestOnly: true,
+                stackable: true,
+                maxStack: 2
+            },
+            'infinity_charm': {
+                id: 'infinity_charm',
+                name: '♾️🍀 Amuleto Infinito',
+                description: 'El amuleto definitivo. (x5.0 multiplicador, 3 horas)',
+                category: 'consumable',
+                rarity: 'mythic',
+                effect: {
+                    type: 'multiplier',
+                    targets: ['work', 'games'],
+                    multiplier: 5.0,
+                    duration: 10800 // 3 horas
+                },
+                chestOnly: true,
+                stackable: true,
+                maxStack: 1
+            },
+            'eternal_pickaxe': {
+                id: 'eternal_pickaxe',
+                name: '♾️⛏️ Pico Eterno',
+                description: 'El pico definitivo, nunca se rompe',
+                category: 'tool',
+                rarity: 'legendary',
+                effect: {
+                    type: 'mining_boost',
+                    multiplier: 2.5,
+                    durability: Infinity
+                },
+                chestOnly: true,
+                stackable: false
+            },
+            'diamond_pickaxe': {
+                id: 'diamond_pickaxe',
+                name: '💎⛏️ Pico de Diamante',
+                description: 'Un pico mejorado para minería (+50% drops)',
+                category: 'tool',
+                rarity: 'epic',
+                effect: {
+                    type: 'mining_boost',
+                    multiplier: 1.5,
+                    durability: 200
+                },
+                chestOnly: true,
+                stackable: false
+            },
+            'phantom_gloves': {
+                id: 'phantom_gloves',
+                name: '👻🧤 Guantes Fantasma',
+                description: 'Permiten robar sin riesgo de ser atrapado (15 usos)',
+                category: 'consumable',
+                rarity: 'mythic',
+                effect: {
+                    type: 'robbery_boost',
+                    successRate: 1.0,
+                    safe: true,
+                    uses: 15
+                },
+                chestOnly: true,
+                stackable: true,
+                maxStack: 1
             }
         };
         
@@ -526,27 +620,27 @@ class ShopSystem {
         this.cacheTimeout = 10 * 60 * 1000; // 10 minutos para items        
     }
 
-async getEquippedCosmetics(userId) {
-    const user = await this.economy.getUser(userId);
-    
-    // ✅ Manejar cosmetics como string o objeto
-    let cosmetics = user.cosmetics || {};
-    
-    if (typeof cosmetics === 'string') {
-        try {
-            cosmetics = JSON.parse(cosmetics);
-        } catch (error) {
-            cosmetics = {};
+    async getEquippedCosmetics(userId) {
+        const user = await this.economy.getUser(userId);
+        
+        // ✅ Manejar cosmetics como string o objeto
+        let cosmetics = user.cosmetics || {};
+        
+        if (typeof cosmetics === 'string') {
+            try {
+                cosmetics = JSON.parse(cosmetics);
+            } catch (error) {
+                cosmetics = {};
+            }
         }
+        
+        if (typeof cosmetics !== 'object') {
+            return [];
+        }
+        
+        // Devolver array de cosméticos equipados
+        return Object.values(cosmetics).filter(cosmetic => cosmetic.equipped);
     }
-    
-    if (typeof cosmetics !== 'object') {
-        return [];
-    }
-    
-    // Devolver array de cosméticos equipados
-    return Object.values(cosmetics).filter(cosmetic => cosmetic.equipped);
-}
     
     // AGREGAR esta función:
     getCachedItems() {
@@ -743,6 +837,11 @@ async getEquippedCosmetics(userId) {
         const item = this.shopItems[itemId];
         if (!item) {
             await message.reply('❌ Item no encontrado. Usa `>shop` para ver los items disponibles.');
+            return;
+        }
+
+        if (item.chestOnly) {
+            await message.reply('❌ Este item solo se puede obtener de cofres especiales.');
             return;
         }
         

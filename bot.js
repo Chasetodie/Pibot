@@ -125,7 +125,7 @@ const trades = new TradeSystem(shop);
 
 const auctions = new AuctionSystem(shop);
 
-const crafting = new CraftingSystem(shop);
+const crafting = new CraftingSystem(shop, client);
 
 // Instancia del sistema de comandos mejorados
 const allCommands = new AllCommands(economy, shop, trades, auctions, crafting, events, betting);

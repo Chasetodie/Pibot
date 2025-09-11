@@ -165,23 +165,112 @@ class LocalDatabase {
                 )
             `);
 
-// Agregar después de la tabla de auctions
-await this.pool.execute(`
-    CREATE TABLE IF NOT EXISTS crafting_queue (
-        id VARCHAR(255) PRIMARY KEY,
-        user_id TEXT NOT NULL,
-        recipe_id TEXT NOT NULL,
-        recipe_name TEXT NOT NULL,
-        completes_at TEXT NOT NULL,
-        status TEXT,
-        result_item_id TEXT NOT NULL,
-        result_quantity INTEGER DEFAULT 1
-    )
-`);
+            // Agregar después de la tabla de auctions
+            await this.pool.execute(`
+                CREATE TABLE IF NOT EXISTS crafting_queue (
+                    id VARCHAR(255) PRIMARY KEY,
+                    user_id TEXT NOT NULL,
+                    recipe_id TEXT NOT NULL,
+                    recipe_name TEXT NOT NULL,
+                    completes_at TEXT NOT NULL,
+                    status TEXT,
+                    result_item_id TEXT NOT NULL,
+                    result_quantity INTEGER DEFAULT 1
+                )
+            `);
 
             console.log('🗃️ Tablas MySQL inicializadas');
         } catch (error) {
             console.error('❌ Error creando tablas:', error);
+        }
+    }
+
+    // En LocalDatabase, agregar este método:
+    async getCraftById(craftId) {
+        try {
+            const [rows] = await this.pool.execute(
+                'SELECT * FROM crafting_queue WHERE id = ? AND status = ?',
+                [craftId, 'in_progress']
+            );
+            return rows.length > 0 ? rows[0] : null;
+        } catch (error) {
+            console.error('❌ Error obteniendo craft por ID:', error);
+            return null;
+        }
+    }
+
+    async cancelCraft(craftId) {
+        try {
+            await this.pool.execute(
+                'UPDATE crafting_queue SET status = ? WHERE id = ?',
+                ['cancelled', craftId]
+            );
+            return true;
+        } catch (error) {
+            console.error('❌ Error cancelando craft:', error);
+            return false;
+        }
+    }
+
+    // Métodos para Crafting System
+    async getCraftingQueue(userId) {
+        try {
+            const [rows] = await this.pool.execute(
+                'SELECT * FROM crafting_queue WHERE user_id = ? AND status = ? ORDER BY completes_at ASC',
+                [userId, 'in_progress']
+            );
+            return rows;
+        } catch (error) {
+            console.error('❌ Error obteniendo cola de crafteo:', error);
+            return [];
+        }
+    }
+
+    async getCompletedCrafts() {
+        try {
+            const [rows] = await this.pool.execute(
+                'SELECT * FROM crafting_queue WHERE completes_at <= ? AND status = ?',
+                [new Date().toISOString(), 'in_progress']
+            );
+            return rows;
+        } catch (error) {
+            console.error('❌ Error obteniendo crafteos completados:', error);
+            return [];
+        }
+    }
+
+    async addCraftToQueue(craftData) {
+        try {
+            await this.pool.execute(`
+                INSERT INTO crafting_queue (id, user_id, recipe_id, recipe_name, completes_at, result_item_id, result_quantity, status)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            `, [
+                craftData.id,
+                craftData.user_id,
+                craftData.recipe_id,
+                craftData.recipe_name,
+                craftData.completes_at,
+                craftData.result_item_id,
+                craftData.result_quantity,
+                'in_progress'
+            ]);
+            return true;
+        } catch (error) {
+            console.error('❌ Error agregando craft a cola:', error);
+            throw error;
+        }
+    }
+
+    async completeCraftInDB(craftId) {
+        try {
+            await this.pool.execute(
+                'UPDATE crafting_queue SET status = ? WHERE id = ?',
+                ['completed', craftId]
+            );
+            return true;
+        } catch (error) {
+            console.error('❌ Error completando craft en DB:', error);
+            return false;
         }
     }
 
