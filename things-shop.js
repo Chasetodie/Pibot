@@ -865,30 +865,41 @@ class CraftingSystem {
         // Marcar como completado
         await this.shop.economy.database.completeCraftInDB(craftId);
         
-        // Notificar al usuario
+        // Notificar en el canal en lugar de DM
         try {
-            const user = await this.client.users.fetch(craft.user_id);
-            if (user) {
-                const embed = {
-                    color: 0x00ff00,
-                    title: '🔨 ¡Crafteo Completado!',
-                    description: `Tu **${craft.recipe_name}** está listo!`,
-                    fields: [
-                        {
-                            name: '📦 Item Obtenido',
-                            value: craft.recipe_name,
-                            inline: true
-                        }
-                    ],
-                    timestamp: new Date().toISOString()
-                };
-                
-                await user.send({ embeds: [embed] }).catch(() => {
-                    console.log(`No se pudo enviar DM al usuario ${craft.user_id}`);
-                });
+            // Buscar un canal donde el usuario haya escrito recientemente
+            const guild = this.client.guilds.cache.first(); // O la guild específica donde esté tu bot
+            if (guild) {
+                const member = await guild.members.fetch(craft.user_id).catch(() => null);
+                if (member) {
+                    // Buscar el canal general o el último canal donde escribió
+                    const channel = guild.channels.cache.find(ch => 
+                        ch.name.includes('general') || 
+                        ch.name.includes('bot') ||
+                        ch.name.includes('comando')
+                    ) || guild.channels.cache.find(ch => ch.type === 0); // Primer canal de texto
+                    
+                    if (channel) {
+                        const embed = {
+                            color: 0x00ff00,
+                            title: '🔨 ¡Crafteo Completado!',
+                            description: `<@${craft.user_id}> tu **${craft.recipe_name}** está listo!\n\nRevisa tu inventario con \`>inventory\``,
+                            fields: [
+                                {
+                                    name: '📦 Item Obtenido',
+                                    value: craft.recipe_name,
+                                    inline: true
+                                }
+                            ],
+                            timestamp: new Date().toISOString()
+                        };
+                        
+                        await channel.send({ embeds: [embed] });
+                    }
+                }
             }
         } catch (error) {
-            console.log(`No se pudo notificar al usuario ${craft.user_id}: ${error.message}`);
+            console.log(`Error notificando crafteo completado para ${craft.user_id}: ${error.message}`);
         }
         
         console.log(`✅ Craft completado: ${craft.recipe_name} para usuario ${craft.user_id}`);
@@ -907,9 +918,16 @@ class CraftingSystem {
             const completesAt = new Date(craft.completes_at).getTime();
             const now = Date.now();
             const timeLeft = completesAt - now;
-            const minutes = Math.max(0, Math.floor(timeLeft / 60000));
-            queueText += `**${index + 1}.** 🔨 **${craft.recipe_name}**\n`;
-            queueText += `└ Completa en: ${minutes > 0 ? `${minutes} minutos` : 'Listo!'}\n\n`;
+            
+            if (timeLeft <= 0) {
+                queueText += `**${index + 1}.** 🔨 **${craft.recipe_name}** ✅ **COMPLETADO**\n\n`;
+            } else {
+                const minutes = Math.floor(timeLeft / 60000);
+                const seconds = Math.floor((timeLeft % 60000) / 1000);
+                const timeString = minutes > 0 ? `${minutes}m ${seconds}s` : `${seconds}s`;
+                queueText += `**${index + 1}.** 🔨 **${craft.recipe_name}**\n`;
+                queueText += `└ Completa en: ${timeString}\n\n`;
+            }
         });
         
         const embed = {
@@ -1005,12 +1023,14 @@ embed.fields.push({
             if (!this.hasRequiredMaterials(userItems, recipe.ingredients)) {
                 let missingMaterials = '';
                 recipe.ingredients.forEach(ingredient => {
-                    const userQuantity = userItems[ingredient.id] || 0;
+                    const userItem = userItems[ingredient.id];
+                    const userQuantity = userItem ? userItem.quantity : 0;  // Usar .quantity
                     const item = this.shop.shopItems[ingredient.id];
                     if (userQuantity < ingredient.quantity) {
                         const itemName = item ? item.name : ingredient.id;
                         const emoji = item ? item.emoji || '📦' : '📦';
-                        missingMaterials += `${emoji} ${itemName}: ${userQuantity}/${ingredient.quantity}\n`;
+                        const needed = ingredient.quantity - userQuantity;
+                        missingMaterials += `${emoji} ${itemName}: ${userQuantity}/${ingredient.quantity} (faltan ${needed})\n`;
                     }
                 });
                 
@@ -1057,7 +1077,7 @@ embed.fields.push({
                         },
                         {
                             name: '🎯 Se completará',
-                            value: `<t:${Math.floor(completesAt/1000)}:R>`,
+                            value: `<t:${Math.floor(completesAt/1000)}:t>`,
                             inline: true
                         }
                     ]

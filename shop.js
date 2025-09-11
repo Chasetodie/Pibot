@@ -928,12 +928,26 @@ class ShopSystem {
             
             const rarityEmoji = this.rarityEmojis[item.rarity];
             const quantity = userItem.quantity;
-            const value = item.price * quantity;
-            totalValue += value;
+            
+            // Verificar si el item tiene precio
+            const itemPrice = item.price || 0;
+            const value = itemPrice * quantity;
+            
+            // Solo sumar al total si tiene precio
+            if (itemPrice > 0) {
+                totalValue += value;
+            }
 
             inventoryText += `${rarityEmoji} **${item.name}**\n`;                       
             inventoryText += `├ Cantidad: x${quantity}\n`;
-            inventoryText += `├ Valor: ${value.toLocaleString('es-ES')} π-b$\n`;
+            
+            // Mostrar precio o "Sin valor"
+            if (itemPrice > 0) {
+                inventoryText += `├ Valor: ${value.toLocaleString('es-ES')} π-b$\n`;
+            } else {
+                inventoryText += `├ Valor: Sin valor\n`;
+            }
+            
             inventoryText += `└ ID: \`${itemId}\`\n\n`;
         }
         
