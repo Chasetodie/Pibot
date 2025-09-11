@@ -908,12 +908,12 @@ class CraftingSystem {
             const timeLeft = completesAt - now;
             
             if (timeLeft <= 0) {
-                queueText += `**${index + 1}.** 🔨 **${craft.emoji} ${craft.recipe_name}** ✅ **COMPLETADO**\n\n`;
+                queueText += `**${index + 1}.** 🔨 **${craft.recipe_name}** ✅ **COMPLETADO**\n\n`;
             } else {
                 const minutes = Math.floor(timeLeft / 60000);
                 const seconds = Math.floor((timeLeft % 60000) / 1000);
                 const timeString = minutes > 0 ? `${minutes}m ${seconds}s` : `${seconds}s`;
-                queueText += `**${index + 1}.** 🔨 **${craft.emoji} ${craft.recipe_name}**\n`;
+                queueText += `**${index + 1}.** 🔨 **${craft.recipe_name}**\n`;
                 queueText += `└ Completa en: ${timeString}\n\n`;
             }
         });
