@@ -975,7 +975,7 @@ class CraftingSystem {
                 return message.reply('❌ Receta no encontrada. Usa `>recipes` para ver las disponibles.');
             }
             
-            const userData = await getUserData(message.author.id);
+            const userData = await getUser(message.author.id);
             if (!userData) {
                 return message.reply('❌ Usuario no registrado.');
             }
