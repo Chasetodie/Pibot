@@ -1155,6 +1155,8 @@ embed.fields.push({
     async cancelCraft(message, args) {
         try {
             const userId = message.author.id;
+            const recipe = this.CRAFTING_RECIPES[craft.recipe_id];
+            const realItemName = recipe ? recipe.name : craft.recipe_name;
             
             // Si no especifica ID, mostrar lista para cancelar
             if (!args[0]) {
@@ -1168,9 +1170,6 @@ embed.fields.push({
                 crafts.forEach((craft, index) => {
                     const timeLeft = new Date(craft.completes_at).getTime() - Date.now();
                     const minutes = Math.max(0, Math.floor(timeLeft / 60000));
-                    
-                    const recipe = this.CRAFTING_RECIPES[craft.recipe_id];
-                    const realItemName = recipe ? recipe.name : craft.recipe_name;
                     
                     craftList += `**${index + 1}.** ${realItemName} (${minutes} min restantes)\n`;
                 });
@@ -1238,7 +1237,7 @@ embed.fields.push({
             const embed = {
                 color: 0xff6600,
                 title: '🚫 Crafteo Cancelado',
-                description: `**${craftToCancel.recipe_name}** ha sido cancelado.`,
+                description: `**${realItemName}** ha sido cancelado.`,
                 fields: [
                     {
                         name: '📦 Materiales Devueltos (80%)',
