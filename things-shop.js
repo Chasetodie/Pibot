@@ -1189,7 +1189,7 @@ embed.fields.push({
             const craftIndex = parseInt(args[0]) - 1;
             
             if (isNaN(craftIndex) || craftIndex < 0 || craftIndex >= crafts.length) {
-                return message.reply('❌ Número de craft inválido. Usa `>cancelcraft` para ver la lista.');
+                return message.reply('❌ Número de craft inválido. Usa `>craftqueue` para ver la lista.');
             }
             
             const craftToCancel = crafts[craftIndex];
