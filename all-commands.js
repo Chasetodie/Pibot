@@ -1813,7 +1813,7 @@ async handleBalance(message, targetUser = null) {
                             fields: [
                                 {
                                     name: '📋 Uso',
-                                    value: '`>cancelcraft` - Ver lista de crafteos\n`>cancelcraft <número>` - Cancelar crafteo específico',
+                                    value: '`>craftqueue` - Ver lista de crafteos\n`>cancelcraft <número>` - Cancelar crafteo específico',
                                     inline: false
                                 },
                                 {
@@ -1823,11 +1823,11 @@ async handleBalance(message, targetUser = null) {
                                 },
                                 {
                                     name: '📝 Ejemplos',
-                                    value: '`>cancelcraft` - Ver tus crafteos\n`>cancelcraft 1` - Cancelar el crafteo #1\n`>cancelcraft 2` - Cancelar el crafteo #2',
+                                    value: '`>craftqueue` - Ver tus crafteos\n`>cancelcraft 1` - Cancelar el crafteo #1\n`>cancelcraft 2` - Cancelar el crafteo #2',
                                     inline: false
                                 }
                             ],
-                            footer: { text: 'Usa >queue para ver todos tus crafteos activos' }
+                            footer: { text: 'Usa >craftqueue para ver todos tus crafteos activos' }
                         };
                         
                         await message.channel.send({ embeds: [helpEmbed] });
