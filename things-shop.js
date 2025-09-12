@@ -461,8 +461,8 @@ class CraftingSystem {
             'super_lucky_charm': {
                 id: 'super_lucky_charm',
                 name: '🍀✨ Super Amuleto de Suerte',
-                description: 'Versión mejorada del amuleto normal (x2.0 multiplicador, 4 horas)',
-                craftTime: /*3600000*/60000, // 1 hora
+                description: 'Versión mejorada del amuleto normal (x2.0 multiplicador, 3 horas)',
+                craftTime: 3600000, // 1 hora
                 ingredients: [
                     { id: 'lucky_charm', quantity: 5 },
                     { id: 'double_xp_potion', quantity: 2 }
