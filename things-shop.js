@@ -1155,8 +1155,8 @@ embed.fields.push({
     async cancelCraft(message, args) {
         try {
             const userId = message.author.id;
-            const recipe = this.CRAFTING_RECIPES[craft.recipe_id];
-            const realItemName = recipe ? recipe.name : craft.recipe_name;
+            const therecipe = this.CRAFTING_RECIPES[craft.recipe_id];
+            const realItemName = therecipe ? therecipe.name : craft.recipe_name;
             
             // Si no especifica ID, mostrar lista para cancelar
             if (!args[0]) {
