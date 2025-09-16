@@ -2554,6 +2554,7 @@ class ShopSystem {
         
         const args = message.content.toLowerCase().split(' ');
         const command = args[0];
+        await economy.missions.updateMissionProgress(message.author.id, 'command_used');
         
         try {
             switch (command) {

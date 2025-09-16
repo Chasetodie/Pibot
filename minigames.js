@@ -4238,6 +4238,7 @@ class MinigamesSystem {
     async processCommand(message) {
         const args = message.content.toLowerCase().split(' ');
         const command = args[0];
+        await this.economy.missions.updateMissionProgress(message.author.id, 'command_used');
 
         try {
             switch (command) {
