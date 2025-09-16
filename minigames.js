@@ -487,7 +487,7 @@ class MinigamesSystem {
 
             if (hasProtection) {
                 embed.addFields(
-                    { name: '🛡️ Protección', value: 'Tu Fortune Shield te protegió de la pérdida!', inline: false }
+                    { name: '🛡️ Protección', value: `${protectionMessage}`, inline: false }
                 );
             } else {
                 embed.addFields(
