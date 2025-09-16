@@ -1200,18 +1200,18 @@ class AllCommands {
                     let penaltyText = '';
 
                     // Verificar si el robber tiene protección
-                    if (canRobResult.robberProtection) {
-                        penaltyText = `\n\n${canRobResult.robberProtection}`;
+                    if (robberyResult.robberProtection) {
+                        penaltyText = `\n\n${robberyResult.robberProtection}`;
                     } else {
-                        penaltyText = `\n\n💸**Perdiste**\n${canRobResult.penalty} π-b$`;
+                        penaltyText = `\n\n💸**Perdiste**\n${robberyResult.penalty} π-b$`;
                     }
                     
-                    if (canRobResult.protectionType === 'shield') {
+                    if (robberyResult.protectionType === 'shield') {
                         errorMessage = `🛡️ ¡Rayos! **${targetUser.displayName}** tiene un **Escudo Antirrobo** activado. Tu intento de robo rebotó como una pelota de goma. 🏀${penaltyText}`;
-                    } else if (canRobResult.protectionType === 'vault') {
+                    } else if (robberyResult.protectionType === 'vault') {
                         errorMessage = `🏦 **${targetUser.displayName}** guardó su dinero en una **Bóveda Permanente**. Intentaste forzarla pero era más dura que una nuez. 🥜${penaltyText}`;
                     } else {
-                        errorMessage = `🛡️ **${targetUser.displayName}** está muy bien protegido. Parece que invirtió sabiamente en seguridad. 💰${penaltyText}`;
+                        errorMessage = `🛡️ **${targetUser.displayName}** está muy bien protegido/a. Parece que invirtió sabiamente en seguridad. 💰${penaltyText}`;
                     }
                     break;
                 default:
