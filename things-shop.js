@@ -508,7 +508,7 @@ class CraftingSystem {
                 id: 'super_lucky_charm',
                 name: '🍀✨ Super Amuleto de Suerte',
                 description: 'Versión mejorada del amuleto normal (x2.0 multiplicador, 3 horas)',
-                craftTime: /*3600000*/3600, // 1 hora
+                craftTime: 3600000, // 1 hora
                 ingredients: [
                     { id: 'lucky_charm', quantity: 5 },
                     { id: 'double_xp_potion', quantity: 2 }
@@ -627,23 +627,24 @@ class CraftingSystem {
 
             'nickname_token_craft': {
                 id: 'nickname_token_craft',
-                name: '🏷️✨ Token de Apodo VIP',
-                description: 'Permite personalizar tu apodo con estilo',
-                craftTime: 1800000, // 30 minutos
+                name: '🏷️✨ Token de Apodo', // Nombre más claro
+                description: 'Permite personalizar tu apodo con estilo. Usa >setnickname <nuevo_apodo>',
+                craftTime: /*1800000*/3600, // 30 minutos
                 ingredients: [
                     { id: 'rainbow_badge', quantity: 2 },
-                    { id: 'golden_trophy', quantity: 2 }
+                    { id: 'golden_trophy', quantity: 2 },
+                    { id: 'custom_nickname_token', quantity: 3 } // ← NUEVO ingrediente
                 ],
                 result: {
-                    id: 'custom_nickname_token',
+                    id: 'nickname_token', // ← Cambié el ID para que sea más claro
                     category: 'special',
-                    rarity: 'rare',
+                    rarity: 'epic', // Subí la rareza ya que requiere más materiales
                     effect: {
                         type: 'nickname_change',
                         uses: 1
                     },
                     stackable: true,
-                    maxStack: 5
+                    maxStack: 3 // Reduje el stack ya que es más valioso
                 }
             },
 

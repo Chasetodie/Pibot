@@ -556,6 +556,11 @@ client.on('interactionCreate', async (interaction) => {
             }
         }
 
+        if (interaction.customId.startsWith('nickname_')) {
+            await shop.handleNicknameConfirmation(interaction);
+            return;
+        }
+
         // AGREGAR ESTO: Manejo de botones del blackjack
         if (interaction.customId.startsWith('bj_')) {
             await minigames.handleBlackjackButtons(interaction);

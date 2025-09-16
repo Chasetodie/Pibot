@@ -1855,11 +1855,6 @@ class AllCommands {
                     await this.crafting.cancelCraft(message, args.slice(1));
                     break;
 
-                case '>setnick':
-                    const nick = message.content.split(' ');
-                    const nickname = args.slice(1).join(' ');
-                    await this.shop.setCustomNickname(message, nickname);
-                    break;                  
                 case '>vip':
                     await this.vipCommand(message);
                     break;

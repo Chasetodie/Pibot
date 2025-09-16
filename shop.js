@@ -315,14 +315,13 @@ class ShopSystem {
             // === ITEMS ESPECIALES ===
             'custom_nickname_token': {
                 id: 'custom_nickname_token',
-                name: '🏷️ Token de Apodo Personalizado',
-                description: 'Item para craftear un Token de Apodo VIP',
+                name: '🎫 Token de Apodo Básico', // Nombre más claro
+                description: 'Componente básico para craftear el Token de Apodo VIP',
                 price: 200000,
                 category: 'special',
                 rarity: 'rare',
-                //effect: { type: 'nickname_change', uses: 1 },
                 stackable: true,
-                maxStack: 3
+                maxStack: 6 // Aumenté porque ahora es ingrediente
             },
             'premium_mystery_box': {
                 id: 'premium_mystery_box',
@@ -1265,24 +1264,6 @@ class ShopSystem {
         return emojiMap[cosmeticId] || '⭐';
     }
 
-    async handleNicknameChange(userId, item) {
-        // Guardar que el usuario tiene un token activo
-        const user = await this.economy.getUser(userId);
-        const activeTokens = user.activeTokens || {};
-        
-        activeTokens.nickname_change = {
-            expires: Date.now() + 300000, // 5 minutos para usar
-            uses: 1
-        };
-        
-        await this.economy.updateUser(userId, { activeTokens });
-        
-        return {
-            success: true,
-            message: 'Token de apodo activado! Usa `>setnick <tu_apodo>` en los próximos 5 minutos.'
-        };
-    }
-
     // Después del método handleNicknameChange(), AGREGAR:
     async resetAllCooldowns(userId, item) {
         const user = await this.economy.getUser(userId);
@@ -1320,74 +1301,6 @@ class ShopSystem {
         }
         
         return false;
-    }
-
-    async setCustomNickname(message, nickname) {
-        const userId = message.author.id;
-        const user = await this.economy.getUser(userId);
-        const activeTokens = user.activeTokens || {};
-        
-        if (!activeTokens.nickname_change || activeTokens.nickname_change.expires < Date.now()) {
-            await message.reply('❌ No tienes un token de apodo activo. Compra uno en la tienda!');
-            return;
-        }
-        
-        if (!nickname || nickname.length > 20) {
-            await message.reply('❌ El apodo debe tener entre 1 y 20 caracteres.');
-            return;
-        }
-        
-        // Filtro de palabras prohibidas (básico)
-        const forbiddenWords = ['admin', 'mod', 'bot', 'discord', 'everyone', 'here'];
-        if (forbiddenWords.some(word => nickname.toLowerCase().includes(word))) {
-            await message.reply('❌ El apodo contiene palabras no permitidas.');
-            return;
-        }
-        
-        try {
-            // Obtener número del usuario
-            const userNumber = await this.getUserNumber(userId);
-            const newNickname = `Pibe ${userNumber} - ${nickname}`;
-            
-            // Intentar cambiar el nickname en el servidor
-            await message.member.setNickname(newNickname);
-            
-            // Guardar el apodo personalizado
-            const newActiveTokens = { ...activeTokens };
-            delete newActiveTokens.nickname_change;
-            
-            const userProfile = user.profile || {};
-            userProfile.customNickname = nickname;
-            userProfile.nicknameSetAt = Date.now();
-            
-            await this.economy.updateUser(userId, { 
-                activeTokens: newActiveTokens,
-                profile: userProfile
-            });
-            
-            const embed = new EmbedBuilder()
-                .setTitle('🏷️ Apodo Cambiado!')
-                .setDescription(`Tu nuevo apodo es: **${newNickname}**`)
-                .setColor('#00FF00')
-                .setTimestamp();
-            
-            await message.reply({ embeds: [embed] });
-            
-        } catch (error) {
-            console.error('Error cambiando nickname:', error);
-            await message.reply('❌ No pude cambiar tu nickname. Puede que no tenga permisos.');
-        }
-    }
-
-    async getUserNumber(userId) {
-        // Generar un número único basado en el ID del usuario
-        let hash = 0;
-        for (let i = 0; i < userId.length; i++) {
-            const char = userId.charCodeAt(i);
-            hash = ((hash << 5) - hash) + char;
-            hash = hash & hash; // Convertir a entero de 32 bits
-        }
-        return Math.abs(hash) % 9999 + 1; // Número entre 1 y 9999
     }
     
     // === APLICAR EFECTO CONSUMIBLE ===
@@ -2554,6 +2467,236 @@ class ShopSystem {
         await message.reply({ embeds: [embed] });
     }
 
+    async handleSetNickname(message, args) {
+        const userId = message.author.id;
+        const newNickname = args.join(' ').trim();
+        
+        // Validar que proporcionó un apodo
+        if (!newNickname) {
+            await message.reply({
+                embeds: [new EmbedBuilder()
+                    .setTitle('❌ Apodo Requerido')
+                    .setDescription('Debes proporcionar un apodo.\n\n**Uso:** `>setnickname <tu_apodo>`')
+                    .setColor('#FF0000')]
+            });
+            return;
+        }
+        
+        // Validar longitud del apodo
+        if (newNickname.length > 20) {
+            await message.reply({
+                embeds: [new EmbedBuilder()
+                    .setTitle('❌ Apodo Muy Largo')
+                    .setDescription('El apodo no puede tener más de 20 caracteres.')
+                    .setColor('#FF0000')]
+            });
+            return;
+        }
+        
+        // Validar caracteres permitidos (opcional)
+        const forbiddenChars = /[<>@#&!]/;
+        if (forbiddenChars.test(newNickname)) {
+            await message.reply({
+                embeds: [new EmbedBuilder()
+                    .setTitle('❌ Caracteres No Permitidos')
+                    .setDescription('El apodo no puede contener: `< > @ # & !`')
+                    .setColor('#FF0000')]
+            });
+            return;
+        }
+        
+        // Verificar que tiene el item
+        const user = await this.economy.getUser(userId);
+        const userItems = user.items || {};
+        
+        if (!userItems['vip_nickname_token'] || userItems['vip_nickname_token'].quantity < 1) {
+            await message.reply({
+                embeds: [new EmbedBuilder()
+                    .setTitle('❌ Token Requerido')
+                    .setDescription('Necesitas un **🏷️✨ Token de Apodo VIP** para cambiar tu apodo.')
+                    .addFields(
+                        { name: '💡 ¿Cómo Obtenerlo?', value: '1. Compra un 🎫 Token de Apodo Básico\n2. Consigue materiales (badges/trophies)\n3. Craftéalo con `>craft nickname_token_craft`', inline: false }
+                    )
+                    .setColor('#FF0000')]
+            });
+            return;
+        }
+        
+        // Obtener el apodo actual del usuario en el servidor
+        const member = message.guild.members.cache.get(userId);
+        if (!member) {
+            await message.reply('❌ No se pudo encontrar tu información en el servidor.');
+            return;
+        }
+        
+        const currentNickname = member.displayName;
+        
+        // Extraer el formato base (Pibe/Piba + número)
+        const basePattern = /^(Pibe|Piba)\s+(\d+)/i;
+        const match = currentNickname.match(basePattern);
+        
+        if (!match) {
+            await message.reply({
+                embeds: [new EmbedBuilder()
+                    .setTitle('❌ Formato de Apodo Inválido')
+                    .setDescription('Tu apodo actual no sigue el formato requerido: **Pibe/Piba + número**\n\nContacta a un administrador para corregir tu apodo base.')
+                    .setColor('#FF0000')]
+            });
+            return;
+        }
+        
+        const baseNickname = `${match[1]} ${match[2]}`; // "Pibe 123" o "Piba 456"
+        const finalNickname = `${baseNickname} - ${newNickname}`;
+        
+        // Verificar que el nuevo apodo no exceda el límite de Discord (32 caracteres)
+        if (finalNickname.length > 32) {
+            const maxCustomLength = 32 - baseNickname.length - 3; // -3 por " - "
+            await message.reply({
+                embeds: [new EmbedBuilder()
+                    .setTitle('❌ Apodo Muy Largo')
+                    .setDescription(`El apodo final sería muy largo para Discord.\n\n**Tu base:** ${baseNickname}\n**Máximo para tu apodo:** ${maxCustomLength} caracteres\n**Tu apodo:** ${newNickname} (${newNickname.length} caracteres)`)
+                    .setColor('#FF0000')]
+            });
+            return;
+        }
+        
+        // Crear embed de confirmación
+        const confirmEmbed = new EmbedBuilder()
+            .setTitle('🏷️ Confirmar Cambio de Apodo')
+            .setDescription(`¿Estás seguro de que quieres cambiar tu apodo?`)
+            .addFields(
+                { name: '📝 Apodo Actual', value: `**${currentNickname}**`, inline: true },
+                { name: '✨ Nuevo Apodo', value: `**${finalNickname}**`, inline: true },
+                { name: '💎 Costo', value: '**1x** 🏷️✨ Token de Apodo VIP', inline: false },
+                { name: '⚠️ Importante', value: 'El token será consumido permanentemente. Para cambiar el apodo otra vez necesitarás otro token.', inline: false }
+            )
+            .setColor('#FFD700')
+            .setThumbnail(message.author.displayAvatarURL({ dynamic: true }));
+        
+        // Crear botones
+        const row = new ActionRowBuilder()
+            .addComponents(
+                new ButtonBuilder()
+                    .setCustomId(`nickname_confirm_${userId}`)
+                    .setLabel('✅ Confirmar')
+                    .setStyle(ButtonStyle.Success),
+                new ButtonBuilder()
+                    .setCustomId(`nickname_cancel_${userId}`)
+                    .setLabel('❌ Cancelar')
+                    .setStyle(ButtonStyle.Danger)
+            );
+        
+        // Guardar datos temporales para la confirmación
+        if (!this.pendingNicknames) {
+            this.pendingNicknames = new Map();
+        }
+        
+        this.pendingNicknames.set(userId, {
+            newNickname: newNickname,
+            finalNickname: finalNickname,
+            baseNickname: baseNickname,
+            timestamp: Date.now()
+        });
+        
+        // Enviar mensaje de confirmación
+        const confirmMessage = await message.reply({ 
+            embeds: [confirmEmbed], 
+            components: [row] 
+        });
+        
+        // Limpiar datos después de 60 segundos
+        setTimeout(() => {
+            this.pendingNicknames.delete(userId);
+            // Desactivar botones si el mensaje aún existe
+            row.components.forEach(button => button.setDisabled(true));
+            confirmMessage.edit({ components: [row] }).catch(() => {});
+        }, 60000);
+    }
+
+    // Método para manejar la confirmación/cancelación
+    async handleNicknameConfirmation(interaction) {
+        const userId = interaction.user.id;
+        const action = interaction.customId.split('_')[1]; // confirm o cancel
+        
+        if (!this.pendingNicknames || !this.pendingNicknames.has(userId)) {
+            await interaction.reply({ content: '❌ Esta confirmación ha expirado.', ephemeral: true });
+            return;
+        }
+        
+        const nicknameData = this.pendingNicknames.get(userId);
+        this.pendingNicknames.delete(userId);
+        
+        if (action === 'cancel') {
+            await interaction.update({ 
+                embeds: [new EmbedBuilder()
+                    .setTitle('❌ Cambio Cancelado')
+                    .setDescription('El cambio de apodo ha sido cancelado. Tu token no fue consumido.')
+                    .setColor('#FF0000')],
+                components: []
+            });
+            return;
+        }
+        
+        if (action === 'confirm') {
+            try {
+                // Verificar nuevamente que tiene el token (por si acaso)
+                const user = await this.economy.getUser(userId);
+                const userItems = user.items || {};
+                
+                if (!userItems['vip_nickname_token'] || userItems['vip_nickname_token'].quantity < 1) {
+                    await interaction.update({
+                        embeds: [new EmbedBuilder()
+                            .setTitle('❌ Token No Disponible')
+                            .setDescription('Ya no tienes el token requerido.')
+                            .setColor('#FF0000')],
+                        components: []
+                    });
+                    return;
+                }
+                
+                // Cambiar el apodo en Discord
+                const member = interaction.guild.members.cache.get(userId);
+                await member.setNickname(nicknameData.finalNickname);
+                
+                // Consumir el token
+                const newItems = { ...userItems };
+                newItems['vip_nickname_token'].quantity -= 1;
+                if (newItems['vip_nickname_token'].quantity <= 0) {
+                    delete newItems['vip_nickname_token'];
+                }
+                
+                await this.economy.updateUser(userId, { items: newItems });
+                
+                // Confirmar éxito
+                const successEmbed = new EmbedBuilder()
+                    .setTitle('✅ Apodo Cambiado Exitosamente')
+                    .setDescription(`Tu apodo ha sido actualizado correctamente.`)
+                    .addFields(
+                        { name: '✨ Nuevo Apodo', value: `**${nicknameData.finalNickname}**`, inline: true },
+                        { name: '💎 Token Consumido', value: '1x 🏷️✨ Token de Apodo VIP', inline: true },
+                        { name: '🔄 Para Cambiar Otra Vez', value: 'Necesitarás craftear otro token y usar `>setnickname <nuevo_apodo>`', inline: false }
+                    )
+                    .setColor('#00FF00')
+                    .setThumbnail(interaction.user.displayAvatarURL({ dynamic: true }));
+                
+                await interaction.update({ 
+                    embeds: [successEmbed], 
+                    components: [] 
+                });
+                
+            } catch (error) {
+                console.error('Error cambiando apodo:', error);
+                await interaction.update({
+                    embeds: [new EmbedBuilder()
+                        .setTitle('❌ Error al Cambiar Apodo')
+                        .setDescription('Hubo un error al cambiar tu apodo. Tu token no fue consumido. Contacta a un administrador.')
+                        .setColor('#FF0000')],
+                    components: []
+                });
+            }
+        }
+    }
+
     // === COMANDOS ===
     async processCommand(message) {
         if (message.author.bot) return;
@@ -2641,6 +2784,9 @@ class ShopSystem {
                     });
                     
                     await message.reply({ embeds: [embedCF] });
+                    break;
+                case 'setnickname':
+                    await this.handleSetNickname(message, args);
                     break;
             }
         } catch (error) {
