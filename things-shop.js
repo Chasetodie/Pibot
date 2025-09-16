@@ -556,7 +556,7 @@ class CraftingSystem {
             'mega_luck_craft': {
                 id: 'mega_luck_craft',
                 name: '🍀✨ Mega Poción de Suerte',
-                description: 'Una potente mezcla de suerte concentrada',
+                description: 'Una potente mezcla de suerte concentrada que aumenta la probabilidad de ganar en juegos +25% por 1h 30m',
                 craftTime: 3600000, // 1 hora
                 ingredients: [
                     { id: 'lucky_charm', quantity: 4 },
@@ -574,54 +574,6 @@ class CraftingSystem {
                     },
                     stackable: true,
                     maxStack: 5
-                }
-            },
-
-            'speed_boots_craft': {
-                id: 'speed_boots_craft',
-                name: '👟⚡ Botas de Velocidad Supremas',
-                description: 'Reduce todos los cooldowns a cero temporalmente',
-                craftTime: 3600000, // 1 hora
-                ingredients: [
-                    { id: 'work_boots', quantity: 2 },
-                    { id: 'energy_drink', quantity: 8 },
-                    { id: 'lucky_charm', quantity: 2 }
-                ],
-                result: {
-                    id: 'speed_boots',
-                    category: 'consumable',
-                    rarity: 'epic',
-                    effect: {
-                        type: 'no_cooldown',
-                        targets: ['all'],
-                        duration: 1800 // 30 min
-                    },
-                    stackable: true,
-                    maxStack: 2
-                }
-            },
-
-            'xp_tornado_craft': {
-                id: 'xp_tornado_craft',
-                name: '🌪️📚 Tornado de XP',
-                description: 'Fusiona pociones de XP para algo épico',
-                craftTime: 3600000, // 1 hora
-                ingredients: [
-                    { id: 'double_xp_potion', quantity: 5 },
-                    { id: 'lucky_charm', quantity: 3 }
-                ],
-                result: {
-                    id: 'xp_tornado',
-                    category: 'consumable',
-                    rarity: 'epic',
-                    effect: {
-                        type: 'xp_multiplier',
-                        targets: ['all'],
-                        multiplier: 3.0,
-                        duration: 1200 // 20 min
-                    },
-                    stackable: true,
-                    maxStack: 3
                 }
             },
 
@@ -695,30 +647,6 @@ class CraftingSystem {
                             { id: 'money_magnet', chance: 0.2 },
                             { id: 'golden_pickaxe', chance: 0.1 }
                         ]
-                    },
-                    stackable: true,
-                    maxStack: 5
-                }
-            },
-
-            // ⚡ Poción Turbo
-            'turbo_potion_craft': {
-                id: 'turbo_potion_craft',
-                name: '⚡🥤 Poción Turbo',
-                description: 'Reduce cooldowns en 50% por 20 minutos',
-                craftTime: 3600000, // 1 hora
-                ingredients: [
-                    { id: 'energy_drink', quantity: 3 },
-                    { id: 'work_boots', quantity: 1 }
-                ],
-                result: {
-                    id: 'turbo_potion',
-                    category: 'consumable',
-                    rarity: 'epic',
-                    effect: {
-                        type: 'cooldown_reduction',
-                        reduction: 0.5,
-                        duration: 1200
                     },
                     stackable: true,
                     maxStack: 5

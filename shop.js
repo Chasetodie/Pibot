@@ -223,18 +223,6 @@ class ShopSystem {
                 maxStack: 1
             },
 
-            // === NUEVOS CONSUMIBLES TEMPORALES ===
-            'mega_luck_potion': {
-                id: 'mega_luck_potion',
-                name: '🍀 Mega Poción de Suerte',
-                description: 'Aumenta la probabilidad de ganar en juegos +25% por 1h 30m',
-                price: 300000,
-                category: 'consumable',
-                rarity: 'epic',
-                effect: { type: 'luck_boost', targets: ['games'], boost: 0.2, duration: 3600 },
-                stackable: true,
-                maxStack: 3
-            },
             'speed_boots': {
                 id: 'speed_boots',
                 name: '👟 Botas de Velocidad',
@@ -242,7 +230,7 @@ class ShopSystem {
                 price: 500000,
                 category: 'consumable',
                 rarity: 'rare',
-                effect: { type: 'cooldown_reduction', targets: ['all'], reduction: 0.7, duration: 1200 },
+                effect: { type: 'cooldown_reduction', targets: ['all'], reduction: 0.7, duration: 1800 },
                 stackable: true,
                 maxStack: 2
             },
@@ -520,6 +508,85 @@ class ShopSystem {
                 stackable: true,
                 maxStack: 2
             },
+            'master_toolkit': {
+                id: 'master_toolkit',
+                name: '🔧⚡ Kit Maestro',
+                description: 'Reduce todos los cooldowns permanentemente en 30%',
+                category: 'permanent',
+                rarity: 'legendary',
+                effect: {
+                    type: 'permanent_cooldown',
+                    targets: ['all'],
+                    reduction: 0.3
+                },
+                chestOnly: true,
+                stackable: false,
+                maxStack: 1
+            },            
+            'mega_luck_potion': {
+                id: 'mega_luck_potion',
+                name: '🍀✨ Mega Poción de Suerte',
+                description: 'Una potente mezcla de suerte concentrada que aumenta la probabilidad de ganar en juegos +25% por 1h 30m',
+                category: 'consumable', 
+                rarity: 'epic',
+                effect: {
+                    type: 'luck_boost',
+                    targets: ['games', 'all'],
+                    boost: 0.25,
+                    duration: 5400 // 1h 30m
+                },
+                chestOnly: true,
+                stackable: true,
+                maxStack: 5
+            },           
+            'nickname_token': {
+                id: 'nickname_token',
+                name: '🏷️✨ Token de Apodo', // Nombre más claro
+                description: 'Permite personalizar tu apodo con estilo. Usa >setnickname <nuevo_apodo>',
+                category: 'special',
+                rarity: 'epic', // Subí la rareza ya que requiere más materiales
+                effect: {
+                    type: 'nickname_change',
+                    uses: 1
+                },
+                chestOnly: true,
+                stackable: true,
+                maxStack: 3 // Reduje el stack ya que es más valioso
+            },    
+            'epic_chest': {
+                id: 'epic_chest',
+                name: '📦🏆 Cofre Épico',
+                description: 'Un cofre misterioso que contiene recompensas raras',
+                category: 'special',
+                rarity: 'epic',
+                effect: {
+                    type: 'open_chest',
+                    rewards: [
+                        { id: 'lucky_charm', chance: 0.4 },
+                        { id: 'double_xp_potion', chance: 0.3 },
+                        { id: 'money_magnet', chance: 0.2 },
+                        { id: 'golden_pickaxe', chance: 0.1 }
+                    ]
+                },
+                chestOnly: true,
+                stackable: true,
+                maxStack: 5
+            },             
+            'master_gloves': {
+                id: 'master_gloves',
+                name: '💀🧤 Guantes del Ladrón Maestro',
+                description: 'Mejora la efectividad de los robos (+50% éxito, 10 usos)',
+                category: 'consumable',
+                rarity: 'epic',
+                effect: {
+                    type: 'robbery_boost',
+                    successRate: 0.5,
+                    uses: 10
+                },
+                chestOnly: true,
+                stackable: true,
+                maxStack: 2
+            },      
             'cosmic_charm': {
                 id: 'cosmic_charm',
                 name: '🔮✨ Amuleto Cósmico',
