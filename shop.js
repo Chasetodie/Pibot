@@ -557,7 +557,7 @@ class ShopSystem {
                 id: 'epic_chest',
                 name: '📦🏆 Cofre Épico',
                 description: 'Un cofre misterioso que contiene recompensas raras',
-                category: 'special',
+                category: 'mystery',
                 rarity: 'epic',
                 effect: {
                     type: 'open_chest',
