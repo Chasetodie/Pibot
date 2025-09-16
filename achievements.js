@@ -746,6 +746,11 @@ class AchievementsSystem {
                     auctions_won: (user.stats?.auctions_won || 0) + 1
                 }
                 break;
+            case 'items_crafted':
+                updateData.stats = {
+                    ...user.stats,
+                    items_crafted: (user.stats?.items_crafted || 0) + 1
+                }
             case 'bet_win':
                 // value = cantidad ganada
                 updateData.daily_stats.bets_won_today = (user.daily_stats.bets_won_today || 0) + 1;
@@ -1008,6 +1013,15 @@ class AchievementsSystem {
                 break;
             case 'auctions_created':
                 currentValue = user.stats?.auctions_created || 0;
+            case 'auctions_won':
+                currentValue = user.stats?.auctions_won || 0;
+                break;
+            case 'items_crafted':
+                currentValue = user.stats?.items_crafted || 0;
+                break;
+            case 'single_bet_win':
+                currentValue = user.stats?.max_single_bet_win || 0;
+                break;
             case 'achievements_count':
                 currentValue = Object.values(user.achievements || {}).filter(status => status === 'completed').length;
                 break;

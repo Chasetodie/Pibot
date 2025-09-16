@@ -862,6 +862,16 @@ async checkAndResetAllMissions() {
                 return stats.mentions_made_today || 0;
             case 'active_hours':
                 return (stats.active_hours_today || []).length;
+            case 'reaction_given':
+                return (stats.reactions_given || []).lenght;
+            case 'command_used':
+                return (stats.commands_used || []).lenght;
+            case 'auctions_created_today':
+                return (stats.auctions_created_today || []).lenght;    
+            case 'auctions_won_today':
+                return (stats.auctions_won_today || []).lenght;
+            case 'items_crafted_today':
+                return (stats.items_crafted_today || []).lenght;
             default:
                 return 0;
         }
