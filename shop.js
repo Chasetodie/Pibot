@@ -34,7 +34,7 @@ class ShopSystem {
                     type: 'cooldown_reduction',
                     targets: ['work'],
                     reduction: 0.5,
-                    duration: 3600
+                    duration: 5400
                 },
                 stackable: true,
                 maxStack: 10
