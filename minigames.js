@@ -211,7 +211,13 @@ class MinigamesSystem {
 
         const lastCoin = user.last_coinflip || 0;
         const now = Date.now();
-        const effectiveCooldown = this.getEffectiveCooldown(this.config.coinflip.cooldown);
+        let effectiveCooldown = this.getEffectiveCooldown(this.config.coinflip.cooldown);
+
+        // Aplicar reducción de items
+        if (this.shop) {
+            const cooldownReduction = await this.shop.getCooldownReduction(userId, 'games');
+            effectiveCooldown = Math.floor(effectiveCooldown * (1 - cooldownReduction));
+        }
 
         if (now - lastCoin < effectiveCooldown) {
             const timeLeft = effectiveCooldown - (now - lastCoin);
