@@ -1047,8 +1047,8 @@ class EconomySystem {
             success: true,
             amount: amount,
             message: message,
-            oldBalance: user.balance,
-            newBalance: user.balance + finalEarnings,
+            oldBalance: user.balance - finalEarnings,
+            newBalance: user.balance,
             jobName: job.name,
             eventMessage: eventMessage,
             pickaxeMessage: pickaxeMessage, // NUEVO

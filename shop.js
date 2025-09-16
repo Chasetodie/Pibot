@@ -150,7 +150,7 @@ class ShopSystem {
                 effect: {
                     type: 'permanent_cooldown',
                     targets: ['work'],
-                    reduction: 0.15
+                    reduction: 0.2
                 },
                 stackable: false,
                 maxStack: 1
