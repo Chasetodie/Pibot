@@ -633,7 +633,7 @@ class CraftingSystem {
                 ingredients: [
                     { id: 'rainbow_badge', quantity: 2 },
                     { id: 'golden_trophy', quantity: 2 },
-                    { id: 'custom_nickname_token', quantity: 3 } // ← NUEVO ingrediente
+                    { id: 'custom_nickname_token', quantity: 1 } // ← NUEVO ingrediente
                 ],
                 result: {
                     id: 'nickname_token', // ← Cambié el ID para que sea más claro

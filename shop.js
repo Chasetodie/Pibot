@@ -321,7 +321,7 @@ class ShopSystem {
                 category: 'special',
                 rarity: 'rare',
                 stackable: true,
-                maxStack: 6 // Aumenté porque ahora es ingrediente
+                maxStack: 3 // Aumenté porque ahora es ingrediente
             },
             'premium_mystery_box': {
                 id: 'premium_mystery_box',
