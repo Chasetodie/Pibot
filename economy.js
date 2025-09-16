@@ -655,7 +655,7 @@ class EconomySystem {
                 baseReward: 1500,
                 variation: 1000,
                 levelRequirement: 1,
-                failChance: 0.05, // 5% de fallar
+                failChance: /*0.05*/1, // 5% de fallar
                 messages: [
                     'Entregaste pizzas por toda la ciudad',
                     'Llevaste paquetes de Amazon sin perder ninguno',
