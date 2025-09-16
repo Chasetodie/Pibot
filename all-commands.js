@@ -65,114 +65,133 @@ class AllCommands {
     }
 
     // VERSIÓN AVANZADA: Con estado VIP también
-async handleBalance(message, targetUser = null) {
-    const userId = targetUser ? targetUser.id : message.author.id;
-    const displayName = targetUser ? targetUser.displayName : message.author.displayName;
-    const user = await this.economy.getUser(userId);
-    
-    // Calcular información de nivel
-    const xpForNextLevel = this.economy.getXpForLevel(user.level + 1);
-    const xpForCurrentLevel = this.economy.getXpForLevel(user.level);
-    const totalXpForCurrent = this.economy.getXpNeededForLevel(user.level);
-    const xpProgress = user.total_xp - totalXpForCurrent;
-    const xpNeeded = xpForNextLevel - xpProgress;
-    
-    // Crear barra de progreso
-    const progressBar = this.createProgressBar(xpProgress, xpForNextLevel, 15);
-    const progressPercentage = ((xpProgress / xpForNextLevel) * 100).toFixed(1);
+    async handleBalance(message, targetUser = null) {
+        const userId = targetUser ? targetUser.id : message.author.id;
+        const displayName = targetUser ? targetUser.displayName : message.author.displayName;
+        const user = await this.economy.getUser(userId);
+        
+        // Calcular información de nivel
+        const xpForNextLevel = this.economy.getXpForLevel(user.level + 1);
+        const xpForCurrentLevel = this.economy.getXpForLevel(user.level);
+        const totalXpForCurrent = this.economy.getXpNeededForLevel(user.level);
+        const xpProgress = user.total_xp - totalXpForCurrent;
+        const xpNeeded = xpForNextLevel - xpProgress;
+        
+        // Crear barra de progreso
+        const progressBar = this.createProgressBar(xpProgress, xpForNextLevel, 15);
+        const progressPercentage = ((xpProgress / xpForNextLevel) * 100).toFixed(1);
 
-    // Avatar
-    const avatarUrl = targetUser ? targetUser.displayAvatarURL({ dynamic: true }) : message.author.displayAvatarURL({ dynamic: true });
+        // Avatar
+        const avatarUrl = targetUser ? targetUser.displayAvatarURL({ dynamic: true }) : message.author.displayAvatarURL({ dynamic: true });
 
-    // ✅ ARREGLO: Obtener cosméticos correctamente
-    const equippedCosmetics = await this.shop.getEquippedCosmetics(userId);
-    const vipStatus = await this.getVipStatus(userId);
-    
-    // ✅ ARREGLO: Crear título más simple
-    let decoratedTitle = `💰 ${displayName}`;
-    
-    // Agregar VIP al título si tiene
-    if (vipStatus.hasVip) {
-        decoratedTitle = `👑 ${decoratedTitle}`;
-    }
+        // ✅ ARREGLO: Obtener cosméticos correctamente
+        const equippedCosmetics = await this.shop.getEquippedCosmetics(userId);
+        const vipStatus = await this.getVipStatus(userId);
 
-    const embed = new EmbedBuilder()
-        .setTitle(decoratedTitle)
-        .setColor(vipStatus.hasVip ? '#FFD700' : '#0099FF')
-        .setThumbnail(avatarUrl)
-        .addFields(
-            { 
-                name: `π-b Coins`, 
-                value: `**${this.formatNumber(user.balance)}**`, 
-                inline: true 
-            },
-            { 
-                name: '📊 Nivel', 
-                value: `**${user.level}**`, 
-                inline: true 
-            },
-            { 
-                name: '⭐ XP Total', 
-                value: `**${this.formatNumber(user.total_xp)}**`, 
-                inline: true 
-            },
-            { 
-                name: '📈 Progreso al Siguiente Nivel', 
-                value: `\`${progressBar}\` ${progressPercentage}%\n**${this.formatNumber(xpProgress)}** / **${this.formatNumber(xpForNextLevel)}** XP\n*Faltan ${this.formatNumber(xpNeeded)} XP*`, 
-                inline: false 
-            },
-            { 
-                name: '💬 Mensajes Enviados', 
-                value: `${this.formatNumber(user.messages_count)}`, 
-                inline: true 
-            },
-            { 
-                name: '📥 Total Ganado', 
-                value: `${this.formatNumber(user.stats.totalEarned)} ${this.economy.config.currencySymbol}`, 
-                inline: true 
-            },
-            { 
-                name: '📤 Total Gastado', 
-                value: `${this.formatNumber(user.stats.totalSpent)} ${this.economy.config.currencySymbol}`, 
-                inline: true 
+        // Crear badges string
+        let badgesString = '';
+        if (equippedCosmetics.length > 0) {
+            let badges = [];
+            for (const cosmetic of equippedCosmetics) {
+                const item = this.shop.shopItems[cosmetic.id];
+                if (item) {
+                    const emojiMatch = item.name.match(/[\u{1F600}-\u{1F64F}]|[\u{1F300}-\u{1F5FF}]|[\u{1F680}-\u{1F6FF}]|[\u{1F1E0}-\u{1F1FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]/u);
+                    const emoji = emojiMatch ? emojiMatch[0] : '✨';
+                    badges.push(emoji);
+                }
             }
-        );
-    
-    // ✅ ARREGLO: Mostrar VIP
-    if (vipStatus.hasVip) {
-        embed.addFields({
-            name: '👑 Estado VIP',
-            value: vipStatus.display,
-            inline: false
-        });
-    }
-    
-    // ✅ ARREGLO: Mostrar cosméticos equipados
-    if (equippedCosmetics.length > 0) {
-        let cosmeticsText = '';
-        for (const cosmetic of equippedCosmetics) {
-            const item = this.shop.shopItems[cosmetic.id];
-            if (item) {
-                const emojiMatch = item.name.match(/[\u{1F600}-\u{1F64F}]|[\u{1F300}-\u{1F5FF}]|[\u{1F680}-\u{1F6FF}]|[\u{1F1E0}-\u{1F1FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]/u);
-                const emoji = emojiMatch ? emojiMatch[0] : '✨';
-                cosmeticsText += `${emoji} **${item.name}**\n`;
-            }
+            badgesString = badges.length > 0 ? ` ${badges.join('')}` : '';
         }
         
-        if (cosmeticsText) {
+        // ✅ ARREGLO: Crear título más simple
+        let decoratedTitle = `💰 ${displayName}${badgesString}`;
+        
+        // Agregar VIP al título si tiene
+        if (vipStatus.hasVip) {
+            decoratedTitle = `👑 ${decoratedTitle}`;
+        }
+
+        const embed = new EmbedBuilder()
+            .setTitle(decoratedTitle)
+            .setColor(vipStatus.hasVip ? '#FFD700' : '#0099FF')
+            .setThumbnail(avatarUrl)
+            .addFields(
+                { 
+                    name: `π-b Coins`, 
+                    value: `**${this.formatNumber(user.balance)}**`, 
+                    inline: true 
+                },
+                { 
+                    name: '📊 Nivel', 
+                    value: `**${user.level}**`, 
+                    inline: true 
+                },
+                { 
+                    name: '⭐ XP Total', 
+                    value: `**${this.formatNumber(user.total_xp)}**`, 
+                    inline: true 
+                },
+                { 
+                    name: '📈 Progreso al Siguiente Nivel', 
+                    value: `\`${progressBar}\` ${progressPercentage}%\n**${this.formatNumber(xpProgress)}** / **${this.formatNumber(xpForNextLevel)}** XP\n*Faltan ${this.formatNumber(xpNeeded)} XP*`, 
+                    inline: false 
+                },
+                { 
+                    name: '💬 Mensajes Enviados', 
+                    value: `${this.formatNumber(user.messages_count)}`, 
+                    inline: true 
+                },
+                { 
+                    name: '📥 Total Ganado', 
+                    value: `${this.formatNumber(user.stats.totalEarned)} ${this.economy.config.currencySymbol}`, 
+                    inline: true 
+                },
+                { 
+                    name: '📤 Total Gastado', 
+                    value: `${this.formatNumber(user.stats.totalSpent)} ${this.economy.config.currencySymbol}`, 
+                    inline: true 
+                }
+            );
+        
+        // ✅ ARREGLO: Mostrar VIP
+        if (vipStatus.hasVip) {
             embed.addFields({
-                name: '✨ Cosméticos Equipados',
-                value: cosmeticsText.trim(),
+                name: '👑 Estado VIP',
+                value: vipStatus.display,
                 inline: false
             });
         }
+        
+        // ✅ ARREGLO: Mostrar cosméticos equipados
+        if (equippedCosmetics.length > 0) {
+            let cosmeticsText = '';
+            let cosmeticLines = [];
+            
+            for (const cosmetic of equippedCosmetics) {
+                const item = this.shop.shopItems[cosmetic.id];
+                if (item) {
+                    const emojiMatch = item.name.match(/[\u{1F600}-\u{1F64F}]|[\u{1F300}-\u{1F5FF}]|[\u{1F680}-\u{1F6FF}]|[\u{1F1E0}-\u{1F1FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]/u);
+                    const emoji = emojiMatch ? emojiMatch[0] : '✨';
+                    // Formato más compacto: emoji + nombre en la misma línea, separados por •
+                    cosmeticLines.push(`${emoji} ${item.name.replace(emoji, '').trim()}`);
+                }
+            }
+            
+            if (cosmeticLines.length > 0) {
+                cosmeticsText = cosmeticLines.join(' • '); // Separados por bullets
+                embed.addFields({
+                    name: '🏆 Insignias Equipadas',
+                    value: cosmeticsText,
+                    inline: false
+                });
+            }
+        }
+        
+        embed.setFooter({ text: `ID: ${userId}` })
+            .setTimestamp();
+        
+        await message.reply({ embeds: [embed] });
     }
-    
-    embed.setFooter({ text: `ID: ${userId}` })
-        .setTimestamp();
-    
-    await message.reply({ embeds: [embed] });
-}
 
     // Comando !daily - Reclamar dinero diario
     async handleDaily(message) {
