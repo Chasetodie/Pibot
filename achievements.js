@@ -751,9 +751,9 @@ class AchievementsSystem {
                     ...user.stats,
                     items_crafted: (user.stats?.items_crafted || 0) + 1
                 }
+                break;
             case 'bet_win':
                 // value = cantidad ganada
-                updateData.daily_stats.bets_won_today = (user.daily_stats.bets_won_today || 0) + 1;
                 updateData.stats = {
                     ...user.stats,
                     max_single_bet_win: Math.max(user.stats?.max_single_bet_win || 0, value)
