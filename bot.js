@@ -450,6 +450,20 @@ client.on('guildMemberAdd', async (member) => {
     }
 });
 
+client.on('messageReactionAdd', async (reaction, user) => {
+    if (user.bot) return;
+
+    // *** NUEVO: NOTIFICAR MISIONES COMPLETADAS ***
+    if (this.economy.missions) {
+        const reactions = await economy.missions.updateMissionProgress(user.id, 'reaction_given');
+                
+        const allCompleted = [...reactions];
+        if (allCompleted.length > 0) {
+//            await this.economy.missions.notifyCompletedMissions(message, allCompleted);
+        }
+    }    
+});
+
 // Evento para manejar interacciones con botones
 client.on('interactionCreate', async (interaction) => {
     if (!interaction.isStringSelectMenu() && !interaction.isButton()) return;
@@ -761,7 +775,7 @@ async function processUserActivityOptimized(userId, message) {
         // ✅ Ejecutar siempre las dos principales
         const [achievementsResult, messageResult] = await Promise.allSettled([
             achievements.checkAchievements(userId),
-            missions.updateMissionProgress(userId, 'message')
+            missions.updateMissionProgress(userId, 'message', message.content)
         ]);
         
         // ✅ Ejecutar menciones por separado si es necesario
@@ -898,31 +912,6 @@ client.on('messageCreate', async (message) => {
         }
     }
 });
-
-async function handleLevelUp(message, xpResult, channel) {
-    try {
-        const levelUpEmbed = new EmbedBuilder()
-            .setTitle('🎉 ¡Nuevo Nivel!')
-            .setThumbnail(message.author.displayAvatarURL({ dynamic: true }))
-            .setDescription(`${message.author} alcanzó el **Nivel ${xpResult.newLevel}**`)
-            .addFields(
-                { name: '📈 XP Ganada', value: `+${xpResult.xpGained} XP`, inline: true },
-                { name: '🎁 Recompensa', value: `+${xpResult.reward} π-b$`, inline: true },
-                { name: '🏆 Niveles Subidos', value: `${xpResult.levelsGained}`, inline: true },
-                { name: '🎉 Extra por Eventos', value: `${xpResult.eventMessage || "No hay eventos Activos"}`, inline: false }
-            )
-            .setColor('#FFD700')
-            .setTimestamp();
-            
-        await channel.send({
-            content: `<@${message.author.id}>`,
-            embeds: [levelUpEmbed],
-            allowedMentions: { users: [message.author.id] }
-        });
-    } catch (error) {
-        console.error('❌ Error enviando notificación de nivel:', error);
-    }
-}
 
 // Manejo de errores
 client.on('error', (error) => {

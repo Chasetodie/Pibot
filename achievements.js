@@ -144,24 +144,6 @@ class AchievementsSystem {
                 emoji: '🗓️'
             },
 
-            // Logros de tienda
-            'collector': {
-                name: '🎒 Coleccionista',
-                description: 'Posee 10 items diferentes',
-                requirement: { type: 'unique_items', count: 10 },
-                reward: { money: 2000, xp: 1500},
-                rarity: 'uncommon',
-                emoji: '🎒'
-            },
-            'vip_member': {
-                name: '👑 Miembro VIP',
-                description: 'Compra el Pase VIP',
-                requirement: { type: 'owns_item', item: 'vip_pass' },
-                reward: { money: 5000, xp: 2000},
-                rarity: 'epic',
-                emoji: '👑'
-            },
-            
             // Logros de gambling
             'first_bet': {
                 name: '🎲 Primera Apuesta',
@@ -220,10 +202,54 @@ class AchievementsSystem {
                 rarity: 'epic',
                 emoji: '📦'
             },
+            // Logros de subastas
+            'auctioneer': {
+                name: '🔨 Subastador',
+                description: 'Crea tu primera subasta',
+                requirement: { type: 'auctions_created', value: 1 },
+                reward: { money: 1000, xp: 300 },
+                rarity: 'uncommon',
+                emoji: '🔨'
+            },
+            'bid_master': {
+                name: '💎 Maestro de Pujas',
+                description: 'Gana 5 subastas',
+                requirement: { type: 'auctions_won', value: 5 },
+                reward: { money: 5000, xp: 1500 },
+                rarity: 'rare',
+                emoji: '💎'
+            },
+
+            // Logros de crafteo
+            'first_craft': {
+                name: '🧪 Aprendiz de Alquimista',
+                description: 'Craftea tu primer item',
+                requirement: { type: 'items_crafted', value: 1 },
+                reward: { money: 800, xp: 250 },
+                rarity: 'common',
+                emoji: '🧪'
+            },
+            'master_crafter': {
+                name: '⚒️ Maestro Artesano',
+                description: 'Craftea 20 items en total',
+                requirement: { type: 'items_crafted', value: 20 },
+                reward: { money: 10000, xp: 3000 },
+                rarity: 'epic',
+                emoji: '⚒️'
+            },
+
+            'jackpot': {
+                name: '🎰 Jackpot!',
+                description: 'Gana más de 100,000 π-b$ en una sola apuesta',
+                requirement: { type: 'single_bet_win', value: 100000 },
+                reward: { money: 20000, xp: 5000 },
+                rarity: 'legendary',
+                emoji: '🎰'
+            },
             'completionist': {
                 name: '🏅 Completista',
                 description: 'Obtén todos los logros disponibles',
-                requirement: { type: 'achievements_count', value: 24 }, // Actualizar según total
+                requirement: { type: 'achievements_count', value: 27 }, // Actualizar según total
                 reward: { money: 100000, xp: 10000 },
                 rarity: 'legendary',
                 emoji: '🏅'
@@ -332,12 +358,18 @@ class AchievementsSystem {
                 case 'lottery_wins':
                     currentValue = user.stats?.lottery_wins || 0;
                     break;
-                case 'unique_items':
-                    currentValue = Object.keys(user.items || 0);
+                case 'auctions_created':
+                    currentValue = user.stats?.auctions_created || 0;
                     break;
-/*                case 'owns_item':
-                    currentValue = user.items[achievement.requirement.item];
-                    break;*/
+                case 'auctions_won':
+                    currentValue = user.stats?.auctions_won || 0;
+                    break;
+                case 'items_crafted':
+                    currentValue = user.stats?.items_crafted || 0;
+                    break;
+                case 'single_bet_win':
+                    currentValue = user.stats?.max_single_bet_win || 0;
+                    break;
                 case 'inactive_streak':
                     // Calcular días sin usar work ni daily
                     const now = Date.now();
@@ -528,12 +560,18 @@ class AchievementsSystem {
                 case 'lottery_wins':
                     currentValue = user.stats?.lottery_wins || 0;
                     break;
-                case 'unique_items':
-                    currentValue = Object.keys(user.items || 0);
+                case 'auctions_created':
+                    currentValue = user.stats?.auctions_created || 0;
                     break;
-/*                case 'owns_item':
-                    currentValue = user.items[achievement.requirement.item];
-                    break;*/
+                case 'auctions_won':
+                    currentValue = user.stats?.auctions_won || 0;
+                    break;
+                case 'items_crafted':
+                    currentValue = user.stats?.items_crafted || 0;
+                    break;
+                case 'single_bet_win':
+                    currentValue = user.stats?.max_single_bet_win || 0;
+                    break;
                 case 'inactive_streak':
                     // Calcular días sin usar work ni daily
                     const now = Date.now();
@@ -694,6 +732,26 @@ class AchievementsSystem {
                 updateData.stats = {
                     ...user.stats,
                     money_given: (user.stats?.money_given || 0) + value
+                };
+                break;
+            case 'auctions_created':
+                updateData.stats = {
+                    ...user.stats,
+                    auctions_created: (user.stats?.auctions_created || 0) + 1
+                }
+                break;
+            case 'auctions_won':
+                updateData.stats = {
+                    ...user.stats,
+                    auctions_won: (user.stats?.auctions_won || 0) + 1
+                }
+                break;
+            case 'bet_win':
+                // value = cantidad ganada
+                updateData.daily_stats.bets_won_today = (user.daily_stats.bets_won_today || 0) + 1;
+                updateData.stats = {
+                    ...user.stats,
+                    max_single_bet_win: Math.max(user.stats?.max_single_bet_win || 0, value)
                 };
                 break;
             case 'daily_claimed':
@@ -948,6 +1006,8 @@ class AchievementsSystem {
             case 'money_given':
                 currentValue = user.stats?.money_given || 0;
                 break;
+            case 'auctions_created':
+                currentValue = user.stats?.auctions_created || 0;
             case 'achievements_count':
                 currentValue = Object.values(user.achievements || {}).filter(status => status === 'completed').length;
                 break;

@@ -213,6 +213,28 @@ calculateMinimumIncrement(currentBid) {
             content: `${auctionId}`,
             embeds: [embed] 
         });
+       
+        if (this.shop.economy.achievements) {
+            await this.shop.economy.achievements.updateStats(message.author.id, 'auctions_created');
+        
+            try {
+                const newAchievements = await this.shop.economy.achievements.checkAchievements(message.author.id);
+                if (newAchievements.length > 0) {
+                    await this.achievements.notifyAchievements(message, newAchievements);
+                }
+            } catch (error) {
+                console.error('❌ Error verificando logros después de crear subasta:', error);
+            }
+        }
+    
+        if (this.shop.economy.missions) {
+            const auctionslol = await this.shop.economy.missions.updateMissionProgress(message.author.id, 'auctions_created_today', 1);
+            
+            const allCompleted = [...auctionslol];
+            if (allCompleted.length > 0) {
+                await this.shop.economy.missions.notifyCompletedMissions(message, allCompleted);
+            }
+        }
         
         // Programar fin de subasta
         setTimeout(() => this.endAuction(auctionId, message.client), duration);
@@ -336,6 +358,28 @@ if (bidAmount < auction.currentBid + minimumIncrement) {
             await this.shop.economy.updateUser(auction.seller, {
                 balance: seller.balance + auction.currentBid
             });
+
+            if (this.shop.economy.achievements) {
+                await this.shop.economy.achievements.updateStats(auction.highestBidder, 'auctions_won');
+            
+                try {
+                    const newAchievements = await this.shop.economy.achievements.checkAchievements(auction.highestBidder);
+                    if (newAchievements.length > 0) {
+                        await this.achievements.notifyAchievements(message, newAchievements);
+                    }
+                } catch (error) {
+                    console.error('❌ Error verificando logros después de crear subasta:', error);
+                }
+            }
+
+            if (this.shop.economy.missions) {
+                const auctionslol = await this.shop.economy.missions.updateMissionProgress(auction.highestBidder, 'auctions_won_today', 1);
+                
+                const allCompleted = [...auctionslol];
+                if (allCompleted.length > 0) {
+                    await this.shop.economy.missions.notifyCompletedMissions(message, allCompleted);
+                }
+            }
 
             console.log(`🔨 Subasta ${auctionId} terminada. Ganador: ${auction.highestBidder}`);
         } else {
@@ -899,6 +943,29 @@ class CraftingSystem {
         } catch (error) {
             console.log(`Error notificando crafteo completado: ${error.message}`);
         }        
+
+        if (this.shop.economy.achievements) {
+            await this.shop.economy.achievements.updateStats(craft.user_id, 'items_crafted');
+        
+            try {
+                const newAchievements = await this.shop.economy.achievements.checkAchievements(craft.user_id);
+                if (newAchievements.length > 0) {
+                    await this.achievements.notifyAchievements(channel, newAchievements);
+                }
+            } catch (error) {
+                console.error('❌ Error verificando logros después de crear subasta:', error);
+            }
+        }
+
+        // *** NUEVO: NOTIFICAR MISIONES COMPLETADAS ***
+        if (this.shop.economy.missions) {
+            const craftinglol = await this.shop.economy.missions.updateMissionProgress(craft.user_id, 'items_crafted_today', 1);
+                
+            const allCompleted = [...craftinglol];
+                if (allCompleted.length > 0) {
+                await this.shop.economy.missions.notifyCompletedMissions(channel, allCompleted);
+            }
+        }
     }
 
     async showCraftingQueue(message) {

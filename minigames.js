@@ -384,6 +384,7 @@ class MinigamesSystem {
                 await this.achievements.updateStats(userId, 'game_played');
                 await this.achievements.updateStats(userId, 'game_won');
                 await this.achievements.updateStats(userId, 'money_bet', betAmount);
+                await this.achievements.updateStats(userId, 'bet_win', finalEarnings);
             }            
 
             if (this.missions) {
@@ -652,6 +653,7 @@ class MinigamesSystem {
                 await this.achievements.updateStats(userId, 'game_played');
                 await this.achievements.updateStats(userId, 'game_won');
                 await this.achievements.updateStats(userId, 'money_bet', betAmount);
+                await this.achievements.updateStats(userId, 'bet_win', finalEarnings);
             }
 
             if (this.missions) {
@@ -912,6 +914,7 @@ class MinigamesSystem {
                 await this.achievements.updateStats(userId, 'game_played');
                 await this.achievements.updateStats(userId, 'game_won');
                 await this.achievements.updateStats(userId, 'money_bet', betAmount);
+                await this.achievements.updateStats(userId, 'bet_win', finalEarnings);
             }
 
             if (this.missions) {
@@ -1396,6 +1399,7 @@ class MinigamesSystem {
                     await this.achievements.updateStats(userId, 'game_played');
                     await this.achievements.updateStats(userId, 'game_won');
                     await this.achievements.updateStats(userId, 'money_bet', finalBet);
+                    await this.achievements.updateStats(userId, 'bet_win', finalEarnings);
                 }
 
                 if (this.missions) {
@@ -1452,6 +1456,7 @@ class MinigamesSystem {
                     await this.achievements.updateStats(userId, 'game_played');
                     await this.achievements.updateStats(userId, 'game_won');
                     await this.achievements.updateStats(userId, 'money_bet', finalBet);
+                    await this.achievements.updateStats(userId, 'bet_win', finalEarnings);
                 }
 
                 if (this.missions) {
@@ -1843,6 +1848,7 @@ class MinigamesSystem {
                 await this.achievements.updateStats(userId, 'game_played');
                 await this.achievements.updateStats(userId, 'game_won');
                 await this.achievements.updateStats(userId, 'money_bet', betAmount);
+                await this.achievements.updateStats(userId, 'bet_win', finalEarnings);
             }
 
             if (this.missions) {
@@ -2740,6 +2746,7 @@ class MinigamesSystem {
             if (this.achievements) {
                 await this.achievements.updateStats(winner.id, 'game_played');
                 await this.achievements.updateStats(winner.id, 'game_won');
+                await this.achievements.updateStats(winner.id, 'bet_win', finalEarnings);
             }
 
             if (this.missions) {

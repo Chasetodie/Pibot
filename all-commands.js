@@ -1546,6 +1546,7 @@ async handleBalance(message, targetUser = null) {
     async processCommand(message) {
         await this.shop.cleanupExpiredTokens(message.author.id);
         await this.trades.cleanupExpiredTrades();
+        await economy.missions.updateMissionProgress(message.author.id, 'command_used');
 
         const args = message.content.trim().split(/ +/g);
         const command = args[0].toLowerCase();
@@ -1788,16 +1789,14 @@ async handleBalance(message, targetUser = null) {
                     
                 case '>recipes':
                     await this.crafting.showCraftingRecipes(message);
-                    break;
-                    
+                    break;                    
                 case '>craft':
-    if (!args[1]) {
-        await message.reply('❌ Especifica la receta. Usa `>recipes` para ver las disponibles.');
-        return;
-    }
-    await this.crafting.craftItem(message, args.slice(1)); // Pasar array desde el segundo elemento
-    break;
-                    
+                    if (!args[1]) {
+                        await message.reply('❌ Especifica la receta. Usa `>recipes` para ver las disponibles.');
+                        return;
+                    }
+                    await this.crafting.craftItem(message, args.slice(1)); // Pasar array desde el segundo elemento
+                    break;
                 case '>queue':
                 case '>craftqueue':
                     await this.crafting.showCraftingQueue(message);

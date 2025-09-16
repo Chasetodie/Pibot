@@ -245,7 +245,66 @@ class MissionsSystem {
                 target: 6,
                 reward: { money: 1500, xp: 600 },
                 rarity: 'rare'
-            }
+            },
+/*            // Misiones de subastas
+            'create_auction': {
+                id: 'create_auction',
+                name: '🔨 Vendedor en Subasta',
+                description: 'Crea una subasta hoy',
+                type: 'auctions_created_today',
+                target: 1,
+                reward: { money: 1000, xp: 400 },
+                rarity: 'uncommon'
+            },
+            'win_auction': {
+                id: 'win_auction',
+                name: '💎 Ganador de Subasta',
+                description: 'Gana una subasta en el día',
+                type: 'auctions_won_today',
+                target: 1,
+                reward: { money: 2500, xp: 1000 },
+                rarity: 'rare'
+            },
+
+            // Misiones de crafteo
+            'craft_item': {
+                id: 'craft_item',
+                name: '⚒️ Artesano Diario',
+                description: 'Craftea un item hoy',
+                type: 'items_crafted_today',
+                target: 1,
+                reward: { money: 1500, xp: 500 },
+                rarity: 'uncommon'
+            },*/
+
+            // Misiones sociales extra
+            'send_emoji': {
+                id: 'send_emoji',
+                name: '😂 Expresivo',
+                description: 'Envía 10 mensajes que contengan emojis',
+                type: 'emoji_messages',
+                target: 10,
+                reward: { money: 600, xp: 300 },
+                rarity: 'common'
+            },
+            'react_messages': {
+                id: 'react_messages',
+                name: '👍 Reaccionador',
+                description: 'Reacciona a 15 mensajes de otros usuarios',
+                type: 'reactions_given',
+                target: 15,
+                reward: { money: 800, xp: 400 },
+                rarity: 'uncommon'
+            },
+            'use_commands': {
+                id: 'use_commands',
+                name: '🤖 Bot Lover',
+                description: 'Usa 15 comandos del bot en el día',
+                type: 'commands_used',
+                target: 15,
+                reward: { money: 1200, xp: 600 },
+                rarity: 'uncommon'
+            },
         };
         
         // Colores por rareza
@@ -575,6 +634,11 @@ async checkAndResetAllMissions() {
             case 'message':
                 updateData.daily_stats.messages_today = (user.daily_stats.messages_today || 0) + 1;
                 
+                // ✅ Mensajes con emojis
+                if (value && /[\u{1F600}-\u{1F6FF}]/u.test(value)) { 
+                    updateData.daily_stats.emoji_messages = (user.daily_stats.emoji_messages || 0) + 1;
+                }
+
                 // Agregar hora actual para misión de active_hours
                 const currentHour = new Date().getHours();
                 const activeHours = user.daily_stats.active_hours_today || [];
@@ -624,6 +688,25 @@ async checkAndResetAllMissions() {
             case 'mention_made':
                 updateData.daily_stats.mentions_made_today = (user.daily_stats.mentions_made_today || 0) + value;
                 break;
+            case 'reaction_given':
+                updateData.daily_stats.reactions_given = (user.daily_stats.reactions_given || 0) + 1;
+                break;
+            case 'command_used':
+                updateData.daily_stats.commands_used = (user.daily_stats.commands_used || 0) + 1;
+                break;
+            // 📦 Subastas
+            case 'auctions_created_today':
+                updateData.daily_stats.auctions_created_today = (user.daily_stats.auctions_created_today || 0) + 1;
+                break;
+
+            case 'auctions_won_today':
+                updateData.daily_stats.auctions_won_today = (user.daily_stats.auctions_won_today || 0) + 1;
+                break;
+
+            // ⚒️ Crafteo
+            case 'items_crafted_today':
+                updateData.daily_stats.items_crafted_today = (user.daily_stats.items_crafted_today || 0) + 1;
+                break;    
         }
        
         // Verificar progreso de cada misión
