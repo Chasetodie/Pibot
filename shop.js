@@ -2469,6 +2469,13 @@ class ShopSystem {
 
     async handleSetNickname(message, args) {
         const userId = message.author.id;
+
+        // ARREGLO: Si args incluye el comando, removerlo
+        let cleanArgs = args;
+        if (args.length > 0 && args[0] === '>setnickname') {
+            cleanArgs = args.slice(1);
+        }
+        
         const newNickname = args.join(' ').trim();
         
         // Validar que proporcionó un apodo
@@ -2493,10 +2500,6 @@ class ShopSystem {
             return;
         }
 
-        console.log('Apodo recibido:', `"${newNickname}"`);
-        console.log('Longitud:', newNickname.length);
-        console.log('Códigos de caracteres:', newNickname.split('').map(char => char.charCodeAt(0)));
-        
         // Validar caracteres permitidos (opcional)
         const forbiddenChars = /[<>@#&!]/;
         if (forbiddenChars.test(newNickname)) {
@@ -2790,7 +2793,7 @@ class ShopSystem {
                     await message.reply({ embeds: [embedCF] });
                     break;
                 case '>setnickname':
-                    await this.handleSetNickname(message, args[1]);
+                    await this.handleSetNickname(message, args);
                     break;
             }
         } catch (error) {
