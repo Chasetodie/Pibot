@@ -1181,7 +1181,7 @@ class EconomySystem {
     }
 
     // Iniciar un robo
-    async startRobbery(robberId, targetId) {
+    async startRobbery(robberId, targetId, message) {
         try {
             console.log(`🎯 Intentando iniciar robo: ${robberId} -> ${targetId}`);
             

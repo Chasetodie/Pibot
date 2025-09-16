@@ -1190,7 +1190,7 @@ class AllCommands {
         }
         
         // Iniciar el robo
-        const robberyResult = await this.economy.startRobbery(robberId, targetId);
+        const robberyResult = await this.economy.startRobbery(robberId, targetId, message);
         
         if (!robberyResult.success) {
             console.log(`❌ Robo falló para ${robberId}:`, robberyResult);
