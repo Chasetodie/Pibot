@@ -937,7 +937,7 @@ class EconomySystem {
         
         if (failed) {
             const failMessage = job.failMessages[Math.floor(Math.random() * job.failMessages.length)];
-            const penalty = Math.floor(job.baseReward * 0.2);
+            let penalty = Math.floor(job.baseReward * 0.2);
             let protectionMessage = '';
 
             // AGREGAR ESTO:
