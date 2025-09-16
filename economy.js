@@ -1229,12 +1229,11 @@ class EconomySystem {
                     await this.updateUser(robberId, robberUpdateData);
                     
                     return { 
-                        success: false,
-                        penalty: actualPenalty,
-                        canRob: false, 
-                        reason: 'target_protected',
-                        protectionType: protection.type,
-                        robberProtection: protectionMessage // Para mostrar en el embed
+                        canRob: false,  // ← Está bien
+                        reason: 'target_protected',  // ← Está bien 
+                        protectionType: protection.type,  // ← Está bien
+                        penalty: actualPenalty,  // ← CAMBIAR penaltyBal por penalty
+                        robberProtection: protectionMessage  // ← Verificar que se esté guardando
                     };
                 } else {
                     if (protection.type === 'vault_failed') {
