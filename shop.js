@@ -2216,7 +2216,7 @@ class ShopSystem {
         for (const [itemId, effects] of Object.entries(activeEffects)) {
             for (const effect of effects) {
                 if (effect.expiresAt && effect.expiresAt < Date.now()) continue;
-                if (!effect.targets.includes(action) && !effect.targets.includes('all')) continue;
+                if (!effect.targets || (!effect.targets.includes(action) && !effect.targets.includes('all'))) continue;
                 
                 if (effect.type === 'cooldown_reduction' && effect.reduction) {
                     reduction += effect.reduction;
@@ -2226,7 +2226,7 @@ class ShopSystem {
         
         // Efectos permanentes
         for (const effect of Object.values(permanentEffects)) {
-            if (effect.type === 'permanent_cooldown' && effect.targets && effect.targets.includes(action)) {
+            if (effect.type === 'permanent_cooldown' && effect.targets && Array.isArray(effect.targets) && effect.targets.includes(action)) {
                 reduction += effect.reduction;
             }
         }
