@@ -2499,6 +2499,10 @@ class ShopSystem {
             });
             return;
         }
+        
+        console.log('Apodo recibido:', `"${newNickname}"`);
+        console.log('Longitud:', newNickname.length);
+        console.log('Códigos de caracteres:', newNickname.split('').map(char => char.charCodeAt(0)));
 
         // Validar caracteres permitidos (opcional)
         const forbiddenChars = /[<>@#&!]/;
