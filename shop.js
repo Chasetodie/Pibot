@@ -1129,7 +1129,7 @@ class ShopSystem {
                     return await this.applyVipPass(userId, itemId, item);
                 }
                 if (item.effect.type === 'nickname_change') {
-                    return await this.handleNicknameChange(userId, item);
+                    return { success: false, message: 'Para usar este item tienes que usar >setnickname <apodo>.' };                
                 }
                 return { success: false, message: 'Item especial no implementado.' };
             case 'mystery':
@@ -2854,7 +2854,8 @@ class ShopSystem {
                     await message.reply({ embeds: [embedCF] });
                     break;
                 case '>setnickname':
-                    await this.handleSetNickname(message, args);
+                    const theotherargs = message.content.trim().split(/ +/g);
+                    await this.handleSetNickname(message, theotherargs);
                     break;
             }
         } catch (error) {
