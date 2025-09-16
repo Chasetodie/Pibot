@@ -2451,9 +2451,19 @@ class ShopSystem {
         const userId = message.author.id;
         const user = await this.economy.getUser(userId);
         const permanentEffects = user.permanentEffects || {};
-        
+
+        // Parsear efectos si vienen como string desde la DB
+        let parsedPermanentEffects = permanentEffects;
+        if (typeof permanentEffects === 'string') {
+            try {
+                parsedPermanentEffects = JSON.parse(permanentEffects);
+            } catch (error) {
+                parsedPermanentEffects = {};
+            }
+        }
+       
         // Verificar que el usuario tiene el efecto activo
-        if (!permanentEffects[itemId]) {
+        if (!parsedPermanentEffects[itemId]) {
             await message.reply(`❌ No tienes el efecto de **${itemId}** activo.`);
             return;
         }
@@ -2508,7 +2518,7 @@ class ShopSystem {
         }
         
         // ✅ Remover el efecto permanente
-        const newPermanentEffects = { ...permanentEffects };
+        const newPermanentEffects = { ...parsedPermanentEffects };
         delete newPermanentEffects[itemId];
         
         // ✅ Devolver el item al inventario
