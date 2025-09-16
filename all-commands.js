@@ -1202,8 +1202,10 @@ class AllCommands {
                     // Verificar si el robber tiene protección
                     if (robberyResult.robberProtection) {
                         penaltyText = `\n\n${robberyResult.robberProtection}`;
-                    } else {
+                    } else if (robberyResult.penalty > 0) {
                         penaltyText = `\n\n💸**Perdiste**\n${robberyResult.penalty} π-b$`;
+                    } else {
+                        penaltyText = ''; // Sin penalización y sin mensaje de protección
                     }
                     
                     if (robberyResult.protectionType === 'shield') {
