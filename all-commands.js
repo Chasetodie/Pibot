@@ -1168,12 +1168,21 @@ class AllCommands {
                     errorMessage = 'Limite de dinero alcanzado';
                     break;
                 case 'target_protected':
-                    if (canRobResult.protectionType === 'shield') {
-                        errorMessage = `🛡️ ¡Rayos! **${targetUser.displayName}** tiene un **Escudo Antirrobo** activado. Tu intento de robo rebotó como una pelota de goma. 🏀\n\n💸**Perdiste**\n${canRobResult.penaltyBal} π-b$`;
-                    } else if (canRobResult.protectionType === 'vault') {
-                        errorMessage = `🏦 **${targetUser.displayName}** guardó su dinero en una **Bóveda Permanente**. Intentaste forzarla pero era más dura que una nuez. 🥜\n\n💸**Perdiste**\n${canRobResult.penaltyBal} π-b$`;
+                    let penaltyText = '';
+                    
+                    // Verificar si el robber tiene protección
+                    if (canRobResult.robberProtection) {
+                        penaltyText = `\n\n${canRobResult.robberProtection}`;
                     } else {
-                        errorMessage = `🛡️ **${targetUser.displayName}** está muy bien protegido. Parece que invirtió sabiamente en seguridad. 💰\n\n💸**Perdiste**\n${canRobResult.penaltyBal} π-b$`;
+                        penaltyText = `\n\n💸**Perdiste**\n${canRobResult.penalty} π-b$`;
+                    }
+                    
+                    if (canRobResult.protectionType === 'shield') {
+                        errorMessage = `🛡️ ¡Rayos! **${targetUser.displayName}** tiene un **Escudo Antirrobo** activado. Tu intento de robo rebotó como una pelota de goma. 🏀${penaltyText}`;
+                    } else if (canRobResult.protectionType === 'vault') {
+                        errorMessage = `🏦 **${targetUser.displayName}** guardó su dinero en una **Bóveda Permanente**. Intentaste forzarla pero era más dura que una nuez. 🥜${penaltyText}`;
+                    } else {
+                        errorMessage = `🛡️ **${targetUser.displayName}** está muy bien protegido. Parece que invirtió sabiamente en seguridad. 💰${penaltyText}`;
                     }
                     break;
                 default:

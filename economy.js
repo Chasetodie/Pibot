@@ -1205,29 +1205,36 @@ class EconomySystem {
                 const robber = await this.getUser(robberId);
 
                 if (protection.protected) {
+                    const robberProtection = await this.shop.hasGameProtection(robberId);
+
+                    let actualPenalty = 0;
+                    let protectionMessage = '';
+
+                    if (robberProtection) {
+                        protectionMessage = '🛡️ Tu Fortune Shield te protegió de la penalización!';
+                    } else {
+                        actualPenalty = Math.floor(robber.balance * (this.robberyConfig.penaltyPercentage / 100));
+                    }
+
                     const robberUpdateData = {
                         last_robbery: Date.now(),
+                        balance: Math.max(0, robber.balance - actualPenalty),
                         stats: {
                             ...robber.stats,
                             robberies: (robber.stats.robberies || 0) + 1,
+                            totalSpent: (robber.stats.totalSpent || 0) + actualPenalty,
                         },
-                    };
-
-                    const penalty = Math.floor(robber.balance * (this.robberyConfig.penaltyPercentage / 100));
-                    
-                    robberUpdateData.balance = Math.max(0, robber.balance - penalty);
-                    robberUpdateData.stats = {
-                        ...robber.stats,
-                        totalSpent: (robber.stats.totalSpent || 0) + penalty,
                     };
                     
                     await this.updateUser(robberId, robberUpdateData);
                     
                     return { 
-                        penaltyBal: penalty,
+                        success: false,
+                        penalty: actualPenalty,
                         canRob: false, 
                         reason: 'target_protected',
-                        protectionType: protection.type
+                        protectionType: protection.type,
+                        robberProtection: protectionMessage // Para mostrar en el embed
                     };
                 } else {
                     if (protection.type === 'vault_failed') {
