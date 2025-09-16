@@ -220,7 +220,7 @@ calculateMinimumIncrement(currentBid) {
             try {
                 const newAchievements = await this.shop.economy.achievements.checkAchievements(message.author.id);
                 if (newAchievements.length > 0) {
-                    await this.achievements.notifyAchievements(message, newAchievements);
+                    await this.shop.economy.achievements.notifyAchievements(message, newAchievements);
                 }
             } catch (error) {
                 console.error('❌ Error verificando logros después de crear subasta:', error);
@@ -365,7 +365,7 @@ if (bidAmount < auction.currentBid + minimumIncrement) {
                 try {
                     const newAchievements = await this.shop.economy.achievements.checkAchievements(auction.highestBidder);
                     if (newAchievements.length > 0) {
-                        await this.achievements.notifyAchievements(message, newAchievements);
+                        await this.shop.economy.achievements.notifyAchievements(message, newAchievements);
                     }
                 } catch (error) {
                     console.error('❌ Error verificando logros después de crear subasta:', error);
@@ -952,7 +952,7 @@ class CraftingSystem {
             try {
                 const newAchievements = await this.shop.economy.achievements.checkAchievements(craft.user_id);
                 if (newAchievements.length > 0) {
-                    await this.achievements.notifyAchievements(channel, newAchievements);
+                    await this.shop.economy.achievements.notifyAchievements(channel, newAchievements);
                 }
             } catch (error) {
                 console.error('❌ Error verificando logros después de crear subasta:', error);
