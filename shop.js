@@ -226,7 +226,7 @@ class ShopSystem {
             'speed_boots': {
                 id: 'speed_boots',
                 name: '👟 Botas de Velocidad',
-                description: 'Elimina el cooldown por 30 minutos',
+                description: 'Reduce un 70% el cooldown por 30 minutos',
                 price: 500000,
                 category: 'consumable',
                 rarity: 'rare',
