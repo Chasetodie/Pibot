@@ -327,38 +327,9 @@ class EconomySystem {
         
         let xpGained = Math.max(1, baseXp + variation);
 
-        // ✅ ARREGLAR: Aplicar multiplicadores de XP correctamente
         if (this.shop) {
-            const modifiers = await this.shop.getActiveMultipliers(userId, 'all');
-            
-            // Verificar multiplicadores específicos de XP
-            let xpMultiplier = 1.0;
-            
-            // Items con multiplicador específico de XP
-            if (modifiers.multiplier > 1) {
-                // Verificar si es específicamente XP o general
-                const activeEffects = user.activeEffects || {};
-                for (const [itemId, effects] of Object.entries(activeEffects)) {
-                    if (!Array.isArray(effects)) continue;
-                    
-                    for (const effect of effects) {
-                        if (effect.type === 'xp_multiplier' || effect.type === 'xp_tornado') {
-                            if (effect.expiresAt && effect.expiresAt > Date.now()) {
-                                xpMultiplier *= effect.multiplier;
-                            }
-                        }
-                    }
-                }
-            }
-            
-            // Aplicar VIP boost para XP
-            const vipMultipliers = await this.shop.getVipMultipliers(userId, 'all');
-            if (vipMultipliers.multiplier > 1) {
-                xpMultiplier *= 1.2; // VIP da 20% más XP
-            }
-            
-            xpGained = Math.floor(xpGained * xpMultiplier);
-        }        
+            xpGained = await this.shop.applyXpEffects(userId, xpGained);
+        }
 
         const finalXp = this.calculateScaledXp(user, xpGained);
         

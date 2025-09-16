@@ -452,7 +452,20 @@ class MinigamesSystem {
             const hasProtection = await this.shop.hasGameProtection(userId);
 
             if (hasProtection) {
-                await message.reply('🛡️ Tu protección evitó la pérdida de dinero!');
+                // Determinar qué protección se activó
+                const user = await this.economy.getUser(userId);
+                const activeEffects = this.shop.economy.parseActiveEffects(user.activeEffects);
+                
+                let protectionMessage = '🛡️ Tu protección evitó la pérdida de dinero!';
+                
+                // Verificar health potion específicamente
+                if (activeEffects['health_potion']) {
+                    protectionMessage = '💊 Tu Poción de Salud te protegió de las penalizaciones!';
+                } else if (activeEffects['fortune_shield']) {
+                    protectionMessage = '🛡️ Tu Escudo de la Fortuna te protegió!';
+                }
+                
+                await message.reply(protectionMessage);
             } else {
                 await this.economy.removeMoney(userId, betAmount, 'coinflip_loss');
             }

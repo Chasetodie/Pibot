@@ -1725,7 +1725,11 @@ class ShopSystem {
                 const targets = effect.targets || [];
                 if (!Array.isArray(targets)) continue;
                 
-                if (!targets.includes(action) && !targets.includes('all')) continue;
+                const appliesToAction = targets.includes(action) || 
+                    (targets.includes('all') && ['work', 'games', 'gambling'].includes(action)) ||
+                    (targets.includes('games') && ['coinflip', 'dice', 'roulette'].includes(action));
+
+                if (!appliesToAction) continue;
                 
                 if (effect.multiplier) totalMultiplier *= effect.multiplier;
                 if (effect.reduction) totalReduction += effect.reduction;
@@ -1838,24 +1842,6 @@ class ShopSystem {
         return hasChanges;
     }
 
-    // === VERIFICAR Y APLICAR EFECTOS EN TRABAJOS ===
-    async applyWorkEffects(userId, baseAmount, baseCooldown) {
-        await this.cleanupExpiredEffects(userId);
-        
-        const multipliers = await this.getActiveMultipliers(userId, 'work');
-        const finalAmount = Math.floor(baseAmount * multipliers.multiplier);
-        const finalCooldown = Math.floor(baseCooldown * (1 - multipliers.reduction));
-        
-        // Decrementar usos si aplica
-        await this.decrementItemUses(userId, 'work');
-        
-        return {
-            amount: finalAmount,
-            cooldown: Math.max(finalCooldown, 1000), // Mínimo 1 segundo
-            multiplierApplied: multipliers.multiplier > 1
-        };
-    }
-
     // 2. ACTUALIZAR applyGameEffects() - agregar soporte para permanent_luck
     async applyGameEffects(userId, baseChance = 0.5) {
         const effects = await this.getActiveMultipliers(userId, 'games');
@@ -1937,7 +1923,9 @@ class ShopSystem {
         // Verificar botas de velocidad
         if (activeEffects['speed_boots']) {
             for (const effect of activeEffects['speed_boots']) {
-                if (effect.type === 'no_cooldown' && effect.expiresAt > Date.now()) {
+                if (effect.type === 'cooldown_reduction' && 
+                    effect.reduction >= 0.7 && 
+                    effect.expiresAt > Date.now()) {
                     return true;
                 }
             }
