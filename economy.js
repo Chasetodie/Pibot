@@ -825,7 +825,7 @@ class EconomySystem {
         if (user.level < job.levelRequirement) {
             return { canWork: false, reason: 'level_too_low', requiredLevel: job.levelRequirement };
         }
-        
+       
         const modifiers = await this.shop.getActiveMultipliers(userId, 'work');
         const lastWork = user.last_work || 0;
         const now = Date.now();
@@ -846,6 +846,12 @@ class EconomySystem {
                 effectiveCooldown = Math.floor(job.cooldown * 0.3); // 🔥 -30% tiempo
                 break;
             }
+        }
+
+        if (this.shop) {
+            // En lugar de agregar hasNoCooldownActive, usa getCooldownReduction
+            const cooldownReduction = await this.shop.getCooldownReduction(userId, 'work');
+            effectiveCooldown = Math.floor(effectiveCooldown * (1 - cooldownReduction));
         }
 
         if (now - lastWork < effectiveCooldown) {

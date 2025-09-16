@@ -1915,27 +1915,6 @@ class ShopSystem {
         }
     }
 
-    // === VERIFICAR SI TIENE COOLDOWN ACTIVO ===
-    async hasNoCooldownActive(userId) {
-        const user = await this.economy.getUser(userId);
-        const activeEffects = this.parseActiveEffects(user.activeEffects);
-        
-        // Verificar botas de velocidad
-        if (activeEffects['speed_boots']) {
-            for (const effect of activeEffects['speed_boots']) {
-                if (effect.type === 'cooldown_reduction' && 
-                    effect.reduction >= 0.7 && 
-                    effect.expiresAt > Date.now()) {
-                    return true;
-                }
-            }
-        }
-        
-        // Verificar VIP
-        const vipEffects = await this.getVipMultipliers(userId, 'all');
-        return vipEffects.noCooldown;
-    }
-
     // === PROCESAR INGRESOS PASIVOS ===
     async processPassiveIncome() {
         try {
