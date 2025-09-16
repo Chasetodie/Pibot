@@ -732,11 +732,11 @@ class ShopSystem {
             const priceFormatted = item.price.toLocaleString('es-ES');
             
             let effectDesc = '';
-            if (item.effect.duration) {
+            if (item.effect && item.effect.duration) {
                 const hours = Math.floor(item.effect.duration / 3600);
                 const minutes = Math.floor((item.effect.duration % 3600) / 60);
                 effectDesc = hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`;
-            } else if (item.effect.uses) {
+            } else if (item.effect && item.effect.uses) {
                 effectDesc = `${item.effect.uses} uso${item.effect.uses > 1 ? 's' : ''}`;
             } else if (item.category === 'permanent') {
                 effectDesc = 'Permanente';
