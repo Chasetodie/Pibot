@@ -687,6 +687,47 @@ class ShopSystem {
         this.cacheTimeout = 10 * 60 * 1000; // 10 minutos para items        
     }
 
+    // Función para parsear efectos permanentes
+    parseEffects(effects, fallback = {}) {
+        if (!effects) return fallback;
+        
+        if (typeof effects === 'string') {
+            try {
+                return JSON.parse(effects);
+            } catch (error) {
+                console.log('❌ Error parseando efectos:', error);
+                return fallback;
+            }
+        }
+        
+        if (typeof effects === 'object' && !Array.isArray(effects)) {
+            return effects;
+        }
+        
+        return fallback;
+    }
+
+    // Función para parsear efectos activos (que son arrays)
+    parseActiveEffects(effects) {
+        if (!effects) return {};
+        
+        if (typeof effects === 'string') {
+            try {
+                const parsed = JSON.parse(effects);
+                return parsed || {};
+            } catch (error) {
+                console.log('❌ Error parseando efectos activos:', error);
+                return {};
+            }
+        }
+        
+        if (typeof effects === 'object') {
+            return effects;
+        }
+        
+        return {};
+    }
+
     async getEquippedCosmetics(userId) {
         const user = await this.economy.getUser(userId);
         
@@ -731,14 +772,7 @@ class ShopSystem {
     async consumeItemUse(userId, itemId) {
         const user = await this.economy.getUser(userId);
         
-        let activeEffects = user.activeEffects || {};
-        if (typeof activeEffects === 'string') {
-            try {
-                activeEffects = JSON.parse(activeEffects);
-            } catch (error) {
-                activeEffects = {};
-            }
-        }
+        const activeEffects = this.parseActiveEffects(user.activeEffects);
         
         if (!activeEffects[itemId] || !activeEffects[itemId].length) {
             return false; // No hay efectos activos
@@ -889,7 +923,7 @@ class ShopSystem {
     
     async hasVipAccess(userId) {
         const user = await this.economy.getUser(userId);
-        const permanentEffects = user.permanentEffects || {};
+        const permanentEffects = this.parseEffects(user.permanentEffects);
         
         for (const effect of Object.values(permanentEffects)) {
             if (effect.benefits && effect.benefits.includes('vip_commands')) {
@@ -1358,7 +1392,7 @@ class ShopSystem {
     // Método para verificar protección contra penalizaciones
     async hasGameProtection(userId) {
         const user = await this.economy.getUser(userId);
-        const activeEffects = user.activeEffects || {};
+        const activeEffects = this.parseActiveEffects(user.activeEffects);
         
         for (const [itemId, effects] of Object.entries(activeEffects)) {
             for (const effect of effects) {
@@ -1375,20 +1409,8 @@ class ShopSystem {
     async applyConsumableEffect(userId, itemId, item) {
         const user = await this.economy.getUser(userId);
         
-        let activeEffects = user.activeEffects || {};
-        
-        if (typeof activeEffects === 'string') {
-            try {
-                activeEffects = JSON.parse(activeEffects);
-            } catch (error) {
-                activeEffects = {};
-            }
-        }
-        
-        if (typeof activeEffects !== 'object' || Array.isArray(activeEffects)) {
-            activeEffects = {};
-        }
-        
+        const activeEffects = this.parseActiveEffects(user.activeEffects);
+                
         // ✅ NUEVO: Verificar si ya hay UN EFECTO ACTIVO del mismo item
         if (activeEffects[itemId] && activeEffects[itemId].length > 0) {
             // Limpiar efectos expirados primero
@@ -1465,19 +1487,11 @@ class ShopSystem {
         const user = await this.economy.getUser(userId);
 
         // ✅ AGREGAR ESTAS LÍNEAS:
-        let permanentEffects = user.permanentEffects || {};
-        
-        if (typeof permanentEffects === 'string') {
-            try {
-                permanentEffects = JSON.parse(permanentEffects);
-            } catch (error) {
-                permanentEffects = {};
-            }
-        }
-        
+        const permanentEffects = this.parseEffects(user.permanentEffects);
+               
         // NUEVO: Manejar VIP Pass como caso especial
         if (item.id === 'vip_pass') {
-//            const permanentEffects = user.permanentEffects || {};
+//            const permanentEffects = this.parseEffects(user.permanentEffects);
             
             if (permanentEffects[itemId]) {
                 return { success: false, message: 'Ya tienes VIP activo.' };
@@ -1499,7 +1513,7 @@ class ShopSystem {
         }
         
         // Resto del código permanece igual...
-//        const permanentEffects = user.permanentEffects || {};
+//        const permanentEffects = this.parseEffects(user.permanentEffects);
         
         if (permanentEffects[itemId]) {
             return { success: false, message: 'Ya tienes este efecto permanente activo.' };
@@ -1654,14 +1668,7 @@ class ShopSystem {
     async getSuccessBoost(userId, action) {
         const user = await this.economy.getUser(userId);
         
-        let activeEffects = user.activeEffects || {};
-        if (typeof activeEffects === 'string') {
-            try {
-                activeEffects = JSON.parse(activeEffects);
-            } catch (error) {
-                activeEffects = {};
-            }
-        }
+        const activeEffects = this.parseActiveEffects(user.activeEffects);        
         
         let totalBoost = 0;
         
@@ -1699,24 +1706,8 @@ class ShopSystem {
             }
         }
         
-        let activeEffects = user.activeEffects || {};
-        if (typeof activeEffects === 'string') {
-            try {
-                activeEffects = JSON.parse(activeEffects);
-            } catch (error) {
-                activeEffects = {};
-            }
-        }
-        
-        let permanentEffects = user.permanentEffects || {};
-        if (typeof permanentEffects === 'string') {
-            try {
-                permanentEffects = JSON.parse(permanentEffects);
-            } catch (error) {
-                permanentEffects = {};
-            }
-        }
-
+        const activeEffects = this.parseActiveEffects(user.activeEffects);
+        const permanentEffects = this.parseEffects(user.permanentEffects);       
         
         let totalMultiplier = 1.0;
         let totalReduction = 0.0;
@@ -1814,16 +1805,8 @@ class ShopSystem {
     // === LIMPIAR EFECTOS EXPIRADOS (ejecutar periódicamente) ===
     async cleanupExpiredEffects(userId) {
         const user = await this.economy.getUser(userId);
-        let activeEffects = user.activeEffects || {};
-
-        if (typeof activeEffects === 'string') {
-            try {
-                activeEffects = JSON.parse(activeEffects);
-            } catch (error) {
-                activeEffects = {};
-            }
-        }       
-        
+        const activeEffects = this.parseActiveEffects(user.activeEffects);
+       
         let hasChanges = false;
         const now = Date.now();
         
@@ -1894,7 +1877,7 @@ class ShopSystem {
         
         const multipliers = await this.getActiveMultipliers(userId, 'all');
         const user = await this.economy.getUser(userId);
-        const activeEffects = user.activeEffects || {};
+        const activeEffects = this.parseActiveEffects(user.activeEffects);
         
         let xpMultiplier = 1.0;
         
@@ -1914,7 +1897,7 @@ class ShopSystem {
     // === DECREMENTAR USOS DE ITEMS ===
     async decrementItemUses(userId, action) {
         const user = await this.economy.getUser(userId);
-        const activeEffects = user.activeEffects || {};
+        const activeEffects = this.parseActiveEffects(user.activeEffects);
         
         let hasChanges = false;
         
@@ -1947,7 +1930,7 @@ class ShopSystem {
     // === VERIFICAR SI TIENE COOLDOWN ACTIVO ===
     async hasNoCooldownActive(userId) {
         const user = await this.economy.getUser(userId);
-        const activeEffects = user.activeEffects || {};
+        const activeEffects = this.parseActiveEffects(user.activeEffects);
         
         // Verificar botas de velocidad
         if (activeEffects['speed_boots']) {
@@ -1970,7 +1953,7 @@ class ShopSystem {
             let processedCount = 0;
             
             for (const user of allUsers) {
-                const permanentEffects = user.permanentEffects || {};
+                const permanentEffects = this.parseEffects(user.permanentEffects);
                 
                 if (typeof permanentEffects === 'string') {
                     try {
@@ -2020,8 +2003,8 @@ class ShopSystem {
         await this.cleanupExpiredEffects(userId);
         
         const user = await this.economy.getUser(userId);
-        const activeEffects = user.activeEffects || {};
-        const permanentEffects = user.permanentEffects || {};
+        const activeEffects = this.parseActiveEffects(user.activeEffects);
+        const permanentEffects = this.parseEffects(user.permanentEffects);
         
         const info = {
             temporary: [],
@@ -2083,25 +2066,9 @@ class ShopSystem {
         const user = await this.economy.getUser(message.author.id);
         
         // Parsear efectos
-        let permanentEffects = user.permanentEffects || {};
-        let activeEffects = user.activeEffects || {};
-        
-        if (typeof permanentEffects === 'string') {
-            try {
-                permanentEffects = JSON.parse(permanentEffects);
-            } catch (error) {
-                permanentEffects = {};
-            }
-        }
-        
-        if (typeof activeEffects === 'string') {
-            try {
-                activeEffects = JSON.parse(activeEffects);
-            } catch (error) {
-                activeEffects = {};
-            }
-        }
-        
+        const permanentEffects = this.parseEffects(user.permanentEffects);
+        const activeEffects = this.parseActiveEffects(user.activeEffects);
+                      
         const hasPermanent = Object.keys(permanentEffects).length > 0;
         const hasTemporary = Object.keys(activeEffects).length > 0;
         
@@ -2207,8 +2174,8 @@ class ShopSystem {
     // 5. NUEVA FUNCIÓN: Manejar cooldowns mejorados
     async getCooldownReduction(userId, action) {
         const user = await this.economy.getUser(userId);
-        const activeEffects = user.activeEffects || {};
-        const permanentEffects = user.permanentEffects || {};
+        const activeEffects = this.parseActiveEffects(user.activeEffects);
+        const permanentEffects = this.parseEffects(user.permanentEffects);
         
         let reduction = 0;
         
@@ -2244,24 +2211,9 @@ class ShopSystem {
     async getTheftProtection(userId) {
         const user = await this.economy.getUser(userId);
 
-        let activeEffects = user.activeEffects || {};
-        if (typeof activeEffects === 'string') {
-            try {
-                activeEffects = JSON.parse(activeEffects);
-            } catch (error) {
-                activeEffects = {};
-            }
-        }
-
-        let permanentEffects = user.permanentEffects || {};
-        if (typeof permanentEffects === 'string') {
-            try {
-                permanentEffects = JSON.parse(permanentEffects);
-            } catch (error) {
-                permanentEffects = {};
-            }
-        }
-        
+        const activeEffects = this.parseActiveEffects(user.activeEffects);
+        const permanentEffects = this.parseEffects(user.permanentEffects);
+       
         let protection = 0; // 0 = sin protección, 1 = protección completa
         
         // Verificar escudo antirrobo temporal
@@ -2300,7 +2252,7 @@ class ShopSystem {
     // === APLICAR VIP PASS ===
     async applyVipPass(userId, itemId, item) {
         const user = await this.economy.getUser(userId);
-        const permanentEffects = user.permanentEffects || {};
+        const permanentEffects = this.parseEffects(user.permanentEffects);
         
         // Verificar si ya tiene VIP activo
         if (permanentEffects[itemId]) {
@@ -2334,7 +2286,7 @@ class ShopSystem {
     // Verificar si el usuario tiene VIP activo con tiempo
     async hasActiveVip(userId) {
         const user = await this.economy.getUser(userId);
-        const permanentEffects = user.permanentEffects || {};
+        const permanentEffects = this.parseEffects(user.permanentEffects);
         
         for (const [itemId, effect] of Object.entries(permanentEffects)) {
             if (effect.type === 'vip_membership') {
@@ -2370,7 +2322,7 @@ class ShopSystem {
         if (!vipStatus.hasVip) return { multiplier: 1.0, luckBoost: 0, noCooldown: false };
         
         const user = await this.economy.getUser(userId);
-        const permanentEffects = user.permanentEffects || {};
+        const permanentEffects = this.parseEffects(user.permanentEffects);
         
         let multiplier = 1.0;
         let luckBoost = 0;
@@ -2404,7 +2356,7 @@ class ShopSystem {
         }
         
         const user = await this.economy.getUser(userId);
-        const permanentEffects = user.permanentEffects || {};
+        const permanentEffects = this.parseEffects(user.permanentEffects);
         
         for (const effect of Object.values(permanentEffects)) {
             if (effect.type === 'vip_membership' && effect.benefits) {
@@ -2428,7 +2380,7 @@ class ShopSystem {
             const allUsers = await this.economy.getAllUsers();
             
             for (const user of allUsers) {
-                const permanentEffects = user.permanentEffects || {};
+                const permanentEffects = this.parseEffects(user.permanentEffects);
                 
                 for (const [itemId, effect] of Object.entries(permanentEffects)) {
                     if (effect.type === 'passive_income') {
@@ -2456,7 +2408,7 @@ class ShopSystem {
 
     async applyPickaxeBonus(userId) {
         const user = await this.economy.getUser(userId);
-        const activeEffects = user.activeEffects || {};
+        const activeEffects = this.parseActiveEffects(user.activeEffects);
         
         // Verificar picos con usos limitados
         for (const [itemId, effects] of Object.entries(activeEffects)) {
@@ -2499,20 +2451,10 @@ class ShopSystem {
     async removePermanentEffect(message, itemId) {
         const userId = message.author.id;
         const user = await this.economy.getUser(userId);
-        const permanentEffects = user.permanentEffects || {};
+        const permanentEffects = this.parseEffects(user.permanentEffects);
 
-        // Parsear efectos si vienen como string desde la DB
-        let parsedPermanentEffects = permanentEffects;
-        if (typeof permanentEffects === 'string') {
-            try {
-                parsedPermanentEffects = JSON.parse(permanentEffects);
-            } catch (error) {
-                parsedPermanentEffects = {};
-            }
-        }
-       
         // Verificar que el usuario tiene el efecto activo
-        if (!parsedPermanentEffects[itemId]) {
+        if (!permanentEffects[itemId]) {
             await message.reply(`❌ No tienes el efecto de **${itemId}** activo.`);
             return;
         }
@@ -2567,7 +2509,7 @@ class ShopSystem {
         }
         
         // ✅ Remover el efecto permanente
-        const newPermanentEffects = { ...parsedPermanentEffects };
+        const newPermanentEffects = { ...permanentEffects };
         delete newPermanentEffects[itemId];
         
         // ✅ Devolver el item al inventario
