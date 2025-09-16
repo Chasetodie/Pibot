@@ -1317,13 +1317,24 @@ class AllCommands {
                     // Mensaje de robo fallido
                     const failEmbed = new EmbedBuilder()
                         .setColor('#800080')
-                        .setTitle('🚨 ¡Robo Fallido!')
-                        .setDescription(`<@${message.author.id}> falló el robo y perdió **${finishResult.penalty}** ${this.economy.config.currencySymbol}`)
-                        .addFields(
+                        .setTitle('🚨 ¡Robo Fallido!');
+
+                    // Descripción diferente según si hay protección o no
+                    if (finishResult.protectionMessage) {
+                        failEmbed.setDescription(`<@${message.author.id}> falló el robo pero ${finishResult.protectionMessage}`);
+                        failEmbed.addFields(
+                            { name: '🛡️ Protección', value: finishResult.protectionMessage, inline: true },
+                            { name: '🎯 Eficiencia', value: `${finishResult.efficiency}%`, inline: true },
+                            { name: '👆 Clicks', value: `${finishResult.clicks}/${finishResult.maxClicks}`, inline: true }
+                        );
+                    } else {
+                        failEmbed.setDescription(`<@${message.author.id}> falló el robo y perdió **${finishResult.penalty}** ${this.economy.config.currencySymbol}`);
+                        failEmbed.addFields(
                             { name: '💸 Penalización', value: `${finishResult.penalty} ${this.economy.config.currencySymbol}`, inline: true },
                             { name: '🎯 Eficiencia', value: `${finishResult.efficiency}%`, inline: true },
                             { name: '👆 Clicks', value: `${finishResult.clicks}/${finishResult.maxClicks}`, inline: true }
                         );
+                    }
                         
                     await message.channel.send({ embeds: [failEmbed] });
                 }

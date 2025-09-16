@@ -1396,7 +1396,9 @@ class ShopSystem {
         
         for (const [itemId, effects] of Object.entries(activeEffects)) {
             for (const effect of effects) {
-                if (effect.type === 'penalty_protection' && effect.expiresAt > Date.now()) {
+                // Verificar tanto penalty_protection como protection (fortune_shield)
+                if ((effect.type === 'penalty_protection' || effect.type === 'protection') 
+                    && effect.expiresAt > Date.now()) {
                     return true;
                 }
             }
@@ -2233,8 +2235,11 @@ class ShopSystem {
             const vaultEffect = permanentEffects['permanent_vault'];
             if (vaultEffect && vaultEffect.reduction) {
                 const roll = Math.random();
-                if (roll < vaultEffect.reduction) { // Usar el valor del item (0.8 = 80%)
+                if (roll < vaultEffect.reduction) {
                     return { protected: true, type: 'vault' };
+                } else {
+                    // La bóveda falló
+                    return { protected: false, type: 'vault_failed', reduction: 0 };
                 }
             }
         }

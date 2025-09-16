@@ -35,7 +35,7 @@ class EconomySystem {
             maxStealPercentage: 10, // Máximo 10%
             buttonTimeLimit: 30000, // 30 segundos para hacer clicks
             maxClicks: 50, // Máximo de clicks
-            failChance: 0.3, // 30% de chance de fallar
+            failChance: 0.4, // 30% de chance de fallar
             penaltyPercentage: 15, // 15% de penalización si fallas
             levelRequirement: 5, // Nivel mínimo para robar
             minTargetBalance: 500, // El objetivo debe tener al menos 500 coins
@@ -1129,38 +1129,7 @@ class EconomySystem {
                 maxBalance: this.config.maxBalance
             }
         }
-
-        // AGREGAR ESTA VERIFICACIÓN:
-        if (this.shop) {
-            const protection = await this.shop.getTheftProtection(targetId);
-            if (protection.protected) {
-            const robberUpdateData = {
-                last_robbery: Date.now(),
-                stats: {
-                    ...robber.stats,
-                    robberies: (robber.stats.robberies || 0) + 1,
-                },
-            };
-
-                const penalty = Math.floor(robber.balance * (this.robberyConfig.penaltyPercentage / 100));
-                
-                robberUpdateData.balance = Math.max(0, robber.balance - penalty);
-                robberUpdateData.stats = {
-                    ...robber.stats,
-                    totalSpent: (robber.stats.totalSpent || 0) + penalty,
-                };
-                
-                await this.updateUser(robberId, robberUpdateData);
-                
-                return { 
-                    penaltyBal: penalty,
-                    canRob: false, 
-                    reason: 'target_protected',
-                    protectionType: protection.type
-                };
-            }
-        }
-        
+       
         // Verificar cooldown
         const lastRobbery = robber.last_robbery || 0;
         const now = Date.now();
@@ -1223,11 +1192,49 @@ class EconomySystem {
                 console.log(`❌ No puede robar - Razón: ${canRobResult.reason}`);
                 return canRobResult;
             }
-            
+
             // Verificar si ya hay un robo activo (doble verificación)
             if (this.activeRobberies.has(robberId)) {
                 console.log(`❌ Ya hay robo activo para ${robberId}`);
                 return { success: false, reason: 'already_robbing' };
+            }
+
+            // AGREGAR ESTA VERIFICACIÓN:
+            if (this.shop) {
+                const protection = await this.shop.getTheftProtection(targetId);
+                const robber = await this.getUser(robberId);
+
+                if (protection.protected) {
+                    const robberUpdateData = {
+                        last_robbery: Date.now(),
+                        stats: {
+                            ...robber.stats,
+                            robberies: (robber.stats.robberies || 0) + 1,
+                        },
+                    };
+
+                    const penalty = Math.floor(robber.balance * (this.robberyConfig.penaltyPercentage / 100));
+                    
+                    robberUpdateData.balance = Math.max(0, robber.balance - penalty);
+                    robberUpdateData.stats = {
+                        ...robber.stats,
+                        totalSpent: (robber.stats.totalSpent || 0) + penalty,
+                    };
+                    
+                    await this.updateUser(robberId, robberUpdateData);
+                    
+                    return { 
+                        penaltyBal: penalty,
+                        canRob: false, 
+                        reason: 'target_protected',
+                        protectionType: protection.type
+                    };
+                } else {
+                    if (protection.type === 'vault_failed') {
+                        // Mostrar mensaje de bóveda fallida
+                        await message.channel.send('🏦💥 **¡La bóveda de seguridad falló!** El robo continúa...');
+                    }
+                }
             }
             
             // Crear datos del robo activo
@@ -1432,14 +1439,24 @@ class EconomySystem {
             } else {
                 // ROBO FALLIDO
                 console.log(`❌ Robo fallido!`);
-                const penalty = Math.floor(robber.balance * (this.robberyConfig.penaltyPercentage / 100));
-                
-                robberUpdateData.balance = Math.max(0, robber.balance - penalty);
-                robberUpdateData.stats = {
-                    ...robber.stats,
-                    totalSpent: (robber.stats.totalSpent || 0) + penalty,
-                };   
-                
+
+                // Verificar protección contra penalizaciones
+                let actualPenalty = 0;
+                let protectionMessage = '';
+
+                const hasProtection = await this.shop.hasGameProtection(robberId);
+                if (hasProtection) {
+                    protectionMessage = '🛡️ Tu Fortune Shield te protegió de la penalización!';
+                    console.log(`🛡️ ${robberId} protegido por Fortune Shield`);
+                } else {
+                    actualPenalty = Math.floor(robber.balance * (this.robberyConfig.penaltyPercentage / 100));
+                    robberUpdateData.balance = Math.max(0, robber.balance - actualPenalty);
+                    robberUpdateData.stats = {
+                        ...robber.stats,
+                        totalSpent: (robber.stats.totalSpent || 0) + actualPenalty,
+                    };
+                }
+
                 await this.updateUser(robberId, robberUpdateData);
                 
                 console.log(`🚨 Robo fallido: ${robberId} perdió ${penalty} ${this.config.currencySymbol} como penalización`);
@@ -1447,7 +1464,8 @@ class EconomySystem {
                 return {
                     success: true,
                     robberySuccess: false,
-                    penalty: penalty,
+                    penalty: actualPenalty,
+                    protectionMessage: protectionMessage,
                     clicks: robberyData.clicks,
                     maxClicks: this.robberyConfig.maxClicks,
                     efficiency: Math.round(clickEfficiency * 100),
