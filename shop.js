@@ -165,8 +165,8 @@ class ShopSystem {
                 category: 'cosmetic',
                 rarity: 'uncommon',
                 effect: { type: 'cosmetic', display: 'profile_trophy' },
-                stackable: false,
-                maxStack: 1
+                stackable: true,
+                maxStack: 2
             },
             'rainbow_badge': {
                 id: 'rainbow_badge',
@@ -176,8 +176,8 @@ class ShopSystem {
                 category: 'cosmetic',
                 rarity: 'common',
                 effect: { type: 'cosmetic', display: 'profile_badge' },
-                stackable: false,
-                maxStack: 1
+                stackable: true,
+                maxStack: 2
             },
 
             // === ESPECIALES ===
@@ -318,7 +318,7 @@ class ShopSystem {
                 name: '🎫 Token de Apodo Básico', // Nombre más claro
                 description: 'Componente básico para craftear el Token de Apodo VIP',
                 price: 200000,
-                category: 'special',
+                category: 'cosmetic',
                 rarity: 'rare',
                 stackable: true,
                 maxStack: 3 // Aumenté porque ahora es ingrediente
@@ -344,8 +344,8 @@ class ShopSystem {
                 category: 'cosmetic',
                 rarity: 'legendary',
                 effect: { type: 'cosmetic', display: 'profile_crown', prestige: 10 },
-                stackable: false,
-                maxStack: 1
+                stackable: true,
+                maxStack: 2
             },
             'fire_badge': {
                 id: 'fire_badge',
@@ -355,8 +355,8 @@ class ShopSystem {
                 category: 'cosmetic',
                 rarity: 'epic',
                 effect: { type: 'cosmetic', display: 'profile_badge', prestige: 5 },
-                stackable: false,
-                maxStack: 1
+                stackable: true,
+                maxStack: 2
             },
             'vip_frame': {
                 id: 'vip_frame',
@@ -366,8 +366,8 @@ class ShopSystem {
                 category: 'cosmetic',
                 rarity: 'epic',
                 effect: { type: 'cosmetic', display: 'profile_frame' },
-                stackable: false,
-                maxStack: 1
+                stackable: true,
+                maxStack: 2
             },
 
             'health_potion': {
@@ -447,7 +447,8 @@ class ShopSystem {
                 effect: {
                     type: 'cosmetic'
                 },
-                stackable: false
+                stackable: true,
+                maxStack: 2
             },
 
             // 🎁 Cofre Premium
@@ -2509,11 +2510,11 @@ class ShopSystem {
         const user = await this.economy.getUser(userId);
         const userItems = user.items || {};
         
-        if (!userItems['vip_nickname_token'] || userItems['vip_nickname_token'].quantity < 1) {
+        if (!userItems['nickname_token'] || userItems['nickname_token'].quantity < 1) {
             await message.reply({
                 embeds: [new EmbedBuilder()
                     .setTitle('❌ Token Requerido')
-                    .setDescription('Necesitas un **🏷️✨ Token de Apodo VIP** para cambiar tu apodo.')
+                    .setDescription('Necesitas un **🏷️✨ Token de Apodo** para cambiar tu apodo.')
                     .addFields(
                         { name: '💡 ¿Cómo Obtenerlo?', value: '1. Compra un 🎫 Token de Apodo Básico\n2. Consigue materiales (badges/trophies)\n3. Craftéalo con `>craft nickname_token_craft`', inline: false }
                     )
@@ -2567,7 +2568,7 @@ class ShopSystem {
             .addFields(
                 { name: '📝 Apodo Actual', value: `**${currentNickname}**`, inline: true },
                 { name: '✨ Nuevo Apodo', value: `**${finalNickname}**`, inline: true },
-                { name: '💎 Costo', value: '**1x** 🏷️✨ Token de Apodo VIP', inline: false },
+                { name: '💎 Costo', value: '**1x** 🏷️✨ Token de Apodo', inline: false },
                 { name: '⚠️ Importante', value: 'El token será consumido permanentemente. Para cambiar el apodo otra vez necesitarás otro token.', inline: false }
             )
             .setColor('#FFD700')
@@ -2643,7 +2644,7 @@ class ShopSystem {
                 const user = await this.economy.getUser(userId);
                 const userItems = user.items || {};
                 
-                if (!userItems['vip_nickname_token'] || userItems['vip_nickname_token'].quantity < 1) {
+                if (!userItems['nickname_token'] || userItems['nickname_token'].quantity < 1) {
                     await interaction.update({
                         embeds: [new EmbedBuilder()
                             .setTitle('❌ Token No Disponible')
@@ -2660,9 +2661,9 @@ class ShopSystem {
                 
                 // Consumir el token
                 const newItems = { ...userItems };
-                newItems['vip_nickname_token'].quantity -= 1;
-                if (newItems['vip_nickname_token'].quantity <= 0) {
-                    delete newItems['vip_nickname_token'];
+                newItems['nickname_token'].quantity -= 1;
+                if (newItems['nickname_token'].quantity <= 0) {
+                    delete newItems['nickname_token'];
                 }
                 
                 await this.economy.updateUser(userId, { items: newItems });
@@ -2673,7 +2674,7 @@ class ShopSystem {
                     .setDescription(`Tu apodo ha sido actualizado correctamente.`)
                     .addFields(
                         { name: '✨ Nuevo Apodo', value: `**${nicknameData.finalNickname}**`, inline: true },
-                        { name: '💎 Token Consumido', value: '1x 🏷️✨ Token de Apodo VIP', inline: true },
+                        { name: '💎 Token Consumido', value: '1x 🏷️✨ Token de Apodo', inline: true },
                         { name: '🔄 Para Cambiar Otra Vez', value: 'Necesitarás craftear otro token y usar `>setnickname <nuevo_apodo>`', inline: false }
                     )
                     .setColor('#00FF00')
