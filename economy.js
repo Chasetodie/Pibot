@@ -922,15 +922,9 @@ class EconomySystem {
         const user = await this.getUser(userId);
         const jobs = await this.getWorkJobs();
         const job = jobs[jobType];
-
-        // ✅ NUEVO: Verificar protección contra fallas
-        let hasProtection = false;
-        if (this.shop) {
-            hasProtection = await this.shop.hasGameProtection(userId);
-        }        
         
         // Verificar si falla (solo algunos trabajos tienen chance de fallar)
-        const failed = job.failChance && Math.random() < job.failChance && !hasProtection;
+        const failed = job.failChance && Math.random() < job.failChance;
 
         const updateData = {
             last_work: Date.now(),
