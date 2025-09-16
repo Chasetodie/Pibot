@@ -449,7 +449,14 @@ class MinigamesSystem {
                 await message.reply(`⚠️ **Límite alcanzado:** No pudiste recibir todo el dinero porque tienes el máximo permitido (${this.formatNumber(this.economy.config.maxBalance)} π-b$).`);
             }
         } else {
-            await this.economy.removeMoney(userId, betAmount, 'coinflip_loss');            
+            const hasProtection = await this.shop.hasGameProtection(userId);
+
+            if (hasProtection) {
+                await message.reply('🛡️ Tu protección evitó la pérdida de dinero!');
+            } else {
+                await this.economy.removeMoney(userId, betAmount, 'coinflip_loss');
+            }
+
             await this.economy.updateUser(userId, updateData);
         
             // *** NUEVO: ACTUALIZAR ESTADÍSTICAS DE ACHIEVEMENTS ***
@@ -463,10 +470,19 @@ class MinigamesSystem {
                 .addFields(
                     { name: '🪙 Resultado', value: result === 'cara' ? '🟡 Cara' : '⚪ Cruz', inline: true },
                     { name: '🎯 Tu Elección', value: normalizedChoice === 'cara' ? '🟡 Cara' : '⚪ Cruz', inline: true },
+                );
+
+            if (hasProtection) {
+                embed.addFields(
+                    { name: '🛡️ Protección', value: 'Tu Fortune Shield te protegió de la pérdida!', inline: false }
+                );
+            } else {
+                embed.addFields(
                     { name: '💸 Perdiste', value: `${this.formatNumber(betAmount)} π-b$`, inline: true },
                     { name: '💸 Balance Antiguo', value: `${this.formatNumber(user.balance + betAmount)} π-b$`, inline: false },
                     { name: '💳 Balance Actual', value: `${this.formatNumber(user.balance)} π-b$`, inline: false }
                 );
+            }
         }
 
         // Verificar tesoros al final

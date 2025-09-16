@@ -944,6 +944,16 @@ class EconomySystem {
         if (failed) {
             const failMessage = job.failMessages[Math.floor(Math.random() * job.failMessages.length)];
             const penalty = Math.floor(job.baseReward * 0.2);
+            let protectionMessage = '';
+
+            // AGREGAR ESTO:
+            if (this.shop) {
+                const hasProtection = await this.shop.hasGameProtection(userId);
+                if (hasProtection) {
+                    penalty = 0; // No penalty
+                    protectionMessage = '🛡️ Tu protección evitó la penalización!';
+                }
+            }            
 
             updateData.balance = Math.max(0, user.balance - penalty);
             updateData.stats.totalSpent = (user.stats?.totalSpent || 0) + penalty;
@@ -956,6 +966,7 @@ class EconomySystem {
                 failed: true,
                 message: failMessage,
                 penalty: penalty,
+                protectionMessage: protectionMessage,
                 oldBalance: Math.max(0, user.balance + penalty),
                 newBalance: Math.max(0, user.balance),
                 canWork: canWorkResult.canWork,

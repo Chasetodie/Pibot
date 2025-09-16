@@ -996,6 +996,16 @@ class AllCommands {
                 )
                 .setColor('#dc3545')
                 .setTimestamp();
+
+            // AGREGAR ESTO:
+            if (result.protectionMessage) {
+                embed.addFields({ 
+                    name: '🛡️ Protección', 
+                    value: result.protectionMessage, 
+                    inline: false 
+                });
+                embed.setColor('#FFA500'); // Color diferente si hay protección
+            }
             
             await message.reply({ embeds: [embed] });
             if (result.hitLimit) {
