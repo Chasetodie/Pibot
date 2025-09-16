@@ -224,6 +224,17 @@ class MinigamesSystem {
         return { canCoinPlay: true };
     }
 
+    formatGameBonuses(eventMessage, luckMessage, itemMessage, vipMessage) {
+        let bonuses = [];
+        
+        if (eventMessage) bonuses.push(eventMessage);
+        if (luckMessage) bonuses.push(luckMessage);
+        if (itemMessage) bonuses.push(itemMessage);
+        if (vipMessage) bonuses.push(vipMessage);
+        
+        return bonuses.length > 0 ? bonuses.join('\n') : 'No hay bonificaciones activas';
+    }
+
     async handleCoinflip(message, args) {
         const userId = message.author.id;
         const user = await this.economy.getUser(userId);
@@ -275,34 +286,38 @@ class MinigamesSystem {
             return;
         }
 
-        let winChance = 0.5; // 50% base
-        let luckMessage = '';
+        let winChance = 0.5;
+        let luckMessages = []; // Array para acumular mensajes
 
-        // AGREGAR ESTAS LÍNEAS:
+        // 1. Items de suerte
         if (this.shop) {
             const luckBoost = await this.shop.getActiveMultipliers(userId, 'games');
             if (luckBoost.luckBoost) {
                 winChance += luckBoost.luckBoost;
-                luckMessage = `🍀 **Boost de Suerte** (+${Math.round(luckBoost.luckBoost * 100)}% probabilidad)`;
+                luckMessages.push(`🍀 **Boost de Suerte** (+${Math.round(luckBoost.luckBoost * 100)}% probabilidad)`);
             }
         }
-       
+
+        // 2. Eventos de suerte
         for (const event of this.events.getActiveEvents()) {
             if (event.type === 'lucky_hour') {
-                winChance *= 1.3; // 🍀 +30% probabilidad
-                luckMessage = `🍀 **Hora de la Suerte** (${Math.round(winChance * 100)}% probabilidad)`;
+                winChance *= 1.3;
+                luckMessages.push(`🍀 **Hora de la Suerte** (${Math.round(winChance * 100)}% probabilidad)`);
                 break;
             }
         }
 
-        // Aplicar boost de suerte VIP
+        // 3. VIP suerte
         if (this.shop) {
             const vipMultipliers = await this.shop.getVipMultipliers(userId, 'games');
             winChance += vipMultipliers.luckBoost;
             if (vipMultipliers.luckBoost > 0) {
-                luckMessage += `💎 **Boost VIP** (+${Math.round(vipMultipliers.luckBoost * 100)}% suerte)`;
+                luckMessages.push(`💎 **Boost VIP** (+${Math.round(vipMultipliers.luckBoost * 100)}% suerte)`);
             }
         }
+
+        // Combinar todos los mensajes de suerte
+        const luckMessage = luckMessages.join('\n');
 
         // Realizar el juego
         const result = Math.random() < winChance ? 'cara' : 'cruz';
@@ -421,7 +436,7 @@ class MinigamesSystem {
                     { name: '💰 Ganancia', value: `+${this.formatNumber(profit)} π-b$`, inline: true },
                     { name: '💸 Balance Antiguo', value: `${this.formatNumber(user.balance - profit)} π-b$`, inline: false },
                     { name: '💳 Balance Actual', value: `${this.formatNumber(user.balance)} π-b$`, inline: false },
-                    { name: '🎉 Extra por Eventos', value: `${finalMessage || "No hay eventos Activos"} `, inline: false }
+                    { name: '🎉 Bonificaciones', value: this.formatGameBonuses(eventMessage, luckMessage, itemMessage), inline: false }
                 );
 
             if (addResult.hitLimit) {
