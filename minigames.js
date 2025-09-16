@@ -450,13 +450,13 @@ class MinigamesSystem {
             }
         } else {
             const hasProtection = await this.shop.hasGameProtection(userId);
+            let protectionMessage = '🛡️ Tu protección evitó la pérdida de dinero!';
 
             if (hasProtection) {
                 // Determinar qué protección se activó
                 const user = await this.economy.getUser(userId);
                 const activeEffects = this.shop.parseActiveEffects(user.activeEffects);
                 
-                let protectionMessage = '🛡️ Tu protección evitó la pérdida de dinero!';
                 
                 // Verificar health potion específicamente
                 if (activeEffects['health_potion']) {
