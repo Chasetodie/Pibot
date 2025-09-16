@@ -405,11 +405,13 @@ if (bidAmount < auction.currentBid + minimumIncrement) {
         if (client && auction.channelId) {
             try {
                 const channel = client.channels.cache.get(auction.channelId);
+                const recipe = this.shop.shopItems[auction.itemName];
+                const realItemName = recipe ? recipe.name : auction.itemName;
                 
                 if (channel) {
                     const embed = new EmbedBuilder()
                         .setTitle('🔨 Subasta Terminada')
-                        .setDescription(`Subasta de **${auction.itemName}** ha finalizado`)
+                        .setDescription(`Subasta de **${realItemName}** ha finalizado`)
                         .setColor(auction.highestBidder ? '#00FF00' : '#FF6600')
                         .setTimestamp();
                     
@@ -506,7 +508,7 @@ class CraftingSystem {
                 id: 'super_lucky_charm',
                 name: '🍀✨ Super Amuleto de Suerte',
                 description: 'Versión mejorada del amuleto normal (x2.0 multiplicador, 3 horas)',
-                craftTime: 3600000, // 1 hora
+                craftTime: /*3600000*/3600, // 1 hora
                 ingredients: [
                     { id: 'lucky_charm', quantity: 5 },
                     { id: 'double_xp_potion', quantity: 2 }
