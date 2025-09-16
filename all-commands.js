@@ -875,6 +875,17 @@ class AllCommands {
             await message.channel.send({ embeds: [levelUpEmbed] });
         }
     }
+
+    formatAllBonuses(result) {
+        let bonuses = [];
+        
+        if (result.eventMessage) bonuses.push(result.eventMessage);
+        if (result.pickaxeMessage) bonuses.push(result.pickaxeMessage);
+        if (result.itemMessage) bonuses.push(result.itemMessage);
+        if (result.vipMessage) bonuses.push(result.vipMessage);
+        
+        return bonuses.length > 0 ? bonuses.join('\n') : 'No hay bonificaciones activas';
+    }
     
     // Comando !work - Sistema de trabajos
     async handleWork(message) {
@@ -1033,7 +1044,7 @@ class AllCommands {
                     value: `${this.formatNumber(result.newBalance)} π-b$`,
                     inline: true
                 },
-                { name: '🎉 Extra por Eventos', value: `${result.eventMessage || "No hay eventos Activos"} `, inline: false },
+                { name: '🎉 Bonificaciones', value: this.formatAllBonuses(result), inline: false },
                 //{ name: '🎉 Bonificaciones', value: this.formatBonusMessages(eventMessage, itemMessage, vipMessage), inline: false }
             )
             .setColor('#28a745')

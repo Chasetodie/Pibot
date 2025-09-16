@@ -401,16 +401,18 @@ class MinigamesSystem {
                 }
             }
 
-            let finalMessage = ''
+            // Obtener mensajes de items
+            let itemMessage = '';
+            if (this.shop) {
+                const modifiers = await this.shop.getActiveMultipliers(userId, 'games');
+                if (modifiers.multiplier > 1) {
+                    itemMessage = `✨ **Items Activos** (x${modifiers.multiplier.toFixed(1)} ganancia)`;
+                }
+            }
 
-            if (eventMessage === '')
-                finalMessage = luckMessage;
-            else if (luckMessage === '')
-                finalMessage = eventMessage;
-            else if (luckMessage === '' && eventMessage === '')
-                finalMessage = '';
-            else
-                finalMessage = eventMessage + "\n" + luckMessage;            
+            // Combinar todos los mensajes
+            let allMessages = [eventMessage, luckMessage, itemMessage].filter(msg => msg !== '');
+            let finalMessage = allMessages.length > 0 ? allMessages.join('\n') : 'No hay bonificaciones activas';
           
             embed.setDescription(`🎉 **¡GANASTE!**`)
                 .addFields(
