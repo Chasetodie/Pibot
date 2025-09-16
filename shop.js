@@ -2790,7 +2790,7 @@ class ShopSystem {
                     await message.reply({ embeds: [embedCF] });
                     break;
                 case '>setnickname':
-                    await this.handleSetNickname(message, args);
+                    await this.handleSetNickname(message, args[1]);
                     break;
             }
         } catch (error) {
