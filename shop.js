@@ -1964,29 +1964,55 @@ class ShopSystem {
     }
 
     // === PROCESAR INGRESOS PASIVOS ===
-    async processPassiveIncome(userId) {
-        const user = await this.economy.getUser(userId);
-        const permanentEffects = user.permanentEffects || {};
-        
-        if (!permanentEffects['auto_worker']) return { amount: 0, generated: false };
-        
-        const effect = permanentEffects['auto_worker'];
-        const lastClaim = user.lastPassiveIncome || 0;
-        const now = Date.now();
-        
-        // Verificar si ha pasado 1 hora
-        if (now - lastClaim < effect.interval) {
-            return { amount: 0, generated: false };
+    async processPassiveIncome() {
+        try {
+            const allUsers = await this.economy.getAllUsers();
+            let processedCount = 0;
+            
+            for (const user of allUsers) {
+                const permanentEffects = user.permanentEffects || {};
+                
+                if (typeof permanentEffects === 'string') {
+                    try {
+                        permanentEffects = JSON.parse(permanentEffects);
+                    } catch (error) {
+                        continue; // Skip usuario con datos corruptos
+                    }
+                }
+                
+                for (const [itemId, effect] of Object.entries(permanentEffects)) {
+                    if (effect.type === 'passive_income') {
+                        const lastPayout = user.lastPassivePayout || 0;
+                        const now = Date.now();
+                        
+                        // Si ha pasado 1 hora
+                        if (now - lastPayout >= 3600000) {
+                            const amount = Math.floor(
+                                Math.random() * (effect.maxAmount - effect.minAmount + 1)
+                            ) + effect.minAmount;
+                            
+                            // Verificar límite de balance
+                            if (user.balance + amount <= this.economy.config.maxBalance) {
+                                await this.economy.updateUser(user.id, {
+                                    balance: user.balance + amount,
+                                    lastPassivePayout: now
+                                });
+                                
+                                console.log(`🤖 Ingreso pasivo: ${amount} π-b$ para ${user.id.slice(-4)}`);
+                                processedCount++;
+                            }
+                        }
+                    }
+                }
+            }
+            
+            if (processedCount > 0) {
+                console.log(`✅ Procesados ${processedCount} ingresos pasivos`);
+            }
+            
+        } catch (error) {
+            console.error('❌ Error procesando ingresos pasivos:', error);
         }
-        
-        const amount = Math.floor(Math.random() * (effect.maxAmount - effect.minAmount + 1)) + effect.minAmount;
-        
-        await this.economy.updateUser(userId, {
-            balance: user.balance + amount,
-            lastPassiveIncome: now
-        });
-        
-        return { amount, generated: true };
     }
 
     // === OBTENER INFO DE EFECTOS ACTIVOS ===
@@ -2426,6 +2452,48 @@ class ShopSystem {
         } catch (error) {
             console.error('❌ Error procesando ingresos pasivos:', error);
         }
+    }
+
+    async applyPickaxeBonus(userId) {
+        const user = await this.economy.getUser(userId);
+        const activeEffects = user.activeEffects || {};
+        
+        // Verificar picos con usos limitados
+        for (const [itemId, effects] of Object.entries(activeEffects)) {
+            if (!Array.isArray(effects)) continue;
+            
+            for (const effect of effects) {
+                // Verificar pico dorado
+                if (effect.type === 'work_multiplier' && effect.usesLeft > 0) {
+                    const item = this.shopItems[itemId];
+                    if (item) {
+                        // Consumir un uso
+                        effect.usesLeft -= 1;
+                        
+                        // Si se acabaron los usos, remover
+                        if (effect.usesLeft <= 0) {
+                            const effectIndex = effects.indexOf(effect);
+                            effects.splice(effectIndex, 1);
+                            
+                            if (effects.length === 0) {
+                                delete activeEffects[itemId];
+                            }
+                        }
+                        
+                        await this.economy.updateUser(userId, { activeEffects });
+                        
+                        return {
+                            applied: true,
+                            multiplier: effect.multiplier,
+                            name: item.name,
+                            usesLeft: effect.usesLeft
+                        };
+                    }
+                }
+            }
+        }
+        
+        return { applied: false };
     }
     
     async removePermanentEffect(message, itemId) {

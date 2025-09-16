@@ -143,6 +143,7 @@ trades.startCacheCleanup();
 missions.startCacheCleanup();
 events.startCacheCleanup();
 minigames.startCacheCleanup();
+startPassiveIncomeProcessor(shop);
 
 const userCooldowns = new Map();
 const messageBatch = [];
@@ -189,6 +190,16 @@ function checkMessageRate() {
         messageCount = 0;
         lastSecond = now;
     }
+}
+
+function startPassiveIncomeProcessor(shop) {
+    // Ejecutar cada hora (3600000 ms)
+    setInterval(async () => {
+        console.log('💰 Procesando ingresos pasivos...');
+        await shop.processPassiveIncome();
+    }, 3600000); // 1 hora
+    
+    console.log('🤖 Sistema de ingreso pasivo iniciado (cada 1 hora)');
 }
 
 // LIMPIEZA AGRESIVA DE MEMORIA

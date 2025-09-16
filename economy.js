@@ -324,13 +324,43 @@ class EconomySystem {
     async addXp(userId, baseXp) {
         const user = await this.getUser(userId); // ← Ahora async
         const variation = Math.floor(Math.random() * (this.config.xpVariation * 2)) - this.config.xpVariation;
-        const xpGained = Math.max(1, baseXp + variation);
-        const modifiers = await this.shop.getActiveMultipliers(userId, 'all');
-        let finalXp = this.calculateScaledXp(user);
+        
+        let xpGained = Math.max(1, baseXp + variation);
 
-        if (modifiers.multiplier > 1) {
-            finalXp = Math.floor(xpGained * modifiers.multiplier);        
-        }
+        // ✅ ARREGLAR: Aplicar multiplicadores de XP correctamente
+        if (this.shop) {
+            const modifiers = await this.shop.getActiveMultipliers(userId, 'all');
+            
+            // Verificar multiplicadores específicos de XP
+            let xpMultiplier = 1.0;
+            
+            // Items con multiplicador específico de XP
+            if (modifiers.multiplier > 1) {
+                // Verificar si es específicamente XP o general
+                const activeEffects = user.activeEffects || {};
+                for (const [itemId, effects] of Object.entries(activeEffects)) {
+                    if (!Array.isArray(effects)) continue;
+                    
+                    for (const effect of effects) {
+                        if (effect.type === 'xp_multiplier' || effect.type === 'xp_tornado') {
+                            if (effect.expiresAt && effect.expiresAt > Date.now()) {
+                                xpMultiplier *= effect.multiplier;
+                            }
+                        }
+                    }
+                }
+            }
+            
+            // Aplicar VIP boost para XP
+            const vipMultipliers = await this.shop.getVipMultipliers(userId, 'all');
+            if (vipMultipliers.multiplier > 1) {
+                xpMultiplier *= 1.2; // VIP da 20% más XP
+            }
+            
+            xpGained = Math.floor(xpGained * xpMultiplier);
+        }        
+
+        const finalXp = this.calculateScaledXp(user, xpGained);
         
         const oldLevel = user.level;
         const newXp = user.xp + finalXp;
@@ -356,13 +386,6 @@ class EconomySystem {
                 ...user.stats,
                 totalEarned: (user.stats.totalEarned || 0) + reward
             };
-
-            //console.log(`🎉 ${userId} subió ${levelUps} nivel(es)! Nuevo nivel: ${newLevel}, Recompensa: ${reward} ${this.config.currencySymbol}`);
-
-            // *** NUEVO: ACTUALIZAR MISIONES DE LEVEL UP ***
-            if (this.missions) {
-                await this.missions.updateMissionProgress(userId, 'level_up', levelUps);
-            }
             
             await this.updateUser(userId, updateData); // ← Reemplaza saveUsers()
            
@@ -899,9 +922,15 @@ class EconomySystem {
         const user = await this.getUser(userId);
         const jobs = await this.getWorkJobs();
         const job = jobs[jobType];
+
+        // ✅ NUEVO: Verificar protección contra fallas
+        let hasProtection = false;
+        if (this.shop) {
+            hasProtection = await this.shop.hasGameProtection(userId);
+        }        
         
         // Verificar si falla (solo algunos trabajos tienen chance de fallar)
-        const failed = job.failChance && Math.random() < job.failChance;
+        const failed = job.failChance && Math.random() < job.failChance && !hasProtection;
 
         const updateData = {
             last_work: Date.now(),
@@ -913,15 +942,14 @@ class EconomySystem {
         }
         
         if (failed) {
-            // Trabajo falló
             const failMessage = job.failMessages[Math.floor(Math.random() * job.failMessages.length)];
-            const penalty = Math.floor(job.baseReward * 0.2); // Pierde 20% del reward base
+            const penalty = Math.floor(job.baseReward * 0.2);
 
             updateData.balance = Math.max(0, user.balance - penalty);
             updateData.stats.totalSpent = (user.stats?.totalSpent || 0) + penalty;
 
-            await this.updateUser(userId, updateData); // ← Reemplaza saveUsers()
-           
+            await this.updateUser(userId, updateData);
+        
             return {
                 name: job.name,
                 success: false,
@@ -930,11 +958,10 @@ class EconomySystem {
                 penalty: penalty,
                 oldBalance: Math.max(0, user.balance + penalty),
                 newBalance: Math.max(0, user.balance),
-
                 canWork: canWorkResult.canWork,
                 reason: canWorkResult.reason,
                 requiredLevel: canWorkResult.requiredLevel,
-                timeLeft: canWorkResult.timeLeft || 0, // Solo si es cooldown
+                timeLeft: canWorkResult.timeLeft || 0,
                 canWorkResult: canWorkResult  
             };
         }
@@ -969,7 +996,18 @@ class EconomySystem {
             }
         }
 
-        // ✅ 2. DESPUÉS aplicar multiplicadores de items
+        // ✅ 2. NUEVO: Aplicar PICOS primero (antes de otros multiplicadores)
+        let pickaxeMessage = '';
+        if (this.shop) {
+            const pickaxeBonus = await this.shop.applyPickaxeBonus(userId);
+            if (pickaxeBonus.applied) {
+                const beforePickaxe = finalEarnings;
+                finalEarnings = Math.floor(finalEarnings * pickaxeBonus.multiplier);
+                pickaxeMessage = `⛏️ **${pickaxeBonus.name}** (+${finalEarnings - beforePickaxe} π-b$)`;
+            }
+        }
+
+        // 3. DESPUÉS aplicar multiplicadores de items
         let itemMessage = '';
         if (this.shop) {
             const modifiers = await this.shop.getActiveMultipliers(userId, 'work');
@@ -983,7 +1021,7 @@ class EconomySystem {
             await this.shop.consumeItemUse(userId, 'work');
         }
 
-        // ✅ 3. FINALMENTE aplicar VIP
+        // 4. FINALMENTE aplicar VIP
         let vipMessage = '';
         if (this.shop) {
             const vipMultipliers = await this.shop.getVipMultipliers(userId, 'work');
@@ -995,8 +1033,10 @@ class EconomySystem {
         }
         
         const addResult = await this.addMoney(userId, finalEarnings, 'work_reward');
-
         await this.updateUser(userId, updateData); // ← Reemplaza saveUsers()    
+
+        // ✅ MEJORAR: Combinar todos los mensajes de bonificaciones
+        let allBonusMessages = [eventMessage, pickaxeMessage, itemMessage, vipMessage].filter(msg => msg !== '');
 
         return {
             success: true,
@@ -1006,9 +1046,12 @@ class EconomySystem {
             newBalance: user.balance + finalEarnings,
             jobName: job.name,
             eventMessage: eventMessage,
+            pickaxeMessage: pickaxeMessage, // NUEVO
+            itemMessage: itemMessage,       // NUEVO
+            vipMessage: vipMessage,         // NUEVO
+            allBonusMessages: allBonusMessages, // NUEVO: array con todos los bonos
             finalEarnings: addResult.actualAmount,
             hitLimit: addResult.hitLimit,
-
             canWork: canWorkResult.canWork,
             reason: canWorkResult.reason,
             requiredLevel: canWorkResult.requiredLevel,
