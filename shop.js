@@ -1732,7 +1732,7 @@ class ShopSystem {
                 if (!appliesToAction) continue;
 
                 // AGREGAR ESTA LÍNEA - Filtrar efectos que no dan multiplicador de dinero
-                if (['penalty_protection', 'cooldown_reduction', 'protection'].includes(effect.type)) continue;
+                if (['penalty_protection', 'cooldown_reduction', 'protection', 'xp_multiplier'].includes(effect.type)) continue;
                 
                 if (effect.multiplier) totalMultiplier *= effect.multiplier;
                 if (effect.reduction) totalReduction += effect.reduction;
