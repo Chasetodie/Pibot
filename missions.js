@@ -537,7 +537,13 @@ async checkAndResetAllMissions() {
                     successful_robberies_today: 0,
                     daily_claimed_today: false,
                     mentions_made_today: 0,
-                    active_hours_today: []
+                    active_hours_today: [],
+                    emoji_messages: 0,
+                    reactions_given: 0,
+                    commands_used: 0,
+                    auctions_created_today: 0,
+                    auctions_won_today: 0,
+                    items_crafted_today: 0
                 }
             };
             
@@ -832,6 +838,8 @@ async checkAndResetAllMissions() {
         const stats = user.daily_stats || {};
         
         switch (mission.type) {
+            case 'emoji_messages':
+                return stats.emoji_messages || 0;
             case 'messages':
                 return stats.messages_today || 0;
             case 'work':
