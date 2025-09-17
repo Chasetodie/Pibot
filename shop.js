@@ -1878,6 +1878,7 @@ class ShopSystem {
                 if (effect.type === 'xp_multiplier' || effect.type === 'xp_tornado') {
                     if (effect.expiresAt && effect.expiresAt < Date.now()) continue;
                     if (effect.multiplier) xpMultiplier *= effect.multiplier;
+                    console.log("esta cosa que w");
                 }
             }
         }
