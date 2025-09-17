@@ -237,7 +237,7 @@ class ShopSystem {
             'xp_tornado': {
                 id: 'xp_tornado',
                 name: '🌪️ Tornado de XP',
-                description: 'x3 XP de todos los mensajes por 20 minutos',
+                description: 'x3 XP de todos los mensajes por 15 minutos',
                 price: 400000,
                 category: 'consumable',
                 rarity: 'epic',
@@ -367,7 +367,7 @@ class ShopSystem {
                 rarity: 'uncommon',
                 effect: {
                     type: 'penalty_protection',
-                    targets: ['games', 'work'],
+                    targets: ['games'],
                     duration: 3600 // 1 hora
                 },
                 stackable: true,
@@ -495,13 +495,13 @@ class ShopSystem {
             'super_lucky_charm': {
                 id: 'super_lucky_charm',
                 name: '🍀✨ Super Amuleto de Suerte',
-                description: 'Versión mejorada del amuleto normal (x2.0 multiplicador, 4 horas)',
+                description: 'Versión mejorada del amuleto normal (x2.0 multiplicador, 3 horas)',
                 category: 'consumable',
                 rarity: 'epic',
                 effect: {
                     type: 'multiplier',
                     targets: ['work', 'games'],
-                    multiplier: 1.5,
+                    multiplier: 2.0,
                     duration: 10800 // 3 horas
                 },
                 chestOnly: true,
