@@ -641,9 +641,9 @@ async checkAndResetAllMissions() {
                 updateData.daily_stats.messages_today = (user.daily_stats.messages_today || 0) + 1;
                 
                 // ✅ Mensajes con emojis
-                if (value && /[\u{1F600}-\u{1F6FF}]/u.test(value)) { 
-                    updateData.daily_stats.emoji_messages = (user.daily_stats.emoji_messages || 0) + 1;
-                }
+if (value && (/\p{Emoji}/u.test(value) || /<a?:\w+:\d+>/.test(value))) {
+  updateData.daily_stats.emoji_messages = (user.daily_stats.emoji_messages || 0) + 1;
+}
 
                 // Agregar hora actual para misión de active_hours
                 const currentHour = new Date().getHours();
