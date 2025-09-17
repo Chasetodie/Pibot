@@ -590,13 +590,13 @@ class ShopSystem {
             'cosmic_charm': {
                 id: 'cosmic_charm',
                 name: '🔮✨ Amuleto Cósmico',
-                description: 'Un amuleto místico con poderes cósmicos (x3.0 multiplicador, 2 horas)',
+                description: 'Un amuleto místico con poderes cósmicos (x3.0 multiplicador, 1 hora 30 minutos)',
                 category: 'consumable',
                 rarity: 'legendary',
                 effect: {
                     type: 'multiplier',
                     targets: ['work', 'games'],
-                    multiplier: 2.5,
+                    multiplier: 3.0,
                     duration: 5400 // 1.5 horas
                 },
                 chestOnly: true,
