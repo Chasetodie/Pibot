@@ -248,7 +248,7 @@ class ShopSystem {
             'golden_pickaxe': {
                 id: 'golden_pickaxe',
                 name: '⛏️ Pico Dorado',
-                description: 'Duplica las ganancias de trabajo por 5 usos',
+                description: 'Duplica las ganancias de trabajo por 3 usos',
                 price: 450000,
                 category: 'consumable',
                 rarity: 'rare',
@@ -1730,6 +1730,9 @@ class ShopSystem {
                     (targets.includes('games') && ['coinflip', 'dice', 'roulette'].includes(action));
 
                 if (!appliesToAction) continue;
+
+                // AGREGAR ESTA LÍNEA - Filtrar efectos que no dan multiplicador de dinero
+                if (['penalty_protection', 'cooldown_reduction', 'protection'].includes(effect.type)) continue;
                 
                 if (effect.multiplier) totalMultiplier *= effect.multiplier;
                 if (effect.reduction) totalReduction += effect.reduction;
