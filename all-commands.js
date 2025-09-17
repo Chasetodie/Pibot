@@ -1303,11 +1303,6 @@ class AllCommands {
             
             const finishResult = await this.economy.finishRobbery(robberId);
 
-            const consumedUse = await this.shop.consumeItemUse(robberId, 'robbery_kit');
-            if (consumedUse) {
-                await message.channel.reply('🔧 Has usado 1 uso de tu **Kit de Robo**.');
-            }
-
             // En lugar de mostrar el resultado inmediatamente, envía un mensaje separado
             if (finishResult.success) {
                 // Esperar un poco para que se vea como mensaje separado

@@ -1353,6 +1353,11 @@ class EconomySystem {
             console.log(`🎲 Probabilidad de éxito: ${finalSuccessChance * 100}%`);
             console.log(`🔧 Boost de kit: ${successBoost*100}%`);
             console.log(`✅ Probabilidad final: ${finalChance*100}%`);
+
+            // Consumir usos de items de robo
+            if (this.shop) {
+                await this.shop.consumeItemUse(robberId, 'robbery');
+            }
             
             const success = Math.random() < finalChance;
             

@@ -626,9 +626,10 @@ class ShopSystem {
                 category: 'tool',
                 rarity: 'legendary',
                 effect: {
-                    type: 'mining_boost',
+                    type: 'mining_tool',
                     multiplier: 2.5,
-                    durability: Infinity
+                    durability: Infinity,
+                    currentDurability: Infinity
                 },
                 chestOnly: true,
                 stackable: false
@@ -640,9 +641,10 @@ class ShopSystem {
                 category: 'tool',
                 rarity: 'epic',
                 effect: {
-                    type: 'mining_boost',
+                    type: 'mining_tool',
                     multiplier: 1.5,
-                    durability: 200
+                    durability: 200,
+                    currentDurability: 200
                 },
                 chestOnly: true,
                 stackable: false
@@ -2168,8 +2170,11 @@ class ShopSystem {
         
         // Efectos permanentes
         for (const effect of Object.values(permanentEffects)) {
-            if (effect.type === 'permanent_cooldown' && effect.targets && Array.isArray(effect.targets) && effect.targets.includes(action)) {
-                reduction += effect.reduction;
+            if (effect.type === 'permanent_cooldown' && effect.targets && Array.isArray(effect.targets)) {
+                // Verificar si el item aplica a esta acción o a todas
+                if (effect.targets.includes(action) || effect.targets.includes('all')) {
+                    reduction += effect.reduction;
+                }
             }
         }
         
@@ -2387,6 +2392,34 @@ class ShopSystem {
     async applyPickaxeBonus(userId) {
         const user = await this.economy.getUser(userId);
         const activeEffects = this.parseActiveEffects(user.activeEffects);
+        const userItems = user.items || {};
+
+        // Verificar herramientas permanentes primero
+        for (const [itemId, userItem] of Object.entries(userItems)) {
+            const item = this.shopItems[itemId];
+            if (!item || item.effect?.type !== 'mining_tool') continue;
+            if (!userItem.currentDurability || userItem.currentDurability <= 0) continue;
+            
+            // Usar herramienta
+            const newItems = { ...userItems };
+            if (userItem.currentDurability !== Infinity) {
+                newItems[itemId].currentDurability -= 1;
+                
+                // Si se rompe, eliminar
+                if (newItems[itemId].currentDurability <= 0) {
+                    delete newItems[itemId];
+                }
+            }
+            
+            await this.economy.updateUser(userId, { items: newItems });
+            
+            return {
+                applied: true,
+                multiplier: item.effect.multiplier,
+                name: item.name,
+                durabilityLeft: newItems[itemId]?.currentDurability || 0
+            };
+        }
         
         // Verificar picos con usos limitados
         for (const [itemId, effects] of Object.entries(activeEffects)) {
@@ -2444,7 +2477,7 @@ class ShopSystem {
         }
         
         // ✅ CONFIRMACIÓN para items costosos
-        const expensiveItems = ['diamond_membership', 'auto_worker', 'permanent_vault'];
+        const expensiveItems = ['auto_worker', 'permanent_vault'];
         if (expensiveItems.includes(itemId) || item.price > 20000) {
             
             // Sistema de confirmación similar al de subastas

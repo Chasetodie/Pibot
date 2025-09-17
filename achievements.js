@@ -241,7 +241,7 @@ class AchievementsSystem {
             'jackpot': {
                 name: '🎰 Jackpot!',
                 description: 'Gana más de 100,000 π-b$ en una sola apuesta',
-                requirement: { type: 'single_bet_win', value: 100000 },
+                requirement: { type: 'single_bet_win', value: 500000 },
                 reward: { money: 20000, xp: 5000 },
                 rarity: 'legendary',
                 emoji: '🎰'
