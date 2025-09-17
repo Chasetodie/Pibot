@@ -754,7 +754,7 @@ class CraftingSystem {
                 description: 'Permiten robar sin riesgo de ser atrapado (15 usos)',
                 craftTime: 21600000, // 6 horas
                 ingredients: [
-                    { id: 'master_gloves_craft', quantity: 1 },
+                    { id: 'master_gloves', quantity: 1 },
                     { id: 'fortune_shield', quantity: 1 }
                 ],
                 result: {
