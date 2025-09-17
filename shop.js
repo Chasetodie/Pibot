@@ -671,7 +671,8 @@ class ShopSystem {
             'uncommon': '#1EFF00', 
             'rare': '#0099FF',
             'epic': '#CC00FF',
-            'legendary': '#FF6600'
+            'legendary': '#FF6600',
+            'mythic': '#000000'
         };
         
         this.rarityEmojis = {
@@ -679,7 +680,8 @@ class ShopSystem {
             'uncommon': '🟢',
             'rare': '🔵', 
             'epic': '🟣',
-            'legendary': '🟠'
+            'legendary': '🟠',
+            'mythic': '⚫'
         };
 
         // AGREGAR ESTAS LÍNEAS:
