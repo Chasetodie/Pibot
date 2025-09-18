@@ -1189,6 +1189,42 @@ class AllCommands {
             
             return message.reply({ embeds: [errorEmbed] });
         }
+
+        if (this.shop) {
+            const user = await this.economy.getUser(robberId);
+            const activeEffects = this.shop.parseActiveEffects(user.activeEffects);
+            
+            for (const [itemId, effects] of Object.entries(activeEffects)) {
+                for (const effect of effects) {
+                    if (effect.type === 'robbery_boost' && effect.safe === true && effect.usesLeft > 0) {
+                        // Auto-ejecutar el robo sin minijuego
+                        const autoRobberyResult = await this.economy.startRobbery(robberId, targetId, message);
+                        if (autoRobberyResult.success) {
+                            // Simular clicks máximos para mejor resultado
+                            autoRobberyResult.robberyData.clicks = this.economy.robberyConfig.maxClicks;
+                            this.economy.activeRobberies.set(robberId, autoRobberyResult.robberyData);
+                            
+                            const finishResult = await this.economy.finishRobbery(robberId);
+                            
+                            // Consumir phantom gloves
+                            await this.shop.consumeRobberyItems(robberId);
+                            
+                            // Mostrar resultado inmediatamente
+                            const phantomEmbed = new EmbedBuilder()
+                                .setTitle('👻 Robo Fantasma Exitoso')
+                                .setDescription(`Los **Phantom Gloves** permitieron a ${message.author.username} robar sin ser detectado!`)
+                                .addFields([
+                                    { name: '💰 Cantidad robada', value: `${finishResult.stolenAmount} ${this.economy.config.currencySymbol}`, inline: true },
+                                    { name: '👻 Método', value: 'Robo fantasma instantáneo', inline: true },
+                                ])
+                                .setColor('#800080');
+                            
+                            return message.reply({ embeds: [phantomEmbed] });
+                        }
+                    }
+                }
+            }
+        }  
         
         // Iniciar el robo
         const robberyResult = await this.economy.startRobbery(robberId, targetId, message);
@@ -1237,43 +1273,7 @@ class AllCommands {
                 .setTimestamp();
             
             return message.reply({ embeds: [errorEmbed] });
-        }
-
-        if (this.shop) {
-            const user = await this.economy.getUser(robberId);
-            const activeEffects = this.shop.parseActiveEffects(user.activeEffects);
-            
-            for (const [itemId, effects] of Object.entries(activeEffects)) {
-                for (const effect of effects) {
-                    if (effect.type === 'robbery_boost' && effect.safe === true && effect.usesLeft > 0) {
-                        // Auto-ejecutar el robo sin minijuego
-                        const autoRobberyResult = await this.economy.startRobbery(robberId, targetId, message);
-                        if (autoRobberyResult.success) {
-                            // Simular clicks máximos para mejor resultado
-                            autoRobberyResult.robberyData.clicks = this.economy.robberyConfig.maxClicks;
-                            this.economy.activeRobberies.set(robberId, autoRobberyResult.robberyData);
-                            
-                            const finishResult = await this.economy.finishRobbery(robberId);
-                            
-                            // Consumir phantom gloves
-                            await this.shop.consumeRobberyItems(robberId);
-                            
-                            // Mostrar resultado inmediatamente
-                            const phantomEmbed = new EmbedBuilder()
-                                .setTitle('👻 Robo Fantasma Exitoso')
-                                .setDescription(`Los **Phantom Gloves** permitieron a ${message.author.username} robar sin ser detectado!`)
-                                .addFields([
-                                    { name: '💰 Cantidad robada', value: `${finishResult.stolenAmount} ${this.economy.config.currencySymbol}`, inline: true },
-                                    { name: '👻 Método', value: 'Robo fantasma instantáneo', inline: true },
-                                ])
-                                .setColor('#800080');
-                            
-                            return message.reply({ embeds: [phantomEmbed] });
-                        }
-                    }
-                }
-            }
-        }        
+        }      
         
         // Crear embed inicial del robo
         const robberyEmbed = new EmbedBuilder()

@@ -2162,7 +2162,7 @@ class ShopSystem {
                     // AGREGAR: Caso especial para herramientas
                     if (effect.type === 'mining_tool') {
                         description += `${rarityEmoji} **${item.name}**\n`;
-                        if (effect.currentDurability === Infinity) {
+                        if (itemId === 'eternal_pickaxe') {
                             description += `└ Durabilidad: ♾️ Infinita\n\n`;
                         } else {
                             description += `└ Durabilidad: ${effect.currentDurability}/${effect.durability}\n\n`;
