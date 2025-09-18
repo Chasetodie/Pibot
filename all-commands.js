@@ -1597,7 +1597,7 @@ class AllCommands {
     async processCommand(message) {
         await this.shop.cleanupExpiredTokens(message.author.id);
         await this.trades.cleanupExpiredTrades();
-        await this.economy.missions.updateMissionProgress(message.author.id, 'command_used');
+        await this.economy.missions.updateMissionProgress(message.author.id, 'commands_used');
 
         const args = message.content.trim().split(/ +/g);
         const command = args[0].toLowerCase();

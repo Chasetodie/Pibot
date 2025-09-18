@@ -1452,7 +1452,7 @@ class EconomySystem {
 
                 await this.updateUser(robberId, robberUpdateData);
                 
-                console.log(`🚨 Robo fallido: ${robberId} perdió ${penalty} ${this.config.currencySymbol} como penalización`);
+                console.log(`🚨 Robo fallido: ${robberId} perdió ${actualPenalty} ${this.config.currencySymbol} como penalización`);
                 
                 return {
                     success: true,

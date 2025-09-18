@@ -252,7 +252,11 @@ class ShopSystem {
                 price: 450000,
                 category: 'consumable',
                 rarity: 'rare',
-                effect: { type: 'work_multiplier', targets: ['work'], multiplier: 2.0, uses: 3 },
+                effect: { 
+                    type: 'mining_limited', 
+                    multiplier: 2.0, 
+                    uses: 3
+                },
                 stackable: true,
                 maxStack: 5
             },
@@ -2427,7 +2431,7 @@ class ShopSystem {
             
             for (const effect of effects) {
                 // Verificar pico dorado
-                if (effect.type === 'work_multiplier' && effect.usesLeft > 0) {
+                if (effect.type === 'mining_limited' && effect.usesLeft > 0) {
                     const item = this.shopItems[itemId];
                     if (item) {
                         // Consumir un uso
@@ -2796,7 +2800,7 @@ class ShopSystem {
         
         const args = message.content.toLowerCase().split(' ');
         const command = args[0];
-        await this.economy.missions.updateMissionProgress(message.author.id, 'command_used');
+        await this.economy.missions.updateMissionProgress(message.author.id, 'commands_used');
         
         try {
             switch (command) {

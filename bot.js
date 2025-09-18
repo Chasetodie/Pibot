@@ -466,7 +466,7 @@ client.on('messageReactionAdd', async (reaction, user) => {
 
     // *** NUEVO: NOTIFICAR MISIONES COMPLETADAS ***
     if (this.economy.missions) {
-        const reactions = await economy.missions.updateMissionProgress(user.id, 'reaction_given');
+        const reactions = await economy.missions.updateMissionProgress(user.id, 'reactions_given');
                 
         const allCompleted = [...reactions];
         if (allCompleted.length > 0) {

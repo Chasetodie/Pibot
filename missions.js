@@ -641,9 +641,9 @@ async checkAndResetAllMissions() {
                 updateData.daily_stats.messages_today = (user.daily_stats.messages_today || 0) + 1;
                 
                 // ✅ Mensajes con emojis
-if (value && (/\p{Emoji}/u.test(value) || /<a?:\w+:\d+>/.test(value))) {
-  updateData.daily_stats.emoji_messages = (user.daily_stats.emoji_messages || 0) + 1;
-}
+                if (value && (/\p{Emoji}/u.test(value) || /<a?:\w+:\d+>/.test(value))) {
+                updateData.daily_stats.emoji_messages = (user.daily_stats.emoji_messages || 0) + 1;
+                }
 
                 // Agregar hora actual para misión de active_hours
                 const currentHour = new Date().getHours();
@@ -694,10 +694,10 @@ if (value && (/\p{Emoji}/u.test(value) || /<a?:\w+:\d+>/.test(value))) {
             case 'mention_made':
                 updateData.daily_stats.mentions_made_today = (user.daily_stats.mentions_made_today || 0) + value;
                 break;
-            case 'reaction_given':
+            case 'reactions_given':
                 updateData.daily_stats.reactions_given = (user.daily_stats.reactions_given || 0) + 1;
                 break;
-            case 'command_used':
+            case 'commands_used':
                 updateData.daily_stats.commands_used = (user.daily_stats.commands_used || 0) + 1;
                 break;
             // 📦 Subastas
@@ -870,9 +870,9 @@ if (value && (/\p{Emoji}/u.test(value) || /<a?:\w+:\d+>/.test(value))) {
                 return stats.mentions_made_today || 0;
             case 'active_hours':
                 return (stats.active_hours_today || []).length;
-            case 'reaction_given':
+            case 'reactions_given':
                 return (stats.reactions_given || []).lenght;
-            case 'command_used':
+            case 'commands_used':
                 return (stats.commands_used || []).lenght;
             case 'auctions_created_today':
                 return (stats.auctions_created_today || []).lenght;    
@@ -1046,7 +1046,7 @@ if (value && (/\p{Emoji}/u.test(value) || /<a?:\w+:\d+>/.test(value))) {
     async processCommand(message) {
         const args = message.content.toLowerCase().split(' ');
         const command = args[0];
-        await this.updateMissionProgress(message.author.id, 'command_used');
+        await this.updateMissionProgress(message.author.id, 'commands_used');
         
         try {
             switch (command) {

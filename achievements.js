@@ -1141,7 +1141,7 @@ class AchievementsSystem {
     async processCommand(message) {
         const args = message.content.toLowerCase().split(' ');
         const command = args[0];
-        await this.economy.missions.updateMissionProgress(message.author.id, 'command_used');
+        await this.economy.missions.updateMissionProgress(message.author.id, 'commands_used');
 
         try {
             switch (command) {
