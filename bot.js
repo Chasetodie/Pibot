@@ -463,16 +463,42 @@ client.on('guildMemberAdd', async (member) => {
 
 client.on('messageReactionAdd', async (reaction, user) => {
     if (user.bot) return;
-
-    // *** NUEVO: NOTIFICAR MISIONES COMPLETADAS ***
-    if (this.economy.missions) {
-        const reactions = await economy.missions.updateMissionProgress(user.id, 'reactions_given');
-                
-        const allCompleted = [...reactions];
-        if (allCompleted.length > 0) {
-//            await this.economy.missions.notifyCompletedMissions(message, allCompleted);
+    
+    try {
+        // Asegurarse de que la reacción esté completamente cargada
+        if (reaction.partial) {
+            try {
+                await reaction.fetch();
+            } catch (error) {
+                console.log('No se pudo obtener la reacción completa:', error);
+                return;
+            }
         }
-    }    
+
+        // Verificar que el sistema de misiones esté disponible
+        if (!economy || !economy.missions) return;
+
+        // Actualizar progreso de misiones
+        const completedMissions = await economy.missions.updateMissionProgress(
+            user.id, 
+            'reactions_given'
+        );
+
+        // Notificar misiones completadas si hay alguna
+        if (completedMissions.length > 0) {
+            // Crear un objeto message simulado para las notificaciones
+            const fakeMessage = {
+                author: user,
+                user: user,
+                channel: reaction.message.channel,
+                guild: reaction.message.guild
+            };
+            
+            await economy.missions.notifyCompletedMissions(fakeMessage, completedMissions);
+        }
+    } catch (error) {
+        console.error('Error en messageReactionAdd para misiones:', error);
+    }
 });
 
 // Evento para manejar interacciones con botones
