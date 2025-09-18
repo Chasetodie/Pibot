@@ -1503,17 +1503,43 @@ class ShopSystem {
             return { success: false, message: 'No tienes este item.' };
         }
         
-        // Para herramientas, "usarlas" significa equiparlas con durabilidad completa
+        // CAMBIAR: En lugar de modificar items, agregar a activeEffects
+        const activeEffects = this.parseActiveEffects(user.activeEffects);
+        
+        // Verificar si ya tiene esta herramienta activa
+        if (activeEffects[itemId] && activeEffects[itemId].length > 0) {
+            return { success: false, message: 'Ya tienes esta herramienta equipada.' };
+        }
+        
+        // Agregar herramienta a efectos activos
+        const toolEffect = {
+            type: 'mining_tool',
+            multiplier: item.effect.multiplier,
+            durability: item.effect.durability,
+            currentDurability: item.effect.durability,
+            appliedAt: Date.now()
+        };
+        
+        if (!activeEffects[itemId]) {
+            activeEffects[itemId] = [];
+        }
+        activeEffects[itemId].push(toolEffect);
+        
+        // Consumir el item del inventario
         const newItems = { ...userItems };
+        newItems[itemId].quantity -= 1;
+        if (newItems[itemId].quantity <= 0) {
+            delete newItems[itemId];
+        }
         
-        // Inicializar durabilidad actual basada en la durabilidad máxima
-        newItems[itemId].currentDurability = item.effect.durability;
-        
-        await this.economy.updateUser(userId, { items: newItems });
+        await this.economy.updateUser(userId, { 
+            activeEffects, 
+            items: newItems 
+        });
         
         return {
             success: true,
-            message: `⛏️ **${item.name}** equipado y listo para usar! Durabilidad: ${item.effect.durability === Infinity ? '♾️ Infinita' : item.effect.durability}`
+            message: `⛏️ **${item.name}** equipado! Durabilidad: ${item.effect.durability === Infinity ? '♾️ Infinita' : item.effect.durability}`
         };
     }
     
@@ -2449,33 +2475,39 @@ class ShopSystem {
     async applyPickaxeBonus(userId) {
         const user = await this.economy.getUser(userId);
         const activeEffects = this.parseActiveEffects(user.activeEffects);
-        const userItems = user.items || {};
 
-        // Verificar herramientas permanentes primero
-        for (const [itemId, userItem] of Object.entries(userItems)) {
-            const item = this.shopItems[itemId];
-            if (!item || item.effect?.type !== 'mining_tool') continue;
-            if (!userItem.currentDurability || userItem.currentDurability <= 0) continue;
-            
-            // Usar herramienta
-            const newItems = { ...userItems };
-            if (userItem.currentDurability !== Infinity) {
-                newItems[itemId].currentDurability -= 1;
-                
-                // Si se rompe, eliminar
-                if (newItems[itemId].currentDurability <= 0) {
-                    delete newItems[itemId];
+        // Buscar herramientas en activeEffects
+        for (const [itemId, effects] of Object.entries(activeEffects)) {
+            for (const effect of effects) {
+                if (effect.type === 'mining_tool' && effect.currentDurability > 0) {
+                    const item = this.shopItems[itemId];
+                    if (!item) continue;
+                    
+                    // Usar herramienta
+                    if (effect.currentDurability !== Infinity) {
+                        effect.currentDurability -= 1;
+                        
+                        // Si se rompe, remover del array
+                        if (effect.currentDurability <= 0) {
+                            const effectIndex = effects.indexOf(effect);
+                            effects.splice(effectIndex, 1);
+                            
+                            if (effects.length === 0) {
+                                delete activeEffects[itemId];
+                            }
+                        }
+                    }
+                    
+                    await this.economy.updateUser(userId, { activeEffects });
+                    
+                    return {
+                        applied: true,
+                        multiplier: effect.multiplier,
+                        name: item.name,
+                        durabilityLeft: effect.currentDurability
+                    };
                 }
             }
-            
-            await this.economy.updateUser(userId, { items: newItems });
-            
-            return {
-                applied: true,
-                multiplier: item.effect.multiplier,
-                name: item.name,
-                durabilityLeft: newItems[itemId]?.currentDurability || 0
-            };
         }
         
         // Verificar picos con usos limitados
