@@ -1165,6 +1165,8 @@ class ShopSystem {
                 return await this.applyConsumableEffect(userId, itemId, item);
             case 'permanent':
                 return await this.applyPermanentEffect(userId, itemId, item);
+            case 'tool':
+                return await this.applyToolEffect(userId, itemId, item);            
             case 'special':
                 // Casos especiales existentes
                 if (item.id === 'vip_pass') {
@@ -1489,6 +1491,29 @@ class ShopSystem {
         return { 
             success: true, 
             message: `¡Efecto aplicado! ${item.description} ${durationText}.` 
+        };
+    }
+
+    async applyToolEffect(userId, itemId, item) {
+        const user = await this.economy.getUser(userId);
+        const userItems = user.items || {};
+        
+        // Verificar que tiene el item
+        if (!userItems[itemId] || userItems[itemId].quantity <= 0) {
+            return { success: false, message: 'No tienes este item.' };
+        }
+        
+        // Para herramientas, "usarlas" significa equiparlas con durabilidad completa
+        const newItems = { ...userItems };
+        
+        // Inicializar durabilidad actual basada en la durabilidad máxima
+        newItems[itemId].currentDurability = item.effect.durability;
+        
+        await this.economy.updateUser(userId, { items: newItems });
+        
+        return {
+            success: true,
+            message: `⛏️ **${item.name}** equipado y listo para usar! Durabilidad: ${item.effect.durability === Infinity ? '♾️ Infinita' : item.effect.durability}`
         };
     }
     
