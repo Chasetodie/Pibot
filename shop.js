@@ -632,8 +632,8 @@ class ShopSystem {
                 effect: {
                     type: 'mining_tool',
                     multiplier: 2.5,
-                    durability: Infinity,
-                    currentDurability: Infinity
+                    durability: 999999,
+                    currentDurability: 999999
                 },
                 chestOnly: true,
                 stackable: false
@@ -1519,12 +1519,14 @@ class ShopSystem {
             return { success: false, message: 'Ya tienes esta herramienta equipada.' };
         }
         
+        const durability = item.id === 'eternal_pickaxe' ? 999999 : item.effect.durability;
+
         // Agregar herramienta a efectos activos
         const toolEffect = {
             type: 'mining_tool',
             multiplier: item.effect.multiplier,
-            durability: item.effect.durability,
-            currentDurability: item.effect.durability,
+            durability: durability,
+            currentDurability: durability,
             appliedAt: Date.now()
         };
         
@@ -1547,7 +1549,7 @@ class ShopSystem {
         
         return {
             success: true,
-            message: `⛏️ **${item.name}** equipado! Durabilidad: ${item.effect.durability === Infinity ? '♾️ Infinita' : item.effect.durability}`
+            message: `⛏️ **${item.name}** equipado! Durabilidad: ${item.id === 'eternal_pickaxe' ? '♾️ Infinita' : durability}`
         };
     }
     
@@ -2479,8 +2481,10 @@ class ShopSystem {
 
                     const durabilityLoss = Math.floor(Math.random() * 5) + 1; //1 a 5
                     
-                    // Usar herramienta
-                    if (effect.currentDurability !== Infinity) {
+                    // Verificar si es pico eterno (no consumir durabilidad)
+                    if (itemId === 'eternal_pickaxe') {
+                        // No reducir durabilidad para pico eterno
+                    } else if (effect.currentDurability > 0) {
                         effect.currentDurability = Math.max(0, effect.currentDurability - durabilityLoss);
                         
                         // Si se rompe, remover del array
@@ -2502,7 +2506,7 @@ class ShopSystem {
                         multiplier: effect.multiplier,
                         name: item.name,
                         durabilityLeft: effect.currentDurability,
-                        durabilityLost: durabilityLoss
+                        durabilityLost: itemId === 'eternal_pickaxe' ? 0 : durabilityLoss
                     };
                 }
             }
