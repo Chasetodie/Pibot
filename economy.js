@@ -986,7 +986,7 @@ class EconomySystem {
                 const beforePickaxe = finalEarnings;
                 finalEarnings = Math.floor(finalEarnings * pickaxeBonus.multiplier);
                 
-                const item = this.shop[pickaxeBonus.itemId]; // USAR EL itemId devuelto
+                const item = this.shop.shopItems[pickaxeBonus.itemId]; // USAR EL itemId devuelto
                 
                 if (item.category === 'tool') {
                     pickaxeMessage = `⛏️ **${pickaxeBonus.name}** | Durabilidad: ${pickaxeBonus.durabilityLeft}/${item.effect.durability} (-${pickaxeBonus.durabilityLost})`;
