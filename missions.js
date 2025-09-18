@@ -871,15 +871,15 @@ async checkAndResetAllMissions() {
             case 'active_hours':
                 return (stats.active_hours_today || []).length;
             case 'reactions_given':
-                return (stats.reactions_given || []).lenght;
+                return stats.reactions_given || 0;
             case 'commands_used':
-                return (stats.commands_used || []).lenght;
+                return stats.commands_used || 0;
             case 'auctions_created_today':
-                return (stats.auctions_created_today || []).lenght;    
+                return stats.auctions_created_today || 0;    
             case 'auctions_won_today':
-                return (stats.auctions_won_today || []).lenght;
+                return stats.auctions_won_today || 0;
             case 'items_crafted_today':
-                return (stats.items_crafted_today || []).lenght;
+                return stats.items_crafted_today || 0;
             default:
                 return 0;
         }
