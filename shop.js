@@ -2074,11 +2074,27 @@ class ShopSystem {
         // Parsear efectos
         const permanentEffects = this.parseEffects(user.permanentEffects);
         const activeEffects = this.parseActiveEffects(user.activeEffects);
-                      
+
+        // AGREGAR: Buscar herramientas activas
+        const userItems = user.items || {};
+        const activeTools = [];
+        
+        for (const [itemId, userItem] of Object.entries(userItems)) {
+            const item = this.shopItems[itemId];
+            if (item && item.category === 'tool' && userItem.currentDurability > 0) {
+                activeTools.push({
+                    id: itemId,
+                    name: item.name,
+                    durability: userItem.currentDurability === Infinity ? 'Infinita' : userItem.currentDurability
+                });
+            }
+        }
+
         const hasPermanent = Object.keys(permanentEffects).length > 0;
         const hasTemporary = Object.keys(activeEffects).length > 0;
-        
-        if (!hasPermanent && !hasTemporary) {
+        const hasTools = activeTools.length > 0;
+
+        if (!hasPermanent && !hasTemporary && !hasTools) {
             await message.reply('📝 No tienes efectos activos.');
             return;
         }
@@ -2145,6 +2161,18 @@ class ShopSystem {
                 }
             }
         }
+
+        // AGREGAR: Mostrar herramientas activas
+        if (hasTools) {
+            description += '**⛏️ HERRAMIENTAS EQUIPADAS**\n';
+            for (const tool of activeTools) {
+                const item = this.shopItems[tool.id];
+                const rarityEmoji = this.rarityEmojis[item.rarity];
+                
+                description += `${rarityEmoji} **${tool.name}**\n`;
+                description += `└ Durabilidad: ${tool.durability}\n\n`;
+            }
+        }        
         
         if (!description.trim()) {
             await message.reply('📝 No tienes efectos válidos activos.');
