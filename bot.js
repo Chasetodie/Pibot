@@ -463,21 +463,33 @@ client.on('guildMemberAdd', async (member) => {
 });
 
 client.on('messageReactionAdd', async (reaction, user) => {
-    if (user.bot) return;
+    console.log(`🔍 Reacción detectada de ${user.tag} en mensaje ${reaction.message.id}`);
+    
+    if (user.bot) {
+        console.log('❌ Usuario es bot, ignorando');
+        return;
+    }
     
     try {
         // Asegurarse de que la reacción esté completamente cargada
         if (reaction.partial) {
+            console.log('📦 Reacción parcial, cargando...');
             try {
                 await reaction.fetch();
+                console.log('✅ Reacción cargada completamente');
             } catch (error) {
-                console.log('No se pudo obtener la reacción completa:', error);
+                console.log('❌ No se pudo obtener la reacción completa:', error);
                 return;
             }
         }
 
         // Verificar que el sistema de misiones esté disponible
-        if (!economy || !economy.missions) return;
+        if (!economy || !economy.missions) {
+            console.log('❌ Sistema de economy o missions no disponible');
+            return;
+        }
+
+        console.log(`🎯 Actualizando progreso de misiones para ${user.id}`);
 
         // Actualizar progreso de misiones
         const completedMissions = await economy.missions.updateMissionProgress(
@@ -485,9 +497,11 @@ client.on('messageReactionAdd', async (reaction, user) => {
             'reactions_given'
         );
 
+        console.log(`📊 Misiones completadas: ${completedMissions.length}`);
+
         // Notificar misiones completadas si hay alguna
         if (completedMissions.length > 0) {
-            // Crear un objeto message simulado para las notificaciones
+            console.log('🎉 Notificando misiones completadas');
             const fakeMessage = {
                 author: user,
                 user: user,
@@ -498,7 +512,7 @@ client.on('messageReactionAdd', async (reaction, user) => {
             await economy.missions.notifyCompletedMissions(fakeMessage, completedMissions);
         }
     } catch (error) {
-        console.error('Error en messageReactionAdd para misiones:', error);
+        console.error('❌ Error en messageReactionAdd para misiones:', error);
     }
 });
 
