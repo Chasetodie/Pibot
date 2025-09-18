@@ -776,10 +776,18 @@ class ShopSystem {
         });
     }
 
+    // Agregar esta función en ShopSystem:
+    async consumeRobberyItems(userId) {
+        const robberyItems = ['master_gloves', 'phantom_gloves', 'robbery_kit'];
+        
+        for (const itemId of robberyItems) {
+            await this.consumeItemUse(userId, itemId);
+        }
+    }
+
     // 4. Función para consumir efectos de uso limitado
     async consumeItemUse(userId, itemId) {
         const user = await this.economy.getUser(userId);
-        
         const activeEffects = this.parseActiveEffects(user.activeEffects);
         
         if (!activeEffects[itemId] || !activeEffects[itemId].length) {
@@ -1727,8 +1735,7 @@ class ShopSystem {
     }
 
     async getSuccessBoost(userId, action) {
-        const user = await this.economy.getUser(userId);
-        
+        const user = await this.economy.getUser(userId);        
         const activeEffects = this.parseActiveEffects(user.activeEffects);        
         
         let totalBoost = 0;
@@ -1741,8 +1748,13 @@ class ShopSystem {
                 // Verificar que el efecto esté activo
                 if (effect.expiresAt && effect.expiresAt < Date.now()) continue;
                 if (effect.usesLeft && effect.usesLeft <= 0) continue;
-                
+
+                // AGREGAR: Verificar robbery_boost para robos
+                if (action === 'robbery' && effect.type === 'robbery_boost') {
+                    totalBoost += effect.successRate || 0;
+                }
                 // Verificar que sea el tipo correcto y para la acción correcta
+                
                 if (effect.type === 'success_boost') {
                     const targets = effect.targets || [];
                     if (targets.includes(action) || targets.includes('all')) {
@@ -2464,10 +2476,12 @@ class ShopSystem {
                 if (effect.type === 'mining_tool' && effect.currentDurability > 0) {
                     const item = this.shopItems[itemId];
                     if (!item) continue;
+
+                    const durabilityLoss = Math.floor(Math.random() * 5) + 1; //1 a 5
                     
                     // Usar herramienta
                     if (effect.currentDurability !== Infinity) {
-                        effect.currentDurability -= 1;
+                        effect.currentDurability = Math.max(0, effect.currentDurability - durabilityLoss);
                         
                         // Si se rompe, remover del array
                         if (effect.currentDurability <= 0) {
@@ -2484,9 +2498,11 @@ class ShopSystem {
                     
                     return {
                         applied: true,
+                        itemId: itemId,
                         multiplier: effect.multiplier,
                         name: item.name,
-                        durabilityLeft: effect.currentDurability
+                        durabilityLeft: effect.currentDurability,
+                        durabilityLost: durabilityLoss
                     };
                 }
             }
@@ -2518,6 +2534,7 @@ class ShopSystem {
                         
                         return {
                             applied: true,
+                            itemId: itemId,
                             multiplier: effect.multiplier,
                             name: item.name,
                             usesLeft: effect.usesLeft

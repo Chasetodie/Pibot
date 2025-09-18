@@ -985,7 +985,14 @@ class EconomySystem {
             if (pickaxeBonus.applied) {
                 const beforePickaxe = finalEarnings;
                 finalEarnings = Math.floor(finalEarnings * pickaxeBonus.multiplier);
-                pickaxeMessage = `⛏️ **${pickaxeBonus.name}** (+${finalEarnings - beforePickaxe} π-b$)`;
+                
+                const item = this.shopItems[pickaxeBonus.itemId]; // USAR EL itemId devuelto
+                
+                if (item.category === 'tool') {
+                    pickaxeMessage = `⛏️ **${pickaxeBonus.name}** | Durabilidad: ${pickaxeBonus.durabilityLeft}/${item.effect.durability} (-${pickaxeBonus.durabilityLost})`;
+                } else {
+                    pickaxeMessage = `⛏️ **${pickaxeBonus.name}** | Usos restantes: ${pickaxeBonus.usesLeft}`;
+                }
             }
         }
 
@@ -1356,7 +1363,7 @@ class EconomySystem {
 
             // Consumir usos de items de robo
             if (this.shop) {
-                await this.shop.consumeItemUse(robberId, 'robbery');
+                await this.shop.consumeRobberyItems(robberId);
             }
             
             const success = Math.random() < finalChance;
