@@ -1463,7 +1463,7 @@ class EconomySystem {
                     maxClicks: this.robberyConfig.maxClicks,
                     efficiency: Math.round(clickEfficiency * 100),
                     robberOldBalance: robber.balance,
-                    robberNewBalance: Math.max(0, robber.balance - penalty),
+                    robberNewBalance: Math.max(0, robber.balance - actualPenalty),
                     targetId: robberyData.targetId
                 };
             }
