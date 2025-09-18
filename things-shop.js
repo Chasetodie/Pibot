@@ -751,7 +751,7 @@ class CraftingSystem {
             'phantom_gloves_craft': {
                 id: 'phantom_gloves_craft',
                 name: '👻🧤 Guantes Fantasma',
-                description: 'Permiten robar sin riesgo de ser atrapado (15 usos)',
+                description: 'Permiten robar sin riesgo de ser atrapado (7 usos)',
                 craftTime: 21600000, // 6 horas
                 ingredients: [
                     { id: 'master_gloves', quantity: 1 },
@@ -765,7 +765,7 @@ class CraftingSystem {
                         type: 'robbery_boost',
                         successRate: 1.0,
                         safe: true,
-                        uses: 15
+                        uses: 7
                     },
                     stackable: true,
                     maxStack: 1

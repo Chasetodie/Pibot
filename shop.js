@@ -656,14 +656,14 @@ class ShopSystem {
             'phantom_gloves': {
                 id: 'phantom_gloves',
                 name: '👻🧤 Guantes Fantasma',
-                description: 'Permiten robar sin riesgo de ser atrapado (15 usos)',
+                description: 'Permiten robar sin riesgo de ser atrapado (7 usos)',
                 category: 'consumable',
                 rarity: 'mythic',
                 effect: {
                     type: 'robbery_boost',
                     successRate: 1.0,
                     safe: true,
-                    uses: 15
+                    uses: 7
                 },
                 chestOnly: true,
                 stackable: true,
@@ -932,7 +932,7 @@ class ShopSystem {
             components.push(row);
         }
         
-        embed.setFooter({ text: 'Usa >buy <item_id> para comprar un item' });
+        embed.setFooter({ text: 'Usa >buy <item_id> para comprar un item / Si activas un item con usos que es superior a otro, se consumirá el item que es superior.' });
         
         await message.reply({ embeds: [embed], components });
     }
