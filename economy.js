@@ -986,12 +986,12 @@ class EconomySystem {
                 const beforePickaxe = finalEarnings;
                 finalEarnings = Math.floor(finalEarnings * pickaxeBonus.multiplier);
                 
-                const item = this.shop.shopItems[pickaxeBonus.itemId]; // USAR EL itemId devuelto
+                const item = this.shopItems[pickaxeBonus.itemId]; // USAR EL itemId devuelto
                 
                 if (item.category === 'tool') {
-                    pickaxeMessage = `⛏️ **${pickaxeBonus.name}** | Durabilidad: ${pickaxeBonus.durabilityLeft}/${item.effect.durability} (-${pickaxeBonus.durabilityLost})`;
+                    pickaxeMessage = `⛏️ **${pickaxeBonus.name}** (+${finalEarnings - beforePickaxe} π-b$) | Durabilidad: ${pickaxeBonus.durabilityLeft}/${item.effect.durability} (-${pickaxeBonus.durabilityLost})`;
                 } else {
-                    pickaxeMessage = `⛏️ **${pickaxeBonus.name}** | Usos restantes: ${pickaxeBonus.usesLeft}`;
+                    pickaxeMessage = `⛏️ **${pickaxeBonus.name}** (+${finalEarnings - beforePickaxe} π-b$) | Usos restantes: ${pickaxeBonus.usesLeft}`;
                 }
             }
         }
