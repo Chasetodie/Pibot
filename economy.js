@@ -993,7 +993,7 @@ class EconomySystem {
                 } 
                 
                 if (item.category === 'consumable') {
-                    pickaxeMessage = `⛏️ **${pickaxeBonus.name}** (+${finalEarnings - beforePickaxe} π-b$) | Usos restantes: ${pickaxeBonus.usesLeft}`;
+                    pickaxeMessage += `\n⛏️ **${pickaxeBonus.name}** (+${finalEarnings - beforePickaxe} π-b$) | Usos restantes: ${pickaxeBonus.usesLeft}`;
                 }
             }
         }
