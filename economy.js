@@ -990,7 +990,9 @@ class EconomySystem {
                 
                 if (item.category === 'tool') {
                     pickaxeMessage = `⛏️ **${pickaxeBonus.name}** (+${finalEarnings - beforePickaxe} π-b$) | Durabilidad: ${pickaxeBonus.durabilityLeft}/${item.effect.durability} (-${pickaxeBonus.durabilityLost})`;
-                } else {
+                } 
+                
+                if (item.category === 'consumable') {
                     pickaxeMessage = `⛏️ **${pickaxeBonus.name}** (+${finalEarnings - beforePickaxe} π-b$) | Usos restantes: ${pickaxeBonus.usesLeft}`;
                 }
             }
