@@ -65,7 +65,8 @@ class LocalDatabase {
                     cosmetics TEXT,
                     permanentEffects TEXT,
                     activeEffects TEXT,
-                    passiveIncomeStats TEXT
+                    passiveIncomeStats TEXT,
+                    lastPassivePayout BIGINT DEFAULT 0
                 )
             `);
 
@@ -386,6 +387,7 @@ class LocalDatabase {
                     lastPayout: 0,
                     payoutCount: 0
                 },
+                lastPassivePayout: 0
             };
 
             await this.pool.execute(`

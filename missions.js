@@ -1047,6 +1047,18 @@ async checkAndResetAllMissions() {
         // Verificar ingresos pasivos pendientes
         await this.economy.checkPendingPassiveIncome(message.author.id);
 
+        // Limpiar efectos expirados y notificar
+        const cleanupResult = await this.cleanupExpiredEffects(message.author.id);
+        if (cleanupResult.expiredItems.length > 0) {
+            await this.notifyExpiredItems(message.author.id, cleanupResult.expiredItems, message);
+        }
+        
+        // Verificar items con pocas reservas
+        const lowItems = await this.checkLowItems(message.author.id);
+        if (lowItems.length > 0) {
+            await this.notifyLowItems(message.author.id, lowItems, message);
+        }
+
         const args = message.content.toLowerCase().split(' ');
         const command = args[0];
         await this.updateMissionProgress(message.author.id, 'commands_used');

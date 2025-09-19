@@ -299,7 +299,12 @@ class ShopSystem {
                 price: 4000000,
                 category: 'permanent',
                 rarity: 'legendary',
-                effect: { type: 'passive_income', minAmount: 5000, maxAmount: 15000, interval: 3600000 },
+                effect: { 
+                    type: 'passive_income', 
+                    minAmount: 5000, 
+                    maxAmount: 15000, 
+                    interval: 3600000 
+                },
                 stackable: false,
                 maxStack: 1
             },
@@ -1886,21 +1891,37 @@ class ShopSystem {
         return true;
     }    
 
-    // === LIMPIAR EFECTOS EXPIRADOS (ejecutar periódicamente) ===
     async cleanupExpiredEffects(userId) {
         const user = await this.economy.getUser(userId);
         const activeEffects = this.parseActiveEffects(user.activeEffects);
-       
+    
         let hasChanges = false;
         const now = Date.now();
+        const expiredItems = [];
         
         for (const [itemId, effects] of Object.entries(activeEffects)) {
             if (!Array.isArray(effects)) continue;
             
             const validEffects = effects.filter(effect => {
-                // Mantener efectos sin expiración o que no han expirado
-                if (!effect.expiresAt) return true;
-                return effect.expiresAt > now;
+                // Verificar expiración por tiempo
+                if (effect.expiresAt && effect.expiresAt <= now) {
+                    expiredItems.push({ itemId, reason: 'time_expired' });
+                    return false;
+                }
+                
+                // Verificar agotamiento por usos
+                if (effect.usesLeft !== null && effect.usesLeft <= 0) {
+                    expiredItems.push({ itemId, reason: 'uses_depleted' });
+                    return false;
+                }
+                
+                // Verificar herramientas rotas por durabilidad
+                if (effect.type === 'mining_tool' && effect.currentDurability <= 0) {
+                    expiredItems.push({ itemId, reason: 'durability_broken' });
+                    return false;
+                }
+                
+                return true;
             });
             
             if (validEffects.length !== effects.length) {
@@ -1917,7 +1938,37 @@ class ShopSystem {
             await this.economy.updateUser(userId, { activeEffects });
         }
         
-        return hasChanges;
+        return { hasChanges, expiredItems };
+    }
+
+    async checkLowItems(userId) {
+        const user = await this.economy.getUser(userId);
+        const activeEffects = this.parseActiveEffects(user.activeEffects);
+        const lowItems = [];
+        const now = Date.now();
+        
+        for (const [itemId, effects] of Object.entries(activeEffects)) {
+            if (!Array.isArray(effects)) continue;
+            
+            for (const effect of effects) {
+                // Verificar usos bajos
+                if (effect.usesLeft && effect.usesLeft <= 3 && effect.usesLeft > 0) {
+                    lowItems.push({ itemId, type: 'low_uses', remaining: effect.usesLeft });
+                }
+                
+                // Verificar durabilidad baja (herramientas)
+                if (effect.type === 'mining_tool' && effect.currentDurability <= 10 && effect.currentDurability > 0) {
+                    lowItems.push({ itemId, type: 'low_durability', remaining: effect.currentDurability });
+                }
+                
+                // Verificar tiempo próximo a expirar (menos de 5 minutos)
+                if (effect.expiresAt && (effect.expiresAt - now) <= 300000 && (effect.expiresAt - now) > 0) {
+                    lowItems.push({ itemId, type: 'expiring_soon', timeLeft: effect.expiresAt - now });
+                }
+            }
+        }
+        
+        return lowItems;
     }
 
     // 2. ACTUALIZAR applyGameEffects() - agregar soporte para permanent_luck
@@ -2089,10 +2140,19 @@ class ShopSystem {
                         const now = Date.now();
                         
                         if (now - lastPayout >= 3600000) {
+                            console.log('🐛 Effect data:', {
+                                itemId: itemId,
+                                effectType: effect.type,
+                                minAmount: effect.minAmount,
+                                maxAmount: effect.maxAmount
+                            });
+
                             const amount = Math.floor(
                                 Math.random() * (effect.maxAmount - effect.minAmount + 1)
                             ) + effect.minAmount;
                             
+                            console.log('🐛 Calculated amount:', amount);
+
                             if (user.balance + amount <= this.economy.config.maxBalance) {
                                 // Actualizar estadísticas
                                 const currentStats = user.passiveIncomeStats || { totalEarned: 0, lastPayout: 0, payoutCount: 0 };
@@ -2190,6 +2250,7 @@ class ShopSystem {
     }
 
     async showActiveEffects(message) {
+        await this.cleanupExpiredEffects(message.author.id); // Agregar esta línea
         const user = await this.economy.getUser(message.author.id);
         
         // Parsear efectos
@@ -2959,12 +3020,90 @@ class ShopSystem {
         }
     }
 
+    // Función para notificar items expirados/agotados
+    async notifyExpiredItems(userId, expiredItems, message) {
+        if (expiredItems.length === 0) return;
+        
+        let notificationText = '';
+        
+        for (const expired of expiredItems) {
+            const item = this.shopItems[expired.itemId];
+            if (!item) continue;
+            
+            const rarityEmoji = this.rarityEmojis[item.rarity];
+            
+            if (expired.reason === 'time_expired') {
+                notificationText += `${rarityEmoji} **${item.name}** ha expirado por tiempo\n`;
+            } else if (expired.reason === 'uses_depleted') {
+                notificationText += `${rarityEmoji} **${item.name}** se agotó (sin usos restantes)\n`;
+            } else if (expired.reason === 'durability_broken') {
+                notificationText += `⚒️ **${item.name}** se rompió por falta de durabilidad\n`;
+            }
+        }
+        
+        if (notificationText.trim()) {
+            const embed = new EmbedBuilder()
+                .setTitle('⚰️ Items Expirados')
+                .setDescription(notificationText)
+                .setColor('#666666')
+                .setFooter({ text: 'Puedes comprar nuevos items en >shop' });
+            
+            await message.reply({ embeds: [embed] });
+        }
+    }
+
+    // Función para notificar advertencias de items por agotarse
+    async notifyLowItems(userId, lowItems, message) {
+        if (lowItems.length === 0) return;
+        
+        let warningText = '';
+        
+        for (const warning of lowItems) {
+            const item = this.shopItems[warning.itemId];
+            if (!item) continue;
+            
+            const rarityEmoji = this.rarityEmojis[item.rarity];
+            
+            if (warning.type === 'low_uses') {
+                warningText += `⚠️ ${rarityEmoji} **${item.name}**: ${warning.remaining} uso${warning.remaining > 1 ? 's' : ''} restante${warning.remaining > 1 ? 's' : ''}\n`;
+            } else if (warning.type === 'low_durability') {
+                warningText += `🔧 ${rarityEmoji} **${item.name}**: ${warning.remaining} durabilidad restante\n`;
+            } else if (warning.type === 'expiring_soon') {
+                const timeLeft = warning.timeLeft;
+                const minutes = Math.floor(timeLeft / 60000);
+                warningText += `⏰ ${rarityEmoji} **${item.name}**: expira en ${minutes} minuto${minutes > 1 ? 's' : ''}\n`;
+            }
+        }
+        
+        if (warningText.trim()) {
+            const embed = new EmbedBuilder()
+                .setTitle('⚠️ Items por Agotarse')
+                .setDescription(warningText)
+                .setColor('#FFA500')
+                .setFooter({ text: 'Considera comprar reemplazos pronto' });
+            
+            await message.reply({ embeds: [embed] });
+        }
+    }
+
     // === COMANDOS ===
     async processCommand(message) {
         if (message.author.bot) return;
 
         // Verificar ingresos pasivos pendientes
         await this.economy.checkPendingPassiveIncome(message.author.id);
+
+        // Limpiar efectos expirados y notificar
+        const cleanupResult = await this.cleanupExpiredEffects(message.author.id);
+        if (cleanupResult.expiredItems.length > 0) {
+            await this.notifyExpiredItems(message.author.id, cleanupResult.expiredItems, message);
+        }
+        
+        // Verificar items con pocas reservas
+        const lowItems = await this.checkLowItems(message.author.id);
+        if (lowItems.length > 0) {
+            await this.notifyLowItems(message.author.id, lowItems, message);
+        }
 
         if ((!message.author.id === '488110147265232898') || (!message.author.id === '788424796366307409')) {
             return;
