@@ -10,6 +10,7 @@ class EconomySystem {
         this.database = null;
         this.initializeDatabase();
         this.events = null;
+        this.processingPassiveIncome = new Set();
         
         // Configuración del sistema
         this.config = {
@@ -91,22 +92,31 @@ class EconomySystem {
     }
 
     async checkPendingPassiveIncome(userId) {
-        const user = await this.getUser(userId);
-        const permanentEffects = this.shop.parseEffects(user.permanentEffects);
+        if (this.processingPassiveIncome.has(userId)) {
+            return; // Ya se está procesando para este usuario
+        }
         
-        for (const [itemId, effect] of Object.entries(permanentEffects)) {
-            // Verificar que effect sea un objeto válido
-            if (!effect || typeof effect !== 'object') continue;
+        this.processingPassiveIncome.add(userId);
+        
+        try {
+            const user = await this.getUser(userId);
+            const permanentEffects = this.shop.parseEffects(user.permanentEffects);
             
-            if (effect.type === 'passive_income') {
-                const lastPayout = user.lastPassivePayout || 0;
-                const now = Date.now();
+            for (const [itemId, effect] of Object.entries(permanentEffects)) {
+                if (!effect || typeof effect !== 'object') continue;
                 
-                if (now - lastPayout >= 3600000) {
-                    await this.shop.processPassiveIncome();
-                    break;
+                if (effect.type === 'passive_income') {
+                    const lastPayout = user.lastPassivePayout || 0;
+                    const now = Date.now();
+                    
+                    if (now - lastPayout >= 3600000) {
+                        await this.shop.processPassiveIncome();
+                        break;
+                    }
                 }
             }
+        } finally {
+            this.processingPassiveIncome.delete(userId);
         }
     }
 

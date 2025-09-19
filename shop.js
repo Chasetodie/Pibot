@@ -1604,6 +1604,9 @@ class ShopSystem {
             reduction: item.effect.reduction,
             boost: item.effect.boost, // NUEVO: agregar boost para permanent_luck
             benefits: item.effect.benefits,
+            minAmount: item.effect.minAmount,
+            maxAmount: item.effect.maxAmount,
+            interval: item.effect.interval,
             appliedAt: Date.now()
         };
         
