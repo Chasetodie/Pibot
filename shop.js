@@ -2072,6 +2072,14 @@ class ShopSystem {
         const stats = user.passiveIncomeStats || { totalEarned: 0, lastPayout: 0, payoutCount: 0 };
         const now = Date.now();
         const timeSinceLastPayout = now - (stats.lastPayout || 0);
+
+        console.log('🐛 Payout debug:', {
+            now: now,
+            lastPayout: stats.lastPayout,
+            timeSinceLastPayout: timeSinceLastPayout,
+            hoursUntilNext: Math.max(0, (3600000 - timeSinceLastPayout) / 3600000)
+        });
+
         const hoursUntilNext = Math.max(0, (3600000 - timeSinceLastPayout) / 3600000);
         const activeSince = new Date(hasAutoWorker.appliedAt);
         
@@ -2578,16 +2586,22 @@ class ShopSystem {
 
     // Después del método processItemUse(), AGREGAR:
     async processPassiveIncome() {
-        console.log('💰 Procesando ingresos pasivos...');
+        console.log('🐛 Iniciando processPassiveIncome...');
         
         try {
             const allUsers = await this.economy.getAllUsers();
+            console.log(`🐛 Total usuarios encontrados: ${allUsers.length}`);
             
             for (const user of allUsers) {
+                console.log(`🐛 Procesando usuario: ${user.id}`);
                 const permanentEffects = this.parseEffects(user.permanentEffects);
-                
+                console.log(`🐛 Permanent effects:`, permanentEffects);
+
                 for (const [itemId, effect] of Object.entries(permanentEffects)) {
+                    console.log(`🐛 Verificando item: ${itemId}, effect:`, effect);
+                    
                     if (effect.type === 'passive_income') {
+                        console.log(`🐛 Auto worker encontrado! minAmount: ${effect.minAmount}, maxAmount: ${effect.maxAmount}`);
                         const lastPayout = user.lastPassivePayout || 0;
                         const now = Date.now();
                         
