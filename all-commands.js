@@ -1192,22 +1192,13 @@ class AllCommands {
 
         if (this.shop) {
             const user = await this.economy.getUser(robberId);
-            console.log('🐛 Raw activeEffects:', user.activeEffects);
-
             const activeEffects = this.shop.parseActiveEffects(user.activeEffects);
-            console.log('🐛 Parsed activeEffects:', activeEffects);
-            console.log('🐛 Keys:', Object.keys(activeEffects));
             
             for (const [itemId, effects] of Object.entries(activeEffects)) {
                 if (!Array.isArray(effects)) continue;
 
-                console.log(`🐛 Item ${itemId}:`, effects);
-
                 for (const effect of effects) {
-                    console.log(`🐛 Effect:`, effect);
-                    if (effect.type === 'robbery_boost' && effect.safe === true && effect.usesLeft > 0) {
-                        console.log('👻 Phantom gloves detectado - robo automático');
-                        
+                    if (effect.type === 'robbery_boost' && effect.safe === true && effect.usesLeft > 0) {                       
                         // Ejecutar robo directo sin minijuego
                         const robberyResult = await this.economy.startRobbery(robberId, targetId, message);
                         

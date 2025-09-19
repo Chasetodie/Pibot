@@ -1359,7 +1359,31 @@ class EconomySystem {
             const finalSuccessChance = baseSuccessChance + (clickEfficiency * 0.2); // Bonus por clicks
 
             const successBoost = await this.shop.getSuccessBoost(robberId, 'robbery');
-            const finalChance = Math.min(finalSuccessChance + successBoost, 0.95);
+            // Verificar si tiene phantom gloves para garantizar 100% éxito
+            let finalChance = finalSuccessChance + successBoost;
+
+            // NUEVO: Verificar phantom gloves activos
+            if (this.shop) {
+                const user = await this.getUser(robberId);
+                const activeEffects = this.shop.parseActiveEffects(user.activeEffects);
+                
+                for (const [itemId, effects] of Object.entries(activeEffects)) {
+                    if (!Array.isArray(effects)) continue;
+                    
+                    for (const effect of effects) {
+                        if (effect.type === 'robbery_boost' && effect.safe === true && effect.usesLeft > 0) {
+                            finalChance = 1.0; // 100% garantizado para phantom gloves
+                            break;
+                        }
+                    }
+                    if (finalChance === 1.0) break; // Salir del loop exterior también
+                }
+            }
+
+            // Solo aplicar límite si NO son phantom gloves
+            if (finalChance < 1.0) {
+                finalChance = Math.min(finalChance, 0.95);
+            }
 
             console.log(`🎲 Probabilidad de éxito: ${finalSuccessChance * 100}%`);
             console.log(`🔧 Boost de kit: ${successBoost*100}%`);
