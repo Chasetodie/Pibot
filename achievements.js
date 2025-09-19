@@ -1140,18 +1140,28 @@ class AchievementsSystem {
     // NUEVO: Procesador de comandos
     async processCommand(message) {
         // Verificar ingresos pasivos pendientes
-        await this.economy.checkPendingPassiveIncome(message.author.id);
-    
-        // Limpiar efectos expirados y notificar
-        const cleanupResult = await this.economy.shop.cleanupExpiredEffects(message.author.id);
-        if (cleanupResult.expiredItems.length > 0) {
-            await this.economy.shop.notifyExpiredItems(message.author.id, cleanupResult.expiredItems, message);
-        }
+        const userId = message.author.id;
+        const now = Date.now();
         
-        // Verificar items con pocas reservas
-        const lowItems = await this.economy.shop.checkLowItems(message.author.id);
-        if (lowItems.length > 0) {
-            await this.economy.shop.notifyLowItems(message.author.id, lowItems, message);
+        // Solo hacer limpieza si este archivo tiene acceso al shop
+        if (this.economy.shop) {
+            await this.economy.checkPendingPassiveIncome(userId);
+            
+            // Verificar si ya se notificó recientemente
+            const lastNotification = this.economy.shop.lastNotifications.get(userId) || 0;
+            const shouldNotify = (now - lastNotification) > this.economy.shop.notificationCooldown;
+            
+            const cleanupResult = await this.economy.shop.cleanupExpiredEffects(userId);
+            if (cleanupResult.expiredItems.length > 0 && shouldNotify) {
+                await this.economy.shop.notifyExpiredItems(userId, cleanupResult.expiredItems, message);
+                this.economy.shop.lastNotifications.set(userId, now);
+            }
+            
+            const lowItems = await this.economy.shop.checkLowItems(userId);
+            if (lowItems.length > 0 && shouldNotify) {
+                await this.economy.shop.notifyLowItems(userId, lowItems, message);
+                this.economy.shop.lastNotifications.set(userId, now);
+            }
         }
         
         const args = message.content.toLowerCase().split(' ');

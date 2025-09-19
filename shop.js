@@ -4,6 +4,19 @@ const heavyUsersCache = new Map();
 class ShopSystem {
     constructor(economySystem) {
         this.economy = economySystem;
+        this.processingCleanup = new Set();
+        this.lastNotifications = new Map(); // userId -> timestamp
+        this.notificationCooldown = 5 * 60 * 1000; // 5 minutos
+
+        // En el constructor, agregar limpieza automática
+        setInterval(() => {
+            const now = Date.now();
+            for (const [userId, timestamp] of this.lastNotifications.entries()) {
+                if (now - timestamp > this.notificationCooldown) {
+                    this.lastNotifications.delete(userId);
+                }
+            }
+        }, 10 * 60 * 1000); // Limpiar cada 10 minutos
         
         this.shopItems = {
             // === CONSUMIBLES TEMPORALES ===
@@ -1895,56 +1908,72 @@ class ShopSystem {
     }    
 
     async cleanupExpiredEffects(userId) {
-        const user = await this.economy.getUser(userId);
-        const activeEffects = this.parseActiveEffects(user.activeEffects);
-    
-        let hasChanges = false;
-        const now = Date.now();
-        const expiredItems = [];
+        // Evitar procesamiento concurrente
+        if (this.processingCleanup.has(userId)) {
+            return { hasChanges: false, expiredItems: [] };
+        }
         
-        for (const [itemId, effects] of Object.entries(activeEffects)) {
-            if (!Array.isArray(effects)) continue;
+        this.processingCleanup.add(userId);
+        
+        try {
+            const user = await this.economy.getUser(userId);
+            const activeEffects = this.parseActiveEffects(user.activeEffects);
+        
+            let hasChanges = false;
+            const now = Date.now();
+            const expiredItems = [];
             
-            const validEffects = effects.filter(effect => {
-                // Verificar expiración por tiempo
-                if (effect.expiresAt && effect.expiresAt <= now) {
-                    expiredItems.push({ itemId, reason: 'time_expired' });
-                    return false;
-                }
+            for (const [itemId, effects] of Object.entries(activeEffects)) {
+                if (!Array.isArray(effects)) continue;
                 
-                // Verificar agotamiento por usos
-                if (effect.usesLeft !== null && effect.usesLeft <= 0) {
-                    expiredItems.push({ itemId, reason: 'uses_depleted' });
-                    return false;
-                }
+                const validEffects = effects.filter(effect => {
+                    // Verificar expiración por tiempo
+                    if (effect.expiresAt && effect.expiresAt <= now) {
+                        expiredItems.push({ itemId, reason: 'time_expired' });
+                        return false;
+                    }
+                    
+                    // Verificar agotamiento por usos
+                    if (effect.usesLeft !== null && effect.usesLeft <= 0) {
+                        expiredItems.push({ itemId, reason: 'uses_depleted' });
+                        return false;
+                    }
+                    
+                    // Verificar herramientas rotas por durabilidad
+                    if (effect.type === 'mining_tool' && effect.currentDurability <= 0) {
+                        expiredItems.push({ itemId, reason: 'durability_broken' });
+                        return false;
+                    }
+                    
+                    return true;
+                });
                 
-                // Verificar herramientas rotas por durabilidad
-                if (effect.type === 'mining_tool' && effect.currentDurability <= 0) {
-                    expiredItems.push({ itemId, reason: 'durability_broken' });
-                    return false;
-                }
-                
-                return true;
-            });
-            
-            if (validEffects.length !== effects.length) {
-                hasChanges = true;
-                if (validEffects.length === 0) {
-                    delete activeEffects[itemId];
-                } else {
-                    activeEffects[itemId] = validEffects;
+                if (validEffects.length !== effects.length) {
+                    hasChanges = true;
+                    if (validEffects.length === 0) {
+                        delete activeEffects[itemId];
+                    } else {
+                        activeEffects[itemId] = validEffects;
+                    }
                 }
             }
+            
+            if (hasChanges) {
+                await this.economy.updateUser(userId, { activeEffects });
+            }
+            
+            return { hasChanges, expiredItems };
+        } finally {
+            this.processingCleanup.delete(userId);
         }
-        
-        if (hasChanges) {
-            await this.economy.updateUser(userId, { activeEffects });
-        }
-        
-        return { hasChanges, expiredItems };
     }
 
     async checkLowItems(userId) {
+        // Similar throttling
+        if (this.processingCleanup.has(userId)) {
+            return [];
+        }
+
         const user = await this.economy.getUser(userId);
         const activeEffects = this.parseActiveEffects(user.activeEffects);
         const lowItems = [];
@@ -3087,19 +3116,26 @@ class ShopSystem {
     async processCommand(message) {
         if (message.author.bot) return;
 
-        // Verificar ingresos pasivos pendientes
-        await this.economy.checkPendingPassiveIncome(message.author.id);
+        const userId = message.author.id;
+        const now = Date.now();
 
-        // Limpiar efectos expirados y notificar
-        const cleanupResult = await this.cleanupExpiredEffects(message.author.id);
-        if (cleanupResult.expiredItems.length > 0) {
-            await this.notifyExpiredItems(message.author.id, cleanupResult.expiredItems, message);
+        // Verificar ingresos pasivos pendientes
+        await this.economy.checkPendingPassiveIncome(userId);
+        
+        // Verificar si ya se notificó recientemente
+        const lastNotification = this.lastNotifications.get(userId) || 0;
+        const shouldNotify = (now - lastNotification) > this.notificationCooldown;
+        
+        const cleanupResult = await this.shop.cleanupExpiredEffects(userId);
+        if (cleanupResult.expiredItems.length > 0 && shouldNotify) {
+            await this.shop.notifyExpiredItems(userId, cleanupResult.expiredItems, message);
+            this.lastNotifications.set(userId, now);
         }
         
-        // Verificar items con pocas reservas
-        const lowItems = await this.checkLowItems(message.author.id);
-        if (lowItems.length > 0) {
-            await this.notifyLowItems(message.author.id, lowItems, message);
+        const lowItems = await this.shop.checkLowItems(userId);
+        if (lowItems.length > 0 && shouldNotify) {
+            await this.shop.notifyLowItems(userId, lowItems, message);
+            this.lastNotifications.set(userId, now);
         }
 
         if ((!message.author.id === '488110147265232898') || (!message.author.id === '788424796366307409')) {
