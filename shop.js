@@ -1475,6 +1475,8 @@ class ShopSystem {
             multiplier: item.effect.multiplier,
             reduction: item.effect.reduction,
             boost: item.effect.boost,
+            safe: item.effect.safe,
+            successRate: item.effect.successRate,
             appliedAt: now,
             expiresAt: item.effect.duration ? now + (item.effect.duration * 1000) : null,
             usesLeft: item.effect.uses || null
