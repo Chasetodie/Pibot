@@ -2072,9 +2072,18 @@ class ShopSystem {
         }
         
         // Calcular estadísticas
-        const stats = user.passiveIncomeStats || { totalEarned: 0, lastPayout: 0, payoutCount: 0 };
+        let stats = user.passiveIncomeStats || '{"totalEarned": 0, "lastPayout": 0, "payoutCount": 0}';
+
+        if (typeof stats === 'string') {
+            try {
+                stats = JSON.parse(stats);
+            } catch (error) {
+                stats = { totalEarned: 0, lastPayout: 0, payoutCount: 0 };
+            }
+        }
+        
         const now = Date.now();
-        const timeSinceLastPayout = now - (stats.lastPayout || 0);
+        const timeSinceLastPayout = now - (user.lastPassivePayout || stats.lastPayout || 0);
 
         console.log('🐛 Payout debug:', {
             now: now,
@@ -2167,16 +2176,27 @@ class ShopSystem {
                             if (user.balance + amount <= this.economy.config.maxBalance) {
                                 // Actualizar estadísticas
                                 const currentStats = user.passiveIncomeStats || { totalEarned: 0, lastPayout: 0, payoutCount: 0 };
+
+                                // Si passiveIncomeStats es string, parsearlo
+                                let parsedStats = currentStats;
+                                if (typeof currentStats === 'string') {
+                                    try {
+                                        parsedStats = JSON.parse(currentStats);
+                                    } catch (error) {
+                                        parsedStats = { totalEarned: 0, lastPayout: 0, payoutCount: 0 };
+                                    }
+                                }
+
                                 const newStats = {
-                                    totalEarned: currentStats.totalEarned + amount,
+                                    totalEarned: parsedStats.totalEarned + amount,
                                     lastPayout: now,
-                                    payoutCount: currentStats.payoutCount + 1
+                                    payoutCount: parsedStats.payoutCount + 1
                                 };
-                                
+
                                 await this.economy.updateUser(user.id, {
                                     balance: user.balance + amount,
                                     lastPassivePayout: now,
-                                    passiveIncomeStats: newStats
+                                    passiveIncomeStats: JSON.stringify(newStats)  // <- Convertir a string
                                 });
                                 
                                 console.log(`🤖 Ingreso pasivo: ${amount} π-b$ para ${user.id.slice(-4)} (Total: ${newStats.totalEarned})`);
