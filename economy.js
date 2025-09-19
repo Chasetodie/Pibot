@@ -990,12 +990,12 @@ class EconomySystem {
                 
                 if (item.category === 'tool') {
                     if (pickaxeBonus.itemId === 'eternal_pickaxe') {
-                        pickaxeMessage = `⛏️ **${pickaxeBonus.name}** (+${finalEarnings - beforePickaxe} π-b$) | Durabilidad: ♾️ Infinita`;
+                        pickaxeMessage = `**${pickaxeBonus.name}** (+${finalEarnings - beforePickaxe} π-b$) | Durabilidad: ♾️ Infinita`;
                     } else {
-                        pickaxeMessage = `⛏️ **${pickaxeBonus.name}** (+${finalEarnings - beforePickaxe} π-b$) | Durabilidad: ${pickaxeBonus.durabilityLeft}/${item.effect.durability} (-${pickaxeBonus.durabilityLost})`;
+                        pickaxeMessage = `**${pickaxeBonus.name}** (+${finalEarnings - beforePickaxe} π-b$) | Durabilidad: ${pickaxeBonus.durabilityLeft}/${item.effect.durability} (-${pickaxeBonus.durabilityLost})`;
                     }
                 } else {
-                    pickaxeMessage = `⛏️ **${pickaxeBonus.name}** (+${finalEarnings - beforePickaxe} π-b$) | Usos restantes: ${pickaxeBonus.usesLeft}`;
+                    pickaxeMessage = `**${pickaxeBonus.name}** (+${finalEarnings - beforePickaxe} π-b$) | Usos restantes: ${pickaxeBonus.usesLeft}`;
                 }
             }
         }
