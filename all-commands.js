@@ -1635,6 +1635,9 @@ class AllCommands {
     }
 
     async processCommand(message) {
+        // Verificar ingresos pasivos pendientes
+        await this.economy.checkPendingPassiveIncome(message.author.id);
+        
         await this.shop.cleanupExpiredTokens(message.author.id);
         await this.trades.cleanupExpiredTrades();
         await this.economy.missions.updateMissionProgress(message.author.id, 'commands_used');

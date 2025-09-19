@@ -64,7 +64,8 @@ class LocalDatabase {
                     missions_notifications_blocked BOOLEAN DEFAULT 0,
                     cosmetics TEXT,
                     permanentEffects TEXT,
-                    activeEffects TEXT
+                    activeEffects TEXT,
+                    passiveIncomeStats TEXT
                 )
             `);
 
@@ -380,6 +381,11 @@ class LocalDatabase {
                     money_earned_today: 0
                 },
                 achievements: {},
+                passiveIncomeStats: {
+                    totalEarned: 0,
+                    lastPayout: 0,
+                    payoutCount: 0
+                },
             };
 
             await this.pool.execute(`

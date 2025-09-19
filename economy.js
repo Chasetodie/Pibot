@@ -35,7 +35,7 @@ class EconomySystem {
             maxStealPercentage: 10, // Máximo 10%
             buttonTimeLimit: 30000, // 30 segundos para hacer clicks
             maxClicks: 50, // Máximo de clicks
-            failChance: 0.4, // 30% de chance de fallar
+            failChance: 0.5, // 30% de chance de fallar
             penaltyPercentage: 15, // 15% de penalización si fallas
             levelRequirement: 5, // Nivel mínimo para robar
             minTargetBalance: 500, // El objetivo debe tener al menos 500 coins
@@ -87,6 +87,26 @@ class EconomySystem {
         } catch (error) {
             console.error('❌ Error obteniendo usuario:', error);
             throw error;
+        }
+    }
+
+    async checkPendingPassiveIncome(userId) {
+        const user = await this.getUser(userId);
+        const permanentEffects = this.shop.parseEffects(user.permanentEffects);
+        
+        for (const [itemId, effect] of Object.entries(permanentEffects)) {
+            // Verificar que effect sea un objeto válido
+            if (!effect || typeof effect !== 'object') continue;
+            
+            if (effect.type === 'passive_income') {
+                const lastPayout = user.lastPassivePayout || 0;
+                const now = Date.now();
+                
+                if (now - lastPayout >= 3600000) {
+                    await this.shop.processPassiveIncome();
+                    break;
+                }
+            }
         }
     }
 

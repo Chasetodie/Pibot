@@ -1139,6 +1139,9 @@ class AchievementsSystem {
    
     // NUEVO: Procesador de comandos
     async processCommand(message) {
+        // Verificar ingresos pasivos pendientes
+        await this.economy.checkPendingPassiveIncome(message.author.id);
+        
         const args = message.content.toLowerCase().split(' ');
         const command = args[0];
         await this.economy.missions.updateMissionProgress(message.author.id, 'commands_used');

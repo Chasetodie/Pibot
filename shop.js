@@ -1994,6 +1994,86 @@ class ShopSystem {
         }
     }
 
+    async showAutoWorkerStatus(message) {
+        const userId = message.author.id;
+        const user = await this.economy.getUser(userId);
+        const permanentEffects = this.parseEffects(user.permanentEffects);
+        
+        // Verificar si tiene auto_worker activo
+        const hasAutoWorker = permanentEffects['auto_worker'];
+        
+        if (!hasAutoWorker) {
+            const embed = new EmbedBuilder()
+                .setTitle('🤖 Auto Worker - No Activo')
+                .setDescription('No tienes un **Trabajador Automático** activo.')
+                .addFields({
+                    name: '🛒 ¿Cómo obtenerlo?',
+                    value: 'Compra el item `auto_worker` en la tienda por 4,000,000 π-b$',
+                    inline: false
+                })
+                .setColor('#FF0000');
+            
+            await message.reply({ embeds: [embed] });
+            return;
+        }
+        
+        // Calcular estadísticas
+        const stats = user.passiveIncomeStats || { totalEarned: 0, lastPayout: 0, payoutCount: 0 };
+        const now = Date.now();
+        const timeSinceLastPayout = now - (stats.lastPayout || 0);
+        const hoursUntilNext = Math.max(0, (3600000 - timeSinceLastPayout) / 3600000);
+        const activeSince = new Date(hasAutoWorker.appliedAt);
+        
+        // Formatear tiempo
+        const formatTime = (hours) => {
+            const h = Math.floor(hours);
+            const m = Math.floor((hours % 1) * 60);
+            return h > 0 ? `${h}h ${m}m` : `${m}m`;
+        };
+        
+        const embed = new EmbedBuilder()
+            .setTitle('🤖 Estado del Auto Worker')
+            .setDescription('Tu trabajador automático está activo y generando dinero cada hora.')
+            .addFields(
+                {
+                    name: '💰 Total Ganado',
+                    value: `${stats.totalEarned.toLocaleString('es-ES')} π-b$`,
+                    inline: true
+                },
+                {
+                    name: '🔄 Pagos Recibidos',
+                    value: `${stats.payoutCount} veces`,
+                    inline: true
+                },
+                {
+                    name: '⏱️ Próximo Pago',
+                    value: hoursUntilNext <= 0 ? 'Disponible ahora' : `En ${formatTime(hoursUntilNext)}`,
+                    inline: true
+                },
+                {
+                    name: '📅 Activo Desde',
+                    value: activeSince.toLocaleDateString('es-ES'),
+                    inline: true
+                },
+                {
+                    name: '💎 Rango de Ingresos',
+                    value: '5,000 - 15,000 π-b$ por hora',
+                    inline: true
+                },
+                {
+                    name: '📊 Promedio por Pago',
+                    value: stats.payoutCount > 0 ? 
+                        `${Math.floor(stats.totalEarned / stats.payoutCount).toLocaleString('es-ES')} π-b$` : 
+                        'Sin datos aún',
+                    inline: true
+                }
+            )
+            .setColor('#00FF00')
+            .setTimestamp();
+        
+        await message.reply({ embeds: [embed] });
+    }
+
     // === PROCESAR INGRESOS PASIVOS ===
     async processPassiveIncome() {
         try {
@@ -2003,33 +2083,32 @@ class ShopSystem {
             for (const user of allUsers) {
                 const permanentEffects = this.parseEffects(user.permanentEffects);
                 
-                if (typeof permanentEffects === 'string') {
-                    try {
-                        permanentEffects = JSON.parse(permanentEffects);
-                    } catch (error) {
-                        continue; // Skip usuario con datos corruptos
-                    }
-                }
-                
                 for (const [itemId, effect] of Object.entries(permanentEffects)) {
                     if (effect.type === 'passive_income') {
                         const lastPayout = user.lastPassivePayout || 0;
                         const now = Date.now();
                         
-                        // Si ha pasado 1 hora
                         if (now - lastPayout >= 3600000) {
                             const amount = Math.floor(
                                 Math.random() * (effect.maxAmount - effect.minAmount + 1)
                             ) + effect.minAmount;
                             
-                            // Verificar límite de balance
                             if (user.balance + amount <= this.economy.config.maxBalance) {
+                                // Actualizar estadísticas
+                                const currentStats = user.passiveIncomeStats || { totalEarned: 0, lastPayout: 0, payoutCount: 0 };
+                                const newStats = {
+                                    totalEarned: currentStats.totalEarned + amount,
+                                    lastPayout: now,
+                                    payoutCount: currentStats.payoutCount + 1
+                                };
+                                
                                 await this.economy.updateUser(user.id, {
                                     balance: user.balance + amount,
-                                    lastPassivePayout: now
+                                    lastPassivePayout: now,
+                                    passiveIncomeStats: newStats
                                 });
                                 
-                                console.log(`🤖 Ingreso pasivo: ${amount} π-b$ para ${user.id.slice(-4)}`);
+                                console.log(`🤖 Ingreso pasivo: ${amount} π-b$ para ${user.id.slice(-4)} (Total: ${newStats.totalEarned})`);
                                 processedCount++;
                             }
                         }
@@ -2884,6 +2963,9 @@ class ShopSystem {
     async processCommand(message) {
         if (message.author.bot) return;
 
+        // Verificar ingresos pasivos pendientes
+        await this.economy.checkPendingPassiveIncome(message.author.id);
+
         if ((!message.author.id === '488110147265232898') || (!message.author.id === '788424796366307409')) {
             return;
         }
@@ -2943,7 +3025,11 @@ class ShopSystem {
                     }
                     await this.removePermanentEffect(message, args[1]);
                     break;
-                    
+                case '>autoworkerbal':
+                case '>autoworker':
+                case '>awbal':
+                    await this.showAutoWorkerStatus(message);
+                    break;
                 case '>cosmetics':
                 case '>cosmeticos':
                     const cosmeticsDisplay = await this.getCosmeticsDisplay(message.author.id);
