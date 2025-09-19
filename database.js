@@ -453,6 +453,19 @@ class LocalDatabase {
                     else if (key === 'stats' && currentUser.stats) {
                         finalValue = { ...currentUser.stats, ...value };
                     }
+                    // En el bloque de merge, agregar:
+                    else if (key === 'passiveIncomeStats' && currentUser.passiveIncomeStats) {
+                        // Parse si es string
+                        let currentStats = currentUser.passiveIncomeStats;
+                        if (typeof currentStats === 'string') {
+                            try {
+                                currentStats = JSON.parse(currentStats);
+                            } catch {
+                                currentStats = {};
+                            }
+                        }
+                        finalValue = { ...currentStats, ...value };
+                    }
                     // Otros objetos, usar el valor tal como viene
                     else {
                         finalValue = value;

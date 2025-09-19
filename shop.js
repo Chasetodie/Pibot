@@ -2081,7 +2081,7 @@ class ShopSystem {
                 stats = { totalEarned: 0, lastPayout: 0, payoutCount: 0 };
             }
         }
-        
+
         const now = Date.now();
         const timeSinceLastPayout = now - (user.lastPassivePayout || stats.lastPayout || 0);
 
@@ -2196,7 +2196,7 @@ class ShopSystem {
                                 await this.economy.updateUser(user.id, {
                                     balance: user.balance + amount,
                                     lastPassivePayout: now,
-                                    passiveIncomeStats: JSON.stringify(newStats)  // <- Convertir a string
+                                    passiveIncomeStats: newStats  // <- Convertir a string
                                 });
                                 
                                 console.log(`🤖 Ingreso pasivo: ${amount} π-b$ para ${user.id.slice(-4)} (Total: ${newStats.totalEarned})`);
@@ -2605,46 +2605,6 @@ class ShopSystem {
             canUse: false,
             reason: 'Tu nivel VIP no incluye comandos exclusivos.'
         };
-    }
-
-    // Después del método processItemUse(), AGREGAR:
-    async processPassiveIncome() {
-        console.log('🐛 Iniciando processPassiveIncome...');
-        
-        try {
-            const allUsers = await this.economy.getAllUsers();
-            console.log(`🐛 Total usuarios encontrados: ${allUsers.length}`);
-            
-            for (const user of allUsers) {
-                console.log(`🐛 Procesando usuario: ${user.id}`);
-                const permanentEffects = this.parseEffects(user.permanentEffects);
-                console.log(`🐛 Permanent effects:`, permanentEffects);
-
-                for (const [itemId, effect] of Object.entries(permanentEffects)) {
-                    console.log(`🐛 Verificando item: ${itemId}, effect:`, effect);
-                    
-                    if (effect.type === 'passive_income') {
-                        console.log(`🐛 Auto worker encontrado! minAmount: ${effect.minAmount}, maxAmount: ${effect.maxAmount}`);
-                        const lastPayout = user.lastPassivePayout || 0;
-                        const now = Date.now();
-                        
-                        // Si ha pasado 1 hora (3600000 ms)
-                        if (now - lastPayout >= 3600000) {
-                            const amount = Math.floor(
-                                Math.random() * (effect.maxAmount - effect.minAmount) + effect.minAmount
-                            );
-                            
-                            await this.economy.addMoney(user.id, amount, 'passive_income');
-                            await this.economy.updateUser(user.id, { lastPassivePayout: now });
-                            
-                            console.log(`💰 Ingreso pasivo: ${amount} π-b$ para ${user.id}`);
-                        }
-                    }
-                }
-            }
-        } catch (error) {
-            console.error('❌ Error procesando ingresos pasivos:', error);
-        }
     }
 
     async applyPickaxeBonus(userId) {
