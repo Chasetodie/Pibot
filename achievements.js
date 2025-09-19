@@ -1143,15 +1143,15 @@ class AchievementsSystem {
         await this.economy.checkPendingPassiveIncome(message.author.id);
     
         // Limpiar efectos expirados y notificar
-        const cleanupResult = await this.cleanupExpiredEffects(message.author.id);
+        const cleanupResult = await this.economy.shop.cleanupExpiredEffects(message.author.id);
         if (cleanupResult.expiredItems.length > 0) {
-            await this.notifyExpiredItems(message.author.id, cleanupResult.expiredItems, message);
+            await this.economy.shop.notifyExpiredItems(message.author.id, cleanupResult.expiredItems, message);
         }
         
         // Verificar items con pocas reservas
-        const lowItems = await this.checkLowItems(message.author.id);
+        const lowItems = await this.economy.shop.checkLowItems(message.author.id);
         if (lowItems.length > 0) {
-            await this.notifyLowItems(message.author.id, lowItems, message);
+            await this.economy.shop.notifyLowItems(message.author.id, lowItems, message);
         }
         
         const args = message.content.toLowerCase().split(' ');
