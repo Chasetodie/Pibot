@@ -3126,15 +3126,15 @@ class ShopSystem {
         const lastNotification = this.lastNotifications.get(userId) || 0;
         const shouldNotify = (now - lastNotification) > this.notificationCooldown;
         
-        const cleanupResult = await this.shop.cleanupExpiredEffects(userId);
+        const cleanupResult = await this.cleanupExpiredEffects(userId);
         if (cleanupResult.expiredItems.length > 0 && shouldNotify) {
-            await this.shop.notifyExpiredItems(userId, cleanupResult.expiredItems, message);
+            await this.notifyExpiredItems(userId, cleanupResult.expiredItems, message);
             this.lastNotifications.set(userId, now);
         }
         
-        const lowItems = await this.shop.checkLowItems(userId);
+        const lowItems = await this.checkLowItems(userId);
         if (lowItems.length > 0 && shouldNotify) {
-            await this.shop.notifyLowItems(userId, lowItems, message);
+            await this.notifyLowItems(userId, lowItems, message);
             this.lastNotifications.set(userId, now);
         }
 
