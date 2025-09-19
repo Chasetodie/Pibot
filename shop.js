@@ -18,7 +18,7 @@ class ShopSystem {
                     type: 'multiplier',
                     targets: ['work', 'games'],
                     multiplier: 1.25,
-                    duration: 7200
+                    duration: /*7200*/360
                 },
                 stackable: true,
                 maxStack: 5
