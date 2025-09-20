@@ -1636,29 +1636,8 @@ class AllCommands {
 
     async processCommand(message) {
         // Verificar ingresos pasivos pendientes
-        const userId = message.author.id;
-        const now = Date.now();
-        
-        // Solo hacer limpieza si este archivo tiene acceso al shop
-        if (this.economy.shop) {
-            await this.economy.checkPendingPassiveIncome(userId);
-            
-            // Verificar si ya se notificó recientemente
-            const lastNotification = this.economy.shop.lastNotifications.get(userId) || 0;
-            const shouldNotify = (now - lastNotification) > this.economy.shop.notificationCooldown;
-            
-            const cleanupResult = await this.economy.shop.cleanupExpiredEffects(userId);
-            if (cleanupResult.expiredItems.length > 0 && shouldNotify) {
-                await this.economy.shop.notifyExpiredItems(userId, cleanupResult.expiredItems, message);
-                this.economy.shop.lastNotifications.set(userId, now);
-            }
-            
-            const lowItems = await this.economy.shop.checkLowItems(userId);
-            if (lowItems.length > 0 && shouldNotify) {
-                await this.economy.shop.notifyLowItems(userId, lowItems, message);
-                this.economy.shop.lastNotifications.set(userId, now);
-            }
-        }
+        await this.economy.checkPendingPassiveIncome(message.author.id);
+        await this.economy.checkAndNotifyItems(message.author.id, message);
        
         await this.shop.cleanupExpiredTokens(message.author.id);
         await this.trades.cleanupExpiredTrades();
