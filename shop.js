@@ -1895,14 +1895,6 @@ class ShopSystem {
     }    
 
     async cleanupExpiredEffects(userId) {
-        // Evitar procesamiento concurrente
-        if (this.processingCleanup.has(userId)) {
-            return { hasChanges: false, expiredItems: [] };
-        }
-        
-        this.processingCleanup.add(userId);
-        
-        try {
             const user = await this.economy.getUser(userId);
             const activeEffects = this.parseActiveEffects(user.activeEffects);
         
@@ -1950,17 +1942,9 @@ class ShopSystem {
             }
             
             return { hasChanges, expiredItems };
-        } finally {
-            this.processingCleanup.delete(userId);
-        }
     }
 
     async checkLowItems(userId) {
-        // Similar throttling
-        if (this.processingCleanup.has(userId)) {
-            return [];
-        }
-
         const user = await this.economy.getUser(userId);
         const activeEffects = this.parseActiveEffects(user.activeEffects);
         const lowItems = [];
