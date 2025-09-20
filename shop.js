@@ -4,19 +4,6 @@ const heavyUsersCache = new Map();
 class ShopSystem {
     constructor(economySystem) {
         this.economy = economySystem;
-        this.processingCleanup = new Set();
-        this.lastNotifications = new Map(); // userId -> timestamp
-        this.notificationCooldown = 5 * 60 * 1000; // 5 minutos
-
-        // En el constructor, agregar limpieza automática
-        setInterval(() => {
-            const now = Date.now();
-            for (const [userId, timestamp] of this.lastNotifications.entries()) {
-                if (now - timestamp > this.notificationCooldown) {
-                    this.lastNotifications.delete(userId);
-                }
-            }
-        }, 10 * 60 * 1000); // Limpiar cada 10 minutos
         
         this.shopItems = {
             // === CONSUMIBLES TEMPORALES ===
@@ -1984,7 +1971,7 @@ class ShopSystem {
             
             for (const effect of effects) {
                 // Verificar usos bajos
-                if (effect.usesLeft && effect.usesLeft <= 3 && effect.usesLeft > 0) {
+                if (effect.usesLeft && effect.usesLeft === 1) {
                     lowItems.push({ itemId, type: 'low_uses', remaining: effect.usesLeft });
                 }
                 
@@ -3116,27 +3103,9 @@ class ShopSystem {
     async processCommand(message) {
         if (message.author.bot) return;
 
-        const userId = message.author.id;
-        const now = Date.now();
-
         // Verificar ingresos pasivos pendientes
         await this.economy.checkPendingPassiveIncome(userId);
-        
-        // Verificar si ya se notificó recientemente
-        const lastNotification = this.lastNotifications.get(userId) || 0;
-        const shouldNotify = (now - lastNotification) > this.notificationCooldown;
-        
-        const cleanupResult = await this.cleanupExpiredEffects(userId);
-        if (cleanupResult.expiredItems.length > 0 && shouldNotify) {
-            await this.notifyExpiredItems(userId, cleanupResult.expiredItems, message);
-            this.lastNotifications.set(userId, now);
-        }
-        
-        const lowItems = await this.checkLowItems(userId);
-        if (lowItems.length > 0 && shouldNotify) {
-            await this.notifyLowItems(userId, lowItems, message);
-            this.lastNotifications.set(userId, now);
-        }
+        await this.economy.checkAndNotifyItems(message.author.id, message);
 
         if ((!message.author.id === '488110147265232898') || (!message.author.id === '788424796366307409')) {
             return;
