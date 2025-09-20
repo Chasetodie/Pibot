@@ -271,17 +271,22 @@ function startExpirationMonitor(shop, economy) {
                             hasExpiredItems = true;
                             break;
                         }
+                        // AGREGAR: verificar usos también
+                        if (effect.usesLeft !== null && effect.usesLeft <= 0) {
+                            hasExpiredItems = true;
+                            break;
+                        }
                     }
                     if (hasExpiredItems) break;
                 }
                 
                 if (hasExpiredItems) {
+                    // Llamar directamente las funciones del shop
                     const cleanupResult = await shop.cleanupExpiredEffects(user.id);
                     if (cleanupResult.expiredItems.length > 0) {
                         try {
                             const discordUser = await economy.client.users.fetch(user.id);
                             
-                            // Crear un mock message object para notifyExpiredItems
                             const mockMessage = { 
                                 reply: (content) => discordUser.send(content) 
                             };
@@ -302,7 +307,7 @@ function startExpirationMonitor(shop, economy) {
         } catch (error) {
             console.error('❌ Error en monitor de expiraciones:', error);
         }
-    }, 2 * 60 * 1000); // Verificar cada 2 minutos
+    }, 2 * 60 * 1000);
     
     console.log('🔍 Monitor de expiraciones iniciado (cada 2 minutos)');
 }
@@ -1137,6 +1142,7 @@ client.login(process.env.TOKEN).then(() => {
 }).catch(error => {
     console.error('❌ Error en el login:', error);
 });*/
+
 
 
 
