@@ -87,7 +87,7 @@ let counters = loadCounters();
 const commandHandler = new CommandHandler(counters, saveCounters);
 
 //Crear instancia del sistema de economia
-const economy = new EconomySystem();
+const economy = new EconomySystem(client);
 
 //Crear instancia del sistema de Misiones
 const missions = new MissionsSystem(economy);
@@ -144,6 +144,7 @@ trades.startCacheCleanup();
 missions.startCacheCleanup();
 events.startCacheCleanup();
 minigames.startCacheCleanup();
+startExpirationMonitor(shop, economy);
 
 const userCooldowns = new Map();
 const messageBatch = [];
@@ -247,6 +248,63 @@ async function processMessageSafe({ message, userId, now }) {
     } catch (error) {
         console.error('❌ Error procesando mensaje:', error.message);
     }
+}
+
+function startExpirationMonitor(shop, economy) {
+    setInterval(async () => {
+        try {
+            console.log('🔍 Verificando expiraciones automáticas...');
+            const allUsers = await economy.getAllUsers();
+            let processedUsers = 0;
+            
+            for (const user of allUsers) {
+                const activeEffects = shop.parseActiveEffects(user.activeEffects);
+                const now = Date.now();
+                let hasExpiredItems = false;
+                
+                // Verificar si hay items expirados
+                for (const [itemId, effects] of Object.entries(activeEffects)) {
+                    if (!Array.isArray(effects)) continue;
+                    
+                    for (const effect of effects) {
+                        if (effect.expiresAt && effect.expiresAt <= now) {
+                            hasExpiredItems = true;
+                            break;
+                        }
+                    }
+                    if (hasExpiredItems) break;
+                }
+                
+                if (hasExpiredItems) {
+                    const cleanupResult = await shop.cleanupExpiredEffects(user.id);
+                    if (cleanupResult.expiredItems.length > 0) {
+                        try {
+                            const discordUser = await economy.client.users.fetch(user.id);
+                            
+                            // Crear un mock message object para notifyExpiredItems
+                            const mockMessage = { 
+                                reply: (content) => discordUser.send(content) 
+                            };
+                            
+                            await shop.notifyExpiredItems(user.id, cleanupResult.expiredItems, mockMessage);
+                            processedUsers++;
+                        } catch (error) {
+                            console.log(`No se pudo notificar a usuario ${user.id}: ${error.message}`);
+                        }
+                    }
+                }
+            }
+            
+            if (processedUsers > 0) {
+                console.log(`⚰️ Notificadas expiraciones a ${processedUsers} usuarios`);
+            }
+            
+        } catch (error) {
+            console.error('❌ Error en monitor de expiraciones:', error);
+        }
+    }, 2 * 60 * 1000); // Verificar cada 2 minutos
+    
+    console.log('🔍 Monitor de expiraciones iniciado (cada 2 minutos)');
 }
 
 // LEVEL UP SEGURO Y SIMPLE
@@ -1079,6 +1137,7 @@ client.login(process.env.TOKEN).then(() => {
 }).catch(error => {
     console.error('❌ Error en el login:', error);
 });*/
+
 
 
 
