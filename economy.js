@@ -6,8 +6,9 @@ const richUC = new Map();
 const heavyUsersCache = new Map();
 
 class EconomySystem {
-    constructor() {
+    constructor(client) {
         this.database = null;
+        this.client = client;
         this.initializeDatabase();
         this.events = null;
         this.processingPassiveIncome = new Set();
