@@ -103,24 +103,33 @@ class EconomySystem {
         
         try {
             const now = Date.now();
-            const lastNotification = this.lastNotifications.get(userId) || 0;
-            const shouldNotify = (now - lastNotification) > this.notificationCooldown;
+            const userNotifications = this.lastNotifications.get(userId) || { expired: 0, low: 0 };
             
-            if (shouldNotify) {
+            // Verificar items expirados (cooldown separado)
+            const shouldNotifyExpired = (now - userNotifications.expired) > this.notificationCooldown;
+            if (shouldNotifyExpired) {
                 const cleanupResult = await this.shop.cleanupExpiredEffects(userId);
                 if (cleanupResult.expiredItems.length > 0) {
                     await this.shop.notifyExpiredItems(userId, cleanupResult.expiredItems, message);
+                    userNotifications.expired = now;
                 }
-                
+            }
+            
+            // Verificar items con pocos usos/tiempo (cooldown separado)
+            const shouldNotifyLow = (now - userNotifications.low) > this.notificationCooldown;
+            if (shouldNotifyLow) {
                 const lowItems = await this.shop.checkLowItems(userId);
                 if (lowItems.length > 0) {
                     await this.shop.notifyLowItems(userId, lowItems, message);
-                }
-                
-                if (cleanupResult.expiredItems.length > 0 || lowItems.length > 0) {
-                    this.lastNotifications.set(userId, now);
+                    userNotifications.low = now;
                 }
             }
+            
+            // Actualizar mapa solo si cambió algo
+            if (userNotifications.expired > 0 || userNotifications.low > 0) {
+                this.lastNotifications.set(userId, userNotifications);
+            }
+            
         } finally {
             this.processingNotifications.delete(userId);
         }
