@@ -95,7 +95,7 @@ class EconomySystem {
         }
     }
 
-    async checkAndNotifyItems(userId, message) {
+    async checkAndNotifyItems(userId, message, isAutomatic = false) {
         if (this.processingNotifications.has(userId)) {
             return;
         }
@@ -104,32 +104,43 @@ class EconomySystem {
         
         try {
             const now = Date.now();
-            const userNotifications = this.lastNotifications.get(userId) || { expired: 0, low: 0 };
+            const userNotifications = this.lastNotifications.get(userId) || { 
+                expiredAuto: 0, 
+                expiredManual: 0, 
+                low: 0 
+            };
             
-            // Verificar items expirados (cooldown separado)
-            const shouldNotifyExpired = (now - userNotifications.expired) > this.notificationCooldown;
+            // Elegir qué timestamp usar según si es automático o manual
+            const expiredTimestamp = isAutomatic ? userNotifications.expiredAuto : userNotifications.expiredManual;
+            const shouldNotifyExpired = (now - expiredTimestamp) > this.notificationCooldown;
+            
             if (shouldNotifyExpired) {
                 const cleanupResult = await this.shop.cleanupExpiredEffects(userId);
                 if (cleanupResult.expiredItems.length > 0) {
                     await this.shop.notifyExpiredItems(userId, cleanupResult.expiredItems, message);
-                    userNotifications.expired = now;
+                    
+                    // Actualizar el timestamp correspondiente
+                    if (isAutomatic) {
+                        userNotifications.expiredAuto = now;
+                    } else {
+                        userNotifications.expiredManual = now;
+                    }
                 }
             }
             
-            // Verificar items con pocos usos/tiempo (cooldown separado)
-            const shouldNotifyLow = (now - userNotifications.low) > this.notificationCooldown;
-            if (shouldNotifyLow) {
-                const lowItems = await this.shop.checkLowItems(userId);
-                if (lowItems.length > 0) {
-                    await this.shop.notifyLowItems(userId, lowItems, message);
-                    userNotifications.low = now;
+            // Para items con pocos usos, solo en notificaciones manuales
+            if (!isAutomatic) {
+                const shouldNotifyLow = (now - userNotifications.low) > this.notificationCooldown;
+                if (shouldNotifyLow) {
+                    const lowItems = await this.shop.checkLowItems(userId);
+                    if (lowItems.length > 0) {
+                        await this.shop.notifyLowItems(userId, lowItems, message);
+                        userNotifications.low = now;
+                    }
                 }
             }
             
-            // Actualizar mapa solo si cambió algo
-            if (userNotifications.expired > 0 || userNotifications.low > 0) {
-                this.lastNotifications.set(userId, userNotifications);
-            }
+            this.lastNotifications.set(userId, userNotifications);
             
         } finally {
             this.processingNotifications.delete(userId);
