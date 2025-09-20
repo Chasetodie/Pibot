@@ -11,6 +11,9 @@ class EconomySystem {
         this.initializeDatabase();
         this.events = null;
         this.processingPassiveIncome = new Set();
+        this.processingNotifications = new Set();
+        this.lastNotifications = new Map();
+        this.notificationCooldown = 60 * 60 * 1000;
         
         // Configuración del sistema
         this.config = {
@@ -88,6 +91,38 @@ class EconomySystem {
         } catch (error) {
             console.error('❌ Error obteniendo usuario:', error);
             throw error;
+        }
+    }
+
+    async checkAndNotifyItems(userId, message) {
+        if (this.processingNotifications.has(userId)) {
+            return;
+        }
+        
+        this.processingNotifications.add(userId);
+        
+        try {
+            const now = Date.now();
+            const lastNotification = this.lastNotifications.get(userId) || 0;
+            const shouldNotify = (now - lastNotification) > this.notificationCooldown;
+            
+            if (shouldNotify) {
+                const cleanupResult = await this.shop.cleanupExpiredEffects(userId);
+                if (cleanupResult.expiredItems.length > 0) {
+                    await this.shop.notifyExpiredItems(userId, cleanupResult.expiredItems, message);
+                }
+                
+                const lowItems = await this.shop.checkLowItems(userId);
+                if (lowItems.length > 0) {
+                    await this.shop.notifyLowItems(userId, lowItems, message);
+                }
+                
+                if (cleanupResult.expiredItems.length > 0 || lowItems.length > 0) {
+                    this.lastNotifications.set(userId, now);
+                }
+            }
+        } finally {
+            this.processingNotifications.delete(userId);
         }
     }
 
