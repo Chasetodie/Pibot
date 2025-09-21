@@ -156,6 +156,66 @@ class EventsSystem {
                 }
             }, 1000);
     }
+
+    // En EventsSystem, agregar esta función
+    getEcuadorTime() {
+        const now = new Date();
+        return new Date(now.toLocaleString("en-US", {timeZone: "America/Guayaquil"}));
+    }
+
+    // Función para verificar si es viernes 00:00
+    checkWeekendStart() {
+        const ecuadorTime = this.getEcuadorTime();
+        const dayOfWeek = ecuadorTime.getDay(); // 0=Domingo, 1=Lunes, ..., 5=Viernes, 6=Sábado
+        const hour = ecuadorTime.getHours();
+        const minute = ecuadorTime.getMinutes();
+        
+        // Viernes (5) a las 00:00-00:59
+        return dayOfWeek === 5 && hour === 0 && minute < 30;
+    }
+
+    // Función para verificar si es domingo 23:30 (para terminar el evento)
+    checkWeekendEnd() {
+        const ecuadorTime = this.getEcuadorTime();
+        const dayOfWeek = ecuadorTime.getDay();
+        const hour = ecuadorTime.getHours();
+        const minute = ecuadorTime.getMinutes();
+        
+        // Domingo (0) a las 23:30-23:59 (para terminar antes de lunes)
+        return dayOfWeek === 0 && hour === 23 && minute >= 30;
+    }
+
+    // Modificar startEventLoop para incluir verificación de fin de semana
+    startEventLoop() {
+        // Verificar fin de semana cada 30 minutos
+        setInterval(async () => {
+            await this.checkWeekendEvents();
+        }, 30 * 60 * 1000); // 30 minutos
+        
+        // Resto del código existente...
+    }
+
+    // Nueva función para manejar eventos de fin de semana
+    async checkWeekendEvents() {
+        const hasWeekendEvent = this.hasActiveEvent('week_end');
+        
+        if (this.checkWeekendStart() && !hasWeekendEvent) {
+            // Iniciar evento de fin de semana
+            const weekendDuration = 2 * 24 * 60 * 60 * 1000; // 48 horas exactas
+            await this.createEvent('week_end', weekendDuration);
+            console.log('🎉 Evento de fin de semana iniciado automáticamente');
+        }
+        
+        if (this.checkWeekendEnd() && hasWeekendEvent) {
+            // Terminar evento de fin de semana manualmente
+            const weekendEvent = hasWeekendEvent;
+            weekendEvent.endTime = Date.now(); // Forzar fin inmediato
+            await this.deleteEvent(weekendEvent.id);
+            delete this.activeEvents[weekendEvent.id];
+            await this.announceEvent(weekendEvent, 'expired');
+            console.log('🏁 Evento de fin de semana terminado automáticamente');
+        }
+    }
     
     // QUITAR todo el bloque de Supabase y REEMPLAZAR por:
     async loadEvents() {

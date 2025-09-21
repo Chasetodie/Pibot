@@ -877,10 +877,20 @@ class ShopSystem {
             .setDescription(`Página ${page}/${totalPages} - Categoría: ${category === 'all' ? 'Todas' : category}`)
             .setColor('#FFD700')
             .setTimestamp();
+
+        const discount = this.getWeekendDiscount();
         
         for (const item of pageItems) {
             const rarityEmoji = this.rarityEmojis[item.rarity];
-            const priceFormatted = item.price.toLocaleString('es-ES');
+            const originalPrice = item.price;
+            const discountedPrice = discount > 0 ? Math.floor(originalPrice * (1 - discount)) : originalPrice;
+            
+            let priceText;
+            if (discount > 0) {
+                priceText = `~~${originalPrice.toLocaleString('es-ES')}~~ **${discountedPrice.toLocaleString('es-ES')} π-b$** (-${Math.round(discount * 100)}%)`;
+            } else {
+                priceText = `**${originalPrice.toLocaleString('es-ES')} π-b$**`;
+            }
             
             let effectDesc = '';
             if (item.effect && item.effect.duration) {
@@ -895,7 +905,7 @@ class ShopSystem {
             
             embed.addFields({
                 name: `${rarityEmoji} ${item.name}`,
-                value: `${item.description}\n💰 **${priceFormatted} π-b$** ${effectDesc ? `| ⏱️ ${effectDesc}` : ''}\n**item_id:** ${item.id}`,
+                value: `${item.description}\n💰 ${priceText} ${effectDesc ? `| ⏱️ ${effectDesc}` : ''}\n**item_id:** ${item.id}`,
                 inline: false
             });
         }
@@ -966,7 +976,13 @@ class ShopSystem {
             components.push(row);
         }
         
-        embed.setFooter({ text: 'Usa >buy <item_id> para comprar un item / Si activas un item con usos que es superior a otro, se consumirá el item que es superior.' });
+        if (discount > 0) {
+            let discountText;
+            discountText = `\n🎉 ¡Descuento de fin de semana activo! ${Math.round(discount * 100)}% OFF en todos los items`;
+            embed.setFooter({ text: `Usa >buy <item_id> para comprar un item / Si activas un item con usos que es superior a otro, se consumirá el item que es superior.${discountText}` });
+        } else {
+            embed.setFooter({ text: 'Usa >buy <item_id> para comprar un item / Si activas un item con usos que es superior a otro, se consumirá el item que es superior.' });
+        }
         
         await message.reply({ embeds: [embed], components });
     }
@@ -983,6 +999,18 @@ class ShopSystem {
         return false;
     }
 
+    getWeekendDiscount() {
+        // Verificar si hay evento de fin de semana activo
+        if (this.economy.events) {
+            for (const event of this.economy.events.getActiveEvents()) {
+                if (event.type === 'week_end') {
+                    return 0.20; // 20% de descuento
+                }
+            }
+        }
+        return 0; // Sin descuento
+    }
+
     // === COMPRAR ITEM ===
     async buyItem(message, itemId, quantity = 1) {
         const item = this.shopItems[itemId];
@@ -996,8 +1024,13 @@ class ShopSystem {
             return;
         }
         
+        // Calcular precio con descuento
+        const discount = this.getWeekendDiscount();
+        const originalPrice = item.price;
+        const discountedPrice = Math.floor(originalPrice * (1 - discount));
+        const totalCost = discountedPrice * quantity;
+        
         const user = await this.economy.getUser(message.author.id);
-        const totalCost = item.price * quantity;
         
         if (user.balance < totalCost) {
             await message.reply(`❌ No tienes suficiente dinero. Necesitas **${totalCost.toLocaleString('es-ES')} π-b$**.`);
@@ -1042,11 +1075,21 @@ class ShopSystem {
             .setTitle('✅ Compra Exitosa')
             .setDescription(`${rarityEmoji} **${item.name}** x${quantity}\n\n${item.description}`)
             .setColor(this.rarityColors[item.rarity])
-            .addFields(
-                { name: '💰 Costo Total', value: `${totalCost.toLocaleString('es-ES')} π-b$`, inline: true },
-                { name: '💳 Balance Restante', value: `${newBalance.toLocaleString('es-ES')} π-b$`, inline: true }
-            )
             .setTimestamp();
+
+            if (discount > 0) {
+                const savings = (originalPrice - discountedPrice) * quantity;
+                embed.addFields(
+                    { name: '💰 Precio Original', value: `${(originalPrice * quantity).toLocaleString('es-ES')} π-b$`, inline: true },
+                    { name: '🎉 Descuento', value: `${Math.round(discount * 100)}%`, inline: true },
+                    { name: '💸 Ahorro', value: `${savings.toLocaleString('es-ES')} π-b$`, inline: true },
+                    { name: '💳 Precio Final', value: `${totalCost.toLocaleString('es-ES')} π-b$`, inline: true }
+                );
+            } else {
+                embed.addFields(
+                    { name: '💰 Costo Total', value: `${totalCost.toLocaleString('es-ES')} π-b$`, inline: true }
+                );
+            }
         
         await message.reply({ embeds: [embed] });
     }
@@ -3221,6 +3264,12 @@ class ShopSystem {
             console.error('❌ Error en sistema de tienda:', error);
             await message.reply('❌ Ocurrió un error en la tienda. Intenta de nuevo.');
         }
+    }
+
+    // Método para conectar eventos
+    connectEventsSystem(eventsSystem) {
+        this.events = eventsSystem;
+        console.log('🎮 Sistema de eventos conectado a economia');
     }
 }
 

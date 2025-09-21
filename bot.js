@@ -106,6 +106,7 @@ database.startCacheCleanup();
 
 //Crear instancia del sistema de Eventos
 const events = new EventsSystem(economy, client);
+shop.connectEventsSystem(events);
 missions.connectEventsSystem(events);
 achievements.connectEventsSystem(events);
 economy.connectEventsSystem(events);
