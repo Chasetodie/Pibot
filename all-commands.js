@@ -1359,6 +1359,21 @@ class AllCommands {
                                 { name: '🎯 Eficiencia', value: `${finishResult.efficiency}%`, inline: true },
                                 { name: '👆 Clicks', value: `${finishResult.clicks}/${finishResult.maxClicks}`, inline: true }
                             );
+
+                        // AGREGAR: Mostrar items usados si los hay
+                        if (finishResult.usedItems && finishResult.usedItems.length > 0) {
+                            let itemsText = '';
+                            for (const item of finishResult.usedItems) {
+                                if (item.safe) {
+                                    itemsText += `${item.name} (100% éxito)\n`;
+                                } else if (item.boost > 0) {
+                                    itemsText += `${item.name} (+${Math.round(item.boost * 100)}% éxito)\n`;
+                                } else {
+                                    itemsText += `${item.name}\n`;
+                                }
+                            }
+                            successEmbed.addFields({ name: '🔧 Items Usados', value: itemsText, inline: false });
+                        }
                         
                         await message.channel.send({ embeds: [successEmbed] });
                         
@@ -1386,6 +1401,15 @@ class AllCommands {
                             { name: '🎯 Eficiencia', value: `${finishResult.efficiency}%`, inline: true },
                             { name: '👆 Clicks', value: `${finishResult.clicks}/${finishResult.maxClicks}`, inline: true }
                         );
+                    }
+
+                    // AGREGAR: Mostrar items usados también en fallos
+                    if (finishResult.usedItems && finishResult.usedItems.length > 0) {
+                        let itemsText = '';
+                        for (const item of finishResult.usedItems) {
+                            itemsText += `${item.name} (consumido)\n`;
+                        }
+                        failEmbed.addFields({ name: '🔧 Items Usados', value: itemsText, inline: false });
                     }
                         
                     await message.channel.send({ embeds: [failEmbed] });

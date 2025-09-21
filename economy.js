@@ -1445,6 +1445,33 @@ class EconomySystem {
             const finalSuccessChance = baseSuccessChance + (clickEfficiency * 0.2); // Bonus por clicks
 
             const successBoost = await this.shop.getSuccessBoost(robberId, 'robbery');
+            // AGREGAR: Obtener lista de items de robo activos
+            let usedItems = [];
+            if (this.shop) {
+                const user = await this.getUser(robberId);
+                const activeEffects = this.shop.parseActiveEffects(user.activeEffects);
+                
+                const robberyItems = ['master_gloves', 'phantom_gloves', 'robbery_kit'];
+                
+                for (const itemId of robberyItems) {
+                    if (activeEffects[itemId] && activeEffects[itemId].length > 0) {
+                        for (const effect of activeEffects[itemId]) {
+                            if (effect.usesLeft > 0 || effect.safe === true) {
+                                const item = this.shop.shopItems[itemId];
+                                if (item) {
+                                    usedItems.push({
+                                        id: itemId,
+                                        name: item.name,
+                                        boost: effect.successRate || effect.boost || 0,
+                                        safe: effect.safe || false
+                                    });
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            
             // Verificar si tiene phantom gloves para garantizar 100% éxito
             let finalChance = finalSuccessChance + successBoost;
 
@@ -1547,7 +1574,8 @@ class EconomySystem {
                     targetNewBalance: Math.max(0, target.balance - stolenAmount),
                     targetId: robberyData.targetId,
                     stealPercentage: Math.round(stealPercentage * 100),
-                    hitLimit: addResult.hitLimit
+                    hitLimit: addResult.hitLimit,
+                    usedItems: usedItems
                 };
                 
             } else {
@@ -1585,7 +1613,8 @@ class EconomySystem {
                     efficiency: Math.round(clickEfficiency * 100),
                     robberOldBalance: robber.balance,
                     robberNewBalance: Math.max(0, robber.balance - actualPenalty),
-                    targetId: robberyData.targetId
+                    targetId: robberyData.targetId,
+                    usedItems: usedItems
                 };
             }
         } catch (error) {
