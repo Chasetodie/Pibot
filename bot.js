@@ -661,9 +661,12 @@ client.on('interactionCreate', async (interaction) => {
             }
         }
 
-        if (interaction.customId.startsWith('nickname_')) {
-            await shop.handleNicknameConfirmation(interaction);
-            return;
+        if (interaction.isButton()) {
+            if (interaction.customId.startsWith('role_') || 
+                interaction.customId.startsWith('nickname_') || 
+                interaction.customId.startsWith('vip_')) {
+                await shop.handleButtonInteraction(interaction);
+            }
         }
 
         // AGREGAR ESTO: Manejo de botones del blackjack

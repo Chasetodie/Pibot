@@ -1260,6 +1260,11 @@ class ShopSystem {
                 if (item.effect.type === 'nickname_change') {
                     return { success: false, message: 'Para usar este item tienes que usar >setnickname <apodo>.' };                
                 }
+
+                if (item.id === 'role_token') {
+                    return { success: false, message: 'Para usar este item tienes que usar >rolcreate #COLOR nombre_del_rol.' };
+                }
+                
                 return { success: false, message: 'Item especial no implementado.' };
             case 'mystery':
                 if (item.effect.type === 'random_money') {
@@ -2863,6 +2868,302 @@ class ShopSystem {
         await message.reply({ embeds: [embed] });
     }
 
+    // 9. MANEJAR INTERACCIONES DE BOTONES
+    async handleButtonInteraction(interaction) {
+        if (interaction.customId.startsWith('role_')) {
+            await this.handleRoleConfirmation(interaction);
+            return;
+        }
+        
+        if (interaction.customId.startsWith('nickname_')) {
+            await this.handleNicknameConfirmation(interaction);
+            return;
+        }
+        
+        // Nuevas interacciones VIP
+        if (interaction.customId.startsWith('vip_')) {
+            await this.handleVipButtonInteraction(interaction);
+            return;
+        }    
+    }
+
+    async handleVipButtonInteraction(interaction) {
+        const [action, subAction, userId] = interaction.customId.split('_');
+        
+        if (interaction.user.id !== userId) {
+            await interaction.reply({ content: '❌ Este botón no es para ti.', ephemeral: true });
+            return;
+        }
+        
+        const canUse = await this.canUseVipCommand(userId, 'vip_buttons');
+        if (!canUse.canUse) {
+            await interaction.reply({ content: `❌ ${canUse.reason}`, ephemeral: true });
+            return;
+        }
+        
+        switch (subAction) {
+            case 'backup':
+                await this.createVipBackup(interaction);
+                break;
+            case 'stats':
+                await this.showDetailedVipStats(interaction);
+                break;
+            case 'extend':
+                await this.showVipExtension(interaction);
+                break;
+        }
+    }
+
+    // 1. MANEJAR CREACIÓN DE ROL PERSONALIZADO
+    async handleRoleCreate(message, args) {
+        const userId = message.author.id;
+        const input = message.content.trim().split(/ +/g);
+        
+        // Validar formato: >rolcreate #FFFFFF El Master
+        if (input.length < 3) {
+            await message.reply({
+                embeds: [new EmbedBuilder()
+                    .setTitle('❌ Formato Incorrecto')
+                    .setDescription('**Uso correcto:** `>rolcreate <#color> <nombre_del_rol>`\n\n**Ejemplo:** `>rolcreate #FF0000 Rey Supremo`')
+                    .addFields({
+                        name: '🎨 Colores Válidos',
+                        value: '• Usa formato hexadecimal: #FF0000, #00FF00, #0000FF\n• Herramienta: [Selector de colores](https://htmlcolorcodes.com/)',
+                        inline: false
+                    })
+                    .setColor('#FF0000')]
+            });
+            return;
+        }
+        
+        const colorHex = input[1];
+        const roleName = input.slice(2).join(' ');
+        
+        // Validar color hexadecimal
+        if (!/^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/.test(colorHex)) {
+            await message.reply({
+                embeds: [new EmbedBuilder()
+                    .setTitle('❌ Color Inválido')
+                    .setDescription(`**${colorHex}** no es un color hexadecimal válido.`)
+                    .addFields({
+                        name: '✅ Formato Correcto',
+                        value: '• `#FF0000` (rojo)\n• `#00FF00` (verde)\n• `#0000FF` (azul)\n• `#FFD700` (dorado)',
+                        inline: false
+                    })
+                    .setColor('#FF0000')]
+            });
+            return;
+        }
+        
+        // Validar longitud del nombre
+        if (roleName.length > 25) {
+            await message.reply({
+                embeds: [new EmbedBuilder()
+                    .setTitle('❌ Nombre Muy Largo')
+                    .setDescription('El nombre del rol no puede tener más de 25 caracteres.')
+                    .setColor('#FF0000')]
+            });
+            return;
+        }
+        
+        // Verificar caracteres prohibidos
+        const forbiddenChars = /[<>@#&!]/;
+        if (forbiddenChars.test(roleName)) {
+            await message.reply({
+                embeds: [new EmbedBuilder()
+                    .setTitle('❌ Caracteres No Permitidos')
+                    .setDescription('El nombre del rol no puede contener: `< > @ # & !`')
+                    .setColor('#FF0000')]
+            });
+            return;
+        }
+        
+        // Verificar que tiene el token
+        const user = await this.economy.getUser(userId);
+        const userItems = user.items || {};
+        
+        if (!userItems['role_token'] || userItems['role_token'].quantity < 1) {
+            await message.reply({
+                embeds: [new EmbedBuilder()
+                    .setTitle('❌ Token Requerido')
+                    .setDescription('Necesitas un **🎭 Token de Rol Personalizado** para crear un rol.')
+                    .addFields(
+                        { name: '💰 Precio', value: '2,000,000 π-b$', inline: true },
+                        { name: '🛒 Comprar', value: '`>buy role_token`', inline: true }
+                    )
+                    .setColor('#FF0000')]
+            });
+            return;
+        }
+        
+        // Verificar si ya tiene un rol personalizado
+        const memberRoles = message.member.roles.cache;
+        const hasCustomRole = memberRoles.some(role => 
+            role.name.includes('👑') || 
+            role.name.includes('⭐') || 
+            (role.position > message.guild.roles.everyone.position && !role.managed && role.members.size === 1)
+        );
+        
+        if (hasCustomRole) {
+            await message.reply({
+                embeds: [new EmbedBuilder()
+                    .setTitle('❌ Ya Tienes Rol Personalizado')
+                    .setDescription('Solo puedes tener un rol personalizado a la vez. Contacta a un administrador si quieres cambiarlo.')
+                    .setColor('#FF0000')]
+            });
+            return;
+        }
+        
+        // Crear embed de confirmación
+        const colorInt = parseInt(colorHex.replace('#', ''), 16);
+        
+        const confirmEmbed = new EmbedBuilder()
+            .setTitle('🎭 Confirmar Creación de Rol')
+            .setDescription(`¿Estás seguro de que quieres crear este rol personalizado?`)
+            .addFields(
+                { name: '📝 Nombre del Rol', value: `**${roleName}**`, inline: true },
+                { name: '🎨 Color', value: `\`${colorHex}\``, inline: true },
+                { name: '💎 Costo', value: '**1x** 🎭 Token de Rol Personalizado', inline: false },
+                { name: '⚠️ Importante', value: '• El token será consumido permanentemente\n• Solo puedes tener un rol personalizado\n• El rol será creado automáticamente y asignado a ti', inline: false }
+            )
+            .setColor(colorInt)
+            .setThumbnail(message.author.displayAvatarURL({ dynamic: true }));
+        
+        // Crear botones
+        const row = new ActionRowBuilder()
+            .addComponents(
+                new ButtonBuilder()
+                    .setCustomId(`role_confirm_${userId}`)
+                    .setLabel('✅ Crear Rol')
+                    .setStyle(ButtonStyle.Success),
+                new ButtonBuilder()
+                    .setCustomId(`role_cancel_${userId}`)
+                    .setLabel('❌ Cancelar')
+                    .setStyle(ButtonStyle.Danger)
+            );
+        
+        // Guardar datos temporales
+        if (!this.pendingRoles) {
+            this.pendingRoles = new Map();
+        }
+        
+        this.pendingRoles.set(userId, {
+            roleName: roleName,
+            colorHex: colorHex,
+            colorInt: colorInt,
+            timestamp: Date.now()
+        });
+        
+        const confirmMessage = await message.reply({ 
+            embeds: [confirmEmbed], 
+            components: [row] 
+        });
+        
+        // Limpiar después de 60 segundos
+        setTimeout(() => {
+            this.pendingRoles.delete(userId);
+            row.components.forEach(button => button.setDisabled(true));
+            confirmMessage.edit({ components: [row] }).catch(() => {});
+        }, 60000);
+    }
+
+    // 2. MANEJAR CONFIRMACIÓN DE CREACIÓN DE ROL
+    async handleRoleConfirmation(interaction) {
+        const userId = interaction.user.id;
+        const action = interaction.customId.split('_')[1];
+        
+        if (!this.pendingRoles || !this.pendingRoles.has(userId)) {
+            await interaction.reply({ content: '❌ Esta confirmación ha expirado.', ephemeral: true });
+            return;
+        }
+        
+        const roleData = this.pendingRoles.get(userId);
+        this.pendingRoles.delete(userId);
+        
+        if (action === 'cancel') {
+            await interaction.update({
+                embeds: [new EmbedBuilder()
+                    .setTitle('❌ Creación Cancelada')
+                    .setDescription('La creación del rol ha sido cancelada. Tu token no fue consumido.')
+                    .setColor('#FF0000')],
+                components: []
+            });
+            return;
+        }
+        
+        if (action === 'confirm') {
+            try {
+                // Verificar token nuevamente
+                const user = await this.economy.getUser(userId);
+                const userItems = user.items || {};
+                
+                if (!userItems['role_token'] || userItems['role_token'].quantity < 1) {
+                    await interaction.update({
+                        embeds: [new EmbedBuilder()
+                            .setTitle('❌ Token No Disponible')
+                            .setDescription('Ya no tienes el token requerido.')
+                            .setColor('#FF0000')],
+                        components: []
+                    });
+                    return;
+                }
+                
+                // Crear el rol en Discord
+                const guild = interaction.guild;
+                const newRole = await guild.roles.create({
+                    name: `👑 ${roleData.roleName}`,
+                    color: roleData.colorInt,
+                    reason: `Rol personalizado creado por ${interaction.user.tag} usando Token de Rol`
+                });
+                
+                // Asignar el rol al usuario
+                const member = guild.members.cache.get(userId);
+                await member.roles.add(newRole);
+                
+                // Consumir el token
+                const newItems = { ...userItems };
+                newItems['role_token'].quantity -= 1;
+                if (newItems['role_token'].quantity <= 0) {
+                    delete newItems['role_token'];
+                }
+                
+                await this.economy.updateUser(userId, { items: newItems });
+                
+                // Confirmar éxito
+                const successEmbed = new EmbedBuilder()
+                    .setTitle('✅ Rol Creado Exitosamente')
+                    .setDescription(`Tu rol personalizado ha sido creado y asignado.`)
+                    .addFields(
+                        { name: '🎭 Rol Creado', value: `<@&${newRole.id}>`, inline: true },
+                        { name: '🎨 Color', value: `\`${roleData.colorHex}\``, inline: true },
+                        { name: '💎 Token Consumido', value: '1x 🎭 Token de Rol Personalizado', inline: false },
+                        { name: '📋 Información', value: '• Este rol es exclusivamente tuyo\n• Aparecerá en la lista de miembros\n• Contacta un admin si necesitas modificaciones', inline: false }
+                    )
+                    .setColor(roleData.colorInt)
+                    .setThumbnail(interaction.user.displayAvatarURL({ dynamic: true }));
+                
+                await interaction.update({ 
+                    embeds: [successEmbed], 
+                    components: [] 
+                });
+                
+            } catch (error) {
+                console.error('Error creando rol personalizado:', error);
+                await interaction.update({
+                    embeds: [new EmbedBuilder()
+                        .setTitle('❌ Error al Crear Rol')
+                        .setDescription('Hubo un error al crear tu rol. Tu token no fue consumido. Contacta a un administrador.')
+                        .addFields({
+                            name: '🔧 Posibles Causas',
+                            value: '• El bot no tiene permisos suficientes\n• El servidor alcanzó el límite de roles\n• Error temporal de Discord',
+                            inline: false
+                        })
+                        .setColor('#FF0000')],
+                    components: []
+                });
+            }
+        }
+    }
+
     async handleSetNickname(message, args) {
         const userId = message.author.id;       
         const newNickname = /*args.join(' ').trim()*/args[1];
@@ -3258,6 +3559,11 @@ class ShopSystem {
                 case '>setnickname':
                     const theotherargs = message.content.trim().split(/ +/g);
                     await this.handleSetNickname(message, theotherargs);
+                    break;
+                case '>rolcreate':
+                case '>createrol':
+                    const roleArgs = message.content.trim().split(/ +/g);
+                    await this.handleRoleCreate(message, roleArgs);
                     break;
             }
         } catch (error) {
