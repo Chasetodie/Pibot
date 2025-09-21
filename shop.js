@@ -3117,8 +3117,15 @@ class ShopSystem {
                 });
                 
                 // Asignar el rol al usuario
-                const member = await guild.members.fetch(userId);
-                await member.roles.add(newRole.id);
+                try {
+                    const member = await guild.members.fetch(userId);
+                    await member.roles.add(newRole);
+                } catch (error) {
+                    console.log('Error asignando rol:', error);
+                    // Intentar con ID del rol
+                    const member = await guild.members.fetch(userId);
+                    await member.roles.add(newRole.id);
+                }
                 
                 // Consumir el token
                 const newItems = { ...userItems };
