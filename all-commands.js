@@ -1635,31 +1635,6 @@ class AllCommands {
         await message.reply({ embeds: [embed] });
     }
 
-    // 6. Comando especial VIP
-    async vipCommand(message) {
-        const userId = message.author.id;
-        const hasVipAccess = await this.shop.hasVipAccess(userId);
-        
-        if (!hasVipAccess) {
-            await message.reply('❌ Necesitas ser **VIP** para usar este comando. Compra el **Pase VIP** en la tienda.');
-            return;
-        }
-        
-        const embed = new EmbedBuilder()
-            .setTitle('👑 Comandos VIP Disponibles')
-            .setColor('#FFD700')
-            .setDescription('Comandos exclusivos para usuarios VIP:')
-            .addFields(
-                { name: '💎 >vipwork', value: 'Trabajo especial con mejores recompensas', inline: false },
-                { name: '🎁 >vipbonus', value: 'Bonificación adicional cada 12 horas', inline: false },
-                { name: '📊 >vipstats', value: 'Estadísticas detalladas de tu progreso', inline: false },
-                { name: '⭐ >vipshop', value: 'Acceso a items exclusivos VIP', inline: false }
-            )
-            .setFooter({ text: '¡Gracias por ser VIP!' });
-        
-        await message.reply({ embeds: [embed] });
-    }
-
     async processCommand(message) {
         // Verificar ingresos pasivos pendientes
         await this.economy.checkPendingPassiveIncome(message.author.id);
@@ -1957,12 +1932,6 @@ class AllCommands {
                     await this.crafting.cancelCraft(message, args.slice(1));
                     break;
 
-                case '>vip':
-                    await this.vipCommand(message);
-                    break;
-                case '>vipstatus':
-                    await this.shop.showVipStatus(message);
-                    break;
                 case '>giveitem':
                     await this.giveItemCommand(message, args);
                     break;

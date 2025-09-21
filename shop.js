@@ -2590,7 +2590,16 @@ class ShopSystem {
             appliedAt: Date.now()
         };
         
-        await this.economy.updateUser(userId, { permanentEffects });
+        // Inicializar estadísticas VIP
+        await this.economy.updateUser(userId, { 
+            permanentEffects,
+            vipStats: JSON.stringify({
+                commandsUsed: 0,
+                bonusEarnings: 0,
+                luckyWins: 0,
+                timeSaved: 0
+            })
+        });
         
         const days = Math.floor(item.effect.duration / (24 * 60 * 60 * 1000));
         return { 
@@ -2914,6 +2923,191 @@ class ShopSystem {
         }
     }
 
+    // 7. ESTADÍSTICAS VIP
+    async getVipStats(userId) {
+        const user = await this.economy.getUser(userId);
+        let vipStats = user.vipStats || {};
+        
+        if (typeof vipStats === 'string') {
+            try {
+                vipStats = JSON.parse(vipStats);
+            } catch {
+                vipStats = {};
+            }
+        }
+        
+        return {
+            commandsUsed: vipStats.commandsUsed || 0,
+            bonusEarnings: vipStats.bonusEarnings || 0,
+            luckyWins: vipStats.luckyWins || 0,
+            timeSaved: vipStats.timeSaved || 0
+        };
+    }
+
+    async updateVipStats(userId, stat, value) {
+        const user = await this.economy.getUser(userId);
+        let vipStats = await this.getVipStats(userId);
+        
+        vipStats[stat] = (vipStats[stat] || 0) + value;
+        
+        await this.economy.updateUser(userId, { vipStats });
+    }
+
+    // 6. VIP MEGA GAMBLE
+    async vipMegaGamble(message) {
+        const user = await this.economy.getUser(message.author.id);
+        const bet = Math.min(user.balance * 0.1, 100000); // 10% del balance, máximo 100k
+        
+        if (bet < 1000) {
+            await message.reply('❌ Necesitas al menos 10,000 π-b$ para usar VIP Mega Gamble.');
+            return;
+        }
+        
+        const vipLuck = 0.65; // 65% probabilidad de ganar (vs 50% normal)
+        const won = Math.random() < vipLuck;
+        const multiplier = won ? 3.0 : 0; // Triple o nada
+        const result = won ? Math.floor(bet * multiplier) : -bet;
+        
+        await this.economy.updateUser(message.author.id, {
+            balance: user.balance + result
+        });
+        
+        if (won) {
+            await this.updateVipStats(message.author.id, 'luckyWins', 1);
+        }
+        
+        const embed = new EmbedBuilder()
+            .setTitle(won ? '🎉 VIP Mega Gamble - ¡GANASTE!' : '💸 VIP Mega Gamble - Perdiste')
+            .addFields(
+                { name: '🎯 Apuesta', value: `${bet.toLocaleString('es-ES')} π-b$`, inline: true },
+                { name: '🍀 Probabilidad VIP', value: '65% (vs 50% normal)', inline: true },
+                { name: won ? '💰 Ganancia' : '💸 Pérdida', value: `${Math.abs(result).toLocaleString('es-ES')} π-b$`, inline: true }
+            )
+            .setColor(won ? '#00FF00' : '#FF0000')
+            .setTimestamp();
+        
+        await message.reply({ embeds: [embed] });
+    }
+
+    // 5. VIP INSTANT WORK
+    async vipInstantWork(message) {
+        const baseEarnings = Math.floor(Math.random() * 15000) + 10000;
+        const vipMultiplier = 2.5; // VIP bonus
+        const earnings = Math.floor(baseEarnings * vipMultiplier);
+        
+        const user = await this.economy.getUser(message.author.id);
+        await this.economy.updateUser(message.author.id, {
+            balance: user.balance + earnings
+        });
+        
+        // Actualizar estadísticas VIP
+        await this.updateVipStats(message.author.id, 'bonusEarnings', earnings - baseEarnings);
+        
+        const embed = new EmbedBuilder()
+            .setTitle('👑 VIP Instant Work')
+            .setDescription(`Como VIP, trabajaste instantáneamente y ganaste:`)
+            .addFields(
+                { name: '💰 Ganancia Base', value: `${baseEarnings.toLocaleString('es-ES')} π-b$`, inline: true },
+                { name: '👑 Bonus VIP (2.5x)', value: `+${(earnings - baseEarnings).toLocaleString('es-ES')} π-b$`, inline: true },
+                { name: '💎 Total Ganado', value: `**${earnings.toLocaleString('es-ES')} π-b$**`, inline: false }
+            )
+            .setColor('#FFD700')
+            .setTimestamp();
+        
+        await message.reply({ embeds: [embed] });
+    }
+
+    // 4. COMANDOS EXCLUSIVOS VIP
+    async handleVipCommand(message, command) {
+        const canUse = await this.canUseVipCommand(message.author.id, command);
+        
+        if (!canUse.canUse) {
+            await message.reply(`❌ ${canUse.reason}`);
+            return;
+        }
+        
+        switch (command) {
+            case 'vipwork':
+                await this.vipInstantWork(message);
+                break;
+            case 'vipgamble':
+                await this.vipMegaGamble(message);
+                break;
+            case 'vipboost':
+                await this.vipTempBoost(message);
+                break;
+            case 'vipdaily':
+                await this.vipDailyBonus(message);
+                break;
+        }
+    }
+
+    // 3. MEJORAR SISTEMA VIP - Nuevas funcionalidades
+    async showVipDashboard(message) {
+        const userId = message.author.id;
+        const vipStatus = await this.hasActiveVip(userId);
+        
+        if (!vipStatus.hasVip) {
+            // Mostrar beneficios VIP para no-VIPs
+            const promoEmbed = new EmbedBuilder()
+                .setTitle('👑 Membresía VIP - No Activa')
+                .setDescription('¡Desbloquea beneficios premium con la membresía VIP!')
+                .addFields(
+                    { name: '🚀 Beneficios VIP', value: '• **Sin cooldowns** en comandos\n• **Ganancias x2** en trabajo y juegos\n• **+20% suerte** en juegos de azar\n• **Comandos exclusivos** VIP\n• **Auto-backup** de progreso\n• **Soporte prioritario**', inline: false },
+                    { name: '💰 Precio', value: '5,000,000 π-b$', inline: true },
+                    { name: '⏰ Duración', value: '30 días', inline: true },
+                    { name: '🛒 Comprar', value: '`>buy vip_pass`', inline: true }
+                )
+                .setColor('#FFD700')
+                .setThumbnail('https://i.imgur.com/crown_icon.png'); // Agregar icono si tienes
+            
+            await message.reply({ embeds: [promoEmbed] });
+            return;
+        }
+        
+        // Dashboard VIP completo
+        const user = await this.economy.getUser(userId);
+        const vipData = await this.getVipStats(userId);
+        
+        const timeLeft = vipStatus.timeLeft;
+        const days = Math.floor(timeLeft / (24 * 60 * 60 * 1000));
+        const hours = Math.floor((timeLeft % (24 * 60 * 60 * 1000)) / (60 * 60 * 1000));
+        
+        const vipEmbed = new EmbedBuilder()
+            .setTitle('👑 Dashboard VIP')
+            .setDescription(`¡Bienvenido a tu área VIP, **${message.author.displayName}**!`)
+            .addFields(
+                { name: '⏰ Tiempo Restante', value: `${days} días, ${hours} horas`, inline: true },
+                { name: '🎯 Tier VIP', value: vipStatus.tier, inline: true },
+                { name: '📊 Comandos Sin Cooldown', value: `${vipData.commandsUsed || 0}`, inline: true },
+                { name: '💰 Dinero Extra Ganado', value: `${(vipData.bonusEarnings || 0).toLocaleString('es-ES')} π-b$`, inline: true },
+                { name: '🍀 Juegos con Suerte VIP', value: `${vipData.luckyWins || 0}`, inline: true },
+                { name: '📈 Ahorro en Cooldowns', value: `~${vipData.timeSaved || 0} horas`, inline: true }
+            )
+            .setColor('#FFD700')
+            .setThumbnail(message.author.displayAvatarURL({ dynamic: true }))
+            .setTimestamp();
+        
+        // Botones VIP
+        const vipButtons = new ActionRowBuilder()
+            .addComponents(
+                new ButtonBuilder()
+                    .setCustomId(`vip_backup_${userId}`)
+                    .setLabel('💾 Crear Backup')
+                    .setStyle(ButtonStyle.Primary),
+                new ButtonBuilder()
+                    .setCustomId(`vip_stats_${userId}`)
+                    .setLabel('📊 Estadísticas')
+                    .setStyle(ButtonStyle.Secondary),
+                new ButtonBuilder()
+                    .setCustomId(`vip_extend_${userId}`)
+                    .setLabel('⏰ Extender VIP')
+                    .setStyle(ButtonStyle.Success)
+            );
+        
+        await message.reply({ embeds: [vipEmbed], components: [vipButtons] });
+    }
+
     // 1. MANEJAR CREACIÓN DE ROL PERSONALIZADO
     async handleRoleCreate(message, args) {
         const userId = message.author.id;
@@ -3116,7 +3310,7 @@ class ShopSystem {
                 try {
                     // Crear rol
                     newRole = await guild.roles.create({
-                        name: `👑 ${roleData.roleName}`,
+                        name: `${roleData.roleName}`,
                         color: roleData.colorInt,
                         reason: `Rol personalizado creado por ${interaction.user.tag}`
                     });
@@ -3589,6 +3783,17 @@ class ShopSystem {
                 case '>createrol':
                     const roleArgs = message.content.trim().split(/ +/g);
                     await this.handleRoleCreate(message, roleArgs);
+                    break;
+                case '>vip':
+                case '>vipdashboard':
+                    await this.showVipDashboard(message);
+                    break;
+                    
+                case '>vipwork':
+                case '>vipgamble':
+                case '>vipboost':
+                case '>vipdaily':
+                    await this.handleVipCommand(message, command.replace('>', ''));
                     break;
             }
         } catch (error) {
