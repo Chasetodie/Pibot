@@ -529,8 +529,13 @@ class MinigamesSystem {
 
         const lastDice = user.last_dice || 0;
         const now = Date.now();
+        let effectiveCooldown = this.getEffectiveCooldown(this.config.dice.cooldown);
 
-        const effectiveCooldown = this.getEffectiveCooldown(this.config.dice.cooldown);
+        // Aplicar reducción de items
+        if (this.shop) {
+            const cooldownReduction = await this.shop.getCooldownReduction(userId, 'games');
+            effectiveCooldown = Math.floor(effectiveCooldown * (1 - cooldownReduction));
+        }
 
         if (now - lastDice < effectiveCooldown) {
             const timeLeft = effectiveCooldown - (now - lastDice);
@@ -633,6 +638,31 @@ class MinigamesSystem {
             won = baseWon;
         }
 
+        // Aplicar efectos de items de suerte
+        let luckMessages = [luckMessage].filter(msg => msg !== ''); // Conservar mensaje de eventos
+        if (this.shop) {
+            const luckBoost = await this.shop.getActiveMultipliers(userId, 'games');
+            if (luckBoost.luckBoost > 0) {
+                // Para dice, aplicar boost a la probabilidad base
+                if (!won && Math.random() < luckBoost.luckBoost) {
+                    won = true;
+                    luckMessages.push(`🍀 **Boost de Suerte** te dio una segunda oportunidad!`);
+                } else if (luckBoost.luckBoost > 0) {
+                    luckMessages.push(`🍀 **Boost de Suerte** (+${Math.round(luckBoost.luckBoost * 100)}% probabilidad)`);
+                }
+            }
+
+            // VIP suerte
+            const vipMultipliers = await this.shop.getVipMultipliers(userId, 'games');
+            if (vipMultipliers.luckBoost > 0 && !won && Math.random() < vipMultipliers.luckBoost) {
+                won = true;
+                luckMessages.push(`💎 **Boost VIP** te salvó!`);
+            }
+        }
+
+        // Combinar todos los mensajes de suerte
+        luckMessage = luckMessages.join('\n');
+
         // Establecer cooldown
         this.setCooldown(userId, 'dice');
         
@@ -692,6 +722,25 @@ class MinigamesSystem {
                 }
             }
 
+            // Aplicar multiplicadores de items DESPUÉS de los eventos
+            if (this.shop) {
+                const modifiers = await this.shop.getActiveMultipliers(userId, 'games');
+                if (modifiers.multiplier > 1) {
+                    finalEarnings = Math.floor(finalEarnings * modifiers.multiplier);
+                }
+                
+                // Consumir efectos de uso limitado
+                await this.shop.consumeItemUse(userId, 'games');
+            }
+
+            let itemMessage = '';
+            if (this.shop) {
+                const modifiers = await this.shop.getActiveMultipliers(userId, 'games');
+                if (modifiers.multiplier > 1) {
+                    itemMessage = `✨ **Items Activos** (x${modifiers.multiplier.toFixed(1)} ganancia)`;
+                }
+            }
+
             const userData = await this.economy.getUser(userId);
             if (userData.balance + finalEarnings > this.economy.config.maxBalance) {
                 const spaceLeft = this.economy.config.maxBalance - userData.balance;
@@ -741,13 +790,30 @@ class MinigamesSystem {
                     { name: '💰 Ganancia', value: `+${this.formatNumber(profit)} π-b$`, inline: false },
                     { name: '💸 Balance Antiguo', value: `${this.formatNumber(user.balance - profit)} π-b$`, inline: false },
                     { name: '💳 Balance Actual', value: `${this.formatNumber(user.balance)} π-b$`, inline: false },
-                    { name: '🎉 Extra por Eventos', value: `${finalMessage || "No hay eventos Activos"} `, inline: false }
+                    { name: '🎉 Bonificaciones', value: this.formatGameBonuses(eventMessage, luckMessage, itemMessage), inline: false }
                 );
             if (addResult.hitLimit) {
                 await message.reply(`⚠️ **Límite alcanzado:** No pudiste recibir todo el dinero porque tienes el máximo permitido (${this.formatNumber(this.economy.config.maxBalance)} π-b$).`);
             }
         } else {
-            await this.economy.removeMoney(userId, betAmount, 'dice_loss');
+            const hasProtection = await this.shop.hasGameProtection(userId);
+            if (hasProtection) {
+                let protectionMessage = '🛡️ Tu protección evitó la pérdida de dinero!';
+                
+                const user = await this.economy.getUser(userId);
+                const activeEffects = this.shop.parseActiveEffects(user.activeEffects);
+                
+                if (activeEffects['health_potion']) {
+                    protectionMessage = '💊 Tu Poción de Salud te protegió!';
+                } else if (activeEffects['fortune_shield']) {
+                    protectionMessage = '🛡️ Tu Escudo de la Fortuna te protegió!';
+                }
+                
+                await message.reply(protectionMessage);
+            } else {
+                await this.economy.removeMoney(userId, betAmount, 'dice_loss');
+            }
+            
             await this.economy.updateUser(userId, updateData);
             
             // *** NUEVO: ACTUALIZAR ESTADÍSTICAS DE ACHIEVEMENTS ***
@@ -785,10 +851,22 @@ class MinigamesSystem {
     async canLottery(userId) {
         const user = await this.economy.getUser(userId);
 
+        if (this.shop) {
+            const vipMultipliers = await this.shop.getVipMultipliers(userId, 'games');
+            if (vipMultipliers.noCooldown) {
+                return { canCoinPlay: true };
+            }
+        }
+
         const lastLottery = user.last_lotto || 0;
         const now = Date.now();
+        let effectiveCooldown = this.getEffectiveCooldown(this.config.lottery.cooldown);
 
-        const effectiveCooldown = this.getEffectiveCooldown(this.config.lottery.cooldown);
+        // Aplicar reducción de items
+        if (this.shop) {
+            const cooldownReduction = await this.shop.getCooldownReduction(userId, 'games');
+            effectiveCooldown = Math.floor(effectiveCooldown * (1 - cooldownReduction));
+        }
 
         if (now - lastLottery < effectiveCooldown) {
             const timeLeft = effectiveCooldown - (now - lastLottery);
@@ -869,6 +947,31 @@ class MinigamesSystem {
                 break;
             }
         }
+
+        // Aplicar efectos de items de suerte
+        let luckMessages = [luckMessage].filter(msg => msg !== ''); // Conservar mensaje de eventos
+        if (this.shop) {
+            const luckBoost = await this.shop.getActiveMultipliers(userId, 'games');
+            if (luckBoost.luckBoost > 0) {
+                // Para dice, aplicar boost a la probabilidad base
+                if (!won && Math.random() < luckBoost.luckBoost) {
+                    won = true;
+                    luckMessages.push(`🍀 **Boost de Suerte** te dio una segunda oportunidad!`);
+                } else if (luckBoost.luckBoost > 0) {
+                    luckMessages.push(`🍀 **Boost de Suerte** (+${Math.round(luckBoost.luckBoost * 100)}% probabilidad)`);
+                }
+            }
+
+            // VIP suerte
+            const vipMultipliers = await this.shop.getVipMultipliers(userId, 'games');
+            if (vipMultipliers.luckBoost > 0 && !won && Math.random() < vipMultipliers.luckBoost) {
+                won = true;
+                luckMessages.push(`💎 **Boost VIP** te salvó!`);
+            }
+        }
+
+        // Combinar todos los mensajes de suerte
+        luckMessage = luckMessages.join('\n');
         
         // Establecer cooldown
         this.setCooldown(userId, 'lottery');
@@ -945,6 +1048,26 @@ class MinigamesSystem {
                 }
             }
 
+            // Aplicar multiplicadores de items DESPUÉS de los eventos
+            if (this.shop) {
+                const modifiers = await this.shop.getActiveMultipliers(userId, 'games');
+                if (modifiers.multiplier > 1) {
+                    finalEarnings = Math.floor(finalEarnings * modifiers.multiplier);
+                }
+                
+                // Consumir efectos de uso limitado
+                await this.shop.consumeItemUse(userId, 'games');
+            }
+
+            // Obtener mensajes de items
+            let itemMessage = '';
+            if (this.shop) {
+                const modifiers = await this.shop.getActiveMultipliers(userId, 'games');
+                if (modifiers.multiplier > 1) {
+                    itemMessage = `✨ **Items Activos** (x${modifiers.multiplier.toFixed(1)} ganancia)`;
+                }
+            }
+
             const userData = await this.economy.getUser(userId);
             if (userData.balance + finalEarnings > this.economy.config.maxBalance) {
                 const spaceLeft = this.economy.config.maxBalance - userData.balance;
@@ -1004,13 +1127,30 @@ class MinigamesSystem {
                     { name: '🤑 Ganancia Total', value: `+${this.formatNumber(profit)} π-b$`, inline: true },
                     { name: '💸 Balance Anterior', value: `${this.formatNumber(user.balance - profit)} π-b$`, inline: false },
                     { name: '💳 Balance Actual', value: `${this.formatNumber(user.balance)} π-b$ 🚀`, inline: false },
-                    { name: '🎉 Extra por Eventos', value: `${finalMessage || "No hay eventos Activos"} `, inline: false }
+                    { name: '🎉 Bonificaciones', value: this.formatGameBonuses(eventMessage, luckMessage, itemMessage), inline: false }
                 );
             if (addResult.hitLimit) {
                 await message.reply(`⚠️ **Límite alcanzado:** No pudiste recibir todo el dinero porque tienes el máximo permitido (${this.formatNumber(this.economy.config.maxBalance)} π-b$).`);
             }
         } else {
-            await this.economy.removeMoney(userId, betAmount, 'lottery_loss');
+            const hasProtection = await this.shop.hasGameProtection(userId);
+            if (hasProtection) {
+                let protectionMessage = '🛡️ Tu protección evitó la pérdida de dinero!';
+                
+                const user = await this.economy.getUser(userId);
+                const activeEffects = this.shop.parseActiveEffects(user.activeEffects);
+                
+                if (activeEffects['health_potion']) {
+                    protectionMessage = '💊 Tu Poción de Salud te protegió!';
+                } else if (activeEffects['fortune_shield']) {
+                    protectionMessage = '🛡️ Tu Escudo de la Fortuna te protegió!';
+                }
+                
+                await message.reply(protectionMessage);
+            } else {
+                await this.economy.removeMoney(userId, betAmount, 'lottery');
+            }
+            
             await this.economy.updateUser(userId, updateData);
 
             // *** NUEVO: ACTUALIZAR ESTADÍSTICAS DE ACHIEVEMENTS ***
@@ -1063,10 +1203,22 @@ class MinigamesSystem {
     async canBlackJack(userId) {
         const user = await this.economy.getUser(userId);
 
+        if (this.shop) {
+            const vipMultipliers = await this.shop.getVipMultipliers(userId, 'games');
+            if (vipMultipliers.noCooldown) {
+                return { canCoinPlay: true };
+            }
+        }
+
         const lastBlackJack = user.last_blackjack || 0;
         const now = Date.now();
+        let effectiveCooldown = this.getEffectiveCooldown(this.config.blackjack.cooldown);
 
-        const effectiveCooldown = this.getEffectiveCooldown(this.config.blackjack.cooldown);
+        // Aplicar reducción de items
+        if (this.shop) {
+            const cooldownReduction = await this.shop.getCooldownReduction(userId, 'games');
+            effectiveCooldown = Math.floor(effectiveCooldown * (1 - cooldownReduction));
+        }
 
         if (now - lastBlackJack < effectiveCooldown) {
             const timeLeft = effectiveCooldown - (now - lastBlackJack);
@@ -1098,7 +1250,7 @@ class MinigamesSystem {
                     { name: '🎮 Controles', value: '🎯 **Hit** - Pedir carta\n🛑 **Stand** - Plantarse\n🔄 **Double** - Doblar apuesta', inline: false }
                 )
                 .setColor('#000000')
-                .setFooter({ text: 'Cooldown: 3 minutos' });
+                .setFooter({ text: 'Cooldown: 3 minutos. En este juego no se aplican items de suerte.' });
             
             await message.reply({ embeds: [embed] });
             return;
@@ -1409,6 +1561,8 @@ class MinigamesSystem {
 
         let finalEarnings = 0;
         let eventMessage = '';
+        let itemMessage = '';
+        const hasProtection = await this.shop.hasGameProtection(userId);;
 
         let addResult;
         let userData;
@@ -1436,6 +1590,25 @@ class MinigamesSystem {
                     else if (event.type === 'server_anniversary') {
                         finalEarnings = Math.floor(profit * 2);
                         eventMessage = `🎉 **Aniversario del Servidor** (+${finalEarnings - profit} π-b$)`
+                    }
+                }
+
+                // Aplicar multiplicadores de items DESPUÉS de los eventos
+                if (this.shop) {
+                    const modifiers = await this.shop.getActiveMultipliers(userId, 'games');
+                    if (modifiers.multiplier > 1) {
+                        finalEarnings = Math.floor(finalEarnings * modifiers.multiplier);
+                    }
+                    
+                    // Consumir efectos de uso limitado
+                    await this.shop.consumeItemUse(userId, 'games');
+                }
+
+                // Obtener mensajes de items
+                if (this.shop) {
+                    const modifiers = await this.shop.getActiveMultipliers(userId, 'games');
+                    if (modifiers.multiplier > 1) {
+                        itemMessage = `✨ **Items Activos** (x${modifiers.multiplier.toFixed(1)} ganancia)`;
                     }
                 }
 
@@ -1496,6 +1669,24 @@ class MinigamesSystem {
                     }
                 }
 
+                // Aplicar multiplicadores de items DESPUÉS de los eventos
+                if (this.shop) {
+                    const modifiers = await this.shop.getActiveMultipliers(userId, 'games');
+                    if (modifiers.multiplier > 1) {
+                        finalEarnings = Math.floor(finalEarnings * modifiers.multiplier);
+                    }
+                    
+                    // Consumir efectos de uso limitado
+                    await this.shop.consumeItemUse(userId, 'games');
+                }
+
+                if (this.shop) {
+                    const modifiers = await this.shop.getActiveMultipliers(userId, 'games');
+                    if (modifiers.multiplier > 1) {
+                        itemMessage = `✨ **Items Activos** (x${modifiers.multiplier.toFixed(1)} ganancia)`;
+                    }
+                }
+
                 userData = await this.economy.getUser(userId);
                 if (userData.balance + finalEarnings > this.economy.config.maxBalance) {
                     const spaceLeft = this.economy.config.maxBalance - userData.balance;
@@ -1541,7 +1732,23 @@ class MinigamesSystem {
             case 'bust':
                 resultText = '💥 **¡TE PASASTE!**';
                 profit = -finalBet;
-                await this.economy.removeMoney(userId, finalBet, 'blackjack_loss');
+
+                if (hasProtection) {
+                    let protectionMessage = '🛡️ Tu protección evitó la pérdida de dinero!';
+                    
+                    const user = await this.economy.getUser(userId);
+                    const activeEffects = this.shop.parseActiveEffects(user.activeEffects);
+                    
+                    if (activeEffects['health_potion']) {
+                        protectionMessage = '💊 Tu Poción de Salud te protegió!';
+                    } else if (activeEffects['fortune_shield']) {
+                        protectionMessage = '🛡️ Tu Escudo de la Fortuna te protegió!';
+                    }
+                    
+                    await message.reply(protectionMessage);
+                } else {
+                    await this.economy.removeMoney(userId, finalBet, 'blackjack_loss');
+                }
 
                 // *** NUEVO: ACTUALIZAR ESTADÍSTICAS DE ACHIEVEMENTS ***
                 if (this.achievements) {
@@ -1553,7 +1760,23 @@ class MinigamesSystem {
             case 'lose':
                 resultText = '💸 **Perdiste...**';
                 profit = -finalBet;
-                await this.economy.removeMoney(userId, finalBet, 'blackjack_loss');
+
+                if (hasProtection) {
+                    let protectionMessage = '🛡️ Tu protección evitó la pérdida de dinero!';
+                    
+                    const user = await this.economy.getUser(userId);
+                    const activeEffects = this.shop.parseActiveEffects(user.activeEffects);
+                    
+                    if (activeEffects['health_potion']) {
+                        protectionMessage = '💊 Tu Poción de Salud te protegió!';
+                    } else if (activeEffects['fortune_shield']) {
+                        protectionMessage = '🛡️ Tu Escudo de la Fortuna te protegió!';
+                    }
+                    
+                    await message.reply(protectionMessage);
+                } else {
+                    await this.economy.removeMoney(userId, finalBet, 'blackjack_loss');
+                }
 
                 // *** NUEVO: ACTUALIZAR ESTADÍSTICAS DE ACHIEVEMENTS ***
                 if (this.achievements) {
@@ -1592,7 +1815,7 @@ class MinigamesSystem {
             embed.addFields(
                 { name: '💰 Ganancia', value: `+${this.formatNumber(profit)} π-b$`, inline: true },
                 { name: '💳 Balance Actual', value: `${this.formatNumber(user.balance)} π-b$`, inline: true },
-                { name: '🎉 Extra por Eventos', value: `${eventMessage || "No hay eventos Activos"} `, inline: false }
+                { name: '🎉 Bonificaciones', value: this.formatGameBonuses(eventMessage, luckMessage, itemMessage), inline: false }
             );
         } else if (profit < 0) {
             embed.addFields(
@@ -1709,10 +1932,22 @@ class MinigamesSystem {
     async canRoulette(userId) {
         const user = await this.economy.getUser(userId);
 
+        if (this.shop) {
+            const vipMultipliers = await this.shop.getVipMultipliers(userId, 'games');
+            if (vipMultipliers.noCooldown) {
+                return { canCoinPlay: true };
+            }
+        }
+
         const lastRoulette = user.last_roulette || 0;
         const now = Date.now();
+        let effectiveCooldown = this.getEffectiveCooldown(this.config.roulette.cooldown);
 
-        const effectiveCooldown = this.getEffectiveCooldown(this.config.roulette.cooldown);
+        // Aplicar reducción de items
+        if (this.shop) {
+            const cooldownReduction = await this.shop.getCooldownReduction(userId, 'games');
+            effectiveCooldown = Math.floor(effectiveCooldown * (1 - cooldownReduction));
+        }
 
         if (now - lastRoulette < effectiveCooldown) {
             const timeLeft = effectiveCooldown - (now - lastRoulette);
@@ -1810,6 +2045,31 @@ class MinigamesSystem {
             }
         }
         
+        // Aplicar efectos de items de suerte
+        let luckMessages = [luckMessage].filter(msg => msg !== ''); // Conservar mensaje de eventos
+        if (this.shop) {
+            const luckBoost = await this.shop.getActiveMultipliers(userId, 'games');
+            if (luckBoost.luckBoost > 0) {
+                // Para dice, aplicar boost a la probabilidad base
+                if (!won && Math.random() < luckBoost.luckBoost) {
+                    won = true;
+                    luckMessages.push(`🍀 **Boost de Suerte** te dio una segunda oportunidad!`);
+                } else if (luckBoost.luckBoost > 0) {
+                    luckMessages.push(`🍀 **Boost de Suerte** (+${Math.round(luckBoost.luckBoost * 100)}% probabilidad)`);
+                }
+            }
+
+            // VIP suerte
+            const vipMultipliers = await this.shop.getVipMultipliers(userId, 'games');
+            if (vipMultipliers.luckBoost > 0 && !won && Math.random() < vipMultipliers.luckBoost) {
+                won = true;
+                luckMessages.push(`💎 **Boost VIP** te salvó!`);
+            }
+        }
+
+        // Combinar todos los mensajes de suerte
+        luckMessage = luckMessages.join('\n');
+
         // Establecer cooldown
         this.setCooldown(userId, 'roulette');
     
@@ -1886,6 +2146,27 @@ class MinigamesSystem {
                 }
             }
 
+            // Aplicar multiplicadores de items DESPUÉS de los eventos
+            if (this.shop) {
+                const modifiers = await this.shop.getActiveMultipliers(userId, 'games');
+                if (modifiers.multiplier > 1) {
+                    finalEarnings = Math.floor(finalEarnings * modifiers.multiplier);
+                }
+                
+                // Consumir efectos de uso limitado
+                await this.shop.consumeItemUse(userId, 'games');
+            }
+
+            // AQUÍ VA EL CÓDIGO QUE PREGUNTAS:
+            // Obtener mensajes de items
+            let itemMessage = '';
+            if (this.shop) {
+                const modifiers = await this.shop.getActiveMultipliers(userId, 'games');
+                if (modifiers.multiplier > 1) {
+                    itemMessage = `✨ **Items Activos** (x${modifiers.multiplier.toFixed(1)} ganancia)`;
+                }
+            }
+
             const userData = await this.economy.getUser(userId);
             if (userData.balance + finalEarnings > this.economy.config.maxBalance) {
                 const spaceLeft = this.economy.config.maxBalance - userData.balance;
@@ -1937,7 +2218,7 @@ class MinigamesSystem {
                     { name: '🤑 Ganancia Total', value: `+${this.formatNumber(profit)} π-b$`, inline: true },
                     { name: '💸 Balance Anterior', value: `${this.formatNumber(user.balance - profit)} π-b$`, inline: false },
                     { name: '💳 Balance Actual', value: `${this.formatNumber(user.balance)} π-b$ 🚀`, inline: false },
-                    { name: '🎉 Extra por Eventos', value: `${finalMessage || "No hay eventos Activos"} `, inline: false }
+                    { name: '🎉 Bonificaciones', value: this.formatGameBonuses(eventMessage, luckMessage, itemMessage), inline: false }
                 );
     
             // Mensaje especial para números exactos
@@ -1953,7 +2234,24 @@ class MinigamesSystem {
                 await message.reply(`⚠️ **Límite alcanzado:** No pudiste recibir todo el dinero porque tienes el máximo permitido (${this.formatNumber(this.economy.config.maxBalance)} π-b$).`);
             }
         } else {
-            await this.economy.removeMoney(userId, betAmount, 'roulette_loss');
+            const hasProtection = await this.shop.hasGameProtection(userId);
+            if (hasProtection) {
+                let protectionMessage = '🛡️ Tu protección evitó la pérdida de dinero!';
+                
+                const user = await this.economy.getUser(userId);
+                const activeEffects = this.shop.parseActiveEffects(user.activeEffects);
+                
+                if (activeEffects['health_potion']) {
+                    protectionMessage = '💊 Tu Poción de Salud te protegió!';
+                } else if (activeEffects['fortune_shield']) {
+                    protectionMessage = '🛡️ Tu Escudo de la Fortuna te protegió!';
+                }
+                
+                await message.reply(protectionMessage);
+            } else {
+                await this.economy.removeMoney(userId, betAmount, 'roulette_loss');
+            }
+            
             await this.economy.updateUser(userId, updateData);
     
             // *** ACTUALIZAR ESTADÍSTICAS DE ACHIEVEMENTS ***
@@ -2194,7 +2492,7 @@ class MinigamesSystem {
                     }
                 )
                 .setColor('#8B0000')
-                .setFooter({ text: '⚠️ Juego de alto riesgo - Solo para valientes' });
+                .setFooter({ text: '⚠️ Juego de alto riesgo - Solo para valientes. En este minijuego no se aplica el efecto de ningun item.' });
             
             await message.reply({ embeds: [embed] });
             return;
@@ -2978,7 +3276,7 @@ class MinigamesSystem {
                     }
                 )
                 .setColor('#FF0000')
-                .setFooter({ text: '🎴 ¡Que gane el mejor estratega!' });
+                .setFooter({ text: '🎴 ¡Que gane el mejor estratega!. En este minijuego no se aplica el efecto de ningun item' });
             
             await message.reply({ embeds: [embed] });
             return;
