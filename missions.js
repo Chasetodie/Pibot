@@ -1,5 +1,6 @@
 const { EmbedBuilder } = require('discord.js');
 const EventsSystem = require('./events');
+const emojiRegex = require('emoji-regex');
 
 class MissionsSystem {
     constructor(economySystem) {
@@ -596,19 +597,12 @@ class MissionsSystem {
         }, 10 * 60 * 1000);
     }
 
-    // Función para detectar emojis reales (no números ni símbolos básicos)
     containsRealEmoji(text) {
-        // 1. Emojis personalizados de Discord: <:nombre:id> o <a:nombre:id>
+        const regex = emojiRegex();
         const discordEmojiRegex = /<a?:\w+:\d+>/;
-        if (discordEmojiRegex.test(text)) {
-            return true;
-        }
         
-        // 2. Emojis Unicode reales (excluyendo números y símbolos básicos)
-        const emojiRegex = /[\u{1F600}-\u{1F64F}]|[\u{1F300}-\u{1F5FF}]|[\u{1F680}-\u{1F6FF}]|[\u{1F1E0}-\u{1F1FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]|[\u{1F900}-\u{1F9FF}]|[\u{1F018}-\u{1F270}]/u;
-        
-        return emojiRegex.test(text);
-    }    
+        return regex.test(text) || discordEmojiRegex.test(text);
+    }   
     
     // Actualizar progreso de misiones
     async updateMissionProgress(userId, actionType, value, maxChecks = 3, checkedInSession = new Set()) {        
