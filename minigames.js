@@ -1815,7 +1815,7 @@ class MinigamesSystem {
             embed.addFields(
                 { name: '💰 Ganancia', value: `+${this.formatNumber(profit)} π-b$`, inline: true },
                 { name: '💳 Balance Actual', value: `${this.formatNumber(user.balance)} π-b$`, inline: true },
-                { name: '🎉 Bonificaciones', value: this.formatGameBonuses(eventMessage, luckMessage, itemMessage), inline: false }
+                { name: '🎉 Bonificaciones', value: this.formatGameBonuses(eventMessage, '', itemMessage), inline: false }
             );
         } else if (profit < 0) {
             embed.addFields(
