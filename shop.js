@@ -1004,7 +1004,7 @@ class ShopSystem {
         if (this.economy.events) {
             for (const event of this.economy.events.getActiveEvents()) {
                 if (event.type === 'week_end') {
-                    return 0.20; // 20% de descuento
+                    return 0.1; // 20% de descuento
                 }
             }
         }

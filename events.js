@@ -100,7 +100,7 @@ class EventsSystem {
                 emoji: '😎',
                 color: '#FF6600',
                 multiplier: { 
-                    items: 0.2,
+                    items: 0.1,
                 },
                 minDuration: 172800000, // 48 horas
                 maxDuration: 172800000 // 48 horas
