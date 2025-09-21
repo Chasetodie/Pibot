@@ -260,6 +260,35 @@ class ShopSystem {
                 stackable: true,
                 maxStack: 5
             },
+            'condon_pibe2': {
+                id: 'condon_pibe2',
+                name: '🧃 Condón usado del Pibe 2**',
+                description: 'Un objeto misterioso de dudosa efectividad... pero asegura una protección total durante 10 minutos.',
+                price: 696969, // precio meme
+                category: 'consumable',
+                rarity: 'epic',
+                effect: {
+                    type: 'protection',
+                    prevents: ['robbery', 'money_loss'],
+                    duration: 600 // 10 minutos
+                },
+                stackable: true,
+                maxStack: 5
+            },
+            'role_token': {
+                id: 'role_token',
+                name: '🎭 Token de Rol Personalizado',
+                description: 'Usa este token para solicitar a un admin que te cree un rol exclusivo y único.',
+                price: 2000000,
+                category: 'special',
+                rarity: 'legendary',
+                effect: {
+                    type: 'custom_role',
+                    uses: 1
+                },
+                stackable: true,
+                maxStack: 1
+            },
 
             // === NUEVOS ITEMS PERMANENTES ===
             'vip_pass': {

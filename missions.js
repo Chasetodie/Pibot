@@ -598,14 +598,17 @@ async checkAndResetAllMissions() {
     
     // Actualizar progreso de misiones
     async updateMissionProgress(userId, actionType, value, maxChecks = 3, checkedInSession = new Set()) {        
-        const cooldownKey = `mission_update_${userId}`;
-        if (this.updateCooldowns.has(cooldownKey)) {
-            const lastUpdate = this.updateCooldowns.get(cooldownKey);
-            if (Date.now() - lastUpdate < 100) { // 1 segundo de cooldown
-                return [];
+        // Solo aplicar cooldown para acciones muy frecuentes
+        if (actionType === 'message' || actionType === 'commands_used') {
+            const cooldownKey = `mission_update_${userId}_${actionType}`;
+            if (this.updateCooldowns.has(cooldownKey)) {
+                const lastUpdate = this.updateCooldowns.get(cooldownKey);
+                if (Date.now() - lastUpdate < 1000) { // 1 segundo de cooldown
+                    return [];
+                }
             }
+            this.updateCooldowns.set(cooldownKey, Date.now());
         }
-        this.updateCooldowns.set(cooldownKey, Date.now());
 
         const cacheKey = `missions_${userId}`;
         let user = this.missionsCache.get(cacheKey);
