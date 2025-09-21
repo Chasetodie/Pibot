@@ -2022,8 +2022,6 @@ class ShopSystem {
 
     // === APLICAR EFECTOS DE XP ===
     async applyXpEffects(userId, baseXp) {
-        await this.cleanupExpiredEffects(userId);
-        
         const multipliers = await this.getActiveMultipliers(userId, 'all');
         const user = await this.economy.getUser(userId);
         const activeEffects = this.parseActiveEffects(user.activeEffects);
@@ -2247,8 +2245,6 @@ class ShopSystem {
 
     // === OBTENER INFO DE EFECTOS ACTIVOS ===
     async getActiveEffectsInfo(userId) {
-        await this.cleanupExpiredEffects(userId);
-        
         const user = await this.economy.getUser(userId);
         const activeEffects = this.parseActiveEffects(user.activeEffects);
         const permanentEffects = this.parseEffects(user.permanentEffects);
@@ -2310,7 +2306,6 @@ class ShopSystem {
     }
 
     async showActiveEffects(message) {
-        await this.cleanupExpiredEffects(message.author.id); // Agregar esta línea
         const user = await this.economy.getUser(message.author.id);
         
         // Parsear efectos

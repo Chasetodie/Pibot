@@ -926,20 +926,6 @@ setInterval(() => {
     }
 }, 60000);
 
-/*// Limpiar efectos expirados cada 5 minutos
-setInterval(async () => {
-    if (shop && shop.cleanupExpiredEffects) {
-        await shop.cleanupExpiredEffects();
-    }
-}, 5 * 60 * 1000);
-
-// Sistema de ingresos pasivos (cada hora)
-setInterval(async () => {
-    if (shop) {
-        await shop.processPassiveIncome();
-    }
-}, 60 * 60 * 1000); // Cada hora*/
-
 // Manejar mensajes (COMANDOS + XP + ECONOMÍA)
 client.on('messageCreate', async (message) => {
     // Ignorar mensajes de bots
