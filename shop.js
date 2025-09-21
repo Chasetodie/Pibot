@@ -2488,6 +2488,15 @@ class ShopSystem {
                 }
             }
         }
+
+        // AGREGAR TU NUEVO ITEM AQUÍ - Ejemplo con un item temporal
+        if (activeEffects['condon_pibe2']) {
+            for (const effect of activeEffects['condon_pibe2']) {
+                if (effect.type === 'protection' && effect.expiresAt > Date.now()) {
+                    return { protected: true, type: 'condon', reduction: 1.0 };
+                }
+            }
+        }
         
         // Verificar bóveda permanente
         if (permanentEffects['permanent_vault']) {

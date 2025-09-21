@@ -463,6 +463,8 @@ class MinigamesSystem {
                     protectionMessage = '💊 Tu Poción de Salud te protegió de las penalizaciones!';
                 } else if (activeEffects['fortune_shield']) {
                     protectionMessage = '🛡️ Tu Escudo de la Fortuna te protegió!';
+                } else if (activeEffects['condon_pibe2']) {
+                    protectionMessage = '🧃 En hora buena, el Condon usado de Pibe 2 te protegió!';
                 }
                 
                 await message.reply(protectionMessage);

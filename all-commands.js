@@ -1262,6 +1262,8 @@ class AllCommands {
                         errorMessage = `🛡️ ¡Rayos! **${targetUser.displayName}** tiene un **Escudo Antirrobo** activado. Tu intento de robo rebotó como una pelota de goma. 🏀${penaltyText}`;
                     } else if (robberyResult.protectionType === 'vault') {
                         errorMessage = `🏦 **${targetUser.displayName}** guardó su dinero en una **Bóveda Permanente**. Intentaste forzarla pero era más dura que una nuez. 🥜${penaltyText}`;
+                    } else if (robberyResult.protectionType === 'condon') {
+                        errorMessage = `🧃 **${targetUser.displayName}** tiene un gorrito bien colocado. 💰${penaltyText}`;
                     } else {
                         errorMessage = `🛡️ **${targetUser.displayName}** está muy bien protegido/a. Parece que invirtió sabiamente en seguridad. 💰${penaltyText}`;
                     }
