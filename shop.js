@@ -2996,7 +2996,7 @@ class ShopSystem {
         }
         
         // Verificar si ya tiene un rol personalizado
-        const member = message.guild.members.cache.get(userId);
+        /*const member = message.guild.members.cache.get(userId);
         const memberRoles = member.roles.cache;
         const hasCustomRole = memberRoles.some(role => 
             role.name.includes('👑') || 
@@ -3012,7 +3012,7 @@ class ShopSystem {
                     .setColor('#FF0000')]
             });
             return;
-        }
+        }*/
         
         // Crear embed de confirmación
         const colorInt = parseInt(colorHex.replace('#', ''), 16);
