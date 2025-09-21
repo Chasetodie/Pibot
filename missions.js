@@ -342,10 +342,10 @@ class MissionsSystem {
     }
 
     // Función helper para obtener fecha/hora de Ecuador
-getEcuadorTime() {
-    const now = new Date();
-    return new Date(now.toLocaleString("en-US", {timeZone: "America/Guayaquil"}));
-}
+    getEcuadorTime() {
+        const now = new Date();
+        return new Date(now.toLocaleString("en-US", {timeZone: "America/Guayaquil"}));
+    }
     
     // Generar misiones del día (se ejecuta automáticamente a las 12 PM)
     generateDailyMissions() {
@@ -414,15 +414,15 @@ getEcuadorTime() {
     }
     
     // Obtener el día actual en formato YYYY-MM-DD
-getCurrentDay() {
-    const ecuadorTime = this.getEcuadorTime();
-    // Usar getFullYear, getMonth, getDate en lugar de toISOString
-    const year = ecuadorTime.getFullYear();
-    const month = String(ecuadorTime.getMonth() + 1).padStart(2, '0');
-    const day = String(ecuadorTime.getDate()).padStart(2, '0');
-    
-    return `${year}-${month}-${day}`;
-}
+    getCurrentDay() {
+        const ecuadorTime = this.getEcuadorTime();
+        // Usar getFullYear, getMonth, getDate en lugar de toISOString
+        const year = ecuadorTime.getFullYear();
+        const month = String(ecuadorTime.getMonth() + 1).padStart(2, '0');
+        const day = String(ecuadorTime.getDate()).padStart(2, '0');
+        
+        return `${year}-${month}-${day}`;
+    }
 
     isNewDay(lastResetDate) {
         const today = this.getCurrentDay();
@@ -462,26 +462,26 @@ getCurrentDay() {
         console.log('🕛 Sistema de reset automático iniciado');
     }
 
-async checkAndResetAllMissions() {
-    const ecuadorTime = this.getEcuadorTime();
-    const currentDay = this.getCurrentDay();
-    
-    console.log(`📅 Día actual Ecuador: ${currentDay} (${ecuadorTime.toLocaleString()})`);
-    console.log(`📅 Último reset: ${this.lastResetDay}`);
-    console.log(`🔄 ¿Cambió el día?: ${this.lastResetDay !== currentDay}`);
-    
-    if (this.lastResetDay && currentDay !== this.lastResetDay) {
-        console.log('🌅 Iniciando reset automático de misiones...');
+    async checkAndResetAllMissions() {
+        const ecuadorTime = this.getEcuadorTime();
+        const currentDay = this.getCurrentDay();
         
-        this.lastResetDay = currentDay;
-        this.missionsCache.clear();
+        console.log(`📅 Día actual Ecuador: ${currentDay} (${ecuadorTime.toLocaleString()})`);
+        console.log(`📅 Último reset: ${this.lastResetDay}`);
+        console.log(`🔄 ¿Cambió el día?: ${this.lastResetDay !== currentDay}`);
         
-        console.log('✅ Reset automático completado');
-    } else if (!this.lastResetDay) {
-        this.lastResetDay = currentDay;
-        console.log(`🎯 Día inicial establecido: ${currentDay}`);
+        if (this.lastResetDay && currentDay !== this.lastResetDay) {
+            console.log('🌅 Iniciando reset automático de misiones...');
+            
+            this.lastResetDay = currentDay;
+            this.missionsCache.clear();
+            
+            console.log('✅ Reset automático completado');
+        } else if (!this.lastResetDay) {
+            this.lastResetDay = currentDay;
+            console.log(`🎯 Día inicial establecido: ${currentDay}`);
+        }
     }
-}
     
     // Inicializar misiones diarias para un usuario
     async initializeDailyMissions(userId) {
@@ -595,6 +595,20 @@ async checkAndResetAllMissions() {
             console.log(`🧹 Cache cleanup: ${this.missionsCache.size} misiones en memoria`);
         }, 10 * 60 * 1000);
     }
+
+    // Función para detectar emojis reales (no números ni símbolos básicos)
+    containsRealEmoji(text) {
+        // 1. Emojis personalizados de Discord: <:nombre:id> o <a:nombre:id>
+        const discordEmojiRegex = /<a?:\w+:\d+>/;
+        if (discordEmojiRegex.test(text)) {
+            return true;
+        }
+        
+        // 2. Emojis Unicode reales (excluyendo números y símbolos básicos)
+        const emojiRegex = /[\u{1F600}-\u{1F64F}]|[\u{1F300}-\u{1F5FF}]|[\u{1F680}-\u{1F6FF}]|[\u{1F1E0}-\u{1F1FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]|[\u{1F900}-\u{1F9FF}]|[\u{1F018}-\u{1F270}]/u;
+        
+        return emojiRegex.test(text);
+    }    
     
     // Actualizar progreso de misiones
     async updateMissionProgress(userId, actionType, value, maxChecks = 3, checkedInSession = new Set()) {        
@@ -643,9 +657,9 @@ async checkAndResetAllMissions() {
             case 'message':
                 updateData.daily_stats.messages_today = (user.daily_stats.messages_today || 0) + 1;
                 
-                // ✅ Mensajes con emojis
-                if (value && (/\p{Emoji}/u.test(value) || /<a?:\w+:\d+>/.test(value))) {
-                updateData.daily_stats.emoji_messages = (user.daily_stats.emoji_messages || 0) + 1;
+                // Verificar emojis más específicamente
+                if (value && this.containsRealEmoji(value)) {
+                    updateData.daily_stats.emoji_messages = (user.daily_stats.emoji_messages || 0) + 1;
                 }
 
                 // Agregar hora actual para misión de active_hours
