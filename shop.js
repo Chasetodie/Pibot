@@ -3108,23 +3108,40 @@ class ShopSystem {
                     return;
                 }
                 
-                // Crear el rol en Discord
+                // Crear el rol en Discord usando REST API
                 const guild = interaction.guild;
-                const newRole = await guild.roles.create({
-                    name: `👑 ${roleData.roleName}`,
-                    color: roleData.colorInt,
-                    reason: `Rol personalizado creado por ${interaction.user.tag} usando Token de Rol`
-                });
-                
-                // Asignar el rol al usuario
+                let newRole;
+                let member;
+
                 try {
-                    const member = await guild.members.fetch(userId);
-                    await member.roles.add(newRole);
+                    // Crear rol
+                    newRole = await guild.roles.create({
+                        name: `👑 ${roleData.roleName}`,
+                        color: roleData.colorInt,
+                        reason: `Rol personalizado creado por ${interaction.user.tag}`
+                    });
+                    
+                    // Obtener miembro y asignar rol usando REST
+                    member = await guild.members.fetch(userId);
+                    await interaction.guild.members.edit(userId, {
+                        roles: [...member.roles.cache.map(r => r.id), newRole.id]
+                    });
+                    
                 } catch (error) {
-                    console.log('Error asignando rol:', error);
-                    // Intentar con ID del rol
-                    const member = await guild.members.fetch(userId);
-                    await member.roles.add(newRole.id);
+                    console.log('Error con método principal, intentando alternativo:', error);
+                    
+                    // Método alternativo: usar REST client directamente
+                    try {
+                        const { REST } = require('@discordjs/rest');
+                        const rest = new REST({ version: '10' }).setToken(interaction.client.token);
+                        
+                        await rest.put(
+                            `/guilds/${guild.id}/members/${userId}/roles/${newRole.id}`,
+                            { reason: 'Token de rol personalizado' }
+                        );
+                    } catch (restError) {
+                        throw new Error('No se pudo asignar el rol: ' + restError.message);
+                    }
                 }
                 
                 // Consumir el token
