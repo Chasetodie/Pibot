@@ -2796,6 +2796,12 @@ class ShopSystem {
             await message.reply('❌ Item no encontrado.');
             return;
         }
+
+        // Prevenir remoción de VIP
+        if (itemId === 'vip_pass') {
+            await message.reply('❌ La membresía VIP no se puede remover manualmente. Expira automáticamente.');
+            return;
+        }
         
         // ✅ CONFIRMACIÓN para items costosos
         const expensiveItems = ['auto_worker', 'permanent_vault'];
@@ -2911,9 +2917,6 @@ class ShopSystem {
         }
         
         switch (subAction) {
-            case 'backup':
-                await this.createVipBackup(interaction);
-                break;
             case 'stats':
                 await this.showDetailedVipStats(interaction);
                 break;
@@ -2921,6 +2924,35 @@ class ShopSystem {
                 await this.showVipExtension(interaction);
                 break;
         }
+    }
+
+    async showDetailedVipStats(interaction) {
+        const vipStats = await this.getVipStats(interaction.user.id);
+        
+        const embed = new EmbedBuilder()
+            .setTitle('📊 Estadísticas VIP Detalladas')
+            .addFields(
+                { name: '⚡ Comandos sin Cooldown', value: `${vipStats.commandsUsed}`, inline: true },
+                { name: '💰 Bonus Ganado', value: `${vipStats.bonusEarnings.toLocaleString('es-ES')} π-b$`, inline: true },
+                { name: '🍀 Victorias con Suerte VIP', value: `${vipStats.luckyWins}`, inline: true },
+                { name: '⏰ Tiempo Ahorrado', value: `${vipStats.timeSaved} horas`, inline: true }
+            )
+            .setColor('#FFD700');
+        
+        await interaction.reply({ embeds: [embed], ephemeral: true });
+    }
+
+    async showVipExtension(interaction) {
+        const embed = new EmbedBuilder()
+            .setTitle('⏰ Extender Membresía VIP')
+            .setDescription('Compra otro VIP Pass para extender tu membresía cuando expire.')
+            .addFields(
+                { name: '💰 Precio', value: '5,000,000 π-b$', inline: true },
+                { name: '⏰ Duración', value: '+30 días', inline: true }
+            )
+            .setColor('#FFD700');
+        
+        await interaction.reply({ embeds: [embed], ephemeral: true });
     }
 
     // 7. ESTADÍSTICAS VIP
@@ -3053,7 +3085,7 @@ class ShopSystem {
                 .setTitle('👑 Membresía VIP - No Activa')
                 .setDescription('¡Desbloquea beneficios premium con la membresía VIP!')
                 .addFields(
-                    { name: '🚀 Beneficios VIP', value: '• **Sin cooldowns** en comandos\n• **Ganancias x2** en trabajo y juegos\n• **+20% suerte** en juegos de azar\n• **Comandos exclusivos** VIP\n• **Auto-backup** de progreso\n• **Soporte prioritario**', inline: false },
+                    { name: '🚀 Beneficios VIP', value: '• **Sin cooldowns** en comandos\n• **Ganancias x2** en trabajo y juegos\n• **+20% suerte** en juegos de azar\n• **Comandos exclusivos** VIP\n• **Soporte prioritario**', inline: false },
                     { name: '💰 Precio', value: '5,000,000 π-b$', inline: true },
                     { name: '⏰ Duración', value: '30 días', inline: true },
                     { name: '🛒 Comprar', value: '`>buy vip_pass`', inline: true }
@@ -3092,17 +3124,13 @@ class ShopSystem {
         const vipButtons = new ActionRowBuilder()
             .addComponents(
                 new ButtonBuilder()
-                    .setCustomId(`vip_backup_${userId}`)
-                    .setLabel('💾 Crear Backup')
-                    .setStyle(ButtonStyle.Primary),
-                new ButtonBuilder()
                     .setCustomId(`vip_stats_${userId}`)
                     .setLabel('📊 Estadísticas')
-                    .setStyle(ButtonStyle.Secondary),
+                    .setStyle(ButtonStyle.Primary),
                 new ButtonBuilder()
                     .setCustomId(`vip_extend_${userId}`)
                     .setLabel('⏰ Extender VIP')
-                    .setStyle(ButtonStyle.Success)
+                    .setStyle(ButtonStyle.Secondary)
             );
         
         await message.reply({ embeds: [vipEmbed], components: [vipButtons] });
