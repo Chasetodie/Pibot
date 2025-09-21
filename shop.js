@@ -2996,7 +2996,8 @@ class ShopSystem {
         }
         
         // Verificar si ya tiene un rol personalizado
-        const memberRoles = message.member.roles.cache;
+        const member = message.guild.members.cache.get(userId);
+        const memberRoles = member.roles.cache;
         const hasCustomRole = memberRoles.some(role => 
             role.name.includes('👑') || 
             role.name.includes('⭐') || 
