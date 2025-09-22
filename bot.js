@@ -70,9 +70,9 @@ const client = new Client({
     makeCache: () => new Map(), // Caché más pequeño
 });
 
+client.commands = new Collection();
 require('./musicManager.js')(client);
 require('./commandHandler.js')(client);
-client.commands = new Collection();
 
 // Función para guardar contadores
 function saveCounters(counters) {

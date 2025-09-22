@@ -4,7 +4,7 @@ const { REST, Routes } = require('discord.js');
 
 const commands = [];
 
-module.exports = (client => {
+module.exports = (client) => {
     const commandsPath = path.join(__dirname, 'Commands');
     const commandFiles = fs.readdirSync(commandsPath).filter((file) => file.endsWith('.js'));
 
@@ -32,4 +32,4 @@ module.exports = (client => {
             console.error(error);
         }
     })();
-})
+}
