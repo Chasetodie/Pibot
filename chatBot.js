@@ -96,7 +96,7 @@ class ChatBotSystem {
             } else if (quotaInfo.remaining <= 15) {
                 responseMessage += `\n\n🔔 Te quedan **${quotaInfo.remaining}** mensajes (${quotaInfo.userType.toUpperCase()}).`;
             } else {
-                responseMessage += `\n\n📊 Restantes: **${quotaInfo.remaining}** (${quotaInfo.userType.toUpperCase()})`;
+                responseMessage += `\n\n📊 Mensajes Restantes: **${quotaInfo.remaining}** (${quotaInfo.userType.toUpperCase()})`;
             }
 
             // Alerta global si queda poco
