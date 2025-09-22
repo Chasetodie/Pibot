@@ -1,4 +1,7 @@
-const freeChatBot = require('free-chatbot');
+const freeChatBotModule = require('free-chatbot');
+console.log('Contenido del módulo:', freeChatBotModule);
+console.log('Tipo:', typeof freeChatBotModule);
+console.log('Keys:', Object.keys(freeChatBotModule));
 
 class ChatBotSystem {
     constructor(database) {
