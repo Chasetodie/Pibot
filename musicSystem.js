@@ -235,8 +235,7 @@ class MusicSystem {
                 player.play();
             }
 
-            await message.followUp({ embeds: [embed] });
-
+            await message.channel.send({ embeds: [embed] });
         } catch (error) {
             console.error('Error en play command:', error);
             await message.reply('❌ Ocurrió un error al reproducir la música.');
