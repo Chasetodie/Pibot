@@ -246,33 +246,61 @@ class MinigamesSystem {
     // NUEVOS MÉTODOS PARA BASE DE DATOS
     async initializeWeeklyPot() {
         try {
-            let currentPot = await this.economy.database.getWeeklyPot();
+            let currentPot = await this.economy.database.getWeeklyPot(currentWeekStart);
             
             // AGREGAR: Verificar si ya existe un pozo activo para esta semana
             const currentWeekStart = this.getWeekStart();
             
-            if (!currentPot || currentPot.start_date !== currentWeekStart) {
-                // Solo distribuir si existe Y ya expiró
-                if (currentPot && Date.now() >= currentPot.end_date) {
-                    await this.distributeWeeklyPot(currentPot);
-                }
+            // Verificar si necesitamos crear un nuevo pozo
+            if (!currentPot) {
+                const potData = {
+                    id: `pot_${currentWeekStart}`,
+                    total_money: 0,
+                    contributions: {},
+                    participants: [],
+                    items: [],
+                    start_date: currentWeekStart,
+                    end_date: currentWeekStart + (3 * 60 * 1000)
+                };
                 
-                // CAMBIAR: Solo crear si NO existe uno para esta semana
-                if (!currentPot || currentPot.start_date !== currentWeekStart) {
-                    const potData = {
-                        id: `pot_${currentWeekStart}`, // USAR fecha como ID único
-                        total_money: 0,
-                        contributions: {},
-                        participants: [],
-                        items: [],
-                        start_date: currentWeekStart,
-                        end_date: currentWeekStart + (3 * 60 * 1000) // 3 minutos para test
-                    };
-                    
-                    console.log('Creando pozo con datos:', potData);
+                try {
+                    console.log('Creando pozo con ID:', potData.id);
                     await this.economy.database.createWeeklyPot(potData);
                     currentPot = potData;
                     console.log('🕳️ Nuevo pozo semanal creado');
+                } catch (error) {
+                    if (error.code === 'ER_DUP_ENTRY') {
+                        console.log('🔄 Pozo ya existe, obteniendo existente...');
+                        currentPot = await this.economy.database.getWeeklyPot(currentWeekStart);
+                    } else {
+                        throw error;
+                    }
+                }
+            } else if (Date.now() >= currentPot.end_date) {
+                // El pozo actual ya expiró, distribuir y crear nuevo
+                await this.distributeWeeklyPot(currentPot);
+                
+                const newWeekStart = this.getWeekStart();
+                const potData = {
+                    id: `pot_${newWeekStart}`,
+                    total_money: 0,
+                    contributions: {},
+                    participants: [],
+                    items: [],
+                    start_date: newWeekStart,
+                    end_date: newWeekStart + (3 * 60 * 1000)
+                };
+                
+                try {
+                    await this.economy.database.createWeeklyPot(potData);
+                    currentPot = potData;
+                    console.log('🕳️ Nuevo pozo creado después de distribución');
+                } catch (error) {
+                    if (error.code === 'ER_DUP_ENTRY') {
+                        currentPot = await this.economy.database.getWeeklyPot(newWeekStart);
+                    } else {
+                        throw error;
+                    }
                 }
             }
             
