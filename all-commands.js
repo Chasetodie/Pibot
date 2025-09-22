@@ -1946,7 +1946,7 @@ class AllCommands {
                 
                 // Tienda y Items
                 { 
-                    name: '🛒 Tienda y Items', 
+                    name: '🛒 Tienda e Items', 
                     value: '`>shop [categoría]` - Ver tienda\n`>buy <item_id> [cantidad]` - Comprar items\n`>bag [@usuario]` - Ver inventario\n`>useitem <item_id>` - Usar item\n`>effects` - Ver efectos activos\n`>removeeffect <item_id>` - Quitar efecto permanente\n`>autoworkerbal` - Estado del auto worker\n`>cosmeticos` - Ver cosméticos activos', 
                     inline: false 
                 },
