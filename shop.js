@@ -887,9 +887,9 @@ class ShopSystem {
             
             let priceText;
             if (discount > 0) {
-                priceText = `~~${originalPrice.toLocaleString('es-ES')}~~ **${discountedPrice.toLocaleString('es-ES')} π-b$** (-${Math.round(discount * 100)}%)`;
+                priceText = `~~${originalPrice}~~ **${discountedPrice.toLocaleString('es-ES')} π-b$** (-${Math.round(discount * 100)}%)`;
             } else {
-                priceText = `**${originalPrice.toLocaleString('es-ES')} π-b$**`;
+                priceText = `**${originalPrice} π-b$**`;
             }
             
             let effectDesc = '';
