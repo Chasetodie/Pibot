@@ -1,4 +1,4 @@
-const { SlashCommandBuilder, ChatInputCommandInteraction } = require('discord.js');
+const { SlashCommandBuilder, ChatInputCommandInteraction, Client } = require('discord.js');
 const { Kazagumo } = require('kazagumo');
 
 module.exports = {
