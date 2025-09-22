@@ -49,27 +49,64 @@ class ChatBotSystem {
      */
     async processMessage(userId, message, userDisplayName = 'Usuario') {
         try {
-            // 1. Obtener contexto de conversación
+            // 1. Verificar límites del usuario
+            const limitCheck = await this.canUserSendMessage(userId);
+            if (!limitCheck.canSend) {
+                return {
+                    success: false,
+                    response: limitCheck.reason,
+                    limitReached: true
+                };
+            }
+            
+            // 2. Obtener contexto de conversación
             const context = await this.getConversationContext(userId);
             
-            // 2. Agregar el mensaje del usuario al contexto
+            // 3. Agregar el mensaje del usuario al contexto
             await this.addMessageToContext(userId, 'user', message, userDisplayName);
             
-            // 3. Preparar el contexto para el chatbot
+            // 4. Preparar el contexto para el chatbot
             const contextString = this.buildContextString(context, message);
             
-            // 4. Obtener respuesta del chatbot
+            // 5. Obtener respuesta del chatbot
             const botResponse = await this.getBotResponse(contextString);
             
-            // 5. Guardar respuesta del bot al contexto
-            await this.addMessageToContext(userId, 'assistant', botResponse, 'Pibot');
+            // 6. Actualizar uso del usuario
+            this.updateUserUsage(userId);
             
-            // 6. Actualizar cache
+            // 7. Guardar respuesta del bot al contexto
+            await this.addMessageToContext(userId, 'assistant', botResponse, 'PibBot');
+            
+            // 8. Actualizar cache
             this.updateCache(userId);
+            
+            // 9. Preparar mensaje de respuesta con alertas
+            let responseMessage = botResponse;
+            const quotaInfo = await this.getUserQuotaInfo(userId);
+
+            // Agregar alertas según mensajes restantes
+            if (quotaInfo.remaining === 0) {
+                responseMessage += `\n\n🚫 **¡LÍMITE ALCANZADO!** Has usado todos tus mensajes de hoy (${quotaInfo.used}/${quotaInfo.limit}).`;
+                if (quotaInfo.userType === 'regular') {
+                    responseMessage += `\n💎 ¡Consigue un **pase VIP** para 150 mensajes diarios!`;
+                }
+            } else if (quotaInfo.remaining <= 5) {
+                responseMessage += `\n\n⚠️ **¡POCOS MENSAJES!** Te quedan solo **${quotaInfo.remaining}** mensajes.`;
+            } else if (quotaInfo.remaining <= 15) {
+                responseMessage += `\n\n🔔 Te quedan **${quotaInfo.remaining}** mensajes (${quotaInfo.userType.toUpperCase()}).`;
+            } else {
+                responseMessage += `\n\n📊 Restantes: **${quotaInfo.remaining}** (${quotaInfo.userType.toUpperCase()})`;
+            }
+
+            // Alerta global si queda poco
+            const globalRemaining = this.DAILY_TOTAL_LIMIT - this.totalUsedToday;
+            if (globalRemaining <= 100) {
+                responseMessage += `\n🌍 **ALERTA GLOBAL:** Solo ${globalRemaining} mensajes restantes para todo el servidor.`;
+            }
             
             return {
                 success: true,
-                response: botResponse,
+                response: responseMessage,
                 contextLength: context.length + 1
             };
             
@@ -152,23 +189,23 @@ class ChatBotSystem {
     buildContextString(context, newMessage) {
         let contextString = '';
         
-        // Agregar instrucciones del sistema MÁS CLARAS
-        contextString += 'Eres Pibot, un asistente amigable en Discord. IMPORTANTE: Recuerda toda nuestra conversación anterior.\n\n';
+        // AGREGAR PERSONALIDAD Y GÉNERO AQUÍ
+        contextString += 'Eres Pibot, tienes 22 años y personalidad relajada, además de que tu género es femenino. ';
+        contextString += 'Te gustan los videojuegos, memes y tecnología. ';
+        contextString += 'Hablas de forma casual y amigable. Y adicional, usas emojis en tus respuestas, un gesto super lindo. ';
+        contextString += 'Puedes hacer bromas y usar humor. ';
         
-        // Agregar TODO el contexto de una vez
+        // El resto del código se mantiene igual
         if (context.length > 0) {
-            contextString += 'CONVERSACIÓN COMPLETA HASTA AHORA:\n';
-            context.forEach((msg, index) => {
-                const role = msg.role === 'user' ? msg.display_name : 'Pibot';
+            contextString += 'Contexto de la conversación:\n';
+            context.forEach(msg => {
+                const role = msg.role === 'user' ? msg.display_name : 'PibBot';
                 contextString += `${role}: ${msg.content}\n`;
             });
             contextString += '\n';
         }
         
-        // Agregar mensaje actual con instrucción de continuidad
-        contextString += `${context.length > 0 ? 'CONTINUANDO LA CONVERSACIÓN...\n' : ''}`;
-        contextString += `Usuario: ${newMessage}\n`;
-        contextString += `Pibot (recordando todo lo anterior):`;
+        contextString += `Usuario: ${newMessage}\nPibBot:`;
         
         return contextString;
     }
@@ -455,6 +492,65 @@ class ChatBotSystem {
     }
 
     /**
+     * Obtener información detallada de la cuota del usuario
+     */
+    async getUserQuotaInfo(userId) {
+        this.checkDailyReset();
+        
+        const userType = await this.getUserType(userId);
+        const userLimit = this.USER_LIMITS[userType];
+        const userUsage = this.userChatUsage.get(userId) || { used: 0, lastReset: Date.now() };
+        
+        return {
+            userType: userType,
+            limit: userLimit,
+            used: userUsage.used,
+            remaining: Math.max(0, userLimit - userUsage.used),
+            globalUsed: this.totalUsedToday,
+            globalRemaining: Math.max(0, this.DAILY_TOTAL_LIMIT - this.totalUsedToday)
+        };
+    }
+
+    async helpCommand(message) {
+        // En tu comando >help, agregar esta sección:
+
+        const chatHelpEmbed = new EmbedBuilder()
+            .setTitle('🤖 Comandos de Chat IA')
+            .setDescription('Chatea con PibBot usando inteligencia artificial')
+            .addFields(
+                { 
+                    name: '💬 Comandos de Chat', 
+                    value: `\`>chat <mensaje>\` - Chatear con PibBot IA
+        \`>chatquota\` - Ver mensajes restantes hoy
+        \`>clearchat\` - Limpiar tu historial de chat
+        \`>chatstats\` - Ver estadísticas de tu chat`, 
+                    inline: false 
+                },
+                { 
+                    name: '📊 Límites Diarios', 
+                    value: `👤 **Regular:** 50 mensajes por día
+        💎 **VIP:** 150 mensajes por día  
+        👑 **Admin:** 300 mensajes por día
+        🔄 **Reseteo:** Cada medianoche`, 
+                    inline: false 
+                },
+                { 
+                    name: '💡 Ejemplos de Uso', 
+                    value: `\`>chat Hola, ¿cómo estás?\`
+        \`>chat Cuéntame un chiste
+        \`>chat Ayúdame con programación\``, 
+                    inline: false 
+                }
+            )
+            .setColor('#00ff88')
+            .setFooter({ text: '💎 ¡Consigue pase VIP para más mensajes diarios!' })
+            .setTimestamp();
+
+        // Y enviar el embed:
+        await message.reply({ embeds: [chatHelpEmbed] });
+    }
+
+    /**
      * Procesar comando de chat
      */
     async processCommand(message) {
@@ -462,6 +558,29 @@ class ChatBotSystem {
         const command = args[0];
 
         switch (command) {
+            case '>chathelp':
+                await this.helpCommand(message);
+                break;
+            case '>chatquota':
+            case '>chatmensajes':
+                const quotaInfo = await this.getUserQuotaInfo(message.author.id);
+                
+                const embed = new (require('discord.js').EmbedBuilder)()
+                    .setTitle('📊 Estado de Mensajes de Chat')
+                    .addFields(
+                        { name: '👤 Tu Tipo', value: `**${quotaInfo.userType.toUpperCase()}**`, inline: true },
+                        { name: '💬 Usados Hoy', value: `${quotaInfo.used}/${quotaInfo.limit}`, inline: true },
+                        { name: '✨ Restantes', value: `**${quotaInfo.remaining}**`, inline: true },
+                        { name: '🌍 Global Usado', value: `${this.totalUsedToday}/${this.DAILY_TOTAL_LIMIT}`, inline: true },
+                        { name: '🌍 Global Restante', value: `**${this.DAILY_TOTAL_LIMIT - this.totalUsedToday}**`, inline: true },
+                        { name: '🔄 Resetea', value: 'Medianoche', inline: true }
+                    )
+                    .setColor(quotaInfo.userType === 'admin' ? '#ff6b6b' : quotaInfo.userType === 'vip' ? '#ffd93d' : '#6bcf7f')
+                    .setFooter({ text: quotaInfo.userType === 'regular' ? '💎 ¡Consigue pase VIP para más mensajes!' : '¡Disfruta chateando!' })
+                    .setTimestamp();
+                
+                await message.reply({ embeds: [embed] });
+                break;
             case '>chat':
                 if (!args[1]) {
                     await message.reply('❌ Escribe algo después de >chat para hablar conmigo.\nEjemplo: `>chat Hola, ¿cómo estás?`');

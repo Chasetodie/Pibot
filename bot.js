@@ -991,8 +991,8 @@ client.on('messageCreate', async (message) => {
         return;
     }
 
-    // CHATBOT - ANTES del sistema de XP
-    if (chatbot.shouldProcessMessage(message)) {
+    // CHATBOT - Solo cuando mencionen al bot
+    if (message.mentions.has(message.client.user)) {
         try {
             const result = await chatbot.processMessage(
                 message.author.id,
