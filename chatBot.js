@@ -1,4 +1,5 @@
 const { GoogleGenerativeAI } = require('@google/generative-ai');
+const { EmbedBuilder } = require('discord.js');
 
 class ChatBotSystem {
     constructor(database, economy) {
@@ -20,9 +21,9 @@ class ChatBotSystem {
         
         // Límites por tipo de usuario
         this.USER_LIMITS = {
-            admin: 200,      // Admins: 200 mensajes por día
-            vip: 200,        // VIP: 200 mensajes por día  
-            regular: 50      // Usuarios normales: 50 mensajes por día
+            admin: 500,      // Admins: 500 mensajes por día
+            vip: 750,        // VIP: 750 mensajes por día  
+            regular: 250      // Usuarios normales: 250 mensajes por día
         };
         
         this.totalUsedToday = 0;
@@ -270,7 +271,7 @@ class ChatBotSystem {
     async getUserType(userId) {
         try {
             // Verificar si es admin (adapta esto a tu sistema)
-            const adminIds = ['ADMIN_ID_1', 'ADMIN_ID_2']; // Reemplaza con IDs reales de admins
+            const adminIds = ['488110147265232898', '788424796366307409']; // Reemplaza con IDs reales de admins
             if (adminIds.includes(userId)) {
                 return 'admin';
             }
@@ -341,7 +342,25 @@ class ChatBotSystem {
         this.userChatUsage.set(userId, userUsage);
         this.totalUsedToday += 1;
         
+        // AGREGAR: Guardar en base de datos
+        this.saveDailyUsage(userId, userUsage.used);
+        
         console.log(`📊 Usuario ${userId}: ${userUsage.used} mensajes | Global: ${this.totalUsedToday}/${this.DAILY_TOTAL_LIMIT}`);
+    }
+
+    async saveDailyUsage(userId, messagesUsed) {
+        try {
+            const today = new Date().toISOString().split('T')[0];
+            
+            await this.database.pool.execute(`
+                INSERT INTO chat_daily_usage (user_id, usage_date, messages_used) 
+                VALUES (?, ?, ?)
+                ON DUPLICATE KEY UPDATE messages_used = ?
+            `, [userId, today, messagesUsed, messagesUsed]);
+            
+        } catch (error) {
+            console.error('❌ Error guardando uso diario:', error);
+        }
     }
 
     /**
@@ -426,6 +445,7 @@ class ChatBotSystem {
      */
     async initChatTables() {
         try {
+            // Tabla existente de conversaciones
             await this.database.pool.execute(`
                 CREATE TABLE IF NOT EXISTS chat_conversations (
                     id INT AUTO_INCREMENT PRIMARY KEY,
@@ -438,9 +458,53 @@ class ChatBotSystem {
                 )
             `);
             
+            // NUEVA TABLA para cuotas diarias
+            await this.database.pool.execute(`
+                CREATE TABLE IF NOT EXISTS chat_daily_usage (
+                    user_id VARCHAR(255) NOT NULL,
+                    usage_date DATE NOT NULL,
+                    messages_used INT DEFAULT 0,
+                    PRIMARY KEY (user_id, usage_date),
+                    INDEX idx_date (usage_date)
+                )
+            `);
+            
             console.log('🗃️ Tablas de chat inicializadas');
+            await this.loadDailyUsage();
+            
         } catch (error) {
             console.error('❌ Error creando tablas de chat:', error);
+        }
+    }
+
+    /**
+     * Cargar uso diario desde la base de datos al iniciar
+     */
+    async loadDailyUsage() {
+        try {
+            const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+            
+            // Cargar uso diario desde la nueva tabla
+            const [rows] = await this.database.pool.execute(
+                'SELECT user_id, messages_used FROM chat_daily_usage WHERE usage_date = ?',
+                [today]
+            );
+            
+            let totalUsed = 0;
+            
+            for (const row of rows) {
+                this.userChatUsage.set(row.user_id, {
+                    used: row.messages_used,
+                    lastReset: Date.now()
+                });
+                totalUsed += row.messages_used;
+            }
+            
+            this.totalUsedToday = totalUsed;
+            console.log(`📊 Uso diario cargado: ${totalUsed}/${this.DAILY_TOTAL_LIMIT} mensajes`);
+            
+        } catch (error) {
+            console.error('❌ Error cargando uso diario:', error);
         }
     }
 
