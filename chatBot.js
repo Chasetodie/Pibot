@@ -3,7 +3,7 @@ const { GoogleGenerativeAI } = require('@google/generative-ai');
 class ChatBotSystem {
     constructor(database, economy) {
         this.database = database;
-        this.genAI = new GoogleGenerativeAI('TU_API_KEY_AQUI');
+        this.genAI = new GoogleGenerativeAI('AIzaSyBg2M-qzlgQYzUA7HxgnOxeTzVqp9TOuJI');
         this.model = this.genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
         
         this.economy = economy;
