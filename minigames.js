@@ -4703,6 +4703,10 @@ class MinigamesSystem {
             
             if (Date.now() >= weekEnd && currentPot.status === 'active') {
                 await this.distributePot(currentPot);
+                
+                // Crear nuevo pozo inmediatamente después de distribución natural
+                console.log('Creando nuevo pozo para la próxima semana...');
+                await this.economy.database.getCurrentWeeklyPot();
             }
         } catch (error) {
             console.error('Error verificando expiración del pozo:', error);
@@ -4825,63 +4829,12 @@ class MinigamesSystem {
                 } catch (error) {
                     console.log(`No se pudo anunciar en canal ${channelId}:`, error.message);
                 }
-            }
-            
-            // También crear un mensaje especial para los ganadores
-            await this.notifyWinners(moneyWinner, itemWinners, pot);
-            
+            }            
         } catch (error) {
             console.error('Error anunciando resultados del pozo:', error);
         }
     }
-
-    async notifyWinners(moneyWinner, itemWinners, pot) {
-        try {
-            // Notificar al ganador del dinero
-            if (moneyWinner && pot.total_money > 0) {
-                try {
-                    const user = await this.economy.client.users.fetch(moneyWinner);
-                    const embed = new EmbedBuilder()
-                        .setTitle('🎉 ¡GANASTE EL POZO SEMANAL!')
-                        .setDescription(`¡Felicidades! Has ganado el premio en dinero del pozo semanal`)
-                        .addFields(
-                            { name: '💰 Premio', value: `${this.formatNumber(pot.total_money)} π-b$`, inline: true },
-                            { name: '🎊 Tipo', value: 'Dinero del pozo', inline: true }
-                        )
-                        .setColor('#00FF00')
-                        .setTimestamp();
-                    
-                    await user.send({ embeds: [embed] });
-                } catch (error) {
-                    console.log(`No se pudo notificar al ganador del dinero: ${moneyWinner}`);
-                }
-            }
-            
-            // Notificar a los ganadores de items
-            for (const itemWin of itemWinners) {
-                try {
-                    const user = await this.economy.client.users.fetch(itemWin.winner);
-                    const embed = new EmbedBuilder()
-                        .setTitle('🎁 ¡GANASTE UN ITEM DEL POZO!')
-                        .setDescription(`¡Felicidades! Has ganado un item del pozo semanal`)
-                        .addFields(
-                            { name: '🎁 Item', value: itemWin.name, inline: true },
-                            { name: '👤 Contribuido por', value: `<@${itemWin.contributor}>`, inline: true }
-                        )
-                        .setColor('#9932CC')
-                        .setTimestamp();
-                    
-                    await user.send({ embeds: [embed] });
-                } catch (error) {
-                    console.log(`No se pudo notificar al ganador del item: ${itemWin.winner}`);
-                }
-            }
-            
-        } catch (error) {
-            console.error('Error notificando ganadores:', error);
-        }
-    }
-
+    
     getWeekNumber(date) {
         const firstDayOfYear = new Date(date.getFullYear(), 0, 1);
         const pastDaysOfYear = (date - firstDayOfYear) / 86400000;
@@ -5055,8 +5008,8 @@ class MinigamesSystem {
                 return;
             }
 
-            const weekEnd = currentPot.week_start + this.potConfig.weekDuration;
-            const timeLeft = weekEnd - Date.now();
+            const nextMonday = currentPot.week_start + this.potConfig.weekDuration;
+            const timeLeft = nextMonday - Date.now();
             const daysLeft = Math.floor(timeLeft / (24 * 60 * 60 * 1000));
             const hoursLeft = Math.floor((timeLeft % (24 * 60 * 60 * 1000)) / (60 * 60 * 1000));
 
@@ -5255,10 +5208,10 @@ class MinigamesSystem {
                     await this.showGamesList(message);
                     break;
                 case '>forcepot':
-                    if (message.author.id === '488110147265232898') { // Reemplaza con tu ID
+                    if (message.author.id === '488110147265232898') { // Tu ID real
                         const currentPot = await this.economy.database.getCurrentWeeklyPot();
                         if (currentPot) {
-                            await this.distributePot(currentPot);
+                            await this.distributePot(currentPot);                            
                             await message.reply('🔄 Pozo forzado a distribuir');
                         } else {
                             await message.reply('❌ No hay pozo activo');

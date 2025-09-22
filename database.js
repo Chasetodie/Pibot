@@ -346,12 +346,12 @@ class LocalDatabase {
 
     getWeekStart() {
         const now = new Date();
-        const dayOfWeek = now.getDay();
+        const dayOfWeek = now.getDay(); // 0 = domingo, 1 = lunes, etc.
         const daysToMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
         
         const monday = new Date(now);
         monday.setDate(now.getDate() - daysToMonday);
-        monday.setHours(0, 0, 0, 0);
+        monday.setHours(0, 0, 0, 0); // Medianoche del lunes
         
         return monday.getTime();
     }
