@@ -27,6 +27,13 @@ module.exports = (client) => {
         try {
             console.log(`Started refreshing ${commands.length} application (/) commands.`);
 
+            const data = await rest.put(
+                Routes.applicationGuildCommands('1402028858223362238'),
+                {
+                    body: commands,
+                }
+            );
+
             console.log(`Successfully reload ${data.length} application (/) commands.`);
         } catch (error) {
             console.error(error);
