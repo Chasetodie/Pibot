@@ -18,6 +18,31 @@ class MinigamesSystem {
         this.minigamesCache = new Map();
         this.MAX_CACHE_SIZE = 500;
         this.cacheTimeout = 10 * 60 * 1000;
+
+        // En el constructor, después de this.achievements = achievementsSystem;
+        this.weeklyPot = {
+            contributions: new Map(), // userId -> {money: amount, items: [...], lastContribution: timestamp}
+            totalMoney: 0,
+            totalItems: [],
+            participants: new Set(),
+            startDate: this.getWeekStart(),
+            //endDate: this.getWeekStart() + (7 * 24 * 60 * 60 * 1000)
+            endDate: this.getWeekStart() + (1 * 60 * 1000)
+        };
+
+        this.potConfig = {
+            minMoney: 1000,
+            maxMoney: 500000,
+            maxItemsPerUser: 3
+        };
+
+        // Verificar si necesita reset semanal
+        this.checkWeeklyReset();
+
+        // Agregar timer para verificar reset semanal cada hora
+        setInterval(() => {
+            this.checkWeeklyReset();
+        }, /*60 * 60*/5 * 1000); // Cada hora
         
         // Configuración de minijuegos
         this.config = {
@@ -197,6 +222,268 @@ class MinigamesSystem {
         }
         
         return effectiveCooldown;
+    }
+
+    // SISTEMA DE POZO SEMANAL
+    getWeekStart() {
+        const now = new Date();
+        const dayOfWeek = now.getDay(); // 0 = domingo, 1 = lunes, etc.
+        const daysToMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1; // Calcular días hasta el lunes
+        
+        const monday = new Date(now);
+        monday.setDate(now.getDate() - daysToMonday);
+        monday.setHours(0, 0, 0, 0); // Medianoche del lunes
+        
+        return monday.getTime();
+    }
+
+    checkWeeklyReset() {
+        const now = Date.now();
+        if (now >= this.weeklyPot.endDate) {
+            this.distributeWeeklyPot();
+            this.resetWeeklyPot();
+        }
+    }
+
+    resetWeeklyPot() {
+        const newStart = this.getWeekStart();
+        this.weeklyPot = {
+            contributions: new Map(),
+            totalMoney: 0,
+            totalItems: [],
+            participants: new Set(),
+            startDate: newStart,
+            //endDate: newStart + (7 * 24 * 60 * 60 * 1000)
+            endDate: newStart + (1 * 60 * 1000)
+        };
+    }
+
+    async handlePotContribute(message, args) {
+        if (args.length < 3) {
+            const embed = new EmbedBuilder()
+                .setTitle('🕳️ Contribuir al Pozo Semanal')
+                .setDescription('Contribuye dinero o items al pozo semanal')
+                .addFields(
+                    { name: '💰 Contribuir Dinero', value: '`>potcontribute money <cantidad>`', inline: false },
+                    { name: '📦 Contribuir Item', value: '`>potcontribute item <item_id>`', inline: false },
+                    { name: '💡 Ejemplos', value: '`>potcontribute money 5000`\n`>potcontribute item lucky_charm`', inline: false },
+                    { name: '📋 Límites', value: `• Dinero: ${this.formatNumber(this.potConfig.minMoney)} - ${this.formatNumber(this.potConfig.maxMoney)} π-b$\n• Items: Máximo ${this.potConfig.maxItemsPerUser} por semana`, inline: false }
+                )
+                .setColor('#8B4513');
+            
+            await message.reply({ embeds: [embed] });
+            return;
+        }
+
+        this.checkWeeklyReset();
+        const userId = message.author.id;
+        const type = args[1].toLowerCase();
+        
+        if (type === 'money') {
+            await this.contributeMoney(message, userId, args[2]);
+        } else if (type === 'item') {
+            await this.contributeItem(message, userId, args[2]);
+        } else {
+            await message.reply('❌ Tipo inválido. Usa `money` o `item`');
+        }
+    }
+
+    async contributeMoney(message, userId, amountStr) {
+        const amount = parseInt(amountStr);
+        
+        if (isNaN(amount) || amount < this.potConfig.minMoney || amount > this.potConfig.maxMoney) {
+            await message.reply(`❌ La cantidad debe ser entre ${this.formatNumber(this.potConfig.minMoney)} y ${this.formatNumber(this.potConfig.maxMoney)} π-b$`);
+            return;
+        }
+
+        const user = await this.economy.getUser(userId);
+        if (user.balance < amount) {
+            await message.reply(`❌ No tienes suficientes π-b Coins. Balance: ${this.formatNumber(user.balance)} π-b$`);
+            return;
+        }
+
+        // Quitar dinero al usuario
+        await this.economy.removeMoney(userId, amount, 'weekly_pot_contribution');
+
+        // Agregar al pozo
+        let userContribution = this.weeklyPot.contributions.get(userId) || { money: 0, items: [], lastContribution: 0 };
+        userContribution.money += amount;
+        userContribution.lastContribution = Date.now();
+        
+        this.weeklyPot.contributions.set(userId, userContribution);
+        this.weeklyPot.totalMoney += amount;
+        this.weeklyPot.participants.add(userId);
+
+        const embed = new EmbedBuilder()
+            .setTitle('✅ Contribución al Pozo')
+            .setDescription(`Has contribuido **${this.formatNumber(amount)} π-b$** al pozo semanal`)
+            .addFields(
+                { name: '💰 Tu Contribución Total', value: `${this.formatNumber(userContribution.money)} π-b$`, inline: true },
+                { name: '🕳️ Pozo Total', value: `${this.formatNumber(this.weeklyPot.totalMoney)} π-b$`, inline: true },
+                { name: '👥 Participantes', value: `${this.weeklyPot.participants.size}`, inline: true }
+            )
+            .setColor('#00FF00')
+            .setTimestamp();
+
+        await message.reply({ embeds: [embed] });
+    }
+
+    async contributeItem(message, userId, itemId) {
+        const user = await this.economy.getUser(userId);
+        const userItems = user.items || {};
+        
+        if (!userItems[itemId] || userItems[itemId].quantity < 1) {
+            await message.reply(`❌ No tienes el item **${itemId}** en tu inventario`);
+            return;
+        }
+
+        // Verificar límite de items por usuario
+        let userContribution = this.weeklyPot.contributions.get(userId) || { money: 0, items: [], lastContribution: 0 };
+        if (userContribution.items.length >= this.potConfig.maxItemsPerUser) {
+            await message.reply(`❌ Ya contribuiste el máximo de ${this.potConfig.maxItemsPerUser} items esta semana`);
+            return;
+        }
+
+        // Verificar que el item existe en la tienda
+        const shopItem = this.economy.shop ? this.economy.shop.shopItems[itemId] : null;
+        if (!shopItem) {
+            await message.reply(`❌ Item **${itemId}** no encontrado`);
+            return;
+        }
+
+        // Quitar item al usuario
+        const newItems = { ...userItems };
+        newItems[itemId].quantity -= 1;
+        if (newItems[itemId].quantity <= 0) {
+            delete newItems[itemId];
+        }
+        await this.economy.updateUser(userId, { items: newItems });
+
+        // Agregar al pozo
+        const itemContribution = {
+            id: itemId,
+            name: shopItem.name,
+            contributor: userId,
+            contributorName: message.author.displayName,
+            timestamp: Date.now()
+        };
+
+        userContribution.items.push(itemContribution);
+        userContribution.lastContribution = Date.now();
+        
+        this.weeklyPot.contributions.set(userId, userContribution);
+        this.weeklyPot.totalItems.push(itemContribution);
+        this.weeklyPot.participants.add(userId);
+
+        const embed = new EmbedBuilder()
+            .setTitle('✅ Item Contribuido al Pozo')
+            .setDescription(`Has contribuido **${shopItem.name}** al pozo semanal`)
+            .addFields(
+                { name: '📦 Tus Items Contribuidos', value: `${userContribution.items.length}/${this.potConfig.maxItemsPerUser}`, inline: true },
+                { name: '🎁 Items Totales en Pozo', value: `${this.weeklyPot.totalItems.length}`, inline: true },
+                { name: '👥 Participantes', value: `${this.weeklyPot.participants.size}`, inline: true }
+            )
+            .setColor('#00FF00')
+            .setTimestamp();
+
+        await message.reply({ embeds: [embed] });
+    }
+
+    async showPotContents(message) {
+        this.checkWeeklyReset();
+        
+        const endDate = new Date(this.weeklyPot.endDate);
+        const timeLeft = this.weeklyPot.endDate - Date.now();
+        const daysLeft = Math.floor(timeLeft / (24 * 60 * 60 * 1000));
+        const hoursLeft = Math.floor((timeLeft % (24 * 60 * 60 * 1000)) / (60 * 60 * 1000));
+
+        const embed = new EmbedBuilder()
+            .setTitle('🕳️ Contenido del Pozo Semanal')
+            .setDescription(`Termina el ${endDate.toLocaleDateString('es-ES')} (${daysLeft}d ${hoursLeft}h restantes)`)
+            .addFields(
+                { name: '💰 Dinero Total', value: `${this.formatNumber(this.weeklyPot.totalMoney)} π-b$`, inline: true },
+                { name: '📦 Items Totales', value: `${this.weeklyPot.totalItems.length}`, inline: true },
+                { name: '👥 Participantes', value: `${this.weeklyPot.participants.size}`, inline: true }
+            )
+            .setColor('#8B4513')
+            .setTimestamp();
+
+        // Mostrar contribuciones de dinero
+        if (this.weeklyPot.totalMoney > 0) {
+            let moneyContributions = '';
+            for (const [userId, contribution] of this.weeklyPot.contributions) {
+                if (contribution.money > 0) {
+                    const user = message.guild.members.cache.get(userId);
+                    const userName = user ? user.displayName : `Usuario ${userId.slice(-4)}`;
+                    moneyContributions += `• **${userName}**: ${this.formatNumber(contribution.money)} π-b$\n`;
+                }
+            }
+            if (moneyContributions) {
+                embed.addFields({ name: '💰 Contribuciones de Dinero', value: moneyContributions.slice(0, 1020) + (moneyContributions.length > 1020 ? '...' : ''), inline: false });
+            }
+        }
+
+        // Mostrar items contribuidos
+        if (this.weeklyPot.totalItems.length > 0) {
+            let itemsList = '';
+            for (const item of this.weeklyPot.totalItems) {
+                const contributionDate = new Date(item.timestamp).toLocaleDateString('es-ES');
+                itemsList += `• **${item.name}** por ${item.contributorName} (${contributionDate})\n`;
+            }
+            if (itemsList) {
+                embed.addFields({ name: '🎁 Items Contribuidos', value: itemsList.slice(0, 1020) + (itemsList.length > 1020 ? '...' : ''), inline: false });
+            }
+        }
+
+        if (this.weeklyPot.participants.size === 0) {
+            embed.setDescription('El pozo está vacío. ¡Sé el primero en contribuir!\n\nUsa `>potcontribute money <cantidad>` o `>potcontribute item <item_id>`');
+        }
+
+        await message.reply({ embeds: [embed] });
+    }
+
+    async distributeWeeklyPot() {
+        if (this.weeklyPot.participants.size === 0) {
+            console.log('📦 Pozo semanal terminó sin participantes');
+            return;
+        }
+
+        console.log(`📦 Distribuyendo pozo semanal con ${this.weeklyPot.participants.size} participantes`);
+        
+        const participants = Array.from(this.weeklyPot.participants);
+        
+        // Distribuir dinero
+        if (this.weeklyPot.totalMoney > 0) {
+            const luckyWinner = participants[Math.floor(Math.random() * participants.length)];
+            await this.economy.addMoney(luckyWinner, this.weeklyPot.totalMoney, 'weekly_pot_money_prize');
+            console.log(`💰 ${luckyWinner.slice(-4)} ganó ${this.weeklyPot.totalMoney} π-b$ del pozo`);
+        }
+
+        // Distribuir items aleatoriamente
+        for (const item of this.weeklyPot.totalItems) {
+            const randomWinner = participants[Math.floor(Math.random() * participants.length)];
+            
+            const user = await this.economy.getUser(randomWinner);
+            const userItems = user.items || {};
+            
+            if (userItems[item.id]) {
+                userItems[item.id].quantity += 1;
+            } else {
+                userItems[item.id] = {
+                    id: item.id,
+                    quantity: 1,
+                    purchaseDate: new Date().toISOString(),
+                    source: 'weekly_pot'
+                };
+            }
+            
+            await this.economy.updateUser(randomWinner, { items: userItems });
+            console.log(`🎁 ${randomWinner.slice(-4)} ganó ${item.name} del pozo`);
+        }
+    }
+
+    async showPotStatus(message) {
+        await this.showPotContents(message);
     }
 
     async canCoinflip(userId) {
@@ -4818,6 +5105,25 @@ class MinigamesSystem {
                 case '>juegos':
                     await this.showGamesList(message);
                     break;
+                case '>potcontribute':
+                case '>contribute':
+                    await this.handlePotContribute(message, args);
+                    break;
+                    
+                case '>potcontents':
+                case '>holethings':
+                case '>potstatus':
+                    await this.showPotContents(message);
+                    break;
+                case '>forcedistribute':
+                    if (message.author.id === '488110147265232898') { // Reemplaza con tu ID real
+                        await this.distributeWeeklyPot();
+                        this.resetWeeklyPot();
+                        await message.reply('🔄 Pozo forzado a distribuir y resetear');
+                    } else {
+                        await message.reply('❌ Solo administradores pueden usar este comando.');
+                    }
+                    break;
                 default:
                     // No es un comando de minijuegos
                     break;
@@ -4868,6 +5174,11 @@ class MinigamesSystem {
                 {
                     name: '🎴 UNO (Multiplayer)',
                     value: '`>ujoin <cantidad>` - Crear partida\n`>ustart` - Iniciar (creador)\n`>uplay <color> <numero>` - Lanzar una carta\n`>upickup` - Agarra una carta\n`>uhand` - Muestra tu mano\n`>sayuno` - Usalo cuando tengas una carta\n`>ucallout` - El jugador no dijo Uno\n`>utable` - Muestra la mesa\n`>uleave` - Abandona el juego\nApuesta: 100-10,000 π-b$\nJugadores: 2-8\nGanador se lleva 85% del pot',
+                    inline: false,
+                },
+                {
+                    name: '🕳️ Pozo Semanal',
+                    value: '`>potcontribute money/item <valor>` - Contribuir\n`>holethings` - Ver contenido del pozo\nRango: 100-50k π-b$ | Max 3 items/usuario\nDistribución aleatoria semanal entre participantes',
                     inline: false,
                 },
                 { 
