@@ -5207,22 +5207,6 @@ class MinigamesSystem {
                 case '>juegos':
                     await this.showGamesList(message);
                     break;
-                case '>forcepot':
-                    if (message.author.id === '488110147265232898') { // Tu ID real
-                        const currentPot = await this.economy.database.getCurrentWeeklyPot();
-                        if (currentPot) {
-                            await this.distributePot(currentPot);
-                            
-                            // SOLO cuando se fuerza, crear nuevo pozo inmediatamente
-                            console.log('Creando nuevo pozo después de distribución forzada...');
-                            await this.economy.database.forceCreateNewPot();
-                            
-                            await message.reply('🔄 Pozo forzado a distribuir y nuevo pozo creado');
-                        } else {
-                            await message.reply('❌ No hay pozo activo');
-                        }
-                    }
-                    break;
                 default:
                     // No es un comando de minijuegos
                     break;
@@ -5273,6 +5257,11 @@ class MinigamesSystem {
                 {
                     name: '🎴 UNO (Multiplayer)',
                     value: '`>ujoin <cantidad>` - Crear partida\n`>ustart` - Iniciar (creador)\n`>uplay <color> <numero>` - Lanzar una carta\n`>upickup` - Agarra una carta\n`>uhand` - Muestra tu mano\n`>sayuno` - Usalo cuando tengas una carta\n`>ucallout` - El jugador no dijo Uno\n`>utable` - Muestra la mesa\n`>uleave` - Abandona el juego\nApuesta: 100-10,000 π-b$\nJugadores: 2-8\nGanador se lleva 85% del pot',
+                    inline: false,
+                },
+                {
+                    name: '🕳️ Pozo Semanal',
+                    value: '`>potcontribute money/item <valor>` - Contribuir\n`>holethings` - Ver contenido del pozo\nRango: 100-50k π-b$ | Max 3 items/usuario\nDistribución aleatoria semanal entre participantes',
                     inline: false,
                 },
                 { 
