@@ -256,32 +256,46 @@ class MinigamesSystem {
         try {
             let currentPot = await this.economy.database.getWeeklyPot();
             
-            if (!currentPot || Date.now() >= currentPot.end_date) {
-                // Distribuir pozo anterior si existe
-                if (currentPot) {
+            // AGREGAR: Verificar si ya existe un pozo activo para esta semana
+            const currentWeekStart = this.getWeekStart();
+            
+            if (!currentPot || currentPot.start_date !== currentWeekStart) {
+                // Solo distribuir si existe Y ya expiró
+                if (currentPot && Date.now() >= currentPot.end_date) {
                     await this.distributeWeeklyPot(currentPot);
                 }
                 
-                // Crear nuevo pozo
-                const startDate = this.getWeekStart();
-                const potData = {
-                    id: `pot_${Date.now()}`,
-                    total_money: 0,
-                    contributions: {},
-                    participants: [],
-                    items: [],
-                    start_date: startDate,
-                    end_date: startDate + (/*7 * 24 * 60*/3 * 60 * 1000)
-                };
-                
-                await this.economy.database.createWeeklyPot(potData);
-                currentPot = potData;
-                console.log('🕳️ Nuevo pozo semanal creado');
+                // CAMBIAR: Solo crear si NO existe uno para esta semana
+                if (!currentPot || currentPot.start_date !== currentWeekStart) {
+                    const potData = {
+                        id: `pot_${currentWeekStart}`, // USAR fecha como ID único
+                        total_money: 0,
+                        contributions: {},
+                        participants: [],
+                        items: [],
+                        start_date: currentWeekStart,
+                        end_date: currentWeekStart + (3 * 60 * 1000) // 3 minutos para test
+                    };
+                    
+                    await this.economy.database.createWeeklyPot(potData);
+                    currentPot = potData;
+                    console.log('🕳️ Nuevo pozo semanal creado');
+                }
             }
             
             this.weeklyPot = currentPot;
         } catch (error) {
             console.error('❌ Error inicializando pozo semanal:', error);
+            // Si hay error, usar el existente o crear vacío
+            if (!this.weeklyPot) {
+                this.weeklyPot = {
+                    id: `temp_${Date.now()}`,
+                    total_money: 0,
+                    contributions: {},
+                    participants: [],
+                    items: []
+                };
+            }
         }
     }
 

@@ -227,12 +227,20 @@ class LocalDatabase {
     }
 
     // Métodos para Weekly Pot
-    async getWeeklyPot() {
+    async getWeeklyPot(startDate = null) {
         try {
-            const [rows] = await this.pool.execute(
-                'SELECT * FROM weekly_pot WHERE status = ? ORDER BY start_date DESC LIMIT 1', 
-                ['active']
-            );
+            let query = 'SELECT * FROM weekly_pot WHERE status = ?';
+            let params = ['active'];
+            
+            // Si se proporciona startDate, buscar específicamente esa semana
+            if (startDate) {
+                query += ' AND start_date = ?';
+                params.push(startDate);
+            }
+            
+            query += ' ORDER BY start_date DESC LIMIT 1';
+            
+            const [rows] = await this.pool.execute(query, params);
             
             if (rows.length > 0) {
                 const pot = rows[0];
