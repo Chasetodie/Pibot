@@ -1,12 +1,9 @@
-const freeChatBotModule = require('free-chatbot');
-console.log('Contenido del módulo:', freeChatBotModule);
-console.log('Tipo:', typeof freeChatBotModule);
-console.log('Keys:', Object.keys(freeChatBotModule));
+const { createDuckDuckGoChat } = require('free-chatbot');
 
 class ChatBotSystem {
     constructor(database) {
         this.database = database;
-        this.chatbot = freeChatBot;
+        this.chatbot = null;
         this.MAX_CONTEXT_MESSAGES = 10; // Límite de mensajes por contexto
         this.conversationCache = new Map(); // Cache en memoria para acceso rápido
         this.CACHE_CLEANUP_INTERVAL = 30 * 60 * 1000; // 30 minutos
@@ -148,13 +145,15 @@ class ChatBotSystem {
     async getBotResponse(contextString, maxRetries = 3) {
         for (let attempt = 1; attempt <= maxRetries; attempt++) {
             try {
-                // Cambia esta línea:
-                // const response = await this.chatbot(contextString);
+                // Crear el chat si no existe
+                if (!this.chatbot) {
+                    this.chatbot = createDuckDuckGoChat();
+                }
                 
-                // Por esta (free-chatbot es una función, no un constructor):
-                const response = await freeChatBot(contextString);
+                // Usar el chat
+                const response = await this.chatbot(contextString);
                 
-                // El resto del código se mantiene igual...
+                // El resto del código se mantiene igual
                 let cleanResponse = response.trim();
                 cleanResponse = cleanResponse.replace(/^(PibBot:|Bot:|Asistente:)/i, '').trim();
                 
