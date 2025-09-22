@@ -55,13 +55,17 @@ class MusicSystem {
             }
         });
 
-        this.kazagumo.on('playerEnd', (player) => {
-            // Verificar si hay más canciones en la cola
-            if (player.queue.size > 0) {
-                // Si hay canciones, saltar a la siguiente (esto mueve la cola correctamente)
-                player.skip();
-            } else {
-                // Si no hay más canciones, enviar mensaje y programar desconexión
+        this.kazagumo.on('playerEnd', (player, track, reason) => {
+            // Verificar si terminó naturalmente (no por skip)
+            if (reason !== 'REPLACED' && player.queue.size > 0) {
+                // La cola ya se movió automáticamente, solo reproducir
+                setTimeout(() => {
+                    if (player.queue.current && !player.playing) {
+                        player.play();
+                    }
+                }, 100); // Pequeño delay para asegurar que la cola se actualizó
+            } else if (player.queue.size === 0) {
+                // No hay más canciones
                 if (player.textId) {
                     const channel = this.client.channels.cache.get(player.textId);
                     if (channel) {
@@ -74,7 +78,6 @@ class MusicSystem {
                     }
                 }
                 
-                // Auto-disconnect después de 5 minutos de inactividad
                 this.setPlayerTimeout(player.guildId, () => {
                     if (player.queue.size === 0) {
                         player.destroy();
@@ -284,18 +287,11 @@ class MusicSystem {
             return message.reply('❌ No hay música reproduciéndose.');
         }
 
-        if (!player.queue.current) {
-            return message.reply('❌ No hay canción reproduciéndose actualmente.');
+        if (player.queue.size === 0) {
+            return message.reply('❌ No hay más canciones en la cola.');
         }
 
         const currentTrack = player.queue.current;
-
-        // Si no hay más canciones después de esta
-        if (player.queue.size === 0) {
-            await this.stopCommand(message, guild);
-            return message.reply(`⏭️ **${currentTrack.title}** ha sido saltada. No hay más canciones en la cola.`);
-        }
-
         player.skip();
 
         const embed = new EmbedBuilder()
