@@ -148,14 +148,15 @@ class ChatBotSystem {
     async getBotResponse(contextString, maxRetries = 3) {
         for (let attempt = 1; attempt <= maxRetries; attempt++) {
             try {
-                // Usar modelo gratuito de Hugging Face
+                // Probar con un modelo diferente que sí esté disponible
                 const response = await this.hf.textGeneration({
-                    model: 'microsoft/DialoGPT-medium',
+                    model: 'gpt2',  // Cambiar a GPT-2 que siempre está disponible
                     inputs: contextString,
                     parameters: {
-                        max_new_tokens: 100,
-                        temperature: 0.7,
+                        max_new_tokens: 50,
+                        temperature: 0.8,
                         do_sample: true,
+                        pad_token_id: 50256
                     }
                 });
                 
