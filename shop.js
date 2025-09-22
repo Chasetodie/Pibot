@@ -2535,8 +2535,8 @@ class ShopSystem {
         // VIP
         const vipEffects = await this.getVipMultipliers(userId, action);
         if (vipEffects.noCooldown) {
-            this.economy.missions.updateMissionProgress(userId, 'vip_commands_used').catch(() => {});
-            this.updateVipStats(userId, 'timeSaved', 0.5).catch(() => {});
+            /*this.economy.missions.updateMissionProgress(userId, 'vip_commands_used').catch(() => {});
+            this.updateVipStats(userId, 'timeSaved', 0.5).catch(() => {});*/
             reduction = 1.0; // 100% reducción = sin cooldown
         }
         
