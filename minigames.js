@@ -4834,7 +4834,7 @@ class MinigamesSystem {
             console.error('Error anunciando resultados del pozo:', error);
         }
     }
-    
+
     getWeekNumber(date) {
         const firstDayOfYear = new Date(date.getFullYear(), 0, 1);
         const pastDaysOfYear = (date - firstDayOfYear) / 86400000;
@@ -5211,8 +5211,13 @@ class MinigamesSystem {
                     if (message.author.id === '488110147265232898') { // Tu ID real
                         const currentPot = await this.economy.database.getCurrentWeeklyPot();
                         if (currentPot) {
-                            await this.distributePot(currentPot);                            
-                            await message.reply('🔄 Pozo forzado a distribuir');
+                            await this.distributePot(currentPot);
+                            
+                            // SOLO cuando se fuerza, crear nuevo pozo inmediatamente
+                            console.log('Creando nuevo pozo después de distribución forzada...');
+                            await this.economy.database.getCurrentWeeklyPot(); // Esto creará el nuevo pozo
+                            
+                            await message.reply('🔄 Pozo forzado a distribuir y nuevo pozo creado');
                         } else {
                             await message.reply('❌ No hay pozo activo');
                         }
