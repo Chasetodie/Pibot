@@ -16,6 +16,7 @@ const ShopSystem = require('./shop');
 const AllCommands = require('./all-commands');
 const LocalDatabase = require('./database');
 const MusicSystem = require('./musicSystem.js');
+const ChatBotSystem = require('./chatBot.js');
 //require('./admin-panel')(app); // Pasar el servidor express existente
 const {
     AuctionSystem,
@@ -106,6 +107,8 @@ const music = new MusicSystem(client);
 
 const database = new LocalDatabase();
 database.startCacheCleanup();
+
+const chatbot = new ChatBotSystem(database);
 
 //Crear instancia del sistema de Eventos
 const events = new EventsSystem(economy, client);
@@ -387,6 +390,8 @@ client.once('ready', async () => {
     await minigames.loadActiveUnoGames(client);
     await trades.loadActiveTrades(client);
     await auctions.loadActiveAuctions(client);
+    await chatbot.initChatTables();
+    console.log('🤖 Sistema de ChatBot inicializado');
 
     setInterval(() => {
         const used = process.memoryUsage();
@@ -958,7 +963,8 @@ client.on('messageCreate', async (message) => {
                 shop.processCommand(message),
                 minigames.processCommand(message),
                 music.processCommand(message),
-                commandHandler.processCommand(message)
+                commandHandler.processCommand(message),
+                chatbot.processCommand(message)
             ]);
         } catch (error) {
             console.error('❌ Error comando:', error.message);
@@ -983,6 +989,30 @@ client.on('messageCreate', async (message) => {
             }
         }
         return;
+    }
+
+    // CHATBOT - ANTES del sistema de XP
+    if (chatbot.shouldProcessMessage(message)) {
+        try {
+            const result = await chatbot.processMessage(
+                message.author.id,
+                message.content,
+                message.author.displayName || message.author.username
+            );
+            
+            if (result.success) {
+                // Delay natural para parecer más humano
+                setTimeout(async () => {
+                    try {
+                        await message.reply(result.response);
+                    } catch (replyError) {
+                        console.error('❌ Error enviando respuesta chatbot:', replyError);
+                    }
+                }, Math.random() * 2000 + 1000); // 1-3 segundos
+            }
+        } catch (error) {
+            console.error('❌ Error en chatbot:', error);
+        }
     }
     
     // Verificar memoria antes de procesar

@@ -182,6 +182,19 @@ class LocalDatabase {
                 )
             `);
 
+            // Tabla para conversaciones de chat
+            await this.pool.execute(`
+                CREATE TABLE IF NOT EXISTS chat_conversations (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    user_id VARCHAR(255) NOT NULL,
+                    role ENUM('user', 'assistant') NOT NULL,
+                    content TEXT NOT NULL,
+                    display_name VARCHAR(100),
+                    timestamp BIGINT NOT NULL,
+                    INDEX idx_user_timestamp (user_id, timestamp)
+                )
+            `);
+
             console.log('🗃️ Tablas MySQL inicializadas');
         } catch (error) {
             console.error('❌ Error creando tablas:', error);

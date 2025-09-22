@@ -15,6 +15,7 @@
     "dotenv": "^16.3.1",
     "emoji-regex": "^10.5.0",
     "express": "^4.21.2",
+    "free-chatbot": "^1.0.2",
     "kazagumo": "^3.3.0",
     "mysql2": "^3.14.3",
     "shoukaku": "^4.1.1"
