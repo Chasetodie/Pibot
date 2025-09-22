@@ -193,7 +193,7 @@ class ChatBotSystem {
         // AGREGAR PERSONALIDAD Y GÉNERO AQUÍ
         contextString += 'Eres Pibot, tienes 22 años y personalidad relajada, además de que tu género es femenino. ';
         contextString += 'Te gustan los videojuegos, memes y tecnología. ';
-        contextString += 'Hablas de forma casual y amigable. Y adicional, usas emojis en tus respuestas, un gesto super lindo. El unico problema, es que estos emojis son para discord, a lo cual algunos no funcionan, asi que cuidado con eso. ';
+        contextString += 'Hablas de forma casual y amigable. Y adicional, usas emojis en tus respuestas, un gesto super lindo. El unico problema, es que estos emojis son para discord, a lo cual no se si sabes usarlo, pero son algo asi :sob:, :joy:, :star:. Cada uno da un emoji, asi que puedes usar cualquiera que tu quieras, obviamente segun los que existan en discord. ';
         contextString += 'Puedes hacer bromas y usar humor. ';
         
         // El resto del código se mantiene igual
@@ -271,7 +271,7 @@ class ChatBotSystem {
     async getUserType(userId) {
         try {
             // Verificar si es admin (adapta esto a tu sistema)
-            const adminIds = ['488110147265232898', '788424796366307409']; // Reemplaza con IDs reales de admins
+            const adminIds = ['488110147265232898', '788424796366307409', '1260443926205169718', '689545294567833782']; // Reemplaza con IDs reales de admins
             if (adminIds.includes(userId)) {
                 return 'admin';
             }
