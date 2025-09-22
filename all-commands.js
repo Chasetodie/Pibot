@@ -44,26 +44,6 @@ class AllCommands {
         return filledChar.repeat(filledLength) + emptyChar.repeat(emptyLength);
     }
 
-    // FUNCIÓN AUXILIAR: Obtener efectos VIP para mostrar en perfil
-    async getVipStatus(userId) {
-        const vipInfo = await this.shop.hasActiveVip(userId);
-        
-        if (!vipInfo.hasVip) {
-            return { hasVip: false, display: '' };
-        }
-        
-        const timeLeft = vipInfo.timeLeft;
-        const days = Math.floor(timeLeft / (24 * 60 * 60 * 1000));
-        const hours = Math.floor((timeLeft % (24 * 60 * 60 * 1000)) / (60 * 60 * 1000));
-        
-        return {
-            hasVip: true,
-            tier: vipInfo.tier,
-            display: `${vipInfo.tier} (${days}d ${hours}h restantes)`,
-            emoji: '💎'
-        };
-    }
-
     // VERSIÓN AVANZADA: Con estado VIP también
     async handleBalance(message, targetUser = null) {
         const userId = targetUser ? targetUser.id : message.author.id;
@@ -1942,6 +1922,7 @@ class AllCommands {
                     await this.showHelp(message);
                     break;
                 default:
+                    await message.reply('❌ Ese comando no existe, escribe `>help` para ver todos los comandos disponibles.');
                     // No es un comando de economía
                     break;
             }
@@ -1951,42 +1932,91 @@ class AllCommands {
         }
     }
 
-/*    async shopHelp(message) {
-        const embed = new EmbedBuilder()
-            .setTitle('🛒 Comandos de la Tienda')
-            .setColor('#9932CC')
-            .addFields(
-                { name: '🛒 >shop [categoría]', value: 'Ver la tienda y sus categorías', inline: false },
-                { name: '💸 >buy <itemId> [cantidad]', value: 'Comprar un item de la tienda', inline: false },
-                { name: '⚡ >use <itemId>', value: 'Usar un boost/cosmético', inline: false },
-                { name: '🎒 >inventory [@usuario]', value: 'Ver tu inventario o el de otro usuario', inline: false },
-                { name: '💰 >sell <itemId> [cantidad]', value: 'Vender items de tu inventario', inline: false }
-            )
-            .setFooter({ text: '¡Colecciona, mejora y presume tus objetos!' })
-            .setTimestamp();
-        await message.reply({ embeds: [embed] });
-    }*/
-
     async showHelp(message) {
         const embed = new EmbedBuilder()
-            .setTitle('📖 Ayuda - Comandos Principales')
+            .setTitle('📖 Ayuda - Comandos del Bot')
             .setColor('#00BFFF')
             .addFields(
-                // Achievements
-                { name: '🏆 Logros', value: '`>achievements [@usuario]` - Ver logros\n`>allachievements` - Ver todos los logros\n`>detectachievements` - Detectar logros desbloqueados', inline: false },
-/*                // Shop
-                { name: '🛒 Tienda', value: '`>shop [categoría]`\n`>buy <item> [cantidad]`\n`>use <item>`\n`>inventory [@usuario]`\n`>sell <item> [cantidad]`\n`>shophelp`', inline: false },*/
-                // Betting
-                { name: '🎲 Apuestas', value: '`>bet [@usuario] <cantidad> <descripción>` - Crear apuesta\n`>mybets` - Ver tus apuestas activas\n`>betstats [@usuario]` - Ver estadísticas de apuestas', inline: false },
-                //Economy
-                { name: '📋 Economía', value: '`>balance [@usuario]` - Ver tu dinero y nivel (o el de otro usuario)\n`>daily` - Reclamar' + `(${this.economy.config.dailyAmount}±${this.economy.config.dailyVariation} ${this.economy.config.currencySymbol})` + 'diarios\n`>missions` - Mira tus misiones diaras y completalas para ganar dinero\n`>work [tipo]` - Trabajar para ganar dinero (delivery, programmer, doctor, criminal)\n`>level [@usuario]` - Ver información detallada de nivel\n`>pay @usuario <cantidad>` - Transferir dinero a otro usuario\n`>top [money/level]` - Ver los rankings del servidor\n`>robar @usuario` - Robar dinero de otro usuario', inline: false},
+                // Economía Básica
+                { 
+                    name: '💰 Economía Básica', 
+                    value: '`>balance [@usuario]` - Ver dinero y nivel\n`>daily` - Reclamar recompensa diaria\n`>work [tipo]` - Trabajar (delivery, programmer, doctor, criminal)\n`>pay @usuario <cantidad>` - Transferir dinero\n`>top [money/level]` - Ver rankings\n`>robar @usuario` - Robar dinero', 
+                    inline: false 
+                },
+                
+                // Tienda y Items
+                { 
+                    name: '🛒 Tienda y Items', 
+                    value: '`>shop [categoría]` - Ver tienda\n`>buy <item_id> [cantidad]` - Comprar items\n`>bag [@usuario]` - Ver inventario\n`>useitem <item_id>` - Usar item\n`>effects` - Ver efectos activos\n`>removeeffect <item_id>` - Quitar efecto permanente\n`>autoworkerbal` - Estado del auto worker\n`>cosmeticos` - Ver cosméticos activos', 
+                    inline: false 
+                },
+                
+                // Personalización
+                { 
+                    name: '✨ Personalización', 
+                    value: '`>setnickname <apodo>` - Cambiar apodo (requiere token)\n`>rolcreate <nombre>` - Crear rol personalizado', 
+                    inline: false 
+                },
+                
+                // VIP
+                { 
+                    name: '👑 Comandos VIP', 
+                    value: '`>vip` - Ver estado VIP\n`>vipwork` - Trabajo VIP\n`>vipgamble` - Apuestas VIP\n`>vipboost` - Boost VIP\n`>vipdaily` - Daily VIP\n`>viphelp` - Ayuda VIP completa', 
+                    inline: false 
+                },
+                
                 // Minijuegos
-                { name: '🎮 Minijuegos', value: '`>games` - Ver lista de minijuegos', inline: false },
+                { 
+                    name: '🎮 Minijuegos', 
+                    value: '`>games` - Lista de minijuegos disponibles\n`>coinflip <cara/cruz> <cantidad>`\n`>dice <predicción> <cantidad>`\n`>lottery <número> <cantidad>`\n`>blackjack <cantidad>`\n`>roulette <tipo> <cantidad>`', 
+                    inline: false 
+                },
+                
+                // Apuestas
+                { 
+                    name: '🎲 Sistema de Apuestas', 
+                    value: '`>bet @usuario <cantidad> <descripción>` - Crear apuesta\n`>acceptbet <bet_id>` - Aceptar apuesta\n`>declinebet <bet_id>` - Declinar apuesta\n`>resolvebet <bet_id> <resultado>` - Resolver apuesta\n`>cancelbet <bet_id>` - Cancelar apuesta\n`>mybets` - Ver tus apuestas\n`>betstats [@usuario]` - Estadísticas de apuestas', 
+                    inline: false 
+                },
+                
+                // Intercambios
+                { 
+                    name: '🔄 Intercambios', 
+                    value: '`>trade @usuario` - Iniciar intercambio\n`>tradeadd <item_id> [cantidad]` - Agregar item\n`>trademoney <cantidad>` - Agregar dinero\n`>tradeaccept` - Aceptar intercambio\n`>tradecancel` - Cancelar intercambio\n`>tradeshow` - Ver intercambios activos', 
+                    inline: false 
+                },
+                
+                // Subastas
+                { 
+                    name: '🔨 Subastas', 
+                    value: '`>auction <item_id> <precio_inicial> [minutos]` - Crear subasta\n`>bid <auction_id> <cantidad>` - Pujar\n`>auctions` - Ver subastas activas', 
+                    inline: false 
+                },
+                
+                // Crafteo
+                { 
+                    name: '⚒️ Crafteo', 
+                    value: '`>recipes` - Ver recetas disponibles\n`>craft <recipe_id>` - Craftear item\n`>craftqueue` - Ver cola de crafteo\n`>cancelcraft <craft_id>` - Cancelar crafteo', 
+                    inline: false 
+                },
+                
+                // Misiones y Logros
+                { 
+                    name: '🎯 Misiones y Logros', 
+                    value: '`>missions` - Ver misiones diarias\n`>blockmissions` - Bloquear notificaciones\n`>unblockmissions` - Desbloquear notificaciones\n`>achievements [@usuario]` - Ver logros\n`>allachievements` - Todos los logros\n`>detectachievements` - Detectar logros\n`>detectall` - Detectar todos los logros', 
+                    inline: false 
+                },
+                
                 // Eventos
-                { name: '🎉 Eventos', value: '`>events` - Ver eventos activos', inline: false },
+                { 
+                    name: '🎉 Eventos', 
+                    value: '`>events` - Ver eventos activos del servidor', 
+                    inline: false 
+                }
             )
-            .setFooter({ text: 'Usa los comandos para interactuar con el bot.' })
+            .setFooter({ text: 'Para más información sobre comandos específicos, pregunta en el chat.' })
             .setTimestamp();
+            
         await message.reply({ embeds: [embed] });
     }
 }

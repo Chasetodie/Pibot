@@ -1108,6 +1108,10 @@ class EconomySystem {
                 const beforeVip = finalEarnings;
                 finalEarnings = Math.floor(finalEarnings * vipMultipliers.multiplier);
                 vipMessage = `👑 **VIP Activo** (+${finalEarnings - beforeVip} π-b$)`;
+            
+                // Cuando un VIP gane dinero extra
+                const vipBonus = finalEarnings - beforeVip;
+                await this.updateVipStats(userId, 'bonusEarnings', vipBonus);
             }
         }
         

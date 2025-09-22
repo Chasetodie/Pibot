@@ -319,6 +319,7 @@ class MinigamesSystem {
             winChance += vipMultipliers.luckBoost;
             if (vipMultipliers.luckBoost > 0) {
                 luckMessages.push(`💎 **Boost VIP** (+${Math.round(vipMultipliers.luckBoost * 100)}% suerte)`);
+                await this.updateVipStats(userId, 'luckyWins', 1);
             }
         }
 
@@ -364,10 +365,22 @@ class MinigamesSystem {
         let eventMessage = '';
         
         if (won) {
+            await this.economy.missions.updateMissionProgress(userId, 'consecutive_win');
+            await this.economy.missions.updateMissionProgress(userId, 'game_won');
+
             if (this.shop) {
                 const modifiers = await this.shop.getActiveMultipliers(userId, 'games');
-                profit = Math.floor(profit * modifiers.multiplier);
-                               
+                
+                // Calcular bonus VIP antes de aplicar multiplicador
+                const originalProfit = finalEarnings;
+                finalEarnings = Math.floor(finalEarnings * modifiers.multiplier);
+                const vipBonus = finalEarnings - originalProfit;
+                
+                // Si hay bonus VIP, actualizar estadísticas
+                if (vipBonus > 0) {
+                    await this.shop.updateVipStats(userId, 'bonusEarnings', vipBonus);
+                }
+                            
                 // Consumir efectos de uso limitado
                 await this.shop.consumeItemUse(userId, 'games');
             }
@@ -394,7 +407,7 @@ class MinigamesSystem {
                 const spaceLeft = this.economy.config.maxBalance - userData.balance;
                 finalEarnings = Math.min(finalEarnings, spaceLeft);
             }
-            
+           
             const addResult = await this.economy.addMoney(userId, finalEarnings, 'coinflip_win');
             finalEarnings = addResult.actualAmount; // Usar cantidad real
             
@@ -449,6 +462,8 @@ class MinigamesSystem {
                 await message.reply(`⚠️ **Límite alcanzado:** No pudiste recibir todo el dinero porque tienes el máximo permitido (${this.formatNumber(this.economy.config.maxBalance)} π-b$).`);
             }
         } else {
+            await this.economy.missions.updateMissionProgress(userId, 'consecutive_loss'); 
+
             const hasProtection = await this.shop.hasGameProtection(userId);
             let protectionMessage = '🛡️ Tu protección evitó la pérdida de dinero!';
 
@@ -657,6 +672,7 @@ class MinigamesSystem {
             if (vipMultipliers.luckBoost > 0 && !won && Math.random() < vipMultipliers.luckBoost) {
                 won = true;
                 luckMessages.push(`💎 **Boost VIP** te salvó!`);
+                await this.updateVipStats(userId, 'luckyWins', 1);
             }
         }
 
@@ -705,6 +721,9 @@ class MinigamesSystem {
         let eventMessage = '';
         
         if (won) {
+            await this.economy.missions.updateMissionProgress(userId, 'consecutive_win');
+            await this.economy.missions.updateMissionProgress(userId, 'game_won');
+
             for (const event of this.events.getActiveEvents()) {
                 if (event.type === 'fever_time') {
                     finalEarnings = Math.floor(profit * 1.5); // 🔥 +30%
@@ -725,10 +744,17 @@ class MinigamesSystem {
             // Aplicar multiplicadores de items DESPUÉS de los eventos
             if (this.shop) {
                 const modifiers = await this.shop.getActiveMultipliers(userId, 'games');
-                if (modifiers.multiplier > 1) {
-                    finalEarnings = Math.floor(finalEarnings * modifiers.multiplier);
-                }
                 
+                // Calcular bonus VIP antes de aplicar multiplicador
+                const originalProfit = finalEarnings;
+                finalEarnings = Math.floor(finalEarnings * modifiers.multiplier);
+                const vipBonus = finalEarnings - originalProfit;
+                
+                // Si hay bonus VIP, actualizar estadísticas
+                if (vipBonus > 0) {
+                    await this.shop.updateVipStats(userId, 'bonusEarnings', vipBonus);
+                }
+                            
                 // Consumir efectos de uso limitado
                 await this.shop.consumeItemUse(userId, 'games');
             }
@@ -796,6 +822,8 @@ class MinigamesSystem {
                 await message.reply(`⚠️ **Límite alcanzado:** No pudiste recibir todo el dinero porque tienes el máximo permitido (${this.formatNumber(this.economy.config.maxBalance)} π-b$).`);
             }
         } else {
+            await this.economy.missions.updateMissionProgress(userId, 'consecutive_loss'); 
+
             const hasProtection = await this.shop.hasGameProtection(userId);
             if (hasProtection) {
                 let protectionMessage = '🛡️ Tu protección evitó la pérdida de dinero!';
@@ -967,6 +995,7 @@ class MinigamesSystem {
             if (vipMultipliers.luckBoost > 0 && !won && Math.random() < vipMultipliers.luckBoost) {
                 won = true;
                 luckMessages.push(`💎 **Boost VIP** te salvó!`);
+                await this.updateVipStats(userId, 'luckyWins', 1);
             }
         }
 
@@ -1031,6 +1060,9 @@ class MinigamesSystem {
             let eventMessage = '';
         
         if (won) {
+            await this.economy.missions.updateMissionProgress(userId, 'consecutive_win');
+            await this.economy.missions.updateMissionProgress(userId, 'game_won');
+
             for (const event of this.events.getActiveEvents()) {
                 if (event.type === 'fever_time') {
                     finalEarnings = Math.floor(profit * 1.5); // 🔥 +30%
@@ -1051,10 +1083,17 @@ class MinigamesSystem {
             // Aplicar multiplicadores de items DESPUÉS de los eventos
             if (this.shop) {
                 const modifiers = await this.shop.getActiveMultipliers(userId, 'games');
-                if (modifiers.multiplier > 1) {
-                    finalEarnings = Math.floor(finalEarnings * modifiers.multiplier);
-                }
                 
+                // Calcular bonus VIP antes de aplicar multiplicador
+                const originalProfit = finalEarnings;
+                finalEarnings = Math.floor(finalEarnings * modifiers.multiplier);
+                const vipBonus = finalEarnings - originalProfit;
+                
+                // Si hay bonus VIP, actualizar estadísticas
+                if (vipBonus > 0) {
+                    await this.shop.updateVipStats(userId, 'bonusEarnings', vipBonus);
+                }
+                            
                 // Consumir efectos de uso limitado
                 await this.shop.consumeItemUse(userId, 'games');
             }
@@ -1133,6 +1172,8 @@ class MinigamesSystem {
                 await message.reply(`⚠️ **Límite alcanzado:** No pudiste recibir todo el dinero porque tienes el máximo permitido (${this.formatNumber(this.economy.config.maxBalance)} π-b$).`);
             }
         } else {
+            await this.economy.missions.updateMissionProgress(userId, 'consecutive_loss'); 
+            
             const hasProtection = await this.shop.hasGameProtection(userId);
             if (hasProtection) {
                 let protectionMessage = '🛡️ Tu protección evitó la pérdida de dinero!';
@@ -1569,6 +1610,9 @@ class MinigamesSystem {
         
         switch (result) {
             case 'blackjack':
+                await this.economy.missions.updateMissionProgress(userId, 'consecutive_win');
+                await this.economy.missions.updateMissionProgress(userId, 'game_won');
+                
                 const blackjackWin = Math.floor(betAmount * this.config.blackjack.blackjackMultiplier);
                 profit = blackjackWin - betAmount;
                 resultText = '🎉 **¡BLACKJACK NATURAL!**';
@@ -1593,13 +1637,19 @@ class MinigamesSystem {
                     }
                 }
 
-                // Aplicar multiplicadores de items DESPUÉS de los eventos
                 if (this.shop) {
                     const modifiers = await this.shop.getActiveMultipliers(userId, 'games');
-                    if (modifiers.multiplier > 1) {
-                        finalEarnings = Math.floor(finalEarnings * modifiers.multiplier);
-                    }
                     
+                    // Calcular bonus VIP antes de aplicar multiplicador
+                    const originalProfit = finalEarnings;
+                    finalEarnings = Math.floor(finalEarnings * modifiers.multiplier);
+                    const vipBonus = finalEarnings - originalProfit;
+                    
+                    // Si hay bonus VIP, actualizar estadísticas
+                    if (vipBonus > 0) {
+                        await this.shop.updateVipStats(userId, 'bonusEarnings', vipBonus);
+                    }
+                                
                     // Consumir efectos de uso limitado
                     await this.shop.consumeItemUse(userId, 'games');
                 }
@@ -1645,6 +1695,9 @@ class MinigamesSystem {
                 break;
             case 'win':
             case 'dealer_bust':
+                await this.economy.missions.updateMissionProgress(userId, 'consecutive_win');
+                await this.economy.missions.updateMissionProgress(userId, 'game_won');
+                
                 const normalWin = finalBet * this.config.blackjack.winMultiplier;
                 profit = normalWin - finalBet;
                 resultText = result === 'dealer_bust' ? '🎉 **¡DEALER SE PASÓ!**' : '🎉 **¡GANASTE!**';
@@ -1672,10 +1725,17 @@ class MinigamesSystem {
                 // Aplicar multiplicadores de items DESPUÉS de los eventos
                 if (this.shop) {
                     const modifiers = await this.shop.getActiveMultipliers(userId, 'games');
-                    if (modifiers.multiplier > 1) {
-                        finalEarnings = Math.floor(finalEarnings * modifiers.multiplier);
-                    }
                     
+                    // Calcular bonus VIP antes de aplicar multiplicador
+                    const originalProfit = finalEarnings;
+                    finalEarnings = Math.floor(finalEarnings * modifiers.multiplier);
+                    const vipBonus = finalEarnings - originalProfit;
+                    
+                    // Si hay bonus VIP, actualizar estadísticas
+                    if (vipBonus > 0) {
+                        await this.shop.updateVipStats(userId, 'bonusEarnings', vipBonus);
+                    }
+                                
                     // Consumir efectos de uso limitado
                     await this.shop.consumeItemUse(userId, 'games');
                 }
@@ -1730,6 +1790,8 @@ class MinigamesSystem {
                 }
                 break;
             case 'bust':
+                await this.economy.missions.updateMissionProgress(userId, 'consecutive_loss'); 
+
                 resultText = '💥 **¡TE PASASTE!**';
                 profit = -finalBet;
 
@@ -1758,6 +1820,8 @@ class MinigamesSystem {
                 }
                 break;
             case 'lose':
+                await this.economy.missions.updateMissionProgress(userId, 'consecutive_loss'); 
+
                 resultText = '💸 **Perdiste...**';
                 profit = -finalBet;
 
@@ -2064,6 +2128,7 @@ class MinigamesSystem {
             if (vipMultipliers.luckBoost > 0 && !won && Math.random() < vipMultipliers.luckBoost) {
                 won = true;
                 luckMessages.push(`💎 **Boost VIP** te salvó!`);
+                await this.updateVipStats(userId, 'luckyWins', 1);
             }
         }
 
@@ -2129,6 +2194,9 @@ class MinigamesSystem {
             let eventMessage = '';
         
         if (won) {
+            await this.economy.missions.updateMissionProgress(userId, 'consecutive_win');
+            await this.economy.missions.updateMissionProgress(userId, 'game_won');
+
             for (const event of this.events.getActiveEvents()) {
                 if (event.type === 'fever_time') {
                     finalEarnings = Math.floor(profit * 1.5); // 🔥 +30%
@@ -2146,13 +2214,19 @@ class MinigamesSystem {
                 }
             }
 
-            // Aplicar multiplicadores de items DESPUÉS de los eventos
             if (this.shop) {
                 const modifiers = await this.shop.getActiveMultipliers(userId, 'games');
-                if (modifiers.multiplier > 1) {
-                    finalEarnings = Math.floor(finalEarnings * modifiers.multiplier);
-                }
                 
+                // Calcular bonus VIP antes de aplicar multiplicador
+                const originalProfit = finalEarnings;
+                finalEarnings = Math.floor(finalEarnings * modifiers.multiplier);
+                const vipBonus = finalEarnings - originalProfit;
+                
+                // Si hay bonus VIP, actualizar estadísticas
+                if (vipBonus > 0) {
+                    await this.shop.updateVipStats(userId, 'bonusEarnings', vipBonus);
+                }
+                            
                 // Consumir efectos de uso limitado
                 await this.shop.consumeItemUse(userId, 'games');
             }
@@ -2234,6 +2308,8 @@ class MinigamesSystem {
                 await message.reply(`⚠️ **Límite alcanzado:** No pudiste recibir todo el dinero porque tienes el máximo permitido (${this.formatNumber(this.economy.config.maxBalance)} π-b$).`);
             }
         } else {
+            await this.economy.missions.updateMissionProgress(userId, 'consecutive_loss'); 
+
             const hasProtection = await this.shop.hasGameProtection(userId);
             if (hasProtection) {
                 let protectionMessage = '🛡️ Tu protección evitó la pérdida de dinero!';

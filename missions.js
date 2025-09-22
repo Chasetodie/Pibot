@@ -306,6 +306,37 @@ class MissionsSystem {
                 reward: { money: 1200, xp: 600 },
                 rarity: 'uncommon'
             },
+            // Al final de availableMissions, antes de cerrar el objeto
+            'vip_spend_big': {
+                id: 'vip_spend_big',
+                name: '💎 Gastador VIP',
+                description: 'Gasta 1M π-b$ en la tienda (solo VIPs)',
+                type: 'money_spent_today',
+                target: 1000000,
+                reward: { money: 500000, xp: 2000 },
+                rarity: 'legendary',
+                vipOnly: true
+            },
+            'vip_lucky_streak': {
+                id: 'vip_lucky_streak',
+                name: '🍀 Racha VIP',
+                description: 'Gana 15 juegos consecutivos (solo VIPs)', 
+                type: 'consecutive_wins',
+                target: 15,
+                reward: { money: 2000000, xp: 5000 },
+                rarity: 'legendary',
+                vipOnly: true
+            },
+            'vip_daily_mastery': {
+                id: 'vip_daily_mastery',
+                name: '⚡ Maestro Diario VIP',
+                description: 'Usa 50 comandos sin cooldown (solo VIPs)',
+                type: 'vip_commands_used',
+                target: 50,
+                reward: { money: 1000000, xp: 3000 },
+                rarity: 'epic',
+                vipOnly: true
+            }
         };
         
         // Colores por rareza
@@ -349,8 +380,21 @@ class MissionsSystem {
     }
     
     // Generar misiones del día (se ejecuta automáticamente a las 12 PM)
-    generateDailyMissions() {
+    async generateDailyMissions() {
         const allMissions = Object.values(this.availableMissions);
+
+        // Al inicio del método, después de obtener allMissions
+        const userId = arguments[0]; // Necesitas pasar userId al método
+        const isVip = await this.economy.shop.hasActiveVip(userId);
+
+        let availableMissionsForUser = allMissions;
+        if (isVip.hasVip) {
+            // VIPs pueden obtener tanto misiones normales como VIP
+            availableMissionsForUser = allMissions;
+        } else {
+            // No-VIPs solo obtienen misiones normales
+            availableMissionsForUser = allMissions.filter(m => !m.vipOnly);
+        }
         
         // Asegurar que al menos una misión de cada rareza esté presente
         const missionsByRarity = {
@@ -515,7 +559,7 @@ class MissionsSystem {
         if (this.shouldResetMissions(user)) {
             console.log(`🔄 Reseteando misiones para usuario ${userId}`);
             
-            const newMissions = this.generateDailyMissions();
+            const newMissions = await this.generateDailyMissions(userId);
             const today = this.getCurrentDay();
             
             const updateData = {
@@ -544,7 +588,11 @@ class MissionsSystem {
                     commands_used: 0,
                     auctions_created_today: 0,
                     auctions_won_today: 0,
-                    items_crafted_today: 0
+                    items_crafted_today: 0,
+                    money_spent_today: 0,
+                    vip_commands_used: 0,
+                    consecutive_wins: 0,
+                    consecutive_losses: 0
                 }
             };
             
@@ -724,6 +772,23 @@ class MissionsSystem {
             case 'items_crafted_today':
                 updateData.daily_stats.items_crafted_today = (user.daily_stats.items_crafted_today || 0) + 1;
                 break;    
+            case 'money_spent_today':
+                updateData.daily_stats.money_spent_today = (user.daily_stats.money_spent_today || 0) + value;
+                break;
+            case 'vip_commands_used':
+                updateData.daily_stats.vip_commands_used = (user.daily_stats.vip_commands_used || 0) + 1;
+                break;
+            case 'consecutive_win':
+                // Incrementar racha de victorias, resetear derrotas
+                updateData.daily_stats.consecutive_wins = (user.daily_stats.consecutive_wins || 0) + 1;
+                updateData.daily_stats.consecutive_losses = 0;
+                break;
+                
+            case 'consecutive_loss':
+                // Incrementar racha de derrotas, resetear victorias  
+                updateData.daily_stats.consecutive_losses = (user.daily_stats.consecutive_losses || 0) + 1;
+                updateData.daily_stats.consecutive_wins = 0;
+                break;
         }
        
         // Verificar progreso de cada misión
@@ -891,6 +956,12 @@ class MissionsSystem {
                 return stats.auctions_won_today || 0;
             case 'items_crafted_today':
                 return stats.items_crafted_today || 0;
+            case 'money_spent_today':
+                return stats.money_spent_today || 0;
+            case 'vip_commands_used':
+                return stats.vip_commands_used || 0;
+            case 'consecutive_wins':
+                return stats.consecutive_wins || 0; // Esto necesitarás implementarlo aparte
             default:
                 return 0;
         }

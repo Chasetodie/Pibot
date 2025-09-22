@@ -1,9 +1,44 @@
+## **Logros**
+>achievements - Ver tus logros 
+>allachievements - Ver todos los logros disponibles
+>detectachievements - detectar logros completados
+>detectall - detectar todos los logros detectados
+
+## **Misiones**
+>missions - Ver las misiones
+>blockmissions - Bloquear mensajes de misiones completadas
+>unblockmissions - Desbloquear mensajes de misiones completadas
+
+## **Minijuegos**
+>games - Muestra todos los minijuegos disponibles
+
 ## 🏪 **Comandos de Tienda**
 - `>shop` / `>tienda` - Ver la tienda completa
 - `>shop <categoría>` - Ver categoría específica (consumable, permanent, cosmetic, mystery)
 - `>buy <item_id> [cantidad]` / `>comprar <item_id> [cantidad]` - Comprar items
 - `>bag` / `>inventario` / `>inv` [@usuario] - Ver inventario
 - `>useitem <item_id>` / `>usar <item_id>` - Usar un item
+>effects - Ver efectos activos
+>removeeffect - Quitar efectos permanents
+>autoworkerbal - Ver balances del item auto_worker
+>cosmeticos - Ver cosmeticos activos
+>setnickname - Cambiar name con el item nickname_change
+>rolcreate - Crear rol con el item role_token
+>vip - Ver todo sobre el vip
+>vipwork
+>vipgamble
+>vipboost
+>vipdaily
+>viphelp - Ver comandos vip
+
+## bets
+>bet - crear apuesta
+>acceptBet - aceptar apuesta
+>declinebet - declinar apuesta
+>resolvebet - terminar apuesta
+>cancelbet - cancelar apuesta
+>mybets - ver apuestas
+>betstats - ver estadisticas de apuestas
 
 ## 🔄 **Comandos de Intercambio**
 - `>trade @usuario` - Iniciar intercambio
@@ -11,6 +46,7 @@
 - `>trademoney <cantidad>` - Agregar dinero
 - `>tradeaccept` - Aceptar intercambio
 - `>tradecancel` - Cancelar intercambio
+>tradeshow - ver tradeos
 
 ## 🔨 **Comandos de Subastas**
 - `>auction <item_id> <precio_inicial> [minutos]` - Crear subasta
@@ -20,18 +56,5 @@
 ## ⚒️ **Comandos de Crafteo**
 - `>recipes` - Ver recetas de crafteo disponibles
 - `>craft <recipe_id>` - Craftear un item
-
-### Perfil y Apodos:
-- `>setnick <apodo>` - Cambiar apodo (requiere token)
-
-## 👑 **Comandos VIP**
-- `>vip` - Ver comandos VIP disponibles (requiere Pase VIP)
-- `>vipwork` - Trabajo especial VIP
-- `>vipbonus` - Bonificación adicional cada 12 horas
-- `>vipstats` - Estadísticas detalladas
-- `>vipshop` - Items exclusivos VIP
-
-## 🛠️ **Comandos Administrativos** (Solo Administradores)
-- `>giveitem @usuario <item_id> [cantidad]` - Dar items a usuarios
-- `>shopstats` - Ver estadísticas de la tienda
----
+>craftqueue - Ver crafteos
+>cancelcraft - Cancelar crafteo

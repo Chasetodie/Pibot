@@ -1069,6 +1069,9 @@ class ShopSystem {
             balance: newBalance,
             items: newItems
         });
+
+        // Actualizar estadística de gasto para misiones VIP
+        await this.economy.missions.updateMissionProgress(message.author.id, 'money_spent_today', totalCost);
         
         const rarityEmoji = this.rarityEmojis[item.rarity];
         const embed = new EmbedBuilder()
@@ -1892,7 +1895,7 @@ class ShopSystem {
                 if (!appliesToAction) continue;
 
                 // AGREGAR ESTA LÍNEA - Filtrar efectos que no dan multiplicador de dinero
-                if (['penalty_protection', 'cooldown_reduction', 'protection', 'xp_multiplier'].includes(effect.type)) continue;
+                if (['penalty_protection', 'cooldown_reduction', 'protection', 'xp_multiplier', 'vip_membership'].includes(effect.type)) continue;
                 
                 if (effect.multiplier) totalMultiplier *= effect.multiplier;
                 if (effect.reduction) totalReduction += effect.reduction;
@@ -1926,6 +1929,12 @@ class ShopSystem {
         const vipMultipliers = await this.getVipMultipliers(userId, action);
         totalMultiplier *= vipMultipliers.multiplier;
         totalLuckBoost += vipMultipliers.luckBoost || 0;
+
+        // Al final, después de calcular vipMultipliers
+        if (vipMultipliers.multiplier > 1.0) {
+            // Asincrono para no bloquear
+            this.updateVipStats(userId, 'commandsUsed', 1).catch(() => {});
+        }
         
         return { 
             multiplier: totalMultiplier, 
@@ -2280,6 +2289,27 @@ class ShopSystem {
                         }
                     }
                 }
+
+                // AGREGAR: Procesar VIP auto-daily
+                const vipStatus = await this.hasActiveVip(user.id);
+                if (vipStatus.hasVip) {
+                    const lastDaily = user.vip_last_daily || 0;
+                    const now = Date.now();
+                    
+                    if (now - lastDaily >= 86400000) { // 24 horas
+                        const dailyAmount = Math.floor(Math.random() * 50000) + 100000; // 100k-150k
+                        
+                        if (user.balance + dailyAmount <= this.economy.config.maxBalance) {
+                            await this.economy.updateUser(user.id, {
+                                balance: user.balance + dailyAmount,
+                                vip_last_daily: now
+                            });
+                            
+                            console.log(`VIP Auto-Daily: ${dailyAmount} π-b$ para ${user.id.slice(-4)}`);
+                            processedCount++;
+                        }
+                    }
+                }                
             }
             
             if (processedCount > 0) {
@@ -2505,6 +2535,8 @@ class ShopSystem {
         // VIP
         const vipEffects = await this.getVipMultipliers(userId, action);
         if (vipEffects.noCooldown) {
+            this.economy.missions.updateMissionProgress(userId, 'vip_commands_used').catch(() => {});
+            this.updateVipStats(userId, 'timeSaved', 0.5).catch(() => {});
             reduction = 1.0; // 100% reducción = sin cooldown
         }
         
@@ -3019,6 +3051,9 @@ class ShopSystem {
             .setTimestamp();
         
         await message.reply({ embeds: [embed] });
+
+        // Después de: await message.reply({ embeds: [embed] });
+        await this.economy.missions.updateMissionProgress(message.author.id, 'vip_commands_used');
     }
 
     // 5. VIP INSTANT WORK
@@ -3034,7 +3069,10 @@ class ShopSystem {
         
         // Actualizar estadísticas VIP
         await this.updateVipStats(message.author.id, 'bonusEarnings', earnings - baseEarnings);
-        
+        // Después de: await this.updateVipStats(message.author.id, 'bonusEarnings', earnings - baseEarnings);
+        await this.economy.missions.updateMissionProgress(message.author.id, 'vip_commands_used');
+
+
         const embed = new EmbedBuilder()
             .setTitle('👑 VIP Instant Work')
             .setDescription(`Como VIP, trabajaste instantáneamente y ganaste:`)
@@ -3074,6 +3112,80 @@ class ShopSystem {
         }
     }
 
+    async vipDailyBonus(message) {
+        await message.reply('💎 VIP Daily Bonus - Esta función usa el auto-daily automático. ¡Recibes bonus cada 24h automáticamente!');
+    }
+
+    async vipTempBoost(message) {
+        const canUse = await this.canUseVipCommand(message.author.id, 'vipboost');
+        if (!canUse.canUse) {
+            await message.reply(`❌ ${canUse.reason}`);
+            return;
+        }
+        
+        const embed = new EmbedBuilder()
+            .setTitle('⚡ VIP Temp Boost')
+            .setDescription('Esta funcionalidad estará disponible pronto.')
+            .addFields({
+                name: '🚧 En Desarrollo',
+                value: 'Los VIP Boosts temporales están siendo desarrollados.',
+                inline: false
+            })
+            .setColor('#FFD700');
+        
+        await message.reply({ embeds: [embed] });
+    }
+
+// In a few days plz
+/*async vipTempBoost(message) {
+    const user = await this.economy.getUser(message.author.id);
+    
+    // Verificar cooldown (1 vez por día)
+    const lastBoost = user.vip_last_boost || 0;
+    const now = Date.now();
+    
+    if (now - lastBoost < 86400000) { // 24 horas
+        const timeLeft = 86400000 - (now - lastBoost);
+        const hours = Math.floor(timeLeft / 3600000);
+        await message.reply(`❌ VIP Boost disponible en ${hours} horas.`);
+        return;
+    }
+    
+    // Aplicar boost temporal (multiplicador x2 por 1 hora)
+    const activeEffects = this.parseActiveEffects(user.activeEffects);
+    
+    const boostEffect = {
+        type: 'multiplier',
+        targets: ['all'],
+        multiplier: 2.0,
+        appliedAt: now,
+        expiresAt: now + 3600000 // 1 hora
+    };
+    
+    if (!activeEffects['vip_boost']) {
+        activeEffects['vip_boost'] = [];
+    }
+    activeEffects['vip_boost'].push(boostEffect);
+    
+    await this.economy.updateUser(message.author.id, {
+        activeEffects,
+        vip_last_boost: now
+    });
+    
+    const embed = new EmbedBuilder()
+        .setTitle('⚡ VIP Boost Activado')
+        .setDescription('¡Tu boost temporal VIP está activo!')
+        .addFields(
+            { name: '🔥 Efecto', value: 'Ganancias x2 en todos los comandos', inline: true },
+            { name: '⏰ Duración', value: '1 hora', inline: true },
+            { name: '🔄 Cooldown', value: '24 horas hasta el próximo', inline: true }
+        )
+        .setColor('#FFD700')
+        .setTimestamp();
+    
+    await message.reply({ embeds: [embed] });
+}*/
+
     // 3. MEJORAR SISTEMA VIP - Nuevas funcionalidades
     async showVipDashboard(message) {
         const userId = message.author.id;
@@ -3085,13 +3197,13 @@ class ShopSystem {
                 .setTitle('👑 Membresía VIP - No Activa')
                 .setDescription('¡Desbloquea beneficios premium con la membresía VIP!')
                 .addFields(
-                    { name: '🚀 Beneficios VIP', value: '• **Sin cooldowns** en comandos\n• **Ganancias x2** en trabajo y juegos\n• **+20% suerte** en juegos de azar\n• **Comandos exclusivos** VIP\n• **Soporte prioritario**', inline: false },
+                    { name: '🚀 Beneficios VIP', value: '• **Menos cooldowns** en comandos\n• **Ganancias x2** en trabajo y juegos\n• **+20% suerte** en juegos de azar\n• **Comandos exclusivos** VIP\n• **Soporte prioritario**', inline: false },
                     { name: '💰 Precio', value: '5,000,000 π-b$', inline: true },
                     { name: '⏰ Duración', value: '30 días', inline: true },
                     { name: '🛒 Comprar', value: '`>buy vip_pass`', inline: true }
                 )
                 .setColor('#FFD700')
-                .setThumbnail('https://i.imgur.com/crown_icon.png'); // Agregar icono si tienes
+                .setThumbnail('https://png.pngtree.com/png-vector/20250714/ourmid/pngtree-golden-vip-emblem-with-crown-and-laurel-wreath-png-image_16636155.webp'); // Agregar icono si tienes
             
             await message.reply({ embeds: [promoEmbed] });
             return;
@@ -3707,6 +3819,30 @@ class ShopSystem {
         }
     }
 
+    async showVipHelp(message) {
+        const canUse = await this.canUseVipCommand(message.author.id, 'vip_help');
+        
+        if (!canUse.canUse) {
+            await message.reply(`❌ ${canUse.reason}`);
+            return;
+        }
+        
+        const embed = new EmbedBuilder()
+            .setTitle('👑 Comandos VIP Disponibles')
+            .setDescription('Lista completa de comandos exclusivos para miembros VIP')
+            .addFields(
+                { name: '📊 Dashboard y Estado', value: '`>vip` - Ver tu dashboard VIP completo', inline: false },
+                { name: '💼 Comandos de Trabajo VIP', value: '`>vipwork` - Trabajo instantáneo con bonus x2.5', inline: false },
+                { name: '🎲 Comandos de Juegos VIP', value: '`>vipgamble` - Mega apuesta con 65% de ganar y x3 multiplicador', inline: false },
+                { name: '⚡ Beneficios Automáticos', value: '• Sin cooldowns en comandos normales\n• Ganancias x2 automáticas\n• +20% suerte en juegos\n• Auto-daily cada 24h', inline: false },
+                { name: '🆘 Soporte', value: '`>viphelp` - Mostrar esta ayuda', inline: false }
+            )
+            .setColor('#FFD700')
+            .setFooter({ text: 'Los beneficios se aplican automáticamente mientras tengas VIP activo' });
+        
+        await message.reply({ embeds: [embed] });
+    }
+
     // === COMANDOS ===
     async processCommand(message) {
         if (message.author.bot) return;
@@ -3822,6 +3958,11 @@ class ShopSystem {
                 case '>vipboost':
                 case '>vipdaily':
                     await this.handleVipCommand(message, command.replace('>', ''));
+                    break;
+                case '>viphelp':
+                case '>helpvip':
+                case '>comandosvip':
+                    await this.showVipHelp(message);
                     break;
             }
         } catch (error) {

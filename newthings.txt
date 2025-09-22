@@ -1,7 +1,0 @@
-implementar los demas items y crafteos - funciones
-agregar vip en los demas juegos
-comprobar que los apodos si cambien dentro del server - agarre el apodo original y lo vuelva a ingresar
-añadir item de roles que se pueda usar una sola vez
-arreglar lo de profiles
-arreglar el comando craft
-solucionar los botones de trade, arreglar el comando de tradeaccept, no permitir tradear "nada"
