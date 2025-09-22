@@ -231,14 +231,6 @@ class MinigamesSystem {
         return monday.getTime();
     }
 
-    checkWeeklyReset() {
-        const now = Date.now();
-        if (now >= this.weeklyPot.endDate) {
-            this.distributeWeeklyPot();
-            this.resetWeeklyPot();
-        }
-    }
-
     resetWeeklyPot() {
         const newStart = this.getWeekStart();
         this.weeklyPot = {
@@ -277,6 +269,7 @@ class MinigamesSystem {
                         end_date: currentWeekStart + (3 * 60 * 1000) // 3 minutos para test
                     };
                     
+                    console.log('Creando pozo con datos:', potData);
                     await this.economy.database.createWeeklyPot(potData);
                     currentPot = potData;
                     console.log('🕳️ Nuevo pozo semanal creado');
@@ -461,10 +454,15 @@ class MinigamesSystem {
     }
 
     async showPotContents(message) {
-        this.checkWeeklyReset();
+        await this.checkWeeklyReset();
         
-        const endDate = new Date(this.weeklyPot.endDate);
-        const timeLeft = this.weeklyPot.endDate - Date.now();
+        if (!this.weeklyPot) {
+            await message.reply('❌ Error cargando el pozo semanal.');
+            return;
+        }
+        
+        const endDate = new Date(this.weeklyPot.end_date);
+        const timeLeft = this.weeklyPot.end_date - Date.now();
         const daysLeft = Math.floor(timeLeft / (24 * 60 * 60 * 1000));
         const hoursLeft = Math.floor((timeLeft % (24 * 60 * 60 * 1000)) / (60 * 60 * 1000));
 
@@ -472,17 +470,18 @@ class MinigamesSystem {
             .setTitle('🕳️ Contenido del Pozo Semanal')
             .setDescription(`Termina el ${endDate.toLocaleDateString('es-ES')} (${daysLeft}d ${hoursLeft}h restantes)`)
             .addFields(
-                { name: '💰 Dinero Total', value: `${this.formatNumber(this.weeklyPot.totalMoney)} π-b$`, inline: true },
-                { name: '📦 Items Totales', value: `${this.weeklyPot.totalItems.length}`, inline: true },
-                { name: '👥 Participantes', value: `${this.weeklyPot.participants.size}`, inline: true }
+                { name: '💰 Dinero Total', value: `${this.formatNumber(this.weeklyPot.total_money || 0)} π-b$`, inline: true },
+                { name: '📦 Items Totales', value: `${(this.weeklyPot.items || []).length}`, inline: true },
+                { name: '👥 Participantes', value: `${(this.weeklyPot.participants || []).length}`, inline: true }
             )
             .setColor('#8B4513')
             .setTimestamp();
 
         // Mostrar contribuciones de dinero
-        if (this.weeklyPot.totalMoney > 0) {
+        const contributions = this.weeklyPot.contributions || {};
+        if (Object.keys(contributions).length > 0) {
             let moneyContributions = '';
-            for (const [userId, contribution] of this.weeklyPot.contributions) {
+            for (const [userId, contribution] of Object.entries(contributions)) {
                 if (contribution.money > 0) {
                     const user = message.guild.members.cache.get(userId);
                     const userName = user ? user.displayName : `Usuario ${userId.slice(-4)}`;
@@ -490,23 +489,24 @@ class MinigamesSystem {
                 }
             }
             if (moneyContributions) {
-                embed.addFields({ name: '💰 Contribuciones de Dinero', value: moneyContributions.slice(0, 1020) + (moneyContributions.length > 1020 ? '...' : ''), inline: false });
+                embed.addFields({ name: '💰 Contribuciones de Dinero', value: moneyContributions.slice(0, 1020), inline: false });
             }
         }
 
         // Mostrar items contribuidos
-        if (this.weeklyPot.totalItems.length > 0) {
+        const items = this.weeklyPot.items || [];
+        if (items.length > 0) {
             let itemsList = '';
-            for (const item of this.weeklyPot.totalItems) {
+            for (const item of items) {
                 const contributionDate = new Date(item.timestamp).toLocaleDateString('es-ES');
                 itemsList += `• **${item.name}** por ${item.contributorName} (${contributionDate})\n`;
             }
             if (itemsList) {
-                embed.addFields({ name: '🎁 Items Contribuidos', value: itemsList.slice(0, 1020) + (itemsList.length > 1020 ? '...' : ''), inline: false });
+                embed.addFields({ name: '🎁 Items Contribuidos', value: itemsList.slice(0, 1020), inline: false });
             }
         }
 
-        if (this.weeklyPot.participants.size === 0) {
+        if ((this.weeklyPot.participants || []).length === 0) {
             embed.setDescription('El pozo está vacío. ¡Sé el primero en contribuir!\n\nUsa `>potcontribute money <cantidad>` o `>potcontribute item <item_id>`');
         }
 
