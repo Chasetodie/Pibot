@@ -21,9 +21,9 @@ class ChatBotSystem {
         
         // Límites por tipo de usuario
         this.USER_LIMITS = {
-            admin: 500,      // Admins: 500 mensajes por día
-            vip: 750,        // VIP: 750 mensajes por día  
-            regular: 250      // Usuarios normales: 250 mensajes por día
+            admin: 150,      // Admins: 500 mensajes por día
+            vip: 250,        // VIP: 750 mensajes por día  
+            regular: 50      // Usuarios normales: 250 mensajes por día
         };
         
         this.totalUsedToday = 0;
@@ -652,16 +652,34 @@ class ChatBotSystem {
                 }
                 
                 const chatMessage = message.content.slice(6).trim(); // Remover '>chat '
-                const result = await this.processMessage(
-                    message.author.id, 
-                    chatMessage, 
-                    message.author.displayName || message.author.username
-                );
                 
-                if (result.success) {
-                    await message.reply(result.response);
-                } else {
-                    await message.reply('❌ Error procesando mensaje de chat.');
+                // ENVIAR MENSAJE DE "PENSANDO" PRIMERO
+                const thinkingMessages = [
+                    '🤔 Pensando...',
+                    '💭 Procesando tu mensaje...',
+                    '🧠 Generando respuesta...',
+                    '⚡ Consultando mi base de conocimientos...',
+                    '🔄 Analizando tu pregunta...'
+                ];
+                
+                const thinkingMsg = await message.reply(thinkingMessages[Math.floor(Math.random() * thinkingMessages.length)]);
+                
+                try {
+                    const result = await this.processMessage(
+                        message.author.id, 
+                        chatMessage, 
+                        message.author.displayName || message.author.username
+                    );
+                    
+                    if (result.success) {
+                        // EDITAR el mensaje de "pensando" con la respuesta real
+                        await thinkingMsg.edit(result.response);
+                    } else {
+                        // EDITAR con error si hay problema
+                        await thinkingMsg.edit(result.response);
+                    }
+                } catch (error) {
+                    await thinkingMsg.edit('❌ Error procesando mensaje de chat.');
                 }
                 break;
 

@@ -993,6 +993,16 @@ client.on('messageCreate', async (message) => {
 
     // CHATBOT - Solo cuando mencionen al bot
     if (message.mentions.has(message.client.user)) {
+        // Mensaje de pensando para menciones
+        const thinkingMessages = [
+            '🤔 Hmm, déjame pensar...',
+            '💭 Procesando...',
+            '🧠 Un momento...',
+            '⚡ Analizando...'
+        ];
+        
+        const thinkingMsg = await message.reply(thinkingMessages[Math.floor(Math.random() * thinkingMessages.length)]);
+        
         try {
             const result = await chatbot.processMessage(
                 message.author.id,
@@ -1001,17 +1011,14 @@ client.on('messageCreate', async (message) => {
             );
             
             if (result.success) {
-                // Delay natural para parecer más humano
-                setTimeout(async () => {
-                    try {
-                        await message.reply(result.response);
-                    } catch (replyError) {
-                        console.error('❌ Error enviando respuesta chatbot:', replyError);
-                    }
-                }, Math.random() * 2000 + 1000); // 1-3 segundos
+                // Editar el mensaje de pensando con la respuesta
+                await thinkingMsg.edit(result.response);
+            } else {
+                await thinkingMsg.edit(result.response);
             }
         } catch (error) {
             console.error('❌ Error en chatbot:', error);
+            await thinkingMsg.edit('❌ Ups, tuve un problema procesando tu mensaje.');
         }
     }
     
