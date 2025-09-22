@@ -246,10 +246,10 @@ class MinigamesSystem {
     // NUEVOS MÉTODOS PARA BASE DE DATOS
     async initializeWeeklyPot() {
         try {
-            let currentPot = await this.economy.database.getWeeklyPot(currentWeekStart);
-            
-            // AGREGAR: Verificar si ya existe un pozo activo para esta semana
+            // MOVER ESTA LÍNEA AL PRINCIPIO
             const currentWeekStart = this.getWeekStart();
+            
+            let currentPot = await this.economy.database.getWeeklyPot(currentWeekStart);
             
             // Verificar si necesitamos crear un nuevo pozo
             if (!currentPot) {
@@ -518,7 +518,7 @@ class MinigamesSystem {
 
         // Verificar si la fecha es válida
         if (isNaN(endDate.getTime()) || timeLeft < 0) {
-            await message.reply('Error: Fecha de finalización inválida o el pozo ya expiró');
+            await message.reply('❌ Error: Fecha de finalización inválida o el pozo ya expiró');
             return;
         }
 
