@@ -1,9 +1,14 @@
-const { createPhindChat } = require('free-chatbot');
+const Chat = require("easy-discord-chatbot");
 
 class ChatBotSystem {
     constructor(database) {
         this.database = database;
-        this.chatbot = null;
+        this.chatbot = new Chat({ 
+            name: "Pibot",
+            gender: "female", // o "female"
+            age: "20",
+            personality: "friendly and funny"
+        });
         this.MAX_CONTEXT_MESSAGES = 10; // Límite de mensajes por contexto
         this.conversationCache = new Map(); // Cache en memoria para acceso rápido
         this.CACHE_CLEANUP_INTERVAL = 30 * 60 * 1000; // 30 minutos
@@ -145,12 +150,7 @@ class ChatBotSystem {
     async getBotResponse(contextString, maxRetries = 3) {
         for (let attempt = 1; attempt <= maxRetries; attempt++) {
             try {
-                // Crear el chat si no existe
-                if (!this.chatbot) {
-                    this.chatbot = createPhindChat(); // Cambiado a Blackbox
-                }
-                
-                // Usar el método chat que ya sabemos que existe
+                // Usar easy-discord-chatbot (mucho más simple)
                 const response = await this.chatbot.chat(contextString);
                 
                 // El resto del código se mantiene igual
