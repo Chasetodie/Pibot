@@ -518,8 +518,7 @@ class MinigamesSystem {
 
         // Verificar si la fecha es válida
         if (isNaN(endDate.getTime()) || timeLeft < 0) {
-            embed.setDescription('Error: Fecha de finalización inválida o el pozo ya expiró');
-            await message.reply({ embeds: [embed] });
+            await message.reply('Error: Fecha de finalización inválida o el pozo ya expiró');
             return;
         }
 
