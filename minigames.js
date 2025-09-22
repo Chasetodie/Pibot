@@ -263,19 +263,9 @@ class MinigamesSystem {
                     end_date: currentWeekStart + (3 * 60 * 1000)
                 };
                 
-                try {
-                    console.log('Creando pozo con ID:', potData.id);
-                    await this.economy.database.createWeeklyPot(potData);
-                    currentPot = potData;
-                    console.log('🕳️ Nuevo pozo semanal creado');
-                } catch (error) {
-                    if (error.code === 'ER_DUP_ENTRY') {
-                        console.log('🔄 Pozo ya existe, obteniendo existente...');
-                        currentPot = await this.economy.database.getWeeklyPot(currentWeekStart);
-                    } else {
-                        throw error;
-                    }
-                }
+                console.log('Creando pozo con ID:', potData.id);
+                currentPot = await this.safeCreateWeeklyPot(potData);
+                console.log('🕳️ Pozo semanal listo');
             } else if (Date.now() >= currentPot.end_date) {
                 // El pozo actual ya expiró, distribuir y crear nuevo
                 await this.distributeWeeklyPot(currentPot);
@@ -291,17 +281,8 @@ class MinigamesSystem {
                     end_date: newWeekStart + (3 * 60 * 1000)
                 };
                 
-                try {
-                    await this.economy.database.createWeeklyPot(potData);
-                    currentPot = potData;
-                    console.log('🕳️ Nuevo pozo creado después de distribución');
-                } catch (error) {
-                    if (error.code === 'ER_DUP_ENTRY') {
-                        currentPot = await this.economy.database.getWeeklyPot(newWeekStart);
-                    } else {
-                        throw error;
-                    }
-                }
+                currentPot = await this.safeCreateWeeklyPot(potData);
+                console.log('🕳️ Nuevo pozo creado después de distribución');
             }
             
             this.weeklyPot = currentPot;
@@ -339,6 +320,19 @@ class MinigamesSystem {
                     items: []
                 };
             }
+        }
+    }
+
+    async safeCreateWeeklyPot(potData) {
+        try {
+            await this.economy.database.createWeeklyPot(potData);
+            return potData;
+        } catch (error) {
+            if (error.code === 'ER_DUP_ENTRY') {
+                // Ya existe, obtener el existente
+                return await this.economy.database.getWeeklyPot(potData.start_date);
+            }
+            throw error;
         }
     }
 
