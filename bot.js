@@ -15,6 +15,7 @@ const MissionsSystem = require('./missions');
 const ShopSystem = require('./shop');
 const AllCommands = require('./all-commands');
 const LocalDatabase = require('./database');
+const MusicSystem = require('./musicSystem.js');
 //require('./admin-panel')(app); // Pasar el servidor express existente
 const {
     AuctionSystem,
@@ -70,10 +71,6 @@ const client = new Client({
     makeCache: () => new Map(), // Caché más pequeño
 });
 
-client.commands = new Collection();
-require('./musicManager.js')(client);
-require('./commandHandler.js')(client);
-
 // Función para guardar contadores
 function saveCounters(counters) {
     try {
@@ -104,6 +101,8 @@ const shop = new ShopSystem(economy);
 
 //Crear instancia del sistema de Minijuegos
 const minigames = new MinigamesSystem(economy, shop);
+
+const music = new MusicSystem(client);
 
 const database = new LocalDatabase();
 database.startCacheCleanup();
@@ -958,6 +957,7 @@ client.on('messageCreate', async (message) => {
                 allCommands.processCommand(message),
                 shop.processCommand(message),
                 minigames.processCommand(message),
+                music.processCommand(message),
                 commandHandler.processCommand(message)
             ]);
         } catch (error) {
