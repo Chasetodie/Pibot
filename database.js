@@ -206,17 +206,33 @@ class LocalDatabase {
                 )
             `);
 
-            // Tabla para pozo semanal
+            // Tabla para pozo semanal - NUEVO DISEÑO
             await this.pool.execute(`
                 CREATE TABLE IF NOT EXISTS weekly_pot (
-                    id VARCHAR(255) PRIMARY KEY,
-                    total_money INTEGER DEFAULT 0,
-                    contributions TEXT,
-                    participants TEXT,
-                    items TEXT,
-                    start_date BIGINT NOT NULL,
-                    end_date BIGINT NOT NULL,
-                    status ENUM('active', 'distributing', 'completed') DEFAULT 'active'
+                    week_start BIGINT PRIMARY KEY,
+                    total_money INT DEFAULT 0,
+                    participant_count INT DEFAULT 0,
+                    status ENUM('active', 'completed') DEFAULT 'active',
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    distributed_at TIMESTAMP NULL,
+                    winner_money VARCHAR(255) NULL,
+                    winner_items TEXT NULL
+                )
+            `);
+
+            // Tabla para contribuciones individuales
+            await this.pool.execute(`
+                CREATE TABLE IF NOT EXISTS pot_contributions (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    week_start BIGINT NOT NULL,
+                    user_id VARCHAR(255) NOT NULL,
+                    contribution_type ENUM('money', 'item') NOT NULL,
+                    amount INT DEFAULT 0,
+                    item_id VARCHAR(255) NULL,
+                    item_name VARCHAR(255) NULL,
+                    contributed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    INDEX idx_week_user (week_start, user_id),
+                    FOREIGN KEY (week_start) REFERENCES weekly_pot(week_start) ON DELETE CASCADE
                 )
             `);
 
@@ -226,86 +242,118 @@ class LocalDatabase {
         }
     }
 
-    // Métodos para Weekly Pot
-    async getWeeklyPot(startDate = null) {
+    // Métodos para Weekly Pot - NUEVO SISTEMA
+    async getCurrentWeeklyPot() {
         try {
-            let query = 'SELECT * FROM weekly_pot WHERE status = ?';
-            let params = ['active'];
+            const weekStart = this.getWeekStart();
             
-            // Si se proporciona startDate, buscar específicamente esa semana
-            if (startDate) {
-                query += ' AND start_date = ?';
-                params.push(startDate);
+            // Crear pozo si no existe
+            await this.pool.execute(`
+                INSERT IGNORE INTO weekly_pot (week_start) VALUES (?)
+            `, [weekStart]);
+            
+            // Obtener pozo actual
+            const [rows] = await this.pool.execute(`
+                SELECT * FROM weekly_pot WHERE week_start = ? AND status = 'active'
+            `, [weekStart]);
+            
+            return rows[0] || null;
+        } catch (error) {
+            console.error('Error obteniendo pozo actual:', error);
+            return null;
+        }
+    }
+
+    async addPotContribution(weekStart, userId, type, amount = 0, itemId = null, itemName = null) {
+        try {
+            // Insertar contribución
+            await this.pool.execute(`
+                INSERT INTO pot_contributions (week_start, user_id, contribution_type, amount, item_id, item_name)
+                VALUES (?, ?, ?, ?, ?, ?)
+            `, [weekStart, userId, type, amount, itemId, itemName]);
+            
+            // Actualizar totales en weekly_pot
+            if (type === 'money') {
+                await this.pool.execute(`
+                    UPDATE weekly_pot 
+                    SET total_money = total_money + ?,
+                        participant_count = (
+                            SELECT COUNT(DISTINCT user_id) 
+                            FROM pot_contributions 
+                            WHERE week_start = ?
+                        )
+                    WHERE week_start = ?
+                `, [amount, weekStart, weekStart]);
+            } else {
+                await this.pool.execute(`
+                    UPDATE weekly_pot 
+                    SET participant_count = (
+                        SELECT COUNT(DISTINCT user_id) 
+                        FROM pot_contributions 
+                        WHERE week_start = ?
+                    )
+                    WHERE week_start = ?
+                `, [weekStart, weekStart]);
             }
             
-            query += ' ORDER BY start_date DESC LIMIT 1';
+            return true;
+        } catch (error) {
+            console.error('Error agregando contribución:', error);
+            return false;
+        }
+    }
+
+    async getPotContributions(weekStart, userId = null) {
+        try {
+            let query = `
+                SELECT * FROM pot_contributions 
+                WHERE week_start = ?
+            `;
+            let params = [weekStart];
+            
+            if (userId) {
+                query += ' AND user_id = ?';
+                params.push(userId);
+            }
+            
+            query += ' ORDER BY contributed_at DESC';
             
             const [rows] = await this.pool.execute(query, params);
-            
-            if (rows.length > 0) {
-                const pot = rows[0];
-                pot.contributions = this.safeJsonParse(pot.contributions, {});
-                pot.participants = this.safeJsonParse(pot.participants, []);
-                pot.items = this.safeJsonParse(pot.items, []);
-                return pot;
-            }
-            return null;
+            return rows;
         } catch (error) {
-            console.error('❌ Error obteniendo pozo semanal:', error);
-            return null;
+            console.error('Error obteniendo contribuciones:', error);
+            return [];
         }
     }
 
-    async createWeeklyPot(potData) {
+    async completePot(weekStart, winnerMoney, winnerItems) {
         try {
             await this.pool.execute(`
-                INSERT INTO weekly_pot (id, total_money, contributions, participants, 
-                                    items, start_date, end_date, status)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-            `, [
-                potData.id,
-                potData.total_money || 0,
-                JSON.stringify(potData.contributions || {}),
-                JSON.stringify(potData.participants || []),
-                JSON.stringify(potData.items || []),
-                potData.start_date,
-                potData.end_date,
-                'active'
-            ]);
+                UPDATE weekly_pot 
+                SET status = 'completed',
+                    distributed_at = NOW(),
+                    winner_money = ?,
+                    winner_items = ?
+                WHERE week_start = ?
+            `, [winnerMoney, JSON.stringify(winnerItems), weekStart]);
             
-            return { id: potData.id };
+            return true;
         } catch (error) {
-            console.error('❌ Error creando pozo semanal:', error);
-            throw error;
+            console.error('Error completando pozo:', error);
+            return false;
         }
     }
 
-    async updateWeeklyPot(potId, updateData) {
-        try {
-            const sets = [];
-            const values = [];
-
-            for (const [key, value] of Object.entries(updateData)) {
-                sets.push(`${key} = ?`);
-                if (typeof value === 'object' && value !== null) {
-                    values.push(JSON.stringify(value));
-                } else {
-                    values.push(value);
-                }
-            }
-
-            values.push(potId);
-
-            const [result] = await this.pool.execute(
-                `UPDATE weekly_pot SET ${sets.join(', ')} WHERE id = ?`,
-                values
-            );
-            
-            return { changes: result.affectedRows };
-        } catch (error) {
-            console.error('❌ Error actualizando pozo semanal:', error);
-            throw error;
-        }
+    getWeekStart() {
+        const now = new Date();
+        const dayOfWeek = now.getDay();
+        const daysToMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+        
+        const monday = new Date(now);
+        monday.setDate(now.getDate() - daysToMonday);
+        monday.setHours(0, 0, 0, 0);
+        
+        return monday.getTime();
     }
 
     // En LocalDatabase, agregar este método:

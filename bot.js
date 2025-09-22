@@ -101,7 +101,7 @@ const achievements = new AchievementsSystem(economy);
 const shop = new ShopSystem(economy);
 
 //Crear instancia del sistema de Minijuegos
-const minigames = new MinigamesSystem(economy, shop);
+const minigames = new MinigamesSystem(economy, shop, client);
 
 const music = new MusicSystem(client);
 
