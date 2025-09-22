@@ -118,23 +118,23 @@ class ChatBotSystem {
     buildContextString(context, newMessage) {
         let contextString = '';
         
-        // Agregar instrucciones del sistema
-        contextString += 'Eres PibBot, un asistente amigable en un servidor de Discord llamado "Adictos a las píldoras". ';
-        contextString += 'Responde de manera casual y divertida, usando emojis ocasionalmente. ';
-        contextString += 'Si te preguntan sobre comandos del bot, menciona que pueden usar >help para ver la lista completa.\n\n';
+        // Agregar instrucciones del sistema MÁS CLARAS
+        contextString += 'Eres PibBot, un asistente amigable en Discord. IMPORTANTE: Recuerda toda nuestra conversación anterior.\n\n';
         
-        // Agregar contexto de conversación
+        // Agregar TODO el contexto de una vez
         if (context.length > 0) {
-            contextString += 'Contexto de la conversación:\n';
-            context.forEach(msg => {
+            contextString += 'CONVERSACIÓN COMPLETA HASTA AHORA:\n';
+            context.forEach((msg, index) => {
                 const role = msg.role === 'user' ? msg.display_name : 'PibBot';
                 contextString += `${role}: ${msg.content}\n`;
             });
             contextString += '\n';
         }
         
-        // Agregar mensaje actual
-        contextString += `Usuario: ${newMessage}\nPibBot:`;
+        // Agregar mensaje actual con instrucción de continuidad
+        contextString += `${context.length > 0 ? 'CONTINUANDO LA CONVERSACIÓN...\n' : ''}`;
+        contextString += `Usuario: ${newMessage}\n`;
+        contextString += `PibBot (recordando todo lo anterior):`;
         
         return contextString;
     }
