@@ -148,10 +148,36 @@ class ChatBotSystem {
                 // Crear el chat si no existe
                 if (!this.chatbot) {
                     this.chatbot = createDuckDuckGoChat();
+                    
+                    // DEBUG: Ver qué contiene
+                    console.log('🔍 Chatbot creado:', this.chatbot);
+                    console.log('🔍 Tipo:', typeof this.chatbot);
+                    console.log('🔍 Propiedades:', Object.keys(this.chatbot));
+                    console.log('🔍 Es función?', typeof this.chatbot === 'function');
                 }
                 
-                // Usar el chat
-                const response = await this.chatbot(contextString);
+                // Probar diferentes formas de usarlo:
+                let response;
+                
+                // Opción 1: Si es función directa
+                if (typeof this.chatbot === 'function') {
+                    response = await this.chatbot(contextString);
+                }
+                // Opción 2: Si tiene método 'chat'
+                else if (this.chatbot.chat) {
+                    response = await this.chatbot.chat(contextString);
+                }
+                // Opción 3: Si tiene método 'send'
+                else if (this.chatbot.send) {
+                    response = await this.chatbot.send(contextString);
+                }
+                // Opción 4: Si tiene método 'ask'
+                else if (this.chatbot.ask) {
+                    response = await this.chatbot.ask(contextString);
+                }
+                else {
+                    throw new Error('No se pudo determinar cómo usar el chatbot');
+                }
                 
                 // El resto del código se mantiene igual
                 let cleanResponse = response.trim();
