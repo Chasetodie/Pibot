@@ -12,6 +12,26 @@ class AllCommands {
         this.achievements = achievementsSystem;
     }
 
+    // FUNCIÓN AUXILIAR: Obtener efectos VIP para mostrar en perfil
+    async getVipStatus(userId) {
+        const vipInfo = await this.shop.hasActiveVip(userId);
+        
+        if (!vipInfo.hasVip) {
+            return { hasVip: false, display: '' };
+        }
+        
+        const timeLeft = vipInfo.timeLeft;
+        const days = Math.floor(timeLeft / (24 * 60 * 60 * 1000));
+        const hours = Math.floor((timeLeft % (24 * 60 * 60 * 1000)) / (60 * 60 * 1000));
+        
+        return {
+            hasVip: true,
+            tier: vipInfo.tier,
+            display: `${vipInfo.tier} (${days}d ${hours}h restantes)`,
+            emoji: '💎'
+        };
+    }
+
     // Formatear tiempo restante para daily
     formatTimeLeft(milliseconds) {
         const hours = Math.floor(milliseconds / (1000 * 60 * 60));
