@@ -56,8 +56,25 @@ class MusicSystem {
         });
 
         this.kazagumo.on('playerEnd', (player) => {
-            // Auto-disconnect después de 5 minutos de inactividad
-            if (player.queue.size === 0) {
+            // Verificar si hay más canciones en la cola
+            if (player.queue.size > 0) {
+                // Si hay canciones, reproducir la siguiente
+                player.play();
+            } else {
+                // Si no hay más canciones, enviar mensaje y programar desconexión
+                if (player.textId) {
+                    const channel = this.client.channels.cache.get(player.textId);
+                    if (channel) {
+                        const embed = new EmbedBuilder()
+                            .setTitle('📭 Cola Terminada')
+                            .setDescription('No hay más canciones en la cola. Desconectando en 5 minutos por inactividad...')
+                            .setColor('#FFA500');
+                        
+                        channel.send({ embeds: [embed] });
+                    }
+                }
+                
+                // Auto-disconnect después de 5 minutos de inactividad
                 this.setPlayerTimeout(player.guildId, () => {
                     if (player.queue.size === 0) {
                         player.destroy();
