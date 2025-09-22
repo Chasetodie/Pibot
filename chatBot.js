@@ -1,17 +1,15 @@
-const Chat = require("easy-discord-chatbot");
+const { HfInference } = require('@huggingface/inference');
 
 class ChatBotSystem {
     constructor(database) {
         this.database = database;
-        this.chatbot = new Chat({ 
-            name: "Pibot",
-            gender: "female", // o "female"
-            age: "20",
-            personality: "friendly and funny"
-        });
-        this.MAX_CONTEXT_MESSAGES = 10; // Límite de mensajes por contexto
-        this.conversationCache = new Map(); // Cache en memoria para acceso rápido
-        this.CACHE_CLEANUP_INTERVAL = 30 * 60 * 1000; // 30 minutos
+        
+        // Crear cliente de Hugging Face (GRATIS, no necesitas API key)
+        this.hf = new HfInference();
+        
+        this.MAX_CONTEXT_MESSAGES = 10;
+        this.conversationCache = new Map();
+        this.CACHE_CLEANUP_INTERVAL = 30 * 60 * 1000;
         this.startCacheCleanup();
     }
 
@@ -150,11 +148,18 @@ class ChatBotSystem {
     async getBotResponse(contextString, maxRetries = 3) {
         for (let attempt = 1; attempt <= maxRetries; attempt++) {
             try {
-                // Usar easy-discord-chatbot (mucho más simple)
-                const response = await this.chatbot.chat(contextString);
+                // Usar modelo gratuito de Hugging Face
+                const response = await this.hf.textGeneration({
+                    model: 'microsoft/DialoGPT-medium',
+                    inputs: contextString,
+                    parameters: {
+                        max_new_tokens: 100,
+                        temperature: 0.7,
+                        do_sample: true,
+                    }
+                });
                 
-                // El resto del código se mantiene igual
-                let cleanResponse = response.trim();
+                let cleanResponse = response.generated_text.replace(contextString, '').trim();
                 cleanResponse = cleanResponse.replace(/^(PibBot:|Bot:|Asistente:)/i, '').trim();
                 
                 if (!cleanResponse || cleanResponse.length < 1) {
@@ -180,7 +185,7 @@ class ChatBotSystem {
                     return fallbackResponses[Math.floor(Math.random() * fallbackResponses.length)];
                 }
                 
-                await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
+                await new Promise(resolve => setTimeout(resolve, 2000 * attempt));
             }
         }
     }
