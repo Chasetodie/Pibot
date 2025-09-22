@@ -247,7 +247,7 @@ class MissionsSystem {
                 reward: { money: 1500, xp: 600 },
                 rarity: 'rare'
             },
-/*            // Misiones de subastas
+            // Misiones de subastas
             'create_auction': {
                 id: 'create_auction',
                 name: '🔨 Vendedor en Subasta',
@@ -276,7 +276,7 @@ class MissionsSystem {
                 target: 1,
                 reward: { money: 1500, xp: 500 },
                 rarity: 'uncommon'
-            },*/
+            },
 
             // Misiones sociales extra
             'send_emoji': {

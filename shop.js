@@ -3850,11 +3850,7 @@ class ShopSystem {
         // Verificar ingresos pasivos pendientes
         await this.economy.checkPendingPassiveIncome(message.author.id);
         await this.economy.checkAndNotifyItems(message.author.id, message);
-
-        if ((!message.author.id === '488110147265232898') || (!message.author.id === '788424796366307409')) {
-            return;
-        }
-        
+       
         const args = message.content.toLowerCase().split(' ');
         const command = args[0];
         await this.economy.missions.updateMissionProgress(message.author.id, 'commands_used');
