@@ -1111,7 +1111,7 @@ class EconomySystem {
             
                 // Cuando un VIP gane dinero extra
                 const vipBonus = finalEarnings - beforeVip;
-                await this.updateVipStats(userId, 'bonusEarnings', vipBonus);
+                await this.shop.updateVipStats(userId, 'bonusEarnings', vipBonus);
             }
         }
         
