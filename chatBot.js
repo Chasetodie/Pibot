@@ -1,4 +1,4 @@
-const { createBlackboxChat } = require('free-chatbot');
+const { createPhindChat } = require('free-chatbot');
 
 class ChatBotSystem {
     constructor(database) {
@@ -147,7 +147,7 @@ class ChatBotSystem {
             try {
                 // Crear el chat si no existe
                 if (!this.chatbot) {
-                    this.chatbot = createBlackboxChat(); // Cambiado a Blackbox
+                    this.chatbot = createPhindChat(); // Cambiado a Blackbox
                 }
                 
                 // Usar el método chat que ya sabemos que existe
