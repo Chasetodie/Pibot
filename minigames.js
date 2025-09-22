@@ -319,7 +319,7 @@ class MinigamesSystem {
             winChance += vipMultipliers.luckBoost;
             if (vipMultipliers.luckBoost > 0) {
                 luckMessages.push(`💎 **Boost VIP** (+${Math.round(vipMultipliers.luckBoost * 100)}% suerte)`);
-                await this.updateVipStats(userId, 'luckyWins', 1);
+                await this.economy.shop.updateVipStats(userId, 'luckyWins', 1);
             }
         }
 
@@ -672,7 +672,7 @@ class MinigamesSystem {
             if (vipMultipliers.luckBoost > 0 && !won && Math.random() < vipMultipliers.luckBoost) {
                 won = true;
                 luckMessages.push(`💎 **Boost VIP** te salvó!`);
-                await this.updateVipStats(userId, 'luckyWins', 1);
+                await this.economy.shop.updateVipStats(userId, 'luckyWins', 1);
             }
         }
 
@@ -995,7 +995,7 @@ class MinigamesSystem {
             if (vipMultipliers.luckBoost > 0 && !won && Math.random() < vipMultipliers.luckBoost) {
                 won = true;
                 luckMessages.push(`💎 **Boost VIP** te salvó!`);
-                await this.updateVipStats(userId, 'luckyWins', 1);
+                await this.economy.shop.updateVipStats(userId, 'luckyWins', 1);
             }
         }
 
@@ -2128,7 +2128,7 @@ class MinigamesSystem {
             if (vipMultipliers.luckBoost > 0 && !won && Math.random() < vipMultipliers.luckBoost) {
                 won = true;
                 luckMessages.push(`💎 **Boost VIP** te salvó!`);
-                await this.updateVipStats(userId, 'luckyWins', 1);
+                await this.economy.shop.updateVipStats(userId, 'luckyWins', 1);
             }
         }
 
