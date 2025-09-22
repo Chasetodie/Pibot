@@ -1,4 +1,4 @@
-const { FreeChatBot } = require('free-chatbot');
+const FreeChatBot = require('free-chatbot');
 
 class ChatBotSystem {
     constructor(database) {
