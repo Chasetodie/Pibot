@@ -409,11 +409,14 @@ class AllCommands {
             return;
         }
 
-        // AÑADIR esto:
+        // Verificar límite dinámico del receptor
         const targetUserData = await this.economy.getUser(targetUser.id);
-        if (targetUserData.balance + amount > this.economy.config.maxBalance) {
-            const spaceLeft = this.economy.config.maxBalance - targetUserData.balance;
-            await message.reply(`❌ ${targetUser.displayName} alcanzaría el límite máximo de 10M π-b$. Solo puedes enviar ${this.formatNumber(spaceLeft)} π-b$ más.`);
+        const targetLimit = this.economy.shop ? await this.economy.shop.getVipLimit(targetUser.id) : this.economy.config.maxBalance;
+
+        if (targetUserData.balance + amount > targetLimit) {
+            const spaceLeft = targetLimit - targetUserData.balance;
+            const limitText = targetLimit === 20000000 ? '20M π-b$ (VIP)' : '10M π-b$';
+            await message.reply(`❌ ${targetUser.displayName} alcanzaría su límite máximo de ${limitText}. Solo puedes enviar ${this.formatNumber(spaceLeft)} π-b$ más.`);
             return;
         }
         

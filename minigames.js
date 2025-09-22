@@ -403,8 +403,10 @@ class MinigamesSystem {
             }
 
             const userData = await this.economy.getUser(userId);
-            if (userData.balance + finalEarnings > this.economy.config.maxBalance) {
-                const spaceLeft = this.economy.config.maxBalance - userData.balance;
+            const userLimit = this.economy.shop ? await this.economy.shop.getVipLimit(userId) : this.economy.config.maxBalance;
+
+            if (userData.balance + finalEarnings > userLimit) {
+                const spaceLeft = userLimit - userData.balance;
                 finalEarnings = Math.min(finalEarnings, spaceLeft);
             }
            
@@ -459,7 +461,8 @@ class MinigamesSystem {
                 );
 
             if (addResult.hitLimit) {
-                await message.reply(`⚠️ **Límite alcanzado:** No pudiste recibir todo el dinero porque tienes el máximo permitido (${this.formatNumber(this.economy.config.maxBalance)} π-b$).`);
+                const limitText = userLimit === 20000000 ? '20M π-b$ (VIP)' : '10M π-b$';
+                await message.reply(`⚠️ **Límite alcanzado:** No pudiste recibir todo el dinero porque tienes el máximo permitido (${this.formatNumber(userLimit)} π-b$).`);
             }
         } else {
             await this.economy.missions.updateMissionProgress(userId, 'consecutive_loss'); 
@@ -538,7 +541,7 @@ class MinigamesSystem {
         if (this.shop) {
             const vipMultipliers = await this.shop.getVipMultipliers(userId, 'games');
             if (vipMultipliers.noCooldown) {
-                return { canCoinPlay: true };
+                return { canDicePlay: true };
             }
         }
 
@@ -768,8 +771,10 @@ class MinigamesSystem {
             }
 
             const userData = await this.economy.getUser(userId);
-            if (userData.balance + finalEarnings > this.economy.config.maxBalance) {
-                const spaceLeft = this.economy.config.maxBalance - userData.balance;
+            const userLimit = this.economy.shop ? await this.economy.shop.getVipLimit(userId) : this.economy.config.maxBalance;
+
+            if (userData.balance + finalEarnings > userLimit) {
+                const spaceLeft = userLimit - userData.balance;
                 finalEarnings = Math.min(finalEarnings, spaceLeft);
             }
                        
@@ -819,7 +824,8 @@ class MinigamesSystem {
                     { name: '🎉 Bonificaciones', value: this.formatGameBonuses(eventMessage, luckMessage, itemMessage), inline: false }
                 );
             if (addResult.hitLimit) {
-                await message.reply(`⚠️ **Límite alcanzado:** No pudiste recibir todo el dinero porque tienes el máximo permitido (${this.formatNumber(this.economy.config.maxBalance)} π-b$).`);
+                const limitText = userLimit === 20000000 ? '20M π-b$ (VIP)' : '10M π-b$';
+                await message.reply(`⚠️ **Límite alcanzado:** No pudiste recibir todo el dinero porque tienes el máximo permitido (${this.formatNumber(userLimit)} π-b$).`);
             }
         } else {
             await this.economy.missions.updateMissionProgress(userId, 'consecutive_loss'); 
@@ -882,7 +888,7 @@ class MinigamesSystem {
         if (this.shop) {
             const vipMultipliers = await this.shop.getVipMultipliers(userId, 'games');
             if (vipMultipliers.noCooldown) {
-                return { canCoinPlay: true };
+                return { canLottery: true };
             }
         }
 
@@ -1108,8 +1114,10 @@ class MinigamesSystem {
             }
 
             const userData = await this.economy.getUser(userId);
-            if (userData.balance + finalEarnings > this.economy.config.maxBalance) {
-                const spaceLeft = this.economy.config.maxBalance - userData.balance;
+            const userLimit = this.economy.shop ? await this.economy.shop.getVipLimit(userId) : this.economy.config.maxBalance;
+
+            if (userData.balance + finalEarnings > userLimit) {
+                const spaceLeft = userLimit - userData.balance;
                 finalEarnings = Math.min(finalEarnings, spaceLeft);
             }
             
@@ -1169,7 +1177,8 @@ class MinigamesSystem {
                     { name: '🎉 Bonificaciones', value: this.formatGameBonuses(eventMessage, luckMessage, itemMessage), inline: false }
                 );
             if (addResult.hitLimit) {
-                await message.reply(`⚠️ **Límite alcanzado:** No pudiste recibir todo el dinero porque tienes el máximo permitido (${this.formatNumber(this.economy.config.maxBalance)} π-b$).`);
+                const limitText = userLimit === 20000000 ? '20M π-b$ (VIP)' : '10M π-b$';
+                await message.reply(`⚠️ **Límite alcanzado:** No pudiste recibir todo el dinero porque tienes el máximo permitido (${this.formatNumber(userLimit)} π-b$).`);
             }
         } else {
             await this.economy.missions.updateMissionProgress(userId, 'consecutive_loss'); 
@@ -1247,7 +1256,7 @@ class MinigamesSystem {
         if (this.shop) {
             const vipMultipliers = await this.shop.getVipMultipliers(userId, 'games');
             if (vipMultipliers.noCooldown) {
-                return { canCoinPlay: true };
+                return { canBlackJack: true };
             }
         }
 
@@ -1906,7 +1915,8 @@ class MinigamesSystem {
         }
 
         if (addResult && addResult.hitLimit) {
-            await messageOrInteraction.reply(`⚠️ **Límite alcanzado:** No pudiste recibir todo el dinero porque tienes el máximo permitido (${this.formatNumber(this.economy.config.maxBalance)} π-b$).`);
+            const limitText = userLimit === 20000000 ? '20M π-b$ (VIP)' : '10M π-b$';
+            await message.reply(`⚠️ **Límite alcanzado:** No pudiste recibir todo el dinero porque tienes el máximo permitido (${this.formatNumber(userLimit)} π-b$).`);
         }
 
         // Verificar tesoros al final
@@ -1999,7 +2009,7 @@ class MinigamesSystem {
         if (this.shop) {
             const vipMultipliers = await this.shop.getVipMultipliers(userId, 'games');
             if (vipMultipliers.noCooldown) {
-                return { canCoinPlay: true };
+                return { canRoulette: true };
             }
         }
 
@@ -2242,8 +2252,10 @@ class MinigamesSystem {
             }
 
             const userData = await this.economy.getUser(userId);
-            if (userData.balance + finalEarnings > this.economy.config.maxBalance) {
-                const spaceLeft = this.economy.config.maxBalance - userData.balance;
+            const userLimit = this.economy.shop ? await this.economy.shop.getVipLimit(userId) : this.economy.config.maxBalance;
+
+            if (userData.balance + finalEarnings > userLimit) {
+                const spaceLeft = userLimit - userData.balance;
                 finalEarnings = Math.min(finalEarnings, spaceLeft);
             }
             
@@ -2305,7 +2317,8 @@ class MinigamesSystem {
             } 
 
             if (addResult.hitLimit) {
-                await message.reply(`⚠️ **Límite alcanzado:** No pudiste recibir todo el dinero porque tienes el máximo permitido (${this.formatNumber(this.economy.config.maxBalance)} π-b$).`);
+                const limitText = userLimit === 20000000 ? '20M π-b$ (VIP)' : '10M π-b$';
+                await message.reply(`⚠️ **Límite alcanzado:** No pudiste recibir todo el dinero porque tienes el máximo permitido (${this.formatNumber(userLimit)} π-b$).`);
             }
         } else {
             await this.economy.missions.updateMissionProgress(userId, 'consecutive_loss'); 
@@ -3150,9 +3163,11 @@ class MinigamesSystem {
                 }
             }     
 
-            const userData = await this.economy.getUser(winner.id);
-            if (userData.balance + finalEarnings > this.economy.config.maxBalance) {
-                const spaceLeft = this.economy.config.maxBalance - userData.balance;
+            const userData = await this.economy.getUser(userId);
+            const userLimit = this.economy.shop ? await this.economy.shop.getVipLimit(userId) : this.economy.config.maxBalance;
+
+            if (userData.balance + finalEarnings > userLimit) {
+                const spaceLeft = userLimit - userData.balance;
                 finalEarnings = Math.min(finalEarnings, spaceLeft);
             }
             
@@ -3209,7 +3224,8 @@ class MinigamesSystem {
                 );
 
             if (addResult.hitLimit) {
-                await channel.send(`⚠️ **Límite alcanzado para ${winner.id}:** No pudiste recibir todo el dinero porque tienes el máximo permitido (${this.formatNumber(this.economy.config.maxBalance)} π-b$).`);
+                const limitText = userLimit === 20000000 ? '20M π-b$ (VIP)' : '10M π-b$';
+                await message.reply(`⚠️ **Límite alcanzado para ${winner.id}:** No pudiste recibir todo el dinero porque tienes el máximo permitido (${this.formatNumber(userLimit)} π-b$).`);
             }
         } else {
             // Todos murieron (teóricamente imposible, pero por seguridad)
@@ -4468,9 +4484,11 @@ class MinigamesSystem {
             }
         }        
 
-        const userData = await this.economy.getUser(winnerId);
-        if (userData.balance + finalEarnings > this.economy.config.maxBalance) {
-            const spaceLeft = this.economy.config.maxBalance - userData.balance;
+        const userData = await this.economy.getUser(userId);
+        const userLimit = this.economy.shop ? await this.economy.shop.getVipLimit(userId) : this.economy.config.maxBalance;
+
+        if (userData.balance + finalEarnings > userLimit) {
+            const spaceLeft = userLimit - userData.balance;
             finalEarnings = Math.min(finalEarnings, spaceLeft);
         }
 
@@ -4505,7 +4523,8 @@ class MinigamesSystem {
 
         await message.reply({ embeds: [embed] });
         if (addResult.hitLimit) {
-            await message.reply(`⚠️ **Límite alcanzado:** No pudiste recibir todo el dinero porque tienes el máximo permitido (${this.formatNumber(this.economy.config.maxBalance)} π-b$).`);
+            const limitText = userLimit === 20000000 ? '20M π-b$ (VIP)' : '10M π-b$';
+            await message.reply(`⚠️ **Límite alcanzado:** No pudiste recibir todo el dinero porque tienes el máximo permitido (${this.formatNumber(userLimit)} π-b$).`);
         }
         
         // Limpiar juego

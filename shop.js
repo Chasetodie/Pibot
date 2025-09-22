@@ -2533,12 +2533,12 @@ class ShopSystem {
         }
         
         // VIP
-        /*const vipEffects = await this.getVipMultipliers(userId, action);
+        const vipEffects = await this.getVipMultipliers(userId, action);
         if (vipEffects.noCooldown) {
-            /*this.economy.missions.updateMissionProgress(userId, 'vip_commands_used').catch(() => {});
+            this.economy.missions.updateMissionProgress(userId, 'vip_commands_used').catch(() => {});
             this.updateVipStats(userId, 'timeSaved', 0.5).catch(() => {});
             reduction = 1.0; // 100% reducción = sin cooldown
-        }*/
+        }
         
         return Math.min(reduction, 0.95); // Máximo 95% reducción
     }
@@ -2658,6 +2658,8 @@ class ShopSystem {
                         tier: this.getVipTier(effect.benefits)
                     };
                 } else {
+                    await this.applyNormalLimitOnVipExpiry(userId);
+
                     // VIP expirado, remover
                     delete permanentEffects[itemId];
                     await this.economy.updateUser(userId, { permanentEffects });
@@ -3017,23 +3019,124 @@ class ShopSystem {
         await this.economy.updateUser(userId, { vipStats });
     }
 
-    // 6. VIP MEGA GAMBLE
-    async vipMegaGamble(message) {
+    // 5. VIP INSTANT WORK
+    async vipInstantWork(message) {
         const user = await this.economy.getUser(message.author.id);
-        const bet = Math.min(user.balance * 0.1, 100000); // 10% del balance, máximo 100k
         
-        if (bet < 1000) {
-            await message.reply('❌ Necesitas al menos 10,000 π-b$ para usar VIP Mega Gamble.');
+        // CAMBIAR: Sistema de límites diarios
+        const today = new Date().toDateString();
+        let vipUsage = user.vip_daily_usage || {};
+        
+        if (typeof vipUsage === 'string') {
+            try {
+                vipUsage = JSON.parse(vipUsage);
+            } catch {
+                vipUsage = {};
+            }
+        }
+        
+        // Resetear si es un nuevo día
+        if (vipUsage.date !== today) {
+            vipUsage = {
+                date: today,
+                vipWork: 0,
+                vipGamble: 0
+            };
+        }
+        
+        // Verificar límite (3 usos por día)
+        if (vipUsage.vipWork >= 3) {
+            await message.reply('❌ Has alcanzado el límite diario de VIP Work (3/3). Resetea mañana.');
             return;
         }
         
-        const vipLuck = 0.65; // 65% probabilidad de ganar (vs 50% normal)
-        const won = Math.random() < vipLuck;
-        const multiplier = won ? 3.0 : 0; // Triple o nada
-        const result = won ? Math.floor(bet * multiplier) : -bet;
+        const baseEarnings = Math.floor(Math.random() * 15000) + 10000;
+        const vipMultiplier = 2.0;
+        const earnings = Math.floor(baseEarnings * vipMultiplier);
+        
+        // Aplicar límite VIP
+        const vipLimit = await this.getVipLimit(message.author.id);
+        if (user.balance >= vipLimit) {
+            await message.reply('❌ Has alcanzado tu límite VIP de balance.');
+            return;
+        }
+        
+        const finalEarnings = Math.min(earnings, vipLimit - user.balance);
+        
+        // Actualizar usos
+        vipUsage.vipWork += 1;
         
         await this.economy.updateUser(message.author.id, {
-            balance: user.balance + result
+            balance: user.balance + finalEarnings,
+            vip_daily_usage: vipUsage
+        });
+        
+        await this.updateVipStats(message.author.id, 'bonusEarnings', finalEarnings - (finalEarnings / vipMultiplier));
+        await this.economy.missions.updateMissionProgress(message.author.id, 'vip_commands_used');
+
+        const embed = new EmbedBuilder()
+            .setTitle('👑 VIP Instant Work')
+            .setDescription(`Trabajo VIP completado exitosamente!`)
+            .addFields(
+                { name: '💰 Ganancia Base', value: `${Math.floor(finalEarnings / vipMultiplier).toLocaleString('es-ES')} π-b$`, inline: true },
+                { name: '👑 Bonus VIP (2.0x)', value: `+${(finalEarnings - Math.floor(finalEarnings / vipMultiplier)).toLocaleString('es-ES')} π-b$`, inline: true },
+                { name: '💎 Total Ganado', value: `**${finalEarnings.toLocaleString('es-ES')} π-b$**`, inline: false },
+                { name: '📊 Usos Diarios', value: `${vipUsage.vipWork}/3 VIP Works usados hoy`, inline: true }
+            )
+            .setColor('#FFD700')
+            .setTimestamp();
+        
+        await message.reply({ embeds: [embed] });
+    }
+
+    async vipMegaGamble(message) {
+        const user = await this.economy.getUser(message.author.id);
+        
+        // CAMBIAR: Sistema de límites diarios
+        const today = new Date().toDateString();
+        let vipUsage = user.vip_daily_usage || {};
+        
+        if (typeof vipUsage === 'string') {
+            try {
+                vipUsage = JSON.parse(vipUsage);
+            } catch {
+                vipUsage = {};
+            }
+        }
+        
+        // Resetear si es un nuevo día
+        if (vipUsage.date !== today) {
+            vipUsage = {
+                date: today,
+                vipWork: 0,
+                vipGamble: 0
+            };
+        }
+        
+        // Verificar límite (2 usos por día)
+        if (vipUsage.vipGamble >= 2) {
+            await message.reply('❌ Has alcanzado el límite diario de VIP Gamble (2/2). Resetea mañana.');
+            return;
+        }
+        
+        const bet = Math.min(user.balance * 0.05, 50000);
+        
+        if (bet < 5000) {
+            await message.reply('❌ Necesitas al menos 100,000 π-b$ para usar VIP Mega Gamble.');
+            return;
+        }
+        
+        const vipLuck = 0.55;
+        const won = Math.random() < vipLuck;
+        const multiplier = won ? 2.5 : 0;
+        const result = won ? Math.floor(bet * multiplier) : -bet;
+        
+        // Actualizar usos
+        vipUsage.vipGamble += 1;
+        
+        await this.economy.updateUser(message.author.id, {
+            balance: user.balance + result,
+            vip_daily_usage: vipUsage
         });
         
         if (won) {
@@ -3044,47 +3147,15 @@ class ShopSystem {
             .setTitle(won ? '🎉 VIP Mega Gamble - ¡GANASTE!' : '💸 VIP Mega Gamble - Perdiste')
             .addFields(
                 { name: '🎯 Apuesta', value: `${bet.toLocaleString('es-ES')} π-b$`, inline: true },
-                { name: '🍀 Probabilidad VIP', value: '65% (vs 50% normal)', inline: true },
-                { name: won ? '💰 Ganancia' : '💸 Pérdida', value: `${Math.abs(result).toLocaleString('es-ES')} π-b$`, inline: true }
+                { name: '🍀 Probabilidad VIP', value: '55% (vs 50% normal)', inline: true },
+                { name: won ? '💰 Ganancia' : '💸 Pérdida', value: `${Math.abs(result).toLocaleString('es-ES')} π-b$`, inline: true },
+                { name: '📊 Usos Diarios', value: `${vipUsage.vipGamble}/2 VIP Gambles usados hoy`, inline: true }
             )
             .setColor(won ? '#00FF00' : '#FF0000')
             .setTimestamp();
         
         await message.reply({ embeds: [embed] });
-
-        // Después de: await message.reply({ embeds: [embed] });
         await this.economy.missions.updateMissionProgress(message.author.id, 'vip_commands_used');
-    }
-
-    // 5. VIP INSTANT WORK
-    async vipInstantWork(message) {
-        const baseEarnings = Math.floor(Math.random() * 15000) + 10000;
-        const vipMultiplier = 2.5; // VIP bonus
-        const earnings = Math.floor(baseEarnings * vipMultiplier);
-        
-        const user = await this.economy.getUser(message.author.id);
-        await this.economy.updateUser(message.author.id, {
-            balance: user.balance + earnings
-        });
-        
-        // Actualizar estadísticas VIP
-        await this.updateVipStats(message.author.id, 'bonusEarnings', earnings - baseEarnings);
-        // Después de: await this.updateVipStats(message.author.id, 'bonusEarnings', earnings - baseEarnings);
-        await this.economy.missions.updateMissionProgress(message.author.id, 'vip_commands_used');
-
-
-        const embed = new EmbedBuilder()
-            .setTitle('👑 VIP Instant Work')
-            .setDescription(`Como VIP, trabajaste instantáneamente y ganaste:`)
-            .addFields(
-                { name: '💰 Ganancia Base', value: `${baseEarnings.toLocaleString('es-ES')} π-b$`, inline: true },
-                { name: '👑 Bonus VIP (2.5x)', value: `+${(earnings - baseEarnings).toLocaleString('es-ES')} π-b$`, inline: true },
-                { name: '💎 Total Ganado', value: `**${earnings.toLocaleString('es-ES')} π-b$**`, inline: false }
-            )
-            .setColor('#FFD700')
-            .setTimestamp();
-        
-        await message.reply({ embeds: [embed] });
     }
 
     // 4. COMANDOS EXCLUSIVOS VIP
@@ -3112,11 +3183,45 @@ class ShopSystem {
         }
     }
 
+    // NUEVO MÉTODO: Obtener límite según status VIP
+    async getVipLimit(userId) {
+        const vipStatus = await this.hasActiveVip(userId);
+        return vipStatus.hasVip ? 20000000 : 10000000; // 20M para VIP, 10M normal
+    }
+
+    // NUEVO: Aplicar límite normal cuando expire VIP
+    async applyNormalLimitOnVipExpiry(userId) {
+        const user = await this.economy.getUser(userId);
+        
+        if (user.balance > this.economy.config.maxBalance) {
+            const excessAmount = user.balance - this.economy.config.maxBalance;
+            
+            // Notificar al usuario
+            const embed = new EmbedBuilder()
+                .setTitle('⚠️ VIP Expirado - Límite de Balance Reducido')
+                .setDescription(`Tu VIP ha expirado. Tu límite de balance se redujo de 20M a 10M.`)
+                .addFields(
+                    { name: '💰 Balance Actual', value: `${user.balance.toLocaleString('es-ES')} π-b$`, inline: true },
+                    { name: '📉 Exceso Removido', value: `${excessAmount.toLocaleString('es-ES')} π-b$`, inline: true },
+                    { name: '💎 Nuevo Balance', value: `${this.economy.config.maxBalance.toLocaleString('es-ES')} π-b$`, inline: true }
+                )
+                .setColor('#FF6600');
+            
+            // Reducir balance al límite normal
+            await this.economy.updateUser(userId, {
+                balance: this.economy.config.maxBalance
+            });
+            
+            // Enviar notificación (necesitarías implementar un sistema de notificaciones)
+            console.log(`📉 Usuario ${userId}: VIP expirado, balance reducido de ${user.balance} a ${this.economy.config.maxBalance}`);
+        }
+    }
+
     async vipDailyBonus(message) {
         await message.reply('💎 VIP Daily Bonus - Esta función usa el auto-daily automático. ¡Recibes bonus cada 24h automáticamente!');
     }
 
-    async vipTempBoost(message) {
+    /*async vipTempBoost(message) {
         const canUse = await this.canUseVipCommand(message.author.id, 'vipboost');
         if (!canUse.canUse) {
             await message.reply(`❌ ${canUse.reason}`);
@@ -3134,57 +3239,59 @@ class ShopSystem {
             .setColor('#FFD700');
         
         await message.reply({ embeds: [embed] });
-    }
+    }*/
 
-// In a few days plz
-/*async vipTempBoost(message) {
-    const user = await this.economy.getUser(message.author.id);
-    
-    // Verificar cooldown (1 vez por día)
-    const lastBoost = user.vip_last_boost || 0;
-    const now = Date.now();
-    
-    if (now - lastBoost < 86400000) { // 24 horas
-        const timeLeft = 86400000 - (now - lastBoost);
-        const hours = Math.floor(timeLeft / 3600000);
-        await message.reply(`❌ VIP Boost disponible en ${hours} horas.`);
-        return;
+    // In a few days plz
+    async vipTempBoost(message) {
+        const user = await this.economy.getUser(message.author.id);
+        
+        // Verificar cooldown (1 vez por día)
+        const lastBoost = user.vip_last_boost || 0;
+        const now = Date.now();
+       
+        if (now - lastBoost < 86400000) { // 24 horas
+            const timeLeft = 86400000 - (now - lastBoost);
+            const hours = Math.floor(timeLeft / 3600000);
+            await message.reply(`❌ VIP Boost disponible en ${hours} horas.`);
+            return;
+        }
+        
+        // Aplicar boost temporal (multiplicador x2 por 1 hora)
+        const activeEffects = this.parseActiveEffects(user.activeEffects);
+        
+        const boostEffect = {
+            type: 'multiplier',
+            targets: ['all'],
+            multiplier: 2.0,
+            appliedAt: now,
+            expiresAt: now + 3600000 // 1 hora
+        };
+        
+        if (!activeEffects['vip_boost']) {
+            activeEffects['vip_boost'] = [];
+        }
+        activeEffects['vip_boost'].push(boostEffect);
+
+        
+        
+        await this.economy.updateUser(message.author.id, {
+            activeEffects,
+            vip_last_boost: now
+        });
+        
+        const embed = new EmbedBuilder()
+            .setTitle('⚡ VIP Boost Activado')
+            .setDescription('¡Tu boost temporal VIP está activo!')
+            .addFields(
+                { name: '🔥 Efecto', value: 'Ganancias x2 en todos los comandos', inline: true },
+                { name: '⏰ Duración', value: '1 hora', inline: true },
+                { name: '🔄 Cooldown', value: '24 horas hasta el próximo', inline: true }
+            )
+            .setColor('#FFD700')
+            .setTimestamp();
+        
+        await message.reply({ embeds: [embed] });
     }
-    
-    // Aplicar boost temporal (multiplicador x2 por 1 hora)
-    const activeEffects = this.parseActiveEffects(user.activeEffects);
-    
-    const boostEffect = {
-        type: 'multiplier',
-        targets: ['all'],
-        multiplier: 2.0,
-        appliedAt: now,
-        expiresAt: now + 3600000 // 1 hora
-    };
-    
-    if (!activeEffects['vip_boost']) {
-        activeEffects['vip_boost'] = [];
-    }
-    activeEffects['vip_boost'].push(boostEffect);
-    
-    await this.economy.updateUser(message.author.id, {
-        activeEffects,
-        vip_last_boost: now
-    });
-    
-    const embed = new EmbedBuilder()
-        .setTitle('⚡ VIP Boost Activado')
-        .setDescription('¡Tu boost temporal VIP está activo!')
-        .addFields(
-            { name: '🔥 Efecto', value: 'Ganancias x2 en todos los comandos', inline: true },
-            { name: '⏰ Duración', value: '1 hora', inline: true },
-            { name: '🔄 Cooldown', value: '24 horas hasta el próximo', inline: true }
-        )
-        .setColor('#FFD700')
-        .setTimestamp();
-    
-    await message.reply({ embeds: [embed] });
-}*/
 
     // 3. MEJORAR SISTEMA VIP - Nuevas funcionalidades
     async showVipDashboard(message) {
@@ -3212,6 +3319,21 @@ class ShopSystem {
         // Dashboard VIP completo
         const user = await this.economy.getUser(userId);
         const vipData = await this.getVipStats(userId);
+
+        // AGREGAR: Obtener usos diarios
+        let vipUsage = user.vip_daily_usage || {};
+        if (typeof vipUsage === 'string') {
+            try {
+                vipUsage = JSON.parse(vipUsage);
+            } catch {
+                vipUsage = {};
+            }
+        }
+        
+        const today = new Date().toDateString();
+        if (vipUsage.date !== today) {
+            vipUsage = { date: today, vipWork: 0, vipGamble: 0 };
+        }
         
         const timeLeft = vipStatus.timeLeft;
         const days = Math.floor(timeLeft / (24 * 60 * 60 * 1000));
@@ -3226,7 +3348,8 @@ class ShopSystem {
                 { name: '📊 Comandos Sin Cooldown', value: `${vipData.commandsUsed || 0}`, inline: true },
                 { name: '💰 Dinero Extra Ganado', value: `${(vipData.bonusEarnings || 0).toLocaleString('es-ES')} π-b$`, inline: true },
                 { name: '🍀 Juegos con Suerte VIP', value: `${vipData.luckyWins || 0}`, inline: true },
-                { name: '📈 Ahorro en Cooldowns', value: `~${vipData.timeSaved || 0} horas`, inline: true }
+                { name: '📈 Ahorro en Cooldowns', value: `~${vipData.timeSaved || 0} horas`, inline: true },
+                { name: '🎮 Usos VIP Hoy', value: `VIP Work: ${vipUsage.vipWork}/3\nVIP Gamble: ${vipUsage.vipGamble}/2`, inline: true } // NUEVO
             )
             .setColor('#FFD700')
             .setThumbnail(message.author.displayAvatarURL({ dynamic: true }))

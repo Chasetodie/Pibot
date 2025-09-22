@@ -241,7 +241,13 @@ class EconomySystem {
     async addMoney(userId, amount, reason = 'unknown') {
         const user = await this.getUser(userId);
 
-        const newBalance = Math.min(user.balance + amount, this.config.maxBalance);
+        let maxBalance = this.config.maxBalance;
+
+        if (this.shop) {
+            maxBalance = await this.shop.getVipLimit(userId);
+        }
+
+        const newBalance = Math.min(user.balance + amount, maxBalance);
         const actualAmount = newBalance - user.balance;
         
         const updateData = {
@@ -311,7 +317,21 @@ class EconomySystem {
         
         const fromUser = await this.getUser(fromUserId);
         const toUser = await this.getUser(toUserId);
+
+        let toMaxBalance = this.config.maxBalance;
+
+        if (this.shop) {
+            toMaxBalance = await this.shop.getVipLimit(toUserId);
+        }
         
+        if (toUser.balance + amount > toMaxBalance) {
+            return {
+                success: false,
+                reason: 'recipient_limit_exceeded',
+                maxBalance: toMaxBalance
+            }
+        }
+
         if (fromUser.balance < amount) {
             return { success: false, reason: 'insufficient_funds' };
         }
