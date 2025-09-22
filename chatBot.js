@@ -604,24 +604,24 @@ class ChatBotSystem {
                 { 
                     name: '💬 Comandos de Chat', 
                     value: `\`>chat <mensaje>\` - Chatear con PibBot IA
-        \`>chatquota\` - Ver mensajes restantes hoy
-        \`>clearchat\` - Limpiar tu historial de chat
-        \`>chatstats\` - Ver estadísticas de tu chat`, 
+                            \`>chatquota\` - Ver mensajes restantes hoy
+                            \`>clearchat\` - Limpiar tu historial de chat
+                            \`>chatstats\` - Ver estadísticas de tu chat`, 
                     inline: false 
                 },
                 { 
                     name: '📊 Límites Diarios', 
                     value: `👤 **Regular:** 50 mensajes por día
-        💎 **VIP:** 150 mensajes por día  
-        👑 **Admin:** 300 mensajes por día
-        🔄 **Reseteo:** Cada medianoche`, 
+                        💎 **VIP:** 250 mensajes por día  
+                        👑 **Admin:** 150 mensajes por día
+                        🔄 **Reseteo:** Cada medianoche (US Pacific Time)`, 
                     inline: false 
                 },
                 { 
                     name: '💡 Ejemplos de Uso', 
                     value: `\`>chat Hola, ¿cómo estás?\`
-        \`>chat Cuéntame un chiste
-        \`>chat Ayúdame con programación\``, 
+                            \`>chat Cuéntame un chiste\`
+                            \`>chat Ayúdame con programación\``, 
                     inline: false 
                 }
             )
