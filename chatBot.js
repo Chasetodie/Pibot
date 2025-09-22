@@ -145,21 +145,20 @@ class ChatBotSystem {
     async getBotResponse(contextString, maxRetries = 3) {
         for (let attempt = 1; attempt <= maxRetries; attempt++) {
             try {
-                // Usar free-chatbot para generar respuesta
-                const response = await this.chatbot(contextString);
+                // Cambia esta línea:
+                // const response = await this.chatbot(contextString);
                 
-                // Validar y limpiar respuesta
+                // Por esta (free-chatbot es una función, no un constructor):
+                const response = await freeChatBot(contextString);
+                
+                // El resto del código se mantiene igual...
                 let cleanResponse = response.trim();
-                
-                // Remover posibles prefijos del bot
                 cleanResponse = cleanResponse.replace(/^(PibBot:|Bot:|Asistente:)/i, '').trim();
                 
-                // Verificar que no esté vacía
                 if (!cleanResponse || cleanResponse.length < 1) {
                     throw new Error('Respuesta vacía del chatbot');
                 }
                 
-                // Limitar longitud de respuesta
                 if (cleanResponse.length > 1800) {
                     cleanResponse = cleanResponse.substring(0, 1800) + '...';
                 }
@@ -170,7 +169,6 @@ class ChatBotSystem {
                 console.error(`❌ Intento ${attempt} fallido:`, error.message);
                 
                 if (attempt === maxRetries) {
-                    // Respuestas de fallback
                     const fallbackResponses = [
                         '¡Ups! Parece que tengo un pequeño problema técnico. ¿Podrías repetir eso? 🤖',
                         'Hmm, se me trabó un poco el cerebro. ¿De qué estábamos hablando? 😅',
@@ -180,7 +178,6 @@ class ChatBotSystem {
                     return fallbackResponses[Math.floor(Math.random() * fallbackResponses.length)];
                 }
                 
-                // Esperar antes de reintentar
                 await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
             }
         }
