@@ -58,8 +58,8 @@ class MusicSystem {
         this.kazagumo.on('playerEnd', (player) => {
             // Verificar si hay más canciones en la cola
             if (player.queue.size > 0) {
-                // Si hay canciones, reproducir la siguiente
-                player.play();
+                // Si hay canciones, saltar a la siguiente (esto mueve la cola correctamente)
+                player.skip();
             } else {
                 // Si no hay más canciones, enviar mensaje y programar desconexión
                 if (player.textId) {
@@ -85,7 +85,7 @@ class MusicSystem {
                             }
                         }
                     }
-                }, 300000); // 5 minutos
+                }, 300000);
             }
         });
 
@@ -284,11 +284,18 @@ class MusicSystem {
             return message.reply('❌ No hay música reproduciéndose.');
         }
 
-        if (player.queue.size === 0) {
-            return message.reply('❌ No hay más canciones en la cola.');
+        if (!player.queue.current) {
+            return message.reply('❌ No hay canción reproduciéndose actualmente.');
         }
 
         const currentTrack = player.queue.current;
+
+        // Si no hay más canciones después de esta
+        if (player.queue.size === 0) {
+            await this.stopCommand(message, guild);
+            return message.reply(`⏭️ **${currentTrack.title}** ha sido saltada. No hay más canciones en la cola.`);
+        }
+
         player.skip();
 
         const embed = new EmbedBuilder()
