@@ -76,7 +76,7 @@ class ChatBotSystem {
             this.updateUserUsage(userId);
             
             // 7. Guardar respuesta del bot al contexto
-            await this.addMessageToContext(userId, 'assistant', botResponse, 'PibBot');
+            await this.addMessageToContext(userId, 'assistant', botResponse, 'Pibot');
             
             // 8. Actualizar cache
             this.updateCache(userId);
@@ -193,20 +193,20 @@ class ChatBotSystem {
         // AGREGAR PERSONALIDAD Y GÉNERO AQUÍ
         contextString += 'Eres Pibot, tienes 22 años y personalidad relajada, además de que tu género es femenino. ';
         contextString += 'Te gustan los videojuegos, memes y tecnología. ';
-        contextString += 'Hablas de forma casual y amigable. Y adicional, usas emojis en tus respuestas, un gesto super lindo. ';
+        contextString += 'Hablas de forma casual y amigable. Y adicional, usas emojis en tus respuestas, un gesto super lindo. El unico problema, es que estos emojis son para discord, a lo cual algunos no funcionan, asi que cuidado con eso. ';
         contextString += 'Puedes hacer bromas y usar humor. ';
         
         // El resto del código se mantiene igual
         if (context.length > 0) {
             contextString += 'Contexto de la conversación:\n';
             context.forEach(msg => {
-                const role = msg.role === 'user' ? msg.display_name : 'PibBot';
+                const role = msg.role === 'user' ? msg.display_name : 'Pibot';
                 contextString += `${role}: ${msg.content}\n`;
             });
             contextString += '\n';
         }
         
-        contextString += `Usuario: ${newMessage}\nPibBot:`;
+        contextString += `Usuario: ${newMessage}\nPibot:`;
         
         return contextString;
     }
@@ -599,11 +599,11 @@ class ChatBotSystem {
 
         const chatHelpEmbed = new EmbedBuilder()
             .setTitle('🤖 Comandos de Chat IA')
-            .setDescription('Chatea con PibBot usando inteligencia artificial')
+            .setDescription('Chatea con Pibot usando inteligencia artificial')
             .addFields(
                 { 
                     name: '💬 Comandos de Chat', 
-                    value: `\`>chat <mensaje>\` - Chatear con PibBot IA
+                    value: `\`>chat <mensaje>\` - Chatear con Pibot
                             \`>chatquota\` - Ver mensajes restantes hoy
                             \`>clearchat\` - Limpiar tu historial de chat
                             \`>chatstats\` - Ver estadísticas de tu chat`, 
