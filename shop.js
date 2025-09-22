@@ -152,8 +152,8 @@ class ShopSystem {
                     targets: ['work'],
                     reduction: 0.2
                 },
-                stackable: false,
-                maxStack: 1
+                stackable: true,
+                maxStack: 2
             },
 
             // === DECORATIVOS ===

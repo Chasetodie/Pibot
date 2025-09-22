@@ -1,4 +1,4 @@
-const { Client, GatewayIntentBits, ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder, SlashCommandBuilder, Events, REST, Routes } = require('discord.js');
+const { Client, GatewayIntentBits, ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder, SlashCommandBuilder, Events, REST, Routes, Collection } = require('discord.js');
 const express = require('express');
 const fs = require('fs');
 const path = require('path');
@@ -20,6 +20,9 @@ const {
     AuctionSystem,
     CraftingSystem
 } = require('./things-shop');
+
+require('./musicManager.js')(client);
+require('./commandHandler.js')(client);
 
 // Archivo para guardar los contadores
 const countersFile = path.join(__dirname, 'counters.json');
@@ -69,6 +72,8 @@ const client = new Client({
     ],
     makeCache: () => new Map(), // Caché más pequeño
 });
+
+client.commands = new Collection();
 
 // Función para guardar contadores
 function saveCounters(counters) {
