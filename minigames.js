@@ -20,15 +20,9 @@ class MinigamesSystem {
         this.cacheTimeout = 10 * 60 * 1000;
 
         // En el constructor, después de this.achievements = achievementsSystem;
-        this.weeklyPot = {
-            contributions: new Map(), // userId -> {money: amount, items: [...], lastContribution: timestamp}
-            totalMoney: 0,
-            totalItems: [],
-            participants: new Set(),
-            startDate: this.getWeekStart(),
-            //endDate: this.getWeekStart() + (7 * 24 * 60 * 60 * 1000)
-            endDate: this.getWeekStart() + (1 * 60 * 1000)
-        };
+        this.weeklyPot = null;
+
+        this.initializeWeeklyPot();
 
         this.potConfig = {
             minMoney: 1000,
@@ -42,7 +36,7 @@ class MinigamesSystem {
         // Agregar timer para verificar reset semanal cada hora
         setInterval(() => {
             this.checkWeeklyReset();
-        }, /*60 * 60*/5 * 1000); // Cada hora
+        }, /*60 * 60*/10 * 1000); // Cada hora
         
         // Configuración de minijuegos
         this.config = {
@@ -253,9 +247,63 @@ class MinigamesSystem {
             totalItems: [],
             participants: new Set(),
             startDate: newStart,
-            //endDate: newStart + (7 * 24 * 60 * 60 * 1000)
-            endDate: newStart + (1 * 60 * 1000)
+            endDate: newStart + (7 * 24 * 60 * 60 * 1000)
         };
+    }
+
+    // NUEVOS MÉTODOS PARA BASE DE DATOS
+    async initializeWeeklyPot() {
+        try {
+            let currentPot = await this.economy.database.getWeeklyPot();
+            
+            if (!currentPot || Date.now() >= currentPot.end_date) {
+                // Distribuir pozo anterior si existe
+                if (currentPot) {
+                    await this.distributeWeeklyPot(currentPot);
+                }
+                
+                // Crear nuevo pozo
+                const startDate = this.getWeekStart();
+                const potData = {
+                    id: `pot_${Date.now()}`,
+                    total_money: 0,
+                    contributions: {},
+                    participants: [],
+                    items: [],
+                    start_date: startDate,
+                    end_date: startDate + (/*7 * 24 * 60*/3 * 60 * 1000)
+                };
+                
+                await this.economy.database.createWeeklyPot(potData);
+                currentPot = potData;
+                console.log('🕳️ Nuevo pozo semanal creado');
+            }
+            
+            this.weeklyPot = currentPot;
+        } catch (error) {
+            console.error('❌ Error inicializando pozo semanal:', error);
+        }
+    }
+
+    async checkWeeklyReset() {
+        const now = Date.now();
+        if (this.weeklyPot && now >= this.weeklyPot.end_date) {
+            await this.distributeWeeklyPot(this.weeklyPot);
+            await this.initializeWeeklyPot(); // Crear nuevo pozo
+        }
+    }
+
+    async saveWeeklyPot() {
+        try {
+            await this.economy.database.updateWeeklyPot(this.weeklyPot.id, {
+                total_money: this.weeklyPot.total_money,
+                contributions: this.weeklyPot.contributions,
+                participants: this.weeklyPot.participants,
+                items: this.weeklyPot.items
+            });
+        } catch (error) {
+            console.error('❌ Error guardando pozo semanal:', error);
+        }
     }
 
     async handlePotContribute(message, args) {
@@ -302,25 +350,34 @@ class MinigamesSystem {
             return;
         }
 
+        await this.checkWeeklyReset();
+
         // Quitar dinero al usuario
         await this.economy.removeMoney(userId, amount, 'weekly_pot_contribution');
 
         // Agregar al pozo
-        let userContribution = this.weeklyPot.contributions.get(userId) || { money: 0, items: [], lastContribution: 0 };
-        userContribution.money += amount;
-        userContribution.lastContribution = Date.now();
+        if (!this.weeklyPot.contributions[userId]) {
+            this.weeklyPot.contributions[userId] = { money: 0, items: [], lastContribution: 0 };
+        }
         
-        this.weeklyPot.contributions.set(userId, userContribution);
-        this.weeklyPot.totalMoney += amount;
-        this.weeklyPot.participants.add(userId);
+        this.weeklyPot.contributions[userId].money += amount;
+        this.weeklyPot.contributions[userId].lastContribution = Date.now();
+        this.weeklyPot.total_money += amount;
+        
+        if (!this.weeklyPot.participants.includes(userId)) {
+            this.weeklyPot.participants.push(userId);
+        }
+
+        // Guardar en base de datos
+        await this.saveWeeklyPot();
 
         const embed = new EmbedBuilder()
             .setTitle('✅ Contribución al Pozo')
             .setDescription(`Has contribuido **${this.formatNumber(amount)} π-b$** al pozo semanal`)
             .addFields(
-                { name: '💰 Tu Contribución Total', value: `${this.formatNumber(userContribution.money)} π-b$`, inline: true },
-                { name: '🕳️ Pozo Total', value: `${this.formatNumber(this.weeklyPot.totalMoney)} π-b$`, inline: true },
-                { name: '👥 Participantes', value: `${this.weeklyPot.participants.size}`, inline: true }
+                { name: '💰 Tu Contribución Total', value: `${this.formatNumber(this.weeklyPot.contributions[userId].money)} π-b$`, inline: true },
+                { name: '🕳️ Pozo Total', value: `${this.formatNumber(this.weeklyPot.total_money)} π-b$`, inline: true },
+                { name: '👥 Participantes', value: `${this.weeklyPot.participants.length}`, inline: true }
             )
             .setColor('#00FF00')
             .setTimestamp();
@@ -442,26 +499,26 @@ class MinigamesSystem {
         await message.reply({ embeds: [embed] });
     }
 
-    async distributeWeeklyPot() {
-        if (this.weeklyPot.participants.size === 0) {
+    async distributeWeeklyPot(potData = null) {
+        const pot = potData || this.weeklyPot;
+        
+        if (!pot || pot.participants.length === 0) {
             console.log('📦 Pozo semanal terminó sin participantes');
             return;
         }
 
-        console.log(`📦 Distribuyendo pozo semanal con ${this.weeklyPot.participants.size} participantes`);
-        
-        const participants = Array.from(this.weeklyPot.participants);
+        console.log(`📦 Distribuyendo pozo semanal con ${pot.participants.length} participantes`);
         
         // Distribuir dinero
-        if (this.weeklyPot.totalMoney > 0) {
-            const luckyWinner = participants[Math.floor(Math.random() * participants.length)];
-            await this.economy.addMoney(luckyWinner, this.weeklyPot.totalMoney, 'weekly_pot_money_prize');
-            console.log(`💰 ${luckyWinner.slice(-4)} ganó ${this.weeklyPot.totalMoney} π-b$ del pozo`);
+        if (pot.total_money > 0) {
+            const luckyWinner = pot.participants[Math.floor(Math.random() * pot.participants.length)];
+            await this.economy.addMoney(luckyWinner, pot.total_money, 'weekly_pot_money_prize');
+            console.log(`💰 ${luckyWinner.slice(-4)} ganó ${pot.total_money} π-b$ del pozo`);
         }
 
-        // Distribuir items aleatoriamente
-        for (const item of this.weeklyPot.totalItems) {
-            const randomWinner = participants[Math.floor(Math.random() * participants.length)];
+        // Distribuir items
+        for (const item of pot.items) {
+            const randomWinner = pot.participants[Math.floor(Math.random() * pot.participants.length)];
             
             const user = await this.economy.getUser(randomWinner);
             const userItems = user.items || {};
@@ -480,6 +537,9 @@ class MinigamesSystem {
             await this.economy.updateUser(randomWinner, { items: userItems });
             console.log(`🎁 ${randomWinner.slice(-4)} ganó ${item.name} del pozo`);
         }
+
+        // Marcar como completado en DB
+        await this.economy.database.updateWeeklyPot(pot.id, { status: 'completed' });
     }
 
     async showPotStatus(message) {
@@ -5115,13 +5175,11 @@ class MinigamesSystem {
                 case '>potstatus':
                     await this.showPotContents(message);
                     break;
-                case '>forcedistribute':
-                    if (message.author.id === '488110147265232898') { // Reemplaza con tu ID real
+                case '>forcepot':
+                    if (message.author.id === '488110147265232898') { // Tu ID real
                         await this.distributeWeeklyPot();
-                        this.resetWeeklyPot();
-                        await message.reply('🔄 Pozo forzado a distribuir y resetear');
-                    } else {
-                        await message.reply('❌ Solo administradores pueden usar este comando.');
+                        await this.initializeWeeklyPot();
+                        await message.reply('🔄 Pozo forzado a distribuir y crear nuevo');
                     }
                     break;
                 default:

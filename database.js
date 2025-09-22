@@ -206,9 +206,97 @@ class LocalDatabase {
                 )
             `);
 
+            // Tabla para pozo semanal
+            await this.pool.execute(`
+                CREATE TABLE IF NOT EXISTS weekly_pot (
+                    id VARCHAR(255) PRIMARY KEY,
+                    total_money INTEGER DEFAULT 0,
+                    contributions TEXT,
+                    participants TEXT,
+                    items TEXT,
+                    start_date BIGINT NOT NULL,
+                    end_date BIGINT NOT NULL,
+                    status ENUM('active', 'distributing', 'completed') DEFAULT 'active'
+                )
+            `);
+
             console.log('🗃️ Tablas MySQL inicializadas');
         } catch (error) {
             console.error('❌ Error creando tablas:', error);
+        }
+    }
+
+    // Métodos para Weekly Pot
+    async getWeeklyPot() {
+        try {
+            const [rows] = await this.pool.execute(
+                'SELECT * FROM weekly_pot WHERE status = ? ORDER BY start_date DESC LIMIT 1', 
+                ['active']
+            );
+            
+            if (rows.length > 0) {
+                const pot = rows[0];
+                pot.contributions = this.safeJsonParse(pot.contributions, {});
+                pot.participants = this.safeJsonParse(pot.participants, []);
+                pot.items = this.safeJsonParse(pot.items, []);
+                return pot;
+            }
+            return null;
+        } catch (error) {
+            console.error('❌ Error obteniendo pozo semanal:', error);
+            return null;
+        }
+    }
+
+    async createWeeklyPot(potData) {
+        try {
+            await this.pool.execute(`
+                INSERT INTO weekly_pot (id, total_money, contributions, participants, 
+                                    items, start_date, end_date, status)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            `, [
+                potData.id,
+                potData.total_money || 0,
+                JSON.stringify(potData.contributions || {}),
+                JSON.stringify(potData.participants || []),
+                JSON.stringify(potData.items || []),
+                potData.start_date,
+                potData.end_date,
+                'active'
+            ]);
+            
+            return { id: potData.id };
+        } catch (error) {
+            console.error('❌ Error creando pozo semanal:', error);
+            throw error;
+        }
+    }
+
+    async updateWeeklyPot(potId, updateData) {
+        try {
+            const sets = [];
+            const values = [];
+
+            for (const [key, value] of Object.entries(updateData)) {
+                sets.push(`${key} = ?`);
+                if (typeof value === 'object' && value !== null) {
+                    values.push(JSON.stringify(value));
+                } else {
+                    values.push(value);
+                }
+            }
+
+            values.push(potId);
+
+            const [result] = await this.pool.execute(
+                `UPDATE weekly_pot SET ${sets.join(', ')} WHERE id = ?`,
+                values
+            );
+            
+            return { changes: result.affectedRows };
+        } catch (error) {
+            console.error('❌ Error actualizando pozo semanal:', error);
+            throw error;
         }
     }
 
