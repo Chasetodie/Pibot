@@ -1,9 +1,9 @@
-const FreeChatBot = require('free-chatbot');
+const freeChatBot = require('free-chatbot');
 
 class ChatBotSystem {
     constructor(database) {
         this.database = database;
-        this.chatbot = FreeChatBot;
+        this.chatbot = freeChatBot;
         this.MAX_CONTEXT_MESSAGES = 10; // Límite de mensajes por contexto
         this.conversationCache = new Map(); // Cache en memoria para acceso rápido
         this.CACHE_CLEANUP_INTERVAL = 30 * 60 * 1000; // 30 minutos
