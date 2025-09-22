@@ -62,7 +62,7 @@ class ChatBotSystem {
             const botResponse = await this.getBotResponse(contextString);
             
             // 5. Guardar respuesta del bot al contexto
-            await this.addMessageToContext(userId, 'assistant', botResponse, 'PibBot');
+            await this.addMessageToContext(userId, 'assistant', botResponse, 'Pibot');
             
             // 6. Actualizar cache
             this.updateCache(userId);
@@ -153,13 +153,13 @@ class ChatBotSystem {
         let contextString = '';
         
         // Agregar instrucciones del sistema MÁS CLARAS
-        contextString += 'Eres PibBot, un asistente amigable en Discord. IMPORTANTE: Recuerda toda nuestra conversación anterior.\n\n';
+        contextString += 'Eres Pibot, un asistente amigable en Discord. IMPORTANTE: Recuerda toda nuestra conversación anterior.\n\n';
         
         // Agregar TODO el contexto de una vez
         if (context.length > 0) {
             contextString += 'CONVERSACIÓN COMPLETA HASTA AHORA:\n';
             context.forEach((msg, index) => {
-                const role = msg.role === 'user' ? msg.display_name : 'PibBot';
+                const role = msg.role === 'user' ? msg.display_name : 'Pibot';
                 contextString += `${role}: ${msg.content}\n`;
             });
             contextString += '\n';
@@ -168,7 +168,7 @@ class ChatBotSystem {
         // Agregar mensaje actual con instrucción de continuidad
         contextString += `${context.length > 0 ? 'CONTINUANDO LA CONVERSACIÓN...\n' : ''}`;
         contextString += `Usuario: ${newMessage}\n`;
-        contextString += `PibBot (recordando todo lo anterior):`;
+        contextString += `Pibot (recordando todo lo anterior):`;
         
         return contextString;
     }
@@ -183,7 +183,7 @@ class ChatBotSystem {
                 const response = await result.response;
                 let cleanResponse = response.text().trim();
                 
-                cleanResponse = cleanResponse.replace(/^(PibBot:|Bot:|Asistente:)/i, '').trim();
+                cleanResponse = cleanResponse.replace(/^(Pibot:|Bot:|Asistente:)/i, '').trim();
                 
                 if (!cleanResponse || cleanResponse.length < 1) {
                     throw new Error('Respuesta vacía del chatbot');
