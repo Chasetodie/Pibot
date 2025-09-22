@@ -108,7 +108,7 @@ const music = new MusicSystem(client);
 const database = new LocalDatabase();
 database.startCacheCleanup();
 
-const chatbot = new ChatBotSystem(database);
+const chatbot = new ChatBotSystem(database, economy);
 
 //Crear instancia del sistema de Eventos
 const events = new EventsSystem(economy, client);

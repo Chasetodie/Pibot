@@ -1,16 +1,47 @@
-const { HfInference } = require('@huggingface/inference');
+const { GoogleGenerativeAI } = require('@google/generative-ai');
 
 class ChatBotSystem {
-    constructor(database) {
+    constructor(database, economy) {
         this.database = database;
+        this.genAI = new GoogleGenerativeAI('TU_API_KEY_AQUI');
+        this.model = this.genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
         
-        // Crear cliente de Hugging Face (GRATIS, no necesitas API key)
-        this.hf = new HfInference();
-        
+        this.economy = economy;
+
         this.MAX_CONTEXT_MESSAGES = 10;
         this.conversationCache = new Map();
         this.CACHE_CLEANUP_INTERVAL = 30 * 60 * 1000;
         this.startCacheCleanup();
+        
+        // AGREGAR ESTO - Sistema de cuotas
+        this.DAILY_TOTAL_LIMIT = 1500; // Límite total de Google
+        this.userChatUsage = new Map(); // user_id -> { used: number, lastReset: timestamp }
+        this.currentDate = new Date().toDateString(); // Para detectar cambio de día
+        
+        // Límites por tipo de usuario
+        this.USER_LIMITS = {
+            admin: 200,      // Admins: 200 mensajes por día
+            vip: 200,        // VIP: 200 mensajes por día  
+            regular: 50      // Usuarios normales: 50 mensajes por día
+        };
+        
+        this.totalUsedToday = 0;
+        this.startDailyReset();
+    }
+
+    /**
+     * Si necesitas el método parseEffects aquí también
+     */
+    parseEffects(effectsString) {
+        if (!effectsString || effectsString.trim() === '') {
+            return {};
+        }
+        try {
+            return JSON.parse(effectsString);
+        } catch (error) {
+            console.error('❌ Error parseando efectos permanentes:', error);
+            return {};
+        }
     }
 
     /**
@@ -148,19 +179,10 @@ class ChatBotSystem {
     async getBotResponse(contextString, maxRetries = 3) {
         for (let attempt = 1; attempt <= maxRetries; attempt++) {
             try {
-                // Probar con un modelo diferente que sí esté disponible
-                const response = await this.hf.textGeneration({
-                    model: 'gpt2',  // Cambiar a GPT-2 que siempre está disponible
-                    inputs: contextString,
-                    parameters: {
-                        max_new_tokens: 50,
-                        temperature: 0.8,
-                        do_sample: true,
-                        pad_token_id: 50256
-                    }
-                });
+                const result = await this.model.generateContent(contextString);
+                const response = await result.response;
+                let cleanResponse = response.text().trim();
                 
-                let cleanResponse = response.generated_text.replace(contextString, '').trim();
                 cleanResponse = cleanResponse.replace(/^(PibBot:|Bot:|Asistente:)/i, '').trim();
                 
                 if (!cleanResponse || cleanResponse.length < 1) {
@@ -203,6 +225,109 @@ class ChatBotSystem {
         }).catch(error => {
             console.error('❌ Error actualizando cache:', error);
         });
+    }
+
+    /**
+     * Determinar el tipo de usuario usando tu sistema existente
+     */
+    async getUserType(userId) {
+        try {
+            // Verificar si es admin (adapta esto a tu sistema)
+            const adminIds = ['ADMIN_ID_1', 'ADMIN_ID_2']; // Reemplaza con IDs reales de admins
+            if (adminIds.includes(userId)) {
+                return 'admin';
+            }
+            
+            // Usar tu método existente para verificar VIP
+            if (this.economy.shop && typeof this.economy.shop.hasVipAccess === 'function') {
+                const hasVip = await this.economy.shop.hasVipAccess(userId);
+                if (hasVip) {
+                    return 'vip';
+                }
+            }
+            
+            return 'regular';
+            
+        } catch (error) {
+            console.error('❌ Error verificando tipo de usuario:', error);
+            return 'regular';
+        }
+    }
+
+    /**
+     * Verificar si el usuario puede enviar mensajes
+     */
+    async canUserSendMessage(userId) {
+        // Resetear día si es necesario
+        this.checkDailyReset();
+        
+        // Verificar límite global
+        if (this.totalUsedToday >= this.DAILY_TOTAL_LIMIT) {
+            return { 
+                canSend: false, 
+                reason: `😴 Límite diario global alcanzado (${this.DAILY_TOTAL_LIMIT}). ¡Vuelve mañana!` 
+            };
+        }
+        
+        // Obtener datos del usuario
+        const userType = await this.getUserType(userId);
+        const userLimit = this.USER_LIMITS[userType];
+        const userUsage = this.userChatUsage.get(userId) || { used: 0, lastReset: Date.now() };
+        
+        // Verificar límite del usuario
+        if (userUsage.used >= userLimit) {
+            const remainingGlobal = this.DAILY_TOTAL_LIMIT - this.totalUsedToday;
+            return {
+                canSend: false,
+                reason: `⏰ Has alcanzado tu límite diario (${userUsage.used}/${userLimit} mensajes).\n` +
+                    `🎭 Tipo: **${userType.toUpperCase()}** | Global restante: **${remainingGlobal}**\n` +
+                    `💎 ${userType === 'regular' ? '¡Consigue un **pase VIP** para más mensajes!' : '¡Vuelve mañana para más!'}`
+            };
+        }
+        
+        return {
+            canSend: true,
+            remaining: userLimit - userUsage.used,
+            userType: userType,
+            globalRemaining: this.DAILY_TOTAL_LIMIT - this.totalUsedToday
+        };
+    }
+
+    /**
+     * Actualizar el uso del usuario
+     */
+    updateUserUsage(userId) {
+        const userUsage = this.userChatUsage.get(userId) || { used: 0, lastReset: Date.now() };
+        userUsage.used += 1;
+        userUsage.lastReset = Date.now();
+        
+        this.userChatUsage.set(userId, userUsage);
+        this.totalUsedToday += 1;
+        
+        console.log(`📊 Usuario ${userId}: ${userUsage.used} mensajes | Global: ${this.totalUsedToday}/${this.DAILY_TOTAL_LIMIT}`);
+    }
+
+    /**
+     * Verificar y resetear límites diarios
+     */
+    checkDailyReset() {
+        const today = new Date().toDateString();
+        if (today !== this.currentDate) {
+            console.log('🔄 Reseteando límites diarios...');
+            this.currentDate = today;
+            this.userChatUsage.clear();
+            this.totalUsedToday = 0;
+        }
+    }
+
+    /**
+     * Iniciar reseteo automático diario
+     */
+    startDailyReset() {
+        // Verificar cada hora si cambió el día
+        setInterval(() => {
+            this.checkDailyReset();
+        }, 60 * 60 * 1000); // 1 hora
     }
 
     /**
