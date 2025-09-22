@@ -299,11 +299,22 @@ class ChatBotSystem {
         // Resetear día si es necesario
         this.checkDailyReset();
         
-        // Verificar límite global
+        // Verificar límite global PRIMERO
         if (this.totalUsedToday >= this.DAILY_TOTAL_LIMIT) {
+            const now = new Date();
+            const tomorrow = new Date(now);
+            tomorrow.setDate(tomorrow.getDate() + 1);
+            tomorrow.setHours(0, 0, 0, 0);
+            
+            const hoursUntilReset = Math.ceil((tomorrow - now) / (1000 * 60 * 60));
+            
             return { 
                 canSend: false, 
-                reason: `😴 Límite diario global alcanzado (${this.DAILY_TOTAL_LIMIT}). ¡Vuelve mañana!` 
+                reason: `🌍 **LÍMITE GLOBAL ALCANZADO**\n` +
+                    `😴 El servidor ha usado todos los mensajes de IA hoy (${this.DAILY_TOTAL_LIMIT}).\n\n` +
+                    `🕛 **Se reiniciará a medianoche** (en ~${hoursUntilReset} horas)\n` +
+                    `⏰ **Horario de reseteo:** 00:00 cada día\n\n` +
+                    `💡 *Tip: ¡Vuelve mañana para chatear de nuevo!*`
             };
         }
         
@@ -314,12 +325,20 @@ class ChatBotSystem {
         
         // Verificar límite del usuario
         if (userUsage.used >= userLimit) {
-            const remainingGlobal = this.DAILY_TOTAL_LIMIT - this.totalUsedToday;
+            const now = new Date();
+            const tomorrow = new Date(now);
+            tomorrow.setDate(tomorrow.getDate() + 1);
+            tomorrow.setHours(0, 0, 0, 0);
+            
+            const hoursUntilReset = Math.ceil((tomorrow - now) / (1000 * 60 * 60));
+            
             return {
                 canSend: false,
-                reason: `⏰ Has alcanzado tu límite diario (${userUsage.used}/${userLimit} mensajes).\n` +
-                    `🎭 Tipo: **${userType.toUpperCase()}** | Global restante: **${remainingGlobal}**\n` +
-                    `💎 ${userType === 'regular' ? '¡Consigue un **pase VIP** para más mensajes!' : '¡Vuelve mañana para más!'}`
+                reason: `⏰ **LÍMITE PERSONAL ALCANZADO**\n` +
+                    `Has usado todos tus mensajes (${userUsage.used}/${userLimit}) hoy.\n\n` +
+                    `🕛 **Se reiniciará a medianoche** (en ~${hoursUntilReset} horas)\n` +
+                    `🎭 **Tu tipo:** ${userType.toUpperCase()}\n\n` +
+                    `${userType === 'regular' ? '💎 ¡Consigue **pase VIP** para 150 mensajes diarios!' : '💤 ¡Descansa y vuelve mañana!'}`
             };
         }
         
