@@ -748,6 +748,17 @@ class LocalDatabase {
         }
     }
 
+    // En database.js
+    async forceCreateNewPot() {
+        const weekStart = this.getWeekStart();
+        await this.pool.execute(`
+            INSERT INTO weekly_pot (week_start) VALUES (?) 
+            ON DUPLICATE KEY UPDATE week_start = week_start
+        `, [weekStart]);
+        
+        return await this.getCurrentWeeklyPot();
+    }
+
     // Métodos para shop_items
     async getShopItems() {
         try {

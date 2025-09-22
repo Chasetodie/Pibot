@@ -5215,7 +5215,7 @@ class MinigamesSystem {
                             
                             // SOLO cuando se fuerza, crear nuevo pozo inmediatamente
                             console.log('Creando nuevo pozo después de distribución forzada...');
-                            await this.economy.database.getCurrentWeeklyPot(); // Esto creará el nuevo pozo
+                            await this.economy.database.forceCreateNewPot();
                             
                             await message.reply('🔄 Pozo forzado a distribuir y nuevo pozo creado');
                         } else {
