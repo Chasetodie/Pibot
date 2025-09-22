@@ -1922,7 +1922,6 @@ class AllCommands {
                     await this.showHelp(message);
                     break;
                 default:
-                    await message.reply('❌ Ese comando no existe, escribe `>help` para ver todos los comandos disponibles.');
                     // No es un comando de economía
                     break;
             }
