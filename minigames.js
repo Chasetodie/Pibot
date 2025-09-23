@@ -5101,6 +5101,7 @@ class MinigamesSystem {
                 creator_id: gameData.creator_id,
                 channel_id: gameData.channel_id,
                 bet_amount: gameData.bet_amount,
+                variant: gameData.variant, // AGREGAR ESTA LÍNEA
                 players: gameData.players,
                 phase: gameData.phase,
                 game_data: cleanGameData
@@ -5122,6 +5123,7 @@ class MinigamesSystem {
             const cleanGameData = this.cleanGameDataForDB(gameData);
             
             await this.economy.database.updateUnoGame(gameData.id, {
+                variant: gameData.variant, // AGREGAR ESTA LÍNEA
                 players: gameData.players,
                 phase: gameData.phase,
                 game_data: cleanGameData
@@ -5197,13 +5199,14 @@ class MinigamesSystem {
 
             for (let gameData of data) {
                 const game = gameData.game_data;
-                this.activeGames.set(game.id, game);
                 
-                // Reanudar timers si es necesario
-                if (game.phase === 'playing') {
-                    // Aquí podrías reanudar el timer del turno actual
-                    //this.startTurnTimer(game, message);
+                // AGREGAR: Asegurar que tenga variante
+                if (!game.variant) {
+                    game.variant = gameData.variant || 'classic';
+                    game.variant_config = this.config.uno.variants[game.variant];
                 }
+                
+                this.activeGames.set(game.id, game);
             }
 
             console.log(`Loaded ${data.length} active UNO games`);

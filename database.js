@@ -123,6 +123,7 @@ class LocalDatabase {
                     creator_id TEXT NOT NULL,
                     channel_id TEXT NOT NULL,
                     bet_amount INTEGER NOT NULL,
+                    variant VARCHAR(50) DEFAULT 'classic',
                     players TEXT,
                     phase TEXT,
                     game_data TEXT
@@ -1046,13 +1047,14 @@ class LocalDatabase {
         try {
             await this.pool.execute(`
                 INSERT INTO uno_games (id, creator_id, channel_id, bet_amount, 
-                                    players, phase, game_data)
-                VALUES (?, ?, ?, ?, ?, ?, ?)
+                                    variant, players, phase, game_data)  -- AGREGAR variant
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
             `, [
                 gameId,
                 gameData.creator_id,
                 gameData.channel_id,
                 gameData.bet_amount,
+                gameData.variant || 'classic',  // AGREGAR ESTA LÍNEA
                 JSON.stringify(gameData.players || []),
                 gameData.phase || 'waiting',
                 JSON.stringify(gameData.game_data || {})
@@ -1060,7 +1062,7 @@ class LocalDatabase {
             
             return { id: gameId };
         } catch (error) {
-            console.error('❌ Error creando juego UNO:', error);
+            console.error('Error creando juego UNO:', error);
             throw error;
         }
     }
@@ -1088,7 +1090,7 @@ class LocalDatabase {
             
             return { changes: result.affectedRows };
         } catch (error) {
-            console.error('❌ Error actualizando juego UNO:', error);
+            console.error('Error actualizando juego UNO:', error);
             throw error;
         }
     }
