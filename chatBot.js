@@ -1,11 +1,12 @@
-const { GoogleGenerativeAI } = require('@google/generative-ai');
+const Groq = require('groq-sdk');
 const { EmbedBuilder } = require('discord.js');
 
 class ChatBotSystem {
     constructor(database, economy) {
         this.database = database;
-        this.genAI = new GoogleGenerativeAI('AIzaSyBg2M-qzlgQYzUA7HxgnOxeTzVqp9TOuJI');
-        this.model = this.genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+        this.groq = new Groq({
+            apiKey: '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'
+        });
         
         this.economy = economy;
 
@@ -15,15 +16,15 @@ class ChatBotSystem {
         this.startCacheCleanup();
         
         // AGREGAR ESTO - Sistema de cuotas
-        this.DAILY_TOTAL_LIMIT = 1500; // Límite total de Google
+        this.DAILY_TOTAL_LIMIT = 500; // Límite total de Google
         this.userChatUsage = new Map(); // user_id -> { used: number, lastReset: timestamp }
         this.currentDate = new Date().toDateString(); // Para detectar cambio de día
         
         // Límites por tipo de usuario
         this.USER_LIMITS = {
-            admin: 150,      // Admins: 500 mensajes por día
-            vip: 250,        // VIP: 750 mensajes por día  
-            regular: 50      // Usuarios normales: 250 mensajes por día
+            admin: 75,      // Admins: 75 mensajes por día
+            vip: 150,        // VIP: 150 mensajes por día  
+            regular: 20      // Usuarios normales: 20 mensajes por día
         };
         
         this.totalUsedToday = 0;
@@ -217,11 +218,26 @@ class ChatBotSystem {
     async getBotResponse(contextString, maxRetries = 3) {
         for (let attempt = 1; attempt <= maxRetries; attempt++) {
             try {
-                const result = await this.model.generateContent(contextString);
-                const response = await result.response;
-                let cleanResponse = response.text().trim();
+                // Usar Groq en lugar de Google
+                const completion = await this.groq.chat.completions.create({
+                    messages: [
+                        {
+                            role: "user",
+                            content: contextString
+                        }
+                    ],
+                    model: "llama3-8b-8192", // Modelo rápido y gratuito
+                    temperature: 0.7,
+                    max_tokens: 200,
+                    top_p: 1,
+                    stream: false
+                });
                 
-                cleanResponse = cleanResponse.replace(/^(Pibot:|Bot:|Asistente:)/i, '').trim();
+                const response = completion.choices[0]?.message?.content || '';
+                
+                // El resto del procesamiento se mantiene igual
+                let cleanResponse = response.trim();
+                cleanResponse = cleanResponse.replace(/^(PibBot:|Bot:|Asistente:)/i, '').trim();
                 
                 if (!cleanResponse || cleanResponse.length < 1) {
                     throw new Error('Respuesta vacía del chatbot');
