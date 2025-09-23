@@ -3448,6 +3448,19 @@ class MinigamesSystem {
 
         const betAmount = parseInt(args[1]);
 
+        let variant = 'classic';
+
+        if (args.length >= 3) {
+            const requestedVariant = args[2].toLowerCase();
+            if (this.config.uno.variants[requestedVariant]){
+                variant = requestedVariant;
+            } else {
+                const availableVariants = Object.keys(this.config.uno.variants).join(',');
+                await message.reply(`Variante "${args[2]}" no existe. Disponibles: ${availableVariants}`);
+                return;
+            }
+        }
+
         // Validar cantidad de apuesta
         if (isNaN(betAmount) || betAmount < this.config.uno.minBet || betAmount > this.config.uno.maxBet) {
             await message.reply(`❌ La apuesta debe ser entre ${this.formatNumber(this.config.uno.minBet)} y ${this.formatNumber(this.config.uno.maxBet)} π-b$`);
@@ -3478,10 +3491,10 @@ class MinigamesSystem {
 
         if (game) {
             // Unirse a partida existente
-            await this.joinUnoGame(message, game, userId, betAmount);
+            await this.joinUnoGame(message, game, userId, betAmount, variant);
         } else {
             // Crear nueva partida
-            await this.createUnoGame(message, userId, betAmount, channelId);
+            await this.createUnoGame(message, userId, betAmount, channelId, variant);
         }
     }
 
@@ -3524,7 +3537,7 @@ class MinigamesSystem {
         await message.reply(`✅ Variante cambiada a: ${variant.emoji} **${variant.name}**\n*${variant.description}*`);
     }
 
-    async createUnoGame(message, userId, betAmount, channelId) {
+    async createUnoGame(message, userId, betAmount, channelId, variant='classic') {
         const gameKey = `uno_${channelId}`;
         
         const game = {
@@ -3532,8 +3545,8 @@ class MinigamesSystem {
             channel_id: channelId,
             creator_id: userId,
             bet_amount: betAmount,
-            variant: 'classic',
-            variant_config: this.config.uno.variants.classic,
+            variant: variant,
+            variant_config: this.config.uno.variants[variant],
             players: [
                 {
                     id: userId,
@@ -3586,7 +3599,14 @@ class MinigamesSystem {
         game.message_id = reply.id;
     }
 
-    async joinUnoGame(message, game, userId, betAmount) {
+    async joinUnoGame(message, game, userId, betAmount, requestedVariant=null) {
+        //Verificar que la variante coincida
+        if (requestedVariant && requestedVariant !== game.variant)
+        {
+            await message.reply(`Esta partida es de variante "${game.variant}", no puedes unirte con "${requestedVariant}"`);
+            return;
+        }
+        
         // Verificaciones
         if (game.phase !== 'waiting') {
             await message.reply('❌ Esta partida ya comenzó o terminó');
