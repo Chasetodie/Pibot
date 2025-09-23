@@ -5,7 +5,7 @@ class ChatBotSystem {
     constructor(database, economy) {
         this.database = database;
         this.groq = new Groq({
-            apiKey: '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'
+            apiKey: process.env.GROQAPI
         });
         
         this.economy = economy;
