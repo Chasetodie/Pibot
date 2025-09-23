@@ -5014,8 +5014,8 @@ class MinigamesSystem {
             }
         }        
 
-        const userData = await this.economy.getUser(userId);
-        const userLimit = this.economy.shop ? await this.economy.shop.getVipLimit(userId) : this.economy.config.maxBalance;
+        const userData = await this.economy.getUser(winnerId);
+        const userLimit = this.economy.shop ? await this.economy.shop.getVipLimit(winnerId) : this.economy.config.maxBalance;
 
         if (userData.balance + finalEarnings > userLimit) {
             const spaceLeft = userLimit - userData.balance;
