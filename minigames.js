@@ -4006,7 +4006,7 @@ class MinigamesSystem {
             chosenColor = chosenColor ? chosenColor.toLowerCase() : null;
         }
 
-        await this.processCardEffect(card, game, chosenColor);
+        await this.processCardEffect(card, game, chosenColor, message);
 
         // AGREGAR ESTO DESPUÉS DE processCardEffect
         if (game.variant_config?.rules?.forcePlay && player.hand.length > 0) {
@@ -4436,7 +4436,7 @@ class MinigamesSystem {
         this.startTurnTimer(game, message);
     }
 
-    async processCardEffect(card, game, chosenColor) {
+    async processCardEffect(card, game, chosenColor, message) {
         const rules = game.variant_config.rules;
 
         switch (card.value) {
