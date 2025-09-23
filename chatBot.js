@@ -7,6 +7,24 @@ class ChatBotSystem {
         this.groq = new Groq({
             apiKey: process.env.GROQAPI
         });
+
+        // AGREGAR: Lista de modelos con fallback
+        this.availableModels = [
+            {
+                name: "llama-3.1-8b-instant",
+                priority: 1,
+                active: true,
+                description: "Rápido y eficiente"
+            },
+            {
+                name: "llama-3.3-70b-versatile", 
+                priority: 2,
+                active: true,
+                description: "Mejor calidad"
+            }
+        ];
+        
+        this.currentModelIndex = 0; // Empezar con el primer modelo
         
         this.economy = economy;
 
@@ -216,55 +234,73 @@ class ChatBotSystem {
      * Obtener respuesta del chatbot con reintentos
      */
     async getBotResponse(contextString, maxRetries = 3) {
-        for (let attempt = 1; attempt <= maxRetries; attempt++) {
-            try {
-                // Usar Groq en lugar de Google
-                const completion = await this.groq.chat.completions.create({
-                    messages: [
-                        {
-                            role: "user",
-                            content: contextString
-                        }
-                    ],
-                    model: "llama3-8b-8192", // Modelo rápido y gratuito
-                    temperature: 0.7,
-                    max_tokens: 200,
-                    top_p: 1,
-                    stream: false
-                });
-                
-                const response = completion.choices[0]?.message?.content || '';
-                
-                // El resto del procesamiento se mantiene igual
-                let cleanResponse = response.trim();
-                cleanResponse = cleanResponse.replace(/^(PibBot:|Bot:|Asistente:)/i, '').trim();
-                
-                if (!cleanResponse || cleanResponse.length < 1) {
-                    throw new Error('Respuesta vacía del chatbot');
+        const activeModels = this.availableModels.filter(model => model.active);
+        
+        for (let modelAttempt = 0; modelAttempt < activeModels.length; modelAttempt++) {
+            const currentModel = activeModels[modelAttempt];
+            console.log(`🤖 Intentando con modelo: ${currentModel.name} (${currentModel.description})`);
+            
+            for (let attempt = 1; attempt <= maxRetries; attempt++) {
+                try {
+                    const completion = await this.groq.chat.completions.create({
+                        messages: [
+                            {
+                                role: "user",
+                                content: contextString
+                            }
+                        ],
+                        model: currentModel.name, // Usar el modelo actual
+                        temperature: 0.7,
+                        max_tokens: 200,
+                        top_p: 1,
+                        stream: false
+                    });
+                    
+                    const response = completion.choices[0]?.message?.content || '';
+                    
+                    // El resto del procesamiento se mantiene igual
+                    let cleanResponse = response.trim();
+                    cleanResponse = cleanResponse.replace(/^(PibBot:|Bot:|Asistente:)/i, '').trim();
+                    
+                    if (!cleanResponse || cleanResponse.length < 1) {
+                        throw new Error('Respuesta vacía del chatbot');
+                    }
+                    
+                    if (cleanResponse.length > 1800) {
+                        cleanResponse = cleanResponse.substring(0, 1800) + '...';
+                    }
+                    
+                    console.log(`✅ Éxito con modelo: ${currentModel.name}`);
+                    return cleanResponse;
+                    
+                } catch (error) {
+                    console.error(`❌ Modelo ${currentModel.name} - Intento ${attempt} fallido:`, error.message);
+                    
+                    // Si es error de cuota/límite, marcar modelo como inactivo temporalmente
+                    if (error.message.includes('rate_limit') || error.message.includes('quota') || error.message.includes('429')) {
+                        console.log(`🚫 Modelo ${currentModel.name} alcanzó límite, cambiando a siguiente...`);
+                        break; // Salir del bucle de reintentos y probar siguiente modelo
+                    }
+                    
+                    // Para otros errores, reintentar
+                    if (attempt < maxRetries) {
+                        await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
+                    } else {
+                        console.log(`❌ Modelo ${currentModel.name} falló después de ${maxRetries} intentos`);
+                    }
                 }
-                
-                if (cleanResponse.length > 1800) {
-                    cleanResponse = cleanResponse.substring(0, 1800) + '...';
-                }
-                
-                return cleanResponse;
-                
-            } catch (error) {
-                console.error(`❌ Intento ${attempt} fallido:`, error.message);
-                
-                if (attempt === maxRetries) {
-                    const fallbackResponses = [
-                        '¡Ups! Parece que tengo un pequeño problema técnico. ¿Podrías repetir eso? 🤖',
-                        'Hmm, se me trabó un poco el cerebro. ¿De qué estábamos hablando? 😅',
-                        'Error 404: Respuesta inteligente no encontrada. ¡Pero estoy aquí para ayudarte! 🔧',
-                        'Mi procesador necesita un cafecito ☕. ¿Puedes intentar de nuevo?'
-                    ];
-                    return fallbackResponses[Math.floor(Math.random() * fallbackResponses.length)];
-                }
-                
-                await new Promise(resolve => setTimeout(resolve, 2000 * attempt));
             }
         }
+        
+        // Si todos los modelos fallaron, usar respuesta de fallback
+        console.log('❌ Todos los modelos fallaron, usando respuesta predeterminada');
+        const fallbackResponses = [
+            '¡Ups! Parece que tengo un pequeño problema técnico. ¿Podrías repetir eso? 🤖',
+            'Hmm, se me trabó un poco el cerebro. ¿De qué estábamos hablando? 😅',
+            'Error 404: Respuesta inteligente no encontrada. ¡Pero estoy aquí para ayudarte! 🔧',
+            'Mi procesador necesita un cafecito ☕. ¿Puedes intentar de nuevo?'
+        ];
+        return fallbackResponses[Math.floor(Math.random() * fallbackResponses.length)];
     }
 
     /**
@@ -725,6 +761,18 @@ class ChatBotSystem {
                 } else {
                     await message.reply('❌ Error limpiando historial de chat.');
                 }
+                break;
+            // Agregar en processCommand:
+            case '>chatmodels':
+                let modelStatus = '🤖 **Estado de Modelos IA:**\n\n';
+                this.availableModels.forEach((model, index) => {
+                    const status = model.active ? '✅ Activo' : '❌ Inactivo';
+                    const current = index === this.currentModelIndex ? ' **(ACTUAL)**' : '';
+                    modelStatus += `**${model.name}**${current}\n`;
+                    modelStatus += `└ ${status} - ${model.description}\n\n`;
+                });
+                
+                await message.reply(modelStatus);
                 break;
 
             case '>chatstats':
