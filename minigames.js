@@ -3646,7 +3646,7 @@ class MinigamesSystem {
     }
 
     // Funciones de manejo de cartas UNO
-    createUnoDeck() {
+    createUnoDeck(variant = 'classic') {
         const deck = [];
         
         // Cartas numeradas (0-9) para cada color
@@ -3832,7 +3832,7 @@ class MinigamesSystem {
         }
 
         game.phase = 'playing';
-        game.deck = this.createUnoDeck(game.variant);
+        game.deck = this.createUnoDeck(game.variant || 'classic');
         game.discard_pile = [];
 
         // Repartir 7 cartas a cada jugador
@@ -3876,7 +3876,7 @@ class MinigamesSystem {
                 .setStyle(ButtonStyle.Secondary)
         );
 
-        const attachment = this.createCardAttachment(topCard);
+        const attachment = this.createCardAttachment(topCard, game.variant || 'classic');
         const messageOptions = { embeds: [embed], components: [row] };
         
         if (attachment) {
@@ -4087,7 +4087,7 @@ class MinigamesSystem {
                     .setStyle(ButtonStyle.Secondary)
             );
 
-        const attachment = this.createCardAttachment(card);
+        const attachment = this.createCardAttachment(card, game.variant || 'classic');
         const messageOptions = { 
             embeds: [embed], 
             components: [row]
@@ -4829,7 +4829,7 @@ class MinigamesSystem {
                     .setStyle(ButtonStyle.Secondary)
             );
         
-        const attachment = this.createCardAttachment(topCard);
+        const attachment = this.createCardAttachment(topCard, game.variant || 'classic');
         const messageOptions = { 
             embeds: [cardEmbed], 
             components: [row]
@@ -4954,7 +4954,7 @@ class MinigamesSystem {
                     .setStyle(ButtonStyle.Secondary)
             );
             
-        const attachment = this.createCardAttachment(topCard);
+        const attachment = this.createCardAttachment(topCard, game.variant || 'classic');
         const messageOptions = { 
             embeds: [embed], 
             components: [row]
