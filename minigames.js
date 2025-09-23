@@ -110,9 +110,60 @@ class MinigamesSystem {
                 maxBet: 10000,
                 minPlayers: 2,
                 maxPlayers: 8,
-                joinTime: 60000, //1 minuto para unirse
-                turnTime: 600000, //10 minutos por turno
-                winnerMultiplier: 0.95 //El ganador se lleva 85% del pot total
+                joinTime: 60000,
+                turnTime: 600000,
+                winnerMultiplier: 0.95,
+                // NUEVO: Variantes disponibles
+                variants: {
+                    classic: {
+                        name: "Clásico",
+                        description: "Reglas tradicionales de UNO",
+                        emoji: "🎴",
+                        rules: {
+                            drawUntilPlayable: false,
+                            stackDrawCards: false,
+                            jumpIn: false,
+                            sevenSwap: false,
+                            zeroRotation: false,
+                            noMercy: false
+                        }
+                    },
+                    flip: {
+                        name: "Flip",
+                        description: "Con carta Flip que cambia el lado del juego",
+                        emoji: "🔄",
+                        rules: {
+                            drawUntilPlayable: false,
+                            stackDrawCards: true,
+                            jumpIn: true,
+                            hasFlipCards: true,
+                            darkSide: false
+                        }
+                    },
+                    noMercy: {
+                        name: "No Mercy",
+                        description: "Sin piedad - acumula +2 y +4",
+                        emoji: "💀",
+                        rules: {
+                            drawUntilPlayable: true,
+                            stackDrawCards: true,
+                            jumpIn: true,
+                            forcePlay: true
+                        }
+                    },
+                    house: {
+                        name: "Reglas de Casa",
+                        description: "7 intercambia manos, 0 rota manos",
+                        emoji: "🏠",
+                        rules: {
+                            drawUntilPlayable: false,
+                            stackDrawCards: true,
+                            jumpIn: true,
+                            sevenSwap: true,
+                            zeroRotation: true
+                        }
+                    }
+                }
             }
         };
         
@@ -3343,11 +3394,17 @@ class MinigamesSystem {
         
         // Si no hay argumentos suficientes, mostrar ayuda
         if (args.length < 2) {
+            const variantsList = Object.entries(this.config.uno.variants)
+                .map(([key, variant]) => `${variant.emoji} **${variant.name}** - ${variant.description}`)
+                .join('\n');
+
             const embed = new EmbedBuilder()
                 .setTitle('🎴 UNO - Juego de Cartas')
                 .setDescription('¡El primer jugador en quedarse sin cartas se lleva todo!')
                 .addFields(
                     { name: '📝 Uso', value: '`>ujoin <cantidad>` - Crear/Unirse a partida', inline: false },
+                    { name: '🎯 Variantes Disponibles', value: variantsList, inline: false },
+                    { name: '💡 Ejemplos', value: '`>ujoin 500` - UNO clásico\n`>ujoin 500 flip` - UNO Flip\n`>ujoin 500 noMercy` - No Mercy', inline: false },
                     { 
                         name: '🎯 Cómo Funciona', 
                         value: '• Cada jugador apuesta la misma cantidad\n• Cada uno recibe 7 cartas iniciales\n• Juega cartas que coincidan en color o número\n• Usa cartas especiales para cambiar el juego\n• El primero sin cartas gana 95% del pot\n• La casa se queda con el 5%', 
@@ -3425,6 +3482,45 @@ class MinigamesSystem {
         }
     }
 
+    async handleUnoVariant(message, args, game) {
+        const userId = message.author.id;
+        
+        // Solo el creador puede cambiar la variante
+        if (game.creator_id !== userId) {
+            await message.reply('❌ Solo el creador puede cambiar la variante');
+            return;
+        }
+        
+        // Solo en fase de espera
+        if (game.phase !== 'waiting') {
+            await message.reply('❌ No se puede cambiar la variante después de iniciar');
+            return;
+        }
+        
+        if (args.length < 2) {
+            const variantsList = Object.entries(this.config.uno.variants)
+                .map(([key, variant]) => `\`${key}\` - ${variant.emoji} ${variant.name}`)
+                .join('\n');
+            
+            await message.reply(`**Variantes disponibles:**\n${variantsList}\n\n**Uso:** \`>uvariant <nombre>\``);
+            return;
+        }
+        
+        const variantKey = args[1].toLowerCase();
+        const variant = this.config.uno.variants[variantKey];
+        
+        if (!variant) {
+            await message.reply('❌ Variante no encontrada');
+            return;
+        }
+        
+        game.variant = variantKey;
+        game.variant_config = variant;
+        await this.updateUnoGameInDB(game);
+        
+        await message.reply(`✅ Variante cambiada a: ${variant.emoji} **${variant.name}**\n*${variant.description}*`);
+    }
+
     async createUnoGame(message, userId, betAmount, channelId) {
         const gameKey = `uno_${channelId}`;
         
@@ -3433,6 +3529,8 @@ class MinigamesSystem {
             channel_id: channelId,
             creator_id: userId,
             bet_amount: betAmount,
+            variant: 'classic',
+            variant_config: this.config.uno.variants.classic,
             players: [
                 {
                     id: userId,
@@ -4207,6 +4305,8 @@ class MinigamesSystem {
     }
 
     async processCardEffect(card, game, chosenColor) {
+        const rules = game.variant_config.rules;
+
         switch (card.value) {
             case 'Skip':
                 this.nextPlayer(game);
@@ -4218,8 +4318,29 @@ class MinigamesSystem {
                 }
                 break;
             case '+2':
-                game.draw_count += 2;
-                console.log(`+2 jugada, cartas acumuladas: ${game.draw_count}`);
+                if (rules.stackDrawCards) {
+                    game.draw_count += 2;
+                    // Permitir que el siguiente jugador tambien juegue +2
+                    game.canStack = true;
+                } else {
+                    //Forzar a robar inmediatamente
+                    await this.forceDrawCards(game, message);
+                }
+                break;
+            case '7':
+                if (rules.sevenSwap) {
+                    game.pendingSevenSwap = true;
+                    // Mostrar botones para elegir con quién intercambiar
+                } else {
+                    game.current_color = card.color;
+                }
+                break;
+                
+            case '0':
+                if (rules.zeroRotation) {
+                    await this.rotateHands(game);
+                }
+                game.current_color = card.color;
                 break;
             case 'Wild':
                 game.current_color = chosenColor || UNO_COLORS[0];
