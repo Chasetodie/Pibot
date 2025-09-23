@@ -322,20 +322,55 @@ class ChatBotSystem {
      */
     async getUserType(userId) {
         try {
-            // Verificar si es admin (adapta esto a tu sistema)
-            const adminIds = ['488110147265232898', '788424796366307409', '1260443926205169718', '689545294567833782']; // Reemplaza con IDs reales de admins
+            console.log('🔍 === DEBUG VIP ===');
+            console.log('🔍 Usuario ID:', userId);
+            console.log('🔍 Economy disponible:', !!this.economy);
+            console.log('🔍 Economy object:', this.economy);
+            
+            // Verificar si es admin
+            const adminIds = ['TU_ID_ADMIN_AQUI']; // Asegúrate de que tu ID esté aquí
             if (adminIds.includes(userId)) {
+                console.log('👑 Usuario detectado como ADMIN');
                 return 'admin';
             }
             
-            // Usar tu método existente para verificar VIP
-            if (this.economy.shop && typeof this.economy.shop.hasVipAccess === 'function') {
-                const hasVip = await this.economy.shop.hasVipAccess(userId);
-                if (hasVip) {
-                    return 'vip';
+            // Verificar VIP con MÁS DEBUG
+            if (this.economy && typeof this.economy.getUser === 'function') {
+                console.log('✅ Intentando obtener usuario de economy...');
+                
+                const user = await this.economy.getUser(userId);
+                console.log('🔍 Usuario obtenido:', user);
+                
+                if (user && user.permanentEffects) {
+                    console.log('🔍 permanentEffects raw:', user.permanentEffects);
+                    console.log('🔍 permanentEffects type:', typeof user.permanentEffects);
+                    
+                    const permanentEffects = this.parseEffects(user.permanentEffects);
+                    console.log('🔍 permanentEffects parseados:', permanentEffects);
+                    console.log('🔍 permanentEffects keys:', Object.keys(permanentEffects));
+                    
+                    for (const [key, effect] of Object.entries(permanentEffects)) {
+                        console.log(`🔍 Efecto ${key}:`, effect);
+                        console.log(`🔍 Efecto benefits:`, effect.benefits);
+                        console.log(`🔍 Tiene vip_commands?:`, effect.benefits?.includes('vip_commands'));
+                        
+                        if (effect.benefits && effect.benefits.includes('vip_commands')) {
+                            console.log('💎 ¡VIP ENCONTRADO!');
+                            return 'vip';
+                        }
+                    }
+                    console.log('❌ No se encontró vip_commands en ningún efecto');
+                } else {
+                    console.log('❌ Usuario no tiene permanentEffects o usuario no existe');
                 }
+            } else {
+                console.log('❌ Economy no disponible o getUser no es función');
+                console.log('❌ Economy type:', typeof this.economy);
+                console.log('❌ getUser type:', typeof this.economy?.getUser);
             }
             
+            console.log('👤 Usuario detectado como REGULAR');
+            console.log('🔍 === FIN DEBUG VIP ===');
             return 'regular';
             
         } catch (error) {
@@ -656,24 +691,24 @@ class ChatBotSystem {
                 { 
                     name: '💬 Comandos de Chat', 
                     value: `\`>chat <mensaje>\` - Chatear con Pibot
-                            \`>chatquota\` - Ver mensajes restantes hoy
-                            \`>clearchat\` - Limpiar tu historial de chat
-                            \`>chatstats\` - Ver estadísticas de tu chat`, 
+                    \`>chatquota\` - Ver mensajes restantes hoy
+                    \`>clearchat\` - Limpiar tu historial de chat
+                    \`>chatstats\` - Ver estadísticas de tu chat`, 
                     inline: false 
                 },
                 { 
                     name: '📊 Límites Diarios', 
                     value: `👤 **Regular:** 50 mensajes por día
-                        💎 **VIP:** 250 mensajes por día  
-                        👑 **Admin:** 150 mensajes por día
-                        🔄 **Reseteo:** Cada medianoche (US Pacific Time)`, 
+                💎 **VIP:** 250 mensajes por día  
+                👑 **Admin:** 150 mensajes por día
+                🔄 **Reseteo:** Cada medianoche (US Pacific Time)`, 
                     inline: false 
                 },
                 { 
                     name: '💡 Ejemplos de Uso', 
                     value: `\`>chat Hola, ¿cómo estás?\`
-                            \`>chat Cuéntame un chiste\`
-                            \`>chat Ayúdame con programación\``, 
+                    \`>chat Cuéntame un chiste\`
+                    \`>chat Ayúdame con programación\``, 
                     inline: false 
                 }
             )
