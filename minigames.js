@@ -3708,7 +3708,7 @@ class MinigamesSystem {
             const valueMap = {
                 // Wild clásicas
                 'Wild': 'wild',
-                'Wild+4': 'wild+4',
+                'Wild+4': 'wild-draw-4',
                 
                 // No Mercy Wild (sin color)
                 '+6': 'wild+6',
@@ -4282,12 +4282,12 @@ class MinigamesSystem {
             
         } catch (error) {
             // Si falla el DM, avisar al usuario que abra sus DMs
-            const errorMsg = await message.channel.send(`❌ <@${player.id}> No puedo enviarte mensaje privado. Activa los DMs en Configuración > Privacidad > Permitir mensajes directos de miembros del servidor.`);
+            /*const errorMsg = await message.channel.send(`❌ <@${player.id}> No puedo enviarte mensaje privado. Activa los DMs en Configuración > Privacidad > Permitir mensajes directos de miembros del servidor.`);
             
             // Borrar el mensaje de error después de 10 segundos
             setTimeout(() => {
                 errorMsg.delete().catch(() => {});
-            }, 10000);
+            }, 10000);*/
         }
     }
 
