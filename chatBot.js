@@ -322,55 +322,59 @@ class ChatBotSystem {
      */
     async getUserType(userId) {
         try {
-            console.log('🔍 === DEBUG VIP ===');
-            console.log('🔍 Usuario ID:', userId);
-            console.log('🔍 Economy disponible:', !!this.economy);
-            console.log('🔍 Economy object:', this.economy);
+            console.log('🔍 Verificando usuario VIP:', userId);
             
-            // Verificar si es admin
-            const adminIds = ['TU_ID_ADMIN_AQUI']; // Asegúrate de que tu ID esté aquí
+            // Verificar admin primero
+            const adminIds = ['488110147265232898']; // Tu ID como admin para probar
             if (adminIds.includes(userId)) {
-                console.log('👑 Usuario detectado como ADMIN');
+                console.log('👑 Usuario es ADMIN');
                 return 'admin';
             }
             
-            // Verificar VIP con MÁS DEBUG
+            // Debug VIP específico
             if (this.economy && typeof this.economy.getUser === 'function') {
-                console.log('✅ Intentando obtener usuario de economy...');
-                
                 const user = await this.economy.getUser(userId);
-                console.log('🔍 Usuario obtenido:', user);
+                
+                console.log('🔍 ¿Usuario tiene permanentEffects?:', !!user.permanentEffects);
+                console.log('🔍 permanentEffects value:', user.permanentEffects);
                 
                 if (user && user.permanentEffects) {
-                    console.log('🔍 permanentEffects raw:', user.permanentEffects);
-                    console.log('🔍 permanentEffects type:', typeof user.permanentEffects);
+                    let permanentEffects;
                     
-                    const permanentEffects = this.parseEffects(user.permanentEffects);
-                    console.log('🔍 permanentEffects parseados:', permanentEffects);
-                    console.log('🔍 permanentEffects keys:', Object.keys(permanentEffects));
-                    
-                    for (const [key, effect] of Object.entries(permanentEffects)) {
-                        console.log(`🔍 Efecto ${key}:`, effect);
-                        console.log(`🔍 Efecto benefits:`, effect.benefits);
-                        console.log(`🔍 Tiene vip_commands?:`, effect.benefits?.includes('vip_commands'));
+                    // Intentar parsear
+                    try {
+                        permanentEffects = typeof user.permanentEffects === 'string' 
+                            ? JSON.parse(user.permanentEffects) 
+                            : user.permanentEffects;
+                            
+                        console.log('🔍 permanentEffects parseados:', permanentEffects);
                         
-                        if (effect.benefits && effect.benefits.includes('vip_commands')) {
-                            console.log('💎 ¡VIP ENCONTRADO!');
-                            return 'vip';
+                        // Verificar cada efecto
+                        for (const [key, effect] of Object.entries(permanentEffects)) {
+                            console.log(`🔍 Efecto "${key}":`, effect);
+                            
+                            if (effect && effect.benefits && Array.isArray(effect.benefits)) {
+                                console.log(`🔍 Benefits en "${key}":`, effect.benefits);
+                                
+                                if (effect.benefits.includes('vip_commands')) {
+                                    console.log('💎 ¡VIP ENCONTRADO en efecto:', key);
+                                    return 'vip';
+                                }
+                            }
                         }
+                        
+                        console.log('❌ No se encontró vip_commands en ningún efecto');
+                        
+                    } catch (parseError) {
+                        console.log('❌ Error parseando permanentEffects:', parseError.message);
+                        console.log('❌ permanentEffects raw:', user.permanentEffects);
                     }
-                    console.log('❌ No se encontró vip_commands en ningún efecto');
                 } else {
-                    console.log('❌ Usuario no tiene permanentEffects o usuario no existe');
+                    console.log('❌ Usuario no tiene permanentEffects');
                 }
-            } else {
-                console.log('❌ Economy no disponible o getUser no es función');
-                console.log('❌ Economy type:', typeof this.economy);
-                console.log('❌ getUser type:', typeof this.economy?.getUser);
             }
             
             console.log('👤 Usuario detectado como REGULAR');
-            console.log('🔍 === FIN DEBUG VIP ===');
             return 'regular';
             
         } catch (error) {
