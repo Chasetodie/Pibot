@@ -40,8 +40,8 @@ class ChatBotSystem {
         
         // Límites por tipo de usuario
         this.USER_LIMITS = {
-            admin: 75,      // Admins: 75 mensajes por día
-            vip: 150,        // VIP: 150 mensajes por día  
+            admin: 50,      // Admins: 50 mensajes por día
+            vip: 100,        // VIP: 100 mensajes por día  
             regular: 20      // Usuarios normales: 20 mensajes por día
         };
         
