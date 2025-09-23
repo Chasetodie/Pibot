@@ -3731,7 +3731,7 @@ class MinigamesSystem {
         // Mapeo de valores especiales
         const valueMap = {
             // Cartas clásicas
-            '+2': '+2',
+            '+2': 'draw-2',
             'skip': 'skip',
             'reverse': 'reverse',
             
