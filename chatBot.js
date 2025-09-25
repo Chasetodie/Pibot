@@ -28,7 +28,7 @@ class ChatBotSystem {
         
         this.economy = economy;
 
-        this.MAX_CONTEXT_MESSAGES = 10;
+        this.MAX_CONTEXT_MESSAGES = 20;
         this.conversationCache = new Map();
         this.CACHE_CLEANUP_INTERVAL = 30 * 60 * 1000;
         this.startCacheCleanup();
@@ -209,23 +209,36 @@ class ChatBotSystem {
     buildContextString(context, newMessage) {
         let contextString = '';
         
-        // AGREGAR PERSONALIDAD Y GÉNERO AQUÍ
-        contextString += 'Eres Pibot, tienes 22 años y personalidad relajada, además de que tu género es femenino. ';
-        contextString += 'Te gustan los videojuegos, memes y tecnología. ';
-        contextString += 'Hablas de forma casual y amigable. Y adicional, usas emojis en tus respuestas, un gesto super lindo. El unico problema, es que estos emojis son para discord, a lo cual no se si sabes usarlo, pero son algo asi :sob:, :joy:, :star:. Cada uno da un emoji, asi que puedes usar cualquiera que tu quieras, obviamente segun los que existan en discord. ';
-        contextString += 'Puedes hacer bromas y usar humor. ';
+        const userName = context.length > 0 ? context[0].display_name : 'Usuario';
+        const hasHistory = context.length > 0;
         
-        // El resto del código se mantiene igual
-        if (context.length > 0) {
-            contextString += 'Contexto de la conversación:\n';
-            context.forEach(msg => {
-                const role = msg.role === 'user' ? msg.display_name : 'Pibot';
-                contextString += `${role}: ${msg.content}\n`;
-            });
-            contextString += '\n';
+        contextString += `Eres Pibot, una asistente virtual femenina amigable en Discord. `;
+        contextString += `Tienes 22 años y personalidad relajada. `;       
+        contextString += `Te gustan los videojuegos, memes y tecnología, pero no siempre hables de ello. `;
+        contextString += `Estás hablando con ${userName}, recuerda su nombre en toda la conversación. `;
+        
+        if (hasHistory) {
+            contextString += `YA han conversado antes, NO te presentes de nuevo. `;
+            contextString += `Continúa la conversación de manera natural recordando lo que han hablado. `;
+            contextString += `NO saludes como si fuera la primera vez. `;
+        } else {
+            contextString += `Es su primera conversación, puedes saludar. `;
         }
         
-        contextString += `Usuario: ${newMessage}\nPibot:`;
+        contextString += `Hablas de forma casual y amigable. Y adicional, usas emojis en tus respuestas, un gesto super lindo. El unico problema, es que estos emojis son para discord, a lo cual no se si sabes usarlo, pero son algo asi :sob:, :joy:, :star:. Cada uno da un emoji, asi que puedes usar cualquiera que tu quieras, obviamente segun los que existan en discord. `;
+        contextString += `Puedes hacer bromas y usar humor. `;
+        contextString += `Ademas, si es que alguien pregunta sobre algun comando tuyo, puedes ayudarlos con el comando >help, el cual les dira todos los comandos disponibles.\n\n`;
+        
+        if (hasHistory) {
+            contextString += 'CONVERSACIÓN ANTERIOR:\n';
+            context.forEach(msg => {
+                const role = msg.role === 'user' ? msg.display_name : 'PibBot';
+                contextString += `${role}: ${msg.content}\n`;
+            });
+            contextString += '\nCONTINÚA LA CONVERSACIÓN:\n';
+        }
+        
+        contextString += `${userName}: ${newMessage}\nPibBot:`;
         
         return contextString;
     }
