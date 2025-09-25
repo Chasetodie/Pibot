@@ -4546,8 +4546,10 @@ class MinigamesSystem {
                     };
                     
                     await this.showSevenSwapOptions(game, message, userId);
+                    return;
+                } else {
+                    game.current_color = card.color;
                 }
-                game.current_color = card.color;
                 break;
                 
             case '0':
