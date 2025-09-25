@@ -4849,10 +4849,10 @@ class MinigamesSystem {
     }
 
     async rotateHands(game, message) {
-        if (game.players.length < 3) {
+/*        if (game.players.length < 3) {
             await message.reply('🔄 Se necesitan al menos 3 jugadores para rotar manos');
             return;
-        }
+        }*/
         
         const direction = game.direction;
         const hands = game.players.map(p => [...p.hand]);
