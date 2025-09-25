@@ -4632,6 +4632,7 @@ class MinigamesSystem {
                         };
                         
                         await this.showSevenSwapOptions(game, message, userId);
+                        return;
                     }
                     
                     if (card.value === '0' && game.variant === 'house' && game.variant_config?.rules?.zeroRotation) {
@@ -4934,7 +4935,7 @@ class MinigamesSystem {
         await interaction.channel.send(messageOptions);
 
         // Continuar el juego
-        //this.nextPlayer(game);
+        this.nextPlayer(game);
         await this.updateUnoGameInDB(game);
         this.startTurnTimer(game, { channel: interaction.channel });
     }
@@ -5035,7 +5036,7 @@ class MinigamesSystem {
         await message.channel.send(messageOptions);
         
         // Continuar el juego
-        //this.nextPlayer(game);
+        this.nextPlayer(game);
         await this.updateUnoGameInDB(game);
         this.startTurnTimer(game, message);
     }
