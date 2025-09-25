@@ -4901,6 +4901,38 @@ class MinigamesSystem {
         await this.sendHandAsEphemeral({ channel: interaction.channel, client: interaction.client }, swapper);
         await this.sendHandAsEphemeral({ channel: interaction.channel, client: interaction.client }, target);
         
+        // AGREGAR: Mostrar el estado actual del juego después del intercambio
+        const topCard = game.discard_pile[game.discard_pile.length - 1];
+        const embed = this.createCardEmbed(
+            topCard,
+            '🎴 UNO - Intercambio Completado',
+            `**Intercambio realizado**\n\n**Turno:** <@${game.players[game.current_player_index].id}>\n**Color actual:** ${game.current_color}`
+        );
+
+        const row = new ActionRowBuilder()
+            .addComponents(
+                new ButtonBuilder()
+                    .setCustomId('uno_show_hand')
+                    .setLabel('🎴 Ver mis cartas')
+                    .setStyle(ButtonStyle.Primary),
+                new ButtonBuilder()
+                    .setCustomId('uno_draw_card')
+                    .setLabel('🔄 Robar carta')
+                    .setStyle(ButtonStyle.Secondary)
+            );
+
+        const attachment = this.createCardAttachment(topCard, game.variant);
+        const messageOptions = { 
+            embeds: [embed], 
+            components: [row]
+        };
+        
+        if (attachment) {
+            messageOptions.files = [attachment];
+        }
+
+        await message.channel.send(messageOptions);
+
         // Continuar el juego
         this.nextPlayer(game);
         await this.updateUnoGameInDB(game);
