@@ -4903,7 +4903,10 @@ class MinigamesSystem {
         // Enviar nuevas manos por DM
         await this.sendHandAsEphemeral({ channel: interaction.channel, client: interaction.client }, swapper);
         await this.sendHandAsEphemeral({ channel: interaction.channel, client: interaction.client }, target);
-        
+
+        // Continuar el juego
+        this.nextPlayer(game);
+
         // AGREGAR: Mostrar el estado actual del juego después del intercambio
         const topCard = game.discard_pile[game.discard_pile.length - 1];
         const embed = this.createCardEmbed(
@@ -4936,8 +4939,6 @@ class MinigamesSystem {
 
         await interaction.channel.send(messageOptions);
 
-        // Continuar el juego
-        this.nextPlayer(game);
         await this.updateUnoGameInDB(game);
         this.startTurnTimer(game, { channel: interaction.channel });
     }
@@ -5005,6 +5006,9 @@ class MinigamesSystem {
         await this.sendHandAsEphemeral(message, swapper);
         await this.sendHandAsEphemeral(message, target);
         
+        // Continuar el juego
+        this.nextPlayer(game);
+
         // AGREGAR: Mostrar el estado actual del juego después del intercambio
         const topCard = game.discard_pile[game.discard_pile.length - 1];
         const embed = this.createCardEmbed(
@@ -5036,9 +5040,7 @@ class MinigamesSystem {
         }
 
         await message.channel.send(messageOptions);
-        
-        // Continuar el juego
-        this.nextPlayer(game);
+
         await this.updateUnoGameInDB(game);
         this.startTurnTimer(game, message);
     }
