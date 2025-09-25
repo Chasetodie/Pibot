@@ -4075,6 +4075,13 @@ class MinigamesSystem {
 
         await this.processCardEffect(card, game, chosenColor, message, userId);
 
+        // AGREGAR esta verificación:
+        if (game.pendingSevenSwap) {
+            // NO continuar el juego, esperar intercambio
+            await this.updateUnoGameInDB(game);
+            return;
+        }
+
         // AGREGAR ESTO DESPUÉS DE processCardEffect
         if (game.variant_config?.rules?.forcePlay && player.hand.length > 0) {
             const canPlayAnother = player.hand.some(c => this.canPlayCard(c, game));
@@ -4122,7 +4129,7 @@ class MinigamesSystem {
                 
                 console.log(`🚨 VENTANA CALLOUT CREADA PARA: ${userId}`);
                 
-                await message.reply(`🎴 <@${userId}> tiene 1 carta... 👀\n*Los otros jugadores tienen 10 segundos para usar \`>unocallout\` si no dijo UNO*`);
+                await message.reply(`🎴 <@${userId}> tiene 1 carta... 👀\n*Los otros jugadores tienen 10 segundos para usar \`>ucallout\` si no dijo UNO*`);
             }
         }
 
@@ -4852,11 +4859,14 @@ class MinigamesSystem {
         }
     }
 
-    async handleSevenSwap(game, swapperId, targetId, message) {
+    async handleSevenSwap(game, swapperId, targetId, interaction) {
         const swapper = game.players.find(p => p.id === swapperId);
         const target = game.players.find(p => p.id === targetId);
         
-        if (!swapper || !target) return;
+        if (!swapper || !target) {
+            await interaction.followUp('❌ Error: Jugadores no encontrados');
+            return;
+        }
         
         // Limpiar timeout
         if (game.pendingSevenSwap?.timeout) {
@@ -4872,16 +4882,43 @@ class MinigamesSystem {
         swapper.cardCount = swapper.hand.length;
         target.cardCount = target.hand.length;
         
-        await message.reply(`🔄 **Intercambio!** <@${swapperId}> y <@${targetId}> intercambiaron cartas`);
+        await interaction.followUp(`🔄 **Intercambio!** <@${swapperId}> y <@${targetId}> intercambiaron cartas`);
         
         // Enviar nuevas manos por DM
-        await this.sendHandAsEphemeral(message, swapper);
-        await this.sendHandAsEphemeral(message, target);
+        await this.sendHandAsEphemeral({ channel: interaction.channel, client: interaction.client }, swapper);
+        await this.sendHandAsEphemeral({ channel: interaction.channel, client: interaction.client }, target);
         
         // Continuar el juego
         this.nextPlayer(game);
         await this.updateUnoGameInDB(game);
-        this.startTurnTimer(game, message);
+        this.startTurnTimer(game, { channel: interaction.channel });
+    }
+
+    // AGREGAR este método nuevo:
+    async handleSevenSwapButton(interaction, targetId) {
+        const userId = interaction.user.id;
+        const channelId = interaction.channelId;
+        const gameKey = `uno_${channelId}`;
+        const game = this.activeGames.get(gameKey);
+
+        if (!game) {
+            await interaction.reply({ content: '❌ No hay partida activa', ephemeral: true });
+            return;
+        }
+
+        if (!game.pendingSevenSwap || game.pendingSevenSwap.playerId !== userId) {
+            await interaction.reply({ content: '❌ No puedes hacer este intercambio', ephemeral: true });
+            return;
+        }
+
+        // Realizar intercambio
+        await this.handleSevenSwap(game, userId, targetId, interaction);
+        
+        // Actualizar mensaje original para quitar botones
+        await interaction.update({ 
+            content: `✅ Intercambio completado entre <@${userId}> y <@${targetId}>`,
+            components: [] 
+        });
     }
 
     async autoSevenSwap(game, swapperId, message) {
@@ -4893,8 +4930,30 @@ class MinigamesSystem {
         // Seleccionar jugador aleatorio
         const randomTarget = otherPlayers[Math.floor(Math.random() * otherPlayers.length)];
         
-        await message.reply(`⏰ Tiempo agotado! Intercambio automático...`);
-        await this.handleSevenSwap(game, swapperId, randomTarget.id, message);
+        // Limpiar pendingSevenSwap antes del intercambio
+        game.pendingSevenSwap = null;
+        
+        await message.channel.send(`⏰ Tiempo agotado! Intercambio automático con <@${randomTarget.id}>...`);
+        
+        // Hacer intercambio manual aquí en lugar de llamar handleSevenSwap
+        const swapper = game.players.find(p => p.id === swapperId);
+        const target = randomTarget;
+        
+        const tempHand = [...swapper.hand];
+        swapper.hand = [...target.hand];
+        target.hand = tempHand;
+        
+        swapper.cardCount = swapper.hand.length;
+        target.cardCount = target.hand.length;
+        
+        // Enviar nuevas manos
+        await this.sendHandAsEphemeral(message, swapper);
+        await this.sendHandAsEphemeral(message, target);
+        
+        // Continuar el juego
+        this.nextPlayer(game);
+        await this.updateUnoGameInDB(game);
+        this.startTurnTimer(game, message);
     }
 
     async handleJumpIn(game, userId, card) {
@@ -5272,6 +5331,15 @@ class MinigamesSystem {
     // Función para limpiar datos antes de guardar en DB
     cleanGameDataForDB(gameData) {
         const { turn_timeout, join_timeout, ...cleanData } = gameData;
+        
+        // AGREGAR: Limpiar también pendingSevenSwap timeout
+        if (cleanData.pendingSevenSwap?.timeout) {
+            cleanData.pendingSevenSwap = {
+                ...cleanData.pendingSevenSwap,
+                timeout: null
+            };
+        }
+        
         return cleanData;
     }
 

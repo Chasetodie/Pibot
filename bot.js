@@ -828,8 +828,7 @@ client.on('interactionCreate', async (interaction) => {
 
             if (interaction.customId.startsWith('seven_swap_')) {
                 const targetId = interaction.customId.replace('seven_swap_', '');
-                // Manejar intercambio
-                await minigames.handleSevenSwap(interaction, targetId);
+                await minigames.handleSevenSwapButton(interaction, targetId);
             }
             
             if (interaction.customId === 'uno_draw_card') {
