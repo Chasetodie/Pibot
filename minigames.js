@@ -4931,7 +4931,7 @@ class MinigamesSystem {
             messageOptions.files = [attachment];
         }
 
-        await message.channel.send(messageOptions);
+        await interaction.channel.send(messageOptions);
 
         // Continuar el juego
         this.nextPlayer(game);
