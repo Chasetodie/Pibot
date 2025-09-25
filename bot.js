@@ -825,6 +825,12 @@ client.on('interactionCreate', async (interaction) => {
                     ephemeral: true 
                 });
             }
+
+            if (interaction.customId.startsWith('seven_swap_')) {
+                const targetId = interaction.customId.replace('seven_swap_', '');
+                // Manejar intercambio
+                await minigames.handleSevenSwap(interaction, targetId);
+            }
             
             if (interaction.customId === 'uno_draw_card') {
                 const gameKey = `uno_${interaction.channelId}`;

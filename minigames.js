@@ -3447,16 +3447,31 @@ class MinigamesSystem {
         }
 
         const betAmount = parseInt(args[1]);
-
         let variant = 'classic';
 
+        // Si hay un tercer argumento, es la variante
         if (args.length >= 3) {
             const requestedVariant = args[2].toLowerCase();
-            if (this.config.uno.variants[requestedVariant]){
-                variant = requestedVariant;
+            
+            // Mapear nombres alternativos a las variantes reales
+            const variantMap = {
+                'classic': 'classic',
+                'clasico': 'classic',
+                'nomercy': 'noMercy',
+                'no-mercy': 'noMercy',
+                'noMercy': 'noMercy',
+                'mercy': 'noMercy',
+                'flip': 'flip',
+                'house': 'house',
+                'casa': 'house'
+            };
+            
+            const mappedVariant = variantMap[requestedVariant];
+            if (mappedVariant && this.config.uno.variants[mappedVariant]) {
+                variant = mappedVariant;
             } else {
-                const availableVariants = Object.keys(this.config.uno.variants).join(',');
-                await message.reply(`Variante "${args[2]}" no existe. Disponibles: ${availableVariants}`);
+                const availableVariants = Object.keys(this.config.uno.variants).join(', ');
+                await message.reply(`❌ Variante "${args[2]}" no existe.\n**Disponibles:** ${availableVariants}\n**Aliases:** classic, nomercy, flip, house`);
                 return;
             }
         }
@@ -3563,6 +3578,7 @@ class MinigamesSystem {
             current_color: null,
             direction: 1, // 1 = horario, -1 = antihorario
             draw_count: 0, // Para acumular cartas +2 y +4
+            darkSide: false,
             pot: betAmount,
             start_time: Date.now(),
             join_start_time: Date.now(),
@@ -3603,7 +3619,7 @@ class MinigamesSystem {
         //Verificar que la variante coincida
         if (requestedVariant && requestedVariant !== game.variant)
         {
-            await message.reply(`Esta partida es de variante "${game.variant}", no puedes unirte con "${requestedVariant}"`);
+            await message.reply(`❌ Esta partida es de variante "${game.variant}", no puedes unirte con "${requestedVariant}"`);
             return;
         }
         
@@ -3666,49 +3682,82 @@ class MinigamesSystem {
     }
 
     // Funciones de manejo de cartas UNO
-    createUnoDeck(variant = 'classic') {
+    createUnoDeck(variant = 'classic', isDarkSide = false) {
         const deck = [];
         
-        // Cartas numeradas (0-9) para cada color
-        for (let color of UNO_COLORS) {
-            for (let number of UNO_NUMBERS) {
-                deck.push({ color, value: number, type: 'number' });
-                // Agregar una segunda copia (excepto el 0)
-                if (number !== '0') {
-                    deck.push({ color, value: number, type: 'number' });
+        if (variant === 'flip' && isDarkSide) {
+            // DECK DEL LADO OSCURO - cartas completamente diferentes
+            for (let color of UNO_COLORS) {
+                for (let number of UNO_NUMBERS) {
+                    deck.push({ color, value: number, type: 'number', isDark: true });
+                    // Agregar una segunda copia (excepto el 0)
+                    if (number !== '0') {
+                        deck.push({ color, value: number, type: 'number', isDark: true });
+                    }
                 }
             }
-        }
-
-        // Cartas especiales para cada color
-        for (let color of UNO_COLORS) {
-            for (let special of UNO_SPECIAL_CARDS) {
-                deck.push({ color, value: special, type: 'special' });
-                deck.push({ color, value: special, type: 'special' });
-            }
-        }
-
-        // Cartas Wild
-        for (let i = 0; i < 4; i++) {
-            deck.push({ color: 'black', value: 'Wild', type: 'wild' });
-            deck.push({ color: 'black', value: 'Wild+4', type: 'wild' });
-        }
-        
-        if (variant === 'noMercy') {
-            // Cartas Wild especiales No Mercy (SIN COLOR)
-            for (let i = 0; i < 2; i++) {
-                deck.push({ color: 'black', value: '+6', type: 'no_mercy_wild' });
-                deck.push({ color: 'black', value: '+10', type: 'no_mercy_wild' });
-                deck.push({ color: 'black', value: 'Wild Draw Until Color', type: 'no_mercy_wild' });
-                deck.push({ color: 'black', value: 'Discard All', type: 'no_mercy_wild' });
-                deck.push({ color: 'black', value: '+4 Reverse', type: 'no_mercy_wild' }); // NUEVA
-            }
-        }
-
-        if (variant === 'flip') {
+            
+            // Cartas especiales del lado oscuro
             for (let color of UNO_COLORS) {
-                deck.push({ color, value: 'Flip', type: 'flip' });
-            }            
+                deck.push({ color, value: '+5', type: 'dark_special', isDark: true });
+                deck.push({ color, value: '+5', type: 'dark_special', isDark: true });
+                deck.push({ color, value: 'Skip Everyone', type: 'dark_special', isDark: true });
+                deck.push({ color, value: 'Skip Everyone', type: 'dark_special', isDark: true });
+                deck.push({ color, value: 'Flip', type: 'flip', isDark: true });
+            }
+            
+            // Wild del lado oscuro
+            for (let i = 0; i < 4; i++) {
+                deck.push({ color: 'black', value: 'Wild Draw Color', type: 'dark_wild', isDark: true });
+                deck.push({ color: 'black', value: 'Wild+6', type: 'dark_wild', isDark: true });
+            }
+            
+        } else {
+            // DECK NORMAL (lado claro o otras variantes)
+            
+            // Cartas numeradas (0-9) para cada color
+            for (let color of UNO_COLORS) {
+                for (let number of UNO_NUMBERS) {
+                    deck.push({ color, value: number, type: 'number' });
+                    // Agregar una segunda copia (excepto el 0)
+                    if (number !== '0') {
+                        deck.push({ color, value: number, type: 'number' });
+                    }
+                }
+            }
+
+            // Cartas especiales para cada color
+            for (let color of UNO_COLORS) {
+                for (let special of UNO_SPECIAL_CARDS) {
+                    deck.push({ color, value: special, type: 'special' });
+                    deck.push({ color, value: special, type: 'special' });
+                }
+            }
+
+            // Cartas Wild básicas
+            for (let i = 0; i < 4; i++) {
+                deck.push({ color: 'black', value: 'Wild', type: 'wild' });
+                deck.push({ color: 'black', value: 'Wild+4', type: 'wild' });
+            }
+            
+            // Cartas específicas según variante
+            if (variant === 'noMercy') {
+                // Cartas Wild especiales No Mercy (SIN COLOR)
+                for (let i = 0; i < 2; i++) {
+                    deck.push({ color: 'black', value: '+6', type: 'no_mercy_wild' });
+                    deck.push({ color: 'black', value: '+10', type: 'no_mercy_wild' });
+                    deck.push({ color: 'black', value: 'Wild Draw Until Color', type: 'no_mercy_wild' });
+                    deck.push({ color: 'black', value: 'Discard All', type: 'no_mercy_wild' });
+                    deck.push({ color: 'black', value: '+4 Reverse', type: 'no_mercy_wild' });
+                }
+            }
+
+            if (variant === 'flip') {
+                // Cartas Flip normales (lado claro)
+                for (let color of UNO_COLORS) {
+                    deck.push({ color, value: 'Flip', type: 'flip' });
+                }            
+            }
         }
 
         return this.shuffleDeck(deck);
@@ -3780,8 +3829,6 @@ class MinigamesSystem {
             folder = 'nomercy';
         } else if (variant === 'flip' && (card.type === 'flip' || card.type === 'dark_special' || card.type === 'dark_wild')) {
             folder = 'flip';
-        } else if (variant === 'house') {
-            folder = 'house'; // si quieres imágenes diferentes para reglas de casa
         }
         
         const fullPath = path.join(__dirname, 'images', 'UnoImages', folder, `${imageName}.png`);
@@ -4026,7 +4073,7 @@ class MinigamesSystem {
             chosenColor = chosenColor ? chosenColor.toLowerCase() : null;
         }
 
-        await this.processCardEffect(card, game, chosenColor, message);
+        await this.processCardEffect(card, game, chosenColor, message, userId);
 
         // AGREGAR ESTO DESPUÉS DE processCardEffect
         if (game.variant_config?.rules?.forcePlay && player.hand.length > 0) {
@@ -4337,14 +4384,16 @@ class MinigamesSystem {
                 )) {
                     return true;
                 }
-                if (cardValue === 'wild draw until color' && (
-                    searchValue === 'wildcolor' || 
-                    searchValue === 'drawcolor' ||
-                    color.toLowerCase() === 'wild'
-                )) {
-                    return true;
+                if (card.type === 'dark_wild') {
+                    if (cardValue === 'wild draw color' && (
+                        searchValue === 'wildcolor' || 
+                        searchValue === 'drawcolor' ||
+                        color.toLowerCase() === 'wild' ||
+                        (color.toLowerCase() === 'black' && searchValue === 'wild')
+                    )) {
+                        return true;
+                    }
                 }
-
                 if (cardValue === 'discard all' && (
                     searchValue === 'discardall' ||
                     searchValue === 'discard' ||
@@ -4456,7 +4505,7 @@ class MinigamesSystem {
         this.startTurnTimer(game, message);
     }
 
-    async processCardEffect(card, game, chosenColor, message) {
+    async processCardEffect(card, game, chosenColor, message, userId) {
         const rules = game.variant_config.rules;
 
         switch (card.value) {
@@ -4480,17 +4529,25 @@ class MinigamesSystem {
                 }
                 break;
             case '7':
-                if (rules.sevenSwap) {
-                    game.pendingSevenSwap = true;
-                    // Mostrar botones para elegir con quién intercambiar
+                if (game.variant === 'house' && game.variant_config?.rules?.sevenSwap) {
+                    game.pendingSevenSwap = {
+                        playerId: userId,
+                        timeout: setTimeout(() => {
+                            // Auto-seleccionar jugador aleatorio si no elige en 30s
+                            this.autoSevenSwap(game, userId, message);
+                        }, 30000)
+                    };
+                    
+                    await this.showSevenSwapOptions(game, message, userId);
+                    return; // NO pasar turno todavía
                 } else {
                     game.current_color = card.color;
                 }
                 break;
                 
             case '0':
-                if (rules.zeroRotation) {
-                    await this.rotateHands(game);
+                if (game.variant === 'house' && game.variant_config?.rules?.zeroRotation) {
+                    await this.rotateHands(game, message);
                 }
                 game.current_color = card.color;
                 break;
@@ -4512,17 +4569,25 @@ class MinigamesSystem {
                 game.darkSide = !game.darkSide;
                 game.current_color = card.color;
                 
-                // Cambiar todas las cartas al lado opuesto
-                await this.flipAllCards(game);
+                // Regenerar deck con el lado correspondiente
+                const remainingCards = game.deck.length;
+                game.deck = this.createUnoDeck(game.variant, game.darkSide);
                 
-                await message.reply(`🔄 **FLIP ACTIVADO!** Ahora jugamos en el lado ${game.darkSide ? 'OSCURO' : 'CLARO'}`);
+                // Mantener solo las primeras X cartas para no cambiar mucho el juego
+                game.deck = game.deck.slice(0, remainingCards);
+                
+                await message.reply(`🔄 **FLIP!** Ahora jugamos en el lado ${game.darkSide ? 'OSCURO 💀' : 'CLARO ☀️'}`);
                 break;
             case 'Skip Everyone':
                 // Saltar TODOS los otros jugadores, el turno regresa al que jugó
                 // No cambiar current_player_index
                 break;
             case '+5':
-                game.draw_count += 5;
+                if (game.variant === 'flip' && game.darkSide) {
+                    game.draw_count += 5;
+                } else {
+                    game.current_color = card.color;
+                }
                 break;
             case 'Wild Draw Color':
                 game.current_color = chosenColor || UNO_COLORS[0];
@@ -4550,7 +4615,28 @@ class MinigamesSystem {
                 await this.handleDiscardAll(game, message);
                 break;
             default:
-                game.current_color = card.color;
+                // Para cartas numeradas normales (0-9)
+                if (!isNaN(parseInt(card.value))) {
+                    // Manejar 7 y 0 especiales en reglas de casa
+                    if (card.value === '7' && game.variant === 'house' && game.variant_config?.rules?.sevenSwap) {
+                        game.pendingSevenSwap = {
+                            playerId: userId,
+                            timeout: setTimeout(() => {
+                                this.autoSevenSwap(game, userId, message);
+                            }, 30000)
+                        };
+                        
+                        await this.showSevenSwapOptions(game, message, userId);
+                        return;
+                    }
+                    
+                    if (card.value === '0' && game.variant === 'house' && game.variant_config?.rules?.zeroRotation) {
+                        await this.rotateHands(game, message);
+                    }
+                    
+                    game.current_color = card.color;
+                }
+                break;
         }
     }
 
@@ -4640,20 +4726,25 @@ class MinigamesSystem {
     }
 
     async showSevenSwapOptions(game, message, swapperId) {
-        const buttons = game.players
-            .filter(p => p.id !== swapperId)
-            .slice(0, 5) // Máximo 5 botones
-            .map(player => 
-                new ButtonBuilder()
-                    .setCustomId(`seven_swap_${player.id}`)
-                    .setLabel(`${player.displayName} (${player.cardCount})`)
-                    .setStyle(ButtonStyle.Secondary)
-            );
+        const otherPlayers = game.players.filter(p => p.id !== swapperId).slice(0, 5);
+        
+        if (otherPlayers.length === 0) {
+            // Solo 2 jugadores, intercambiar automáticamente
+            await this.handleSevenSwap(game, swapperId, otherPlayers[0].id, message);
+            return;
+        }
+        
+        const buttons = otherPlayers.map(player => 
+            new ButtonBuilder()
+                .setCustomId(`seven_swap_${player.id}`)
+                .setLabel(`${player.displayName} (${player.cardCount} cartas)`)
+                .setStyle(ButtonStyle.Secondary)
+        );
         
         const row = new ActionRowBuilder().addComponents(buttons);
         
         await message.reply({
-            content: `<@${swapperId}> elige con quién intercambiar cartas:`,
+            content: `🔄 <@${swapperId}> jugaste un 7! Elige con quién intercambiar cartas (30 segundos):`,
             components: [row]
         });
     }
@@ -4738,25 +4829,72 @@ class MinigamesSystem {
         return darkSideCard;
     }
 
-    async rotateHands(game) {
+    async rotateHands(game, message) {
+        if (game.players.length < 3) {
+            await message.reply('🔄 Se necesitan al menos 3 jugadores para rotar manos');
+            return;
+        }
+        
         const direction = game.direction;
-        const hands = game.players.map(p => p.hand);
+        const hands = game.players.map(p => [...p.hand]);
         
         for (let i = 0; i < game.players.length; i++) {
             const nextIndex = (i + direction + game.players.length) % game.players.length;
-            game.players[nextIndex].hand = hands[i];
-            game.players[nextIndex].cardCount = hands[i].length;
+            game.players[i].hand = hands[nextIndex];
+            game.players[i].cardCount = hands[nextIndex].length;
+        }
+        
+        await message.reply(`🔄 **Rotación!** Todos los jugadores rotaron sus manos ${direction === 1 ? '➡️' : '⬅️'}`);
+        
+        // Enviar nuevas manos a todos
+        for (let player of game.players) {
+            await this.sendHandAsEphemeral(message, player);
         }
     }
 
-    async handleSevenSwap(game, swapperId, targetId) {
+    async handleSevenSwap(game, swapperId, targetId, message) {
         const swapper = game.players.find(p => p.id === swapperId);
         const target = game.players.find(p => p.id === targetId);
         
+        if (!swapper || !target) return;
+        
+        // Limpiar timeout
+        if (game.pendingSevenSwap?.timeout) {
+            clearTimeout(game.pendingSevenSwap.timeout);
+        }
+        game.pendingSevenSwap = null;
+        
         // Intercambiar manos
-        [swapper.hand, target.hand] = [target.hand, swapper.hand];
+        const tempHand = [...swapper.hand];
+        swapper.hand = [...target.hand];
+        target.hand = tempHand;
+        
         swapper.cardCount = swapper.hand.length;
         target.cardCount = target.hand.length;
+        
+        await message.reply(`🔄 **Intercambio!** <@${swapperId}> y <@${targetId}> intercambiaron cartas`);
+        
+        // Enviar nuevas manos por DM
+        await this.sendHandAsEphemeral(message, swapper);
+        await this.sendHandAsEphemeral(message, target);
+        
+        // Continuar el juego
+        this.nextPlayer(game);
+        await this.updateUnoGameInDB(game);
+        this.startTurnTimer(game, message);
+    }
+
+    async autoSevenSwap(game, swapperId, message) {
+        if (!game.pendingSevenSwap) return;
+        
+        const otherPlayers = game.players.filter(p => p.id !== swapperId);
+        if (otherPlayers.length === 0) return;
+        
+        // Seleccionar jugador aleatorio
+        const randomTarget = otherPlayers[Math.floor(Math.random() * otherPlayers.length)];
+        
+        await message.reply(`⏰ Tiempo agotado! Intercambio automático...`);
+        await this.handleSevenSwap(game, swapperId, randomTarget.id, message);
     }
 
     async handleJumpIn(game, userId, card) {
