@@ -403,7 +403,7 @@ class ChatBotSystem {
                 canSend: false, 
                 reason: `🌍 **LÍMITE GLOBAL ALCANZADO**\n` +
                     `😴 El servidor ha usado todos los mensajes de IA hoy (${this.DAILY_TOTAL_LIMIT}).\n\n` +
-                    `🕛 **Se reiniciará a medianoche** (en ~${hoursUntilReset} horas)\n` +
+                    `🕛 **Se reiniciará a (en ~${hoursUntilReset} horas**)\n` +
                     `⏰ **Horario de reseteo:** 00:00 cada día\n\n` +
                     `💡 *Tip: ¡Vuelve mañana para chatear de nuevo!*`
             };
