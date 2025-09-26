@@ -1012,7 +1012,7 @@ client.on('messageCreate', async (message) => {
             const result = await chatbot.processMessage(
                 message.author.id,
                 message.content,
-                message.author.displayName || message.author.username
+                message.member?.displayName || message.author.globalName || message.author.username
             );
             
             if (result.success) {
