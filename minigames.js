@@ -4647,29 +4647,59 @@ class MinigamesSystem {
             case 'Flip':
                 game.darkSide = !game.darkSide;
                 
-                // Transformar todas las cartas a su lado opuesto
+                // Transformar cartas en las manos de todos los jugadores
                 for (let player of game.players) {
                     player.hand = player.hand.map(card => {
                         if (card.flipData) {
                             return game.darkSide ? 
-                                { ...card.flipData.dark, type: 'number', isDark: true, flipData: card.flipData } :
-                                { ...card.flipData.light, type: 'number', isDark: false, flipData: card.flipData };
+                                { ...card.flipData.dark, flipData: card.flipData } :
+                                { ...card.flipData.light, flipData: card.flipData };
                         }
                         return card;
                     });
+                    player.cardCount = player.hand.length;
                 }
                 
-                // Transformar deck también
+                // Transformar deck
                 game.deck = game.deck.map(card => {
                     if (card.flipData) {
                         return game.darkSide ? 
-                            { ...card.flipData.dark, type: 'number', isDark: true, flipData: card.flipData } :
-                            { ...card.flipData.light, type: 'number', isDark: false, flipData: card.flipData };
+                            { ...card.flipData.dark, flipData: card.flipData } :
+                            { ...card.flipData.light, flipData: card.flipData };
                     }
                     return card;
                 });
                 
-                await message.reply(`🔄 **FLIP!** Las cartas cambiaron completamente!`);
+                // NUEVO: Transformar también la pila de descarte
+                game.discard_pile = game.discard_pile.map(card => {
+                    if (card.flipData) {
+                        return game.darkSide ? 
+                            { ...card.flipData.dark, flipData: card.flipData } :
+                            { ...card.flipData.light, flipData: card.flipData };
+                    }
+                    return card;
+                });
+                
+                // Actualizar color actual según la carta superior transformada
+                const topCard = game.discard_pile[game.discard_pile.length - 1];
+                game.current_color = topCard.color;
+                
+                await message.reply(`🔄 **FLIP!** Todas las cartas cambiaron al lado ${game.darkSide ? 'OSCURO 💀' : 'CLARO ☀️'}`);
+                
+                // Mostrar la nueva carta superior
+                const embed = this.createCardEmbed(
+                    topCard,
+                    '🎴 Nueva carta en mesa tras Flip',
+                    `**Color actual:** ${game.current_color}\n**Siguiente turno:** <@${game.players[game.current_player_index].id}>`
+                );
+            
+                const attachment = this.createCardAttachment(topCard, game.variant);
+                const messageOptions = { embeds: [embed] };
+                if (attachment) {
+                    messageOptions.files = [attachment];
+                }
+                
+                await message.channel.send(messageOptions);
                 break;
                 
 /*            case '+4 Reverse':
