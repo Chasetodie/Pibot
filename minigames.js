@@ -3820,7 +3820,7 @@ class MinigamesSystem {
                 // Flip Wild del lado oscuro (van en carpeta flip/)
                 'Wild Draw Until Color': 'wild-draw-until-color',
                 'Wild': card.isDark ? 'wild-dark' : 'wild',
-                'Wild+2': 'wild+2',
+                'Wild+2': 'wild-draw-2',
             };
             return valueMap[card.value] || 'wild';
         }
@@ -3838,8 +3838,8 @@ class MinigamesSystem {
             
             // Cartas Flip
             'flip': 'flip',
-            '+1': '+1',
-            '+5': '+5',
+            '+1': 'draw-1',
+            '+5': 'draw-5',
             'skip everyone': 'skip-everyone',            
         };
         
@@ -4432,6 +4432,13 @@ class MinigamesSystem {
                         return true;
                     }
                 }
+                if (cardValue === 'skip everyone' && (
+                    searchValue === 'skip' || 
+                    searchValue === 'skipeveryone' ||
+                    searchValue === 'everyone'
+                )) {
+                    return cardColor === searchColor;
+                }
                 if (cardValue === 'discard all' && (
                     searchValue === 'discardall' ||
                     searchValue === 'discard' ||
@@ -4621,10 +4628,13 @@ class MinigamesSystem {
                 if (game.variant === 'flip' && game.darkSide) {
                     if (rules.stackDrawCards) {
                         game.draw_count += 5;
+                        console.log(`+5 detectado, cartas acumuladas: ${game.draw_count}`);
                         game.canStack = true;
                     } else {
                         await this.forceDrawCards(game, message);
                     }
+                } else {
+                    game.current_color = card.color;
                 }
                 break;
 
@@ -4687,10 +4697,11 @@ class MinigamesSystem {
                 await message.reply(`🔄 **FLIP!** Todas las cartas cambiaron al lado ${game.darkSide ? 'OSCURO 💀' : 'CLARO ☀️'}`);
                 
                 // Mostrar la nueva carta superior
-                const embed = this.createCardEmbed(
+/*                const embed = this.createCardEmbed(
                     topCard,
                     '🎴 Nueva carta en mesa tras Flip',
-                    `**Color actual:** ${game.current_color}\n**Siguiente turno:** <@${game.players[game.current_player_index].id}>`
+                    `**Color actual:** ${game.current_color}\n**Siguiente turno:** <@${game.players[game.current_player_index].id}>`,
+                    game.variant
                 );
             
                 const attachment = this.createCardAttachment(topCard, game.variant);
@@ -4699,7 +4710,12 @@ class MinigamesSystem {
                     messageOptions.files = [attachment];
                 }
                 
-                await message.channel.send(messageOptions);
+                await message.channel.send(messageOptions);*/
+                // Enviar nuevas manos a todos los jugadores
+                for (let player of game.players) {
+                    await this.sendHandAsEphemeral(message, player);
+                }
+                
                 break;
                 
 /*            case '+4 Reverse':
