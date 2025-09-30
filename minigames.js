@@ -3878,8 +3878,21 @@ class MinigamesSystem {
 
     // Obtener carta como texto
     getCardString(card) {
-        if (card.type === 'wild') {
-            return card.value === 'Wild' ? 'Wild' : 'Wild+4';
+        if (card.type === 'wild' || card.type === 'dark_wild' || card.type === 'no_mercy_wild') {
+            // Mapear los valores de Wild para mostrarlos correctamente
+            const wildNames = {
+                'Wild': 'Wild',
+                'Wild+2': 'Wild +2',
+                'Wild+4': 'Wild +4',
+                'Wild Draw Until Color': 'Wild Draw Until Color',
+                '+6': 'Wild +6',
+                '+10': 'Wild +10',
+                'Wild Draw Until Color': 'Wild Draw Until Color',
+                'Discard All': 'Wild Discard All',
+                '+4 Reverse': 'Wild +4 Reverse'
+            };
+            
+            return wildNames[card.value] || card.value;
         }
         return `${card.color} ${card.value}`;
     }
@@ -4423,14 +4436,22 @@ class MinigamesSystem {
                     return true;
                 }
                 if (card.type === 'dark_wild') {
-                    if (cardValue === 'wild draw color' && (
-                        searchValue === 'wildcolor' || 
-                        searchValue === 'drawcolor' ||
+                    if (cardValue === 'wild draw until color' && (
+                        searchValue === 'wild' || 
                         color.toLowerCase() === 'wild' ||
-                        (color.toLowerCase() === 'black' && searchValue === 'wild')
+                        color.toLowerCase() === 'black'
                     )) {
                         return true;
                     }
+                }
+
+                // Para Wild normal del lado oscuro
+                if (card.type === 'dark_wild' && cardValue === 'wild' && (
+                    searchValue === 'wild' || 
+                    color.toLowerCase() === 'wild' ||
+                    color.toLowerCase() === 'black'
+                )) {
+                    return true;
                 }
                 if (cardValue === 'skip everyone' && (
                     searchValue === 'skip' || 
@@ -4692,26 +4713,36 @@ class MinigamesSystem {
                 
                 // Actualizar color actual según la carta superior transformada
                 const topCard = game.discard_pile[game.discard_pile.length - 1];
-                game.current_color = topCard.color;
                 
-                await message.reply(`🔄 **FLIP!** Todas las cartas cambiaron al lado ${game.darkSide ? 'OSCURO 💀' : 'CLARO ☀️'}`);
+                // Si la nueva carta superior es Wild, elegir color automáticamente
+                if (topCard.type === 'wild' || topCard.type === 'dark_wild') {
+                    // Elegir color aleatorio según el lado
+                    const colors = game.darkSide ? UNO_DARK_COLORS : UNO_COLORS;
+                    game.current_color = colors[Math.floor(Math.random() * colors.length)];
+                    
+                    await message.reply(`🔄 **FLIP!** La carta volteada es un Wild. Color elegido automáticamente: **${game.current_color}**`);
+                } else {
+                    game.current_color = topCard.color;
+                    await message.reply(`🔄 **FLIP!** Todas las cartas cambiaron al lado ${game.darkSide ? 'OSCURO 💀' : 'CLARO ☀️'}`);
+                }
                 
                 // Mostrar la nueva carta superior
-/*                const embed = this.createCardEmbed(
+                const embed = this.createCardEmbed(
                     topCard,
                     '🎴 Nueva carta en mesa tras Flip',
                     `**Color actual:** ${game.current_color}\n**Siguiente turno:** <@${game.players[game.current_player_index].id}>`,
                     game.variant
                 );
-            
+
                 const attachment = this.createCardAttachment(topCard, game.variant);
                 const messageOptions = { embeds: [embed] };
                 if (attachment) {
                     messageOptions.files = [attachment];
                 }
                 
-                await message.channel.send(messageOptions);*/
-                // Enviar nuevas manos a todos los jugadores
+                await message.channel.send(messageOptions);
+                
+                // Enviar nuevas manos
                 for (let player of game.players) {
                     await this.sendHandAsEphemeral(message, player);
                 }
