@@ -3708,9 +3708,9 @@ class MinigamesSystem {
                 for (let number of UNO_NUMBERS_FLIP) {
                     darkCards.push({ color, value: number, type: 'number' });
                 }
-                darkCards.push({ color, value: '+5', type: 'dark_special' });
-                darkCards.push({ color, value: 'Skip Everyone', type: 'dark_special' });
-                darkCards.push({ color, value: 'Reverse', type: 'dark_special' });
+                darkCards.push({ color, value: '+5', type: 'special' });
+                darkCards.push({ color, value: 'Skip Everyone', type: 'special' });
+                darkCards.push({ color, value: 'Reverse', type: 'special' });
                 darkCards.push({ color, value: 'Flip', type: 'flip' });
             }
             
@@ -3718,8 +3718,8 @@ class MinigamesSystem {
             for (let i = 0; i < 4; i++) {
                 lightCards.push({ color: 'black', value: 'Wild', type: 'wild' });
                 lightCards.push({ color: 'black', value: 'Wild+2', type: 'wild' });
-                darkCards.push({ color: 'black', value: 'Wild', type: 'dark_wild' });
-                darkCards.push({ color: 'black', value: 'Wild Draw Until Color', type: 'dark_wild' });
+                darkCards.push({ color: 'black', value: 'Wild', type: 'wild' });
+                darkCards.push({ color: 'black', value: 'Wild Draw Until Color', type: 'wild' });
             }
             
             // Mezclar ambas listas para emparejamiento aleatorio
@@ -3804,7 +3804,7 @@ class MinigamesSystem {
 
     getCardImageName(card) {
         // Cartas Wild y especiales (sin color)
-        if (card.type === 'wild' || card.type === 'no_mercy_wild' || card.type === 'dark_wild') {
+        if (card.type === 'wild' || card.type === 'no_mercy_wild') {
             const valueMap = {
                 // Wild clásicas
                 'Wild': 'wild',
@@ -3878,7 +3878,7 @@ class MinigamesSystem {
 
     // Obtener carta como texto
     getCardString(card) {
-        if (card.type === 'wild' || card.type === 'dark_wild' || card.type === 'no_mercy_wild') {
+        if (card.type === 'wild' || card.type === 'no_mercy_wild') {
             // Mapear los valores de Wild para mostrarlos correctamente
             const wildNames = {
                 'Wild': 'Wild',
@@ -4054,7 +4054,7 @@ class MinigamesSystem {
         }
 
         const color = args[1].toLowerCase();
-        const value = args[2].toLowerCase();
+        const value = args.slice(2).join(" ");
         
         // Encontrar el jugador
         const player = game.players.find(p => p.id === userId);
@@ -4435,28 +4435,39 @@ class MinigamesSystem {
                 )) {
                     return true;
                 }
-                if (card.type === 'dark_wild') {
-                    if (cardValue === 'wild draw until color' && (
-                        searchValue === 'wild' || 
-                        color.toLowerCase() === 'wild' ||
+
+                // Simplificar - todas las Wild son tipo 'wild' ahora
+                if (card.type === 'wild') {
+                    // Detectar cualquier wild
+                    if (cardValue === 'wild' && (
+                        color.toLowerCase() === 'wild' || 
                         color.toLowerCase() === 'black'
+                    )) {
+                        return true;
+                    }
+                    
+                    if (cardValue === 'wild+2' && (
+                        searchValue === 'wild+2' || 
+                        searchValue === 'wild2' ||
+                        color.toLowerCase() === 'wild'
+                    )) {
+                        return true;
+                    }
+                    
+                    if (cardValue === 'wild draw until color' && (
+                        searchValue === 'wildcolor' ||
+                        searchValue === 'drawcolor' ||
+                        color.toLowerCase() === 'wild'
                     )) {
                         return true;
                     }
                 }
 
-                // Para Wild normal del lado oscuro
-                if (card.type === 'dark_wild' && cardValue === 'wild' && (
-                    searchValue === 'wild' || 
-                    color.toLowerCase() === 'wild' ||
-                    color.toLowerCase() === 'black'
-                )) {
-                    return true;
-                }
                 if (cardValue === 'skip everyone' && (
                     searchValue === 'skip' || 
                     searchValue === 'skipeveryone' ||
-                    searchValue === 'everyone'
+                    searchValue === 'everyone' ||
+                    searchValue === 'skip everyone'
                 )) {
                     return cardColor === searchColor;
                 }
@@ -4715,7 +4726,7 @@ class MinigamesSystem {
                 const topCard = game.discard_pile[game.discard_pile.length - 1];
                 
                 // Si la nueva carta superior es Wild, elegir color automáticamente
-                if (topCard.type === 'wild' || topCard.type === 'dark_wild') {
+                if (topCard.type === 'wild') {
                     // Elegir color aleatorio según el lado
                     const colors = game.darkSide ? UNO_DARK_COLORS : UNO_COLORS;
                     game.current_color = colors[Math.floor(Math.random() * colors.length)];
@@ -5001,18 +5012,18 @@ class MinigamesSystem {
         switch (card.value) {
             case 'Skip':
                 darkSideCard.value = 'Skip Everyone';
-                darkSideCard.type = 'dark_special';
+                darkSideCard.type = 'special';
                 break;
             case '+2':
                 darkSideCard.value = '+5';
                 break;
             case 'Reverse':
                 darkSideCard.value = 'Skip Everyone';
-                darkSideCard.type = 'dark_special';
+                darkSideCard.type = 'special';
                 break;
             case 'Wild':
                 darkSideCard.value = 'Wild Draw Color';
-                darkSideCard.type = 'dark_wild';
+                darkSideCard.type = 'wild';
                 break;
             case 'Wild+4':
                 darkSideCard.value = 'Wild+6';
