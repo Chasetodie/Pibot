@@ -4085,16 +4085,20 @@ class MinigamesSystem {
             // Para wild, el color viene en args[1], el nuevo color en args[2]
             let chosenColor;
             
-            if (color.toLowerCase() === 'wild') {
+            if (color.toLowerCase() === 'wild' || color.toLowerCase() === 'black') {
                 chosenColor = value.toLowerCase(); // El color está en args[2]
             } else {
                 chosenColor = args[2] ? args[2].toLowerCase() : null; // Wild+4 con color en args[3]
             }
             
-            const validColors = ['red', 'yellow', 'green', 'blue'];
+            // Validar color según el lado actual
+            const validColors = game.darkSide ? 
+                ['pink', 'teal', 'orange', 'purple'] : 
+                ['red', 'yellow', 'green', 'blue'];
             
             if (!chosenColor || !validColors.includes(chosenColor)) {
-                await message.reply('❌ Para cartas Wild debes especificar un color válido\n**Ejemplos:**\n• `>uplay wild red`\n• `>uplay wild+4 blue`\n**Colores válidos:** red, yellow, green, blue');
+                const colorsText = game.darkSide ? 'pink, teal, orange, purple' : 'red, yellow, green, blue';
+                await message.reply(`❌ Para cartas Wild debes especificar un color válido del lado ${game.darkSide ? 'OSCURO' : 'CLARO'}\n**Colores válidos:** ${colorsText}\n**Ejemplo:** \`>uplay wild ${validColors[0]}\``);
                 return;
             }
         }
@@ -4118,6 +4122,13 @@ class MinigamesSystem {
         }
 
         await this.processCardEffect(card, game, chosenColor, message, userId);
+
+        // Si es Skip Everyone, NO pasar turno
+        if (card.value === 'Skip Everyone' && game.variant === 'flip' && game.darkSide) {
+            await this.updateUnoGameInDB(game);
+            this.startTurnTimer(game, message);
+            return;
+        }
 
         // AGREGAR esta verificación:
         if (game.pendingSevenSwap) {
@@ -4213,6 +4224,10 @@ class MinigamesSystem {
         
         if (attachment) {
             messageOptions.files = [attachment];
+        }
+
+        if (card.value === 'Flip') {
+            return;
         }
 
         await message.reply(messageOptions);
@@ -4514,18 +4529,22 @@ class MinigamesSystem {
         const currentPlayer = game.players[game.current_player_index];
         const rules = game.variant_config?.rules || {};
 
-        // Para No Mercy: verificar si puede defenderse con otra carta +2/+4/+6/+10
+        // Para variantes con stack: verificar si puede defenderse
         if (rules.stackDrawCards) {
             const hasDefenseCard = currentPlayer.hand.some(card => 
-                card.value === '+2' || card.value === 'Wild+4' || 
-                card.value === '+6' || card.value === '+10'
+                card.value === '+2' || 
+                card.value === 'Wild+4' || 
+                card.value === '+5' ||      // AGREGAR
+                card.value === 'Wild+2' ||  // AGREGAR
+                card.value === '+6' || 
+                card.value === '+10'
             );
             
             if (hasDefenseCard) {
                 await message.channel.send(
-                    `⚠️ <@${currentPlayer.id}> debe robar ${game.draw_count} cartas O jugar una carta +2/+4/+6/+10 para defenderse`
+                    `⚠️ <@${currentPlayer.id}> debe robar ${game.draw_count} cartas O jugar una carta +2/+4/+5/+6/+10 para defenderse`
                 );
-                return; // Darle oportunidad de defenderse
+                return;
             }
         }
 
@@ -4629,8 +4648,11 @@ class MinigamesSystem {
                 game.current_color = card.color;
                 break;
             case 'Wild':
-                game.current_color = chosenColor || UNO_COLORS[0];
-                console.log(`Wild jugada, nuevo color: ${game.current_color}`);
+                // Elegir del pool de colores correcto según el lado
+                const availableColors = game.darkSide ? UNO_DARK_COLORS : UNO_COLORS;
+                game.current_color = chosenColor || availableColors[0];
+                
+                console.log(`Wild jugada, lado: ${game.darkSide ? 'oscuro' : 'claro'}, color elegido: ${game.current_color}`);
                 break;
             case 'Wild+4':
                 game.current_color = chosenColor || UNO_COLORS[0];
@@ -4651,8 +4673,15 @@ class MinigamesSystem {
 
             case 'Wild+2':
                 if (game.variant === 'flip' && !game.darkSide) {
-                    game.current_color = chosenColor || UNO_COLORS[0];
-                    game.draw_count += 2;
+                    const availableColors = UNO_COLORS;
+                    game.current_color = chosenColor || availableColors[0];
+                    if (rules.stackDrawCards) {
+                        game.draw_count += 2;
+                        game.canStack = true;
+                    } else {
+                        game.draw_count += 2;
+                        await this.forceDrawCards(game, message);
+                    }
                 }
                 break;
 
@@ -4660,9 +4689,10 @@ class MinigamesSystem {
                 if (game.variant === 'flip' && game.darkSide) {
                     if (rules.stackDrawCards) {
                         game.draw_count += 5;
-                        console.log(`+5 detectado, cartas acumuladas: ${game.draw_count}`);
                         game.canStack = true;
+                        console.log(`+5 jugada, cartas acumuladas: ${game.draw_count}`);
                     } else {
+                        game.draw_count += 5;
                         await this.forceDrawCards(game, message);
                     }
                 } else {
@@ -4672,15 +4702,22 @@ class MinigamesSystem {
 
             case 'Skip Everyone':
                 if (game.variant === 'flip' && game.darkSide) {
-                    // Saltar todos los jugadores menos el que jugó
-                    // El turno vuelve al mismo jugador
-                    // No cambiar current_player_index
+                    // NO cambiar current_player_index, el turno vuelve al mismo jugador
+                    // Solo actualizar color
+                    game.current_color = card.color;
+                    
+                    await message.reply(`⏭️ **Skip Everyone!** Todos fueron saltados, <@${userId}> juega de nuevo`);
+                    
+                    // NO llamar a nextPlayer aquí
+                    return; // IMPORTANTE: detener aquí para que no pase turno
                 }
+                game.current_color = card.color;
                 break;
 
             case 'Wild Draw Until Color':
                 if (game.variant === 'flip' && game.darkSide) {
-                    game.current_color = chosenColor || UNO_DARK_COLORS[0];
+                    const availableColors = UNO_DARK_COLORS;
+                    game.current_color = chosenColor || availableColors[0];
                     game.drawUntilColor = game.current_color;
                     await this.handleDrawUntilColorFlip(game, message);
                 }
@@ -4741,12 +4778,29 @@ class MinigamesSystem {
                 const embed = this.createCardEmbed(
                     topCard,
                     '🎴 Nueva carta en mesa tras Flip',
+                    `<@${userId}> jugó: **${this.getCardString(card)}**\n\n` +
+                    `**Le toca a:** <@${game.players[game.current_player_index].id}>\n` +
                     `**Color actual:** ${game.current_color}\n**Siguiente turno:** <@${game.players[game.current_player_index].id}>`,
                     game.variant
                 );
 
+                const row = new ActionRowBuilder()
+                    .addComponents(
+                        new ButtonBuilder()
+                            .setCustomId('uno_show_hand')
+                            .setLabel('🎴 Ver mis cartas')
+                            .setStyle(ButtonStyle.Primary),
+                        new ButtonBuilder()
+                            .setCustomId('uno_draw_card')
+                            .setLabel('🔄 Robar carta')
+                            .setStyle(ButtonStyle.Secondary)
+                    );
+
                 const attachment = this.createCardAttachment(topCard, game.variant);
-                const messageOptions = { embeds: [embed] };
+                const messageOptions = { 
+                    embeds: [embed],
+                    components: [row]
+                };
                 if (attachment) {
                     messageOptions.files = [attachment];
                 }
