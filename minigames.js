@@ -4531,7 +4531,8 @@ class MinigamesSystem {
 
         // Para variantes con stack: verificar si puede defenderse
         if (rules.stackDrawCards) {
-            const hasDefenseCard = currentPlayer.hand.some(card => 
+            const hasDefenseCard = currentPlayer.hand.some(card =>
+                card.value === '+1' || 
                 card.value === '+2' || 
                 card.value === 'Wild+4' || 
                 card.value === '+5' ||      // AGREGAR
