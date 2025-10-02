@@ -4086,9 +4086,9 @@ class MinigamesSystem {
             let chosenColor;
             
             if (color.toLowerCase() === 'wild' || color.toLowerCase() === 'black') {
-                chosenColor = value.toLowerCase(); // El color está en args[2]
+                chosenColor = value.toLowerCase().trim(); // El color está en args[2]
             } else {
-                chosenColor = args[2] ? args[2].toLowerCase() : null; // Wild+4 con color en args[3]
+                chosenColor = color.toLowerCase(); // Wild+4 con color en args[3]
             }
             
             // Validar color según el lado actual
@@ -4123,8 +4123,47 @@ class MinigamesSystem {
 
         await this.processCardEffect(card, game, chosenColor, message, userId);
 
+        // Verificar victoria
+        if (player.hand.length === 0) {
+            await this.endUnoGame(game, message, userId);
+            return;
+        }
+
         // Si es Skip Everyone, NO pasar turno
         if (card.value === 'Skip Everyone' && game.variant === 'flip' && game.darkSide) {
+            const embed = this.createCardEmbed(
+                card,
+                '🎴 Carta Jugada',
+                `<@${userId}> jugó: **${this.getCardString(card)}**\n\n` +
+                `⏭️ **Skip Everyone!** Todos fueron saltados\n` +
+                `**Le toca a:** <@${userId}> (de nuevo)\n` +
+                `**Color actual:** ${game.current_color}`,
+                game.variant
+            );
+
+            const row = new ActionRowBuilder()
+                .addComponents(
+                    new ButtonBuilder()
+                        .setCustomId('uno_show_hand')
+                        .setLabel('🎴 Ver mis cartas')
+                        .setStyle(ButtonStyle.Primary),
+                    new ButtonBuilder()
+                        .setCustomId('uno_draw_card')
+                        .setLabel('🔄 Robar carta')
+                        .setStyle(ButtonStyle.Secondary)
+                );
+
+            const attachment = this.createCardAttachment(card, game.variant);
+            const messageOptions = { 
+                embeds: [embed], 
+                components: [row]
+            };
+            
+            if (attachment) {
+                messageOptions.files = [attachment];
+            }
+
+            await message.reply(messageOptions);
             await this.updateUnoGameInDB(game);
             this.startTurnTimer(game, message);
             return;
@@ -4149,17 +4188,12 @@ class MinigamesSystem {
 
         // AGREGAR ESTO:
         // Si se jugó +2 o Wild+4, el siguiente jugador debe actuar
-        if (card.value === '+2' || card.value === 'Wild+4') {
-            // Pequeño delay para que se procese todo
+        if (card.value === '+2' || card.value === 'Wild+4' || card.value === '+5' || 
+            card.value === 'Wild+2' || card.value === '+1' || card.value === '+6' || 
+            card.value === '+10') {
             setTimeout(async () => {
                 await this.forceDrawCards(game, message);
             }, 1500);
-        }
-
-        // Verificar victoria
-        if (player.hand.length === 0) {
-            await this.endUnoGame(game, message, userId);
-            return;
         }
 
         // Donde creas la ventana de callout, agrega:
@@ -4616,14 +4650,8 @@ class MinigamesSystem {
                 }
                 break;
             case '+2':
-                if (rules.stackDrawCards) {
-                    game.draw_count += 2;
-                    // Permitir que el siguiente jugador tambien juegue +2
-                    game.canStack = true;
-                } else {
-                    //Forzar a robar inmediatamente
-                    await this.forceDrawCards(game, message);
-                }
+                game.draw_count += 2;
+                game.canStack = true;
                 break;
             case '7':
                 if (game.variant === 'house' && game.variant_config?.rules?.sevenSwap) {
@@ -4663,39 +4691,23 @@ class MinigamesSystem {
 
             case '+1':
                 if (game.variant === 'flip' && !game.darkSide) {
-                    if (rules.stackDrawCards) {
-                        game.draw_count += 1;
-                        game.canStack = true;
-                    } else {
-                        await this.forceDrawCards(game, message);
-                    }
+                    game.draw_count += 1;
+                    game.canStack = true;
                 }
                 break;
 
             case 'Wild+2':
                 if (game.variant === 'flip' && !game.darkSide) {
-                    const availableColors = UNO_COLORS;
-                    game.current_color = chosenColor || availableColors[0];
-                    if (rules.stackDrawCards) {
-                        game.draw_count += 2;
-                        game.canStack = true;
-                    } else {
-                        game.draw_count += 2;
-                        await this.forceDrawCards(game, message);
-                    }
+                    game.current_color = chosenColor || UNO_COLORS[0];
+                    game.draw_count += 2;
+                    game.canStack = true;
                 }
                 break;
 
             case '+5':
                 if (game.variant === 'flip' && game.darkSide) {
-                    if (rules.stackDrawCards) {
-                        game.draw_count += 5;
-                        game.canStack = true;
-                        console.log(`+5 jugada, cartas acumuladas: ${game.draw_count}`);
-                    } else {
-                        game.draw_count += 5;
-                        await this.forceDrawCards(game, message);
-                    }
+                    game.draw_count += 5;
+                    game.canStack = true;
                 } else {
                     game.current_color = card.color;
                 }
