@@ -998,7 +998,6 @@ client.on('messageCreate', async (message) => {
 
     // CHATBOT - Solo cuando mencionen al bot
     if (message.mentions.has(message.client.user)) {
-        // Mensaje de pensando para menciones
         const thinkingMessages = [
             '🤔 Hmm, déjame pensar...',
             '💭 Procesando...',
@@ -1009,14 +1008,48 @@ client.on('messageCreate', async (message) => {
         const thinkingMsg = await message.reply(thinkingMessages[Math.floor(Math.random() * thinkingMessages.length)]);
         
         try {
+            let botContext = null;
+            
+            // NUEVO: Detectar si está respondiendo a un mensaje del bot
+            if (message.reference) {
+                try {
+                    const repliedMessage = await message.channel.messages.fetch(message.reference.messageId);
+                    
+                    // Si responde a un mensaje del bot
+                    if (repliedMessage.author.id === message.client.user.id) {
+                        const repliedContent = repliedMessage.content.toLowerCase();
+                        const repliedEmbed = repliedMessage.embeds[0];
+                        
+                        // Detectar tipo de juego/comando
+                        if (repliedContent.includes('coinflip') || repliedEmbed?.title?.toLowerCase().includes('coinflip')) {
+                            botContext = 'El usuario acaba de jugar coinflip y está reaccionando al resultado';
+                        } else if (repliedContent.includes('dice') || repliedEmbed?.title?.toLowerCase().includes('dados')) {
+                            botContext = 'El usuario acaba de jugar dados y está reaccionando al resultado';
+                        } else if (repliedContent.includes('roulette') || repliedEmbed?.title?.toLowerCase().includes('ruleta')) {
+                            botContext = 'El usuario acaba de jugar ruleta y está reaccionando al resultado';
+                        } else if (repliedContent.includes('blackjack') || repliedEmbed?.title?.toLowerCase().includes('blackjack')) {
+                            botContext = 'El usuario acaba de jugar blackjack y está reaccionando al resultado';
+                        } else if (repliedContent.includes('ganaste') || repliedContent.includes('perdiste')) {
+                            botContext = 'El usuario está reaccionando al resultado de un juego (ganó o perdió)';
+                        } else if (repliedContent.includes('balance') || repliedContent.includes('monedas')) {
+                            botContext = 'El usuario está viendo su balance o dinero';
+                        }
+                    }
+                } catch (fetchError) {
+                    // Si no puede obtener el mensaje, continuar sin contexto
+                    console.log('No se pudo obtener mensaje referenciado');
+                }
+            }
+            
+            // Procesar mensaje con contexto adicional
             const result = await chatbot.processMessage(
                 message.author.id,
                 message.content,
-                message.member?.displayName || message.author.globalName || message.author.username
+                message.member?.displayName || message.author.globalName || message.author.username,
+                botContext // Pasar el contexto detectado
             );
             
             if (result.success) {
-                // Editar el mensaje de pensando con la respuesta
                 await thinkingMsg.edit(result.response);
             } else {
                 await thinkingMsg.edit(result.response);

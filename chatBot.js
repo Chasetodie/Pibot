@@ -67,7 +67,7 @@ class ChatBotSystem {
     /**
      * Procesar mensaje de chat y generar respuesta
      */
-    async processMessage(userId, message, userDisplayName = 'Usuario') {
+    async processMessage(userId, message, userDisplayName = 'Usuario', botContext = null) {
         try {
             // 1. Verificar límites del usuario
             const limitCheck = await this.canUserSendMessage(userId);
@@ -86,7 +86,7 @@ class ChatBotSystem {
             await this.addMessageToContext(userId, 'user', message, userDisplayName);
             
             // 4. Preparar el contexto para el chatbot
-            const contextString = this.buildContextString(context, message, userDisplayName);
+            const contextString = this.buildContextString(context, message, userDisplayName, botContext);
             
             // 5. Obtener respuesta del chatbot
             const botResponse = await this.getBotResponse(contextString);
@@ -153,14 +153,18 @@ class ChatBotSystem {
                 }
             }
 
-            // Obtener desde base de datos
+            // AGREGAR: Filtro de tiempo - solo mensajes de las últimas 2 horas
+            const twoHoursAgo = Date.now() - (2 * 60 * 60 * 1000);
+
+            // Obtener desde base de datos CON FILTRO DE TIEMPO
             const [rows] = await this.database.pool.execute(
                 `SELECT role, content, display_name, timestamp 
-                 FROM chat_conversations 
-                 WHERE user_id = ? 
-                 ORDER BY timestamp DESC 
-                 LIMIT ?`,
-                [userId, this.MAX_CONTEXT_MESSAGES]
+                FROM chat_conversations 
+                WHERE user_id = ? 
+                AND timestamp > ?
+                ORDER BY timestamp DESC 
+                LIMIT ?`,
+                [userId, twoHoursAgo, this.MAX_CONTEXT_MESSAGES]
             );
 
             // Invertir para orden cronológico
@@ -170,6 +174,17 @@ class ChatBotSystem {
             console.error('❌ Error obteniendo contexto:', error);
             return [];
         }
+    }
+
+    getAvailableCommands() {
+        return `
+    COMANDOS DISPONIBLES:
+    💰 Economía: >balance, >daily, >work, >transfer
+    🎮 Juegos: >coinflip, >dice, >roulette, >blackjack
+    🏪 Tienda: >shop, >buy, >inventory
+    💬 Chat: >chat, >chatquota, >clearchat
+    📊 Info: >profile, >leaderboard, >help
+    `.trim();
     }
 
     /**
@@ -206,17 +221,19 @@ class ChatBotSystem {
     /**
      * Construir string de contexto para el chatbot
      */
-    buildContextString(context, newMessage, userDisplayName = 'Usuario') {
+    buildContextString(context, newMessage, userDisplayName = 'Usuario', botContext = null) {
         let contextString = '';
         
         const userName = userDisplayName || 'Usuario';
         const hasHistory = context.length > 0;
         
-        contextString += `Eres Pibot, una asistente virtual femenina amigable en Discord. `;
+        contextString += `Eres Pibot, una asistente virtual femenina amigable en Discord, te encuentras en el servidor "Adictos a las pildoras". `;
         contextString += `Tienes 22 años y personalidad relajada. `;       
         contextString += `Te gustan los videojuegos, memes y tecnología, pero no siempre hables de ello. `;
         contextString += `Estás hablando con ${userName}, recuerda su nombre en toda la conversación. `;
         
+        contextString += `Conoces los comandos del servidor y puedes mencionarlos cuando sea relevante. `;
+
         if (hasHistory) {
             contextString += `YA han conversado antes, NO te presentes de nuevo. `;
             contextString += `Continúa la conversación de manera natural recordando lo que han hablado. `;
@@ -227,15 +244,24 @@ class ChatBotSystem {
         
         contextString += `Hablas de forma casual y amigable. Y adicional, usas emojis en tus respuestas, un gesto super lindo. El unico problema, es que estos emojis son para discord, a lo cual no se si sabes usarlo, pero son algo asi :sob:, :joy:, :star:. Cada uno da un emoji, asi que puedes usar cualquiera que tu quieras, obviamente segun los que existan en discord. `;
         contextString += `Puedes hacer bromas y usar humor. `;
-        contextString += `Ademas, si es que alguien pregunta sobre algun comando tuyo, puedes ayudarlos con el comando >help, el cual les dira todos los comandos disponibles.\n\n`;
+        contextString += `Si ${userName} reacciona a resultados de juegos (como ganar/perder en coinflip), `;
+        contextString += `reconócelo y responde apropiadamente a su emoción.\n\n`;
+
+        // AGREGAR: Si hay contexto adicional del bot (como resultado de juego)
+        if (botContext) {
+            contextString += `CONTEXTO ADICIONAL: ${botContext}\n\n`;
+        }
         
+        // Lista de comandos disponibles
+        contextString += `${this.getAvailableCommands()}\n\n`;
+
         if (hasHistory) {
-            contextString += 'CONVERSACIÓN ANTERIOR:\n';
+            contextString += 'CONVERSACIÓN RECIENTE:\n';
             context.forEach(msg => {
                 const role = msg.role === 'user' ? msg.display_name : 'Pibot';
                 contextString += `${role}: ${msg.content}\n`;
             });
-            contextString += '\nCONTINÚA LA CONVERSACIÓN:\n';
+            contextString += '\n';
         }
         
         contextString += `${userName}: ${newMessage}\nPibot:`;
