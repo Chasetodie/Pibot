@@ -4082,23 +4082,20 @@ class MinigamesSystem {
 
         // Para cartas Wild, verificar que se especificó un color válido
         if (card.type === 'wild') {
-            // Para wild, el color viene en args[1], el nuevo color en args[2]
-            let chosenColor;
+            const lastArg = args[args.length - 1].toLowerCase();
             
-            if (color.toLowerCase() === 'wild' || color.toLowerCase() === 'black') {
-                chosenColor = value.toLowerCase().trim(); // El color está en args[2]
-            } else {
-                chosenColor = color.toLowerCase(); // Wild+4 con color en args[3]
-            }
-            
-            // Validar color según el lado actual
             const validColors = game.darkSide ? 
                 ['pink', 'teal', 'orange', 'purple'] : 
                 ['red', 'yellow', 'green', 'blue'];
             
-            if (!chosenColor || !validColors.includes(chosenColor)) {
+            let chosenColor = null;
+            if (validColors.includes(lastArg)) {
+                chosenColor = lastArg;
+            }
+            
+            if (!chosenColor) {
                 const colorsText = game.darkSide ? 'pink, teal, orange, purple' : 'red, yellow, green, blue';
-                await message.reply(`❌ Para cartas Wild debes especificar un color válido del lado ${game.darkSide ? 'OSCURO' : 'CLARO'}\n**Colores válidos:** ${colorsText}\n**Ejemplo:** \`>uplay wild ${validColors[0]}\``);
+                await message.reply(`❌ Para cartas Wild debes especificar un color válido al FINAL\n**Ejemplos:**\n• \`>uplay wild ${validColors[0]}\`\n• \`>uplay wild+2 ${validColors[1]}\`\n• \`>uplay wild draw until color ${validColors[2]}\`\n**Colores válidos:** ${colorsText}`);
                 return;
             }
         }
