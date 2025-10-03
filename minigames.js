@@ -3878,6 +3878,10 @@ class MinigamesSystem {
 
     // Obtener carta como texto
     getCardString(card) {
+        if (!card || !card.value) {
+            return 'Carta inválida';
+        }
+
         if (card.type === 'wild' || card.type === 'no_mercy_wild') {
             // Mapear los valores de Wild para mostrarlos correctamente
             const wildNames = {
@@ -4874,9 +4878,22 @@ class MinigamesSystem {
         while (true) {
             if (game.deck.length === 0) {
                 await this.reshuffleDeck(game);
+                
+                // Si después de rebarajear NO hay cartas, detener
+                if (game.deck.length === 0) {
+                    await message.reply(`🛑 No quedan más cartas en el deck. <@${currentPlayer.id}> robó ${drawnCards} cartas`);
+                    break;
+                }
             }
             
             const card = game.deck.pop();
+            
+            // Verificar que la carta existe
+            if (!card) {
+                await message.reply(`🛑 Error: No se pudo robar carta. Total robado: ${drawnCards}`);
+                break;
+            }
+            
             currentPlayer.hand.push(card);
             drawnCards++;
             
@@ -4896,6 +4913,7 @@ class MinigamesSystem {
             }
         }
         
+        currentPlayer.hand = currentPlayer.hand.filter(card => card !== undefined && card !== null);
         currentPlayer.cardCount = currentPlayer.hand.length;
         game.drawUntilColor = null;
         
