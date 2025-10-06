@@ -3231,7 +3231,7 @@ class MinigamesSystem {
                 }
             }     
 
-            const userData = await this.economy.getUser(userId);
+            const userData = await this.economy.getUser(winner.id);
             const userLimit = this.economy.shop ? await this.economy.shop.getVipLimit(userId) : this.economy.config.maxBalance;
 
             if (userData.balance + finalEarnings > userLimit) {
