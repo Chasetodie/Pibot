@@ -4100,7 +4100,7 @@ class MinigamesSystem {
 
         // Para cartas Wild, el color SIEMPRE es el último argumento
         if (card.type === 'wild') {
-            chosenColor = args[args.length - 1].toLowerCase();
+            let chosenColor = args[args.length - 1].toLowerCase();
             
             const validColors = game.darkSide ? 
                 ['pink', 'teal', 'orange', 'purple'] : 
