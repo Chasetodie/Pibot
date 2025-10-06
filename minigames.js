@@ -4072,7 +4072,7 @@ class MinigamesSystem {
         }
 
         const color = args[1].toLowerCase();
-        const value = args.slice(2).join(" ");
+        let value = args.slice(2).join(" ").toLowerCase();
         
         // Encontrar el jugador
         const player = game.players.find(p => p.id === userId);
@@ -4098,22 +4098,16 @@ class MinigamesSystem {
             return;
         }
 
-        // Para cartas Wild, verificar que se especificó un color válido
+        // Para cartas Wild, el color SIEMPRE es el último argumento
         if (card.type === 'wild') {
-            const lastArg = args[args.length - 1].toLowerCase();
+            chosenColor = args[args.length - 1].toLowerCase();
             
             const validColors = game.darkSide ? 
                 ['pink', 'teal', 'orange', 'purple'] : 
                 ['red', 'yellow', 'green', 'blue'];
             
-            let chosenColor = null;
-            if (validColors.includes(lastArg)) {
-                chosenColor = lastArg;
-            }
-            
-            if (!chosenColor) {
-                const colorsText = game.darkSide ? 'pink, teal, orange, purple' : 'red, yellow, green, blue';
-                await message.reply(`❌ Para cartas Wild debes especificar un color válido al FINAL\n**Ejemplos:**\n• \`>uplay wild ${validColors[0]}\`\n• \`>uplay wild+2 ${validColors[1]}\`\n• \`>uplay wild draw until color ${validColors[2]}\`\n**Colores válidos:** ${colorsText}`);
+            if (!validColors.includes(chosenColor)) {
+                await message.reply(`❌ El último argumento debe ser un color válido: ${validColors.join(', ')}`);
                 return;
             }
         }
@@ -4498,6 +4492,9 @@ class MinigamesSystem {
             
             // CASO ESPECIAL: Cartas Wild
             if (card.type === 'wild') {
+                const cardValue = card.value.toLowerCase().replace(/\s+/g, ''); // "wild+2"
+                const searchValue = value.toLowerCase().replace(/\s+/g, ''); // "+2" o "2"
+                
                 // Para Wild normal
                 if (cardValue === 'wild' && (searchValue === 'wild' || color.toLowerCase() === 'wild')) {
                     return true;
@@ -4513,31 +4510,28 @@ class MinigamesSystem {
                     return true;
                 }
 
-                // Simplificar - todas las Wild son tipo 'wild' ahora
-                if (card.type === 'wild') {
-                    // Detectar cualquier wild
-                    if (cardValue === 'wild' && (
-                        color.toLowerCase() === 'wild' || 
-                        color.toLowerCase() === 'black'
-                    )) {
-                        return true;
-                    }
+                // Detectar cualquier wild
+                if (cardValue === 'wild' && (
+                    color.toLowerCase() === 'wild' || 
+                    color.toLowerCase() === 'black'
+                )) {
+                    return true;
+                }
                     
-                    if (cardValue === 'wild+2' && (
-                        searchValue === 'wild+2' || 
-                        searchValue === 'wild2' ||
-                        color.toLowerCase() === 'wild'
-                    )) {
-                        return true;
-                    }
+                if (cardValue === 'wild+2' && (
+                    searchValue === '+2' || 
+                    searchValue === '2' ||
+                    (color.toLowerCase() === 'wild' && searchValue.includes('2'))
+                )) {
+                    return true;
+                }
                     
-                    if (cardValue === 'wild draw until color' && (
-                        searchValue === 'wildcolor' ||
-                        searchValue === 'drawcolor' ||
-                        color.toLowerCase() === 'wild'
-                    )) {
-                        return true;
-                    }
+                if (cardValue === 'wild draw until color' && (
+                    searchValue === 'wildcolor' ||
+                    searchValue === 'drawcolor' ||
+                    color.toLowerCase() === 'wild'
+                )) {
+                    return true;
                 }
 
                 if (cardValue === 'skip everyone' && (
