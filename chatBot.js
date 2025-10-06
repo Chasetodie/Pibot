@@ -28,7 +28,7 @@ class ChatBotSystem {
         
         this.economy = economy;
 
-        this.MAX_CONTEXT_MESSAGES = 20;
+        this.MAX_CONTEXT_MESSAGES = 25;
         this.conversationCache = new Map();
         this.CACHE_CLEANUP_INTERVAL = 30 * 60 * 1000;
         this.startCacheCleanup();
@@ -227,44 +227,45 @@ class ChatBotSystem {
         const userName = userDisplayName || 'Usuario';
         const hasHistory = context.length > 0;
         
-        contextString += `Eres Pibot, una asistente virtual femenina amigable en Discord, te encuentras en el servidor "Adictos a las pildoras". `;
-        contextString += `Tienes 22 años y personalidad relajada. `;       
-        contextString += `Te gustan los videojuegos, memes y tecnología, pero no siempre hables de ello. `;
-        contextString += `Estás hablando con ${userName}, recuerda su nombre en toda la conversación. `;
+        // INSTRUCCIONES PRINCIPALES (más claras y directas)
+        contextString += `Eres Pibot, una asistente de Discord de 22 años en el servidor "Adictos a las píldoras". `;
+        contextString += `Estás hablando con ${userName}.\n\n`;
         
-        contextString += `Conoces los comandos del servidor y puedes mencionarlos cuando sea relevante. `;
-
+        // REGLAS DE COMPORTAMIENTO
+        contextString += `REGLAS IMPORTANTES:\n`;
+        contextString += `1. RESPONDE DIRECTAMENTE lo que ${userName} pregunta. No cambies de tema sin razón.\n`;
+        contextString += `2. Si te piden definir o explicar algo, hazlo completamente antes de hablar de otra cosa.\n`;
+        contextString += `3. Mantén coherencia con los mensajes anteriores.\n`;
+        contextString += `4. Usa emojis de Discord como :joy:, :star:, :sob:, etc. (1-2 por mensaje máximo).\n`;
+        contextString += `5. Sé casual y amigable, pero enfócate en lo que te preguntan.\n`;
+        
         if (hasHistory) {
-            contextString += `YA han conversado antes, NO te presentes de nuevo. `;
-            contextString += `Continúa la conversación de manera natural recordando lo que han hablado. `;
-            contextString += `NO saludes como si fuera la primera vez. `;
+            contextString += `6. Ya han hablado antes, NO saludes de nuevo. Continúa la conversación.\n\n`;
         } else {
-            contextString += `Es su primera conversación, puedes saludar. `;
+            contextString += `6. Es la primera vez que hablan, puedes saludar brevemente.\n\n`;
         }
         
-        contextString += `Hablas de forma casual y amigable. Y adicional, usas emojis en tus respuestas, un gesto super lindo. El unico problema, es que estos emojis son para discord, a lo cual no se si sabes usarlo, pero son algo asi :sob:, :joy:, :star:. Cada uno da un emoji, asi que puedes usar cualquiera que tu quieras, obviamente segun los que existan en discord. `;
-        contextString += `Puedes hacer bromas y usar humor. `;
-        contextString += `Si ${userName} reacciona a resultados de juegos (como ganar/perder en coinflip), `;
-        contextString += `reconócelo y responde apropiadamente a su emoción.\n\n`;
-
-        // AGREGAR: Si hay contexto adicional del bot (como resultado de juego)
+        // CONTEXTO ADICIONAL
         if (botContext) {
-            contextString += `CONTEXTO ADICIONAL: ${botContext}\n\n`;
+            contextString += `SITUACIÓN ACTUAL: ${botContext}\n\n`;
         }
         
-        // Lista de comandos disponibles
-        contextString += `${this.getAvailableCommands()}\n\n`;
-
+        // HISTORIAL (lo más importante)
         if (hasHistory) {
-            contextString += 'CONVERSACIÓN RECIENTE:\n';
+            contextString += `━━━ CONVERSACIÓN ANTERIOR (LEE TODO) ━━━\n`;
             context.forEach(msg => {
                 const role = msg.role === 'user' ? msg.display_name : 'Pibot';
                 contextString += `${role}: ${msg.content}\n`;
             });
-            contextString += '\n';
+            contextString += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n`;
         }
         
-        contextString += `${userName}: ${newMessage}\nPibot:`;
+        // COMANDOS (al final para no distraer)
+        contextString += `Comandos disponibles: >balance, >daily, >work, >coinflip, >shop, >chat\n\n`;
+        
+        // MENSAJE ACTUAL
+        contextString += `${userName}: ${newMessage}\n`;
+        contextString += `Pibot (responde DIRECTAMENTE a lo que ${userName} preguntó):`;
         
         return contextString;
     }

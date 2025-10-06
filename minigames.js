@@ -3216,18 +3216,18 @@ class MinigamesSystem {
 
             for (const event of this.events.getActiveEvents()) {
                 if (event.type === 'fever_time') {
-                    finalEarnings = Math.floor(profit * 1.5); // 🔥 +30%
-                    eventMessage = `🔥 **Tiempo Fiebre** (+${finalEarnings - profit} π-b$)`;
+                    finalEarnings = Math.floor(winnerPrize * 1.5); // 🔥 +30%
+                    eventMessage = `🔥 **Tiempo Fiebre** (+${finalEarnings - winnerPrize} π-b$)`;
                     break;
                 }
                 else if (event.type === 'market_crash') {
-                    finalEarnings = Math.floor(profit * 1.5); // 📉 -30%
-                    eventMessage = `📉 **Crisis del Mercado** (-${profit - finalEarnings} π-b$)`;
+                    finalEarnings = Math.floor(winnerPrize * 1.5); // 📉 -30%
+                    eventMessage = `📉 **Crisis del Mercado** (-${winnerPrize - finalEarnings} π-b$)`;
                     break;
                 }
                 else if (event.type === 'server_anniversary') {
-                    finalEarnings = Math.floor(profit * 2);
-                    eventMessage = `🎉 **Aniversario del Servidor** (+${finalEarnings - profit} π-b$)`
+                    finalEarnings = Math.floor(winnerPrize * 2);
+                    eventMessage = `🎉 **Aniversario del Servidor** (+${finalEarnings - winnerPrize} π-b$)`
                 }
             }     
 
@@ -3690,31 +3690,47 @@ class MinigamesSystem {
         if (variant === 'flip') {
             const deck = [];
             
-            // Crear cartas del lado claro
+            // Crear cartas del lado claro (18 de cada color)
             const lightCards = [];
             for (let color of UNO_COLORS) {
-                for (let number of UNO_NUMBERS_FLIP) {
+                // Números 1-9 (2 de cada uno = 18 cartas por color)
+                for (let number of UNO_NUMBERS) {
+                    lightCards.push({ color, value: number, type: 'number' });
                     lightCards.push({ color, value: number, type: 'number' });
                 }
+                
+                // 8 cartas especiales de cada tipo (2 por color)
+                lightCards.push({ color, value: '+1', type: 'special' });
                 lightCards.push({ color, value: '+1', type: 'special' });
                 lightCards.push({ color, value: 'Skip', type: 'special' });
+                lightCards.push({ color, value: 'Skip', type: 'special' });
                 lightCards.push({ color, value: 'Reverse', type: 'special' });
+                lightCards.push({ color, value: 'Reverse', type: 'special' });
+                lightCards.push({ color, value: 'Flip', type: 'flip' });
                 lightCards.push({ color, value: 'Flip', type: 'flip' });
             }
             
-            // Crear cartas del lado oscuro
+            // Crear cartas del lado oscuro (18 de cada color)
             const darkCards = [];
             for (let color of UNO_DARK_COLORS) {
-                for (let number of UNO_NUMBERS_FLIP) {
+                // Números 1-9 (2 de cada uno = 18 cartas por color)
+                for (let number of UNO_NUMBERS) {
+                    darkCards.push({ color, value: number, type: 'number' });
                     darkCards.push({ color, value: number, type: 'number' });
                 }
-                darkCards.push({ color, value: '+5', type: 'special' });
-                darkCards.push({ color, value: 'Skip Everyone', type: 'special' });
-                darkCards.push({ color, value: 'Reverse', type: 'special' });
+                
+                // 8 cartas especiales de cada tipo (2 por color)
+                darkCards.push({ color, value: '+5', type: 'dark_special' });
+                darkCards.push({ color, value: '+5', type: 'dark_special' });
+                darkCards.push({ color, value: 'Skip Everyone', type: 'dark_special' });
+                darkCards.push({ color, value: 'Skip Everyone', type: 'dark_special' });
+                darkCards.push({ color, value: 'Reverse', type: 'dark_special' });
+                darkCards.push({ color, value: 'Reverse', type: 'dark_special' });
+                darkCards.push({ color, value: 'Flip', type: 'flip' });
                 darkCards.push({ color, value: 'Flip', type: 'flip' });
             }
             
-            // Wild cards
+            // Wild cards - 4 de cada tipo
             for (let i = 0; i < 4; i++) {
                 lightCards.push({ color: 'black', value: 'Wild', type: 'wild' });
                 lightCards.push({ color: 'black', value: 'Wild+2', type: 'wild' });
@@ -3722,11 +3738,10 @@ class MinigamesSystem {
                 darkCards.push({ color: 'black', value: 'Wild Draw Until Color', type: 'wild' });
             }
             
-            // Mezclar ambas listas para emparejamiento aleatorio
+            // Mezclar y emparejar
             const shuffledLight = this.shuffleDeck([...lightCards]);
             const shuffledDark = this.shuffleDeck([...darkCards]);
             
-            // Crear cartas con ambos lados emparejados aleatoriamente
             const maxCards = Math.min(shuffledLight.length, shuffledDark.length);
             for (let i = 0; i < maxCards; i++) {
                 const flipCard = {
@@ -3742,7 +3757,6 @@ class MinigamesSystem {
             }
             
             return deck;
-            
         } else {
             // DECK NORMAL (lado claro o otras variantes)
             
@@ -4124,6 +4138,16 @@ class MinigamesSystem {
 
         await this.processCardEffect(card, game, chosenColor, message, userId);
 
+        // Si se jugó Wild Draw Until Color, forzar al siguiente jugador
+        if (card.value === 'Wild Draw Until Color' && game.drawUntilColor) {
+            this.nextPlayer(game);
+            setTimeout(async () => {
+                await this.handleDrawUntilColorFlip(game, message);
+            }, 1500);
+            await this.updateUnoGameInDB(game);
+            return;
+        }
+
         // Verificar victoria
         if (player.hand.length === 0) {
             await this.endUnoGame(game, message, userId);
@@ -4464,6 +4488,9 @@ class MinigamesSystem {
         console.log(`🔍 Buscando carta: color="${color}", value="${value}"`);
         console.log(`📋 Cartas en mano:`, player.hand.map(c => `${c.color} ${c.value} (type: ${c.type})`));
 
+        // AGREGAR: Limpiar cartas undefined primero
+        player.hand = player.hand.filter(c => c !== undefined && c !== null);
+
         const index = player.hand.findIndex(card => {
             // Normalizar valores para comparación
             const cardValue = card.value.toLowerCase();
@@ -4733,7 +4760,6 @@ class MinigamesSystem {
                     const availableColors = UNO_DARK_COLORS;
                     game.current_color = chosenColor || availableColors[0];
                     game.drawUntilColor = game.current_color;
-                    await this.handleDrawUntilColorFlip(game, message);
                 }
                 break;
 
