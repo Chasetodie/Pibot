@@ -105,7 +105,7 @@ class CommandHandler {
         }
 
         const args = message.content.split(' ');
-        const amount = parseInt(args[1]);
+        const amount = parseInt(args[1]) + 1;
 
         if (isNaN(amount) || amount < 1 || amount > 100) {
             await message.reply('❌ Especifica un número válido entre 1 y 100. Ejemplo: `>clear 10`');
