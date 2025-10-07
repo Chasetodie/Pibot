@@ -4100,14 +4100,15 @@ class MinigamesSystem {
 
         // Para cartas Wild, el color SIEMPRE es el último argumento
         if (card.type === 'wild') {
-            let chosenColor = args[args.length - 1].toLowerCase();
+            let lastArg = args[args.length - 1].toLowerCase();
             
             const validColors = game.darkSide ? 
                 ['pink', 'teal', 'orange', 'purple'] : 
                 ['red', 'yellow', 'green', 'blue'];
             
-            if (!validColors.includes(chosenColor)) {
-                await message.reply(`❌ El último argumento debe ser un color válido: ${validColors.join(', ')}`);
+            if (!validColors.includes(lastArg)) {
+                const colorsText = validColors.join(', ');
+                await message.reply(`❌ El ÚLTIMO argumento debe ser un color válido\n**Colores válidos:** ${colorsText}\n**Ejemplos:**\n• \`>uplay wild red\`\n• \`>uplay wild +2 blue\`\n• \`>uplay wild draw until color pink\``);
                 return;
             }
         }
@@ -4125,9 +4126,8 @@ class MinigamesSystem {
         // Procesar efectos de la carta
         let chosenColor = null;
         if (card.type === 'wild') {
-            // Para wild, el nuevo color está en args[2]
-            chosenColor = (color.toLowerCase() === 'wild') ? value : args[2];
-            chosenColor = chosenColor ? chosenColor.toLowerCase() : null;
+            // El color es SIEMPRE el último argumento
+            chosenColor = args[args.length - 1].toLowerCase();
         }
 
         await this.processCardEffect(card, game, chosenColor, message, userId);
@@ -5752,7 +5752,8 @@ class MinigamesSystem {
             game.current_player_index = 0;
         }
         
-        await message.reply(`⏰ <@${kickedPlayer.id}> fue expulsado por inactividad`);
+        // CAMBIAR de message.reply a message.channel.send
+        await message.channel.send(`⏰ <@${kickedPlayer.id}> fue expulsado por inactividad`);
         
         // Si solo queda 1 jugador, terminar juego
         if (game.players.length === 1) {
@@ -5761,6 +5762,7 @@ class MinigamesSystem {
         }
         
         // Continuar con siguiente jugador
+        await this.updateUnoGameInDB(game);
         this.startTurnTimer(game, message);
     }
 

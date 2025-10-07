@@ -67,7 +67,7 @@ class ChatBotSystem {
     /**
      * Procesar mensaje de chat y generar respuesta
      */
-    async processMessage(userId, message, userDisplayName = 'Usuario', botContext = null) {
+    async processMessage(userId, message, userDisplayName = 'Usuario', botContext = null, repliedToMessage = null) {
         try {
             // 1. Verificar límites del usuario
             const limitCheck = await this.canUserSendMessage(userId);
@@ -86,7 +86,7 @@ class ChatBotSystem {
             await this.addMessageToContext(userId, 'user', message, userDisplayName);
             
             // 4. Preparar el contexto para el chatbot
-            const contextString = this.buildContextString(context, message, userDisplayName, botContext);
+            const contextString = this.buildContextString(context, message, userDisplayName, botContext, repliedToMessage);
             
             // 5. Obtener respuesta del chatbot
             const botResponse = await this.getBotResponse(contextString);
@@ -192,11 +192,14 @@ class ChatBotSystem {
      */
     async addMessageToContext(userId, role, content, displayName) {
         try {
+            // IMPORTANTE: Agregar microsegundos para evitar duplicados
+            const timestamp = Date.now() + Math.random();
+
             // Agregar a la base de datos
             await this.database.pool.execute(
                 `INSERT INTO chat_conversations (user_id, role, content, display_name, timestamp) 
                  VALUES (?, ?, ?, ?, ?)`,
-                [userId, role, content, displayName, Date.now()]
+                [userId, role, content, displayName, timestamp]
             );
 
             // Limpiar mensajes antiguos (mantener solo los últimos MAX_CONTEXT_MESSAGES)
@@ -221,51 +224,69 @@ class ChatBotSystem {
     /**
      * Construir string de contexto para el chatbot
      */
-    buildContextString(context, newMessage, userDisplayName = 'Usuario', botContext = null) {
+    buildContextString(context, newMessage, userDisplayName = 'Usuario', botContext = null, repliedToMessage = null) {
         let contextString = '';
         
         const userName = userDisplayName || 'Usuario';
         const hasHistory = context.length > 0;
+
+        contextString += `TU CONOCIMIENTO:\n`;
+        contextString += `- Tienes información hasta 2023\n`;
+        contextString += `- NO puedes buscar en internet\n`;
+        contextString += `- NO conoces comandos de otros bots (Nekotina, etc.)\n`;
+        contextString += `- Para preguntas sobre otros bots, di: "No conozco los comandos de ese bot, consulta su comando de help"\n\n`;
         
         // INSTRUCCIONES PRINCIPALES (más claras y directas)
-        contextString += `Eres Pibot, una asistente de Discord de 22 años en el servidor "Adictos a las píldoras". `;
-        contextString += `Estás hablando con ${userName}.\n\n`;
+        contextString += `Eres Pibot, una asistente de Discord de 22 años en el servidor "Adoradores de la mostaza". `;
+        contextString += `Hablas SOLO con ${userName}. Esta es una conversación INDIVIDUAL.\n\n`;
         
-        // REGLAS DE COMPORTAMIENTO
-        contextString += `REGLAS IMPORTANTES:\n`;
-        contextString += `1. RESPONDE DIRECTAMENTE lo que ${userName} pregunta. No cambies de tema sin razón.\n`;
-        contextString += `2. Si te piden definir o explicar algo, hazlo completamente antes de hablar de otra cosa.\n`;
-        contextString += `3. Mantén coherencia con los mensajes anteriores.\n`;
-        contextString += `4. Usa emojis de Discord como :joy:, :star:, :sob:, etc. (1-2 por mensaje máximo).\n`;
-        contextString += `5. Sé casual y amigable, pero enfócate en lo que te preguntan.\n`;
+        contextString += `REGLAS CRÍTICAS:\n`;
+        contextString += `1. Lee TODA la conversación antes de responder.\n`;
+        contextString += `2. Responde EXACTAMENTE lo que ${userName} pregunta en su ÚLTIMO mensaje.\n`;
+        contextString += `3. Si ${userName} pregunta algo que no sabes, di "No tengo esa información" en lugar de inventar.\n`;
+        contextString += `4. NO mezcles temas de mensajes antiguos con la pregunta actual.\n`;
+        contextString += `5. Para información actual o comandos de otros bots, di que no tienes esa información.\n`;
+        contextString += `6. Matemáticas: Calcula con precisión o di que no puedes.\n`;
+        contextString += `7. Traducciones: Si no estás segura, di que no tienes certeza.\n`;
         
         if (hasHistory) {
-            contextString += `6. Ya han hablado antes, NO saludes de nuevo. Continúa la conversación.\n\n`;
+            contextString += `8. Ya conoces a ${userName}, NO saludes de nuevo.\n\n`;
         } else {
-            contextString += `6. Es la primera vez que hablan, puedes saludar brevemente.\n\n`;
+            contextString += `8. Primera vez con ${userName}, saluda brevemente.\n\n`;
+        }
+
+        // NUEVO: Si está respondiendo a un mensaje tuyo
+        if (repliedToMessage) {
+            contextString += `⚠️ ${userName} ESTÁ RESPONDIENDO A TU MENSAJE:\n`;
+            contextString += `Tu mensaje anterior: "${repliedToMessage}"\n`;
+            contextString += `Su respuesta: "${newMessage}"\n`;
+            contextString += `Responde de forma coherente considerando LO QUE TÚ DIJISTE.\n\n`;
         }
         
-        // CONTEXTO ADICIONAL
+        // CONTEXTO DEL JUEGO/BOT
         if (botContext) {
-            contextString += `SITUACIÓN ACTUAL: ${botContext}\n\n`;
+            contextString += `ℹ️ CONTEXTO: ${botContext}\n\n`;
         }
-        
-        // HISTORIAL (lo más importante)
+               
+        // HISTORIAL LIMITADO Y CLARO
         if (hasHistory) {
-            contextString += `━━━ CONVERSACIÓN ANTERIOR (LEE TODO) ━━━\n`;
-            context.forEach(msg => {
-                const role = msg.role === 'user' ? msg.display_name : 'Pibot';
+            contextString += `━━━ HISTORIAL CON ${userName} ━━━\n`;
+            // Solo los últimos 10 mensajes para evitar confusión
+            const recentContext = context.slice(-10);
+            recentContext.forEach(msg => {
+                const role = msg.role === 'user' ? userName : 'Pibot';
                 contextString += `${role}: ${msg.content}\n`;
             });
-            contextString += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n`;
+            contextString += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n`;
         }
         
-        // COMANDOS (al final para no distraer)
-        contextString += `Comandos disponibles: >balance, >daily, >work, >coinflip, >shop, >chat\n\n`;
-        
-        // MENSAJE ACTUAL
-        contextString += `${userName}: ${newMessage}\n`;
-        contextString += `Pibot (responde DIRECTAMENTE a lo que ${userName} preguntó):`;
+        // MENSAJE ACTUAL (enfatizado)
+        if (!repliedToMessage) {
+            contextString += `📌 PREGUNTA ACTUAL:\n`;
+            contextString += `${userName}: ${newMessage}\n\n`;
+        }
+
+        contextString += `Pibot (responde SOLO a la pregunta actual, sin referencias antiguas y de manera coherente. ):`;
         
         return contextString;
     }
@@ -278,7 +299,6 @@ class ChatBotSystem {
         
         for (let modelAttempt = 0; modelAttempt < activeModels.length; modelAttempt++) {
             const currentModel = activeModels[modelAttempt];
-            console.log(`🤖 Intentando con modelo: ${currentModel.name} (${currentModel.description})`);
             
             for (let attempt = 1; attempt <= maxRetries; attempt++) {
                 try {
@@ -289,18 +309,24 @@ class ChatBotSystem {
                                 content: contextString
                             }
                         ],
-                        model: currentModel.name, // Usar el modelo actual
-                        temperature: 0.7,
-                        max_tokens: 200,
-                        top_p: 1,
+                        model: currentModel.name,
+                        temperature: 0.5, // REDUCIR de 0.7 a 0.5 para respuestas más coherentes
+                        max_tokens: 250,
+                        top_p: 0.9, // Agregar para más consistencia
                         stream: false
                     });
                     
                     const response = completion.choices[0]?.message?.content || '';
-                    
-                    // El resto del procesamiento se mantiene igual
                     let cleanResponse = response.trim();
-                    cleanResponse = cleanResponse.replace(/^(Pibot:|Bot:|Asistente:)/i, '').trim();
+                    
+                    // VALIDACIONES ADICIONALES
+                    cleanResponse = cleanResponse.replace(/^(Pibot:|PibBot:|Bot:|Asistente:)/i, '').trim();
+                    
+                    // Si la respuesta menciona comandos que no existen, filtrar
+                    if (cleanResponse.includes('>work') && !contextString.includes('work')) {
+                        console.log('⚠️ Respuesta incoherente detectada, reintentando...');
+                        throw new Error('Respuesta incoherente');
+                    }
                     
                     if (!cleanResponse || cleanResponse.length < 1) {
                         throw new Error('Respuesta vacía del chatbot');
@@ -316,29 +342,23 @@ class ChatBotSystem {
                 } catch (error) {
                     console.error(`❌ Modelo ${currentModel.name} - Intento ${attempt} fallido:`, error.message);
                     
-                    // Si es error de cuota/límite, marcar modelo como inactivo temporalmente
                     if (error.message.includes('rate_limit') || error.message.includes('quota') || error.message.includes('429')) {
-                        console.log(`🚫 Modelo ${currentModel.name} alcanzó límite, cambiando a siguiente...`);
-                        break; // Salir del bucle de reintentos y probar siguiente modelo
+                        console.log(`🚫 Modelo ${currentModel.name} alcanzó límite`);
+                        break;
                     }
                     
-                    // Para otros errores, reintentar
                     if (attempt < maxRetries) {
                         await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
-                    } else {
-                        console.log(`❌ Modelo ${currentModel.name} falló después de ${maxRetries} intentos`);
                     }
                 }
             }
         }
         
-        // Si todos los modelos fallaron, usar respuesta de fallback
-        console.log('❌ Todos los modelos fallaron, usando respuesta predeterminada');
+        // Fallback mejorado
         const fallbackResponses = [
-            '¡Ups! Parece que tengo un pequeño problema técnico. ¿Podrías repetir eso? 🤖',
-            'Hmm, se me trabó un poco el cerebro. ¿De qué estábamos hablando? 😅',
-            'Error 404: Respuesta inteligente no encontrada. ¡Pero estoy aquí para ayudarte! 🔧',
-            'Mi procesador necesita un cafecito ☕. ¿Puedes intentar de nuevo?'
+            'Disculpa, no entendí bien tu pregunta. ¿Podrías reformularla? 🤔',
+            'Hmm, creo que me confundí. ¿De qué me estabas hablando? 😅',
+            'Lo siento, tuve un problema procesando eso. Intenta de nuevo porfa 🔧'
         ];
         return fallbackResponses[Math.floor(Math.random() * fallbackResponses.length)];
     }
@@ -784,39 +804,45 @@ class ChatBotSystem {
                 break;
             case '>chat':
                 if (!args[1]) {
-                    await message.reply('❌ Escribe algo después de >chat para hablar conmigo.\nEjemplo: `>chat Hola, ¿cómo estás?`');
+                    await message.reply('❌ Escribe algo después de >chat.\nEjemplo: `>chat Hola`');
                     return;
                 }
                 
-                const chatMessage = message.content.slice(6).trim(); // Remover '>chat '
+                const chatMessage = message.content.slice(6).trim();
                 
-                // ENVIAR MENSAJE DE "PENSANDO" PRIMERO
                 const thinkingMessages = [
                     '🤔 Pensando...',
-                    '💭 Procesando tu mensaje...',
-                    '🧠 Generando respuesta...',
-                    '⚡ Consultando mi base de conocimientos...',
-                    '🔄 Analizando tu pregunta...'
+                    '💭 Procesando...',
+                    '🧠 Generando respuesta...'
                 ];
                 
                 const thinkingMsg = await message.reply(thinkingMessages[Math.floor(Math.random() * thinkingMessages.length)]);
                 
                 try {
+                    // Detectar si responde a un mensaje
+                    let repliedToMessage = null;
+                    if (message.reference) {
+                        const repliedMessage = await message.channel.messages.fetch(message.reference.messageId);
+                        if (repliedMessage.author.id === message.client.user.id) {
+                            repliedToMessage = repliedMessage.content;
+                        }
+                    }
+                    
                     const result = await this.processMessage(
                         message.author.id, 
                         chatMessage, 
-                        message.member?.displayName || message.author.globalName || message.author.username
+                        message.member?.displayName || message.author.globalName || message.author.username,
+                        null,
+                        repliedToMessage
                     );
                     
                     if (result.success) {
-                        // EDITAR el mensaje de "pensando" con la respuesta real
                         await thinkingMsg.edit(result.response);
                     } else {
-                        // EDITAR con error si hay problema
                         await thinkingMsg.edit(result.response);
                     }
                 } catch (error) {
-                    await thinkingMsg.edit('❌ Error procesando mensaje de chat.');
+                    await thinkingMsg.edit('❌ Error procesando mensaje.');
                 }
                 break;
 

@@ -1009,8 +1009,9 @@ client.on('messageCreate', async (message) => {
         
         try {
             let botContext = null;
+            let repliedToMessage = null; // NUEVO
             
-            // NUEVO: Detectar si está respondiendo a un mensaje del bot
+            // Detectar si está respondiendo a un mensaje
             if (message.reference) {
                 try {
                     const repliedMessage = await message.channel.messages.fetch(message.reference.messageId);
@@ -1019,6 +1020,9 @@ client.on('messageCreate', async (message) => {
                     if (repliedMessage.author.id === message.client.user.id) {
                         const repliedContent = repliedMessage.content.toLowerCase();
                         const repliedEmbed = repliedMessage.embeds[0];
+                        
+                        // NUEVO: Guardar contenido del mensaje
+                        repliedToMessage = repliedMessage.content || repliedEmbed?.description || '';
                         
                         // Detectar tipo de juego/comando
                         if (repliedContent.includes('coinflip') || repliedEmbed?.title?.toLowerCase().includes('coinflip')) {
@@ -1033,20 +1037,23 @@ client.on('messageCreate', async (message) => {
                             botContext = 'El usuario está reaccionando al resultado de un juego (ganó o perdió)';
                         } else if (repliedContent.includes('balance') || repliedContent.includes('monedas')) {
                             botContext = 'El usuario está viendo su balance o dinero';
+                        } else {
+                            // Si no es juego, es una conversación normal
+                            botContext = `El usuario está respondiendo a tu mensaje anterior`;
                         }
                     }
                 } catch (fetchError) {
-                    // Si no puede obtener el mensaje, continuar sin contexto
                     console.log('No se pudo obtener mensaje referenciado');
                 }
             }
             
-            // Procesar mensaje con contexto adicional
+            // Procesar mensaje con contexto Y mensaje referenciado
             const result = await chatbot.processMessage(
                 message.author.id,
                 message.content,
                 message.member?.displayName || message.author.globalName || message.author.username,
-                botContext // Pasar el contexto detectado
+                botContext,
+                repliedToMessage // NUEVO PARÁMETRO
             );
             
             if (result.success) {
