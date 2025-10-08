@@ -4754,6 +4754,8 @@ class MinigamesSystem {
                     const availableColors = UNO_DARK_COLORS;
                     game.current_color = chosenColor || availableColors[0];
                     game.drawUntilColor = game.current_color;
+                } else {
+                    game.current_color = card.color;
                 }
                 break;
 
@@ -4895,49 +4897,41 @@ class MinigamesSystem {
         let drawnCards = 0;
         const targetColor = game.drawUntilColor;
         
+        await message.channel.send(`🎯 <@${currentPlayer.id}> debe robar cartas hasta conseguir el color **${targetColor}**`);
+        
         while (true) {
             if (game.deck.length === 0) {
                 await this.reshuffleDeck(game);
-                
-                // Si después de rebarajear NO hay cartas, detener
                 if (game.deck.length === 0) {
-                    await message.reply(`🛑 No quedan más cartas en el deck. <@${currentPlayer.id}> robó ${drawnCards} cartas`);
+                    await message.channel.send(`🛑 No quedan más cartas. <@${currentPlayer.id}> robó ${drawnCards} cartas`);
                     break;
                 }
             }
             
             const card = game.deck.pop();
-            
-            // Verificar que la carta existe
-            if (!card) {
-                await message.reply(`🛑 Error: No se pudo robar carta. Total robado: ${drawnCards}`);
-                break;
-            }
+            if (!card) break;
             
             currentPlayer.hand.push(card);
             drawnCards++;
             
-            // Si consigue el color objetivo, debe jugar esa carta
             if (card.color === targetColor) {
-                await message.reply(`🎯 <@${currentPlayer.id}> robó ${drawnCards} cartas y DEBE jugar la carta ${targetColor} que sacó`);
-                
-                // Forzar a jugar esa carta específica
-                game.mustPlayCard = card;
+                await message.channel.send(`🎯 <@${currentPlayer.id}> robó ${drawnCards} cartas y consiguió ${targetColor}!`);
                 break;
             }
             
-            // Protección: máximo 20 cartas
             if (drawnCards >= 20) {
-                await message.reply(`🛑 <@${currentPlayer.id}> robó ${drawnCards} cartas sin conseguir ${targetColor}`);
+                await message.channel.send(`🛑 <@${currentPlayer.id}> robó ${drawnCards} cartas sin conseguir ${targetColor}`);
                 break;
             }
         }
         
-        currentPlayer.hand = currentPlayer.hand.filter(card => card !== undefined && card !== null);
+        currentPlayer.hand = currentPlayer.hand.filter(c => c !== undefined && c !== null);
         currentPlayer.cardCount = currentPlayer.hand.length;
         game.drawUntilColor = null;
         
         await this.sendHandAsEphemeral(message, currentPlayer);
+        await this.updateUnoGameInDB(game);
+        this.startTurnTimer(game, message);
     }
 
     async handleDrawUntilColor(game, message) {
@@ -5641,10 +5635,11 @@ class MinigamesSystem {
                 }
             }
 
-        await message.reply({ embeds: [embed] });
+        await message.channel.send({ embeds: [embed] });
+        
         if (addResult.hitLimit) {
             const limitText = userLimit === 20000000 ? '20M π-b$ (VIP)' : '10M π-b$';
-            await message.reply(`⚠️ **Límite alcanzado:** No pudiste recibir todo el dinero porque tienes el máximo permitido (${this.formatNumber(userLimit)} π-b$).`);
+            await message.channel.send(`⚠️ **Límite alcanzado:** No pudiste recibir todo el dinero porque tienes el máximo permitido (${this.formatNumber(userLimit)} π-b$).`);
         }
         
         // Limpiar juego
