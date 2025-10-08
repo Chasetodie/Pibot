@@ -3694,7 +3694,7 @@ class MinigamesSystem {
             const lightCards = [];
             for (let color of UNO_COLORS) {
                 // Números 1-9 (2 de cada uno = 18 cartas por color)
-                for (let number of UNO_NUMBERS) {
+                for (let number of UNO_NUMBERS_FLIP) {
                     lightCards.push({ color, value: number, type: 'number' });
                     lightCards.push({ color, value: number, type: 'number' });
                 }
@@ -3714,7 +3714,7 @@ class MinigamesSystem {
             const darkCards = [];
             for (let color of UNO_DARK_COLORS) {
                 // Números 1-9 (2 de cada uno = 18 cartas por color)
-                for (let number of UNO_NUMBERS) {
+                for (let number of UNO_NUMBERS_FLIP) {
                     darkCards.push({ color, value: number, type: 'number' });
                     darkCards.push({ color, value: number, type: 'number' });
                 }
