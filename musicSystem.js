@@ -11,39 +11,30 @@ class MusicSystem {
     }
 
     initialize() {
-        const nodes = [
+        const node = [
             {
-                name: 'Main',
-                url: 'lavalink.jirayu.net:13592',
-                auth: 'youshallnotpass',
-                secure: false
+                name: 'equisde',
+                url: 'lavalinkv4.serenetia.com',
+                auth: "https://dsc.gg/ajidevserver",
+                secure: true 
             }
         ];
 
         this.kazagumo = new Kazagumo(
             {
                 defaultSearchEngine: 'youtube',
-                // Remover PlayerMoved si causa problemas en v4
-                plugins: [],
+                plugins: [new Plugins.PlayerMoved(this.client)],
                 send: (guildId, payload) => {
                     const guild = this.client.guilds.cache.get(guildId);
                     if (guild) guild.shard.send(payload);
                 },
             },
             new Connectors.DiscordJS(this.client),
-            nodes
+            node
         );
 
         // Asignar kazagumo al cliente para acceso global
         this.client.kazagumo = this.kazagumo;
-
-        this.kazagumo.shoukaku.on('ready', (name) => {
-            console.log(`✅ Lavalink [${name}] conectado`);
-        });
-
-        this.kazagumo.shoukaku.on('error', (name, error) => {
-            console.error(`❌ Error en [${name}]:`, error);
-        });
 
         // Event listeners
         this.setupEventListeners();
@@ -64,9 +55,29 @@ class MusicSystem {
             }
         });
 
-        this.kazagumo.on('playerEnd', (player) => {
-            // Auto-disconnect después de 5 minutos de inactividad
-            if (player.queue.size === 0) {
+        this.kazagumo.on('playerEnd', (player, track, reason) => {
+            // Verificar si terminó naturalmente (no por skip)
+            if (reason !== 'REPLACED' && player.queue.size > 0) {
+                // La cola ya se movió automáticamente, solo reproducir
+                setTimeout(() => {
+                    if (player.queue.current && !player.playing) {
+                        player.play();
+                    }
+                }, 100); // Pequeño delay para asegurar que la cola se actualizó
+            } else if (player.queue.size === 0) {
+                // No hay más canciones
+                if (player.textId) {
+                    const channel = this.client.channels.cache.get(player.textId);
+                    if (channel) {
+                        const embed = new EmbedBuilder()
+                            .setTitle('📭 Cola Terminada')
+                            .setDescription('No hay más canciones en la cola. Desconectando en 5 minutos por inactividad...')
+                            .setColor('#FFA500');
+                        
+                        channel.send({ embeds: [embed] });
+                    }
+                }
+                
                 this.setPlayerTimeout(player.guildId, () => {
                     if (player.queue.size === 0) {
                         player.destroy();
@@ -77,7 +88,7 @@ class MusicSystem {
                             }
                         }
                     }
-                }, 300000); // 5 minutos
+                }, 300000);
             }
         });
 
@@ -244,8 +255,7 @@ class MusicSystem {
                 player.play();
             }
 
-            await message.followUp({ embeds: [embed] });
-
+            await message.channel.send({ embeds: [embed] });
         } catch (error) {
             console.error('Error en play command:', error);
             await message.reply('❌ Ocurrió un error al reproducir la música.');
