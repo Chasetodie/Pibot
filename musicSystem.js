@@ -245,6 +245,12 @@ class MusicSystem {
                 return message.reply('❌ No se encontraron resultados para tu búsqueda.');
             }
 
+            // Antes de player.play():
+            if (result.tracks.length > this.maxSongDuration) {
+                return message.reply('❌ La canción es muy larga (máximo 2 horas).');
+            }
+
+
             const embed = new EmbedBuilder()
                 .setColor('#00FF00')
                 .setTimestamp();
@@ -260,11 +266,6 @@ class MusicSystem {
                 embed.setTitle('🎵 Canción Agregada a la Cola')
                     .setDescription(`**${track.title}**\nDuración: ${this.formatTime(track.length)}`)
                     .setThumbnail(track.thumbnail || null);
-            }
-
-            // Antes de player.play():
-            if (track.length > this.maxSongDuration) {
-                return message.reply('❌ La canción es muy larga (máximo 2 horas).');
             }
 
             if (!player.playing && !player.paused) {
