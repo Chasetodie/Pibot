@@ -11,26 +11,27 @@ class MusicSystem {
     }
 
     initialize() {
-        const node = [
+        const nodes = [
             {
-                name: 'equisde',
+                name: 'Main',
                 url: 'lava-v4.ajieblogs.eu.org:443',
-                auth: "https://dsc.gg/ajidevserver",
-                secure: true 
+                auth: 'https://dsc.gg/ajidevserver',
+                secure: true
             }
         ];
 
         this.kazagumo = new Kazagumo(
             {
                 defaultSearchEngine: 'youtube',
-                plugins: [new Plugins.PlayerMoved(this.client)],
+                // Remover PlayerMoved si causa problemas en v4
+                plugins: [],
                 send: (guildId, payload) => {
                     const guild = this.client.guilds.cache.get(guildId);
                     if (guild) guild.shard.send(payload);
                 },
             },
             new Connectors.DiscordJS(this.client),
-            node
+            nodes
         );
 
         // Asignar kazagumo al cliente para acceso global
@@ -55,29 +56,9 @@ class MusicSystem {
             }
         });
 
-        this.kazagumo.on('playerEnd', (player, track, reason) => {
-            // Verificar si terminó naturalmente (no por skip)
-            if (reason !== 'REPLACED' && player.queue.size > 0) {
-                // La cola ya se movió automáticamente, solo reproducir
-                setTimeout(() => {
-                    if (player.queue.current && !player.playing) {
-                        player.play();
-                    }
-                }, 100); // Pequeño delay para asegurar que la cola se actualizó
-            } else if (player.queue.size === 0) {
-                // No hay más canciones
-                if (player.textId) {
-                    const channel = this.client.channels.cache.get(player.textId);
-                    if (channel) {
-                        const embed = new EmbedBuilder()
-                            .setTitle('📭 Cola Terminada')
-                            .setDescription('No hay más canciones en la cola. Desconectando en 5 minutos por inactividad...')
-                            .setColor('#FFA500');
-                        
-                        channel.send({ embeds: [embed] });
-                    }
-                }
-                
+        this.kazagumo.on('playerEnd', (player) => {
+            // Auto-disconnect después de 5 minutos de inactividad
+            if (player.queue.size === 0) {
                 this.setPlayerTimeout(player.guildId, () => {
                     if (player.queue.size === 0) {
                         player.destroy();
@@ -88,7 +69,7 @@ class MusicSystem {
                             }
                         }
                     }
-                }, 300000);
+                }, 300000); // 5 minutos
             }
         });
 
@@ -255,7 +236,8 @@ class MusicSystem {
                 player.play();
             }
 
-            await message.channel.send({ embeds: [embed] });
+            await message.followUp({ embeds: [embed] });
+
         } catch (error) {
             console.error('Error en play command:', error);
             await message.reply('❌ Ocurrió un error al reproducir la música.');
