@@ -366,10 +366,8 @@ class MusicSystem {
             return message.reply('❌ La música no está pausada.');
         }
         
-        // AGREGAR ESTAS LÍNEAS:
-        const currentPosition = player.position;
         player.pause(false);
-        player.seekTo(currentPosition); // Mantener posición
+        player.setVolume(player.volume); // "Kick" al player
         
         const embed = new EmbedBuilder()
             .setTitle('▶️ Música Reanudada')
