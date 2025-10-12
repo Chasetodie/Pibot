@@ -14,8 +14,8 @@ class MusicSystem {
         const node = [
             {
                 name: 'equisde',
-                url: 'lavalink-v4.triniumhost.com:443',
-                auth: "free",
+                url: 'lavalink.jirayu.net:443',
+                auth: "youshallnotpass",
                 secure: true 
             }
         ];
