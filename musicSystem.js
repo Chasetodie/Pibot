@@ -14,8 +14,8 @@ class MusicSystem {
         const node = [
             {
                 name: 'equisde',
-                url: 'lavalinkv4.serenetia.com',
-                auth: "https://dsc.gg/ajidevserver",
+                url: 'lavalink-v4.triniumhost.com',
+                auth: "free",
                 secure: true 
             }
         ];
