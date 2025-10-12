@@ -529,13 +529,14 @@ class MusicSystem {
         if (targetPosition < 0) {
             return message.reply('❌ No puedes retroceder antes del inicio.');
         }
-        
+
         if (targetPosition > duration) {
             return message.reply('❌ El tiempo especificado excede la duración de la canción.');
         }
-        
-        player.seekTo(targetPosition);
-        
+
+        // CAMBIAR AQUÍ:
+        player.seek(targetPosition);
+
         const embed = new EmbedBuilder()
             .setTitle('⏩ Posición Cambiada')
             .setDescription(`Posición: **${this.formatTime(targetPosition)}** / ${this.formatTime(duration)}`)
