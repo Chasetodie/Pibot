@@ -179,6 +179,16 @@ class MusicSystem {
                     case 'np':
                         await this.nowPlayingCommand(message, guild);
                         break;
+
+                    case 'fix':
+                    case 'restart':
+                        await this.fixPlayerCommand(message, guild);
+                        break;
+                    case 'seek':
+                    case 'adelantar':
+                    case 'forward':
+                        await this.seekCommand(message, args, guild);
+                        break;
                     
                     case 'volume':
                     case 'vol':
@@ -549,15 +559,6 @@ class MusicSystem {
             case 'queue':
             case 'cola':
                 newLoop = 'queue';
-                break;
-            case 'fix':
-            case 'restart':
-                await this.fixPlayerCommand(message, guild);
-                break;
-            case 'seek':
-            case 'adelantar':
-            case 'forward':
-                await this.seekCommand(message, args, guild);
                 break;
             case 'off':
             case 'disable':
