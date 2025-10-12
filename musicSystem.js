@@ -14,9 +14,9 @@ class MusicSystem {
         const nodes = [
             {
                 name: 'Main',
-                url: 'lava-v4.ajieblogs.eu.org:443',
-                auth: 'https://dsc.gg/ajidevserver',
-                secure: true
+                url: 'lavalink.jirayu.net:13592',
+                auth: 'youshallnotpass',
+                secure: false
             }
         ];
 
@@ -36,6 +36,14 @@ class MusicSystem {
 
         // Asignar kazagumo al cliente para acceso global
         this.client.kazagumo = this.kazagumo;
+
+        this.kazagumo.shoukaku.on('ready', (name) => {
+            console.log(`✅ Lavalink [${name}] conectado`);
+        });
+
+        this.kazagumo.shoukaku.on('error', (name, error) => {
+            console.error(`❌ Error en [${name}]:`, error);
+        });
 
         // Event listeners
         this.setupEventListeners();
