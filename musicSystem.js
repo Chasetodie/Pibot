@@ -14,7 +14,10 @@ class MusicSystem {
     initialize() {
         const nodes = [
             { name: 'Node1', url: 'lavalink.jirayu.net:13592', auth: 'youshallnotpass', secure: false },
-            { name: 'Node3', url: 'lavalink.clxud.dev:2333', auth: 'youshallnotpass', secure: false }
+            { name: 'Node2', url: 'lavalink.clxud.dev:2333', auth: 'youshallnotpass', secure: false },
+            { name: 'Node3', url: 'lavalink-v4.ajieblogs.eu.org:443', auth: 'https://dsc.gg/ajidevserver', secure: true },
+            { name: 'Node4', url: 'lava.catfein.com:80', auth: 'catfein', secure: false },
+            { name: 'Node5', url: 'lavalink.alfari.id:443', auth: 'catfein', secure: true }
         ];
 
         this.kazagumo = new Kazagumo(
@@ -285,6 +288,11 @@ class MusicSystem {
             await message.channel.send({ embeds: [embed] });
         } catch (error) {
             console.error('Error en play command:', error);
+            
+            if (error.status === 429) {
+                return message.reply('⏳ El servidor de música está sobrecargado. Intenta en unos segundos o usa `>m fix` para cambiar de nodo.');
+            }
+            
             await message.reply('❌ Ocurrió un error al reproducir la música.');
         }
     }
