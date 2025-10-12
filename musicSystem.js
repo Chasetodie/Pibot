@@ -13,7 +13,6 @@ class MusicSystem {
     initialize() {
         const nodes = [
             { name: 'Node1', url: 'lavalink.jirayu.net:13592', auth: 'youshallnotpass', secure: false },
-            { name: 'Node2', url: 'lava.horizxon.studio:80', auth: 'horizxon.studio', secure: false },
             { name: 'Node3', url: 'lavalink.clxud.dev:2333', auth: 'youshallnotpass', secure: false }
         ];
 
