@@ -7,6 +7,7 @@ class MusicSystem {
         this.client = client;
         this.kazagumo = null;
         this.playerTimeouts = new Map();
+        this.maxSongDuration = 2 * 60 * 60 * 1000; // 2 horas en ms
         this.initialize();
     }
 
@@ -94,6 +95,16 @@ class MusicSystem {
 
         this.kazagumo.on('playerDestroy', (player) => {
             this.clearPlayerTimeout(player.guildId);
+        });
+
+        // AGREGAR ESTO:
+        this.kazagumo.on('playerResumed', (player) => {
+            console.log(`🔄 Player resumido en ${player.guildId}`);
+        });
+        
+        this.kazagumo.on('playerMoved', (player, oldChannel, newChannel) => {
+            console.log(`🔄 Bot movido de canal`);
+            player.pause(false); // Forzar resume
         });
     }
 
@@ -251,6 +262,11 @@ class MusicSystem {
                     .setThumbnail(track.thumbnail || null);
             }
 
+            // Antes de player.play():
+            if (track.length > this.maxSongDuration) {
+                return message.reply('❌ La canción es muy larga (máximo 2 horas).');
+            }
+
             if (!player.playing && !player.paused) {
                 player.play();
             }
@@ -325,22 +341,25 @@ class MusicSystem {
 
     async resumeCommand(message, guild) {
         const player = this.kazagumo.getPlayer(guild.id);
-
+        
         if (!player) {
             return message.reply('❌ No hay música reproduciéndose.');
         }
-
+        
         if (!player.paused) {
             return message.reply('❌ La música no está pausada.');
         }
-
+        
+        // AGREGAR ESTAS LÍNEAS:
+        const currentPosition = player.position;
         player.pause(false);
-
+        player.seekTo(currentPosition); // Mantener posición
+        
         const embed = new EmbedBuilder()
             .setTitle('▶️ Música Reanudada')
             .setDescription('La música ha sido reanudada.')
             .setColor('#00FF00');
-
+        
         await message.reply({ embeds: [embed] });
     }
 
@@ -435,6 +454,82 @@ class MusicSystem {
         await message.reply({ embeds: [embed] });
     }
 
+    async fixPlayerCommand(message, guild) {
+        const player = this.kazagumo.getPlayer(guild.id);
+        
+        if (!player) {
+            return message.reply('❌ No hay música reproduciéndose.');
+        }
+        
+        const queue = [...player.queue];
+        const current = player.queue.current;
+        
+        await player.destroy();
+        
+        // Recrear player
+        const newPlayer = await this.kazagumo.createPlayer({
+            guildId: guild.id,
+            textId: message.channel.id,
+            voiceId: message.member.voice.channel.id
+        });
+        
+        if (current) newPlayer.queue.add(current);
+        newPlayer.queue.add(queue);
+        newPlayer.play();
+        
+        await message.reply('✅ Player reiniciado correctamente.');
+    }
+
+    async seekCommand(message, args, guild) {
+        const player = this.kazagumo.getPlayer(guild.id);
+        
+        if (!player || !player.queue.current) {
+            return message.reply('❌ No hay música reproduciéndose.');
+        }
+        
+        if (!args[2]) {
+            return message.reply('❌ Especifica el tiempo.\nEjemplos:\n• `>m seek 1:30` (1 min 30 seg)\n• `>m seek 30` (30 segundos)\n• `>m seek +30` (adelantar 30 seg)\n• `>m seek -15` (retroceder 15 seg)');
+        }
+        
+        const input = args[2];
+        const currentPosition = player.position;
+        const duration = player.queue.current.length;
+        let targetPosition;
+        
+        // Formato: +30 o -30 (relativo)
+        if (input.startsWith('+') || input.startsWith('-')) {
+            const seconds = parseInt(input) * 1000;
+            targetPosition = currentPosition + seconds;
+        }
+        // Formato: 1:30 (minutos:segundos)
+        else if (input.includes(':')) {
+            const [min, sec] = input.split(':').map(Number);
+            targetPosition = (min * 60 + sec) * 1000;
+        }
+        // Formato: 30 (segundos absolutos)
+        else {
+            targetPosition = parseInt(input) * 1000;
+        }
+        
+        // Validar límites
+        if (targetPosition < 0) {
+            return message.reply('❌ No puedes retroceder antes del inicio.');
+        }
+        
+        if (targetPosition > duration) {
+            return message.reply('❌ El tiempo especificado excede la duración de la canción.');
+        }
+        
+        player.seekTo(targetPosition);
+        
+        const embed = new EmbedBuilder()
+            .setTitle('⏩ Posición Cambiada')
+            .setDescription(`Posición: **${this.formatTime(targetPosition)}** / ${this.formatTime(duration)}`)
+            .setColor('#0099FF');
+        
+        await message.reply({ embeds: [embed] });
+    }
+
     async loopCommand(message, args, guild) {
         const player = this.kazagumo.getPlayer(guild.id);
 
@@ -453,6 +548,15 @@ class MusicSystem {
             case 'queue':
             case 'cola':
                 newLoop = 'queue';
+                break;
+            case 'fix':
+            case 'restart':
+                await this.fixPlayerCommand(message, guild);
+                break;
+            case 'seek':
+            case 'adelantar':
+            case 'forward':
+                await this.seekCommand(message, args, guild);
                 break;
             case 'off':
             case 'disable':
@@ -532,7 +636,8 @@ class MusicSystem {
                 { name: '▶️ Reproducción', value: '`>music play <canción>` - Reproduce una canción\n`>music pause` - Pausa la música\n`>music resume` - Reanuda la música\n`>music stop` - Detiene y desconecta', inline: false },
                 { name: '⏭️ Control de Cola', value: '`>music skip` - Salta la canción actual\n`>music queue` - Muestra la cola\n`>music shuffle` - Mezcla la cola\n`>music clear` - Limpia la cola', inline: false },
                 { name: '🔧 Configuración', value: '`>music volume <1-100>` - Cambia el volumen\n`>music loop [track/queue/off]` - Configura el loop\n`>music nowplaying` - Canción actual', inline: false },
-                { name: '📝 Aliases', value: '`>m`, `>musica`, `>music`\n`p` = play, `s` = skip, `q` = queue, `np` = nowplaying', inline: false }
+                { name: '📝 Aliases', value: '`>m`, `>musica`, `>music`\n`p` = play, `s` = skip, `q` = queue, `np` = nowplaying', inline: false },
+                { name: '⏩ Navegación', value: '`>music seek <tiempo>` - Adelantar/retroceder\nEjemplos: `>m seek 1:30`, `>m seek +30`, `>m seek -15`', inline: false },
             )
             .setColor('#0099FF')
             .setFooter({ text: 'Ejemplo: >music play despacito' })
