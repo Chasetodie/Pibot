@@ -11,13 +11,10 @@ class MusicSystem {
     }
 
     initialize() {
-        const node = [
-            {
-                name: 'equisde',
-                url: 'lavalink.jirayu.net:443',
-                auth: "youshallnotpass",
-                secure: true 
-            }
+        const nodes = [
+            { name: 'Node1', url: 'lavalink.jirayu.net:13592', auth: 'youshallnotpass', secure: false },
+            { name: 'Node2', url: 'lava.horizxon.studio:80', auth: 'horizxon.studio', secure: false },
+            { name: 'Node3', url: 'lavalink.clxud.dev:2333', auth: 'youshallnotpass', secure: false }
         ];
 
         this.kazagumo = new Kazagumo(
@@ -30,11 +27,15 @@ class MusicSystem {
                 },
             },
             new Connectors.DiscordJS(this.client),
-            node
+            nodes
         );
 
         // Asignar kazagumo al cliente para acceso global
         this.client.kazagumo = this.kazagumo;
+
+        this.kazagumo.shoukaku.on('ready', (name) => {
+            console.log(`✅ Nodo [${name}] conectado!`);
+        });
 
         // Event listeners
         this.setupEventListeners();
