@@ -7,7 +7,8 @@ class MusicSystem {
         this.client = client;
         this.kazagumo = null;
         this.playerTimeouts = new Map();
-        this.maxSongDuration = 2 * 60 * 60 * 1000; // 2 horas en ms
+        this.maxSongDuration = 7200000; // 2 horas en ms
+        this.playThrottle = new Map();
         this.initialize();
     }
 
@@ -56,36 +57,38 @@ class MusicSystem {
             }
         });
 
-        this.kazagumo.on('playerEnd', (player, track, reason) => {
-            // Verificar si terminó naturalmente (no por skip)
-            if (reason !== 'REPLACED' && player.queue.size > 0) {
-                // La cola ya se movió automáticamente, solo reproducir
+        this.kazagumo.on('playerEnd', (player) => {
+            console.log(`🎵 Canción terminada en ${player.guildId}`);
+            
+            if (player.queue.size > 0) {
                 setTimeout(() => {
-                    if (player.queue.current && !player.playing) {
+                    if (player.queue.size > 0 && !player.playing) {
                         player.play();
                     }
-                }, 100); // Pequeño delay para asegurar que la cola se actualizó
-            } else if (player.queue.size === 0) {
-                // No hay más canciones
+                }, 1000);
+            } else {
+                // AGREGAR MENSAJE AQUÍ:
                 if (player.textId) {
                     const channel = this.client.channels.cache.get(player.textId);
                     if (channel) {
                         const embed = new EmbedBuilder()
-                            .setTitle('📭 Cola Terminada')
-                            .setDescription('No hay más canciones en la cola. Desconectando en 5 minutos por inactividad...')
-                            .setColor('#FFA500');
+                            .setTitle('✅ Cola Terminada')
+                            .setDescription('Se han reproducido todas las canciones de la cola.')
+                            .setColor('#00FF00')
+                            .setFooter({ text: 'El bot se desconectará en 5 minutos si no hay más música.' });
                         
                         channel.send({ embeds: [embed] });
                     }
                 }
                 
+                // Auto-disconnect después de 5 minutos
                 this.setPlayerTimeout(player.guildId, () => {
                     if (player.queue.size === 0) {
                         player.destroy();
                         if (player.textId) {
                             const channel = this.client.channels.cache.get(player.textId);
                             if (channel) {
-                                channel.send('⏹️ Desconectado por inactividad (5 minutos sin música).');
+                                channel.send('⏹️ Desconectado por inactividad.');
                             }
                         }
                     }
@@ -220,6 +223,13 @@ class MusicSystem {
     }
 
     async playCommand(message, args, member, channel, guild, author) {
+        // AGREGAR THROTTLE:
+        const lastPlay = this.playThrottle.get(guild.id) || 0;
+        if (Date.now() - lastPlay < 2000) { // 2 segundos entre plays
+            return message.reply('⏳ Espera un momento antes de agregar más canciones.');
+        }
+        this.playThrottle.set(guild.id, Date.now());
+
         const voiceChannel = member.voice.channel;
 
         if (!voiceChannel) {
@@ -279,6 +289,7 @@ class MusicSystem {
             }
 
             if (!player.playing && !player.paused) {
+                await new Promise(resolve => setTimeout(resolve, 500));
                 player.play();
             }
 
