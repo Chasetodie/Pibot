@@ -15,10 +15,7 @@ class MusicSystem {
     initialize() {
         const nodes = [
             { name: 'Node1', url: 'lavalink.jirayu.net:13592', auth: 'youshallnotpass', secure: false },
-            { name: 'Node2', url: 'lavalink.clxud.dev:2333', auth: 'youshallnotpass', secure: false },
-            { name: 'Node3', url: 'lava-v4.ajieblogs.eu.org:443', auth: 'https://dsc.gg/ajidevserver', secure: true},
-            { name: 'Node4', url: 'lavalink.devamop.in:443', auth: 'DevamOP', secure: true },
-            { name: 'Node5', url: 'lavalink-eu.omagize.tech:19628', auth: 'www.freelavalink.ga', secure: false }
+            { name: 'Node2', url: 'lava-v4.ajieblogs.eu.org:443', auth: 'https://dsc.gg/ajidevserver', secure: true},
         ];
 
         this.kazagumo = new Kazagumo(
