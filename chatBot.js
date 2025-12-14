@@ -337,7 +337,7 @@ class ChatBotSystem {
                             max_tokens: 350,
                             top_p: 0.95,
                             frequency_penalty: 0.7,
-                            presence_penalty: 0.4
+                            presence_penalty: 0.5
                         })
                     });
                     
