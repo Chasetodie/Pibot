@@ -889,6 +889,51 @@ class ChatBotSystem {
                 await message.reply(modelStatus);
                 break;
 
+            case '>chatcredits':
+            case '>aicredits':
+                try {
+                    const response = await fetch('https://api.mistral.ai/v1/models', {
+                        method: 'GET',
+                        headers: {
+                            'Authorization': `Bearer ${this.apiKey}`,
+                            'Content-Type': 'application/json'
+                        }
+                    });
+                    
+                    if (response.ok) {
+                        // Mistral no expone créditos por API, pero podemos verificar que funciona
+                        const embed = new (require('discord.js').EmbedBuilder)()
+                            .setTitle('💳 Créditos de IA')
+                            .setDescription('Para ver tus créditos exactos:')
+                            .addFields(
+                                { 
+                                    name: '🌐 Dashboard', 
+                                    value: '[console.mistral.ai/usage](https://console.mistral.ai/usage)', 
+                                    inline: false 
+                                },
+                                { 
+                                    name: '✅ Estado API', 
+                                    value: 'Conectado y funcionando', 
+                                    inline: false 
+                                },
+                                {
+                                    name: '📊 Uso del Servidor',
+                                    value: `Hoy: ${this.totalUsedToday}/${this.DAILY_TOTAL_LIMIT} mensajes`,
+                                    inline: false
+                                }
+                            )
+                            .setColor('#00D9FF')
+                            .setTimestamp();
+                        
+                        await message.reply({ embeds: [embed] });
+                    } else {
+                        await message.reply('❌ No se pudo conectar con Mistral API. Verifica tu token.');
+                    }
+                } catch (error) {
+                    await message.reply('❌ Error verificando créditos. Usa: https://console.mistral.ai/usage');
+                }
+                break;
+
             case '>chatstats':
                 const stats = await this.getConversationStats(message.author.id);
                 if (stats && stats.totalMessages > 0) {

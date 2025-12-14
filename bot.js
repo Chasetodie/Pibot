@@ -370,13 +370,21 @@ const rest = new REST({ version: '10' }).setToken(process.env.TOKEN);
 
 (async () => {
   try {
+    // ✅ VERIFICAR QUE ESTAS VARIABLES EXISTAN
+    if (!process.env.CLIENT_ID || !process.env.GUILD_ID) {
+      console.error('❌ CLIENT_ID o GUILD_ID no definidos en variables de entorno');
+      return;
+    }
+
+    console.log(`🔧 Registrando slash commands para ${process.env.GUILD_ID}...`);
+    
     await rest.put(
       Routes.applicationGuildCommands(process.env.CLIENT_ID, process.env.GUILD_ID),
       { body: commands }
     );
-    console.log('Slash command registered!');
+    console.log('✅ Slash command registrado!');
   } catch (error) {
-    console.error(error);
+    console.error('❌ Error registrando slash commands:', error);
   }
 })();
 
