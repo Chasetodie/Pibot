@@ -88,7 +88,7 @@ class ChatBotSystem {
             const contextString = this.buildContextString(context, message, userDisplayName, botContext, repliedToMessage);
             
             // 5. Obtener respuesta del bot
-            const botResponse = await this.getBotResponse(messages);
+            const botResponse = await this.getBotResponse(contextString);
 
             // ✨ NUEVO - Verificar si es muy similar a respuestas recientes
             const recentUserResponses = this.recentResponses.get(userId) || [];
