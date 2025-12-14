@@ -123,9 +123,9 @@ setTimeout(async () => {
     console.log('✅ Sistemas de eventos listo');
 }, 2000);
 
-setInterval(async () => {
+/*setInterval(async () => {
     await economy.database.backup(); // Crear backup cada 6 horas
-}, 6 * 60 * 60 * 1000);
+}, 6 * 60 * 60 * 1000);*/
 
 const betting = new BettingSystem(economy);
 

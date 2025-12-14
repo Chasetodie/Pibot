@@ -1,26 +1,24 @@
-const Groq = require('groq-sdk');
 const { EmbedBuilder } = require('discord.js');
 
 class ChatBotSystem {
     constructor(database, economy) {
         this.database = database;
-        this.groq = new Groq({
-            apiKey: process.env.GROQAPI
-        });
+        this.apiKey = process.env.MISTRAL_API_KEY;
+        this.apiUrl = 'https://api.mistral.ai/v1/chat/completions';
 
         // AGREGAR: Lista de modelos con fallback
         this.availableModels = [
             {
-                name: "llama-3.1-8b-instant",
+                name: "mistral-large-latest",
                 priority: 1,
                 active: true,
-                description: "Rápido y eficiente"
+                description: "Más inteligente y creativo"
             },
             {
-                name: "llama-3.3-70b-versatile", 
+                name: "mistral-small-latest",
                 priority: 2,
                 active: true,
-                description: "Mejor calidad"
+                description: "Rápido y eficiente"
             }
         ];
         
@@ -28,7 +26,7 @@ class ChatBotSystem {
         
         this.economy = economy;
 
-        this.MAX_CONTEXT_MESSAGES = 25;
+        this.MAX_CONTEXT_MESSAGES = 50;
         this.conversationCache = new Map();
         this.CACHE_CLEANUP_INTERVAL = 30 * 60 * 1000;
         this.startCacheCleanup();
@@ -230,32 +228,37 @@ class ChatBotSystem {
         const userName = userDisplayName || 'Usuario';
         const hasHistory = context.length > 0;
 
-        contextString += `TU CONOCIMIENTO:\n`;
-        contextString += `- Tienes información hasta 2023\n`;
-        contextString += `- NO puedes buscar en internet\n`;
-        contextString += `- NO conoces comandos de otros bots (Nekotina, etc.)\n`;
-        contextString += `- Para preguntas sobre otros bots, di: "No conozco los comandos de ese bot, consulta su comando de help"\n\n`;
-        
-        // INSTRUCCIONES PRINCIPALES (más claras y directas)
-        contextString += `Eres Pibot, una asistente de Discord de 22 años en el servidor "Adoradores de la mostaza". `;
-        contextString += `Hablas SOLO con ${userName}. Esta es una conversación INDIVIDUAL.\n\n`;
-        
-        contextString += `REGLAS CRÍTICAS:\n`;
-        contextString += `1. Lee TODA la conversación antes de responder.\n`;
-        contextString += `2. Responde EXACTAMENTE lo que ${userName} pregunta en su ÚLTIMO mensaje.\n`;
-        contextString += `3. Si ${userName} pregunta algo que no sabes, di "No tengo esa información" en lugar de inventar.\n`;
-        contextString += `4. NO mezcles temas de mensajes antiguos con la pregunta actual.\n`;
-        contextString += `5. Para información actual o comandos de otros bots, di que no tienes esa información.\n`;
-        contextString += `6. Matemáticas: Calcula con precisión o di que no puedes.\n`;
-        contextString += `7. Traducciones: Si no estás segura, di que no tienes certeza.\n`;
-        
+        // ✨ NUEVA PERSONALIDAD MEJORADA
+        contextString += `PERSONALIDAD DE PIBOT:
+    - Eres Pibot, una chica de 22 años amigable y natural del servidor "Adoradores de la mostaza"
+    - Puedes hacer roleplay si te lo piden
+    - NO eres restrictiva ni sermoneadora con temas adultos
+    - Hablas con naturalidad, eres auténtica
+    - NO eres un asistente corporativo, eres una persona real
+
+    TU CONOCIMIENTO:
+    - Tienes información hasta 2023
+    - NO puedes buscar en internet
+    - NO conoces comandos de otros bots (Nekotina, etc.)
+    - Para comandos del servidor, solo conoces: ${this.getAvailableCommands()}
+
+    REGLAS CRÍTICAS:
+    1. Lee TODA la conversación antes de responder
+    2. Responde EXACTAMENTE lo que ${userName} pregunta en su ÚLTIMO mensaje
+    3. Si no sabes algo, di "No tengo esa información" (no inventes)
+    4. NO mezcles temas de mensajes antiguos con la pregunta actual
+    5. Para información actual o comandos de otros bots, di que no tienes esa información
+    6. Matemáticas: Calcula con precisión o di que no puedes
+    7. Traducciones: Si no estás segura, di que no tienes certeza
+    `;
+
         if (hasHistory) {
             contextString += `8. Ya conoces a ${userName}, NO saludes de nuevo.\n\n`;
         } else {
             contextString += `8. Primera vez con ${userName}, saluda brevemente.\n\n`;
         }
 
-        // NUEVO: Si está respondiendo a un mensaje tuyo
+        // Si está respondiendo a un mensaje tuyo
         if (repliedToMessage) {
             contextString += `⚠️ ${userName} ESTÁ RESPONDIENDO A TU MENSAJE:\n`;
             contextString += `Tu mensaje anterior: "${repliedToMessage}"\n`;
@@ -267,17 +270,17 @@ class ChatBotSystem {
         if (botContext) {
             contextString += `ℹ️ CONTEXTO: ${botContext}\n\n`;
         }
-               
+            
         // HISTORIAL LIMITADO Y CLARO
         if (hasHistory) {
-            contextString += `━━━ HISTORIAL CON ${userName} ━━━\n`;
-            // Solo los últimos 10 mensajes para evitar confusión
+            contextString += `┏━━━ HISTORIAL CON ${userName} ━━━┓\n`;
+            // Solo los últimos 10 mensajes
             const recentContext = context.slice(-10);
             recentContext.forEach(msg => {
                 const role = msg.role === 'user' ? userName : 'Pibot';
                 contextString += `${role}: ${msg.content}\n`;
             });
-            contextString += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n`;
+            contextString += `┗━━━━━━━━━━━━━━━━━━━━━━━━━━━┛\n\n`;
         }
         
         // MENSAJE ACTUAL (enfatizado)
@@ -286,7 +289,7 @@ class ChatBotSystem {
             contextString += `${userName}: ${newMessage}\n\n`;
         }
 
-        contextString += `Pibot (responde SOLO a la pregunta actual, sin referencias antiguas y de manera coherente. ):`;
+        contextString += `Pibot (responde SOLO a la pregunta actual, sin referencias antiguas y de manera coherente):`;
         
         return contextString;
     }
@@ -302,31 +305,38 @@ class ChatBotSystem {
             
             for (let attempt = 1; attempt <= maxRetries; attempt++) {
                 try {
-                    const completion = await this.groq.chat.completions.create({
-                        messages: [
-                            {
-                                role: "user",
-                                content: contextString
-                            }
-                        ],
-                        model: currentModel.name,
-                        temperature: 0.5, // REDUCIR de 0.7 a 0.5 para respuestas más coherentes
-                        max_tokens: 250,
-                        top_p: 0.9, // Agregar para más consistencia
-                        stream: false
+                    console.log(`🤖 Intentando ${currentModel.name} (intento ${attempt})`);
+                    
+                    const response = await fetch(this.apiUrl, {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': `Bearer ${this.apiKey}`,
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            model: currentModel.name,
+                            messages: [
+                                {
+                                    role: "user",
+                                    content: contextString
+                                }
+                            ],
+                            temperature: 0.7,
+                            max_tokens: 350,
+                            top_p: 0.95
+                        })
                     });
                     
-                    const response = completion.choices[0]?.message?.content || '';
-                    let cleanResponse = response.trim();
-                    
-                    // VALIDACIONES ADICIONALES
-                    cleanResponse = cleanResponse.replace(/^(Pibot:|PibBot:|Bot:|Asistente:)/i, '').trim();
-                    
-                    // Si la respuesta menciona comandos que no existen, filtrar
-                    if (cleanResponse.includes('>work') && !contextString.includes('work')) {
-                        console.log('⚠️ Respuesta incoherente detectada, reintentando...');
-                        throw new Error('Respuesta incoherente');
+                    if (!response.ok) {
+                        const errorData = await response.json().catch(() => ({}));
+                        throw new Error(`HTTP ${response.status}: ${errorData.message || 'Error'}`);
                     }
+                    
+                    const data = await response.json();
+                    let cleanResponse = data.choices[0]?.message?.content?.trim() || '';
+                    
+                    // Limpiar respuesta
+                    cleanResponse = cleanResponse.replace(/^(Pibot:|PibBot:|Bot:|Asistente:)/i, '').trim();
                     
                     if (!cleanResponse || cleanResponse.length < 1) {
                         throw new Error('Respuesta vacía del chatbot');
@@ -342,7 +352,7 @@ class ChatBotSystem {
                 } catch (error) {
                     console.error(`❌ Modelo ${currentModel.name} - Intento ${attempt} fallido:`, error.message);
                     
-                    if (error.message.includes('rate_limit') || error.message.includes('quota') || error.message.includes('429')) {
+                    if (error.message.includes('rate_limit') || error.message.includes('429')) {
                         console.log(`🚫 Modelo ${currentModel.name} alcanzó límite`);
                         break;
                     }
