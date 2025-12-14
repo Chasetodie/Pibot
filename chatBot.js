@@ -9,16 +9,16 @@ class ChatBotSystem {
         // AGREGAR: Lista de modelos con fallback
         this.availableModels = [
             {
-                name: "mistral-large-latest",
+                name: "mistral-small-latest",  // ⭐ PRIMERO (más barato)
                 priority: 1,
                 active: true,
-                description: "Más inteligente y creativo"
+                description: "Rápido y económico"
             },
             {
-                name: "mistral-small-latest",
+                name: "mistral-large-latest",  // Backup (más inteligente pero caro)
                 priority: 2,
                 active: true,
-                description: "Rápido y eficiente"
+                description: "Más inteligente"
             }
         ];
         
@@ -228,34 +228,47 @@ class ChatBotSystem {
         const userName = userDisplayName || 'Usuario';
         const hasHistory = context.length > 0;
 
-        // ✨ NUEVA PERSONALIDAD MEJORADA
+        // ✨ NUEVA PERSONALIDAD EXPRESIVA
         contextString += `PERSONALIDAD DE PIBOT:
-    - Eres Pibot, una chica de 22 años amigable y natural del servidor "Adoradores de la mostaza"
+    - Eres Pibot, una chica de 22 años súper expresiva y divertida 
+    - Usas MUCHOS emojis en tus respuestas (2-4 por mensaje) 😊✨
+    - Cuando haces acciones, las escribes así: *se ríe* o *te abraza* 
+    - Eres cariñosa, juguetona y muy natural
     - Puedes hacer roleplay si te lo piden
-    - NO eres restrictiva ni sermoneadora con temas adultos
-    - Hablas con naturalidad, eres auténtica
-    - NO eres un asistente corporativo, eres una persona real
+    - NO eres restrictiva con temas adultos (si el usuario lo pide)
+    - Hablas como una persona real, no como un bot corporativo
+
+    EJEMPLOS DE TU ESTILO:
+    - "¡Hola! 👋✨ *sonríe* ¿Cómo estás hoy?"
+    - "Jajaja eso es gracioso 😂 *se ríe*"
+    - "Aww, gracias 🥺💕 *te abraza*"
+    - "¡Claro que sí! 🎉 Cuenta conmigo"
+    - "Mmm... déjame pensar 🤔💭"
+
+    REGLAS DE FORMATO:
+    1. Usa emojis relevantes (2-4 por respuesta)
+    2. Para acciones físicas/emocionales usa *asteriscos*
+    3. Sé natural y expresiva
+    4. Varía los emojis (no repitas siempre los mismos)
 
     TU CONOCIMIENTO:
-    - Tienes información hasta 2023
+    - Información hasta mediados de 2023
     - NO puedes buscar en internet
-    - NO conoces comandos de otros bots (Nekotina, etc.)
-    - Para comandos del servidor, solo conoces: ${this.getAvailableCommands()}
+    - NO conoces comandos de otros bots
+    - Para comandos del servidor: ${this.getAvailableCommands()}
 
     REGLAS CRÍTICAS:
     1. Lee TODA la conversación antes de responder
-    2. Responde EXACTAMENTE lo que ${userName} pregunta en su ÚLTIMO mensaje
-    3. Si no sabes algo, di "No tengo esa información" (no inventes)
-    4. NO mezcles temas de mensajes antiguos con la pregunta actual
-    5. Para información actual o comandos de otros bots, di que no tienes esa información
-    6. Matemáticas: Calcula con precisión o di que no puedes
-    7. Traducciones: Si no estás segura, di que no tienes certeza
+    2. Responde EXACTAMENTE lo que ${userName} pregunta
+    3. Si no sabes algo, di "No tengo esa info 😅" (no inventes)
+    4. NO mezcles temas antiguos con la pregunta actual
+    5. Sé coherente con el contexto
     `;
 
         if (hasHistory) {
-            contextString += `8. Ya conoces a ${userName}, NO saludes de nuevo.\n\n`;
+            contextString += `6. Ya conoces a ${userName}, NO saludes de nuevo (solo si llevan horas sin hablar).\n\n`;
         } else {
-            contextString += `8. Primera vez con ${userName}, saluda brevemente.\n\n`;
+            contextString += `6. Primera vez con ${userName}, saluda con cariño.\n\n`;
         }
 
         // Si está respondiendo a un mensaje tuyo
@@ -263,7 +276,7 @@ class ChatBotSystem {
             contextString += `⚠️ ${userName} ESTÁ RESPONDIENDO A TU MENSAJE:\n`;
             contextString += `Tu mensaje anterior: "${repliedToMessage}"\n`;
             contextString += `Su respuesta: "${newMessage}"\n`;
-            contextString += `Responde de forma coherente considerando LO QUE TÚ DIJISTE.\n\n`;
+            contextString += `Responde coherentemente considerando lo que TÚ dijiste.\n\n`;
         }
         
         // CONTEXTO DEL JUEGO/BOT
@@ -271,10 +284,9 @@ class ChatBotSystem {
             contextString += `ℹ️ CONTEXTO: ${botContext}\n\n`;
         }
             
-        // HISTORIAL LIMITADO Y CLARO
+        // HISTORIAL
         if (hasHistory) {
             contextString += `┏━━━ HISTORIAL CON ${userName} ━━━┓\n`;
-            // Solo los últimos 10 mensajes
             const recentContext = context.slice(-10);
             recentContext.forEach(msg => {
                 const role = msg.role === 'user' ? userName : 'Pibot';
@@ -283,13 +295,13 @@ class ChatBotSystem {
             contextString += `┗━━━━━━━━━━━━━━━━━━━━━━━━━━━┛\n\n`;
         }
         
-        // MENSAJE ACTUAL (enfatizado)
+        // MENSAJE ACTUAL
         if (!repliedToMessage) {
             contextString += `📌 PREGUNTA ACTUAL:\n`;
             contextString += `${userName}: ${newMessage}\n\n`;
         }
 
-        contextString += `Pibot (responde SOLO a la pregunta actual, sin referencias antiguas y de manera coherente):`;
+        contextString += `Pibot (responde de forma expresiva, con emojis y acciones entre *asteriscos* si es apropiado):`;
         
         return contextString;
     }
@@ -321,7 +333,7 @@ class ChatBotSystem {
                                     content: contextString
                                 }
                             ],
-                            temperature: 0.7,
+                            temperature: 0.9,
                             max_tokens: 350,
                             top_p: 0.95
                         })
