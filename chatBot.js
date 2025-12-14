@@ -5,6 +5,7 @@ class ChatBotSystem {
         this.database = database;
         this.apiKey = process.env.MISTRAL_API_KEY;
         this.apiUrl = 'https://api.mistral.ai/v1/chat/completions';
+        this.recentResponses = new Map(); // userId -> últimas 3 respuestas
 
         // AGREGAR: Lista de modelos con fallback
         this.availableModels = [
@@ -86,14 +87,47 @@ class ChatBotSystem {
             // 4. Preparar el contexto para el chatbot
             const contextString = this.buildContextString(context, message, userDisplayName, botContext, repliedToMessage);
             
-            // 5. Obtener respuesta del chatbot
-            const botResponse = await this.getBotResponse(contextString);
-            
+            // 5. Obtener respuesta del bot
+            const botResponse = await this.getBotResponse(messages);
+
+            // ✨ NUEVO - Verificar si es muy similar a respuestas recientes
+            const recentUserResponses = this.recentResponses.get(userId) || [];
+
+            // Calcular similitud simple
+            let isTooSimilar = false;
+            for (const recent of recentUserResponses) {
+                const similarity = this.calculateSimilarity(botResponse, recent);
+                if (similarity > 0.8) { // 80% similar
+                    console.log('⚠️ Respuesta muy similar a una reciente, regenerando...');
+                    isTooSimilar = true;
+                    break;
+                }
+            }
+
+            // Si es muy similar, regenerar UNA vez
+            let finalResponse = botResponse;
+            if (isTooSimilar) {
+                console.log('🔄 Regenerando respuesta...');
+                const retryMessages = [...messages];
+                retryMessages.push({
+                    role: "system",
+                    content: "No repitas respuestas anteriores. Da una respuesta diferente y fresca."
+                });
+                finalResponse = await this.getBotResponse(retryMessages);
+            }
+
+            // Guardar en historial de respuestas
+            recentUserResponses.push(finalResponse);
+            if (recentUserResponses.length > 3) {
+                recentUserResponses.shift(); // Mantener solo últimas 3
+            }
+            this.recentResponses.set(userId, recentUserResponses);
+
             // 6. Actualizar uso del usuario
             this.updateUserUsage(userId);
-            
+
             // 7. Guardar respuesta del bot al contexto
-            await this.addMessageToContext(userId, 'assistant', botResponse, 'Pibot');
+            await this.addMessageToContext(userId, 'assistant', finalResponse, 'Pibot');
             
             // 8. Actualizar cache
             this.updateCache(userId);
@@ -309,7 +343,7 @@ class ChatBotSystem {
     /**
      * Obtener respuesta del chatbot con reintentos
      */
-    async getBotResponse(contextString, maxRetries = 3) {
+    async getBotResponse(messages, maxRetries = 3) {
         const activeModels = this.availableModels.filter(model => model.active);
         
         for (let modelAttempt = 0; modelAttempt < activeModels.length; modelAttempt++) {
@@ -327,15 +361,12 @@ class ChatBotSystem {
                         },
                         body: JSON.stringify({
                             model: currentModel.name,
-                            messages: [
-                                {
-                                    role: "user",
-                                    content: contextString
-                                }
-                            ],
-                            temperature: 0.9,
+                            messages: messages,
+                            temperature: 0.7,
                             max_tokens: 350,
-                            top_p: 0.95
+                            top_p: 0.95,
+                            frequency_penalty: 0.5,  // ✨ Evita repeticiones
+                            presence_penalty: 0.4    // ✨ Fomenta variedad
                         })
                     });
                     
@@ -347,8 +378,36 @@ class ChatBotSystem {
                     const data = await response.json();
                     let cleanResponse = data.choices[0]?.message?.content?.trim() || '';
                     
-                    // Limpiar respuesta
+                    // Limpiar prefijos
                     cleanResponse = cleanResponse.replace(/^(Pibot:|PibBot:|Bot:|Asistente:)/i, '').trim();
+                    
+                    // ✨ Detectar líneas duplicadas
+                    const lines = cleanResponse.split('\n');
+                    const uniqueLines = [...new Set(lines)];
+                    
+                    if (lines.length > uniqueLines.length + 2) {
+                        console.log('⚠️ Repetición de líneas detectada, limpiando...');
+                        cleanResponse = uniqueLines.join('\n').trim();
+                    }
+                    
+                    // ✨ Detectar frases repetidas
+                    const sentences = cleanResponse.match(/[^.!?]+[.!?]+/g) || [cleanResponse];
+                    const seenSentences = new Set();
+                    const filteredSentences = [];
+                    
+                    for (const sentence of sentences) {
+                        const normalized = sentence.trim().toLowerCase();
+                        if (!seenSentences.has(normalized)) {
+                            seenSentences.add(normalized);
+                            filteredSentences.push(sentence);
+                        } else {
+                            console.log('⚠️ Frase duplicada eliminada');
+                        }
+                    }
+                    
+                    if (filteredSentences.length < sentences.length) {
+                        cleanResponse = filteredSentences.join(' ').trim();
+                    }
                     
                     if (!cleanResponse || cleanResponse.length < 1) {
                         throw new Error('Respuesta vacía del chatbot');
@@ -376,7 +435,6 @@ class ChatBotSystem {
             }
         }
         
-        // Fallback mejorado
         const fallbackResponses = [
             'Disculpa, no entendí bien tu pregunta. ¿Podrías reformularla? 🤔',
             'Hmm, creo que me confundí. ¿De qué me estabas hablando? 😅',
@@ -450,6 +508,22 @@ class ChatBotSystem {
             console.error('❌ Error verificando tipo de usuario:', error);
             return 'regular';
         }
+    }
+
+    /**
+     * Calcular similitud entre dos textos (0 = diferentes, 1 = idénticos)
+     */
+    calculateSimilarity(text1, text2) {
+        const words1 = text1.toLowerCase().split(/\s+/);
+        const words2 = text2.toLowerCase().split(/\s+/);
+        
+        const set1 = new Set(words1);
+        const set2 = new Set(words2);
+        
+        const intersection = new Set([...set1].filter(x => set2.has(x)));
+        const union = new Set([...set1, ...set2]);
+        
+        return intersection.size / union.size; // Jaccard similarity
     }
 
     /**
