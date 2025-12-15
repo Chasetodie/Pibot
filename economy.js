@@ -22,7 +22,7 @@ class EconomySystem {
             currencySymbol: 'π-b$',
             xpPerMessage: 10, // XP base por mensaje
             xpVariation: 5,  // Variación aleatoria del XP
-            xpCooldown: 15000, // 15 segundos entre mensajes que dan XP
+            xpCooldown: 10000, // 15 segundos entre mensajes que dan XP
             dailyAmount: 2500,  // Cantidad base del daily
             dailyVariation: 1500, // Variación del daily
             levelUpReward: 50, // π-b Coins por subir de nivel
@@ -397,19 +397,25 @@ class EconomySystem {
     // Calcular XP necesaria para un nivel específico
     getXpForLevel(level) {
         if (level <= 1) return 0;
-        return Math.floor(this.config.xpPerLevel * Math.pow(this.config.levelMultiplier, level - 2));
+        
+        // Fórmula más suave: base * (nivel ^ 1.5) en lugar de (nivel ^ exponente alto)
+        return Math.floor(100 * Math.pow(level - 1, 1.5));
     }
 
-    calculateScaledXp(user) {
-        const baseXp = this.config.xpPerMessage;
+    calculateScaledXp(user, baseXp = this.config.xpPerMessage) {
+        const level = user.level;
         
-        // Exponencial para niveles altos
-        if (user.level <= 15) {
-            return baseXp + Math.floor(user.level * 1.3); // +1 por nivel hasta 15
+        // Sistema escalonado más suave
+        if (level <= 10) {
+            return baseXp + Math.floor(level * 1.2); // +1-12 XP (niveles 1-10)
+        } else if (level <= 25) {
+            return baseXp + Math.floor(12 + (level - 10) * 1.5); // +12-34 XP (niveles 11-25)
+        } else if (level <= 50) {
+            return baseXp + Math.floor(34 + (level - 25) * 2); // +34-84 XP (niveles 26-50)
+        } else if (level <= 75) {
+            return baseXp + Math.floor(84 + (level - 50) * 2.5); // +84-146 XP (niveles 51-75)
         } else {
-            // Exponencial: nivel^1.5 para niveles altos
-            const exponentialBonus = Math.floor(Math.pow(user.level, 1.75));
-            return baseXp + exponentialBonus;
+            return baseXp + Math.floor(146 + (level - 75) * 3); // +146+ XP (nivel 76+)
         }
     }
 

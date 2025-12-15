@@ -49,7 +49,7 @@ class ShopSystem {
                 effect: {
                     type: 'xp_multiplier',
                     targets: ['all'],
-                    multiplier: 2.0,
+                    multiplier: 1.5,
                     duration: 1800
                 },
                 stackable: true,
@@ -117,7 +117,7 @@ class ShopSystem {
                 price: 1000,
                 effect: {
                     type: 'xp_multiplier',
-                    multiplier: 1.5,
+                    multiplier: 1.3,
                     duration: 3600
                 },
                 stackable: true,
@@ -241,7 +241,7 @@ class ShopSystem {
                 price: 400000,
                 category: 'consumable',
                 rarity: 'epic',
-                effect: { type: 'xp_multiplier', targets: ['all'], multiplier: 3.0, duration: 900 },
+                effect: { type: 'xp_multiplier', targets: ['all'], multiplier: 2.0, duration: 900 },
                 stackable: true,
                 maxStack: 2
             },
@@ -422,7 +422,7 @@ class ShopSystem {
                 effect: {
                     type: 'xp_multiplier',
                     targets: ['all'],
-                    multiplier: 3.0,
+                    multiplier: 2.0,
                     duration: 2700 // 45 minutos
                 },
                 stackable: true,

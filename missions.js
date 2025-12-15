@@ -26,7 +26,7 @@ class MissionsSystem {
                 description: 'Envía 10 mensajes en el servidor',
                 type: 'messages',
                 target: 10,
-                reward: { money: 200, xp: 100 },
+                reward: { money: 200, xp: 50 },
                 rarity: 'common'
             },
             'send_messages_25': {
@@ -35,7 +35,7 @@ class MissionsSystem {
                 description: 'Envía 25 mensajes en el servidor',
                 type: 'messages',
                 target: 25,
-                reward: { money: 400, xp: 200 },
+                reward: { money: 400, xp: 100 },
                 rarity: 'uncommon'
             },
             'send_messages_50': {
@@ -44,7 +44,7 @@ class MissionsSystem {
                 description: 'Envía 50 mensajes en el servidor',
                 type: 'messages',
                 target: 50,
-                reward: { money: 800, xp: 400 },
+                reward: { money: 800, xp: 200 },
                 rarity: 'rare'
             },
             
@@ -55,7 +55,7 @@ class MissionsSystem {
                 description: 'Completa un trabajo exitoso',
                 type: 'work',
                 target: 1,
-                reward: { money: 300, xp: 150 },
+                reward: { money: 300, xp: 75 },
                 rarity: 'common'
             },
             'work_3_times': {
@@ -64,7 +64,7 @@ class MissionsSystem {
                 description: 'Completa 3 trabajos en el día',
                 type: 'work',
                 target: 3,
-                reward: { money: 700, xp: 350 },
+                reward: { money: 700, xp: 175 },
                 rarity: 'uncommon'
             },
             'work_5_times': {
@@ -73,7 +73,7 @@ class MissionsSystem {
                 description: 'Completa 5 trabajos en el día',
                 type: 'work',
                 target: 5,
-                reward: { money: 1200, xp: 600 },
+                reward: { money: 1200, xp: 300 },
                 rarity: 'rare'
             },
             
@@ -84,7 +84,7 @@ class MissionsSystem {
                 description: 'Gana 1,000 π-b$ en el día',
                 type: 'money_earned_today',
                 target: 1000,
-                reward: { money: 500, xp: 200 },
+                reward: { money: 500, xp: 100 },
                 rarity: 'common'
             },
             'earn_5000': {
@@ -93,7 +93,7 @@ class MissionsSystem {
                 description: 'Gana 5,000 π-b$ en el día',
                 type: 'money_earned_today',
                 target: 5000,
-                reward: { money: 1000, xp: 400 },
+                reward: { money: 1000, xp: 200 },
                 rarity: 'uncommon'
             },
             'earn_10000': {
@@ -102,7 +102,7 @@ class MissionsSystem {
                 description: 'Gana 10,000 π-b$ en el día',
                 type: 'money_earned_today',
                 target: 10000,
-                reward: { money: 2000, xp: 800 },
+                reward: { money: 2000, xp: 400 },
                 rarity: 'rare'
             },
             
@@ -113,7 +113,7 @@ class MissionsSystem {
                 description: 'Juega 3 minijuegos',
                 type: 'games',
                 target: 3,
-                reward: { money: 400, xp: 200 },
+                reward: { money: 400, xp: 100 },
                 rarity: 'common'
             },
             'play_games_10': {
@@ -122,7 +122,7 @@ class MissionsSystem {
                 description: 'Juega 10 minijuegos',
                 type: 'games',
                 target: 10,
-                reward: { money: 800, xp: 400 },
+                reward: { money: 800, xp: 200 },
                 rarity: 'uncommon'
             },
             'win_games_5': {
@@ -131,7 +131,7 @@ class MissionsSystem {
                 description: 'Gana 5 minijuegos',
                 type: 'games_won',
                 target: 5,
-                reward: { money: 1000, xp: 500 },
+                reward: { money: 1000, xp: 250 },
                 rarity: 'rare'
             },
             
@@ -142,7 +142,7 @@ class MissionsSystem {
                 description: 'Transfiere 1,000 π-b$ a otro usuario',
                 type: 'money_transferred',
                 target: 1000,
-                reward: { money: 600, xp: 300 },
+                reward: { money: 600, xp: 150 },
                 rarity: 'uncommon'
             },
             'transfer_money_big': {
@@ -151,7 +151,7 @@ class MissionsSystem {
                 description: 'Transfiere 5,000 π-b$ a otros usuarios',
                 type: 'money_transferred',
                 target: 5000,
-                reward: { money: 1500, xp: 750 },
+                reward: { money: 1500, xp: 375 },
                 rarity: 'rare'
             },
                         
@@ -162,7 +162,7 @@ class MissionsSystem {
                 description: 'Mantén un balance de 10,000 π-b$ o más',
                 type: 'balance_check',
                 target: 10000,
-                reward: { money: 1000, xp: 500 },
+                reward: { money: 1000, xp: 250 },
                 rarity: 'uncommon'
             },
             'maintain_balance_50k': {
@@ -171,7 +171,7 @@ class MissionsSystem {
                 description: 'Mantén un balance de 50,000 π-b$ o más',
                 type: 'balance_check',
                 target: 50000,
-                reward: { money: 2500, xp: 1000 },
+                reward: { money: 2500, xp: 500 },
                 rarity: 'epic'
             },
             
@@ -182,7 +182,7 @@ class MissionsSystem {
                 description: 'Apuesta un total de 2,000 π-b$',
                 type: 'money_bet',
                 target: 2000,
-                reward: { money: 800, xp: 300 },
+                reward: { money: 800, xp: 150 },
                 rarity: 'common'
             },
             'win_bets': {
@@ -191,7 +191,7 @@ class MissionsSystem {
                 description: 'Gana 3 apuestas',
                 type: 'bets_won',
                 target: 3,
-                reward: { money: 1200, xp: 500 },
+                reward: { money: 1200, xp: 250 },
                 rarity: 'uncommon'
             },
             
@@ -202,7 +202,7 @@ class MissionsSystem {
                 description: 'Completa un robo exitoso',
                 type: 'successful_robberies',
                 target: 1,
-                reward: { money: 1000, xp: 400 },
+                reward: { money: 1000, xp: 200 },
                 rarity: 'rare'
             },
             
@@ -213,7 +213,7 @@ class MissionsSystem {
                 description: 'Reclama tu daily reward',
                 type: 'daily_claimed',
                 target: 1,
-                reward: { money: 300, xp: 150 },
+                reward: { money: 300, xp: 75 },
                 rarity: 'common'
             },
             'complete_all_missions': {
@@ -222,7 +222,7 @@ class MissionsSystem {
                 description: 'Completa todas las misiones del día',
                 type: 'missions_completed',
                 target: 4, // Las otras 4 misiones (esta no se cuenta a sí misma)
-                reward: { money: 2000, xp: 1000 },
+                reward: { money: 2000, xp: 500 },
                 rarity: 'epic'
             },
             
@@ -233,7 +233,7 @@ class MissionsSystem {
                 description: 'Menciona a 3 usuarios diferentes',
                 type: 'mentions_made',
                 target: 3,
-                reward: { money: 400, xp: 200 },
+                reward: { money: 400, xp: 100 },
                 rarity: 'common'
             },
             
@@ -244,7 +244,7 @@ class MissionsSystem {
                 description: 'Envía mensajes en 6 horas diferentes del día',
                 type: 'active_hours',
                 target: 6,
-                reward: { money: 1500, xp: 600 },
+                reward: { money: 1500, xp: 300 },
                 rarity: 'rare'
             },
             // Misiones de subastas
@@ -254,7 +254,7 @@ class MissionsSystem {
                 description: 'Crea una subasta hoy',
                 type: 'auctions_created_today',
                 target: 1,
-                reward: { money: 1000, xp: 400 },
+                reward: { money: 1000, xp: 200 },
                 rarity: 'uncommon'
             },
             'win_auction': {
@@ -263,7 +263,7 @@ class MissionsSystem {
                 description: 'Gana una subasta en el día',
                 type: 'auctions_won_today',
                 target: 1,
-                reward: { money: 2500, xp: 1000 },
+                reward: { money: 2500, xp: 500 },
                 rarity: 'rare'
             },
 
@@ -274,7 +274,7 @@ class MissionsSystem {
                 description: 'Craftea un item hoy',
                 type: 'items_crafted_today',
                 target: 1,
-                reward: { money: 1500, xp: 500 },
+                reward: { money: 1500, xp: 250 },
                 rarity: 'uncommon'
             },
 
@@ -285,7 +285,7 @@ class MissionsSystem {
                 description: 'Envía 10 mensajes que contengan emojis',
                 type: 'emoji_messages',
                 target: 10,
-                reward: { money: 600, xp: 300 },
+                reward: { money: 600, xp: 150 },
                 rarity: 'common'
             },
             'react_messages': {
@@ -294,7 +294,7 @@ class MissionsSystem {
                 description: 'Reacciona a 15 mensajes de otros usuarios',
                 type: 'reactions_given',
                 target: 15,
-                reward: { money: 800, xp: 400 },
+                reward: { money: 800, xp: 200 },
                 rarity: 'uncommon'
             },
             'use_commands': {
@@ -303,17 +303,17 @@ class MissionsSystem {
                 description: 'Usa 15 comandos del bot en el día',
                 type: 'commands_used',
                 target: 15,
-                reward: { money: 1200, xp: 600 },
+                reward: { money: 1200, xp: 300 },
                 rarity: 'uncommon'
             },
             // Al final de availableMissions, antes de cerrar el objeto
-            'vip_spend_big': {
+            /*'vip_spend_big': {
                 id: 'vip_spend_big',
                 name: '💎 Gastador VIP',
                 description: 'Gasta 1M π-b$ en la tienda (solo VIPs)',
                 type: 'money_spent_today',
                 target: 1000000,
-                reward: { money: 500000, xp: 2000 },
+                reward: { money: 500000, xp: 1000 },
                 rarity: 'legendary',
                 vipOnly: true
             },
@@ -323,7 +323,7 @@ class MissionsSystem {
                 description: 'Gana 15 juegos consecutivos (solo VIPs)', 
                 type: 'consecutive_wins',
                 target: 15,
-                reward: { money: 2000000, xp: 5000 },
+                reward: { money: 2000000, xp: 2500 },
                 rarity: 'legendary',
                 vipOnly: true
             },
@@ -333,10 +333,10 @@ class MissionsSystem {
                 description: 'Usa 50 comandos sin cooldown (solo VIPs)',
                 type: 'vip_commands_used',
                 target: 50,
-                reward: { money: 1000000, xp: 3000 },
+                reward: { money: 1000000, xp: 2000 },
                 rarity: 'epic',
                 vipOnly: true
-            }
+            }*/
         };
         
         // Colores por rareza

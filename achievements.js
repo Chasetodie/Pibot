@@ -19,7 +19,7 @@ class AchievementsSystem {
                 name: '💰 Primer Dólar',
                 description: 'Gana tu primer π-b Coin',
                 requirement: { type: 'money_earned', value: 1 },
-                reward: { money: 100, xp: 50 },
+                reward: { money: 100, xp: 25 },
                 rarity: 'common',
                 emoji: '💰'
             },
@@ -27,7 +27,7 @@ class AchievementsSystem {
                 name: '💸 Emprendedor',
                 description: 'Acumula 10,000 π-b Coins',
                 requirement: { type: 'money_balance', value: 10000 },
-                reward: { money: 1000, xp: 200 },
+                reward: { money: 1000, xp: 100 },
                 rarity: 'uncommon',
                 emoji: '💸'
             },
@@ -35,7 +35,7 @@ class AchievementsSystem {
                 name: '🏆 Millonario',
                 description: 'Acumula 1,000,000 π-b Coins',
                 requirement: { type: 'money_balance', value: 1000000 },
-                reward: { money: 50000, xp: 5000 },
+                reward: { money: 50000, xp: 2500 },
                 rarity: 'legendary',
                 emoji: '🏆'
             },
@@ -45,7 +45,7 @@ class AchievementsSystem {
                 name: '📈 Subiendo',
                 description: 'Alcanza el nivel 5',
                 requirement: { type: 'level', value: 5 },
-                reward: { money: 500, xp: 100 },
+                reward: { money: 500, xp: 50 },
                 rarity: 'common',
                 emoji: '📈'
             },
@@ -53,7 +53,7 @@ class AchievementsSystem {
                 name: '🎖️ Experimentado',
                 description: 'Alcanza el nivel 20',
                 requirement: { type: 'level', value: 20 },
-                reward: { money: 2000, xp: 500 },
+                reward: { money: 2000, xp: 250 },
                 rarity: 'rare',
                 emoji: '🎖️'
             },
@@ -61,7 +61,7 @@ class AchievementsSystem {
                 name: '👑 Maestro',
                 description: 'Alcanza el nivel 50',
                 requirement: { type: 'level', value: 50 },
-                reward: { money: 10000, xp: 2000 },
+                reward: { money: 10000, xp: 1000 },
                 rarity: 'epic',
                 emoji: '👑'
             },
@@ -69,7 +69,7 @@ class AchievementsSystem {
                 name: '⭐ Leyenda',
                 description: 'Alcanza el nivel 100',
                 requirement: { type: 'level', value: 100 },
-                reward: { money: 50000, xp: 10000 },
+                reward: { money: 50000, xp: 5000 },
                 rarity: 'legendary',
                 emoji: '⭐'
             },
@@ -79,7 +79,7 @@ class AchievementsSystem {
                 name: '💬 Conversador',
                 description: 'Envía 100 mensajes',
                 requirement: { type: 'messages', value: 100 },
-                reward: { money: 200, xp: 100 },
+                reward: { money: 200, xp: 50 },
                 rarity: 'common',
                 emoji: '💬'
             },
@@ -87,7 +87,7 @@ class AchievementsSystem {
                 name: '🦋 Mariposa Social',
                 description: 'Envía 1,000 mensajes',
                 requirement: { type: 'messages', value: 1000 },
-                reward: { money: 2000, xp: 500 },
+                reward: { money: 2000, xp: 250 },
                 rarity: 'rare',
                 emoji: '🦋'
             },
@@ -95,7 +95,7 @@ class AchievementsSystem {
                 name: '🤖 Sin Vida Social',
                 description: 'Envía 10,000 mensajes',
                 requirement: { type: 'messages', value: 10000 },
-                reward: { money: 25000, xp: 2500 },
+                reward: { money: 25000, xp: 1250 },
                 rarity: 'epic',
                 emoji: '🤖'
             },
@@ -105,7 +105,7 @@ class AchievementsSystem {
                 name: '🛠️ Primer Trabajo',
                 description: 'Completa tu primer trabajo',
                 requirement: { type: 'work_count', value: 1 },
-                reward: { money: 150, xp: 75 },
+                reward: { money: 150, xp: 37.5 },
                 rarity: 'common',
                 emoji: '🛠️'
             },
@@ -113,7 +113,7 @@ class AchievementsSystem {
                 name: '💪 Trabajador Duro',
                 description: 'Completa 100 trabajos',
                 requirement: { type: 'work_count', value: 100 },
-                reward: { money: 5000, xp: 1000 },
+                reward: { money: 5000, xp: 500 },
                 rarity: 'rare',
                 emoji: '💪'
             },
@@ -121,7 +121,7 @@ class AchievementsSystem {
                 name: '⚡ Adicto al Trabajo',
                 description: 'Completa 500 trabajos',
                 requirement: { type: 'work_count', value: 500 },
-                reward: { money: 20000, xp: 3000 },
+                reward: { money: 20000, xp: 1500 },
                 rarity: 'epic',
                 emoji: '⚡'
             },
@@ -131,7 +131,7 @@ class AchievementsSystem {
                 name: '📅 Rutinario',
                 description: 'Reclama tu daily 7 días seguidos',
                 requirement: { type: 'daily_streak', value: 7 },
-                reward: { money: 1000, xp: 200 },
+                reward: { money: 1000, xp: 100 },
                 rarity: 'uncommon',
                 emoji: '📅'
             },
@@ -139,7 +139,7 @@ class AchievementsSystem {
                 name: '🗓️ Maestro de la Rutina',
                 description: 'Reclama tu daily 30 días seguidos',
                 requirement: { type: 'daily_streak', value: 30 },
-                reward: { money: 10000, xp: 1500 },
+                reward: { money: 10000, xp: 750 },
                 rarity: 'epic',
                 emoji: '🗓️'
             },
@@ -149,7 +149,7 @@ class AchievementsSystem {
                 name: '🎲 Primera Apuesta',
                 description: 'Juega cualquier minijuego por primera vez',
                 requirement: { type: 'games_played', value: 1 },
-                reward: { money: 100, xp: 50 },
+                reward: { money: 100, xp: 25 },
                 rarity: 'common',
                 emoji: '🎲'
             },
@@ -157,7 +157,7 @@ class AchievementsSystem {
                 name: '🍀 Racha de Suerte',
                 description: 'Gana 10 juegos seguidos',
                 requirement: { type: 'win_streak', value: 10 },
-                reward: { money: 5000, xp: 1000 },
+                reward: { money: 5000, xp: 500 },
                 rarity: 'rare',
                 emoji: '🍀'
             },
@@ -165,7 +165,7 @@ class AchievementsSystem {
                 name: '💎 Apostador VIP',
                 description: 'Apuesta más de 50,000 π-b$ en total',
                 requirement: { type: 'total_bet', value: 50000 },
-                reward: { money: 10000, xp: 2000 },
+                reward: { money: 10000, xp: 1000 },
                 rarity: 'epic',
                 emoji: '💎'
             },           
@@ -173,7 +173,7 @@ class AchievementsSystem {
                 name: '🎰 Ganador de Lotería',
                 description: 'Gana al menos una vez en la lotería',
                 requirement: { type: 'lottery_wins', value: 1 },
-                reward: { money: 1000, xp: 5000 },
+                reward: { money: 1000, xp: 2500 },
                 rarity: 'rare',
                 emoji: '🎰'
             },
@@ -182,7 +182,7 @@ class AchievementsSystem {
                 name: '🧘 Asceta',
                 description: 'No uses Work ni Daily por 7 días consecutivos',
                 requirement: { type: 'inactive_streak', value: 7 },
-                reward: { money: 5000, xp: 1500 },
+                reward: { money: 5000, xp: 750 },
                 rarity: 'epic',
                 emoji: '🧘'
             },
@@ -190,7 +190,7 @@ class AchievementsSystem {
                 name: '❤️ Generoso',
                 description: 'Transfiere 5,000 π-b$ a otros usuarios',
                 requirement: { type: 'money_given', value: 5000 },
-                reward: { money: 3000, xp: 500 },
+                reward: { money: 3000, xp: 250 },
                 rarity: 'rare',
                 emoji: '❤️'
             },
@@ -198,7 +198,7 @@ class AchievementsSystem {
                 name: '📦 Coleccionista',
                 description: 'Obtén 10 logros diferentes',
                 requirement: { type: 'achievements_count', value: 10 },
-                reward: { money: 5000, xp: 1000 },
+                reward: { money: 5000, xp: 500 },
                 rarity: 'epic',
                 emoji: '📦'
             },
@@ -207,7 +207,7 @@ class AchievementsSystem {
                 name: '🔨 Subastador',
                 description: 'Crea tu primera subasta',
                 requirement: { type: 'auctions_created', value: 1 },
-                reward: { money: 1000, xp: 300 },
+                reward: { money: 1000, xp: 150 },
                 rarity: 'uncommon',
                 emoji: '🔨'
             },
@@ -215,7 +215,7 @@ class AchievementsSystem {
                 name: '💎 Maestro de Pujas',
                 description: 'Gana 5 subastas',
                 requirement: { type: 'auctions_won', value: 5 },
-                reward: { money: 5000, xp: 1500 },
+                reward: { money: 5000, xp: 750 },
                 rarity: 'rare',
                 emoji: '💎'
             },
@@ -225,7 +225,7 @@ class AchievementsSystem {
                 name: '🧪 Aprendiz de Alquimista',
                 description: 'Craftea tu primer item',
                 requirement: { type: 'items_crafted', value: 1 },
-                reward: { money: 800, xp: 250 },
+                reward: { money: 800, xp: 125 },
                 rarity: 'common',
                 emoji: '🧪'
             },
@@ -233,7 +233,7 @@ class AchievementsSystem {
                 name: '⚒️ Maestro Artesano',
                 description: 'Craftea 20 items en total',
                 requirement: { type: 'items_crafted', value: 20 },
-                reward: { money: 10000, xp: 3000 },
+                reward: { money: 10000, xp: 1500 },
                 rarity: 'epic',
                 emoji: '⚒️'
             },
@@ -242,7 +242,7 @@ class AchievementsSystem {
                 name: '🎰 Jackpot!',
                 description: 'Gana más de 500,000 π-b$ en una sola apuesta',
                 requirement: { type: 'single_bet_win', value: 500000 },
-                reward: { money: 20000, xp: 5000 },
+                reward: { money: 20000, xp: 2500 },
                 rarity: 'legendary',
                 emoji: '🎰'
             },
@@ -250,7 +250,7 @@ class AchievementsSystem {
                 name: '🏅 Completista',
                 description: 'Obtén todos los logros disponibles',
                 requirement: { type: 'achievements_count', value: 27 }, // Actualizar según total
-                reward: { money: 100000, xp: 10000 },
+                reward: { money: 100000, xp: 5000 },
                 rarity: 'legendary',
                 emoji: '🏅'
             }

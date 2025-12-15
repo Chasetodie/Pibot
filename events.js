@@ -24,7 +24,7 @@ class EventsSystem {
                 description: 'Gana el doble de XP por mensajes',
                 emoji: '⚡',
                 color: '#FFD700',
-                multiplier: { xp: 2 },
+                multiplier: { xp: 1.5 },
                 minDuration: 1800000, // 30 minutos
                 maxDuration: 7200000  // 2 horas
             },
@@ -52,7 +52,7 @@ class EventsSystem {
                 emoji: '🔥',
                 color: '#FF4500',
                 multiplier: { 
-                    xp: 1.5, 
+                    xp: 1.3, 
                     work: 1.3, 
                     cooldown: 0.5, 
                     daily: 1.2, 
@@ -111,7 +111,7 @@ class EventsSystem {
                 emoji: '🎉',
                 color: '#9932CC',
                 multiplier: { 
-                    xp: 3, 
+                    xp: 2, 
                     work: 2, 
                     daily: 2, 
                     cooldown: 0.3,
