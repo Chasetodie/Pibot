@@ -493,7 +493,7 @@ class EconomySystem {
                 levelUp: true,
                 levelsGained: levelUps,
                 newLevel: newLevel,
-                xpGained: finalXp,
+                xpGained: xpGained,
                 reward: reward
             };
         }
@@ -502,7 +502,7 @@ class EconomySystem {
         
         return {
             levelUp: false,
-            xpGained: finalXp,
+            xpGained: xpGained,
             currentLevel: user.level
         };
     }
