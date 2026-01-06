@@ -9,28 +9,28 @@ class ChatBotSystem {
         // AGREGAR: Lista de modelos con fallback
         this.availableModels = [
             {
-                name: "PygmalionAI/mythalion-13b",
+                name: "meta-llama/Meta-Llama-3-8B-Instruct",
                 priority: 1,
                 active: true,
-                description: "🎭 Mythalion - Excelente para roleplay"
+                description: "🦙 Llama 3 - Conversacional y sin censura"
             },
             {
-                name: "Gryphe/MythoMax-L2-13b",
+                name: "mistralai/Mistral-7B-Instruct-v0.3",
                 priority: 2,
                 active: true,
-                description: "📚 MythoMax - Narrativa creativa"
+                description: "⚡ Mistral v0.3 - Rápido y eficiente"
             },
             {
-                name: "NousResearch/Nous-Hermes-2-Mixtral-8x7B-DPO",
+                name: "microsoft/Phi-3-mini-4k-instruct",
                 priority: 3,
                 active: true,
-                description: "🧠 Hermes - Conversacional"
+                description: "🔬 Phi-3 - Pequeño pero potente"
             },
             {
-                name: "mistralai/Mistral-7B-Instruct-v0.2",
+                name: "HuggingFaceH4/zephyr-7b-beta",
                 priority: 4,
                 active: true,
-                description: "⚡ Mistral - Rápido"
+                description: "🌪️ Zephyr - Conversacional"
             }
         ];
         
@@ -345,11 +345,13 @@ class ChatBotSystem {
                 try {
                     console.log(`🤗 ${model.name} (intento ${attempt})`);
                     
-                    const response = await fetch(this.hfBaseUrl + model.name, {
+                    // NUEVA URL Y FORMATO
+                    const response = await fetch(`https://api-inference.huggingface.co/models/${model.name}`, {
                         method: 'POST',
                         headers: {
                             'Authorization': `Bearer ${this.hfApiKey}`,
-                            'Content-Type': 'application/json'
+                            'Content-Type': 'application/json',
+                            'x-wait-for-model': 'true' // ← IMPORTANTE: espera si el modelo está cargando
                         },
                         body: JSON.stringify({
                             inputs: contextString,
@@ -358,7 +360,12 @@ class ChatBotSystem {
                                 temperature: 0.9,
                                 top_p: 0.95,
                                 repetition_penalty: 1.15,
-                                do_sample: true
+                                do_sample: true,
+                                return_full_text: false // ← Solo devolver la respuesta nueva
+                            },
+                            options: {
+                                wait_for_model: true,
+                                use_cache: false
                             }
                         })
                     });
@@ -370,20 +377,33 @@ class ChatBotSystem {
                     
                     const data = await response.json();
                     
-                    // HuggingFace devuelve array o objeto
+                    // Parsear respuesta (formato puede variar)
                     let cleanResponse = '';
-                    if (Array.isArray(data) && data[0]?.generated_text) {
-                        cleanResponse = data[0].generated_text;
+                    
+                    if (Array.isArray(data)) {
+                        // Formato 1: Array de respuestas
+                        if (data[0]?.generated_text) {
+                            cleanResponse = data[0].generated_text;
+                        } else if (data[0]?.text) {
+                            cleanResponse = data[0].text;
+                        }
                     } else if (data.generated_text) {
+                        // Formato 2: Objeto directo
                         cleanResponse = data.generated_text;
-                    } else {
+                    } else if (typeof data === 'string') {
+                        // Formato 3: String directo
+                        cleanResponse = data;
+                    }
+                    
+                    if (!cleanResponse) {
+                        console.log('Respuesta recibida:', JSON.stringify(data).substring(0, 200));
                         throw new Error('Formato de respuesta inesperado');
                     }
                     
                     // Limpiar el contexto de la respuesta
                     cleanResponse = cleanResponse
                         .replace(contextString, '')
-                        .replace(/^(Pibot:|PibBot:|Bot:)/i, '')
+                        .replace(/^(Pibot:|PibBot:|Bot:|Asistente:)/i, '')
                         .trim();
                     
                     if (!cleanResponse || cleanResponse.length < 1) {
@@ -401,9 +421,16 @@ class ChatBotSystem {
                 } catch (error) {
                     console.error(`❌ ${model.name} falló:`, error.message);
                     
+                    // Si el modelo está cargando (503), esperar más
                     if (error.message.includes('503') || error.message.includes('loading')) {
-                        console.log('⏳ Modelo cargando, esperando...');
-                        await new Promise(r => setTimeout(r, 3000));
+                        console.log('⏳ Modelo cargando, esperando 5 segundos...');
+                        await new Promise(r => setTimeout(r, 5000));
+                    }
+                    
+                    // Si es 410 (deprecated), saltar al siguiente modelo inmediatamente
+                    if (error.message.includes('410')) {
+                        console.log('⚠️ Modelo no disponible en esta API, saltando...');
+                        break;
                     }
                     
                     if (attempt < maxRetries) {
@@ -412,7 +439,7 @@ class ChatBotSystem {
                 }
             }
         }
-    
+        
         // Fallback mejorado
         const fallbackResponses = [
             'Disculpa, no entendí bien tu pregunta. ¿Podrías reformularla? 🤔',
