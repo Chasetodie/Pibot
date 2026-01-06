@@ -422,14 +422,22 @@ class EconomySystem {
     // Calcular nivel basado en XP total
     getLevelFromXp(totalXp) {
         let level = 1;
-        let xpRequired = 0;
+        let xpNeeded = 0;
         
-        while (xpRequired <= totalXp) {
+        // Acumular XP necesaria hasta que supere el XP total
+        while (true) {
+            const xpForNextLevel = this.getXpForLevel(level + 1);
+            if (xpNeeded + xpForNextLevel > totalXp) {
+                break; // Ya no puede subir más niveles
+            }
+            xpNeeded += xpForNextLevel;
             level++;
-            xpRequired += this.getXpForLevel(level);
+            
+            // Límite de seguridad
+            if (level >= 200) break;
         }
         
-        return level - 1;
+        return level;
     }
 
     // Agregar XP a un usuario y verificar subida de nivel
@@ -442,15 +450,24 @@ class EconomySystem {
         if (this.shop) {
             xpGained = await this.shop.applyXpEffects(userId, xpGained);
         }
-
-        const finalXp = this.calculateScaledXp(user, xpGained);
-        
+       
         const oldLevel = user.level;
-        const newXp = user.xp + finalXp;
-        const newTotalXp = user.total_xp + finalXp;
+        const newXp = user.xp + xpGained;
+        const newTotalXp = user.total_xp + xpGained;
         
         // Calcular nuevo nivel
         const newLevel = this.getLevelFromXp(newTotalXp);
+
+        // 🔍 DEBUG - Borrar después
+        console.log(`
+        🐛 DEBUG XP:
+        - Usuario: ${userId.slice(-4)}
+        - XP ganado: ${xpGained}
+        - XP total: ${newTotalXp}
+        - Nivel calculado: ${newLevel}
+        - Nivel anterior: ${oldLevel}
+        `);
+
         const levelUps = newLevel - oldLevel;
         
         // Preparar datos para actualizar
