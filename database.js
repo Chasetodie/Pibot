@@ -237,9 +237,79 @@ class LocalDatabase {
                 )
             `);
 
+            // Tabla para contadores globales del servidor
+            await this.pool.execute(`
+                CREATE TABLE IF NOT EXISTS server_counters (
+                    id VARCHAR(50) PRIMARY KEY,
+                    value INT DEFAULT 0,
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+                )
+            `);
+
+            // Inicializar contadores si no existen
+            await this.pool.execute(`
+                INSERT IGNORE INTO server_counters (id, value) VALUES 
+                ('pibe_counter', 0),
+                ('piba_counter', 0)
+            `);
+
             console.log('🗃️ Tablas MySQL inicializadas');
         } catch (error) {
             console.error('❌ Error creando tablas:', error);
+        }
+    }
+
+    // Obtener contador
+    async getCounter(counterId) {
+        try {
+            const [rows] = await this.pool.execute(
+                'SELECT value FROM server_counters WHERE id = ?',
+                [counterId]
+            );
+            return rows[0] ? rows[0].value : 0;
+        } catch (error) {
+            console.error(`❌ Error obteniendo contador ${counterId}:`, error);
+            return 0;
+        }
+    }
+
+    // Incrementar contador y devolver nuevo valor
+    async incrementCounter(counterId) {
+        try {
+            await this.pool.execute(
+                'UPDATE server_counters SET value = value + 1 WHERE id = ?',
+                [counterId]
+            );
+            
+            const [rows] = await this.pool.execute(
+                'SELECT value FROM server_counters WHERE id = ?',
+                [counterId]
+            );
+            
+            return rows[0] ? rows[0].value : 0;
+        } catch (error) {
+            console.error(`❌ Error incrementando contador ${counterId}:`, error);
+            return 0;
+        }
+    }
+
+    // Decrementar contador (para cuando alguien sale del servidor)
+    async decrementCounter(counterId) {
+        try {
+            await this.pool.execute(
+                'UPDATE server_counters SET value = GREATEST(0, value - 1) WHERE id = ?',
+                [counterId]
+            );
+            
+            const [rows] = await this.pool.execute(
+                'SELECT value FROM server_counters WHERE id = ?',
+                [counterId]
+            );
+            
+            return rows[0] ? rows[0].value : 0;
+        } catch (error) {
+            console.error(`❌ Error decrementando contador ${counterId}:`, error);
+            return 0;
         }
     }
 

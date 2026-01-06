@@ -23,39 +23,12 @@ const {
     CraftingSystem
 } = require('./things-shop');
 
-// Archivo para guardar los contadores
-const countersFile = path.join(__dirname, 'counters.json');
-
 if (typeof File === 'undefined') {
   global.File = class File {
     constructor() {
       throw new Error('File is not supported in this environment.');
     }
   };
-}
-
-// Función para cargar contadores (con variables de entorno como respaldo)
-function loadCounters() {
-    try {
-        if (fs.existsSync(countersFile)) {
-            const data = fs.readFileSync(countersFile, 'utf8');
-            const saved = JSON.parse(data);
-            console.log(`📂 Contadores cargados desde archivo: Pibe ${saved.pibe}, Piba ${saved.piba}`);
-            return saved;
-        }
-    } catch (error) {
-        console.error('Error cargando contadores desde archivo:', error);
-    }
-    
-    // Si no hay archivo, usar variables de entorno
-    const fromEnv = {
-        pibe: parseInt(process.env.PIBE_COUNT) || 0,
-        piba: parseInt(process.env.PIBA_COUNT) || 0
-    };
-    
-    console.log(`🌍 Usando contadores desde variables de entorno: Pibe ${fromEnv.pibe}, Piba ${fromEnv.piba}`);
-    saveCounters(fromEnv); // Guardar en archivo para futuras ocasiones
-    return fromEnv;
 }
 
 // Configuración del bot de Discord con TODOS los intents necesarios
@@ -71,19 +44,6 @@ const client = new Client({
     ],
     makeCache: () => new Map(), // Caché más pequeño
 });
-
-// Función para guardar contadores
-function saveCounters(counters) {
-    try {
-        fs.writeFileSync(countersFile, JSON.stringify(counters, null, 2));
-        console.log(`💾 Contadores guardados: Pibe ${counters.pibe}, Piba ${counters.piba}`);
-    } catch (error) {
-        console.error('Error guardando contadores:', error);
-    }
-}
-
-// Cargar contadores al iniciar
-let counters = loadCounters();
 
 // Crear instancia del manejador de comandos
 const commandHandler = new CommandHandler(counters, saveCounters);
@@ -391,8 +351,6 @@ const rest = new REST({ version: '10' }).setToken(process.env.TOKEN);
 // Evento cuando el bot está listo
 client.once('ready', async () => {
     console.log(`✅ Bot conectado como ${client.user.tag}`);
-    console.log(`📊 Contadores actuales: Pibe ${counters.pibe}, Piba ${counters.piba}`);
-    console.log(`🌍 Variables de entorno: PIBE_COUNT=${process.env.PIBE_COUNT || 'no definida'}, PIBA_COUNT=${process.env.PIBA_COUNT || 'no definida'}`);
     console.log(`🔧 Comandos disponibles: !contadores, !reset, !reload, !help`);
     await minigames.loadActiveRussianGames(client);
     await minigames.loadActiveUnoGames(client);
@@ -427,33 +385,31 @@ client.once('ready', async () => {
     }
 });
 
-// Evento cuando un miembro abandona el servidor
 client.on('guildMemberRemove', async (member) => {
     try {
         const nickname = member.nickname || member.user.username;
         console.log(`👋 Miembro salió: ${member.user.tag} (Apodo: ${nickname})`);
         
-        // Verificar si el apodo era "Pibe X" o "Piba X"
         const pibeMatch = nickname.match(/^Pibe (\d+)$/);
         const pibaMatch = nickname.match(/^Piba (\d+)$/);
         
         if (pibeMatch) {
-            // Era un pibe, restar del contador
+            // ✅ OBTENER CONTADOR ACTUAL
+            const currentCount = await economy.database.getCounter('pibe_counter');
             const numero = parseInt(pibeMatch[1]);
-            if (numero === counters.pibe) {
-                // Era el último pibe, reducir contador
-                counters.pibe--;
-                saveCounters(counters);
-                console.log(`🔵 Contador de pibes reducido a: ${counters.pibe}`);
+            
+            if (numero === currentCount) {
+                // Era el último, decrementar
+                const newCount = await economy.database.decrementCounter('pibe_counter');
+                console.log(`🔵 Contador de pibes reducido a: ${newCount}`);
             }
         } else if (pibaMatch) {
-            // Era una piba, restar del contador
+            const currentCount = await economy.database.getCounter('piba_counter');
             const numero = parseInt(pibaMatch[1]);
-            if (numero === counters.piba) {
-                // Era la última piba, reducir contador
-                counters.piba--;
-                saveCounters(counters);
-                console.log(`🔴 Contador de pibas reducido a: ${counters.piba}`);
+            
+            if (numero === currentCount) {
+                const newCount = await economy.database.decrementCounter('piba_counter');
+                console.log(`🔴 Contador de pibas reducido a: ${newCount}`);
             }
         }
         
@@ -462,7 +418,6 @@ client.on('guildMemberRemove', async (member) => {
     }
 });
 
-// Evento cuando un nuevo miembro se une al servidor
 client.on('guildMemberAdd', async (member) => {
     try {
         console.log(`🎉 Nuevo miembro: ${member.user.tag}`);
@@ -471,12 +426,18 @@ client.on('guildMemberAdd', async (member) => {
         const embed = new EmbedBuilder()
             .setTitle('¡Bienvenido/a a Adictos a las píldoras!')
             .setDescription('Por favor selecciona tu género para asignarte un apodo:')
-            .setColor('#5865F2')
-            .addFields(
-                { name: '🔵 Pibe', value: `Siguiente número: **${counters.pibe + 1}**`, inline: true },
-                { name: '🔴 Piba', value: `Siguiente número: **${counters.piba + 1}**`, inline: true }
-            )
-            .setFooter({ text: 'Haz clic en uno de los botones para continuar' });
+            .setColor('#5865F2');
+        
+        // ✅ OBTENER CONTADORES DESDE LA BASE DE DATOS
+        const pibeCount = await economy.database.getCounter('pibe_counter');
+        const pibaCount = await economy.database.getCounter('piba_counter');
+        
+        embed.addFields(
+            { name: '🔵 Pibe', value: `Siguiente número: **${pibeCount + 1}**`, inline: true },
+            { name: '🔴 Piba', value: `Siguiente número: **${pibaCount + 1}**`, inline: true }
+        );
+        
+        embed.setFooter({ text: 'Haz clic en uno de los botones para continuar' });
 
         // Crear los botones
         const row = new ActionRowBuilder()
@@ -493,11 +454,10 @@ client.on('guildMemberAdd', async (member) => {
                     .setEmoji('🔴')
             );
 
-        // En lugar de todo el bloque de dmSent = false y los try-catch
+        // Enviar DM...
         try {
             console.log(`📩 Intentando DM con REST API para ${member.user.tag}`);
             
-            // Usar REST API directamente
             const dmChannelResponse = await client.rest.post('/users/@me/channels', {
                 body: { recipient_id: member.user.id }
             });
@@ -512,9 +472,8 @@ client.on('guildMemberAdd', async (member) => {
             console.log(`✅ DM enviado exitosamente a ${member.user.tag}`);
             
         } catch (dmError) {
-            console.log(`❌ DM falló con REST: ${dmError.message}`);
+            console.log(`❌ DM falló: ${dmError.message}`);
             
-            // Fallback al canal del servidor
             const guild = member.guild;
             const systemChannel = guild.systemChannel;
             
@@ -527,7 +486,7 @@ client.on('guildMemberAdd', async (member) => {
             }
         }
     } catch (error) {
-        console.error('❌ Error general procesando nuevo miembro:', error);
+        console.error('❌ Error procesando nuevo miembro:', error);
     }
 });
 
@@ -591,17 +550,13 @@ client.on('interactionCreate', async (interaction) => {
 
     try {
         if (interaction.customId === 'select_pibe' || interaction.customId === 'select_piba') {
-            // Si la interacción viene de un DM, necesitamos encontrar el guild y member
             let member;
             let guild;
             
             if (interaction.guild) {
-                // La interacción viene del servidor
                 guild = interaction.guild;
                 member = interaction.member;
             } else {
-                // La interacción viene de un DM, necesitamos encontrar el servidor
-                // Buscar en todos los servidores donde está el bot
                 const guilds = client.guilds.cache;
                 
                 for (const [guildId, guildObj] of guilds) {
@@ -613,15 +568,14 @@ client.on('interactionCreate', async (interaction) => {
                             break;
                         }
                     } catch (error) {
-                        // El usuario no está en este servidor, continuar
                         continue;
                     }
                 }
                 
                 if (!member || !guild) {
                     await interaction.reply({
-                        content: 'No pude encontrarte en ningún servidor. Asegúrate de estar en el servidor antes de usar los botones.',
-                        flags: 64 // ephemeral
+                        content: 'No pude encontrarte en ningún servidor.',
+                        flags: 64
                     });
                     return;
                 }
@@ -629,40 +583,34 @@ client.on('interactionCreate', async (interaction) => {
 
             console.log(`✅ Miembro encontrado: ${member.user.tag} en ${guild.name}`);
             
-            // Procesar la selección
             let newNickname;
             let selectedType;
             
+            // ✅ INCREMENTAR CONTADOR EN LA BASE DE DATOS
             if (interaction.customId === 'select_pibe') {
-                counters.pibe++;
-                newNickname = `Pibe ${counters.pibe}`;
+                const newCount = await economy.database.incrementCounter('pibe_counter');
+                newNickname = `Pibe ${newCount}`;
                 selectedType = 'Pibe';
                 console.log(`🔵 Nuevo pibe: ${newNickname}`);
             } else {
-                counters.piba++;
-                newNickname = `Piba ${counters.piba}`;
+                const newCount = await economy.database.incrementCounter('piba_counter');
+                newNickname = `Piba ${newCount}`;
                 selectedType = 'Piba';
                 console.log(`🔴 Nueva piba: ${newNickname}`);
             }
             
             try {
-                // Cambiar el apodo
                 await member.setNickname(newNickname);
                 
-                // Guardar contadores
-                saveCounters(counters);
-                
-                // Responder al usuario
                 await interaction.reply({
                     content: `✅ ¡Perfecto! Te asigné el apodo: **${newNickname}**`,
-                    flags: 64 // ephemeral
+                    flags: 64
                 });
                 
                 console.log(`✅ Apodo asignado: ${member.user.tag} -> ${newNickname}`);
             } catch (nicknameError) {
                 console.error(`❌ Error cambiando apodo:`, nicknameError);
                 
-                // Verificar si es problema de permisos
                 if (nicknameError.code === 50013) {
                     await interaction.reply({
                         content: `❌ No tengo permisos para cambiar apodos. Contacta a un admin.`,
