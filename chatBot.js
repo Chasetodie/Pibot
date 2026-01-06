@@ -9,28 +9,22 @@ class ChatBotSystem {
         // AGREGAR: Lista de modelos con fallback
         this.availableModels = [
             {
-                name: "HuggingFaceH4/zephyr-7b-beta",
+                name: "mistralai/Mixtral-8x7B-Instruct-v0.1",
                 priority: 1,
                 active: true,
-                description: "🌪️ Zephyr - Conversacional"
+                description: "🔥 Mixtral - Potente"
             },
             {
-                name: "mistralai/Mistral-7B-Instruct-v0.1",
+                name: "meta-llama/Llama-2-7b-chat-hf",
                 priority: 2,
                 active: true,
-                description: "⚡ Mistral v0.1 - Estable"
+                description: "🦙 Llama 2 - Estable"
             },
             {
-                name: "google/flan-t5-xxl",
+                name: "tiiuae/falcon-7b-instruct",
                 priority: 3,
                 active: true,
-                description: "🔍 Flan-T5 - Google"
-            },
-            {
-                name: "bigscience/bloom-1b7",
-                priority: 4,
-                active: true,
-                description: "🌸 Bloom - Multilenguaje"
+                description: "🦅 Falcon - Backup"
             }
         ];
         
@@ -346,13 +340,12 @@ class ChatBotSystem {
                 try {
                     console.log(`🤗 ${model.name} (intento ${attempt})`);
                     
-                    // NUEVA URL Y FORMATO
+                    // ✅ NUEVO FORMATO DE API (Enero 2025)
                     const response = await fetch(`https://api-inference.huggingface.co/models/${model.name}`, {
                         method: 'POST',
                         headers: {
                             'Authorization': `Bearer ${this.hfApiKey}`,
-                            'Content-Type': 'application/json',
-                            'x-wait-for-model': 'true' // ← IMPORTANTE: espera si el modelo está cargando
+                            'Content-Type': 'application/json'
                         },
                         body: JSON.stringify({
                             inputs: contextString,
@@ -360,55 +353,62 @@ class ChatBotSystem {
                                 max_new_tokens: 350,
                                 temperature: 0.9,
                                 top_p: 0.95,
-                                repetition_penalty: 1.15,
-                                do_sample: true,
-                                return_full_text: false // ← Solo devolver la respuesta nueva
-                            },
-                            options: {
-                                wait_for_model: true,
-                                use_cache: false
+                                do_sample: true
                             }
                         })
                     });
                     
                     if (!response.ok) {
                         const errorText = await response.text();
-                        throw new Error(`HTTP ${response.status}: ${errorText}`);
+                        console.error(`❌ HTTP ${response.status}:`, errorText);
+                        
+                        // Si es 503, el modelo está cargando
+                        if (response.status === 503) {
+                            console.log('⏳ Modelo cargando, esperando 10 segundos...');
+                            await new Promise(r => setTimeout(r, 10000));
+                            continue; // Reintentar
+                        }
+                        
+                        // Si es 401, problema con API key
+                        if (response.status === 401) {
+                            throw new Error('❌ API Key inválida o expirada');
+                        }
+                        
+                        // Si es 410, modelo deprecado - saltar al siguiente
+                        if (response.status === 410) {
+                            console.log('⚠️ Modelo deprecado, probando siguiente...');
+                            break;
+                        }
+                        
+                        throw new Error(`HTTP ${response.status}`);
                     }
                     
                     const data = await response.json();
+                    console.log('📦 Respuesta recibida:', JSON.stringify(data).substring(0, 200));
                     
-                    // Parsear respuesta (formato puede variar)
+                    // Parsear respuesta
                     let cleanResponse = '';
                     
-                    if (Array.isArray(data)) {
-                        // Formato 1: Array de respuestas
-                        if (data[0]?.generated_text) {
-                            cleanResponse = data[0].generated_text;
-                        } else if (data[0]?.text) {
-                            cleanResponse = data[0].text;
-                        }
+                    if (Array.isArray(data) && data[0]) {
+                        cleanResponse = data[0].generated_text || data[0].text || '';
                     } else if (data.generated_text) {
-                        // Formato 2: Objeto directo
                         cleanResponse = data.generated_text;
                     } else if (typeof data === 'string') {
-                        // Formato 3: String directo
                         cleanResponse = data;
                     }
                     
                     if (!cleanResponse) {
-                        console.log('Respuesta recibida:', JSON.stringify(data).substring(0, 200));
-                        throw new Error('Formato de respuesta inesperado');
+                        throw new Error('Respuesta vacía del modelo');
                     }
                     
-                    // Limpiar el contexto de la respuesta
+                    // Limpiar la respuesta
                     cleanResponse = cleanResponse
                         .replace(contextString, '')
-                        .replace(/^(Pibot:|PibBot:|Bot:|Asistente:)/i, '')
+                        .replace(/^(Pibot:|PibBot:|Bot:|Assistant:|Asistente:)/i, '')
                         .trim();
                     
-                    if (!cleanResponse || cleanResponse.length < 1) {
-                        throw new Error('Respuesta vacía');
+                    if (cleanResponse.length < 5) {
+                        throw new Error('Respuesta demasiado corta');
                     }
                     
                     if (cleanResponse.length > 1800) {
@@ -416,26 +416,14 @@ class ChatBotSystem {
                     }
                     
                     this.requestsToday++;
-                    console.log(`✅ Éxito con ${model.name} | Requests hoy: ${this.requestsToday}`);
+                    console.log(`✅ Éxito con ${model.name}`);
                     return cleanResponse;
                     
                 } catch (error) {
-                    console.error(`❌ ${model.name} falló:`, error.message);
-                    
-                    // Si el modelo está cargando (503), esperar más
-                    if (error.message.includes('503') || error.message.includes('loading')) {
-                        console.log('⏳ Modelo cargando, esperando 5 segundos...');
-                        await new Promise(r => setTimeout(r, 5000));
-                    }
-                    
-                    // Si es 410 (deprecated), saltar al siguiente modelo inmediatamente
-                    if (error.message.includes('410')) {
-                        console.log('⚠️ Modelo no disponible en esta API, saltando...');
-                        break;
-                    }
+                    console.error(`❌ Error con ${model.name}:`, error.message);
                     
                     if (attempt < maxRetries) {
-                        await new Promise(r => setTimeout(r, 1000 * attempt));
+                        await new Promise(r => setTimeout(r, 2000 * attempt));
                     }
                 }
             }
@@ -449,8 +437,6 @@ class ChatBotSystem {
         ];
         return fallbackResponses[Math.floor(Math.random() * fallbackResponses.length)];
     }
-
-
 
     /**
      * Actualizar cache de conversación
@@ -1021,6 +1007,25 @@ class ChatBotSystem {
                 });
                 
                 await statusMsg.edit({ embeds: [finalEmbed] });
+                break;
+
+            case '>testapi':
+                try {
+                    const testResponse = await fetch('https://api-inference.huggingface.co/models/gpt2', {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': `Bearer ${this.hfApiKey}`,
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            inputs: "Hello world"
+                        })
+                    });
+                    
+                    await message.reply(`Status: ${testResponse.status}\nKey válida: ${this.hfApiKey ? 'Sí' : 'No'}\nKey length: ${this.hfApiKey?.length || 0}`);
+                } catch (error) {
+                    await message.reply(`Error: ${error.message}`);
+                }
                 break;
 
             case '>chatcredits':
