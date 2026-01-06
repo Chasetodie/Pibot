@@ -9,28 +9,28 @@ class ChatBotSystem {
         // AGREGAR: Lista de modelos con fallback
         this.availableModels = [
             {
-                name: "meta-llama/Meta-Llama-3-8B-Instruct",
+                name: "meta-llama/Llama-3.2-3B-Instruct",
                 priority: 1,
                 active: true,
-                description: "🦙 Llama 3 - Conversacional y sin censura"
+                description: "🦙 Llama 3.2 - Conversacional mejorado"
             },
             {
-                name: "mistralai/Mistral-7B-Instruct-v0.3",
+                name: "Qwen/Qwen2.5-Coder-7B-Instruct",
                 priority: 2,
                 active: true,
-                description: "⚡ Mistral v0.3 - Rápido y eficiente"
+                description: "⚡ Qwen 2.5 - Rápido y sin filtros"
             },
             {
-                name: "microsoft/Phi-3-mini-4k-instruct",
+                name: "google/gemma-2-2b-it",
                 priority: 3,
                 active: true,
-                description: "🔬 Phi-3 - Pequeño pero potente"
+                description: "💎 Gemma 2 - Ligero y eficiente"
             },
             {
-                name: "HuggingFaceH4/zephyr-7b-beta",
+                name: "mistralai/Mistral-7B-Instruct-v0.2",
                 priority: 4,
                 active: true,
-                description: "🌪️ Zephyr - Conversacional"
+                description: "🌪️ Mistral v0.2 - Roleplay friendly"
             }
         ];
         
@@ -56,6 +56,7 @@ class ChatBotSystem {
         };
         
         this.totalUsedToday = 0;
+        this.requestsToday = 0;
         this.startDailyReset();
     }
 
@@ -618,6 +619,7 @@ class ChatBotSystem {
             this.currentDate = today;
             this.userChatUsage.clear();
             this.totalUsedToday = 0;
+            this.requestsToday = 0; // ← AGREGAR ESTA LÍNEA
         }
     }
 
