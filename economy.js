@@ -457,17 +457,6 @@ class EconomySystem {
         
         // Calcular nuevo nivel
         const newLevel = this.getLevelFromXp(newTotalXp);
-
-        // 🔍 DEBUG - Borrar después
-        console.log(`
-        🐛 DEBUG XP:
-        - Usuario: ${userId.slice(-4)}
-        - XP ganado: ${xpGained}
-        - XP total: ${newTotalXp}
-        - Nivel calculado: ${newLevel}
-        - Nivel anterior: ${oldLevel}
-        `);
-
         const levelUps = newLevel - oldLevel;
         
         // Preparar datos para actualizar
