@@ -1,11 +1,6 @@
 const { EmbedBuilder } = require('discord.js');
 
 class CommandHandler {
-    constructor(counters, saveCountersFunction) {
-        this.counters = counters;
-        this.saveCounters = saveCountersFunction;
-    }
-
     // Comando para verificar contadores
     async handleContadores(message) {
         if (!message.member?.permissions.has('Administrator')) {

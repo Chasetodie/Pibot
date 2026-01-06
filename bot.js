@@ -46,7 +46,7 @@ const client = new Client({
 });
 
 // Crear instancia del manejador de comandos
-const commandHandler = new CommandHandler(counters, saveCounters);
+const commandHandler = new CommandHandler();
 
 //Crear instancia del sistema de economia
 const economy = new EconomySystem(client);
