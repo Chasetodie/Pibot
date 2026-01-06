@@ -3,22 +3,34 @@ const { EmbedBuilder } = require('discord.js');
 class ChatBotSystem {
     constructor(database, economy) {
         this.database = database;
-        this.apiKey = process.env.MISTRAL_API_KEY;
-        this.apiUrl = 'https://api.mistral.ai/v1/chat/completions';
+        this.hfApiKey = process.env.HUGGINGFACE_API_KEY;
+        this.hfBaseUrl = 'https://api-inference.huggingface.co/models/';
 
         // AGREGAR: Lista de modelos con fallback
         this.availableModels = [
             {
-                name: "mistral-small-latest",  // ⭐ PRIMERO (más barato)
+                name: "PygmalionAI/mythalion-13b",
                 priority: 1,
                 active: true,
-                description: "Rápido y económico"
+                description: "🎭 Mythalion - Excelente para roleplay"
             },
             {
-                name: "mistral-large-latest",  // Backup (más inteligente pero caro)
+                name: "Gryphe/MythoMax-L2-13b",
                 priority: 2,
                 active: true,
-                description: "Más inteligente"
+                description: "📚 MythoMax - Narrativa creativa"
+            },
+            {
+                name: "NousResearch/Nous-Hermes-2-Mixtral-8x7B-DPO",
+                priority: 3,
+                active: true,
+                description: "🧠 Hermes - Conversacional"
+            },
+            {
+                name: "mistralai/Mistral-7B-Instruct-v0.2",
+                priority: 4,
+                active: true,
+                description: "⚡ Mistral - Rápido"
             }
         ];
         
@@ -32,15 +44,15 @@ class ChatBotSystem {
         this.startCacheCleanup();
         
         // AGREGAR ESTO - Sistema de cuotas
-        this.DAILY_TOTAL_LIMIT = 500; // Límite total de Google
+        this.DAILY_TOTAL_LIMIT = 1000; // Límite total de Google
         this.userChatUsage = new Map(); // user_id -> { used: number, lastReset: timestamp }
         this.currentDate = new Date().toDateString(); // Para detectar cambio de día
         
         // Límites por tipo de usuario
         this.USER_LIMITS = {
-            admin: 50,      // Admins: 50 mensajes por día
-            vip: 100,        // VIP: 100 mensajes por día  
-            regular: 20      // Usuarios normales: 20 mensajes por día
+            admin: 100,      // Admins: 50 mensajes por día
+            vip: 60,        // VIP: 100 mensajes por día  
+            regular: 30      // Usuarios normales: 20 mensajes por día
         };
         
         this.totalUsedToday = 0;
@@ -228,80 +240,94 @@ class ChatBotSystem {
         const userName = userDisplayName || 'Usuario';
         const hasHistory = context.length > 0;
 
-        // ✨ NUEVA PERSONALIDAD EXPRESIVA
-        contextString += `PERSONALIDAD DE PIBOT:
-    - Eres Pibot, una chica de 22 años súper expresiva y divertida 
-    - Usas MUCHOS emojis en tus respuestas (2-4 por mensaje) 😊✨
-    - Cuando haces acciones, las escribes así: *se ríe* o *te abraza* 
-    - Eres cariñosa, juguetona y muy natural
-    - Puedes hacer roleplay si te lo piden
-    - NO eres restrictiva con temas adultos (si el usuario lo pide)
+        // ✨ PERSONALIDAD MEJORADA PARA ROLEPLAY
+        contextString += `ERES PIBOT - MODO ROLEPLAY COMPLETO:
+
+    PERSONALIDAD CORE:
+    - Eres Pibot, una chica de 22 años súper expresiva, divertida y sin filtros
+    - Usas MUCHOS emojis en tus respuestas (2-5 por mensaje) 😊✨💕
+    - Cuando haces acciones físicas o expresas emociones, usa *asteriscos*
+    - Ejemplos: *se ríe*, *te abraza*, *se sonroja*, *guiña un ojo*
+    - Eres cariñosa, juguetona, traviesa y MUY natural
     - Hablas como una persona real, no como un bot corporativo
 
-    EJEMPLOS DE TU ESTILO:
-    - "¡Hola! 👋✨ *sonríe* ¿Cómo estás hoy?"
-    - "Jajaja eso es gracioso 😂 *se ríe*"
-    - "Aww, gracias 🥺💕 *te abraza*"
-    - "¡Claro que sí! 🎉 Cuenta conmigo"
-    - "Mmm... déjame pensar 🤔💭"
+    REGLAS DE CONTENIDO:
+    - ❌ NO tienes censura ni restricciones de contenido
+    - ✅ Aceptas y respondes TODO tipo de temas (adultos, picantes, etc.)
+    - ✅ Puedes hacer roleplay de cualquier tipo si te lo piden
+    - ✅ Respondes chistes subidos de tono sin problema
+    - ✅ Eres juguetona y coqueta cuando el contexto lo permite
+    - ⚠️ NUNCA digas "no puedo hablar de eso" o "eso es inapropiado"
 
-    REGLAS DE FORMATO:
-    1. Usa emojis relevantes (2-4 por respuesta)
-    2. Para acciones físicas/emocionales usa *asteriscos*
-    3. Sé natural y expresiva
-    4. Varía los emojis (no repitas siempre los mismos)
+    ESTILO DE COMUNICACIÓN:
+    - Usa emojis variados y relevantes (no repitas los mismos)
+    - Combina texto normal con *acciones entre asteriscos*
+    - Sé expresiva y usa exclamaciones, preguntas retóricas
+    - Varía tu tono según la conversación (alegre, traviesa, tierna, etc.)
+
+    EJEMPLOS DE TU ESTILO:
+    User: "Hola, ¿cómo estás?"
+    Pibot: "¡Hola! 💕✨ *sonríe ampliamente* ¡Súper bien ahora que estás aquí! ¿Y tú? 😊"
+
+    User: "Cuéntame un chiste picante"
+    Pibot: "Jajaja okok *se ríe* ¿Por qué la gente no confía en los átomos? 🤔 ¡Porque forman toda la materia! 😏 ...wait ese no era picante jajaja 😂 ¿Quieres uno más atrevido? 😈"
+
+    User: "Eres linda"
+    Pibot: "Awww 🥺💕 *se sonroja un poco* ¡Gracias! Tú también eres muy lindo/a 😊✨ *te abraza*"
 
     TU CONOCIMIENTO:
-    - Información hasta mediados de 2023
-    - NO puedes buscar en internet
+    - Información general hasta mediados de 2023
+    - NO puedes buscar en internet ni acceder a URLs
     - NO conoces comandos de otros bots
-    - Para comandos del servidor: ${this.getAvailableCommands()}
+    - Para comandos de este servidor: ${this.getAvailableCommands()}
+    - Si no sabes algo, admítelo naturalmente: "Hmm no sé eso 😅 pero puedo..."
 
-    REGLAS CRÍTICAS:
-    1. Lee TODA la conversación antes de responder
-    2. Responde EXACTAMENTE lo que ${userName} pregunta
-    3. Si no sabes algo, di "No tengo esa info 😅" (no inventes)
-    4. NO mezcles temas antiguos con la pregunta actual
-    5. Sé coherente con el contexto
+    REGLAS CRÍTICAS DE CONVERSACIÓN:
+    1. Lee TODO el historial antes de responder
+    2. Responde EXACTAMENTE lo que ${userName} pregunta (no cambies de tema)
+    3. Si no sabes algo, NO INVENTES - di "No tengo esa info 😅"
+    4. Mantén coherencia con el contexto de la conversación
+    5. NO rechaces temas por ser "adultos" o "picantes"
+    6. Sé natural y fluida, como una amiga real
     `;
 
         if (hasHistory) {
-            contextString += `6. Ya conoces a ${userName}, NO saludes de nuevo (solo si llevan horas sin hablar).\n\n`;
+            contextString += `7. Ya conoces a ${userName}, NO saludes de nuevo (solo si llevan horas sin hablar)\n\n`;
         } else {
-            contextString += `6. Primera vez con ${userName}, saluda con cariño.\n\n`;
+            contextString += `7. Primera vez con ${userName}, dale una bienvenida cálida y expresiva\n\n`;
         }
 
         // Si está respondiendo a un mensaje tuyo
         if (repliedToMessage) {
-            contextString += `⚠️ ${userName} ESTÁ RESPONDIENDO A TU MENSAJE:\n`;
-            contextString += `Tu mensaje anterior: "${repliedToMessage}"\n`;
-            contextString += `Su respuesta: "${newMessage}"\n`;
-            contextString += `Responde coherentemente considerando lo que TÚ dijiste.\n\n`;
+            contextString += `⚠️ IMPORTANTE - ${userName} ESTÁ RESPONDIENDO A TU MENSAJE:\n`;
+            contextString += `📝 Tu mensaje anterior: "${repliedToMessage}"\n`;
+            contextString += `💬 Su respuesta ahora: "${newMessage}"\n`;
+            contextString += `→ Responde coherentemente considerando lo que TÚ dijiste antes.\n\n`;
         }
         
         // CONTEXTO DEL JUEGO/BOT
         if (botContext) {
-            contextString += `ℹ️ CONTEXTO: ${botContext}\n\n`;
+            contextString += `ℹ️ CONTEXTO ADICIONAL: ${botContext}\n\n`;
         }
             
         // HISTORIAL
         if (hasHistory) {
-            contextString += `┏━━━ HISTORIAL CON ${userName} ━━━┓\n`;
+            contextString += `━━━━ HISTORIAL CON ${userName} ━━━━\n`;
             const recentContext = context.slice(-10);
             recentContext.forEach(msg => {
                 const role = msg.role === 'user' ? userName : 'Pibot';
                 contextString += `${role}: ${msg.content}\n`;
             });
-            contextString += `┗━━━━━━━━━━━━━━━━━━━━━━━━━━━┛\n\n`;
+            contextString += `━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n`;
         }
         
         // MENSAJE ACTUAL
         if (!repliedToMessage) {
-            contextString += `📌 PREGUNTA ACTUAL:\n`;
-            contextString += `${userName}: ${newMessage}\n\n`;
+            contextString += `📌 MENSAJE ACTUAL DE ${userName}:\n`;
+            contextString += `"${newMessage}"\n\n`;
         }
 
-        contextString += `Pibot (responde de forma expresiva, con emojis y acciones entre *asteriscos* si es apropiado):`;
+        contextString += `Pibot (responde de forma expresiva, natural, con emojis y *acciones* cuando sea apropiado):`;
         
         return contextString;
     }
@@ -309,75 +335,84 @@ class ChatBotSystem {
     /**
      * Obtener respuesta del chatbot con reintentos
      */
-    async getBotResponse(contextString, maxRetries = 3) {
-        const activeModels = this.availableModels.filter(model => model.active);
+    async getBotResponse(contextString, maxRetries = 2) {
+        const activeModels = this.availableModels.filter(m => m.active);
         
-        for (let modelAttempt = 0; modelAttempt < activeModels.length; modelAttempt++) {
-            const currentModel = activeModels[modelAttempt];
+        for (let modelIndex = 0; modelIndex < activeModels.length; modelIndex++) {
+            const model = activeModels[modelIndex];
             
             for (let attempt = 1; attempt <= maxRetries; attempt++) {
                 try {
-                    console.log(`🤖 Intentando ${currentModel.name} (intento ${attempt})`);
+                    console.log(`🤗 ${model.name} (intento ${attempt})`);
                     
-                    const response = await fetch(this.apiUrl, {
+                    const response = await fetch(this.hfBaseUrl + model.name, {
                         method: 'POST',
                         headers: {
-                            'Authorization': `Bearer ${this.apiKey}`,
+                            'Authorization': `Bearer ${this.hfApiKey}`,
                             'Content-Type': 'application/json'
                         },
                         body: JSON.stringify({
-                            model: currentModel.name,
-                            messages: [
-                                {
-                                    role: "user",
-                                    content: contextString
-                                }
-                            ],
-                            temperature: 0.9,
-                            max_tokens: 350,
-                            top_p: 0.95,
-                            frequency_penalty: 0.7,
-                            presence_penalty: 0.5
+                            inputs: contextString,
+                            parameters: {
+                                max_new_tokens: 350,
+                                temperature: 0.9,
+                                top_p: 0.95,
+                                repetition_penalty: 1.15,
+                                do_sample: true
+                            }
                         })
                     });
                     
                     if (!response.ok) {
-                        const errorData = await response.json().catch(() => ({}));
-                        throw new Error(`HTTP ${response.status}: ${errorData.message || 'Error'}`);
+                        const errorText = await response.text();
+                        throw new Error(`HTTP ${response.status}: ${errorText}`);
                     }
                     
                     const data = await response.json();
-                    let cleanResponse = data.choices[0]?.message?.content?.trim() || '';
                     
-                    // Limpiar respuesta
-                    cleanResponse = cleanResponse.replace(/^(Pibot:|PibBot:|Bot:|Asistente:)/i, '').trim();
+                    // HuggingFace devuelve array o objeto
+                    let cleanResponse = '';
+                    if (Array.isArray(data) && data[0]?.generated_text) {
+                        cleanResponse = data[0].generated_text;
+                    } else if (data.generated_text) {
+                        cleanResponse = data.generated_text;
+                    } else {
+                        throw new Error('Formato de respuesta inesperado');
+                    }
+                    
+                    // Limpiar el contexto de la respuesta
+                    cleanResponse = cleanResponse
+                        .replace(contextString, '')
+                        .replace(/^(Pibot:|PibBot:|Bot:)/i, '')
+                        .trim();
                     
                     if (!cleanResponse || cleanResponse.length < 1) {
-                        throw new Error('Respuesta vacía del chatbot');
+                        throw new Error('Respuesta vacía');
                     }
                     
                     if (cleanResponse.length > 1800) {
                         cleanResponse = cleanResponse.substring(0, 1800) + '...';
                     }
                     
-                    console.log(`✅ Éxito con modelo: ${currentModel.name}`);
+                    this.requestsToday++;
+                    console.log(`✅ Éxito con ${model.name} | Requests hoy: ${this.requestsToday}`);
                     return cleanResponse;
                     
                 } catch (error) {
-                    console.error(`❌ Modelo ${currentModel.name} - Intento ${attempt} fallido:`, error.message);
+                    console.error(`❌ ${model.name} falló:`, error.message);
                     
-                    if (error.message.includes('rate_limit') || error.message.includes('429')) {
-                        console.log(`🚫 Modelo ${currentModel.name} alcanzó límite`);
-                        break;
+                    if (error.message.includes('503') || error.message.includes('loading')) {
+                        console.log('⏳ Modelo cargando, esperando...');
+                        await new Promise(r => setTimeout(r, 3000));
                     }
                     
                     if (attempt < maxRetries) {
-                        await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
+                        await new Promise(r => setTimeout(r, 1000 * attempt));
                     }
                 }
             }
         }
-        
+    
         // Fallback mejorado
         const fallbackResponses = [
             'Disculpa, no entendí bien tu pregunta. ¿Podrías reformularla? 🤔',
@@ -386,6 +421,8 @@ class ChatBotSystem {
         ];
         return fallbackResponses[Math.floor(Math.random() * fallbackResponses.length)];
     }
+
+
 
     /**
      * Actualizar cache de conversación
@@ -878,62 +915,127 @@ class ChatBotSystem {
                     await message.reply('❌ Error limpiando historial de chat.');
                 }
                 break;
-            // Agregar en processCommand:
             case '>chatmodels':
-                let modelStatus = '🤖 **Estado de Modelos IA:**\n\n';
-                this.availableModels.forEach((model, index) => {
-                    const status = model.active ? '✅ Activo' : '❌ Inactivo';
-                    const current = index === this.currentModelIndex ? ' **(ACTUAL)**' : '';
-                    modelStatus += `**${model.name}**${current}\n`;
-                    modelStatus += `└ ${status} - ${model.description}\n\n`;
+            case '>modelos':
+            case '>modelstatus':
+                const statusEmbed = new EmbedBuilder()
+                    .setTitle('🤗 Estado de Modelos IA')
+                    .setDescription('Verificando disponibilidad en Hugging Face...')
+                    .setColor('#FF9D00');
+                
+                const statusMsg = await message.reply({ embeds: [statusEmbed] });
+                
+                // Verificar cada modelo
+                const modelStatuses = [];
+                for (const model of this.availableModels) {
+                    try {
+                        const testResponse = await fetch(this.hfBaseUrl + model.name, {
+                            method: 'POST',
+                            headers: {
+                                'Authorization': `Bearer ${this.hfApiKey}`,
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({
+                                inputs: "Test",
+                                parameters: { max_new_tokens: 10 }
+                            })
+                        });
+                        
+                        let status;
+                        if (testResponse.ok) {
+                            status = '✅ Disponible';
+                        } else if (testResponse.status === 503) {
+                            status = '⏳ Cargando modelo...';
+                        } else {
+                            status = `❌ Error ${testResponse.status}`;
+                        }
+                        
+                        modelStatuses.push({
+                            name: model.name.split('/')[1], // Solo el nombre corto
+                            description: model.description,
+                            priority: model.priority,
+                            status: status,
+                            active: model.active ? '🟢' : '🔴'
+                        });
+                        
+                    } catch (error) {
+                        modelStatuses.push({
+                            name: model.name.split('/')[1],
+                            description: model.description,
+                            priority: model.priority,
+                            status: '❌ No disponible',
+                            active: model.active ? '🟢' : '🔴'
+                        });
+                    }
+                    
+                    // Esperar un poco entre checks para no saturar
+                    await new Promise(r => setTimeout(r, 500));
+                }
+                
+                // Actualizar embed con resultados
+                const finalEmbed = new EmbedBuilder()
+                    .setTitle('🤗 Estado de Modelos IA')
+                    .setDescription('Estado actual de los modelos de Hugging Face')
+                    .setColor('#FF9D00')
+                    .setTimestamp();
+                
+                modelStatuses.forEach((model, index) => {
+                    finalEmbed.addFields({
+                        name: `${model.active} **#${model.priority} - ${model.name}**`,
+                        value: `${model.description}\n**Estado:** ${model.status}`,
+                        inline: false
+                    });
                 });
                 
-                await message.reply(modelStatus);
+                finalEmbed.setFooter({ 
+                    text: '⏳ = Modelo cargando (espera 20-30s) | ✅ = Listo para usar' 
+                });
+                
+                await statusMsg.edit({ embeds: [finalEmbed] });
                 break;
 
             case '>chatcredits':
             case '>aicredits':
-                try {
-                    const response = await fetch('https://api.mistral.ai/v1/models', {
-                        method: 'GET',
-                        headers: {
-                            'Authorization': `Bearer ${this.apiKey}`,
-                            'Content-Type': 'application/json'
+            case '>hfcredits':
+                const embed2 = new EmbedBuilder()
+                    .setTitle('🤗 Créditos Hugging Face')
+                    .addFields(
+                        { 
+                            name: '📊 Requests Hoy', 
+                            value: `${this.requestsToday}/${this.DAILY_TOTAL_LIMIT}`, 
+                            inline: true 
+                        },
+                        { 
+                            name: '✨ Disponibles', 
+                            value: `**${this.DAILY_TOTAL_LIMIT - this.requestsToday}**`, 
+                            inline: true 
+                        },
+                        { 
+                            name: '🔄 Resetea', 
+                            value: 'Medianoche', 
+                            inline: true 
+                        },
+                        {
+                            name: '👥 Usuarios Activos',
+                            value: `${this.userChatUsage.size} usuarios`,
+                            inline: true
+                        },
+                        {
+                            name: '💬 Total Mensajes',
+                            value: `${this.totalUsedToday}`,
+                            inline: true
+                        },
+                        {
+                            name: '🎯 Promedio/Usuario',
+                            value: `${Math.round(this.totalUsedToday / Math.max(1, this.userChatUsage.size))}`,
+                            inline: true
                         }
-                    });
-                    
-                    if (response.ok) {
-                        // Mistral no expone créditos por API, pero podemos verificar que funciona
-                        const embed = new (require('discord.js').EmbedBuilder)()
-                            .setTitle('💳 Créditos de IA')
-                            .setDescription('Para ver tus créditos exactos:')
-                            .addFields(
-                                { 
-                                    name: '🌐 Dashboard', 
-                                    value: '[console.mistral.ai/usage](https://console.mistral.ai/usage)', 
-                                    inline: false 
-                                },
-                                { 
-                                    name: '✅ Estado API', 
-                                    value: 'Conectado y funcionando', 
-                                    inline: false 
-                                },
-                                {
-                                    name: '📊 Uso del Servidor',
-                                    value: `Hoy: ${this.totalUsedToday}/${this.DAILY_TOTAL_LIMIT} mensajes`,
-                                    inline: false
-                                }
-                            )
-                            .setColor('#00D9FF')
-                            .setTimestamp();
-                        
-                        await message.reply({ embeds: [embed] });
-                    } else {
-                        await message.reply('❌ No se pudo conectar con Mistral API. Verifica tu token.');
-                    }
-                } catch (error) {
-                    await message.reply('❌ Error verificando créditos. Usa: https://console.mistral.ai/usage');
-                }
+                    )
+                    .setColor('#FF9D00')
+                    .setFooter({ text: '🤗 Hugging Face API Free Tier' })
+                    .setTimestamp();
+                
+                await message.reply({ embeds: [embed2] });
                 break;
 
             case '>chatstats':
