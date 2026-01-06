@@ -9,28 +9,28 @@ class ChatBotSystem {
         // AGREGAR: Lista de modelos con fallback
         this.availableModels = [
             {
-                name: "meta-llama/Llama-3.2-3B-Instruct",
+                name: "HuggingFaceH4/zephyr-7b-beta",
                 priority: 1,
                 active: true,
-                description: "🦙 Llama 3.2 - Conversacional mejorado"
+                description: "🌪️ Zephyr - Conversacional"
             },
             {
-                name: "Qwen/Qwen2.5-Coder-7B-Instruct",
+                name: "mistralai/Mistral-7B-Instruct-v0.1",
                 priority: 2,
                 active: true,
-                description: "⚡ Qwen 2.5 - Rápido y sin filtros"
+                description: "⚡ Mistral v0.1 - Estable"
             },
             {
-                name: "google/gemma-2-2b-it",
+                name: "google/flan-t5-xxl",
                 priority: 3,
                 active: true,
-                description: "💎 Gemma 2 - Ligero y eficiente"
+                description: "🔍 Flan-T5 - Google"
             },
             {
-                name: "mistralai/Mistral-7B-Instruct-v0.2",
+                name: "bigscience/bloom-1b7",
                 priority: 4,
                 active: true,
-                description: "🌪️ Mistral v0.2 - Roleplay friendly"
+                description: "🌸 Bloom - Multilenguaje"
             }
         ];
         
