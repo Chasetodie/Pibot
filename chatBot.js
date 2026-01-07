@@ -915,10 +915,21 @@ class ChatBotSystem {
                 try {
                     // Verificar estado de los modelos
                     const freeModels = [
-                        { name: "mistralai/mistral-7b-instruct:free", emoji: "⚡", desc: "Mistral 7B - Rápido" },
-                        { name: "meta-llama/llama-3.1-8b-instruct:free", emoji: "🦙", desc: "Llama 3.1 - Potente" },
-                        { name: "google/gemma-2-9b-it:free", emoji: "💎", desc: "Gemma 2 - Google" },
-                        { name: "huggingfaceh4/zephyr-7b-beta:free", emoji: "🌪️", desc: "Zephyr - Backup" }
+                        // Tier 1: Mejores para roleplay sin censura
+                        "nousresearch/hermes-3-llama-3.1-405b:free", // ⭐ EL MEJOR - Sin censura
+                        "mistralai/mistral-7b-instruct:free", // Rápido y sin filtros
+                        
+                        // Tier 2: Alternativos buenos
+                        "meta-llama/llama-3.1-8b-instruct:free", // Potente
+                        "google/gemma-2-9b-it:free", // Confiable
+                        
+                        // Tier 3: Backups ligeros
+                        "huggingfaceh4/zephyr-7b-beta:free", // Conversacional
+                        "openchat/openchat-7b:free", // Rápido
+                        
+                        // Tier 4: Últimos recursos
+                        "gryphe/mythomist-7b:free", // Específico para roleplay/historias
+                        "undi95/toppy-m-7b:free" // Sin censura, creativo
                     ];
                     
                     const statusEmbed = new EmbedBuilder()
