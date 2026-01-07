@@ -2028,6 +2028,12 @@ class AllCommands {
                     value: '`>missions` - Ver misiones diarias\n`>blockmissions` - Bloquear notificaciones\n`>unblockmissions` - Desbloquear notificaciones\n`>achievements [@usuario]` - Ver logros\n`>allachievements` - Todos los logros\n`>detectachievements` - Detectar logros\n`>detectall` - Detectar todos los logros', 
                     inline: false 
                 },
+            
+                { 
+                    name: '🤖 Chat IA', 
+                    value: 'Usa `>chathelp` para ver comandos de chat con Pibot\n\nO simplemente respondele un mensaje al bot',
+                    inline: false
+                },
                 
                 // Eventos
                 { 

@@ -196,17 +196,6 @@ class LocalDatabase {
                 )
             `);
 
-            // NUEVA TABLA para cuotas diarias
-            await this.pool.execute(`
-                CREATE TABLE IF NOT EXISTS chat_daily_usage (
-                    user_id VARCHAR(255) NOT NULL,
-                    usage_date DATE NOT NULL,
-                    messages_used INT DEFAULT 0,
-                    PRIMARY KEY (user_id, usage_date),
-                    INDEX idx_date (usage_date)
-                )
-            `);
-
             // Tabla para pozo semanal - NUEVO DISEÑO
             await this.pool.execute(`
                 CREATE TABLE IF NOT EXISTS weekly_pot (

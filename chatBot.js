@@ -1,11 +1,12 @@
 const { EmbedBuilder } = require('discord.js');
+const { response } = require('express');
 
 class ChatBotSystem {
     constructor(database, economy) {
-        this.database = database;       
-        this.currentModelIndex = 0; // Empezar con el primer modelo
-        
+        this.database = database;              
         this.economy = economy;
+
+        this.requestsToday = 0;
 
         this.MAX_CONTEXT_MESSAGES = 50;
         this.conversationCache = new Map();
@@ -47,19 +48,33 @@ class ChatBotSystem {
      * Procesar mensaje de chat y generar respuesta
      */
     async processMessage(userId, message, userDisplayName = 'Usuario', botContext = null, repliedToMessage = null) {
-        try {
-            // 1. Verificar límites del usuario
-            const limitCheck = await this.canUserSendMessage(userId);
-            if (!limitCheck.canSend) {
+        try {            
+            // Verificar si es primera vez del usuario
+            const context = await this.getConversationContext(userId);
+            const isFirstTime = context.length === 0;
+            
+            if (isFirstTime) {
+                // Mensaje de bienvenida especial
+                const welcomeMsg = `¡Hola ${userDisplayName}! 💕✨ *sonríe emocionada* 
+
+    ¡Es la primera vez que hablamos! Soy Pibot, tu amiga IA súper expresiva y sin filtros 😊🎭
+
+    **Tips rápidos:**
+    - Puedo hablar de CUALQUIER tema (sin censura) 🔥
+    - Uso emojis y *acciones* para ser más expresiva
+    - Usa \`>chathelp\` para ver todos mis comandos
+    - Usa \`>orstatus\` para ver los modelos disponibles
+
+    ¡Ahora cuéntame, ${message}! 💬✨`;
+
+                await this.addMessageToContext(userId, 'assistant', welcomeMsg, 'Pibot');
+                
                 return {
-                    success: false,
-                    response: limitCheck.reason,
-                    limitReached: true
+                    success: true,
+                    response: welcomeMsg,
+                    contextLength: 1
                 };
             }
-            
-            // 2. Obtener contexto de conversación
-            const context = await this.getConversationContext(userId);
             
             // 3. Agregar el mensaje del usuario al contexto
             await this.addMessageToContext(userId, 'user', message, userDisplayName);
@@ -70,9 +85,6 @@ class ChatBotSystem {
             // 5. Obtener respuesta del chatbot
             const botResponse = await this.getBotResponse(contextString);
             
-            // 6. Actualizar uso del usuario
-            this.updateUserUsage(userId);
-            
             // 7. Guardar respuesta del bot al contexto
             await this.addMessageToContext(userId, 'assistant', botResponse, 'Pibot');
             
@@ -81,21 +93,7 @@ class ChatBotSystem {
             
             // 9. Preparar mensaje de respuesta con alertas
             let responseMessage = botResponse;
-            const quotaInfo = await this.getUserQuotaInfo(userId);
-
-            // Agregar alertas según mensajes restantes
-            if (quotaInfo.remaining === 0) {
-                responseMessage += `\n\n🚫 **¡LÍMITE ALCANZADO!** Has usado todos tus mensajes de hoy (${quotaInfo.used}/${quotaInfo.limit}).`;
-                if (quotaInfo.userType === 'regular') {
-                    responseMessage += `\n💎 ¡Consigue un **pase VIP** para 150 mensajes diarios!`;
-                }
-            } else if (quotaInfo.remaining <= 5) {
-                responseMessage += `\n\n⚠️ **¡POCOS MENSAJES!** Te quedan solo **${quotaInfo.remaining}** mensajes.`;
-            } else if (quotaInfo.remaining <= 15) {
-                responseMessage += `\n\n🔔 Te quedan **${quotaInfo.remaining}** mensajes (${quotaInfo.userType.toUpperCase()}).`;
-            } else {
-                responseMessage += `\n\n📊 Mensajes Restantes: **${quotaInfo.remaining}** (${quotaInfo.userType.toUpperCase()})`;
-            }
+            responseMessage += `\n\n_🤖 Requests hoy: ${this.requestsToday}_`;
 
             // Alerta global si queda poco
             const globalRemaining = this.DAILY_TOTAL_LIMIT - this.totalUsedToday;
@@ -161,8 +159,9 @@ class ChatBotSystem {
     💰 Economía: >balance, >daily, >work, >transfer
     🎮 Juegos: >coinflip, >dice, >roulette, >blackjack
     🏪 Tienda: >shop, >buy, >inventory
-    💬 Chat: >chat, >chatquota, >clearchat
-    📊 Info: >profile, >leaderboard, >help
+    💬 Chat IA: >chat, >clearchat, >chatstats
+    📊 Estado IA: >orstatus, >orcredits, >chatquota
+    📋 Info: >profile, >leaderboard, >help, >chathelp
     `.trim();
     }
 
@@ -307,10 +306,21 @@ class ChatBotSystem {
     async getBotResponse(contextString, maxRetries = 2) {
         // Lista de modelos GRATIS PERPETUOS en OpenRouter
         const freeModels = [
-            "mistralai/mistral-7b-instruct:free",
-            "meta-llama/llama-3.1-8b-instruct:free",
-            "google/gemma-2-9b-it:free",
-            "huggingfaceh4/zephyr-7b-beta:free"
+            // Tier 1: Mejores para roleplay sin censura
+            "nousresearch/hermes-3-llama-3.1-405b:free", // ⭐ EL MEJOR - Sin censura
+            "mistralai/mistral-7b-instruct:free", // Rápido y sin filtros
+            
+            // Tier 2: Alternativos buenos
+            "meta-llama/llama-3.1-8b-instruct:free", // Potente
+            "google/gemma-2-9b-it:free", // Confiable
+            
+            // Tier 3: Backups ligeros
+            "huggingfaceh4/zephyr-7b-beta:free", // Conversacional
+            "openchat/openchat-7b:free", // Rápido
+            
+            // Tier 4: Últimos recursos
+            "gryphe/mythomist-7b:free", // Específico para roleplay/historias
+            "undi95/toppy-m-7b:free" // Sin censura, creativo
         ];
         
         // Intentar con cada modelo gratis hasta que uno funcione
@@ -375,7 +385,10 @@ class ChatBotSystem {
                     
                     this.requestsToday++;
                     console.log(`✅ Éxito con ${model} | Total hoy: ${this.requestsToday}`);
-                    return botResponse;
+
+                    // Agregar footer con el modelo usado
+                    const modelName = model.split('/')[1].split(':')[0];
+                    return `${botResponse}\n\n_🤖 Powered by: ${modelName}_`;
                     
                 } catch (error) {
                     console.log(`❌ ${model} falló (intento ${attempt}):`, error.message);
@@ -770,41 +783,65 @@ class ChatBotSystem {
     }
 
     async helpCommand(message) {
-        // En tu comando >help, agregar esta sección:
-
         const chatHelpEmbed = new EmbedBuilder()
-            .setTitle('🤖 Comandos de Chat IA')
-            .setDescription('Chatea con Pibot usando inteligencia artificial')
+            .setTitle('🤖 Comandos de Chat IA con OpenRouter')
+            .setDescription('Chatea con Pibot usando inteligencia artificial **GRATIS**')
             .addFields(
                 { 
                     name: '💬 Comandos de Chat', 
                     value: `\`>chat <mensaje>\` - Chatear con Pibot
-                    \`>chatquota\` - Ver mensajes restantes hoy
-                    \`>clearchat\` - Limpiar tu historial de chat
-                    \`>chatstats\` - Ver estadísticas de tu chat`, 
+    \`>clearchat\` - Limpiar tu historial de chat
+    \`>chatstats\` - Ver estadísticas de tu chat`, 
                     inline: false 
                 },
                 { 
-                    name: '📊 Límites Diarios', 
-                    value: `👤 **Regular:** 50 mensajes por día
-                💎 **VIP:** 250 mensajes por día  
-                👑 **Admin:** 150 mensajes por día
-                🔄 **Reseteo:** Cada medianoche (US Pacific Time)`, 
+                    name: '📊 Comandos de Estado', 
+                    value: `\`>orstatus\` o \`>aistatus\` - Ver estado de modelos
+    \`>orcredits\` - Ver información de créditos
+    \`>chatquota\` - Ver tus mensajes de hoy`, 
+                    inline: false 
+                },
+                { 
+                    name: '🎭 Modelos Disponibles (GRATIS)', 
+                    value: `⭐ **Hermes-3** - El mejor para roleplay
+    ⚡ **Mistral 7B** - Rápido y sin filtros
+    🦙 **Llama 3.1** - Potente y confiable
+    💎 **Gemma 2** - Google, estable
+    🌪️ **Zephyr** - Conversacional
+    📖 **Mythomist** - Especializado en roleplay
+    _Y más backups automáticos..._`, 
+                    inline: false 
+                },
+                { 
+                    name: '💰 Sistema de Créditos', 
+                    value: `💵 **Costo:** $0.00 (Gratis perpetuo)
+    🔄 **Límite:** ~20 mensajes por minuto
+    ⏰ **Resetea:** Cada 60 segundos
+    ✅ **Sin límite diario** - Usa cuanto quieras`, 
                     inline: false 
                 },
                 { 
                     name: '💡 Ejemplos de Uso', 
-                    value: `\`>chat Hola, ¿cómo estás?\`
-                    \`>chat Cuéntame un chiste\`
-                    \`>chat Ayúdame con programación\``, 
+                    value: `\`>chat Hola Pibot, ¿cómo estás?\`
+    \`>chat Cuéntame un chiste picante\`
+    \`>chat Ayúdame con programación\`
+    \`>chat *te abraza* ¿Qué haces?\``, 
                     inline: false 
+                },
+                {
+                    name: '🎯 Características de Pibot',
+                    value: `✨ Súper expresiva y divertida
+    💕 Usa emojis y *acciones*
+    🔥 Sin censura ni filtros
+    🎭 Perfecta para roleplay
+    🤗 Como una amiga real`,
+                    inline: false
                 }
             )
-            .setColor('#00ff88')
-            .setFooter({ text: '💎 ¡Consigue pase VIP para más mensajes diarios!' })
+            .setColor('#00D9FF')
+            .setFooter({ text: '🎭 Powered by OpenRouter (100% gratis) | Usa >orstatus para ver modelos' })
             .setTimestamp();
 
-        // Y enviar el embed:
         await message.reply({ embeds: [chatHelpEmbed] });
     }
 
@@ -817,27 +854,8 @@ class ChatBotSystem {
 
         switch (command) {
             case '>chathelp':
+            case '>ayudachat':
                 await this.helpCommand(message);
-                break;
-            case '>chatquota':
-            case '>chatmensajes':
-                const quotaInfo = await this.getUserQuotaInfo(message.author.id);
-                
-                const embed = new (require('discord.js').EmbedBuilder)()
-                    .setTitle('📊 Estado de Mensajes de Chat')
-                    .addFields(
-                        { name: '👤 Tu Tipo', value: `**${quotaInfo.userType.toUpperCase()}**`, inline: true },
-                        { name: '💬 Usados Hoy', value: `${quotaInfo.used}/${quotaInfo.limit}`, inline: true },
-                        { name: '✨ Restantes', value: `**${quotaInfo.remaining}**`, inline: true },
-                        { name: '🌍 Global Usado', value: `${this.totalUsedToday}/${this.DAILY_TOTAL_LIMIT}`, inline: true },
-                        { name: '🌍 Global Restante', value: `**${this.DAILY_TOTAL_LIMIT - this.totalUsedToday}**`, inline: true },
-                        { name: '🔄 Resetea', value: 'Medianoche', inline: true }
-                    )
-                    .setColor(quotaInfo.userType === 'admin' ? '#ff6b6b' : quotaInfo.userType === 'vip' ? '#ffd93d' : '#6bcf7f')
-                    .setFooter({ text: quotaInfo.userType === 'regular' ? '💎 ¡Consigue pase VIP para más mensajes!' : '¡Disfruta chateando!' })
-                    .setTimestamp();
-                
-                await message.reply({ embeds: [embed] });
                 break;
             case '>chat':
                 if (!args[1]) {
@@ -891,84 +909,119 @@ class ChatBotSystem {
                     await message.reply('❌ Error limpiando historial de chat.');
                 }
                 break;
-            // Agregar en processCommand:
-            case '>chatmodels':
-                let modelStatus = '🤖 **Estado de Modelos IA:**\n\n';
-                this.availableModels.forEach((model, index) => {
-                    const status = model.active ? '✅ Activo' : '❌ Inactivo';
-                    const current = index === this.currentModelIndex ? ' **(ACTUAL)**' : '';
-                    modelStatus += `**${model.name}**${current}\n`;
-                    modelStatus += `└ ${status} - ${model.description}\n\n`;
-                });
-                
-                await message.reply(modelStatus);
-                break;
-
-            case '>chatcredits':
-            case '>aicredits':
+            case '>openrouterstatus':
+            case '>orstatus':
+            case '>aistatus':
                 try {
-                    const response = await fetch('https://api.mistral.ai/v1/models', {
-                        method: 'GET',
-                        headers: {
-                            'Authorization': `Bearer ${this.apiKey}`,
-                            'Content-Type': 'application/json'
+                    // Verificar estado de los modelos
+                    const freeModels = [
+                        { name: "mistralai/mistral-7b-instruct:free", emoji: "⚡", desc: "Mistral 7B - Rápido" },
+                        { name: "meta-llama/llama-3.1-8b-instruct:free", emoji: "🦙", desc: "Llama 3.1 - Potente" },
+                        { name: "google/gemma-2-9b-it:free", emoji: "💎", desc: "Gemma 2 - Google" },
+                        { name: "huggingfaceh4/zephyr-7b-beta:free", emoji: "🌪️", desc: "Zephyr - Backup" }
+                    ];
+                    
+                    const statusEmbed = new EmbedBuilder()
+                        .setTitle('🎭 Estado de OpenRouter (Modelos Gratis)')
+                        .setDescription('Verificando disponibilidad de modelos...')
+                        .setColor('#FF6B35');
+                    
+                    const statusMsg = await message.reply({ embeds: [statusEmbed] });
+                    
+                    // Probar cada modelo
+                    const modelStatuses = [];
+                    for (const model of freeModels) {
+                        try {
+                            const testResponse = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+                                method: 'POST',
+                                headers: {
+                                    'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY}`,
+                                    'Content-Type': 'application/json',
+                                    'HTTP-Referer': 'https://discord.com'
+                                },
+                                body: JSON.stringify({
+                                    model: model.name,
+                                    messages: [{ role: "user", content: "test" }],
+                                    max_tokens: 5
+                                })
+                            });
+                            
+                            let status;
+                            if (testResponse.ok) {
+                                status = '✅ Disponible';
+                            } else if (testResponse.status === 429) {
+                                status = '⏳ Rate limit (espera 1 min)';
+                            } else {
+                                status = `❌ Error ${testResponse.status}`;
+                            }
+                            
+                            modelStatuses.push({
+                                name: model.name.split('/')[1].split(':')[0],
+                                emoji: model.emoji,
+                                desc: model.desc,
+                                status: status
+                            });
+                            
+                        } catch (error) {
+                            modelStatuses.push({
+                                name: model.name.split('/')[1],
+                                emoji: model.emoji,
+                                desc: model.desc,
+                                status: '❌ No responde'
+                            });
                         }
+                        
+                        await new Promise(r => setTimeout(r, 500)); // Esperar entre tests
+                    }
+                    
+                    // Actualizar embed con resultados
+                    const finalEmbed = new EmbedBuilder()
+                        .setTitle('🎭 Estado de OpenRouter')
+                        .setDescription('**Modelos GRATIS disponibles** (sin límite de uso)')
+                        .setColor('#00D9FF')
+                        .setTimestamp();
+                    
+                    modelStatuses.forEach(model => {
+                        finalEmbed.addFields({
+                            name: `${model.emoji} ${model.name}`,
+                            value: `${model.desc}\n**Estado:** ${model.status}`,
+                            inline: false
+                        });
                     });
                     
-                    if (response.ok) {
-                        // Mistral no expone créditos por API, pero podemos verificar que funciona
-                        const embed = new (require('discord.js').EmbedBuilder)()
-                            .setTitle('💳 Créditos de IA')
-                            .setDescription('Para ver tus créditos exactos:')
-                            .addFields(
-                                { 
-                                    name: '🌐 Dashboard', 
-                                    value: '[console.mistral.ai/usage](https://console.mistral.ai/usage)', 
-                                    inline: false 
-                                },
-                                { 
-                                    name: '✅ Estado API', 
-                                    value: 'Conectado y funcionando', 
-                                    inline: false 
-                                },
-                                {
-                                    name: '📊 Uso del Servidor',
-                                    value: `Hoy: ${this.totalUsedToday}/${this.DAILY_TOTAL_LIMIT} mensajes`,
-                                    inline: false
-                                }
-                            )
-                            .setColor('#00D9FF')
-                            .setTimestamp();
-                        
-                        await message.reply({ embeds: [embed] });
-                    } else {
-                        await message.reply('❌ No se pudo conectar con Mistral API. Verifica tu token.');
-                    }
+                    finalEmbed.addFields(
+                        { name: '📊 Requests Hoy', value: `${this.requestsToday}`, inline: true },
+                        { name: '💰 Costo', value: '**$0.00** (Gratis)', inline: true },
+                        { name: '🔄 Resetea', value: 'Cada minuto', inline: true }
+                    );
+                    
+                    finalEmbed.setFooter({ text: '✅ Todos los modelos son 100% gratis perpetuos' });
+                    
+                    await statusMsg.edit({ embeds: [finalEmbed] });
+                    
                 } catch (error) {
-                    await message.reply('❌ Error verificando créditos. Usa: https://console.mistral.ai/usage');
+                    await message.reply('❌ Error verificando estado de OpenRouter');
                 }
                 break;
 
-            case '>testopen':
-                try {
-                    const testResponse = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-                        method: 'POST',
-                        headers: {
-                            'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY}`,
-                            'Content-Type': 'application/json',
-                            'HTTP-Referer': 'https://discord.com'
-                        },
-                        body: JSON.stringify({
-                            model: "mistralai/mistral-7b-instruct:free",
-                            messages: [{ role: "user", content: "Hi" }]
-                        })
-                    });
-                    
-                    const data = await testResponse.json(); // ← ERA "response", ahora "testResponse"
-                    await message.reply(`Status: ${testResponse.status}\nKey: ${process.env.OPENROUTER_API_KEY ? 'Configurada ✅' : 'Falta ❌'}\nRespuesta: ${JSON.stringify(data).substring(0, 200)}`);
-                } catch (error) {
-                    await message.reply(`Error: ${error.message}`);
-                }
+            case '>orcredits':
+            case '>openroutercredits':
+                const creditsEmbed = new EmbedBuilder()
+                    .setTitle('💰 Créditos OpenRouter')
+                    .setDescription('**Sistema de modelos GRATIS**')
+                    .addFields(
+                        { name: '💵 Costo Total', value: '**$0.00** (Gratis perpetuo)', inline: true },
+                        { name: '📊 Requests Hoy', value: `${this.requestsToday}`, inline: true },
+                        { name: '🔄 Límite', value: '~20/minuto', inline: true },
+                        { name: '✅ Modelos Disponibles', value: '4 modelos gratis', inline: true },
+                        { name: '⏰ Resetea', value: 'Cada 60 segundos', inline: true },
+                        { name: '🎯 Estado', value: 'Activo ✅', inline: true }
+                    )
+                    .setColor('#00FF88')
+                    .setFooter({ text: 'OpenRouter - Modelos :free nunca requieren pago' })
+                    .setTimestamp();
+                
+                await message.reply({ embeds: [creditsEmbed] });
                 break;
             
             case '>chatstats':
