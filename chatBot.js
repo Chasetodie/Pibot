@@ -1012,6 +1012,7 @@ class ChatBotSystem {
                     
                 } catch (error) {
                     await message.reply('❌ Error verificando estado de OpenRouter');
+                    console.log(error);
                 }
                 break;
 
