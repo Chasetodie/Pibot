@@ -964,7 +964,7 @@ class ChatBotSystem {
                         })
                     });
                     
-                    const data = await response.json();
+                    const data = await testResponse.json(); // ← ERA "response", ahora "testResponse"
                     await message.reply(`Status: ${testResponse.status}\nKey: ${process.env.OPENROUTER_API_KEY ? 'Configurada ✅' : 'Falta ❌'}\nRespuesta: ${JSON.stringify(data).substring(0, 200)}`);
                 } catch (error) {
                     await message.reply(`Error: ${error.message}`);
