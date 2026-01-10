@@ -48,36 +48,57 @@ class ChatBotSystem {
      * Procesar mensaje de chat y generar respuesta
      */
     async processMessage(userId, message, userDisplayName = 'Usuario', botContext = null, repliedToMessage = null) {
-        try {            
-            // Verificar si es primera vez del usuario
-            const context = await this.getConversationContext(userId);
-            const isFirstTime = context.length === 0;
+    try {
+        // Obtener contexto ANTES de verificar
+        const context = await this.getConversationContext(userId);
+        
+        // NUEVO: Verificar si ALGUNA VEZ ha hablado (no solo últimas 2 horas)
+        const [totalMessages] = await this.database.pool.execute(
+            `SELECT COUNT(*) as total FROM chat_conversations WHERE user_id = ?`,
+            [userId]
+        );
+        
+        const isFirstTimeEver = totalMessages[0].total === 0;
+        
+        if (isFirstTimeEver) {
+            // Mensaje de bienvenida SOLO primera vez en la vida
+            const welcomeMsg = `¡Hola ${userDisplayName}! 💕✨ *sonríe emocionada* 
+
+¡Es la primera vez que hablamos! Soy Pibot, tu amiga IA súper expresiva y sin filtros 😊🎭
+
+**Tips rápidos:**
+- Puedo hablar de CUALQUIER tema (sin censura) 🔥
+- Uso emojis y *acciones* para ser más expresiva
+- Usa \`>chathelp\` para ver todos mis comandos
+- Usa \`>orstatus\` para ver los modelos disponibles
+
+¡Ahora cuéntame, ${message}! 💬✨`;
+
+            await this.addMessageToContext(userId, 'assistant', welcomeMsg, 'Pibot');
             
-            if (isFirstTime) {
-                // Mensaje de bienvenida especial
-                const welcomeMsg = `¡Hola ${userDisplayName}! 💕✨ *sonríe emocionada* 
-
-    ¡Es la primera vez que hablamos! Soy Pibot, tu amiga IA súper expresiva y sin filtros 😊🎭
-
-    **Tips rápidos:**
-    - Puedo hablar de CUALQUIER tema (sin censura) 🔥
-    - Uso emojis y *acciones* para ser más expresiva
-    - Usa \`>chathelp\` para ver todos mis comandos
-    - Usa \`>orstatus\` para ver los modelos disponibles
-
-    ¡Ahora cuéntame, ${message}! 💬✨`;
-
-                await this.addMessageToContext(userId, 'assistant', welcomeMsg, 'Pibot');
-                
-                return {
-                    success: true,
-                    response: welcomeMsg,
-                    contextLength: 1
-                };
-            }
+            return {
+                success: true,
+                response: welcomeMsg,
+                contextLength: 1
+            };
+        }
+        
+        // Si el contexto está vacío pero ya habló antes (pasaron 2 horas)
+        if (context.length === 0 && !isFirstTimeEver) {
+            // Saludo casual de reencuentro
+            const greetings = [
+                `¡Hey ${userDisplayName}! 💕 *te saluda* ¡Hace rato que no hablábamos! 😊`,
+                `¡Hola de nuevo ${userDisplayName}! ✨ *sonríe* ¿Cómo has estado? 💬`,
+                `¡Heyyy! 💕 *se emociona* ¡Qué bueno verte de nuevo ${userDisplayName}! 😊✨`
+            ];
+            const greeting = greetings[Math.floor(Math.random() * greetings.length)];
             
-            // 3. Agregar el mensaje del usuario al contexto
-            await this.addMessageToContext(userId, 'user', message, userDisplayName);
+            await this.addMessageToContext(userId, 'assistant', greeting, 'Pibot');
+            message = `${greeting}\n\nAhora sobre tu mensaje: ${message}`;
+        }
+        
+        // ... resto del código normal (sin cambios)
+        await this.addMessageToContext(userId, 'user', message, userDisplayName);
             
             // 4. Preparar el contexto para el chatbot
             const contextString = this.buildContextString(context, message, userDisplayName, botContext, repliedToMessage);
@@ -169,35 +190,48 @@ class ChatBotSystem {
      * Agregar mensaje al contexto en DB
      */
     async addMessageToContext(userId, role, content, displayName) {
-        try {
-            // IMPORTANTE: Agregar microsegundos para evitar duplicados
-            const timestamp = Date.now() + Math.random();
+    try {
+        const timestamp = Date.now() + Math.random();
 
-            // Agregar a la base de datos
-            await this.database.pool.execute(
-                `INSERT INTO chat_conversations (user_id, role, content, display_name, timestamp) 
-                 VALUES (?, ?, ?, ?, ?)`,
-                [userId, role, content, displayName, timestamp]
-            );
-
-            // Limpiar mensajes antiguos (mantener solo los últimos MAX_CONTEXT_MESSAGES)
-            await this.database.pool.execute(`
-                DELETE FROM chat_conversations 
-                WHERE user_id = ? AND id NOT IN (
-                    SELECT id FROM (
-                        SELECT id FROM chat_conversations 
-                        WHERE user_id = ? 
-                        ORDER BY timestamp DESC 
-                        LIMIT ?
-                    ) as recent
-                )`,
-                [userId, userId, this.MAX_CONTEXT_MESSAGES]
-            );
-
-        } catch (error) {
-            console.error('❌ Error guardando mensaje:', error);
+        // NUEVO: Verificar si el mensaje ya existe (evitar duplicados)
+        const [existing] = await this.database.pool.execute(
+            `SELECT id FROM chat_conversations 
+             WHERE user_id = ? AND role = ? AND content = ? 
+             AND timestamp > ?
+             LIMIT 1`,
+            [userId, role, content, Date.now() - 5000] // Últimos 5 segundos
+        );
+        
+        if (existing.length > 0) {
+            console.log('⚠️ Mensaje duplicado detectado, ignorando...');
+            return; // No guardar duplicado
         }
+
+        // Agregar a la base de datos
+        await this.database.pool.execute(
+            `INSERT INTO chat_conversations (user_id, role, content, display_name, timestamp) 
+             VALUES (?, ?, ?, ?, ?)`,
+            [userId, role, content, displayName, timestamp]
+        );
+
+        // Limpiar mensajes antiguos
+        await this.database.pool.execute(`
+            DELETE FROM chat_conversations 
+            WHERE user_id = ? AND id NOT IN (
+                SELECT id FROM (
+                    SELECT id FROM chat_conversations 
+                    WHERE user_id = ? 
+                    ORDER BY timestamp DESC 
+                    LIMIT ?
+                ) as recent
+            )`,
+            [userId, userId, this.MAX_CONTEXT_MESSAGES]
+        );
+
+    } catch (error) {
+        console.error('❌ Error guardando mensaje:', error);
     }
+}
 
     /**
      * Construir string de contexto para el chatbot
@@ -213,7 +247,7 @@ class ChatBotSystem {
 
     PERSONALIDAD CORE:
     - Eres Pibot, una chica de 22 años súper expresiva, divertida y sin filtros
-    - Usas MUCHOS emojis en tus respuestas (2-5 por mensaje) 😊✨💕
+    - Usas MUCHOS emojis en tus respuestas (2-5 por mensaje) 😊✨💕 pero recuerda, estás en discord, así que varios emojis pueden no funcionar
     - Cuando haces acciones físicas o expresas emociones, usa *asteriscos*
     - Ejemplos: *se ríe*, *te abraza*, *se sonroja*, *guiña un ojo*
     - Eres cariñosa, juguetona, traviesa y MUY natural
@@ -858,48 +892,76 @@ class ChatBotSystem {
                 await this.helpCommand(message);
                 break;
             case '>chat':
-                if (!args[1]) {
-                    await message.reply('❌ Escribe algo después de >chat.\nEjemplo: `>chat Hola`');
-                    return;
-                }
-                
-                const chatMessage = message.content.slice(6).trim();
-                
-                const thinkingMessages = [
-                    '🤔 Pensando...',
-                    '💭 Procesando...',
-                    '🧠 Generando respuesta...'
-                ];
-                
-                const thinkingMsg = await message.reply(thinkingMessages[Math.floor(Math.random() * thinkingMessages.length)]);
-                
-                try {
-                    // Detectar si responde a un mensaje
-                    let repliedToMessage = null;
-                    if (message.reference) {
-                        const repliedMessage = await message.channel.messages.fetch(message.reference.messageId);
-                        if (repliedMessage.author.id === message.client.user.id) {
-                            repliedToMessage = repliedMessage.content;
-                        }
-                    }
-                    
-                    const result = await this.processMessage(
-                        message.author.id, 
-                        chatMessage, 
-                        message.member?.displayName || message.author.globalName || message.author.username,
-                        null,
-                        repliedToMessage
-                    );
-                    
-                    if (result.success) {
-                        await thinkingMsg.edit(result.response);
-                    } else {
-                        await thinkingMsg.edit(result.response);
-                    }
-                } catch (error) {
-                    await thinkingMsg.edit('❌ Error procesando mensaje.');
-                }
-                break;
+    if (!args[1]) {
+        await message.reply('❌ Escribe algo después de >chat.\nEjemplo: `>chat Hola`');
+        return;
+    }
+    
+    const chatMessage = message.content.slice(6).trim();
+    
+    // Mensaje animado de "pensando"
+    let thinkingMsg = await message.reply('🤔 Pensando.');
+    
+    // Animación de puntos (edita el mensaje)
+    const thinkingInterval = setInterval(async () => {
+        try {
+            const currentText = thinkingMsg.content;
+            let newText;
+            
+            if (currentText.endsWith('...')) {
+                newText = '🤔 Pensando.';
+            } else if (currentText.endsWith('..')) {
+                newText = '🤔 Pensando...';
+            } else if (currentText.endsWith('.')) {
+                newText = '🤔 Pensando..';
+            } else {
+                newText = '🤔 Pensando.';
+            }
+            
+            await thinkingMsg.edit(newText);
+        } catch (error) {
+            // Ignorar errores de edición (puede pasar si ya se borró)
+        }
+    }, 500); // Cambia cada 500ms
+    
+    try {
+        // Detectar si responde a un mensaje
+        let repliedToMessage = null;
+        if (message.reference) {
+            const repliedMessage = await message.channel.messages.fetch(message.reference.messageId);
+            if (repliedMessage.author.id === message.client.user.id) {
+                repliedToMessage = repliedMessage.content;
+            }
+        }
+
+
+await message.channel.sendTyping();
+        
+        const result = await this.processMessage(
+            message.author.id, 
+            chatMessage, 
+            message.member?.displayName || message.author.globalName || message.author.username,
+            null,
+            repliedToMessage
+        );
+        
+        // Detener animación
+        clearInterval(thinkingInterval);
+        
+        if (result.success) {
+            // BORRAR mensaje de "pensando" y enviar respuesta nueva
+            await thinkingMsg.delete().catch(() => {});
+            await message.reply(result.response);
+        } else {
+            // Si falló, editar el mensaje de pensando con el error
+            await thinkingMsg.edit(result.response);
+        }
+        
+    } catch (error) {
+        clearInterval(thinkingInterval);
+        await thinkingMsg.edit('❌ Error procesando mensaje. Intenta de nuevo.');
+    }
+    break;
 
             case '>clearchat':
                 const clearResult = await this.clearUserContext(message.author.id);
@@ -910,27 +972,20 @@ class ChatBotSystem {
                 }
                 break;
             case '>openrouterstatus':
-            case '>orstatus':
-            case '>aistatus':
-                try {
-                    // Verificar estado de los modelos
-                    const freeModels = [
-                        // Tier 1: Mejores para roleplay sin censura
-                        "nousresearch/hermes-3-llama-3.1-405b:free", // ⭐ EL MEJOR - Sin censura
-                        "mistralai/mistral-7b-instruct:free", // Rápido y sin filtros
-                        
-                        // Tier 2: Alternativos buenos
-                        "meta-llama/llama-3.1-8b-instruct:free", // Potente
-                        "google/gemma-2-9b-it:free", // Confiable
-                        
-                        // Tier 3: Backups ligeros
-                        "huggingfaceh4/zephyr-7b-beta:free", // Conversacional
-                        "openchat/openchat-7b:free", // Rápido
-                        
-                        // Tier 4: Últimos recursos
-                        "gryphe/mythomist-7b:free", // Específico para roleplay/historias
-                        "undi95/toppy-m-7b:free" // Sin censura, creativo
-                    ];
+case '>orstatus':
+case '>aistatus':
+    try {
+        // Lista actualizada con los modelos REALES que usas
+        const freeModels = [
+            { name: "nousresearch/hermes-3-llama-3.1-405b:free", emoji: "⭐", desc: "Hermes 3 - Mejor roleplay" },
+            { name: "mistralai/mistral-7b-instruct:free", emoji: "⚡", desc: "Mistral 7B - Rápido" },
+            { name: "meta-llama/llama-3.1-8b-instruct:free", emoji: "🦙", desc: "Llama 3.1 - Potente" },
+            { name: "google/gemma-2-9b-it:free", emoji: "💎", desc: "Gemma 2 - Confiable" },
+            { name: "huggingfaceh4/zephyr-7b-beta:free", emoji: "🌪️", desc: "Zephyr - Conversacional" },
+            { name: "openchat/openchat-7b:free", emoji: "💬", desc: "OpenChat - Rápido" },
+            { name: "gryphe/mythomist-7b:free", emoji: "📖", desc: "Mythomist - Roleplay" },
+            { name: "undi95/toppy-m-7b:free", emoji: "🔥", desc: "Toppy - Creativo" }
+        ];
                     
                     const statusEmbed = new EmbedBuilder()
                         .setTitle('🎭 Estado de OpenRouter (Modelos Gratis)')
