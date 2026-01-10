@@ -910,10 +910,19 @@ if (existing.length > 0) {
     
     const chatMessage = message.content.slice(6).trim();
     
+    // Emoji animado en el mensaje
+    const emojis = ['⏳', '⌛', '🔄', '⚙️'];
+    let emojiIndex = 0;
+    
+    const processingMsg = await message.reply(`${emojis[0]} Pibot está pensando...`);
+    
+    // Animar el emoji
+    const emojiInterval = setInterval(async () => {
+        emojiIndex = (emojiIndex + 1) % emojis.length;
+        await processingMsg.edit(`${emojis[emojiIndex]} Pibot está pensando...`).catch(() => {});
+    }, 1000);
+    
     try {
-        // Solo mostrar "está escribiendo..." de Discord
-        await message.channel.sendTyping();
-        
         // Detectar si responde a un mensaje
         let repliedToMessage = null;
         if (message.reference) {
@@ -932,7 +941,12 @@ if (existing.length > 0) {
             repliedToMessage
         );
         
-        // Enviar respuesta directamente
+        clearInterval(emojiInterval);
+        
+        // Borrar mensaje de procesando
+        await processingMsg.delete().catch(() => {});
+        
+        // Enviar respuesta
         if (result.success) {
             await message.reply(result.response);
         } else {
@@ -940,8 +954,9 @@ if (existing.length > 0) {
         }
         
     } catch (error) {
+        clearInterval(emojiInterval);
         console.error('❌ Error en chat:', error);
-        await message.reply('❌ Error procesando mensaje. Intenta de nuevo.');
+        await processingMsg.edit('❌ Error procesando mensaje. Intenta de nuevo.');
     }
     break;
 
