@@ -953,75 +953,85 @@ client.on('messageCreate', async (message) => {
     }
 
     // CHATBOT - Solo cuando mencionen al bot
-    if (message.mentions.has(message.client.user)) {
-        const thinkingMessages = [
-            '🤔 Hmm, déjame pensar...',
-            '💭 Procesando...',
-            '🧠 Un momento...',
-            '⚡ Analizando...'
-        ];
-        
-        const thinkingMsg = await message.reply(thinkingMessages[Math.floor(Math.random() * thinkingMessages.length)]);
-        
-        try {
-            let botContext = null;
-            let repliedToMessage = null; // NUEVO
-            
-            // Detectar si está respondiendo a un mensaje
-            if (message.reference) {
-                try {
-                    const repliedMessage = await message.channel.messages.fetch(message.reference.messageId);
-                    
-                    // Si responde a un mensaje del bot
-                    if (repliedMessage.author.id === message.client.user.id) {
-                        const repliedContent = repliedMessage.content.toLowerCase();
-                        const repliedEmbed = repliedMessage.embeds[0];
-                        
-                        // NUEVO: Guardar contenido del mensaje
-                        repliedToMessage = repliedMessage.content || repliedEmbed?.description || '';
-                        
-                        // Detectar tipo de juego/comando
-                        if (repliedContent.includes('coinflip') || repliedEmbed?.title?.toLowerCase().includes('coinflip')) {
-                            botContext = 'El usuario acaba de jugar coinflip y está reaccionando al resultado';
-                        } else if (repliedContent.includes('dice') || repliedEmbed?.title?.toLowerCase().includes('dados')) {
-                            botContext = 'El usuario acaba de jugar dados y está reaccionando al resultado';
-                        } else if (repliedContent.includes('roulette') || repliedEmbed?.title?.toLowerCase().includes('ruleta')) {
-                            botContext = 'El usuario acaba de jugar ruleta y está reaccionando al resultado';
-                        } else if (repliedContent.includes('blackjack') || repliedEmbed?.title?.toLowerCase().includes('blackjack')) {
-                            botContext = 'El usuario acaba de jugar blackjack y está reaccionando al resultado';
-                        } else if (repliedContent.includes('ganaste') || repliedContent.includes('perdiste')) {
-                            botContext = 'El usuario está reaccionando al resultado de un juego (ganó o perdió)';
-                        } else if (repliedContent.includes('balance') || repliedContent.includes('monedas')) {
-                            botContext = 'El usuario está viendo su balance o dinero';
-                        } else {
-                            // Si no es juego, es una conversación normal
-                            botContext = `El usuario está respondiendo a tu mensaje anterior`;
-                        }
+if (message.mentions.has(message.client.user)) {
+    // Emoji animado en el mensaje
+    const emojis = ['⏳', '⌛', '🔄', '⚙️'];
+    let emojiIndex = 0;
+    
+    const processingMsg = await message.reply(`${emojis[0]} Pibot está pensando...`);
+    
+    // Animar el emoji
+    const emojiInterval = setInterval(async () => {
+        emojiIndex = (emojiIndex + 1) % emojis.length;
+        await processingMsg.edit(`${emojis[emojiIndex]} Pibot está pensando...`).catch(() => {});
+    }, 1000);
+
+    try {
+        let botContext = null;
+        let repliedToMessage = null;
+
+        // Detectar si está respondiendo a un mensaje
+        if (message.reference) {
+            try {
+                const repliedMessage = await message.channel.messages.fetch(message.reference.messageId);
+
+                // Si responde a un mensaje del bot
+                if (repliedMessage.author.id === message.client.user.id) {
+                    const repliedContent = repliedMessage.content.toLowerCase();
+                    const repliedEmbed = repliedMessage.embeds[0];
+
+                    // Guardar contenido del mensaje
+                    repliedToMessage = repliedMessage.content || repliedEmbed?.description || '';
+
+                    // Detectar tipo de juego/comando
+                    if (repliedContent.includes('coinflip') || repliedEmbed?.title?.toLowerCase().includes('coinflip')) {
+                        botContext = 'El usuario acaba de jugar coinflip y está reaccionando al resultado';
+                    } else if (repliedContent.includes('dice') || repliedEmbed?.title?.toLowerCase().includes('dados')) {
+                        botContext = 'El usuario acaba de jugar dados y está reaccionando al resultado';
+                    } else if (repliedContent.includes('roulette') || repliedEmbed?.title?.toLowerCase().includes('ruleta')) {
+                        botContext = 'El usuario acaba de jugar ruleta y está reaccionando al resultado';
+                    } else if (repliedContent.includes('blackjack') || repliedEmbed?.title?.toLowerCase().includes('blackjack')) {
+                        botContext = 'El usuario acaba de jugar blackjack y está reaccionando al resultado';
+                    } else if (repliedContent.includes('ganaste') || repliedContent.includes('perdiste')) {
+                        botContext = 'El usuario está reaccionando al resultado de un juego (ganó o perdió)';
+                    } else if (repliedContent.includes('balance') || repliedContent.includes('monedas')) {
+                        botContext = 'El usuario está viendo su balance o dinero';
+                    } else {
+                        botContext = `El usuario está respondiendo a tu mensaje anterior`;
                     }
-                } catch (fetchError) {
-                    console.log('No se pudo obtener mensaje referenciado');
                 }
+            } catch (fetchError) {
+                console.log('No se pudo obtener mensaje referenciado');
             }
-            
-            // Procesar mensaje con contexto Y mensaje referenciado
-            const result = await chatbot.processMessage(
-                message.author.id,
-                message.content,
-                message.member?.displayName || message.author.globalName || message.author.username,
-                botContext,
-                repliedToMessage // NUEVO PARÁMETRO
-            );
-            
-            if (result.success) {
-                await thinkingMsg.edit(result.response);
-            } else {
-                await thinkingMsg.edit(result.response);
-            }
-        } catch (error) {
-            console.error('❌ Error en chatbot:', error);
-            await thinkingMsg.edit('❌ Ups, tuve un problema procesando tu mensaje.');
         }
+
+        // Procesar mensaje con contexto Y mensaje referenciado
+        const result = await chatbot.processMessage(
+            message.author.id,
+            message.content,
+            message.member?.displayName || message.author.globalName || message.author.username,
+            botContext,
+            repliedToMessage
+        );
+
+        // Detener animación
+        clearInterval(emojiInterval);
+        
+        // Borrar mensaje de "pensando" y enviar respuesta nueva
+        await processingMsg.delete().catch(() => {});
+        
+        if (result.success) {
+            await message.reply(result.response);
+        } else {
+            await message.reply(result.response);
+        }
+        
+    } catch (error) {
+        clearInterval(emojiInterval);
+        console.error('❌ Error en chatbot:', error);
+        await processingMsg.edit('❌ Ups, tuve un problema procesando tu mensaje.');
     }
+}
     
     // Verificar memoria antes de procesar
     const memoryUsage = process.memoryUsage();
