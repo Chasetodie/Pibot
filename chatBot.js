@@ -194,18 +194,29 @@ class ChatBotSystem {
         const timestamp = Date.now() + Math.random();
 
         // NUEVO: Verificar si el mensaje ya existe (evitar duplicados)
-        const [existing] = await this.database.pool.execute(
-            `SELECT id FROM chat_conversations 
-             WHERE user_id = ? AND role = ? AND content = ? 
-             AND timestamp > ?
-             LIMIT 1`,
-            [userId, role, content, Date.now() - 5000] // Últimos 5 segundos
-        );
-        
-        if (existing.length > 0) {
-            console.log('⚠️ Mensaje duplicado detectado, ignorando...');
-            return; // No guardar duplicado
-        }
+        // Verificar duplicados de forma diferente (evita error de collation)
+const [existing] = await this.database.pool.execute(
+    `SELECT id FROM chat_conversations 
+     WHERE user_id = ? 
+     AND role = ? 
+     AND timestamp > ?
+     ORDER BY timestamp DESC
+     LIMIT 1`,
+    [userId, role, Date.now() - 2000] // Solo últimos 2 segundos
+);
+
+// Verificar contenido manualmente
+if (existing.length > 0) {
+    const [lastMsg] = await this.database.pool.execute(
+        `SELECT content FROM chat_conversations WHERE id = ?`,
+        [existing[0].id]
+    );
+    
+    if (lastMsg[0].content === content) {
+        console.log('⚠️ Mensaje duplicado detectado, ignorando...');
+        return;
+    }
+}
 
         // Agregar a la base de datos
         await this.database.pool.execute(
@@ -899,32 +910,10 @@ class ChatBotSystem {
     
     const chatMessage = message.content.slice(6).trim();
     
-    // Mensaje animado de "pensando"
-    let thinkingMsg = await message.reply('🤔 Pensando.');
-    
-    // Animación de puntos (edita el mensaje)
-    const thinkingInterval = setInterval(async () => {
-        try {
-            const currentText = thinkingMsg.content;
-            let newText;
-            
-            if (currentText.endsWith('...')) {
-                newText = '🤔 Pensando.';
-            } else if (currentText.endsWith('..')) {
-                newText = '🤔 Pensando...';
-            } else if (currentText.endsWith('.')) {
-                newText = '🤔 Pensando..';
-            } else {
-                newText = '🤔 Pensando.';
-            }
-            
-            await thinkingMsg.edit(newText);
-        } catch (error) {
-            // Ignorar errores de edición (puede pasar si ya se borró)
-        }
-    }, 500); // Cambia cada 500ms
-    
     try {
+        // Solo mostrar "está escribiendo..." de Discord
+        await message.channel.sendTyping();
+        
         // Detectar si responde a un mensaje
         let repliedToMessage = null;
         if (message.reference) {
@@ -933,10 +922,8 @@ class ChatBotSystem {
                 repliedToMessage = repliedMessage.content;
             }
         }
-
-
-await message.channel.sendTyping();
         
+        // Procesar mensaje
         const result = await this.processMessage(
             message.author.id, 
             chatMessage, 
@@ -945,21 +932,16 @@ await message.channel.sendTyping();
             repliedToMessage
         );
         
-        // Detener animación
-        clearInterval(thinkingInterval);
-        
+        // Enviar respuesta directamente
         if (result.success) {
-            // BORRAR mensaje de "pensando" y enviar respuesta nueva
-            await thinkingMsg.delete().catch(() => {});
             await message.reply(result.response);
         } else {
-            // Si falló, editar el mensaje de pensando con el error
-            await thinkingMsg.edit(result.response);
+            await message.reply(result.response);
         }
         
     } catch (error) {
-        clearInterval(thinkingInterval);
-        await thinkingMsg.edit('❌ Error procesando mensaje. Intenta de nuevo.');
+        console.error('❌ Error en chat:', error);
+        await message.reply('❌ Error procesando mensaje. Intenta de nuevo.');
     }
     break;
 
