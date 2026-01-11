@@ -47,7 +47,11 @@ class ChatBotSystem {
 /**
  * Mejorar prompt de imagen automáticamente
  */
-improveImagePrompt(userPrompt) {
+improveImagePrompt(userPrompt, allowNSFW = false) {
+    if (allowNSFW) {
+        return userPrompt;
+}
+
     // Si el prompt es muy corto, agregar detalles
     if (userPrompt.length < 20) {
         return `${userPrompt}, high quality, detailed, professional`;
@@ -1431,6 +1435,67 @@ case '>realistic':
     }
     break;
 
+case '>generarnsfw':
+case '>nsfwimg':
+case '>nsfw':
+    if (!args[1]) {
+        await message.reply('❌ Escribe la descripción de la imagen NSFW.\n**Ejemplo:** `>generarnsfw [tu descripción]`');
+        return;
+    }
+    
+    const nsfwPrompt = message.content.slice(message.content.indexOf(' ') + 1).trim();
+    
+    const nsfwGenEmojis = ['🔥', '💋', '🍑', '✨'];
+    let nsfwGenEmojiIndex = 0;
+    
+    const nsfwGeneratingMsg = await message.reply(`${nsfwGenEmojis[0]} Generando imagen NSFW...`);
+    
+    const nsfwGenEmojiInterval = setInterval(async () => {
+        nsfwGenEmojiIndex = (nsfwGenEmojiIndex + 1) % nsfwGenEmojis.length;
+        await nsfwGeneratingMsg.edit(`${nsfwGenEmojis[nsfwGenEmojiIndex]} Generando imagen NSFW...`).catch(() => {});
+    }, 1000);
+    
+    try {
+        // NO mejorar el prompt para NSFW (mantener original)
+        console.log(`🔥 NSFW prompt: "${nsfwPrompt}"`);
+        
+        const nsfwSeed = Math.floor(Math.random() * 1000000);
+        const encodedNsfwPrompt = encodeURIComponent(nsfwPrompt);
+        
+        // NSFW con safe=false explícito
+        const nsfwImageUrl = `https://image.pollinations.ai/prompt/${encodedNsfwPrompt}?width=1024&height=1024&model=flux&nologo=true&enhance=true&seed=${nsfwSeed}&safe=false`;
+        
+        console.log('🔥 Solicitando generación NSFW...');
+        const nsfwImageResponse = await fetch(nsfwImageUrl);
+        
+        if (!nsfwImageResponse.ok) {
+            throw new Error(`HTTP ${nsfwImageResponse.status}`);
+        }
+        
+        console.log('✅ Imagen NSFW generada, esperando...');
+        await new Promise(r => setTimeout(r, 2000));
+        
+        clearInterval(nsfwGenEmojiInterval);
+        await nsfwGeneratingMsg.delete().catch(() => {});
+        
+        const nsfwEmbed = new EmbedBuilder()
+            .setTitle('🔞 Imagen NSFW Generada')
+            .setDescription(`**Prompt:** ||${nsfwPrompt}||`) // Spoiler tag
+            .setImage(nsfwImageUrl)
+            .setColor('#FF1744')
+            .setFooter({ text: `Solicitado por ${message.author.username} | 🔞 Contenido adulto | Seed: ${nsfwSeed}` })
+            .setTimestamp();
+        
+        await message.reply({ embeds: [nsfwEmbed] });
+        console.log('✅ Imagen NSFW enviada');
+        
+    } catch (error) {
+        clearInterval(nsfwGenEmojiInterval);
+        console.error('❌ Error generando NSFW:', error);
+        await nsfwGeneratingMsg.edit('❌ Error generando imagen NSFW. Intenta de nuevo.');
+    }
+    break;
+
 case '>generarhelp':
 case '>imagehelp':
 case '>imghelp':
@@ -1472,6 +1537,14 @@ case '>ayudaimg':
 📸 **Flux Realism** - Fotografía ultra realista`,
                 inline: false
             },
+{
+    name: '🔞 Contenido NSFW',
+    value: `\`>generarnsfw <descripción>\` - Imágenes para adultos
+⚠️ **Requiere canal NSFW**
+🔥 Sin censura ni filtros
+🔒 Solo disponible en canales +18`,
+    inline: false
+},
             {
                 name: '✨ Mejoras Automáticas',
                 value: `🔄 Traducción español → inglés
