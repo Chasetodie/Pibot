@@ -424,7 +424,7 @@ client.on('guildMemberAdd', async (member) => {
         
         // Crear el embed para el mensaje directo
         const embed = new EmbedBuilder()
-            .setTitle('¡Bienvenido/a a Adictos a las píldoras!')
+            .setTitle('¡Bienvenido/a a Los Pibes del Átomo!')
             .setDescription('Por favor selecciona tu género para asignarte un apodo:')
             .setColor('#5865F2');
         
