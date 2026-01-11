@@ -44,6 +44,58 @@ class ChatBotSystem {
         }
     }
 
+/**
+ * Mejorar prompt de imagen automáticamente
+ */
+improveImagePrompt(userPrompt) {
+    // Si el prompt es muy corto, agregar detalles
+    if (userPrompt.length < 20) {
+        return `${userPrompt}, high quality, detailed, professional`;
+    }
+    
+    // Diccionario de traducción español -> inglés
+    const translations = {
+        'un': 'a', 'una': 'a', 'el': 'the', 'la': 'the',
+        'con': 'with', 'en': 'in', 'de': 'of', 'y': 'and',
+        'gato': 'cat', 'perro': 'dog', 'dragón': 'dragon', 'dragon': 'dragon',
+        'chica': 'girl', 'chico': 'boy', 'mujer': 'woman', 'hombre': 'man',
+        'castillo': 'castle', 'bosque': 'forest', 'playa': 'beach',
+        'montaña': 'mountain', 'montañas': 'mountains', 'ciudad': 'city',
+        'espacio': 'space', 'robot': 'robot', 'astronauta': 'astronaut',
+        'fuego': 'fire', 'agua': 'water', 'luz': 'light', 'oscuro': 'dark',
+        'noche': 'night', 'día': 'day', 'sol': 'sun', 'luna': 'moon',
+        'estrella': 'star', 'estrellas': 'stars', 'nube': 'cloud', 'nubes': 'clouds',
+        'árbol': 'tree', 'árboles': 'trees', 'flor': 'flower', 'flores': 'flowers',
+        'cabello': 'hair', 'pelo': 'hair', 'ojos': 'eyes',
+        'azul': 'blue', 'rojo': 'red', 'verde': 'green', 'amarillo': 'yellow',
+        'rosa': 'pink', 'morado': 'purple', 'negro': 'black', 'blanco': 'white',
+        'naranja': 'orange', 'dorado': 'golden', 'plateado': 'silver',
+        'cielo': 'sky', 'mar': 'sea', 'océano': 'ocean', 'río': 'river',
+        'casa': 'house', 'edificio': 'building', 'calle': 'street',
+        'carro': 'car', 'coche': 'car', 'avión': 'plane', 'barco': 'boat',
+        'grande': 'big', 'pequeño': 'small', 'hermoso': 'beautiful',
+        'bonito': 'beautiful', 'lindo': 'cute', 'fuerte': 'strong',
+        'rápido': 'fast', 'lento': 'slow', 'alto': 'tall', 'bajo': 'short',
+        'volando': 'flying', 'corriendo': 'running', 'nadando': 'swimming',
+        'brillante': 'bright', 'oscuro': 'dark', 'colorido': 'colorful'
+    };
+    
+    let improved = userPrompt.toLowerCase();
+    
+    // Traducir palabras comunes
+    for (const [spanish, english] of Object.entries(translations)) {
+        const regex = new RegExp(`\\b${spanish}\\b`, 'gi');
+        improved = improved.replace(regex, english);
+    }
+    
+    // Agregar calidad si no tiene
+    if (!improved.includes('quality') && !improved.includes('detailed')) {
+        improved += ', high quality, detailed';
+    }
+    
+    return improved;
+}
+
     /**
      * Procesar mensaje de chat y generar respuesta
      */
@@ -1130,39 +1182,59 @@ case '>img':
     
     const imagePrompt = message.content.slice(message.content.indexOf(' ') + 1).trim();
     
-    // Emojis animados
-    const emojisimage = ['🎨', '🖌️', '🎭', '✨'];
-    let emojiIndexi = 0;
+    // Emojis animados - NOMBRES ÚNICOS
+    const genEmojis = ['🎨', '🖌️', '🎭', '✨'];
+    let genEmojiIndex = 0;
     
-    const generatingMsg = await message.reply(`${emojisimage[0]} Generando imagen...`);
+    const generatingMsg = await message.reply(`${genEmojis[0]} Analizando y generando imagen...`);
     
-    const emojiIntervali = setInterval(async () => {
-        emojiIndexi = (emojiIndexi + 1) % emojisimage.length;
-        await generatingMsg.edit(`${emojisimage[emojiIndexi]} Generando imagen...`).catch(() => {});
+    const genEmojiInterval = setInterval(async () => {
+        genEmojiIndex = (genEmojiIndex + 1) % genEmojis.length;
+        await generatingMsg.edit(`${genEmojis[genEmojiIndex]} Analizando y generando imagen...`).catch(() => {});
     }, 1000);
     
     try {
-        // URL de Pollinations (gratis, sin API key)
-        const encodedPrompt = encodeURIComponent(imagePrompt);
-        const imageUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}?width=1024&height=1024&model=flux&nologo=true&enhance=true`;
+        // Mejorar prompt automáticamente
+        const improvedPrompt = this.improveImagePrompt(imagePrompt);
+        console.log(`🎨 Prompt original: "${imagePrompt}"`);
+        console.log(`✨ Prompt mejorado: "${improvedPrompt}"`);
         
-        clearInterval(emojiIntervali);
+        // Seed aleatorio para evitar duplicados
+        const seed = Math.floor(Math.random() * 1000000);
+        const encodedPrompt = encodeURIComponent(improvedPrompt);
+        const imageUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}?width=1024&height=1024&model=flux&nologo=true&enhance=true&seed=${seed}`;
+        
+        // Pre-cargar la imagen
+        console.log('🎨 Solicitando generación...');
+        const imageResponse = await fetch(imageUrl);
+        
+        if (!imageResponse.ok) {
+            throw new Error(`HTTP ${imageResponse.status}`);
+        }
+        
+        console.log('✅ Imagen generada, esperando carga completa...');
+        
+        // Esperar para asegurar que Discord pueda cargarla
+        await new Promise(r => setTimeout(r, 2000));
+        
+        clearInterval(genEmojiInterval);
         await generatingMsg.delete().catch(() => {});
         
         const embed = new EmbedBuilder()
             .setTitle('🎨 Imagen Generada')
-            .setDescription(`**Prompt:** ${imagePrompt}`)
+            .setDescription(`**Tu prompt:** ${imagePrompt}\n**Optimizado:** _${improvedPrompt}_`)
             .setImage(imageUrl)
             .setColor('#FF6B9D')
-            .setFooter({ text: `Solicitado por ${message.author.username} | Pollinations AI` })
+            .setFooter({ text: `Solicitado por ${message.author.username} | Flux | Seed: ${seed}` })
             .setTimestamp();
         
         await message.reply({ embeds: [embed] });
+        console.log('✅ Imagen enviada exitosamente');
         
     } catch (error) {
-        clearInterval(emojiIntervali);
+        clearInterval(genEmojiInterval);
         console.error('❌ Error generando imagen:', error);
-        await generatingMsg.edit('❌ Error generando la imagen. Intenta de nuevo.');
+        await generatingMsg.edit('❌ Error generando la imagen. El servicio puede estar ocupado, intenta de nuevo en 10 segundos.');
     }
     break;
 
@@ -1176,37 +1248,57 @@ case '>imganime':
     
     const animePrompt = message.content.slice(message.content.indexOf(' ') + 1).trim();
     
-    const animeEmojis = ['🎨', '🖌️', '🎭', '✨'];
-    let animeEmojiIndex = 0;
+    // Emojis animados - NOMBRES ÚNICOS
+    const animeGenEmojis = ['🎌', '✨', '🎨', '💫'];
+    let animeGenEmojiIndex = 0;
     
-    const animeGeneratingMsg = await message.reply(`${animeEmojis[0]} Generando imagen anime...`);
+    const animeGeneratingMsg = await message.reply(`${animeGenEmojis[0]} Generando imagen anime...`);
     
-    const animeEmojiInterval = setInterval(async () => {
-        animeEmojiIndex = (animeEmojiIndex + 1) % animeEmojis.length;
-        await animeGeneratingMsg.edit(`${animeEmojis[animeEmojiIndex]} Generando imagen anime...`).catch(() => {});
+    const animeGenEmojiInterval = setInterval(async () => {
+        animeGenEmojiIndex = (animeGenEmojiIndex + 1) % animeGenEmojis.length;
+        await animeGeneratingMsg.edit(`${animeGenEmojis[animeGenEmojiIndex]} Generando imagen anime...`).catch(() => {});
     }, 1000);
     
     try {
-        const encodedAnimePrompt = encodeURIComponent(animePrompt);
-        const animeImageUrl = `https://image.pollinations.ai/prompt/${encodedAnimePrompt}?width=1024&height=1024&model=flux-anime&nologo=true&enhance=true`;
+        // Mejorar prompt
+        const improvedAnimePrompt = this.improveImagePrompt(animePrompt);
+        console.log(`🎌 Anime prompt original: "${animePrompt}"`);
+        console.log(`✨ Anime prompt mejorado: "${improvedAnimePrompt}"`);
         
-        clearInterval(animeEmojiInterval);
+        // Seed aleatorio
+        const animeSeed = Math.floor(Math.random() * 1000000);
+        const encodedAnimePrompt = encodeURIComponent(improvedAnimePrompt);
+        const animeImageUrl = `https://image.pollinations.ai/prompt/${encodedAnimePrompt}?width=1024&height=1024&model=flux-anime&nologo=true&enhance=true&seed=${animeSeed}`;
+        
+        // Pre-cargar
+        console.log('🎌 Solicitando generación anime...');
+        const animeImageResponse = await fetch(animeImageUrl);
+        
+        if (!animeImageResponse.ok) {
+            throw new Error(`HTTP ${animeImageResponse.status}`);
+        }
+        
+        console.log('✅ Imagen anime generada, esperando...');
+        await new Promise(r => setTimeout(r, 2000));
+        
+        clearInterval(animeGenEmojiInterval);
         await animeGeneratingMsg.delete().catch(() => {});
         
         const animeEmbed = new EmbedBuilder()
             .setTitle('🎌 Imagen Anime Generada')
-            .setDescription(`**Prompt:** ${animePrompt}`)
+            .setDescription(`**Tu prompt:** ${animePrompt}\n**Optimizado:** _${improvedAnimePrompt}_`)
             .setImage(animeImageUrl)
             .setColor('#FF69B4')
-            .setFooter({ text: `Solicitado por ${message.author.username} | Flux Anime` })
+            .setFooter({ text: `Solicitado por ${message.author.username} | Flux Anime | Seed: ${animeSeed}` })
             .setTimestamp();
         
         await message.reply({ embeds: [animeEmbed] });
+        console.log('✅ Imagen anime enviada');
         
     } catch (error) {
-        clearInterval(animeEmojiInterval);
-        console.error('❌ Error:', error);
-        await animeGeneratingMsg.edit('❌ Error generando imagen anime.');
+        clearInterval(animeGenEmojiInterval);
+        console.error('❌ Error generando anime:', error);
+        await animeGeneratingMsg.edit('❌ Error generando imagen anime. Intenta de nuevo.');
     }
     break;
 
@@ -1220,37 +1312,57 @@ case '>img3d':
     
     const prompt3d = message.content.slice(message.content.indexOf(' ') + 1).trim();
     
-    const emojis3d = ['🎨', '🖌️', '🎭', '✨'];
-    let emojiIndex3d = 0;
+    // Emojis animados - NOMBRES ÚNICOS
+    const gen3dEmojis = ['🎮', '🎲', '🎯', '⚙️'];
+    let gen3dEmojiIndex = 0;
     
-    const generating3dMsg = await message.reply(`${emojis3d[0]} Generando imagen 3D...`);
+    const generating3dMsg = await message.reply(`${gen3dEmojis[0]} Generando imagen 3D...`);
     
-    const emojiInterval3d = setInterval(async () => {
-        emojiIndex3d = (emojiIndex3d + 1) % emojis3d.length;
-        await generating3dMsg.edit(`${emojis3d[emojiIndex3d]} Generando imagen 3D...`).catch(() => {});
+    const gen3dEmojiInterval = setInterval(async () => {
+        gen3dEmojiIndex = (gen3dEmojiIndex + 1) % gen3dEmojis.length;
+        await generating3dMsg.edit(`${gen3dEmojis[gen3dEmojiIndex]} Generando imagen 3D...`).catch(() => {});
     }, 1000);
     
     try {
-        const encodedPrompt3d = encodeURIComponent(prompt3d);
-        const imageUrl3d = `https://image.pollinations.ai/prompt/${encodedPrompt3d}?width=1024&height=1024&model=flux-3d&nologo=true&enhance=true`;
+        // Mejorar prompt
+        const improved3dPrompt = this.improveImagePrompt(prompt3d);
+        console.log(`🎮 3D prompt original: "${prompt3d}"`);
+        console.log(`✨ 3D prompt mejorado: "${improved3dPrompt}"`);
         
-        clearInterval(emojiInterval3d);
+        // Seed aleatorio
+        const seed3d = Math.floor(Math.random() * 1000000);
+        const encoded3dPrompt = encodeURIComponent(improved3dPrompt);
+        const imageUrl3d = `https://image.pollinations.ai/prompt/${encoded3dPrompt}?width=1024&height=1024&model=flux-3d&nologo=true&enhance=true&seed=${seed3d}`;
+        
+        // Pre-cargar
+        console.log('🎮 Solicitando generación 3D...');
+        const imageResponse3d = await fetch(imageUrl3d);
+        
+        if (!imageResponse3d.ok) {
+            throw new Error(`HTTP ${imageResponse3d.status}`);
+        }
+        
+        console.log('✅ Imagen 3D generada, esperando...');
+        await new Promise(r => setTimeout(r, 2000));
+        
+        clearInterval(gen3dEmojiInterval);
         await generating3dMsg.delete().catch(() => {});
         
         const embed3d = new EmbedBuilder()
             .setTitle('🎮 Imagen 3D Generada')
-            .setDescription(`**Prompt:** ${prompt3d}`)
+            .setDescription(`**Tu prompt:** ${prompt3d}\n**Optimizado:** _${improved3dPrompt}_`)
             .setImage(imageUrl3d)
             .setColor('#00D9FF')
-            .setFooter({ text: `Solicitado por ${message.author.username} | Flux 3D` })
+            .setFooter({ text: `Solicitado por ${message.author.username} | Flux 3D | Seed: ${seed3d}` })
             .setTimestamp();
         
         await message.reply({ embeds: [embed3d] });
+        console.log('✅ Imagen 3D enviada');
         
     } catch (error) {
-        clearInterval(emojiInterval3d);
-        console.error('❌ Error:', error);
-        await generating3dMsg.edit('❌ Error generando imagen 3D.');
+        clearInterval(gen3dEmojiInterval);
+        console.error('❌ Error generando 3D:', error);
+        await generating3dMsg.edit('❌ Error generando imagen 3D. Intenta de nuevo.');
     }
     break;
 
@@ -1265,37 +1377,57 @@ case '>realistic':
     
     const realisticPrompt = message.content.slice(message.content.indexOf(' ') + 1).trim();
     
-    const realisticEmojis = ['🎨', '🖌️', '🎭', '✨'];
-    let realisticEmojiIndex = 0;
+    // Emojis animados - NOMBRES ÚNICOS
+    const realisticGenEmojis = ['📸', '📷', '🌅', '✨'];
+    let realisticGenEmojiIndex = 0;
     
-    const realisticGeneratingMsg = await message.reply(`${realisticEmojis[0]} Generando imagen realista...`);
+    const realisticGeneratingMsg = await message.reply(`${realisticGenEmojis[0]} Generando imagen realista...`);
     
-    const realisticEmojiInterval = setInterval(async () => {
-        realisticEmojiIndex = (realisticEmojiIndex + 1) % realisticEmojis.length;
-        await realisticGeneratingMsg.edit(`${realisticEmojis[realisticEmojiIndex]} Generando imagen realista...`).catch(() => {});
+    const realisticGenEmojiInterval = setInterval(async () => {
+        realisticGenEmojiIndex = (realisticGenEmojiIndex + 1) % realisticGenEmojis.length;
+        await realisticGeneratingMsg.edit(`${realisticGenEmojis[realisticGenEmojiIndex]} Generando imagen realista...`).catch(() => {});
     }, 1000);
     
     try {
-        const encodedRealisticPrompt = encodeURIComponent(realisticPrompt);
-        const realisticImageUrl = `https://image.pollinations.ai/prompt/${encodedRealisticPrompt}?width=1024&height=1024&model=flux-realism&nologo=true&enhance=true`;
+        // Mejorar prompt
+        const improvedRealisticPrompt = this.improveImagePrompt(realisticPrompt);
+        console.log(`📸 Realistic prompt original: "${realisticPrompt}"`);
+        console.log(`✨ Realistic prompt mejorado: "${improvedRealisticPrompt}"`);
         
-        clearInterval(realisticEmojiInterval);
+        // Seed aleatorio
+        const realisticSeed = Math.floor(Math.random() * 1000000);
+        const encodedRealisticPrompt = encodeURIComponent(improvedRealisticPrompt);
+        const realisticImageUrl = `https://image.pollinations.ai/prompt/${encodedRealisticPrompt}?width=1024&height=1024&model=flux-realism&nologo=true&enhance=true&seed=${realisticSeed}`;
+        
+        // Pre-cargar
+        console.log('📸 Solicitando generación realista...');
+        const realisticImageResponse = await fetch(realisticImageUrl);
+        
+        if (!realisticImageResponse.ok) {
+            throw new Error(`HTTP ${realisticImageResponse.status}`);
+        }
+        
+        console.log('✅ Imagen realista generada, esperando...');
+        await new Promise(r => setTimeout(r, 2000));
+        
+        clearInterval(realisticGenEmojiInterval);
         await realisticGeneratingMsg.delete().catch(() => {});
         
         const realisticEmbed = new EmbedBuilder()
             .setTitle('📸 Imagen Realista Generada')
-            .setDescription(`**Prompt:** ${realisticPrompt}`)
+            .setDescription(`**Tu prompt:** ${realisticPrompt}\n**Optimizado:** _${improvedRealisticPrompt}_`)
             .setImage(realisticImageUrl)
             .setColor('#FFD700')
-            .setFooter({ text: `Solicitado por ${message.author.username} | Flux Realism` })
+            .setFooter({ text: `Solicitado por ${message.author.username} | Flux Realism | Seed: ${realisticSeed}` })
             .setTimestamp();
         
         await message.reply({ embeds: [realisticEmbed] });
+        console.log('✅ Imagen realista enviada');
         
     } catch (error) {
-        clearInterval(realisticEmojiInterval);
-        console.error('❌ Error:', error);
-        await realisticGeneratingMsg.edit('❌ Error generando imagen realista.');
+        clearInterval(realisticGenEmojiInterval);
+        console.error('❌ Error generando realista:', error);
+        await realisticGeneratingMsg.edit('❌ Error generando imagen realista. Intenta de nuevo.');
     }
     break;
 
@@ -1328,8 +1460,8 @@ case '>ayudaimg':
                 value: `✅ **Sé específico:** Describe colores, estilos, ambiente
 ✅ **Usa detalles:** "cabello largo azul" en vez de solo "chica"
 ✅ **Menciona iluminación:** "luz de luna", "atardecer", "neón"
-✅ **Añade calidad:** "high quality", "detailed", "4k"
-⚠️ **Escribe en inglés** para resultados óptimos`,
+✅ **Puedes escribir en español** - se traduce automáticamente
+⚡ **El bot mejora tu prompt** - añade detalles de calidad`,
                 inline: false
             },
             {
@@ -1338,6 +1470,14 @@ case '>ayudaimg':
 🎌 **Flux Anime** - Estilo manga/anime japonés
 🎮 **Flux 3D** - Renderizado 3D tipo Pixar
 📸 **Flux Realism** - Fotografía ultra realista`,
+                inline: false
+            },
+            {
+                name: '✨ Mejoras Automáticas',
+                value: `🔄 Traducción español → inglés
+🎯 Optimización de prompts
+🌟 Añade "high quality, detailed" automáticamente
+🎲 Seed aleatorio (imágenes únicas siempre)`,
                 inline: false
             },
             {
