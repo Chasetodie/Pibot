@@ -1131,14 +1131,14 @@ case '>img':
     const imagePrompt = message.content.slice(message.content.indexOf(' ') + 1).trim();
     
     // Emojis animados
-    const emojis = ['🎨', '🖌️', '🎭', '✨'];
+    const emojisimage = ['🎨', '🖌️', '🎭', '✨'];
     let emojiIndex = 0;
     
-    const generatingMsg = await message.reply(`${emojis[0]} Generando imagen...`);
+    const generatingMsg = await message.reply(`${emojisimage[0]} Generando imagen...`);
     
     const emojiInterval = setInterval(async () => {
-        emojiIndex = (emojiIndex + 1) % emojis.length;
-        await generatingMsg.edit(`${emojis[emojiIndex]} Generando imagen...`).catch(() => {});
+        emojiIndex = (emojiIndex + 1) % emojisimage.length;
+        await generatingMsg.edit(`${emojisimage[emojiIndex]} Generando imagen...`).catch(() => {});
     }, 1000);
     
     try {
