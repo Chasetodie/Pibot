@@ -1136,7 +1136,7 @@ case '>img':
     
     const generatingMsg = await message.reply(`${emojisimage[0]} Generando imagen...`);
     
-    const emojiInterval = setInterval(async () => {
+    const emojiIntervali = setInterval(async () => {
         emojiIndexi = (emojiIndexi + 1) % emojisimage.length;
         await generatingMsg.edit(`${emojisimage[emojiIndexi]} Generando imagen...`).catch(() => {});
     }, 1000);
@@ -1160,7 +1160,7 @@ case '>img':
         await message.reply({ embeds: [embed] });
         
     } catch (error) {
-        clearInterval(emojiInterval);
+        clearInterval(emojiIntervali);
         console.error('❌ Error generando imagen:', error);
         await generatingMsg.edit('❌ Error generando la imagen. Intenta de nuevo.');
     }
