@@ -1146,7 +1146,7 @@ case '>img':
         const encodedPrompt = encodeURIComponent(imagePrompt);
         const imageUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}?width=1024&height=1024&model=flux&nologo=true&enhance=true`;
         
-        clearInterval(emojiInterval);
+        clearInterval(emojiIntervali);
         await generatingMsg.delete().catch(() => {});
         
         const embed = new EmbedBuilder()
