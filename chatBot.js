@@ -175,16 +175,17 @@ class ChatBotSystem {
     }
 
     getAvailableCommands() {
-        return `
-    COMANDOS DISPONIBLES:
-    💰 Economía: >balance, >daily, >work, >transfer
-    🎮 Juegos: >coinflip, >dice, >roulette, >blackjack
-    🏪 Tienda: >shop, >buy, >inventory
-    💬 Chat IA: >chat, >clearchat, >chatstats
-    📊 Estado IA: >orstatus, >orcredits, >chatquota
-    📋 Info: >profile, >leaderboard, >help, >chathelp
-    `.trim();
-    }
+    return `
+COMANDOS DISPONIBLES:
+💰 Economía: >balance, >daily, >work, >transfer
+🎮 Juegos: >coinflip, >dice, >roulette, >blackjack
+🏪 Tienda: >shop, >buy, >inventory
+💬 Chat IA: >chat, >clearchat, >chatstats
+🎨 Imágenes IA: >generar, >generaranime, >generar3d, >generarrealista
+📊 Estado: >orstatus, >orcredits, >chatquota, >generarhelp
+📋 Info: >profile, >leaderboard, >help
+`.trim();
+}
 
     /**
      * Agregar mensaje al contexto en DB
@@ -886,14 +887,21 @@ REGLAS CRÍTICAS DE CONVERSACIÓN:
     🎭 Perfecta para roleplay
     🤗 Como una amiga real`,
                     inline: false
-                }
-            )
-            .setColor('#00D9FF')
-            .setFooter({ text: '🎭 Powered by OpenRouter (100% gratis) | Usa >orstatus para ver modelos' })
-            .setTimestamp();
+                },
+{
+                name: '🎨 Generación de Imágenes',
+                value: `\`>generar <descripción>\` - Generar imagen con IA
+\`>generarhelp\` - Ver guía completa de imágenes
+_Totalmente gratis, sin límites_`,
+                inline: false
+            }
+        )
+        .setColor('#00D9FF')
+        .setFooter({ text: '🎭 OpenRouter Chat + 🎨 Pollinations Imágenes | 100% gratis' })
+        .setTimestamp();
 
-        await message.reply({ embeds: [chatHelpEmbed] });
-    }
+    await message.reply({ embeds: [chatHelpEmbed] });
+}
 
     /**
      * Procesar comando de chat
@@ -1111,6 +1119,251 @@ case '>aistatus':
                     await message.reply('📝 No tienes historial de chat aún. ¡Usa `>chat` para empezar una conversación!');
                 }
                 break;
+case '>generar':
+case '>imagen':
+case '>generate':
+case '>img':
+    if (!args[1]) {
+        await message.reply('❌ Escribe qué imagen quieres generar.\n**Ejemplo:** `>generar un gato astronauta en el espacio`\n**Tip:** Usa `>generarhelp` para ver todos los estilos disponibles.');
+        return;
+    }
+    
+    const imagePrompt = message.content.slice(message.content.indexOf(' ') + 1).trim();
+    
+    // Emojis animados
+    const emojis = ['🎨', '🖌️', '🎭', '✨'];
+    let emojiIndex = 0;
+    
+    const generatingMsg = await message.reply(`${emojis[0]} Generando imagen...`);
+    
+    const emojiInterval = setInterval(async () => {
+        emojiIndex = (emojiIndex + 1) % emojis.length;
+        await generatingMsg.edit(`${emojis[emojiIndex]} Generando imagen...`).catch(() => {});
+    }, 1000);
+    
+    try {
+        // URL de Pollinations (gratis, sin API key)
+        const encodedPrompt = encodeURIComponent(imagePrompt);
+        const imageUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}?width=1024&height=1024&model=flux&nologo=true&enhance=true`;
+        
+        clearInterval(emojiInterval);
+        await generatingMsg.delete().catch(() => {});
+        
+        const embed = new EmbedBuilder()
+            .setTitle('🎨 Imagen Generada')
+            .setDescription(`**Prompt:** ${imagePrompt}`)
+            .setImage(imageUrl)
+            .setColor('#FF6B9D')
+            .setFooter({ text: `Solicitado por ${message.author.username} | Pollinations AI` })
+            .setTimestamp();
+        
+        await message.reply({ embeds: [embed] });
+        
+    } catch (error) {
+        clearInterval(emojiInterval);
+        console.error('❌ Error generando imagen:', error);
+        await generatingMsg.edit('❌ Error generando la imagen. Intenta de nuevo.');
+    }
+    break;
+
+case '>generaranime':
+case '>anime':
+case '>imganime':
+    if (!args[1]) {
+        await message.reply('❌ Escribe qué imagen anime quieres.\n**Ejemplo:** `>generaranime una chica con cabello rosa y ojos azules`');
+        return;
+    }
+    
+    const animePrompt = message.content.slice(message.content.indexOf(' ') + 1).trim();
+    
+    const animeEmojis = ['🎨', '🖌️', '🎭', '✨'];
+    let animeEmojiIndex = 0;
+    
+    const animeGeneratingMsg = await message.reply(`${animeEmojis[0]} Generando imagen anime...`);
+    
+    const animeEmojiInterval = setInterval(async () => {
+        animeEmojiIndex = (animeEmojiIndex + 1) % animeEmojis.length;
+        await animeGeneratingMsg.edit(`${animeEmojis[animeEmojiIndex]} Generando imagen anime...`).catch(() => {});
+    }, 1000);
+    
+    try {
+        const encodedAnimePrompt = encodeURIComponent(animePrompt);
+        const animeImageUrl = `https://image.pollinations.ai/prompt/${encodedAnimePrompt}?width=1024&height=1024&model=flux-anime&nologo=true&enhance=true`;
+        
+        clearInterval(animeEmojiInterval);
+        await animeGeneratingMsg.delete().catch(() => {});
+        
+        const animeEmbed = new EmbedBuilder()
+            .setTitle('🎌 Imagen Anime Generada')
+            .setDescription(`**Prompt:** ${animePrompt}`)
+            .setImage(animeImageUrl)
+            .setColor('#FF69B4')
+            .setFooter({ text: `Solicitado por ${message.author.username} | Flux Anime` })
+            .setTimestamp();
+        
+        await message.reply({ embeds: [animeEmbed] });
+        
+    } catch (error) {
+        clearInterval(animeEmojiInterval);
+        console.error('❌ Error:', error);
+        await animeGeneratingMsg.edit('❌ Error generando imagen anime.');
+    }
+    break;
+
+case '>generar3d':
+case '>3d':
+case '>img3d':
+    if (!args[1]) {
+        await message.reply('❌ Escribe qué imagen 3D quieres.\n**Ejemplo:** `>generar3d un castillo medieval en las nubes`');
+        return;
+    }
+    
+    const prompt3d = message.content.slice(message.content.indexOf(' ') + 1).trim();
+    
+    const emojis3d = ['🎨', '🖌️', '🎭', '✨'];
+    let emojiIndex3d = 0;
+    
+    const generating3dMsg = await message.reply(`${emojis3d[0]} Generando imagen 3D...`);
+    
+    const emojiInterval3d = setInterval(async () => {
+        emojiIndex3d = (emojiIndex3d + 1) % emojis3d.length;
+        await generating3dMsg.edit(`${emojis3d[emojiIndex3d]} Generando imagen 3D...`).catch(() => {});
+    }, 1000);
+    
+    try {
+        const encodedPrompt3d = encodeURIComponent(prompt3d);
+        const imageUrl3d = `https://image.pollinations.ai/prompt/${encodedPrompt3d}?width=1024&height=1024&model=flux-3d&nologo=true&enhance=true`;
+        
+        clearInterval(emojiInterval3d);
+        await generating3dMsg.delete().catch(() => {});
+        
+        const embed3d = new EmbedBuilder()
+            .setTitle('🎮 Imagen 3D Generada')
+            .setDescription(`**Prompt:** ${prompt3d}`)
+            .setImage(imageUrl3d)
+            .setColor('#00D9FF')
+            .setFooter({ text: `Solicitado por ${message.author.username} | Flux 3D` })
+            .setTimestamp();
+        
+        await message.reply({ embeds: [embed3d] });
+        
+    } catch (error) {
+        clearInterval(emojiInterval3d);
+        console.error('❌ Error:', error);
+        await generating3dMsg.edit('❌ Error generando imagen 3D.');
+    }
+    break;
+
+case '>generarrealista':
+case '>realista':
+case '>imgrealista':
+case '>realistic':
+    if (!args[1]) {
+        await message.reply('❌ Escribe qué imagen realista quieres.\n**Ejemplo:** `>generarrealista un paisaje de montañas al atardecer`');
+        return;
+    }
+    
+    const realisticPrompt = message.content.slice(message.content.indexOf(' ') + 1).trim();
+    
+    const realisticEmojis = ['🎨', '🖌️', '🎭', '✨'];
+    let realisticEmojiIndex = 0;
+    
+    const realisticGeneratingMsg = await message.reply(`${realisticEmojis[0]} Generando imagen realista...`);
+    
+    const realisticEmojiInterval = setInterval(async () => {
+        realisticEmojiIndex = (realisticEmojiIndex + 1) % realisticEmojis.length;
+        await realisticGeneratingMsg.edit(`${realisticEmojis[realisticEmojiIndex]} Generando imagen realista...`).catch(() => {});
+    }, 1000);
+    
+    try {
+        const encodedRealisticPrompt = encodeURIComponent(realisticPrompt);
+        const realisticImageUrl = `https://image.pollinations.ai/prompt/${encodedRealisticPrompt}?width=1024&height=1024&model=flux-realism&nologo=true&enhance=true`;
+        
+        clearInterval(realisticEmojiInterval);
+        await realisticGeneratingMsg.delete().catch(() => {});
+        
+        const realisticEmbed = new EmbedBuilder()
+            .setTitle('📸 Imagen Realista Generada')
+            .setDescription(`**Prompt:** ${realisticPrompt}`)
+            .setImage(realisticImageUrl)
+            .setColor('#FFD700')
+            .setFooter({ text: `Solicitado por ${message.author.username} | Flux Realism` })
+            .setTimestamp();
+        
+        await message.reply({ embeds: [realisticEmbed] });
+        
+    } catch (error) {
+        clearInterval(realisticEmojiInterval);
+        console.error('❌ Error:', error);
+        await realisticGeneratingMsg.edit('❌ Error generando imagen realista.');
+    }
+    break;
+
+case '>generarhelp':
+case '>imagehelp':
+case '>imghelp':
+case '>ayudaimg':
+    const imgHelpEmbed = new EmbedBuilder()
+        .setTitle('🎨 Comandos de Generación de Imágenes IA')
+        .setDescription('Genera imágenes increíbles con inteligencia artificial **100% GRATIS**')
+        .addFields(
+            { 
+                name: '🖼️ Comandos Disponibles', 
+                value: `\`>generar <descripción>\` - Imagen general (Flux)
+\`>generaranime <descripción>\` - Estilo anime/manga
+\`>generar3d <descripción>\` - Estilo 3D renderizado
+\`>generarrealista <descripción>\` - Ultra realista fotográfico`,
+                inline: false
+            },
+            {
+                name: '💡 Ejemplos de Uso',
+                value: `\`>generar un dragón de fuego volando sobre montañas\`
+\`>generaranime una chica con cabello rosa y kimono\`
+\`>generar3d un robot futurista en una ciudad cyberpunk\`
+\`>generarrealista un atardecer en la playa con palmeras\``,
+                inline: false
+            },
+            {
+                name: '⚙️ Tips para Mejores Resultados',
+                value: `✅ **Sé específico:** Describe colores, estilos, ambiente
+✅ **Usa detalles:** "cabello largo azul" en vez de solo "chica"
+✅ **Menciona iluminación:** "luz de luna", "atardecer", "neón"
+✅ **Añade calidad:** "high quality", "detailed", "4k"
+⚠️ **Escribe en inglés** para resultados óptimos`,
+                inline: false
+            },
+            {
+                name: '🎯 Estilos Disponibles',
+                value: `🎨 **Flux** - Versátil, alta calidad
+🎌 **Flux Anime** - Estilo manga/anime japonés
+🎮 **Flux 3D** - Renderizado 3D tipo Pixar
+📸 **Flux Realism** - Fotografía ultra realista`,
+                inline: false
+            },
+            {
+                name: '💰 Información de Uso',
+                value: `**Costo:** $0.00 (Gratis perpetuo)
+**Límites:** Sin límites diarios
+**Resolución:** 1024x1024 px
+**Tiempo:** 5-15 segundos por imagen`,
+                inline: false
+            },
+            {
+                name: '🚀 Atajos Rápidos',
+                value: `\`>img\` = \`>generar\`
+\`>anime\` = \`>generaranime\`
+\`>3d\` = \`>generar3d\`
+\`>realista\` = \`>generarrealista\``,
+                inline: false
+            }
+        )
+        .setColor('#FF6B9D')
+        .setFooter({ text: '🎨 Powered by Pollinations AI | 100% gratis sin límites' })
+        .setThumbnail('https://image.pollinations.ai/prompt/AI%20art%20generation%20logo?width=256&height=256&model=flux&nologo=true')
+        .setTimestamp();
+    
+    await message.reply({ embeds: [imgHelpEmbed] });
+    break;
         }
     }
 }
