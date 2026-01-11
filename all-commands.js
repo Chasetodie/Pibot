@@ -1941,6 +1941,9 @@ class AllCommands {
                 case '>shopstats':
                     await this.shopStatsCommand(message);
                     break;
+                case '>hola':
+                        await message.reply('Hola, Como estás? \n\nRIP Pibe10 Bot 🥀');
+                        break;
                 case '>help':
                     await this.showHelp(message);
                     break;
