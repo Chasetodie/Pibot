@@ -1132,13 +1132,13 @@ case '>img':
     
     // Emojis animados
     const emojisimage = ['🎨', '🖌️', '🎭', '✨'];
-    let emojiIndex = 0;
+    let emojiIndexi = 0;
     
     const generatingMsg = await message.reply(`${emojisimage[0]} Generando imagen...`);
     
     const emojiInterval = setInterval(async () => {
-        emojiIndex = (emojiIndex + 1) % emojisimage.length;
-        await generatingMsg.edit(`${emojisimage[emojiIndex]} Generando imagen...`).catch(() => {});
+        emojiIndexi = (emojiIndexi + 1) % emojisimage.length;
+        await generatingMsg.edit(`${emojisimage[emojiIndexi]} Generando imagen...`).catch(() => {});
     }, 1000);
     
     try {
