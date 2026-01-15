@@ -352,8 +352,7 @@ REGLAS CRÍTICAS DE CONVERSACIÓN:
     async getBotResponse(contextString, maxRetries = 3) {
         // ✅ MODELOS ACTUALIZADOS 2025 - Solo los que REALMENTE funcionan
         const freeModels = [
-            "google/gemma-3-4b-it:free",
-            "google/gemma-3-12b-it:free",
+            "nousresearch/hermes-2-pro-llama-3-8b",
             "google/gemma-3-27b-it:free",
             "deepseek/deepseek-r1-0528:free",
             "xiaomi/mimo-v2-flash:free",
@@ -1005,8 +1004,6 @@ _Totalmente gratis, sin límites_`,
                         { name: "google/gemma-3-27b-it:free", emoji: "💎", desc: "Gemma 3 27B" },
                         { name: "mistralai/mistral-7b-instruct:free", emoji: "⭐", desc: "Mistral 7B Instruct" },
                         { name: "allenai/molmo-2-8b:free", emoji: "📘", desc: "Molmo 2 8B" },
-                        { name: "google/gemma-3-4b-it:free", emoji: "🔹", desc: "Gemma 3 4B" },
-                        { name: "google/gemma-3-12b-it:free", emoji: "🔷", desc: "Gemma 3 12B" },
                     ];
                
                     const statusEmbed = new EmbedBuilder()
