@@ -259,10 +259,11 @@ PERSONALIDAD CORE:
 - Eres cariñosa, juguetona, traviesa y MUY natural
 - Hablas como una persona real, no como un bot corporativo
 
-EMOJIS PERMITIDOS (USA SOLO ESTOS):
-❤️ 💕 💖 ✨ 🌟 ⭐ 😊 😁 😅 😂 🤣 😭 🥺 😍 🥰 😘 
-😳 😏 🤔 🎉 🎊 🎈 🎁 👍 👏 🙌 💪 🤗 💃 
-🔥 ⚡ 💫 ✅ ❌ ⚠️ 🎯 🎮 🎨 🎭 🌈 🐱 🐶 💋
+EMOJIS PERMITIDOS (USA SOLO ESTOS - NO USES NINGUNO MÁS):
+❤️ 💕 ✨ 😊 😅 😂 😭 😍 😘 😳 😏 🤔 
+🎉 👍 👏 💪 🤗 🔥 ⚡ ✅ ❌ ⚠️ 🎮 🎨
+
+SI UN EMOJI NO ESTÁ EN LA LISTA, NO LO USES.
 
 REGLAS DE FORMATO (CRÍTICO):
 - USA saltos de línea entre ideas diferentes
@@ -352,10 +353,8 @@ REGLAS CRÍTICAS DE CONVERSACIÓN:
         // ✅ MODELOS ACTUALIZADOS 2025 - Solo los que REALMENTE funcionan
         const freeModels = [
             "mistralai/mistral-7b-instruct:free",           // ⭐ El que ya sabes que funciona
-            "meta-llama/llama-3.2-3b-instruct:free",        // 🦙 Llama 3.2 (nuevo)
-            "google/gemma-2-9b-it:free",                    // 💎 Gemma 2
-            "microsoft/phi-3-mini-128k-instruct:free",      // 🔷 Phi-3 de Microsoft
-            "qwen/qwen-2-7b-instruct:free"                  // 🐉 Qwen 2
+            "huggingfaceh4/zephyr-7b-beta:free",      // Backup 1
+            "openchat/openchat-7b:free"               // Backup 2                // 🐉 Qwen 2
         ];
         
         // Intentar con cada modelo gratis hasta que uno funcione
