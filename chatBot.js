@@ -352,9 +352,23 @@ REGLAS CRÍTICAS DE CONVERSACIÓN:
     async getBotResponse(contextString, maxRetries = 3) {
         // ✅ MODELOS ACTUALIZADOS 2025 - Solo los que REALMENTE funcionan
         const freeModels = [
-            "mistralai/mistral-7b-instruct:free",           // ⭐ El que ya sabes que funciona
-            "huggingfaceh4/zephyr-7b-beta:free",      // Backup 1
-            "openchat/openchat-7b:free"               // Backup 2                // 🐉 Qwen 2
+            "xiaomi/mimo-v2-flash:free",
+            "mistralai/devstral-2512:free",
+            "tngtech/deepseek-r1t2-chimera:free",
+            "tngtech/deepseek-r1t-chimera:free",
+            "z-ai/glm-4.5-air:free",
+            "deepseek/deepseek-r1-0528:free",
+            "qwen/qwen3-coder:free",
+            "tngtech/tng-r1t-chimera:free",
+            "nvidia/nemotron-3-nano-30b-a3b:free",
+            "meta-llama/llama-3.3-70b-instruct:free",
+            "google/gemma-3-27b-it:free",
+            "openai/gpt-oss-120b:free",
+            "openai/gpt-oss-20b:free",
+            "mistralai/mistral-7b-instruct:free",
+            "allenai/molmo-2-8b:free",
+            "google/gemma-3-4b-it:free",
+            "google/gemma-3-12b-it:free",
         ];
         
         // Intentar con cada modelo gratis hasta que uno funcione
@@ -982,11 +996,25 @@ _Totalmente gratis, sin límites_`,
             case '>aistatus':
                 try {
                     const freeModels = [
-                        { name: "mistralai/mistral-7b-instruct:free", emoji: "⭐", desc: "Mistral 7B - Principal" },
-                        { name: "huggingfaceh4/zephyr-7b-beta:free", emoji: "🌪️", desc: "Zephyr - Backup 1" },
-                        { name: "openchat/openchat-7b:free", emoji: "💬", desc: "OpenChat - Backup 2" }
+                        { name: "xiaomi/mimo-v2-flash:free", emoji: "⚡", desc: "Xiaomi MiMo v2 Flash" },
+                        { name: "mistralai/devstral-2512:free", emoji: "🧪", desc: "Devstral Experimental" },
+                        { name: "tngtech/deepseek-r1t2-chimera:free", emoji: "🧬", desc: "DeepSeek R1T2 Chimera" },
+                        { name: "tngtech/deepseek-r1t-chimera:free", emoji: "🧫", desc: "DeepSeek R1T Chimera" },
+                        { name: "z-ai/glm-4.5-air:free", emoji: "🌬️", desc: "GLM 4.5 Air" },
+                        { name: "deepseek/deepseek-r1-0528:free", emoji: "🔍", desc: "DeepSeek R1 (0528)" },
+                        { name: "qwen/qwen3-coder:free", emoji: "💻", desc: "Qwen 3 Coder" },
+                        { name: "tngtech/tng-r1t-chimera:free", emoji: "🧠", desc: "TNG R1T Chimera" },
+                        { name: "nvidia/nemotron-3-nano-30b-a3b:free", emoji: "🤖", desc: "NVIDIA Nemotron Nano" },
+                        { name: "meta-llama/llama-3.3-70b-instruct:free", emoji: "🦙", desc: "LLaMA 3.3 70B Instruct" },
+                        { name: "google/gemma-3-27b-it:free", emoji: "💎", desc: "Gemma 3 27B" },
+                        { name: "openai/gpt-oss-120b:free", emoji: "🚀", desc: "GPT OSS 120B" },
+                        { name: "openai/gpt-oss-20b:free", emoji: "⚙️", desc: "GPT OSS 20B" },
+                        { name: "mistralai/mistral-7b-instruct:free", emoji: "⭐", desc: "Mistral 7B Instruct" },
+                        { name: "allenai/molmo-2-8b:free", emoji: "📘", desc: "Molmo 2 8B" },
+                        { name: "google/gemma-3-4b-it:free", emoji: "🔹", desc: "Gemma 3 4B" },
+                        { name: "google/gemma-3-12b-it:free", emoji: "🔷", desc: "Gemma 3 12B" },
                     ];
-                    
+               
                     const statusEmbed = new EmbedBuilder()
                         .setTitle('🎭 Estado de OpenRouter')
                         .setDescription('Verificando modelos gratis disponibles...')
