@@ -17,9 +17,9 @@ class LocalDatabase {
             this.pool = mysql.createPool({
                 host: 'sql3.freesqldatabase.com',
                 port: 3306,
-                user: 'sql3795651',
-                password: 'byPCRPuUN3',
-                database: 'sql3795651',
+                user: 'sql3814346',
+                password: 'VFjMPfrHY9',
+                database: 'sql3814346',
                 connectionLimit: 3,
                 waitForConnections: true,
                 queueLimit: 0
