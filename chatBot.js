@@ -27,6 +27,7 @@ class ChatBotSystem {
         
         this.totalUsedToday = 0;
         this.startDailyReset();
+        this.startDatabaseCleanup();
     }
 
     /**
@@ -1578,6 +1579,104 @@ case '>ayudaimg':
     await message.reply({ embeds: [imgHelpEmbed] });
     break;
         }
+    }
+
+    /**
+     * Limpiar mensajes antiguos GLOBALMENTE
+     * Mantiene solo los últimos N mensajes por usuario
+     */
+    async cleanupOldMessages() {
+        try {
+            console.log('🧹 Iniciando limpieza de base de datos...');
+            
+            // Obtener todos los usuarios únicos
+            const [users] = await this.database.pool.execute(
+                'SELECT DISTINCT user_id FROM chat_conversations'
+            );
+            
+            let totalDeleted = 0;
+            const keepPerUser = 15; // Mantener últimos 30 mensajes por usuario
+            
+            for (const user of users) {
+                const userId = user.user_id;
+                
+                // Contar mensajes del usuario
+                const [count] = await this.database.pool.execute(
+                    'SELECT COUNT(*) as total FROM chat_conversations WHERE user_id = ?',
+                    [userId]
+                );
+                
+                const totalMessages = count[0].total;
+                
+                // Si tiene más de 30, borrar los viejos
+                if (totalMessages > keepPerUser) {
+                    const toDelete = totalMessages - keepPerUser;
+                    
+                    const [result] = await this.database.pool.execute(`
+                        DELETE FROM chat_conversations 
+                        WHERE user_id = ? 
+                        AND id NOT IN (
+                            SELECT id FROM (
+                                SELECT id FROM chat_conversations 
+                                WHERE user_id = ? 
+                                ORDER BY timestamp DESC 
+                                LIMIT ?
+                            ) as recent
+                        )`,
+                        [userId, userId, keepPerUser]
+                    );
+                    
+                    totalDeleted += result.affectedRows || 0;
+                }
+            }
+            
+            console.log(`✅ Limpieza completada: ${totalDeleted} mensajes eliminados`);
+            
+        } catch (error) {
+            console.error('❌ Error en limpieza de BD:', error);
+        }
+    }
+
+    /**
+     * Limpiar registros de uso diario antiguos (más de 7 días)
+     */
+    async cleanupOldUsageRecords() {
+        try {
+            const sevenDaysAgo = new Date();
+            sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+            const cutoffDate = sevenDaysAgo.toISOString().split('T')[0];
+            
+            const [result] = await this.database.pool.execute(
+                'DELETE FROM chat_daily_usage WHERE usage_date < ?',
+                [cutoffDate]
+            );
+            
+            if (result.affectedRows > 0) {
+                console.log(`🗑️ ${result.affectedRows} registros de uso antiguos eliminados`);
+            }
+            
+        } catch (error) {
+            console.error('❌ Error limpiando registros de uso:', error);
+        }
+    }
+
+    /**
+     * Iniciar limpieza automática periódica
+     */
+    startDatabaseCleanup() {
+        // Limpiar cada 6 horas
+        setInterval(async () => {
+            console.log('⏰ Ejecutando limpieza automática de BD...');
+            await this.cleanupOldMessages();
+            await this.cleanupOldUsageRecords();
+        }, 6 * 60 * 60 * 1000); // 6 horas
+        
+        // Ejecutar una vez al iniciar (después de 30 segundos)
+        setTimeout(async () => {
+            console.log('🚀 Limpieza inicial de BD...');
+            await this.cleanupOldMessages();
+            await this.cleanupOldUsageRecords();
+        }, 30000);
     }
 }
 
