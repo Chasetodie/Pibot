@@ -352,9 +352,9 @@ REGLAS CRÍTICAS DE CONVERSACIÓN:
     async getBotResponse(contextString, maxRetries = 3) {
         // ✅ MODELOS ACTUALIZADOS 2025 - Solo los que REALMENTE funcionan
         const freeModels = [
-            "meta-llama/llama-3.3-70b-instruct:free",
             "google/gemma-3-4b-it:free",
             "google/gemma-3-12b-it:free",
+            "google/gemma-3-27b-it:free",
             "deepseek/deepseek-r1-0528:free",
             "xiaomi/mimo-v2-flash:free",
             "mistralai/devstral-2512:free",
@@ -363,7 +363,7 @@ REGLAS CRÍTICAS DE CONVERSACIÓN:
             "z-ai/glm-4.5-air:free",
             "tngtech/tng-r1t-chimera:free",
             "nvidia/nemotron-3-nano-30b-a3b:free",
-            "google/gemma-3-27b-it:free",
+            "meta-llama/llama-3.3-70b-instruct:free",
             "mistralai/mistral-7b-instruct:free",
             "allenai/molmo-2-8b:free",
         ];
