@@ -2100,7 +2100,7 @@ const userId = gameState.userId;
                 if (this.shop) {
                     const modifiers = await this.shop.getActiveMultipliers(userId, 'games');
                     const originalProfit = finalEarnings;
-                    finalEarnings = Math.floor(finalEarningss * modifiers.multiplier);
+                    finalEarnings = Math.floor(finalEarnings * modifiers.multiplier);
                     const vipBonus = finalEarnings - originalProfit;
                     
                     if (vipBonus > 0) {
