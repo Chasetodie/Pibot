@@ -54,6 +54,10 @@ class MinigamesSystem {
         setInterval(() => {
             this.checkWeeklyPotExpiry();
         }, 60 * 60 * 1000);
+
+setTimeout(() => {
+        this.startNotificationChecker();
+    }, 5000);
         
         // Configuración de minijuegos
         this.config = {
@@ -192,6 +196,41 @@ class MinigamesSystem {
         
         this.cooldowns = new Map(); // Para cooldowns por usuario
     }
+
+async showMyLimits(message) {
+    const userId = message.author.id;
+    const embed = new EmbedBuilder()
+        .setTitle('⏱️ Tus Límites de Juego')
+        .setDescription('Sistema de ciclos de 4 horas\n💡 Usa el botón 🔔 cuando alcances un límite para recibir notificaciones')
+        .setColor('#FFD700')
+        .setTimestamp();
+    
+    for (const [gameType, config] of Object.entries(this.dailyLimits)) {
+        const status = await this.economy.database.getGameLimitStatus(userId, gameType, config.cycleHours);
+        
+        const timeLeft = status.cycleReset - Date.now();
+        const hoursLeft = Math.floor(timeLeft / (60 * 60 * 1000));
+        const minutesLeft = Math.floor((timeLeft % (60 * 60 * 1000)) / (60 * 1000));
+        
+        const gameName = gameType.charAt(0).toUpperCase() + gameType.slice(1);
+        const cycleBar = '█'.repeat(status.cycleCount) + '░'.repeat(config.perCycle - status.cycleCount);
+        
+        const statusEmoji = status.cycleCount >= config.perCycle ? '🔴' : '🟢';
+        
+        embed.addFields({
+            name: `${statusEmoji} ${gameName}`,
+            value: 
+                `**Ciclo:** ${status.cycleCount}/${config.perCycle} ${cycleBar}\n` +
+                `**Hoy:** ${status.dailyCount}/${config.maxDaily}\n` +
+                `⏰ ${hoursLeft}h ${minutesLeft}m`,
+            inline: true
+        });
+    }
+    
+    embed.setFooter({ text: 'Los ciclos se resetean cada 4 horas • 🔔 Activa notificaciones cuando alcances un límite' });
+    
+    await message.reply({ embeds: [embed] });
+}
 
     startCacheCleanup() {
         setInterval(() => {
@@ -414,6 +453,121 @@ class MinigamesSystem {
         await message.reply({ embeds: [embed], components: [row] });
     }
 
+// ==========================================
+// SISTEMA DE NOTIFICACIONES DE LÍMITES
+// ==========================================
+
+async handleLimitNotificationButton(interaction) {
+    if (!interaction.customId.startsWith('notify_limit_')) return;
+    
+    const [, , gameType, userId] = interaction.customId.split('_');
+    
+    if (interaction.user.id !== userId) {
+        await interaction.reply({ 
+            content: '❌ Este botón no es para ti.', 
+            ephemeral: true 
+        });
+        return;
+    }
+    
+    await interaction.deferReply({ ephemeral: true });
+    
+    const limitConfig = this.dailyLimits[gameType];
+    const status = await this.economy.database.getGameLimitStatus(
+        userId, 
+        gameType, 
+        limitConfig.cycleHours
+    );
+    
+    // Crear notificación en la base de datos
+    const success = await this.economy.database.createLimitNotification(
+        userId,
+        gameType,
+        interaction.channelId,
+        status.cycleReset
+    );
+    
+    if (success) {
+        const timeLeft = status.cycleReset - Date.now();
+        const hoursLeft = Math.floor(timeLeft / (60 * 60 * 1000));
+        const minutesLeft = Math.floor((timeLeft % (60 * 60 * 1000)) / (60 * 1000));
+        
+        await interaction.editReply({
+            content: `✅ **Notificación programada**\n` +
+                     `Te avisaré en este canal cuando tus límites de **${gameType}** se recarguen.\n` +
+                     `⏰ Tiempo estimado: ${hoursLeft}h ${minutesLeft}m`
+        });
+        
+        // Deshabilitar el botón
+        const disabledRow = new ActionRowBuilder()
+            .addComponents(
+                new ButtonBuilder()
+                    .setCustomId('disabled')
+                    .setLabel('✅ Notificación activada')
+                    .setStyle(ButtonStyle.Success)
+                    .setDisabled(true)
+            );
+        
+        try {
+            await interaction.message.edit({ components: [disabledRow] });
+        } catch (error) {
+            console.log('No se pudo editar el botón:', error.message);
+        }
+    } else {
+        await interaction.editReply({
+            content: '❌ Error al programar la notificación. Intenta de nuevo.'
+        });
+    }
+}
+
+startNotificationChecker() {
+    // Verificar notificaciones cada 1 minuto
+    setInterval(async () => {
+        await this.checkPendingNotifications();
+    }, 60000);
+    
+    console.log('🔔 Sistema de notificaciones de límites iniciado');
+}
+
+async checkPendingNotifications() {
+    try {
+        const notifications = await this.economy.database.getPendingNotifications();
+        
+        for (const notif of notifications) {
+            try {
+                const channel = await this.client.channels.fetch(notif.channel_id);
+                if (!channel) {
+                    await this.economy.database.markNotificationAsSent(notif.id);
+                    continue;
+                }
+                
+                const gameName = notif.game_type.charAt(0).toUpperCase() + notif.game_type.slice(1);
+                
+                const embed = new EmbedBuilder()
+                    .setTitle('🔔 Límites Recargados')
+                    .setDescription(
+                        `<@${notif.user_id}>, tus límites de **${gameName}** se han recargado.\n\n` +
+                        `✅ Ya puedes volver a jugar!`
+                    )
+                    .setColor('#00FF00')
+                    .setTimestamp();
+                
+                await channel.send({ embeds: [embed] });
+                await this.economy.database.markNotificationAsSent(notif.id);
+                
+                console.log(`✅ Notificación enviada a ${notif.user_id} para ${notif.game_type}`);
+                
+            } catch (error) {
+                console.error(`Error enviando notificación ${notif.id}:`, error);
+                // Marcar como enviada para evitar reintento infinito
+                await this.economy.database.markNotificationAsSent(notif.id);
+            }
+        }
+    } catch (error) {
+        console.error('Error verificando notificaciones:', error);
+    }
+}
+
     // Verificar cooldown de usuario
     checkCooldown(userId, gameType) {
         const key = `${userId}-${gameType}`;
@@ -458,24 +612,33 @@ class MinigamesSystem {
         return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
     }
 
-    async getEffectiveCooldown(baseCooldown) {
-        let effectiveCooldown = baseCooldown;
+    // En minigames.js, REEMPLAZAR getEffectiveCooldown():
 
-       for (const event of this.events.getActiveEvents()) {
-        if (event.multipliers?.cooldown) {
-            effectiveCooldown = Math.floor(baseCooldown * event.multipliers.cooldown);
-            break; // Solo aplicar el primer evento
-        }
-    }
-        
-        // Aplicar items
-        if (this.shop) {
-            const cooldownReduction = await this.shop.getCooldownReduction(userId, context);
-            effectiveCooldown = Math.floor(effectiveCooldown * (1 - cooldownReduction));
-        }
-        
+async getEffectiveCooldown(baseCooldown) {
+    let effectiveCooldown = baseCooldown;
+    
+    // Verificar que events esté disponible
+    if (!this.events) {
+        console.log('⚠️ Events no disponible en cooldown');
         return effectiveCooldown;
     }
+    
+    try {
+        // Aplicar eventos
+        const activeEvents = this.events.getActiveEvents();
+        for (const event of activeEvents) {
+            if (event.multipliers?.cooldown) {
+                effectiveCooldown = Math.floor(baseCooldown * event.multipliers.cooldown);
+                console.log(`⏰ Cooldown modificado por ${event.name}: ${baseCooldown}ms → ${effectiveCooldown}ms`);
+                break;
+            }
+        }
+    } catch (error) {
+        console.error('Error aplicando eventos a cooldown:', error);
+    }
+    
+    return effectiveCooldown;
+}
 
     async canCoinflip(userId) {
         const user = await this.economy.getUser(userId);
@@ -489,7 +652,7 @@ class MinigamesSystem {
 
         const lastCoin = user.last_coinflip || 0;
         const now = Date.now();
-        let effectiveCooldown = this.getEffectiveCooldown(this.config.coinflip.cooldown);
+        let effectiveCooldown = await this.getEffectiveCooldown(this.config.coinflip.cooldown);
 
         if (now - lastCoin < effectiveCooldown) {
             const timeLeft = effectiveCooldown - (now - lastCoin);
@@ -757,7 +920,7 @@ let luckMessage = '';
 
         const lastDice = user.last_dice || 0;
         const now = Date.now();
-        let effectiveCooldown = this.getEffectiveCooldown(this.config.dice.cooldown);
+        let effectiveCooldown = await this.getEffectiveCooldown(this.config.dice.cooldown);
 
         if (now - lastDice < effectiveCooldown) {
             const timeLeft = effectiveCooldown - (now - lastDice);
@@ -1067,7 +1230,7 @@ let luckMessage = '';
 
         const lastLottery = user.last_lotto || 0;
         const now = Date.now();
-        let effectiveCooldown = this.getEffectiveCooldown(this.config.lottery.cooldown);
+        let effectiveCooldown = await this.getEffectiveCooldown(this.config.lottery.cooldown);
 
         if (now - lastLottery < effectiveCooldown) {
             const timeLeft = effectiveCooldown - (now - lastLottery);
@@ -1399,7 +1562,7 @@ let luckMessage = '';
 
         const lastBlackJack = user.last_blackjack || 0;
         const now = Date.now();
-        let effectiveCooldown = this.getEffectiveCooldown(this.config.blackjack.cooldown);
+        let effectiveCooldown = await this.getEffectiveCooldown(this.config.blackjack.cooldown);
 
         if (now - lastBlackJack < effectiveCooldown) {
             const timeLeft = effectiveCooldown - (now - lastBlackJack);
@@ -2141,7 +2304,7 @@ let luckMessage = '';
 
         const lastRoulette = user.last_roulette || 0;
         const now = Date.now();
-        let effectiveCooldown = this.getEffectiveCooldown(this.config.roulette.cooldown);
+        let effectiveCooldown = await this.getEffectiveCooldown(this.config.roulette.cooldown);
 
         if (now - lastRoulette < effectiveCooldown) {
             const timeLeft = effectiveCooldown - (now - lastRoulette);
@@ -6187,6 +6350,11 @@ let luckMessage = '';
 
         try {
             switch (command) {
+case '>limits':
+            case '>limites':
+            case '>mylimits':
+                await this.showMyLimits(message);
+                break;
                 case '>coinflip':
                 case '>cf':
                 case '>coin':
