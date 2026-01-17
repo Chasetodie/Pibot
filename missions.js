@@ -362,7 +362,7 @@ class MissionsSystem {
             },
 
             // 6. Misiones de Actividad Continua
-            'stay_active': {
+            /*'stay_active': {
                 id: 'stay_active',
                 name: '⚡ Incansable',
                 description: 'Envía mensajes en 4 canales diferentes',
@@ -370,7 +370,7 @@ class MissionsSystem {
                 target: 4,
                 reward: { money: 500, xp: 100 },
                 rarity: 'uncommon'
-            },
+            },*/
 
             // 7. Misiones de Economía
             'reach_balance': {
