@@ -511,9 +511,6 @@ class EconomySystem {
         
         console.log(`🔍 Procesando usuario: ${userId.slice(-4)}`);
                
-        await this.missions.updateMissionProgress(userId, 'message', messageContent);
-        await this.missions.updateMissionProgress(userId, 'unique_channels', channelId);
-
         const now = Date.now();
         const lastXp = this.userCooldowns.get(userId) || 0;
 
