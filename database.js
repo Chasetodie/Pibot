@@ -72,6 +72,7 @@ class LocalDatabase {
                     permanentEffects TEXT,
                     activeEffects TEXT,
                     passiveIncomeStats TEXT,
+                    vipStats TEXT,
                     lastPassivePayout BIGINT DEFAULT 0
                 )
             `);
