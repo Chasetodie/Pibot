@@ -279,7 +279,7 @@ class ShopSystem {
                 id: 'role_token',
                 name: '🎭 Token de Rol Personalizado',
                 description: 'Usa este token para crear un rol exclusivo y único.',
-                price: 3000000,
+                price: 350000,
                 category: 'special',
                 rarity: 'legendary',
                 effect: {
@@ -1075,7 +1075,7 @@ class ShopSystem {
             items: newItems
         });
 
-        await this.economy.missions.updateMissionProgress(userId, 'items_bought_today', 1);
+        await this.economy.missions.updateMissionProgress(message.author.id, 'items_bought_today', 1);
         // Actualizar estadística de gasto para misiones VIP
         await this.economy.missions.updateMissionProgress(message.author.id, 'money_spent_today', totalCost);
         
