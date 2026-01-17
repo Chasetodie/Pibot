@@ -143,8 +143,8 @@ class MusicSystem {
                 return;
             }
 
-const commandName = command.replace('>', '');
-        await this.economy.missions.updateMissionProgress(message.author.id, 'unique_commands_used', commandName);
+/*const commandName = command.replace('>', '');
+        await this.economy.missions.updateMissionProgress(message.author.id, 'unique_commands_used', commandName);*/
 
             const subcommand = args[1];
             const { member, channel, guild, author } = message;
