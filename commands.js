@@ -143,7 +143,7 @@ class CommandHandler {
         const command = message.content.toLowerCase().split(' ')[0];
 
 const commandName = command.replace('>', '');
-        await this.economy.missions.updateMissionProgress(mensaje.author.id, 'unique_commands_used', commandName);
+        await this.economy.missions.updateMissionProgress(message.author.id, 'unique_commands_used', commandName);
 
         try {
             switch (command) {
