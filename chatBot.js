@@ -352,7 +352,7 @@ REGLAS CRÍTICAS DE CONVERSACIÓN:
     async getBotResponse(contextString, maxRetries = 3) {
         // ✅ MODELOS ACTUALIZADOS 2025 - Solo los que REALMENTE funcionan
         const freeModels = [
-            "nousresearch/hermes-2-pro-llama-3-8b",
+            //"nousresearch/hermes-2-pro-llama-3-8b",
             "google/gemma-3-27b-it:free",
             "deepseek/deepseek-r1-0528:free",
             "xiaomi/mimo-v2-flash:free",
