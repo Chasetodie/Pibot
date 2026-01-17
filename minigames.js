@@ -1909,7 +1909,6 @@ const userId = gameState.userId;
         
         const { userId, betAmount, playerHand, dealerHand, doubled } = gameState;
         const user = await this.economy.getUser(userId);
-const userId = gameState.userId;
         
         const finalBet = doubled ? betAmount * 2 : betAmount;
         const playerValue = this.calculateHandValue(playerHand);
