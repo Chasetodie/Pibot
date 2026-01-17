@@ -1641,9 +1641,6 @@ class AllCommands {
     }
 
     async processCommand(message) {
-        const commandName = command.replace('>', '');
-        await this.economy.missions.updateMissionProgress(userId, 'unique_commands_used', commandName);
-        
         // Verificar ingresos pasivos pendientes
         await this.economy.checkPendingPassiveIncome(message.author.id);
         await this.economy.checkAndNotifyItems(message.author.id, message);
@@ -1655,6 +1652,9 @@ class AllCommands {
         const args = message.content.trim().split(/ +/g);
         const command = args[0].toLowerCase();
         const betId = args[1];
+
+const commandName = command.replace('>', '');
+        await this.economy.missions.updateMissionProgress(mensaje.author.id, 'unique_commands_used', commandName);
 
         try {
             switch (command) {                    
