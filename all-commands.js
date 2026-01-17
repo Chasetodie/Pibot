@@ -1652,9 +1652,9 @@ class AllCommands {
         const args = message.content.trim().split(/ +/g);
         const command = args[0].toLowerCase();
         const betId = args[1];
-
+/*
 const commandName = command.replace('>', '');
-        await this.economy.missions.updateMissionProgress(message.author.id, 'unique_commands_used', commandName);
+        await this.economy.missions.updateMissionProgress(message.author.id, 'unique_commands_used', commandName);*/
 
         try {
             switch (command) {                    
