@@ -1931,6 +1931,7 @@ const userId = gameState.userId;
         let finalEarnings = 0;
         let eventMessage = '';
         let itemMessage = '';
+        const gameType = 'blackjack';
         const hasProtection = await this.shop.hasGameProtection(userId);;
 
         let addResult;
