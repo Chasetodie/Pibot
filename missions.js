@@ -287,7 +287,7 @@ class MissionsSystem {
                 rarity: 'uncommon'
             },
             // 1. Misiones de Variedad
-            'use_different_commands': {
+            /*'use_different_commands': {
                 id: 'use_different_commands',
                 name: '🎯 Explorador',
                 description: 'Usa 5 comandos diferentes hoy',
@@ -295,7 +295,7 @@ class MissionsSystem {
                 target: 5,
                 reward: { money: 400, xp: 80 },
                 rarity: 'uncommon'
-            },
+            },*/
 
             // 2. Misiones de Logros
             'unlock_achievement': {
@@ -1339,8 +1339,8 @@ class MissionsSystem {
         const args = message.content.toLowerCase().split(' ');
         const command = args[0];
         await this.updateMissionProgress(message.author.id, 'commands_used');
-const commandName = command.replace('>', '');
-        await this.economy.missions.updateMissionProgress(message.author.id, 'unique_commands_used', commandName);
+/*const commandName = command.replace('>', '');
+        await this.economy.missions.updateMissionProgress(message.author.id, 'unique_commands_used', commandName);*/
         
         try {
             switch (command) {
