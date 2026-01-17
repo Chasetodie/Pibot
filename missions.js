@@ -295,7 +295,7 @@ class MissionsSystem {
                 target: 5,
                 reward: { money: 400, xp: 80 },
                 rarity: 'uncommon'
-            },*/
+            },
 
             // 2. Misiones de Logros
             'unlock_achievement': {
@@ -362,7 +362,7 @@ class MissionsSystem {
             },
 
             // 6. Misiones de Actividad Continua
-            /*'stay_active': {
+            'stay_active': {
                 id: 'stay_active',
                 name: '⚡ Incansable',
                 description: 'Envía mensajes en 4 canales diferentes',
@@ -370,7 +370,7 @@ class MissionsSystem {
                 target: 4,
                 reward: { money: 500, xp: 100 },
                 rarity: 'uncommon'
-            },*/
+            },
 
             // 7. Misiones de Economía
             'reach_balance': {
@@ -392,7 +392,7 @@ class MissionsSystem {
                 target: 1,
                 reward: { money: 1000, xp: 200 },
                 rarity: 'epic'
-            },
+            },*/
             // Al final de availableMissions, antes de cerrar el objeto
             /*'vip_spend_big': {
                 id: 'vip_spend_big',
