@@ -1148,7 +1148,7 @@ class AchievementsSystem {
         const command = args[0];
         await this.economy.missions.updateMissionProgress(message.author.id, 'commands_used');
 const commandName = command.replace('>', '');
-        await this.economy.missions.updateMissionProgress(mensaje.author.id, 'unique_commands_used', commandName);
+        await this.economy.missions.updateMissionProgress(message.author.id, 'unique_commands_used', commandName);
 
         try {
             switch (command) {
