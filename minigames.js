@@ -21,6 +21,7 @@ class MinigamesSystem {
         this.client = client;
         this.events = null;
         this.activeGames = new Map(); // Para manejar juegos en progreso
+this.cooldownCache = new Map();
         this.minigamesCache = new Map();
         this.MAX_CACHE_SIZE = 500;
         this.cacheTimeout = 10 * 60 * 1000;
@@ -91,7 +92,7 @@ setTimeout(() => {
             lottery: {
                 minBet: 500,
                 maxBet: 3000,           // Cambiar de 5000 a 3000
-                cooldown: 1800000,      // Cambiar de 900000 a 1800000 (30 minutos)
+                cooldown: 300000,      // Cambiar de 900000 a 1800000 (30 minutos)
                 winMultiplier: 75,      // Cambiar de 100 a 75
                 minNumber: 1,
                 maxNumber: 100
@@ -99,14 +100,14 @@ setTimeout(() => {
             blackjack: {
                 minBet: 100,
                 maxBet: 10000,          // Cambiar de 15000 a 10000
-                cooldown: 120000,       // Cambiar de 90000 a 120000 (2 minutos)
+                cooldown: 30000,       // Cambiar de 90000 a 120000 (2 minutos)
                 blackjackMultiplier: 2.3, // Cambiar de 2.5 a 2.3
                 winMultiplier: 1.9      // Cambiar de 2 a 1.9
             },
             roulette: {
                 minBet: 100,
                 maxBet: 15000,          // Cambiar de 20000 a 15000
-                cooldown: 60000,        // Cambiar de 45000 a 60000 (1 minuto)
+                cooldown: 20000,        // Cambiar de 45000 a 60000 (1 minuto)
                 payouts: {
                     straight: 32,       // Cambiar de 35 a 32
                     red: 1.85,          // Cambiar de 1.95 a 1.85
@@ -586,10 +587,18 @@ async checkPendingNotifications() {
     }
 
     // Establecer cooldown
-    setCooldown(userId, gameType) {
-        const key = `${userId}-${gameType}`;
-        this.cooldowns.set(key, Date.now());
-    }
+setCooldown(userId, gameType) {
+    const key = `${userId}-${gameType}`;
+    const now = Date.now();
+    
+    // Guardar en memoria inmediatamente
+    this.cooldownCache.set(key, now);
+    
+    // Limpiar cache después de 5 minutos (por si acaso)
+    setTimeout(() => {
+        this.cooldownCache.delete(key);
+    }, 5 * 60 * 1000);
+}
 
     // Formatear tiempo
     formatTime(ms) {
@@ -641,29 +650,48 @@ async getEffectiveCooldown(baseCooldown) {
 }
 
     async canCoinflip(userId) {
-        const user = await this.economy.getUser(userId);
+    const user = await this.economy.getUser(userId);
 
-        if (this.shop) {
-            const vipMultipliers = await this.shop.getVipMultipliers(userId, 'games');
-            if (vipMultipliers.noCooldown) {
-                return { canCoinPlay: true };
-            }
+    if (this.shop) {
+        const vipMultipliers = await this.shop.getVipMultipliers(userId, 'games');
+        if (vipMultipliers.noCooldown) {
+            return { canCoinPlay: true };
         }
-
-        const lastCoin = user.last_coinflip || 0;
-        const now = Date.now();
-        let effectiveCooldown = await this.getEffectiveCooldown(this.config.coinflip.cooldown);
-
-        if (now - lastCoin < effectiveCooldown) {
-            const timeLeft = effectiveCooldown - (now - lastCoin);
-            return {
-                canCoinPlay: false,
-                timeLeft: timeLeft
-            };
-        }
-
-        return { canCoinPlay: true };
     }
+
+    // ✅ AGREGAR VERIFICACIÓN DE CACHE PRIMERO:
+    const cacheKey = `${userId}-coinflip`;
+    const cachedCooldown = this.cooldownCache.get(cacheKey);
+    const now = Date.now();
+    
+    let effectiveCooldown = await this.getEffectiveCooldown(this.config.coinflip.cooldown);
+
+    if (this.shop) {
+        const cooldownReduction = await this.shop.getCooldownReduction(userId, 'games');
+        effectiveCooldown = Math.floor(effectiveCooldown * (1 - cooldownReduction));
+    }
+    
+    // Verificar cache primero (más rápido)
+    if (cachedCooldown && (now - cachedCooldown < effectiveCooldown)) {
+        const timeLeft = effectiveCooldown - (now - cachedCooldown);
+        return {
+            canCoinPlay: false,
+            timeLeft: timeLeft
+        };
+    }
+    
+    // Luego verificar base de datos
+    const lastCoin = user.last_coinflip || 0;
+    if (now - lastCoin < effectiveCooldown) {
+        const timeLeft = effectiveCooldown - (now - lastCoin);
+        return {
+            canCoinPlay: false,
+            timeLeft: timeLeft
+        };
+    }
+
+    return { canCoinPlay: true };
+}
 
     formatGameBonuses(eventMessage, luckMessage, itemMessage, vipMessage) {
         let bonuses = [];
@@ -909,29 +937,46 @@ let luckMessage = '';
     }
 
     async canDice(userId) {
-        const user = await this.economy.getUser(userId);
+    const user = await this.economy.getUser(userId);
 
-        if (this.shop) {
-            const vipMultipliers = await this.shop.getVipMultipliers(userId, 'games');
-            if (vipMultipliers.noCooldown) {
-                return { canDicePlay: true };
-            }
+    if (this.shop) {
+        const vipMultipliers = await this.shop.getVipMultipliers(userId, 'games');
+        if (vipMultipliers.noCooldown) {
+            return { canDicePlay: true };
         }
-
-        const lastDice = user.last_dice || 0;
-        const now = Date.now();
-        let effectiveCooldown = await this.getEffectiveCooldown(this.config.dice.cooldown);
-
-        if (now - lastDice < effectiveCooldown) {
-            const timeLeft = effectiveCooldown - (now - lastDice);
-            return {
-                canDicePlay: false,
-                timeLeft: timeLeft
-            };
-        }
-
-        return { canDicePlay: true };
     }
+
+    // ✅ CACHE:
+    const cacheKey = `${userId}-dice`;
+    const cachedCooldown = this.cooldownCache.get(cacheKey);
+    const now = Date.now();
+    
+    let effectiveCooldown = await this.getEffectiveCooldown(this.config.dice.cooldown);
+
+    if (this.shop) {
+        const cooldownReduction = await this.shop.getCooldownReduction(userId, 'games');
+        effectiveCooldown = Math.floor(effectiveCooldown * (1 - cooldownReduction));
+    }
+    
+    if (cachedCooldown && (now - cachedCooldown < effectiveCooldown)) {
+        const timeLeft = effectiveCooldown - (now - cachedCooldown);
+        return {
+            canDicePlay: false,
+            timeLeft: timeLeft
+        };
+    }
+
+    const lastDice = user.last_dice || 0;
+    if (now - lastDice < effectiveCooldown) {
+        const timeLeft = effectiveCooldown - (now - lastDice);
+        return {
+            canDicePlay: false,
+            timeLeft: timeLeft
+        };
+    }
+
+    return { canDicePlay: true };
+}
 
     async handleDice(message, args) {
         const userId = message.author.id;
@@ -1219,29 +1264,45 @@ let luckMessage = '';
     }
 
     async canLottery(userId) {
-        const user = await this.economy.getUser(userId);
+    const user = await this.economy.getUser(userId);
 
-        if (this.shop) {
-            const vipMultipliers = await this.shop.getVipMultipliers(userId, 'games');
-            if (vipMultipliers.noCooldown) {
-                return { canLottery: true };
-            }
+    if (this.shop) {
+        const vipMultipliers = await this.shop.getVipMultipliers(userId, 'games');
+        if (vipMultipliers.noCooldown) {
+            return { canLottery: true };
         }
-
-        const lastLottery = user.last_lotto || 0;
-        const now = Date.now();
-        let effectiveCooldown = await this.getEffectiveCooldown(this.config.lottery.cooldown);
-
-        if (now - lastLottery < effectiveCooldown) {
-            const timeLeft = effectiveCooldown - (now - lastLottery);
-            return {
-                canLottery: false,
-                timeLeft: timeLeft
-            };
-        }
-
-        return { canLottery: true };
     }
+
+    const cacheKey = `${userId}-lottery`;
+    const cachedCooldown = this.cooldownCache.get(cacheKey);
+    const now = Date.now();
+    
+    let effectiveCooldown = await this.getEffectiveCooldown(this.config.lottery.cooldown);
+
+    if (this.shop) {
+        const cooldownReduction = await this.shop.getCooldownReduction(userId, 'games');
+        effectiveCooldown = Math.floor(effectiveCooldown * (1 - cooldownReduction));
+    }
+    
+    if (cachedCooldown && (now - cachedCooldown < effectiveCooldown)) {
+        const timeLeft = effectiveCooldown - (now - cachedCooldown);
+        return {
+            canLottery: false,
+            timeLeft: timeLeft
+        };
+    }
+
+    const lastLottery = user.last_lotto || 0;
+    if (now - lastLottery < effectiveCooldown) {
+        const timeLeft = effectiveCooldown - (now - lastLottery);
+        return {
+            canLottery: false,
+            timeLeft: timeLeft
+        };
+    }
+
+    return { canLottery: true };
+}
 
     // Método para manejar la lotería (agregar a la clase MinigamesSystem)
     async handleLottery(message, args) {
@@ -1551,29 +1612,45 @@ let luckMessage = '';
     }
 
     async canBlackJack(userId) {
-        const user = await this.economy.getUser(userId);
+    const user = await this.economy.getUser(userId);
 
-        if (this.shop) {
-            const vipMultipliers = await this.shop.getVipMultipliers(userId, 'games');
-            if (vipMultipliers.noCooldown) {
-                return { canBlackJack: true };
-            }
+    if (this.shop) {
+        const vipMultipliers = await this.shop.getVipMultipliers(userId, 'games');
+        if (vipMultipliers.noCooldown) {
+            return { canBlackJack: true };
         }
-
-        const lastBlackJack = user.last_blackjack || 0;
-        const now = Date.now();
-        let effectiveCooldown = await this.getEffectiveCooldown(this.config.blackjack.cooldown);
-
-        if (now - lastBlackJack < effectiveCooldown) {
-            const timeLeft = effectiveCooldown - (now - lastBlackJack);
-            return {
-                canBlackJack: false,
-                timeLeft: timeLeft
-            };
-        }
-
-        return { canBlackJack: true };
     }
+
+    const cacheKey = `${userId}-blackjack`;
+    const cachedCooldown = this.cooldownCache.get(cacheKey);
+    const now = Date.now();
+    
+    let effectiveCooldown = await this.getEffectiveCooldown(this.config.blackjack.cooldown);
+
+    if (this.shop) {
+        const cooldownReduction = await this.shop.getCooldownReduction(userId, 'games');
+        effectiveCooldown = Math.floor(effectiveCooldown * (1 - cooldownReduction));
+    }
+    
+    if (cachedCooldown && (now - cachedCooldown < effectiveCooldown)) {
+        const timeLeft = effectiveCooldown - (now - cachedCooldown);
+        return {
+            canBlackJack: false,
+            timeLeft: timeLeft
+        };
+    }
+
+    const lastBlackJack = user.last_blackjack || 0;
+    if (now - lastBlackJack < effectiveCooldown) {
+        const timeLeft = effectiveCooldown - (now - lastBlackJack);
+        return {
+            canBlackJack: false,
+            timeLeft: timeLeft
+        };
+    }
+
+    return { canBlackJack: true };
+}
 
     // Agregar estos métodos a tu clase MinigamesSystem
     
@@ -2295,29 +2372,45 @@ const userId = gameState.userId;
     }    
 
     async canRoulette(userId) {
-        const user = await this.economy.getUser(userId);
+    const user = await this.economy.getUser(userId);
 
-        if (this.shop) {
-            const vipMultipliers = await this.shop.getVipMultipliers(userId, 'games');
-            if (vipMultipliers.noCooldown) {
-                return { canRoulette: true };
-            }
+    if (this.shop) {
+        const vipMultipliers = await this.shop.getVipMultipliers(userId, 'games');
+        if (vipMultipliers.noCooldown) {
+            return { canRoulette: true };
         }
-
-        const lastRoulette = user.last_roulette || 0;
-        const now = Date.now();
-        let effectiveCooldown = await this.getEffectiveCooldown(this.config.roulette.cooldown);
-
-        if (now - lastRoulette < effectiveCooldown) {
-            const timeLeft = effectiveCooldown - (now - lastRoulette);
-            return {
-                canRoulette: false,
-                timeLeft: timeLeft
-            };
-        }
-
-        return { canRoulette: true };
     }
+
+    const cacheKey = `${userId}-roulette`;
+    const cachedCooldown = this.cooldownCache.get(cacheKey);
+    const now = Date.now();
+    
+    let effectiveCooldown = await this.getEffectiveCooldown(this.config.roulette.cooldown);
+
+    if (this.shop) {
+        const cooldownReduction = await this.shop.getCooldownReduction(userId, 'games');
+        effectiveCooldown = Math.floor(effectiveCooldown * (1 - cooldownReduction));
+    }
+    
+    if (cachedCooldown && (now - cachedCooldown < effectiveCooldown)) {
+        const timeLeft = effectiveCooldown - (now - cachedCooldown);
+        return {
+            canRoulette: false,
+            timeLeft: timeLeft
+        };
+    }
+
+    const lastRoulette = user.last_roulette || 0;
+    if (now - lastRoulette < effectiveCooldown) {
+        const timeLeft = effectiveCooldown - (now - lastRoulette);
+        return {
+            canRoulette: false,
+            timeLeft: timeLeft
+        };
+    }
+
+    return { canRoulette: true };
+}
 
     // Método principal para manejar la ruleta
     async handleRoulette(message, args) {
