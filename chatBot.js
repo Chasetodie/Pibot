@@ -903,11 +903,10 @@ _Totalmente gratis, sin límites_`,
      * Procesar comando de chat
      */
     async processCommand(message) {
-        const commandName = command.replace('>', '');
-        await this.economy.missions.updateMissionProgress(userId, 'unique_commands_used', commandName);
-        
         const args = message.content.toLowerCase().split(' ');
         const command = args[0];
+const commandName = command.replace('>', '');
+        await this.economy.missions.updateMissionProgress(mensaje.author.id, 'unique_commands_used', commandName);
 
         switch (command) {
             case '>chathelp':
