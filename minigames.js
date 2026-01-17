@@ -1771,7 +1771,6 @@ const userId = gameState.userId;
     async handleBlackjackAction(interaction, userId, action) {
         const gameState = this.activeGames.get(`blackjack_${userId}`);
 
-const userId = gameState.userId;
         if (!gameState || gameState.finished) {
             if (interaction) {
                 await interaction.reply({ content: '❌ Este juego ya terminó.', ephemeral: true });
