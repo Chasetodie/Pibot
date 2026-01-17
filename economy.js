@@ -450,20 +450,17 @@ class EconomySystem {
         const user = await this.getUser(userId); // ← Ahora async
         const variation = Math.floor(Math.random() * (this.config.xpVariation * 2)) - this.config.xpVariation;
         
-        await this.missions.updateMissionProgress(userId, 'xp_gained_today', xpGained);
-
         let xpGained = Math.max(1, baseXp + variation);
-        let theXp = 0;
 
         if (this.shop) {
-            theXp = await this.shop.applyXpEffects(userId, xpGained);
-        } else {
-            theXp = xpGained;
+            xpGained = await this.shop.applyXpEffects(userId, xpGained);
         }
+
+await this.missions.updateMissionProgress(userId, 'xp_gained_today', xpGained);
        
         const oldLevel = user.level;
-        const newXp = user.xp + theXp;
-        const newTotalXp = user.total_xp + theXp;
+        const newXp = user.xp + xpGained;
+        const newTotalXp = user.total_xp + xpGained;
         
         // Calcular nuevo nivel
         const newLevel = this.getLevelFromXp(newTotalXp);
@@ -492,7 +489,7 @@ class EconomySystem {
                 levelUp: true,
                 levelsGained: levelUps,
                 newLevel: newLevel,
-                xpGained: theXp,
+                xpGained: xpGained,
                 reward: reward
             };
         }
@@ -501,7 +498,7 @@ class EconomySystem {
         
         return {
             levelUp: false,
-            xpGained: theXp,
+            xpGained: xpGained,
             currentLevel: user.level
         };
     }
