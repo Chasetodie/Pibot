@@ -1946,11 +1946,9 @@ const userId = gameState.userId;
                 resultText = '🎉 **¡BLACKJACK NATURAL!**';
                 color = '#00FF00';
 
-                finalEarnings = profit
-
                 // APLICAR EVENTOS DE DINERO
                 const eventBonus = await this.applyEventEffects(userId, profit, 'minigames');
-                let finalEarnings = eventBonus.finalAmount;
+                finalEarnings = eventBonus.finalAmount;
                 
                 // APLICAR ITEMS
                 if (this.shop) {
@@ -2016,18 +2014,16 @@ const userId = gameState.userId;
                 resultText = result === 'dealer_bust' ? '🎉 **¡DEALER SE PASÓ!**' : '🎉 **¡GANASTE!**';
                 color = '#00FF00';
 
-                finalEarnings = profit
-
                 // APLICAR EVENTOS DE DINERO
                 const eventBonuss = await this.applyEventEffects(userId, profit, 'minigames');
-                let finalEarningss = eventBonuss.finalAmount;
+                finalEarnings = eventBonuss.finalAmount;
                 
                 // APLICAR ITEMS
                 if (this.shop) {
                     const modifiers = await this.shop.getActiveMultipliers(userId, 'games');
-                    const originalProfit = finalEarningss;
-                    finalEarningss = Math.floor(finalEarningss * modifiers.multiplier);
-                    const vipBonus = finalEarningss - originalProfit;
+                    const originalProfit = finalEarnings;
+                    finalEarnings = Math.floor(finalEarningss * modifiers.multiplier);
+                    const vipBonus = finalEarnings - originalProfit;
                     
                     if (vipBonus > 0) {
                         await this.shop.updateVipStats(userId, 'bonusEarnings', vipBonus);
