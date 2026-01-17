@@ -131,8 +131,6 @@ class MusicSystem {
     }
 
     async processCommand(message) {
-        const commandName = command.replace('>', '');
-        await this.economy.missions.updateMissionProgress(userId, 'unique_commands_used', commandName);
         if (message.author.bot) return;
 
         const args = message.content.toLowerCase().split(' ');
@@ -144,6 +142,9 @@ class MusicSystem {
                 await this.showMusicHelp(message);
                 return;
             }
+
+const commandName = command.replace('>', '');
+        await this.economy.missions.updateMissionProgress(message.author.id, 'unique_commands_used', commandName);
 
             const subcommand = args[1];
             const { member, channel, guild, author } = message;
