@@ -264,7 +264,7 @@ class AllCommands {
             const dailyMissions = await this.economy.missions.updateMissionProgress(userId, 'daily_claimed');
             // ✅ AGREGAR ESTA LÍNEA:
             const moneyMissions = await this.economy.missions.updateMissionProgress(userId, 'money_earned_today', result.amount);
-            const trinityMissions = await this.missions.checkTrinityCompletion(userId); // ← NUEVO
+            const trinityMissions = await this.economy.missions.checkTrinityCompletion(userId); // ← NUEVO
 
             // ✅ COMBINAR AMBOS RESULTADOS:
             const allCompleted = [...dailyMissions, ...moneyMissions, ...trinityMissions];
@@ -1032,7 +1032,7 @@ class AllCommands {
             if (this.economy.missions) {
                 const workMissions = await this.economy.missions.updateMissionProgress(userId, 'work');
                 const moneyMissions = await this.economy.missions.updateMissionProgress(userId, 'money_earned_today', result.amount);
-                const trinityMissionss = await this.missions.checkTrinityCompletion(userId); // ← NUEVO
+                const trinityMissionss = await this.economy.missions.checkTrinityCompletion(userId); // ← NUEVO
 
                 const allCompleted = [...workMissions, ...moneyMissions, ...trinityMissionss];
                 if (allCompleted.length > 0) {
