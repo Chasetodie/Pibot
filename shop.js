@@ -3975,9 +3975,7 @@ class ShopSystem {
     }
 
     // === COMANDOS ===
-    async processCommand(message) {
-        const commandName = command.replace('>', '');
-        await this.economy.missions.updateMissionProgress(userId, 'unique_commands_used', commandName);
+    async processCommand(message){
         if (message.author.bot) return;
 
         // Verificar ingresos pasivos pendientes
@@ -3987,7 +3985,9 @@ class ShopSystem {
         const args = message.content.toLowerCase().split(' ');
         const command = args[0];
         await this.economy.missions.updateMissionProgress(message.author.id, 'commands_used');
-        
+const commandName = command.replace('>', '');
+        await this.economy.missions.updateMissionProgress(message.author.id, 'unique_commands_used', commandName);
+
         try {
             switch (command) {
                 case '>shop':
