@@ -453,14 +453,17 @@ class EconomySystem {
         await this.missions.updateMissionProgress(userId, 'xp_gained_today', xpGained);
 
         let xpGained = Math.max(1, baseXp + variation);
+        ley theXp = 0;
 
         if (this.shop) {
-            xpGained = await this.shop.applyXpEffects(userId, xpGained);
+            theXp = await this.shop.applyXpEffects(userId, xpGained);
+        } else {
+            theXp = xpGained;
         }
        
         const oldLevel = user.level;
-        const newXp = user.xp + xpGained;
-        const newTotalXp = user.total_xp + xpGained;
+        const newXp = user.xp + theXp;
+        const newTotalXp = user.total_xp + theXp;
         
         // Calcular nuevo nivel
         const newLevel = this.getLevelFromXp(newTotalXp);
@@ -489,7 +492,7 @@ class EconomySystem {
                 levelUp: true,
                 levelsGained: levelUps,
                 newLevel: newLevel,
-                xpGained: xpGained,
+                xpGained: theXp,
                 reward: reward
             };
         }
@@ -498,7 +501,7 @@ class EconomySystem {
         
         return {
             levelUp: false,
-            xpGained: xpGained,
+            xpGained: theXp,
             currentLevel: user.level
         };
     }
