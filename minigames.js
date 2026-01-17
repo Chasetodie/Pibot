@@ -1688,6 +1688,8 @@ let luckMessage = '';
     async showBlackjackState(message, gameState) {
         const { playerHand, dealerHand, betAmount, doubled } = gameState;
         const playerValue = this.calculateHandValue(playerHand);
+
+const userId = gameState.userId;
     
         const embed = new EmbedBuilder()
             .setTitle('♠️ Blackjack - En Juego')
@@ -1768,6 +1770,8 @@ let luckMessage = '';
     
     async handleBlackjackAction(interaction, userId, action) {
         const gameState = this.activeGames.get(`blackjack_${userId}`);
+
+const userId = gameState.userId;
         if (!gameState || gameState.finished) {
             if (interaction) {
                 await interaction.reply({ content: '❌ Este juego ya terminó.', ephemeral: true });
@@ -1797,6 +1801,8 @@ let luckMessage = '';
         gameState.playerHand.push(newCard);
         
         const playerValue = this.calculateHandValue(gameState.playerHand);
+
+const userId = gameState.userId;
         
         if (playerValue > 21) {
             await this.finishBlackjack(interaction, gameState, 'bust');
@@ -1904,6 +1910,7 @@ let luckMessage = '';
         
         const { userId, betAmount, playerHand, dealerHand, doubled } = gameState;
         const user = await this.economy.getUser(userId);
+const userId = gameState.userId;
         
         const finalBet = doubled ? betAmount * 2 : betAmount;
         const playerValue = this.calculateHandValue(playerHand);
