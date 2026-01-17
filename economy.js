@@ -453,7 +453,7 @@ class EconomySystem {
         await this.missions.updateMissionProgress(userId, 'xp_gained_today', xpGained);
 
         let xpGained = Math.max(1, baseXp + variation);
-        ley theXp = 0;
+        let theXp = 0;
 
         if (this.shop) {
             theXp = await this.shop.applyXpEffects(userId, xpGained);
