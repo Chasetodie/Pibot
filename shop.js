@@ -1075,7 +1075,7 @@ class ShopSystem {
             items: newItems
         });
 
-        await this.shop.economy.missions.updateMissionProgress(userId, 'items_bought_today', 1);
+        await this.economy.missions.updateMissionProgress(userId, 'items_bought_today', 1);
         // Actualizar estadística de gasto para misiones VIP
         await this.economy.missions.updateMissionProgress(message.author.id, 'money_spent_today', totalCost);
         
