@@ -458,12 +458,15 @@ class MinigamesSystem {
         return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
     }
 
-    async getEffectiveCooldown(baseCooldown, userId, context = 'games') {
+    async getEffectiveCooldown(baseCooldown) {
         let effectiveCooldown = baseCooldown;
-        
-        // Aplicar eventos
-        const eventEffect = await this.applyEventEffects(userId, 0, 'cooldown');
-        effectiveCooldown = Math.floor(baseCooldown * eventEffect.cooldownMultiplier);
+
+       for (const event of this.events.getActiveEvents()) {
+        if (event.multipliers?.cooldown) {
+            effectiveCooldown = Math.floor(baseCooldown * event.multipliers.cooldown);
+            break; // Solo aplicar el primer evento
+        }
+    }
         
         // Aplicar items
         if (this.shop) {
@@ -564,6 +567,7 @@ class MinigamesSystem {
         const luckCalc = await this.applyLuckToGame(0.5, userId, 'coinflip');
         const result = Math.random() < luckCalc.winChance ? 'cara' : 'cruz';
         const won = result === normalizedChoice;
+let luckMessage = '';
         
         // Establecer cooldown
         this.setCooldown(userId, 'coinflip');
