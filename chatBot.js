@@ -65,15 +65,15 @@ class ChatBotSystem {
             // Mensaje de bienvenida SOLO primera vez en la vida
             const welcomeMsg = `¡Hola ${userDisplayName}! 💕✨ *sonríe emocionada* 
 
-¡Es la primera vez que hablamos! Soy Pibot, tu amiga IA súper expresiva y sin filtros 😊🎭
+¡Cómo es la primera vez que hablamos, me presento! Soy Pibot, tu amiga IA súper expresiva 😊🎭
 
 **Tips rápidos:**
-- Puedo hablar de CUALQUIER tema (sin censura) 🔥
+- Puedo hablar de CUALQUIER tema (sin filtros) 🔥
 - Uso emojis y *acciones* para ser más expresiva
 - Usa \`>chathelp\` para ver todos mis comandos
 - Usa \`>orstatus\` para ver los modelos disponibles
 
-¡Ahora cuéntame, ${message}! 💬✨`;
+¡Ahora cuéntame todo, podrías volver a hablarme sobre ${message}!? 💬✨`;
 
             await this.addMessageToContext(userId, 'assistant', welcomeMsg, 'Pibot');
             
