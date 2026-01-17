@@ -23,8 +23,8 @@ class EconomySystem {
             xpPerMessage: 10, // XP base por mensaje
             xpVariation: 5,  // Variación aleatoria del XP
             xpCooldown: 10000, // 15 segundos entre mensajes que dan XP
-            dailyAmount: 2500,  // Cantidad base del daily
-            dailyVariation: 1500, // Variación del daily
+            dailyAmount: 500,  // Cantidad base del daily
+            dailyVariation: 300, // Variación del daily
             levelUpReward: 50, // π-b Coins por subir de nivel
             xpPerLevel: 100,   // XP base necesaria para nivel 1
             levelMultiplier: 1.5, // Multiplicador de XP por nivel
@@ -35,13 +35,13 @@ class EconomySystem {
 
         // Configuración de robos
         this.robberyConfig = {
-            cooldown: 6 * 60 * 60 * 1000, // 6 horas de cooldown
-            minStealPercentage: 5, // Mínimo 5%
-            maxStealPercentage: 10, // Máximo 10%
+            cooldown: 12 * 60 * 60 * 1000, // 12 horas de cooldown
+            minStealPercentage: 2, // Mínimo 2%
+            maxStealPercentage: 5, // Máximo 5%
             buttonTimeLimit: 30000, // 30 segundos para hacer clicks
             maxClicks: 50, // Máximo de clicks
-            failChance: 0.5, // 30% de chance de fallar
-            penaltyPercentage: 15, // 15% de penalización si fallas
+            failChance: 0.6, // 60% de chance de fallar
+            penaltyPercentage: 20, // 20% de penalización si fallas
             levelRequirement: 5, // Nivel mínimo para robar
             minTargetBalance: 500, // El objetivo debe tener al menos 500 coins
         };
@@ -315,6 +315,9 @@ class EconomySystem {
             };
         }
         
+        await this.missions.updateMissionProgress(fromUserId, 'unique_transfers', toUserId);
+        await this.missions.updateMissionProgress(toUserId, 'money_received_today', amount);
+
         const fromUser = await this.getUser(fromUserId);
         const toUser = await this.getUser(toUserId);
 
@@ -344,9 +347,11 @@ class EconomySystem {
         let eventMessage = '';
         
         for (const event of this.events.getActiveEvents()) {
-            if (event.type === 'charity_event') {
-                finalFrom = Math.floor(amount * 0.45); // 💰 +45%
-                eventMessage = `\n❤️ **Evento de Caridad** (+${finalFrom} π-b$) a quien dió dinero`;
+            const transferBonus = event.multipliers?.transfer_bonus || 0;
+            
+            if (transferBonus > 0) {
+                finalFrom = Math.floor(amount * transferBonus);
+                eventMessage = `\n${event.emoji} **${event.name}** (+${finalFrom} π-b$) a quien dio dinero`;
                 break;
             }
         }
@@ -445,6 +450,8 @@ class EconomySystem {
         const user = await this.getUser(userId); // ← Ahora async
         const variation = Math.floor(Math.random() * (this.config.xpVariation * 2)) - this.config.xpVariation;
         
+        await this.missions.updateMissionProgress(userId, 'xp_gained_today', xpGained);
+
         let xpGained = Math.max(1, baseXp + variation);
 
         if (this.shop) {
@@ -504,6 +511,9 @@ class EconomySystem {
         
         console.log(`🔍 Procesando usuario: ${userId.slice(-4)}`);
                
+        await this.missions.updateMissionProgress(userId, 'message', messageContent);
+        await this.missions.updateMissionProgress(userId, 'unique_channels', channelId);
+
         const now = Date.now();
         const lastXp = this.userCooldowns.get(userId) || 0;
 
@@ -535,26 +545,18 @@ class EconomySystem {
             // Agregar XP (ahora async)
             let finalXp = this.config.xpPerMessage;
             let eventMessage = '';
-
-            const activeEvents = this.events.getActiveEvents();
                 
             for (const event of this.events.getActiveEvents()) {
-                if (event.type === 'double_xp') {
-                    finalXp = this.config.xpPerMessage * 2; // Exactamente x2
-                    eventMessage = `\n⚡ **Doble XP** (+${finalXp - this.config.xpPerMessage} XP)`;
-                    break;
+                const xpMultiplier = event.multipliers?.xp || 1.0;
+                
+                if (xpMultiplier > 1.0) {
+                    const baseXp = this.config.xpPerMessage;
+                    finalXp = Math.floor(baseXp * xpMultiplier);
+                    const bonus = finalXp - baseXp;
+                    eventMessage = `\n${event.emoji} **${event.name}** (+${bonus} XP)`;
+                    break; // Solo aplicar un evento
                 }
-                else if (event.type === 'fever_time') {
-                    finalXp = Math.floor(this.config.xpPerMessage * 1.5); // x1.5
-                    eventMessage = `\n🔥 **Tiempo Fiebre** (+${finalXp - this.config.xpPerMessage} XP)`;
-                    break;
-                }
-                else if (event.type === 'server_anniversary') {
-                    finalXp = Math.floor(this.config.xpPerMessage * 3); // x3
-                    eventMessage = `\n🎉 **Aniversario del Servidor** (+${finalXp - this.config.xpPerMessage} XP)`;
-                    break;
-                }
-            }       
+            }
 
             const result = await this.addXp(userId, finalXp);
             
@@ -684,24 +686,18 @@ class EconomySystem {
         let finalEarnings = amount;
 
         for (const event of this.events.getActiveEvents()) {
-            if (event.type === 'money_rain') {
-                finalEarnings = Math.floor(amount * 1.75); // 💰 +50%
-                eventMessage = `\n💰 **Lluvia de Dinero** (+${finalEarnings - amount} π-b$)`;
-                break;
-            }
-            else if (event.type === 'fever_time') {
-                finalEarnings = Math.floor(amount * 1.2); // 🔥 +30%
-                eventMessage = `🔥 **Tiempo Fiebre** (+${finalEarnings - amount} π-b$)`;
-                break;
-            }
-            else if (event.type === 'market_crash') {
-                finalEarnings = Math.floor(amount * 0.8); // 📉 -30%
-                eventMessage = `📉 **Crisis del Mercado** (-${amount - finalEarnings} π-b$)`;
-                break;
-            }
-            else if (event.type === 'server_anniversary') {
-                finalEarnings = Math.floor(amount * 2);
-                eventMessage = `🎉 **Aniversario del Servidor** (+${finalEarnings - amount} π-b$)`
+            const dailyMultiplier = event.multipliers?.daily || 1.0;
+            
+            if (dailyMultiplier !== 1.0) {
+                const baseAmount = amount;
+                finalEarnings = Math.floor(baseAmount * dailyMultiplier);
+                const diff = finalEarnings - baseAmount;
+                
+                if (diff > 0) {
+                    eventMessage = `\n${event.emoji} **${event.name}** (+${diff} π-b$)`;
+                } else {
+                    eventMessage = `\n${event.emoji} **${event.name}** (${diff} π-b$)`; // Negativo
+                }
                 break;
             }
         }
@@ -739,10 +735,10 @@ class EconomySystem {
         return {
             'delivery': {
                 name: '🚚 Delivery',
-                cooldown: 60 * 60 * 1000, // 1 hora
+                cooldown: 2 * 60 * 60 * 1000, // 1 hora
                 codeName: 'delivery',
-                baseReward: 1500,
-                variation: 1000,
+                baseReward: 300,
+                variation: 200,
                 levelRequirement: 1,
                 failChance: 0.05, // 5% de fallar
                 messages: [
@@ -760,10 +756,10 @@ class EconomySystem {
             },
             'programmer': {
                 name: '💻 Programador',
-                cooldown: 60 * 60 * 1000, // 1 hora
+                cooldown: 2 * 60 * 60 * 1000, // 1 hora
                 codeName: 'programmer',
-                baseReward: 2500,
-                variation: 1500,
+                baseReward: 500,
+                variation: 300,
                 levelRequirement: 5,
                 failChance: 0.1, // 10% de fallar
                 messages: [
@@ -781,10 +777,10 @@ class EconomySystem {
             },
             'abrepuertasoxxo': {
                 name: '🚪 Abre Puertas Oxxo',
-                cooldown: 60 * 60 * 3000, // 3 hora
+                cooldown: 2 * 60 * 60 * 1000, // 3 hora
                 codeName: 'abrepuertasoxxo',
-                baseReward: 12000,
-                variation: 9000,
+                baseReward: 2500,
+                variation: 1500,
                 levelRequirement: 9,
                 failChance: 0.40, // 75% de fallar
                 messages: [
@@ -801,10 +797,10 @@ class EconomySystem {
             },
             'doctor': {
                 name: '👨‍⚕️ Doctor',
-                cooldown: 60 * 60 * 1000, // 1 hora
+                cooldown: 3 * 60 * 60 * 1000, // 1 hora
                 codeName: 'doctor',
-                baseReward: 4000,
-                variation: 2000,
+                baseReward: 800,
+                variation: 400,
                 levelRequirement: 10,
                 failChance: 0.15, // 15% de fallar
                 messages: [
@@ -822,10 +818,10 @@ class EconomySystem {
             },
             'botargadrsimi': {
                 name: '🥼 Botarga de Doctor Simi',
-                cooldown: 60 * 60 * 1000, // 1 hora
+                cooldown: 3 * 60 * 60 * 1000, // 1 hora
                 codeName: 'botargadrsimi',
-                baseReward: 7000,
-                variation: 5000,
+                baseReward: 1400,
+                variation: 1000,
                 levelRequirement: 12,
                 failChance: 0.2, // 20% de fallar
                 messages: [
@@ -843,10 +839,10 @@ class EconomySystem {
             },        
             'criminal': {
                 name: '🕵️ Actividad Sospechosa',
-                cooldown: 60 * 60 * 1000, // 1 hora
+                cooldown: 4 * 60 * 60 * 1000, // 1 hora
                 codeName: 'criminal',
-                baseReward: 6000,
-                variation: 4000,
+                baseReward: 1200,
+                variation: 800,
                 levelRequirement: 15,
                 failChance: 0.3, // 30% de fallar
                 messages: [
@@ -865,10 +861,10 @@ class EconomySystem {
             },
             'vendedordelpunto': {
                 name: '🚬 Vendedor del Punto',
-                cooldown: 60 * 60 * 1000, // 1 hora
+                cooldown: 4 * 60 * 60 * 1000, // 1 hora
                 codeName: 'vendedordelpunto',
-                baseReward: 12000,
-                variation: 15000,
+                baseReward: 2500,
+                variation: 3000,
                 levelRequirement: 15,
                 failChance: 0.35, // 35% de fallar
                 messages: [
@@ -888,10 +884,10 @@ class EconomySystem {
             },
             'ofseller': {
                 name: '👙 Vendedora de Nudes',
-                cooldown: 60 * 60 * 1000, // 1 hora
+                cooldown: 4 * 60 * 60 * 1000, // 1 hora
                 codeName: 'ofseller',
-                baseReward: 10000,
-                variation: 8000,
+                baseReward: 2000,
+                variation: 1600,
                 levelRequirement: 20,
                 failChance: 0.2, // 20% de fallar
                 messages: [
@@ -910,10 +906,10 @@ class EconomySystem {
             },
             'paranormalinv': {
                 name: '👻 Investigador Paranormal',
-                cooldown: 60 * 60 * 1000, // 1 hora
+                cooldown: 4 * 60 * 60 * 1000, // 1 hora
                 codeName: 'paranormalinv',
-                baseReward: 15000,
-                variation: 13000,
+                baseReward: 3000,
+                variation: 2600,
                 levelRequirement: 25,
                 failChance: 0.30, // 30% de fallar
                 messages: [
@@ -1074,24 +1070,18 @@ class EconomySystem {
         let finalEarnings = amount;
 
         for (const event of this.events.getActiveEvents()) {
-            if (event.type === 'money_rain') {
-                finalEarnings = Math.floor(amount * 1.5); // 💰 +50%
-                eventMessage = `💰 **Lluvia de Dinero** (+${finalEarnings - amount} π-b$)`;
-                break;
-            }
-            else if (event.type === 'fever_time') {
-                finalEarnings = Math.floor(amount * 1.3); // 🔥 +30%
-                eventMessage = `🔥 **Tiempo Fiebre** (+${finalEarnings - amount} π-b$)`;
-                break;
-            }
-            else if (event.type === 'market_crash') {
-                finalEarnings = Math.floor(amount * 0.7); // 📉 -30%
-                eventMessage = `📉 **Crisis del Mercado** (-${amount - finalEarnings} π-b$)`;
-                break;
-            }
-            else if (event.type === 'server_anniversary') {
-                finalEarnings = Math.floor(amount * 2);
-                eventMessage = `🎉 **Aniversario del Servidor** (+${finalEarnings - amount} π-b$)`
+            const workMultiplier = event.multipliers?.work || 1.0;
+            
+            if (workMultiplier !== 1.0) {
+                const baseAmount = amount;
+                finalEarnings = Math.floor(baseAmount * workMultiplier);
+                const diff = finalEarnings - baseAmount;
+                
+                if (diff > 0) {
+                    eventMessage = `${event.emoji} **${event.name}** (+${diff} π-b$)`;
+                } else {
+                    eventMessage = `${event.emoji} **${event.name}** (${diff} π-b$)`;
+                }
                 break;
             }
         }

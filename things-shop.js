@@ -531,13 +531,14 @@ class CraftingSystem {
             'master_toolkit': {
                 id: 'master_toolkit',
                 name: '🔧⚡ Kit Maestro',
-                description: 'Reduce todos los cooldowns permanentemente en 30%',
-                craftTime: 10800000, // 3 horas
+                description: 'Reduce todos los cooldowns permanentemente en 20%',
+                craftTime: 21600000, // 6 horas
                 ingredients: [
-                    { id: 'work_boots', quantity: 2 },
+                    { id: 'work_boots', quantity: 1 },
                     { id: 'energy_drink', quantity: 10 },
                     { id: 'robbery_kit', quantity: 5 },
-                    { id: 'golden_pickaxe', quantity: 1 }
+                    { id: 'golden_pickaxe', quantity: 1 },
+                    { id: 'permanent_vault', quantity: 1}
                 ],
                 result: {
                     id: 'master_toolkit',
@@ -546,7 +547,7 @@ class CraftingSystem {
                     effect: {
                         type: 'permanent_cooldown',
                         targets: ['all'],
-                        reduction: 0.3
+                        reduction: 0.2
                     },
                     stackable: false,
                     maxStack: 1
@@ -607,7 +608,7 @@ class CraftingSystem {
                 description: 'Un amuleto místico con poderes cósmicos (x3.0 multiplicador, 2 horas)',
                 craftTime: 10800000, // 3 horas
                 ingredients: [
-                    { id: 'super_lucky_charm', quantity: 2 },
+                    { id: 'super_lucky_charm', quantity: 1 },
                     { id: 'xp_tornado', quantity: 1 }
                 ],
                 result: {
@@ -617,7 +618,7 @@ class CraftingSystem {
                     effect: {
                         type: 'multiplier',
                         targets: ['work', 'games'],
-                        multiplier: 2.5,
+                        multiplier: 2.0,
                         duration: 5400 // 1.5 horas
                     },
                     stackable: true,
@@ -682,10 +683,11 @@ class CraftingSystem {
                 id: 'infinity_charm_craft',
                 name: '♾️🍀 Amuleto Infinito',
                 description: 'El amuleto definitivo. (x5.0 multiplicador, 3 horas)',
-                craftTime: 21600000, // 6 horas 
+                craftTime: 43200000, // 12 horas 
                 ingredients: [
-                    { id: 'cosmic_charm', quantity: 2 },
-                    { id: 'xp_tornado', quantity: 2 }
+                    { id: 'cosmic_charm', quantity: 1 },
+                    { id: 'xp_tornado', quantity: 2 },
+                    { id: 'super_lucky_charm', quantity: 2}
                 ],
                 result: {
                     id: 'infinity_charm',
@@ -694,8 +696,8 @@ class CraftingSystem {
                     effect: {
                         type: 'multiplier',
                         targets: ['work', 'games'],
-                        multiplier: 5.0,
-                        duration: 10800 // 3 horas
+                        multiplier: 3.0,
+                        duration: 7200 // 2 horas
                     },
                     stackable: true,
                     maxStack: 1
@@ -729,10 +731,11 @@ class CraftingSystem {
                 id: 'eternal_pickaxe_craft',
                 name: '♾️⛏️ Pico Eterno',
                 description: 'El pico definitivo, nunca se rompe',
-                craftTime: 10800000, // 3 horas
+                craftTime: 21600000, // 6 horas
                 ingredients: [
                     { id: 'diamond_pickaxe', quantity: 1 },
-                    { id: 'super_lucky_charm', quantity: 2 }
+                    { id: 'super_lucky_charm', quantity: 2 },
+                    { id: 'money_magnet', quantity: 1 }
                 ],
                 result: {
                     id: 'eternal_pickaxe',
@@ -740,7 +743,7 @@ class CraftingSystem {
                     rarity: 'legendary',
                     effect: {
                         type: 'mining_boost',
-                        multiplier: 2.5,
+                        multiplier: 2.0,
                         durability: Infinity
                     },
                     stackable: false
@@ -755,7 +758,8 @@ class CraftingSystem {
                 craftTime: 21600000, // 6 horas
                 ingredients: [
                     { id: 'master_gloves', quantity: 1 },
-                    { id: 'fortune_shield', quantity: 1 }
+                    { id: 'fortune_shield', quantity: 1 },
+                    { id: 'robbery_kit', quantity: 5}
                 ],
                 result: {
                     id: 'phantom_gloves',

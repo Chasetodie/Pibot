@@ -140,6 +140,8 @@ class CommandHandler {
 
     // Procesador principal de comandos
     async processCommand(message) {
+        const commandName = command.replace('>', '');
+        await this.economy.missions.updateMissionProgress(userId, 'unique_commands_used', commandName);
         const command = message.content.toLowerCase().split(' ')[0];
 
         try {

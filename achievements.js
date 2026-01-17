@@ -27,7 +27,7 @@ class AchievementsSystem {
                 name: '💸 Emprendedor',
                 description: 'Acumula 10,000 π-b Coins',
                 requirement: { type: 'money_balance', value: 10000 },
-                reward: { money: 1000, xp: 100 },
+                reward: { money: 500, xp: 75 },
                 rarity: 'uncommon',
                 emoji: '💸'
             },
@@ -35,7 +35,7 @@ class AchievementsSystem {
                 name: '🏆 Millonario',
                 description: 'Acumula 1,000,000 π-b Coins',
                 requirement: { type: 'money_balance', value: 1000000 },
-                reward: { money: 50000, xp: 2500 },
+                reward: { money: 25000, xp: 2000 },
                 rarity: 'legendary',
                 emoji: '🏆'
             },
@@ -69,7 +69,7 @@ class AchievementsSystem {
                 name: '⭐ Leyenda',
                 description: 'Alcanza el nivel 100',
                 requirement: { type: 'level', value: 100 },
-                reward: { money: 50000, xp: 5000 },
+                reward: { money: 50000, xp: 2500 },
                 rarity: 'legendary',
                 emoji: '⭐'
             },
@@ -79,7 +79,7 @@ class AchievementsSystem {
                 name: '💬 Conversador',
                 description: 'Envía 100 mensajes',
                 requirement: { type: 'messages', value: 100 },
-                reward: { money: 200, xp: 50 },
+                reward: { money: 100, xp: 25 },
                 rarity: 'common',
                 emoji: '💬'
             },
@@ -87,7 +87,7 @@ class AchievementsSystem {
                 name: '🦋 Mariposa Social',
                 description: 'Envía 1,000 mensajes',
                 requirement: { type: 'messages', value: 1000 },
-                reward: { money: 2000, xp: 250 },
+                reward: { money: 1000, xp: 150 },
                 rarity: 'rare',
                 emoji: '🦋'
             },
@@ -105,7 +105,7 @@ class AchievementsSystem {
                 name: '🛠️ Primer Trabajo',
                 description: 'Completa tu primer trabajo',
                 requirement: { type: 'work_count', value: 1 },
-                reward: { money: 150, xp: 37.5 },
+                reward: { money: 50, xp: 15 },
                 rarity: 'common',
                 emoji: '🛠️'
             },
@@ -113,7 +113,7 @@ class AchievementsSystem {
                 name: '💪 Trabajador Duro',
                 description: 'Completa 100 trabajos',
                 requirement: { type: 'work_count', value: 100 },
-                reward: { money: 5000, xp: 500 },
+                reward: { money: 2500, xp: 300 },
                 rarity: 'rare',
                 emoji: '💪'
             },
@@ -165,7 +165,7 @@ class AchievementsSystem {
                 name: '💎 Apostador VIP',
                 description: 'Apuesta más de 50,000 π-b$ en total',
                 requirement: { type: 'total_bet', value: 50000 },
-                reward: { money: 10000, xp: 1000 },
+                reward: { money: 5000, xp: 500 },
                 rarity: 'epic',
                 emoji: '💎'
             },           
@@ -173,7 +173,7 @@ class AchievementsSystem {
                 name: '🎰 Ganador de Lotería',
                 description: 'Gana al menos una vez en la lotería',
                 requirement: { type: 'lottery_wins', value: 1 },
-                reward: { money: 1000, xp: 2500 },
+                reward: { money: 500, xp: 500 },
                 rarity: 'rare',
                 emoji: '🎰'
             },
@@ -242,7 +242,7 @@ class AchievementsSystem {
                 name: '🎰 Jackpot!',
                 description: 'Gana más de 500,000 π-b$ en una sola apuesta',
                 requirement: { type: 'single_bet_win', value: 500000 },
-                reward: { money: 20000, xp: 2500 },
+                reward: { money: 25000, xp: 1500 },
                 rarity: 'legendary',
                 emoji: '🎰'
             },
@@ -250,7 +250,7 @@ class AchievementsSystem {
                 name: '🏅 Completista',
                 description: 'Obtén todos los logros disponibles',
                 requirement: { type: 'achievements_count', value: 27 }, // Actualizar según total
-                reward: { money: 100000, xp: 5000 },
+                reward: { money: 100000, xp: 3000 },
                 rarity: 'legendary',
                 emoji: '🏅'
             }
@@ -612,19 +612,19 @@ class AchievementsSystem {
                     let eventMessage = '';
 
                     for (const event of this.events.getActiveEvents()) {
-                        if (event.type === 'fever_time') {
-                            finalEarnings = Math.floor(achievement.reward.money * 1.6); // 🔥 +30%
-                            eventMessage = `🔥 **Tiempo Fiebre** (+${finalEarnings - achievement.reward.money} π-b$)`;
+                        const rewardMultiplier = event.multipliers?.rewards || 1.0;
+                        
+                        if (rewardMultiplier !== 1.0) {
+                            const baseReward = achievement.reward.money;
+                            finalEarnings = Math.floor(baseReward * rewardMultiplier);
+                            const diff = finalEarnings - baseReward;
+                            
+                            if (diff > 0) {
+                                eventMessage = `${event.emoji} **${event.name}** (+${diff} π-b$)`;
+                            } else {
+                                eventMessage = `${event.emoji} **${event.name}** (${diff} π-b$)`;
+                            }
                             break;
-                        }
-                        else if (event.type === 'market_crash') {
-                            finalEarnings = Math.floor(achievement.reward.money * 0.8); // 📉 -30%
-                            eventMessage = `📉 **Crisis del Mercado** (-${achievement.reward.money - finalEarnings} π-b$)`;
-                            break;
-                        }
-                        else if (event.type === 'server_anniversary') {
-                            finalEarnings = Math.floor(achievement.reward.money * 2);
-                            eventMessage = `🎉 **Aniversario del Servidor** (+${finalEarnings - achievement.reward.money} π-b$)`
                         }
                     }
 
@@ -675,6 +675,7 @@ class AchievementsSystem {
                     }
                 }
                 
+                await this.economy.missions.updateMissionProgress(userId, 'achievements_unlocked_today', 1);
                 await this.economy.updateUser(userId, updateData);
                 unlockedAchievements.push(achievementId);
                 console.log(`🏆 ${userId} desbloqueó logro: ${achievement.name}`);
@@ -1139,6 +1140,9 @@ class AchievementsSystem {
    
     // NUEVO: Procesador de comandos
     async processCommand(message) {
+        const commandName = command.replace('>', '');
+        await this.economy.missions.updateMissionProgress(userId, 'unique_commands_used', commandName);
+        
         // Verificar ingresos pasivos pendientes
         await this.economy.checkPendingPassiveIncome(message.author.id);
         await this.economy.checkAndNotifyItems(message.author.id, message);

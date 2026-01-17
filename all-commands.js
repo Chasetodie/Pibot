@@ -264,9 +264,10 @@ class AllCommands {
             const dailyMissions = await this.economy.missions.updateMissionProgress(userId, 'daily_claimed');
             // ✅ AGREGAR ESTA LÍNEA:
             const moneyMissions = await this.economy.missions.updateMissionProgress(userId, 'money_earned_today', result.amount);
-            
+            const trinityMissions = await this.missions.checkTrinityCompletion(userId); // ← NUEVO
+
             // ✅ COMBINAR AMBOS RESULTADOS:
-            const allCompleted = [...dailyMissions, ...moneyMissions];
+            const allCompleted = [...dailyMissions, ...moneyMissions, ...trinityMissions];
             if (allCompleted.length > 0) {
                 await this.economy.missions.notifyCompletedMissions(message, allCompleted);
             }
@@ -1031,8 +1032,9 @@ class AllCommands {
             if (this.economy.missions) {
                 const workMissions = await this.economy.missions.updateMissionProgress(userId, 'work');
                 const moneyMissions = await this.economy.missions.updateMissionProgress(userId, 'money_earned_today', result.amount);
-                
-                const allCompleted = [...workMissions, ...moneyMissions];
+                const trinityMissionss = await this.missions.checkTrinityCompletion(userId); // ← NUEVO
+
+                const allCompleted = [...workMissions, ...moneyMissions, ...trinityMissionss];
                 if (allCompleted.length > 0) {
                     await this.economy.missions.notifyCompletedMissions(message, allCompleted);
                 }
@@ -1639,6 +1641,9 @@ class AllCommands {
     }
 
     async processCommand(message) {
+        const commandName = command.replace('>', '');
+        await this.economy.missions.updateMissionProgress(userId, 'unique_commands_used', commandName);
+        
         // Verificar ingresos pasivos pendientes
         await this.economy.checkPendingPassiveIncome(message.author.id);
         await this.economy.checkAndNotifyItems(message.author.id, message);

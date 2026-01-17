@@ -32,6 +32,25 @@ class MinigamesSystem {
             weekDuration: 7 * 24 * 60 * 60 * 1000 // 7 dias en ms
         };
 
+        // ✅ AGREGAR ESTO (configuración de límites):
+        this.dailyLimits = {
+            lottery: {
+                perCycle: 3,        // 3 partidas por ciclo
+                cycleHours: 4,      // Cada 4 horas
+                maxDaily: 18        // Máximo 18 al día (3 × 6 ciclos)
+            },
+            blackjack: {
+                perCycle: 10,       // 10 partidas por ciclo
+                cycleHours: 4,      // Cada 4 horas
+                maxDaily: 60        // Máximo 60 al día (10 × 6 ciclos)
+            },
+            roulette: {
+                perCycle: 8,        // 8 partidas por ciclo
+                cycleHours: 4,      // Cada 4 horas
+                maxDaily: 48        // Máximo 48 al día (8 × 6 ciclos)
+            }
+        };
+
         setInterval(() => {
             this.checkWeeklyPotExpiry();
         }, 60 * 60 * 1000);
@@ -39,86 +58,85 @@ class MinigamesSystem {
         // Configuración de minijuegos
         this.config = {
             coinflip: {
-                minBet: 50,
-                maxBet: 10000,
-                cooldown: 15000, // 15 segundos entre juegos
-                winMultiplier: 1.95 // Ganas 95% adicional (casa gana 5%)
+                minBet: 100,            // Cambiar de 50 a 100
+                maxBet: 5000,           // Cambiar de 10000 a 5000
+                cooldown: 30000,        // Cambiar de 15000 a 30000 (30 segundos)
+                winMultiplier: 1.85     // Cambiar de 1.95 a 1.85
             },
             dice: {
-                minBet: 50,
-                maxBet: 10000,
-                cooldown: 30000, // 30 segundos entre juegos
+                minBet: 100,            // Cambiar de 50 a 100
+                maxBet: 5000,           // Cambiar de 10000 a 5000
+                cooldown: 45000,        // Cambiar de 30000 a 45000 (45 segundos)
                 payouts: {
-                    exact: 4.8, // Adivinar número exacto: x5.8
-                    high: 1.9,  // 4-6: x1.9
-                    low: 1.9    // 1-3: x1.9
+                    exact: 4.0,         // Cambiar de 4.8 a 4.0
+                    high: 1.85,         // Cambiar de 1.9 a 1.85
+                    low: 1.85           // Cambiar de 1.9 a 1.85
                 }
             },
             guess: {
                 minBet: 100,
                 maxBet: 5000,
-                cooldown: 15000, // 10 segundos
+                cooldown: 15000,
                 payouts: {
-                    exact: 50,    // Número exacto: x50
-                    close5: 10,   // ±5: x10
-                    close10: 5,   // ±10: x5
-                    close20: 2    // ±20: x2
+                    exact: 50,
+                    close5: 10,
+                    close10: 5,
+                    close20: 2
                 }
             },
             lottery: {
                 minBet: 500,
-                maxBet: 5000,
-                cooldown: 900000, // 30 minutos (30 * 60 * 1000)
-                winMultiplier: 100, // Gana x100 si acierta
+                maxBet: 3000,           // Cambiar de 5000 a 3000
+                cooldown: 1800000,      // Cambiar de 900000 a 1800000 (30 minutos)
+                winMultiplier: 75,      // Cambiar de 100 a 75
                 minNumber: 1,
                 maxNumber: 100
             },
             blackjack: {
                 minBet: 100,
-                maxBet: 15000,
-                cooldown: 90000,
-                blackjackMultiplier: 2.5,
-                winMultiplier: 2
+                maxBet: 10000,          // Cambiar de 15000 a 10000
+                cooldown: 120000,       // Cambiar de 90000 a 120000 (2 minutos)
+                blackjackMultiplier: 2.3, // Cambiar de 2.5 a 2.3
+                winMultiplier: 1.9      // Cambiar de 2 a 1.9
             },
             roulette: {
                 minBet: 100,
-                maxBet: 20000,
-                cooldown: 45000, // 45 segundos entre juegos
+                maxBet: 15000,          // Cambiar de 20000 a 15000
+                cooldown: 60000,        // Cambiar de 45000 a 60000 (1 minuto)
                 payouts: {
-                    straight: 35,    // Número exacto: x35
-                    red: 1.95,       // Rojo: x1.95
-                    black: 1.95,     // Negro: x1.95
-                    green: 37,       // Verde: x37
-                    odd: 1.95,       // Impar: x1.95
-                    even: 1.95,      // Par: x1.95
-                    low: 1.95,       // 1-18: x1.95
-                    high: 1.95,      // 19-36: x1.95
-                    dozen1: 2.9,     // 1era docena (1-12): x2.9
-                    dozen2: 2.9,     // 2da docena (13-24): x2.9
-                    dozen3: 2.9,     // 3era docena (25-36): x2.9
-                    column1: 2.9,    // 1era columna: x2.9
-                    column2: 2.9,    // 2da columna: x2.9
-                    column3: 2.9     // 3era columna: x2.9
+                    straight: 32,       // Cambiar de 35 a 32
+                    red: 1.85,          // Cambiar de 1.95 a 1.85
+                    black: 1.85,        // Cambiar de 1.95 a 1.85
+                    green: 34,          // Cambiar de 37 a 34
+                    odd: 1.85,          // Cambiar de 1.95 a 1.85
+                    even: 1.85,         // Cambiar de 1.95 a 1.85
+                    low: 1.85,          // Cambiar de 1.95 a 1.85
+                    high: 1.85,         // Cambiar de 1.95 a 1.85
+                    dozen1: 2.7,        // Cambiar de 2.9 a 2.7
+                    dozen2: 2.7,        // Cambiar de 2.9 a 2.7
+                    dozen3: 2.7,        // Cambiar de 2.9 a 2.7
+                    column1: 2.7,       // Cambiar de 2.9 a 2.7
+                    column2: 2.7,       // Cambiar de 2.9 a 2.7
+                    column3: 2.7        // Cambiar de 2.9 a 2.7
                 }
             },
             russianRoulette: {
-                minBet: 200,
-                maxBet: 5000,
+                minBet: 300,            // Cambiar de 200 a 300
+                maxBet: 4000,           // Cambiar de 5000 a 4000
                 minPlayers: 2,
                 maxPlayers: 6,
-                joinTime: 60000, // 1 minuto segundos para unirse
-                turnTime: 20000, // 20 segundos por turno
-                winnerMultiplier: 0.85 // El ganador se lleva 85% del pot total
+                joinTime: 60000,
+                turnTime: 20000,
+                winnerMultiplier: 0.80  // Cambiar de 0.85 a 0.80 (casa 20%)
             },
             uno: {
-                minBet: 100,
-                maxBet: 10000,
+                minBet: 150,
+                maxBet: 8000,
                 minPlayers: 2,
                 maxPlayers: 8,
                 joinTime: 60000,
                 turnTime: 600000,
-                winnerMultiplier: 0.95,
-                // NUEVO: Variantes disponibles
+                winnerMultiplier: 0.90,
                 variants: {
                     classic: {
                         name: "Clásico",
@@ -202,6 +220,200 @@ class MinigamesSystem {
         }, 10 * 60 * 1000);
     }
 
+    // Método unificado para aplicar CUALQUIER tipo de evento
+    async applyEventEffects(userId, baseAmount, context = 'minigames') {
+        let finalAmount = baseAmount;
+        let eventMessage = '';
+        let cooldownMultiplier = 1;
+        let luckBonus = 0;
+        
+        for (const event of this.events.getActiveEvents()) {
+            // 1. Multiplicadores de dinero (minigames, work, daily, rewards, transfer_bonus)
+            const multiplier = event.multipliers?.[context];
+            if (multiplier && context !== 'cooldown' && context !== 'luck') {
+                const bonus = Math.floor(baseAmount * multiplier) - baseAmount;
+                finalAmount = Math.floor(baseAmount * multiplier);
+                
+                if (bonus > 0) {
+                    eventMessage = `${event.emoji} **${event.name}** (+${this.formatNumber(bonus)} π-b$)`;
+                } else if (bonus < 0) {
+                    eventMessage = `${event.emoji} **${event.name}** (${this.formatNumber(bonus)} π-b$)`;
+                }
+            }
+            
+            // 2. Cooldowns (para reducción de tiempos)
+            if (context === 'cooldown' && event.multipliers?.cooldown) {
+                cooldownMultiplier = event.multipliers.cooldown;
+            }
+            
+            // 3. Suerte (para eventos lucky_hour)
+            if (context === 'luck' && event.type === 'lucky_hour') {
+                luckBonus = 0.10; // +10% fijo
+                eventMessage = `${event.emoji} **${event.name}**`;
+            }
+            
+            // Solo aplicar el primer evento que coincida
+            if (eventMessage || cooldownMultiplier !== 1 || luckBonus > 0) {
+                break;
+            }
+        }
+        
+        return { 
+            finalAmount, 
+            eventMessage, 
+            cooldownMultiplier, 
+            luckBonus 
+        };
+    }
+
+    async calculateLuck(userId) {
+        let totalLuckBonus = 0;
+        let luckMessages = [];
+        
+        // 1. Items de suerte (máximo +8%)
+        if (this.shop) {
+            const luckBoost = await this.shop.getActiveMultipliers(userId, 'games');
+            if (luckBoost.luckBoost) {
+                const itemBonus = Math.min(luckBoost.luckBoost * 0.4, 0.08);
+                totalLuckBonus += itemBonus;
+                luckMessages.push(`🍀 **Boost de Suerte** (+${Math.round(itemBonus * 100)}%)`);
+            }
+        }
+        
+        // 2. Eventos de suerte (+10%)
+        const eventLuck = await this.applyEventEffects(userId, 0, 'luck');
+        if (eventLuck.luckBonus > 0) {
+            totalLuckBonus += eventLuck.luckBonus;
+            luckMessages.push(`${eventLuck.eventMessage} (+10%)`);
+        }
+        
+        // 3. VIP suerte (máximo +7%)
+        if (this.shop) {
+            const vipMultipliers = await this.shop.getVipMultipliers(userId, 'games');
+            if (vipMultipliers.luckBoost > 0) {
+                const vipBonus = Math.min(vipMultipliers.luckBoost * 0.35, 0.07);
+                totalLuckBonus += vipBonus;
+                luckMessages.push(`💎 **Boost VIP** (+${Math.round(vipBonus * 100)}%)`);
+            }
+        }
+        
+        return {
+            luckBonus: totalLuckBonus,
+            luckMessage: luckMessages.join('\n')
+        };
+    }
+
+    async applyLuckToGame(baseChance, userId, gameType) {
+        const luck = await this.calculateLuck(userId);
+        
+        // Límites de bonus según juego
+        const maxBonusByGame = {
+            'lottery': 0.05,           // +5% máximo
+            'roulette_straight': 0.08, // +8% máximo
+            'dice_exact': 0.10,        // +10% máximo
+            'coinflip': 0.12,          // +12% máximo
+            'dice_highlow': 0.12,      // +12% máximo
+            'roulette_color': 0.10,    // +10% máximo
+            'default': 0.15
+        };
+        
+        const maxBonus = maxBonusByGame[gameType] || maxBonusByGame['default'];
+        const cappedBonus = Math.min(luck.luckBonus, maxBonus);
+        
+        // Límite absoluto de probabilidad de ganar
+        const maxWinChance = {
+            'lottery': 0.06,           // 6% máximo
+            'roulette_straight': 0.12, // 12% máximo
+            'dice_exact': 0.28,        // 28% máximo
+            'coinflip': 0.62,          // 62% máximo
+            'dice_highlow': 0.62,      // 62% máximo
+            'roulette_color': 0.58,    // 58% máximo
+            'default': 0.65
+        };
+        
+        const finalChance = Math.min(
+            baseChance + cappedBonus, 
+            maxWinChance[gameType] || maxWinChance['default']
+        );
+        
+        return {
+            winChance: finalChance,
+            luckMessage: luck.luckMessage,
+            luckApplied: cappedBonus > 0
+        };
+    }
+
+    async checkTreasureHunt(userId, message) {
+        for (const event of this.events.getActiveEvents()) {
+            if (event.type === 'treasure_hunt' && Math.random() < 0.15) {
+                const treasureType = Math.random();
+                let treasureReward = 0;
+                let xpBonus = 0;
+                let treasureDescription = '';
+                
+                if (treasureType < 0.55) {
+                    // 55% - Dinero normal
+                    treasureReward = Math.floor(Math.random() * 2000) + 500;
+                    treasureDescription = `💰 Cofre de monedas: ${this.formatNumber(treasureReward)} π-b$`;
+                } else if (treasureType < 0.70) {
+                    // 15% - Dinero premium
+                    treasureReward = Math.floor(Math.random() * 3000) + 1500;
+                    treasureDescription = `🏆 Cofre dorado: ${this.formatNumber(treasureReward)} π-b$`;
+                } else {
+                    // 30% - XP
+                    xpBonus = Math.floor(Math.random() * 1000) + 500;
+                    treasureDescription = `📜 Pergamino ancestral: +${xpBonus} XP`;
+                }
+                
+                if (treasureReward > 0) {
+                    await this.economy.addMoney(userId, treasureReward, 'treasure_found');
+                }
+                if (xpBonus > 0) {
+                    await this.economy.addXp(userId, xpBonus);
+                }
+                
+                await message.reply(`🗺️ **¡Tesoro encontrado!**\n${treasureDescription}`);
+                
+                // Actualizar stats del evento
+                event.stats.treasuresFound = (event.stats.treasuresFound || 0) + 1;
+                event.stats.totalTreasureValue = (event.stats.totalTreasureValue || 0) + treasureReward;
+                if (xpBonus > 0) {
+                    event.stats.totalXpGiven = (event.stats.totalXpGiven || 0) + xpBonus;
+                }
+                
+                break;
+            }
+        }
+    }
+
+    async showLimitReached(message, userId, gameType, status, limitConfig) {
+        const timeLeft = status.cycleReset - Date.now();
+        const hoursLeft = Math.floor(timeLeft / (60 * 60 * 1000));
+        const minutesLeft = Math.floor((timeLeft % (60 * 60 * 1000)) / (60 * 1000));
+        
+        const gameName = gameType.charAt(0).toUpperCase() + gameType.slice(1);
+        
+        const embed = new EmbedBuilder()
+            .setTitle('⏳ Límite de Ciclo Alcanzado')
+            .setDescription(
+                `Has jugado **${status.cycleCount}/${limitConfig.perCycle}** partidas de **${gameName}**.\n\n` +
+                `⏰ Próximo reset: **${hoursLeft}h ${minutesLeft}m**\n` +
+                `📊 Partidas hoy: ${status.dailyCount}/${limitConfig.maxDaily}`
+            )
+            .setColor('#FFA500')
+            .setTimestamp();
+        
+        const row = new ActionRowBuilder()
+            .addComponents(
+                new ButtonBuilder()
+                    .setCustomId(`notify_limit_${gameType}_${userId}`)
+                    .setLabel('🔔 Avisarme cuando se recargue')
+                    .setStyle(ButtonStyle.Primary)
+            );
+        
+        await message.reply({ embeds: [embed], components: [row] });
+    }
+
     // Verificar cooldown de usuario
     checkCooldown(userId, gameType) {
         const key = `${userId}-${gameType}`;
@@ -246,22 +458,17 @@ class MinigamesSystem {
         return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
     }
 
-    getEffectiveCooldown(baseCooldown) {
+    async getEffectiveCooldown(baseCooldown, userId, context = 'games') {
         let effectiveCooldown = baseCooldown;
         
-        for (const event of this.events.getActiveEvents()) {
-            if (event.type === 'fever_time') {
-                effectiveCooldown = Math.floor(baseCooldown * 0.5); // 🔥 -50% tiempo
-                break;
-            }
-            else if (event.type === 'market_crash') {
-                effectiveCooldown = Math.floor(baseCooldown * 0.4); // 🔥 -40% tiempo
-                break;
-            }
-            else if (event.type === 'server_anniversary') {
-                effectiveCooldown = Math.floor(baseCooldown * 0.3); // 🔥 -30% tiempo
-                break;
-            }
+        // Aplicar eventos
+        const eventEffect = await this.applyEventEffects(userId, 0, 'cooldown');
+        effectiveCooldown = Math.floor(baseCooldown * eventEffect.cooldownMultiplier);
+        
+        // Aplicar items
+        if (this.shop) {
+            const cooldownReduction = await this.shop.getCooldownReduction(userId, context);
+            effectiveCooldown = Math.floor(effectiveCooldown * (1 - cooldownReduction));
         }
         
         return effectiveCooldown;
@@ -280,12 +487,6 @@ class MinigamesSystem {
         const lastCoin = user.last_coinflip || 0;
         const now = Date.now();
         let effectiveCooldown = this.getEffectiveCooldown(this.config.coinflip.cooldown);
-
-        // Aplicar reducción de items
-        if (this.shop) {
-            const cooldownReduction = await this.shop.getCooldownReduction(userId, 'games');
-            effectiveCooldown = Math.floor(effectiveCooldown * (1 - cooldownReduction));
-        }
 
         if (now - lastCoin < effectiveCooldown) {
             const timeLeft = effectiveCooldown - (now - lastCoin);
@@ -360,42 +561,8 @@ class MinigamesSystem {
             return;
         }
 
-        let winChance = 0.5;
-        let luckMessages = []; // Array para acumular mensajes
-
-        // 1. Items de suerte
-        if (this.shop) {
-            const luckBoost = await this.shop.getActiveMultipliers(userId, 'games');
-            if (luckBoost.luckBoost) {
-                winChance += luckBoost.luckBoost;
-                luckMessages.push(`🍀 **Boost de Suerte** (+${Math.round(luckBoost.luckBoost * 100)}% probabilidad)`);
-            }
-        }
-
-        // 2. Eventos de suerte
-        for (const event of this.events.getActiveEvents()) {
-            if (event.type === 'lucky_hour') {
-                winChance *= 1.3;
-                luckMessages.push(`🍀 **Hora de la Suerte** (${Math.round(winChance * 100)}% probabilidad)`);
-                break;
-            }
-        }
-
-        // 3. VIP suerte
-        if (this.shop) {
-            const vipMultipliers = await this.shop.getVipMultipliers(userId, 'games');
-            winChance += vipMultipliers.luckBoost;
-            if (vipMultipliers.luckBoost > 0) {
-                luckMessages.push(`💎 **Boost VIP** (+${Math.round(vipMultipliers.luckBoost * 100)}% suerte)`);
-                await this.economy.shop.updateVipStats(userId, 'luckyWins', 1);
-            }
-        }
-
-        // Combinar todos los mensajes de suerte
-        const luckMessage = luckMessages.join('\n');
-
-        // Realizar el juego
-        const result = Math.random() < winChance ? 'cara' : 'cruz';
+        const luckCalc = await this.applyLuckToGame(0.5, userId, 'coinflip');
+        const result = Math.random() < luckCalc.winChance ? 'cara' : 'cruz';
         const won = result === normalizedChoice;
         
         // Establecer cooldown
@@ -419,14 +586,14 @@ class MinigamesSystem {
             // Siempre actualizar que jugó y apostó
             const gameMissions = await this.missions.updateMissionProgress(userId, 'game_played');
             const betMissions = await this.missions.updateMissionProgress(userId, 'money_bet', betAmount);
-            
-            let allCompleted = [...gameMissions, ...betMissions];
+	        const trinityLol = await this.missions.checkTrinityCompletion(userId);            
+
+            let allCompleted = [...gameMissions, ...betMissions, trinityLol];
                         
             if (allCompleted.length > 0) {
                 await this.missions.notifyCompletedMissions(message, allCompleted);
             }
         }
-
         const winAmount = Math.floor(betAmount * this.config.coinflip.winMultiplier);
         let profit = winAmount - betAmount;
         let finalEarnings = profit;
@@ -436,38 +603,21 @@ class MinigamesSystem {
             await this.economy.missions.updateMissionProgress(userId, 'consecutive_win');
             await this.economy.missions.updateMissionProgress(userId, 'game_won');
 
+            // APLICAR EVENTOS DE DINERO
+            const eventBonus = await this.applyEventEffects(userId, profit, 'minigames');
+            let finalEarnings = eventBonus.finalAmount;
+            
+            // APLICAR ITEMS
             if (this.shop) {
                 const modifiers = await this.shop.getActiveMultipliers(userId, 'games');
-                
-                // Calcular bonus VIP antes de aplicar multiplicador
                 const originalProfit = finalEarnings;
                 finalEarnings = Math.floor(finalEarnings * modifiers.multiplier);
                 const vipBonus = finalEarnings - originalProfit;
                 
-                // Si hay bonus VIP, actualizar estadísticas
                 if (vipBonus > 0) {
                     await this.shop.updateVipStats(userId, 'bonusEarnings', vipBonus);
                 }
-                            
-                // Consumir efectos de uso limitado
                 await this.shop.consumeItemUse(userId, 'games');
-            }
-            
-            for (const event of this.events.getActiveEvents()) {
-                if (event.type === 'fever_time') {
-                    finalEarnings = Math.floor(profit * 1.5); // 🔥 +30%
-                    eventMessage = `🔥 **Tiempo Fiebre** (+${finalEarnings - profit} π-b$)`;
-                    break;
-                }
-                else if (event.type === 'market_crash') {
-                    finalEarnings = Math.floor(profit * 1.5); // 📉 -30%
-                    eventMessage = `📉 **Crisis del Mercado** (-${profit - finalEarnings} π-b$)`;
-                    break;
-                }
-                else if (event.type === 'server_anniversary') {
-                    finalEarnings = Math.floor(profit * 2);
-                    eventMessage = `🎉 **Aniversario del Servidor** (+${finalEarnings - profit} π-b$)`
-                }
             }
 
             const userData = await this.economy.getUser(userId);
@@ -533,8 +683,6 @@ class MinigamesSystem {
                 await message.reply(`⚠️ **Límite alcanzado:** No pudiste recibir todo el dinero porque tienes el máximo permitido (${this.formatNumber(userLimit)} π-b$).`);
             }
         } else {
-            await this.economy.missions.updateMissionProgress(userId, 'consecutive_loss'); 
-
             const hasProtection = await this.shop.hasGameProtection(userId);
             let protectionMessage = '🛡️ Tu protección evitó la pérdida de dinero!';
 
@@ -555,6 +703,7 @@ class MinigamesSystem {
                 
                 await message.reply(protectionMessage);
             } else {
+                await this.economy.missions.updateMissionProgress(userId, 'consecutive_loss'); 
                 await this.economy.removeMoney(userId, betAmount, 'coinflip_loss');
             }
 
@@ -587,18 +736,7 @@ class MinigamesSystem {
         }
 
         // Verificar tesoros al final
-        for (const event of this.events.getActiveEvents()) {
-            if (event.type === 'treasure_hunt') {
-                const treasures = await this.events.checkSpecialEvents(userId, 'general');
-                    
-                for (const treasure of treasures) {
-                    if (treasure.type === 'treasure') {
-                        message.reply(`🗺️ **¡Tesoro encontrado!**\n${treasure.description}`);
-                    }
-                }
-                break;
-            }
-        }   
+        await this.checkTreasureHunt(userId, message);
 
         await message.reply({ embeds: [embed] });
     }
@@ -616,12 +754,6 @@ class MinigamesSystem {
         const lastDice = user.last_dice || 0;
         const now = Date.now();
         let effectiveCooldown = this.getEffectiveCooldown(this.config.dice.cooldown);
-
-        // Aplicar reducción de items
-        if (this.shop) {
-            const cooldownReduction = await this.shop.getCooldownReduction(userId, 'games');
-            effectiveCooldown = Math.floor(effectiveCooldown * (1 - cooldownReduction));
-        }
 
         if (now - lastDice < effectiveCooldown) {
             const timeLeft = effectiveCooldown - (now - lastDice);
@@ -685,70 +817,67 @@ class MinigamesSystem {
         // Tirar el dado
         const diceResult = Math.floor(Math.random() * 6) + 1;
         let won = false;
-        let baseWon = false;
         let multiplier = 0;
         let winChance = 1;
-
-        // Determinar si ganó y el multiplicador
-        if (['1', '2', '3', '4', '5', '6'].includes(prediction)) {
-            // Predicción de número exacto
-            baseWon = diceResult === parseInt(prediction);
-            multiplier = this.config.dice.payouts.exact;
-        } else if (['alto', 'high'].includes(prediction)) {
-            // Predicción alto (4-6)
-            baseWon = diceResult >= 4;
-            multiplier = this.config.dice.payouts.high;
-        } else if (['bajo', 'low'].includes(prediction)) {
-            // Predicción bajo (1-3)
-            baseWon = diceResult <= 3;
-            multiplier = this.config.dice.payouts.low;
-        }
-
-        // Aplicar hora de la suerte
+        let gameType = '';
         let luckMessage = '';
-        for (const event of this.events.getActiveEvents()) {
-            if (event.type === 'lucky_hour') {
-                // Si perdió originalmente, dar 30% chance de ganar igual
-                if (!baseWon && Math.random() < 0.3) {
-                    won = true;
-                    luckMessage = `🍀 **Hora de la Suerte** te salvó!`;
-                } else if (baseWon) {
-                    won = true;
-                }
-                break;
-            }
-        }
 
-        // Si no hay hora de la suerte, usar resultado normal
-        if (luckMessage === '') {
-            won = baseWon;
-        }
-
-        // Aplicar efectos de items de suerte
-        let luckMessages = [luckMessage].filter(msg => msg !== ''); // Conservar mensaje de eventos
-        if (this.shop) {
-            const luckBoost = await this.shop.getActiveMultipliers(userId, 'games');
-            if (luckBoost.luckBoost > 0) {
-                // Para dice, aplicar boost a la probabilidad base
-                if (!won && Math.random() < luckBoost.luckBoost) {
-                    won = true;
-                    luckMessages.push(`🍀 **Boost de Suerte** te dio una segunda oportunidad!`);
-                } else if (luckBoost.luckBoost > 0) {
-                    luckMessages.push(`🍀 **Boost de Suerte** (+${Math.round(luckBoost.luckBoost * 100)}% probabilidad)`);
-                }
-            }
-
-            // VIP suerte
-            const vipMultipliers = await this.shop.getVipMultipliers(userId, 'games');
-            if (vipMultipliers.luckBoost > 0 && !won && Math.random() < vipMultipliers.luckBoost) {
+        // DETERMINAR TIPO DE APUESTA
+        if (['1', '2', '3', '4', '5', '6'].includes(prediction)) {
+            // NÚMERO EXACTO
+            gameType = 'dice_exact';
+            multiplier = this.config.dice.payouts.exact;
+            const baseWon = diceResult === parseInt(prediction);
+            
+            if (baseWon) {
                 won = true;
-                luckMessages.push(`💎 **Boost VIP** te salvó!`);
-                await this.economy.shop.updateVipStats(userId, 'luckyWins', 1);
+            } else {
+                // Aplicar suerte solo si perdió
+                const luckCalc = await this.applyLuckToGame(0, userId, gameType);
+                won = Math.random() < luckCalc.winChance;
+                if (won) {
+                    luckMessage = luckCalc.luckMessage + '\n🎲 ¡La suerte cambió el resultado!';
+                }
+            }
+            
+        } else if (['alto', 'high'].includes(prediction)) {
+            // ALTO (4-6)
+            gameType = 'dice_highlow';
+            multiplier = this.config.dice.payouts.high;
+            const baseWon = diceResult >= 4;
+            
+            if (baseWon) {
+                won = true;
+            } else {
+                const luckCalc = await this.applyLuckToGame(0, userId, gameType);
+                won = Math.random() < luckCalc.winChance;
+                if (won) {
+                    luckMessage = luckCalc.luckMessage + '\n🎲 ¡La suerte te salvó!';
+                }
+            }
+            
+        } else if (['bajo', 'low'].includes(prediction)) {
+            // BAJO (1-3)
+            gameType = 'dice_highlow';
+            multiplier = this.config.dice.payouts.low;
+            const baseWon = diceResult <= 3;
+            
+            if (baseWon) {
+                won = true;
+            } else {
+                const luckCalc = await this.applyLuckToGame(0, userId, gameType);
+                won = Math.random() < luckCalc.winChance;
+                if (won) {
+                    luckMessage = luckCalc.luckMessage + '\n🎲 ¡La suerte te salvó!';
+                }
             }
         }
-
-        // Combinar todos los mensajes de suerte
-        luckMessage = luckMessages.join('\n');
+        
+        // Si no usamos suerte pero ganamos naturalmente, mostrar mensaje de suerte disponible
+        if (won && !luckMessage) {
+            const luckCalc = await this.applyLuckToGame(0.5, userId, gameType);
+            luckMessage = luckCalc.luckMessage;
+        }
 
         // Establecer cooldown
         this.setCooldown(userId, 'dice');
@@ -778,8 +907,9 @@ class MinigamesSystem {
             // Siempre actualizar que jugó y apostó
             const gameMissions = await this.missions.updateMissionProgress(userId, 'game_played');
             const betMissions = await this.missions.updateMissionProgress(userId, 'money_bet', betAmount);
-            
-            let allCompleted = [...gameMissions, ...betMissions];
+	        const trinityLol = await this.missions.checkTrinityCompletion(userId);            
+
+            let allCompleted = [...gameMissions, ...betMissions, trinityLol];
                         
             if (allCompleted.length > 0) {
                 await this.missions.notifyCompletedMissions(message, allCompleted);
@@ -795,39 +925,29 @@ class MinigamesSystem {
             await this.economy.missions.updateMissionProgress(userId, 'consecutive_win');
             await this.economy.missions.updateMissionProgress(userId, 'game_won');
 
-            for (const event of this.events.getActiveEvents()) {
-                if (event.type === 'fever_time') {
-                    finalEarnings = Math.floor(profit * 1.5); // 🔥 +30%
-                    eventMessage = `🔥 **Tiempo Fiebre** (+${finalEarnings - profit} π-b$)`;
-                    break;
-                }
-                else if (event.type === 'market_crash') {
-                    finalEarnings = Math.floor(profit * 1.5); // 📉 -30%
-                    eventMessage = `📉 **Crisis del Mercado** (-${profit - finalEarnings} π-b$)`;
-                    break;
-                }
-                else if (event.type === 'server_anniversary') {
-                    finalEarnings = Math.floor(profit * 2);
-                    eventMessage = `🎉 **Aniversario del Servidor** (+${finalEarnings - profit} π-b$)`
-                }
-            }
-
-            // Aplicar multiplicadores de items DESPUÉS de los eventos
+            // APLICAR EVENTOS DE DINERO
+            const eventBonus = await this.applyEventEffects(userId, profit, 'minigames');
+            let finalEarnings = eventBonus.finalAmount;
+            
+            // APLICAR ITEMS
             if (this.shop) {
                 const modifiers = await this.shop.getActiveMultipliers(userId, 'games');
-                
-                // Calcular bonus VIP antes de aplicar multiplicador
                 const originalProfit = finalEarnings;
                 finalEarnings = Math.floor(finalEarnings * modifiers.multiplier);
                 const vipBonus = finalEarnings - originalProfit;
                 
-                // Si hay bonus VIP, actualizar estadísticas
                 if (vipBonus > 0) {
                     await this.shop.updateVipStats(userId, 'bonusEarnings', vipBonus);
                 }
-                            
-                // Consumir efectos de uso limitado
                 await this.shop.consumeItemUse(userId, 'games');
+            }
+
+            const userData = await this.economy.getUser(userId);
+            const userLimit = this.economy.shop ? await this.economy.shop.getVipLimit(userId) : this.economy.config.maxBalance;
+
+            if (userData.balance + finalEarnings > userLimit) {
+                const spaceLeft = userLimit - userData.balance;
+                finalEarnings = Math.min(finalEarnings, spaceLeft);
             }
 
             let itemMessage = '';
@@ -838,14 +958,6 @@ class MinigamesSystem {
                 }
             }
 
-            const userData = await this.economy.getUser(userId);
-            const userLimit = this.economy.shop ? await this.economy.shop.getVipLimit(userId) : this.economy.config.maxBalance;
-
-            if (userData.balance + finalEarnings > userLimit) {
-                const spaceLeft = userLimit - userData.balance;
-                finalEarnings = Math.min(finalEarnings, spaceLeft);
-            }
-                       
             const addResult = await this.economy.addMoney(userId, finalEarnings, 'dice_win');
             finalEarnings = addResult.actualAmount;
             await this.economy.updateUser(userId, updateData);
@@ -896,7 +1008,6 @@ class MinigamesSystem {
                 await message.reply(`⚠️ **Límite alcanzado:** No pudiste recibir todo el dinero porque tienes el máximo permitido (${this.formatNumber(userLimit)} π-b$).`);
             }
         } else {
-            await this.economy.missions.updateMissionProgress(userId, 'consecutive_loss'); 
 
             const hasProtection = await this.shop.hasGameProtection(userId);
             if (hasProtection) {
@@ -913,6 +1024,7 @@ class MinigamesSystem {
                 
                 await message.reply(protectionMessage);
             } else {
+                await this.economy.missions.updateMissionProgress(userId, 'consecutive_loss'); 
                 await this.economy.removeMoney(userId, betAmount, 'dice_loss');
             }
             
@@ -934,18 +1046,7 @@ class MinigamesSystem {
         }
 
         // Verificar tesoros al final
-        for (const event of this.events.getActiveEvents()) {
-            if (event.type === 'treasure_hunt') {
-                const treasures = await this.events.checkSpecialEvents(userId, 'general');
-                    
-                for (const treasure of treasures) {
-                    if (treasure.type === 'treasure') {
-                        message.reply(`🗺️ **¡Tesoro encontrado!**\n${treasure.description}`);
-                    }
-                }
-                break;
-            }
-        }   
+        await this.checkTreasureHunt(userId, message);
 
         await message.reply({ embeds: [embed] });
     }
@@ -964,12 +1065,6 @@ class MinigamesSystem {
         const now = Date.now();
         let effectiveCooldown = this.getEffectiveCooldown(this.config.lottery.cooldown);
 
-        // Aplicar reducción de items
-        if (this.shop) {
-            const cooldownReduction = await this.shop.getCooldownReduction(userId, 'games');
-            effectiveCooldown = Math.floor(effectiveCooldown * (1 - cooldownReduction));
-        }
-
         if (now - lastLottery < effectiveCooldown) {
             const timeLeft = effectiveCooldown - (now - lastLottery);
             return {
@@ -985,7 +1080,7 @@ class MinigamesSystem {
     async handleLottery(message, args) {
         const userId = message.author.id;
         const user = await this.economy.getUser(userId);
-    
+           
         // Si no hay argumentos suficientes, mostrar ayuda
         if (args.length < 3) {
             const embed = new EmbedBuilder()
@@ -1006,6 +1101,26 @@ class MinigamesSystem {
             return;
         }
     
+        // VERIFICAR LÍMITES
+        const gameType = 'lottery';
+        const limitConfig = this.dailyLimits[gameType];
+        const status = await this.economy.database.getGameLimitStatus(userId, gameType, limitConfig.cycleHours);
+        
+        if (status.cycleCount >= limitConfig.perCycle) {
+            await this.showLimitReached(message, userId, gameType, status, limitConfig);
+            return;
+        }
+        
+        // Verificar límite diario
+        if (status.dailyCount >= limitConfig.maxDaily) {
+            await message.reply(
+                `🚫 **Límite diario alcanzado**\n` +
+                `Has alcanzado el máximo de ${limitConfig.maxDaily} partidas de lotería por día.\n` +
+                `🌅 Vuelve mañana!`
+            );
+            return;
+        }
+
         const predictedNumber = parseInt(args[1]);
         const betAmount = parseInt(args[2]);
     
@@ -1033,48 +1148,23 @@ class MinigamesSystem {
             return;
         }
         
-        // Generar número ganador
-        const winningNumber = Math.floor(Math.random() * this.config.lottery.maxNumber) + this.config.lottery.minNumber;
-        let won = winningNumber === predictedNumber;
+        const winningNumber = Math.floor(Math.random() * 100) + 1;
+        const baseWon = winningNumber === predictedNumber;
+        let won = baseWon;
         let luckMessage = '';
-
-        // Aplicar hora de la suerte
-        for (const event of this.events.getActiveEvents()) {
-            if (event.type === 'lucky_hour') {
-                // Si perdió originalmente, dar 30% chance de ganar igual
-                if (!won && Math.random() < 0.3) {
-                    won = true;
-                    luckMessage = `🍀 **Hora de la Suerte** te dio una segunda oportunidad!`;
-                }
-                break;
+        
+        if (!baseWon) {
+            // Solo aplicar suerte si perdió
+            const luckCalc = await this.applyLuckToGame(0, userId, 'lottery');
+            won = Math.random() < luckCalc.winChance;
+            if (won) {
+                luckMessage = luckCalc.luckMessage + '\n🎰 ¡Un milagro de la suerte!';
             }
+        } else {
+            // Si ganó naturalmente, mostrar suerte disponible
+            const luckCalc = await this.applyLuckToGame(0.01, userId, 'lottery');
+            luckMessage = luckCalc.luckMessage;
         }
-
-        // Aplicar efectos de items de suerte
-        let luckMessages = [luckMessage].filter(msg => msg !== ''); // Conservar mensaje de eventos
-        if (this.shop) {
-            const luckBoost = await this.shop.getActiveMultipliers(userId, 'games');
-            if (luckBoost.luckBoost > 0) {
-                // Para dice, aplicar boost a la probabilidad base
-                if (!won && Math.random() < luckBoost.luckBoost) {
-                    won = true;
-                    luckMessages.push(`🍀 **Boost de Suerte** te dio una segunda oportunidad!`);
-                } else if (luckBoost.luckBoost > 0) {
-                    luckMessages.push(`🍀 **Boost de Suerte** (+${Math.round(luckBoost.luckBoost * 100)}% probabilidad)`);
-                }
-            }
-
-            // VIP suerte
-            const vipMultipliers = await this.shop.getVipMultipliers(userId, 'games');
-            if (vipMultipliers.luckBoost > 0 && !won && Math.random() < vipMultipliers.luckBoost) {
-                won = true;
-                luckMessages.push(`💎 **Boost VIP** te salvó!`);
-                await this.economy.shop.updateVipStats(userId, 'luckyWins', 1);
-            }
-        }
-
-        // Combinar todos los mensajes de suerte
-        luckMessage = luckMessages.join('\n');
         
         // Establecer cooldown
         this.setCooldown(userId, 'lottery');
@@ -1119,8 +1209,9 @@ class MinigamesSystem {
                 // Siempre actualizar que jugó y apostó
                 const gameMissions = await this.missions.updateMissionProgress(userId, 'game_played');
                 const betMissions = await this.missions.updateMissionProgress(userId, 'money_bet', betAmount);
-                
-                let allCompleted = [...gameMissions, ...betMissions];
+                const trinityLol = await this.missions.checkTrinityCompletion(userId);            
+
+                let allCompleted = [...gameMissions, ...betMissions, trinityLol];
                             
                 if (allCompleted.length > 0) {
                     await this.missions.notifyCompletedMissions(message, allCompleted);
@@ -1137,48 +1228,21 @@ class MinigamesSystem {
             await this.economy.missions.updateMissionProgress(userId, 'consecutive_win');
             await this.economy.missions.updateMissionProgress(userId, 'game_won');
 
-            for (const event of this.events.getActiveEvents()) {
-                if (event.type === 'fever_time') {
-                    finalEarnings = Math.floor(profit * 1.5); // 🔥 +30%
-                    eventMessage = `🔥 **Tiempo Fiebre** (+${finalEarnings - profit} π-b$)`;
-                    break;
-                }
-                else if (event.type === 'market_crash') {
-                    finalEarnings = Math.floor(profit * 1.5); // 📉 -30%
-                    eventMessage = `📉 **Crisis del Mercado** (-${profit - finalEarnings} π-b$)`;
-                    break;
-                }
-                else if (event.type === 'server_anniversary') {
-                    finalEarnings = Math.floor(profit * 2);
-                    eventMessage = `🎉 **Aniversario del Servidor** (+${finalEarnings - profit} π-b$)`
-                }
-            }
-
-            // Aplicar multiplicadores de items DESPUÉS de los eventos
+            // APLICAR EVENTOS DE DINERO
+            const eventBonus = await this.applyEventEffects(userId, profit, 'minigames');
+            let finalEarnings = eventBonus.finalAmount;
+            
+            // APLICAR ITEMS
             if (this.shop) {
                 const modifiers = await this.shop.getActiveMultipliers(userId, 'games');
-                
-                // Calcular bonus VIP antes de aplicar multiplicador
                 const originalProfit = finalEarnings;
                 finalEarnings = Math.floor(finalEarnings * modifiers.multiplier);
                 const vipBonus = finalEarnings - originalProfit;
                 
-                // Si hay bonus VIP, actualizar estadísticas
                 if (vipBonus > 0) {
                     await this.shop.updateVipStats(userId, 'bonusEarnings', vipBonus);
                 }
-                            
-                // Consumir efectos de uso limitado
                 await this.shop.consumeItemUse(userId, 'games');
-            }
-
-            // Obtener mensajes de items
-            let itemMessage = '';
-            if (this.shop) {
-                const modifiers = await this.shop.getActiveMultipliers(userId, 'games');
-                if (modifiers.multiplier > 1) {
-                    itemMessage = `✨ **Items Activos** (x${modifiers.multiplier.toFixed(1)} ganancia)`;
-                }
             }
 
             const userData = await this.economy.getUser(userId);
@@ -1189,6 +1253,17 @@ class MinigamesSystem {
                 finalEarnings = Math.min(finalEarnings, spaceLeft);
             }
             
+            // Obtener mensajes de items
+            let itemMessage = '';
+            if (this.shop) {
+                const modifiers = await this.shop.getActiveMultipliers(userId, 'games');
+                if (modifiers.multiplier > 1) {
+                    itemMessage = `✨ **Items Activos** (x${modifiers.multiplier.toFixed(1)} ganancia)`;
+                }
+            }
+
+            await this.economy.database.incrementGameLimit(userId, gameType);
+
             const addResult = await this.economy.addMoney(userId, finalEarnings, 'lottery_win');     
             finalEarnings = addResult.actualAmount;
             
@@ -1250,7 +1325,8 @@ class MinigamesSystem {
             }
         } else {
             await this.economy.missions.updateMissionProgress(userId, 'consecutive_loss'); 
-            
+            await this.economy.database.incrementGameLimit(userId, gameType);
+
             const hasProtection = await this.shop.hasGameProtection(userId);
             if (hasProtection) {
                 let protectionMessage = '🛡️ Tu protección evitó la pérdida de dinero!';
@@ -1302,18 +1378,7 @@ class MinigamesSystem {
         }
 
         // Verificar tesoros al final
-        for (const event of this.events.getActiveEvents()) {
-            if (event.type === 'treasure_hunt') {
-                const treasures = await this.events.checkSpecialEvents(userId, 'general');
-                    
-                for (const treasure of treasures) {
-                    if (treasure.type === 'treasure') {
-                        message.reply(`🗺️ **¡Tesoro encontrado!**\n${treasure.description}`);
-                    }
-                }
-                break;
-            }
-        }   
+        await this.checkTreasureHunt(userId, message);
     
         await reply.edit({ embeds: [resultEmbed] });
     }
@@ -1332,12 +1397,6 @@ class MinigamesSystem {
         const now = Date.now();
         let effectiveCooldown = this.getEffectiveCooldown(this.config.blackjack.cooldown);
 
-        // Aplicar reducción de items
-        if (this.shop) {
-            const cooldownReduction = await this.shop.getCooldownReduction(userId, 'games');
-            effectiveCooldown = Math.floor(effectiveCooldown * (1 - cooldownReduction));
-        }
-
         if (now - lastBlackJack < effectiveCooldown) {
             const timeLeft = effectiveCooldown - (now - lastBlackJack);
             return {
@@ -1354,7 +1413,26 @@ class MinigamesSystem {
     async handleBlackjack(message, args) {        
         const userId = message.author.id;
         const user = await this.economy.getUser(userId);
-    
+
+        // VERIFICAR LÍMITES (igual que lottery/roulette)
+        const gameType = 'blackjack';
+        const limitConfig = this.dailyLimits[gameType];
+        const status = await this.economy.database.getGameLimitStatus(userId, gameType, limitConfig.cycleHours);
+        
+        if (status.cycleCount >= limitConfig.perCycle) {
+            await this.showLimitReached(message, userId, gameType, status, limitConfig);
+            return;
+        }
+
+        if (status.dailyCount >= limitConfig.maxDaily) {
+            await message.reply(
+                `🚫 **Límite diario alcanzado**\n` +
+                `Has alcanzado el máximo de ${limitConfig.maxDaily} partidas de blackjack por día.\n` +
+                `🌅 Vuelve mañana!`
+            );
+            return;
+        }
+
         // Si no hay argumentos suficientes, mostrar ayuda
         if (args.length < 2) {
             const embed = new EmbedBuilder()
@@ -1468,10 +1546,11 @@ class MinigamesSystem {
 
         if (this.missions) {
             // Siempre actualizar que jugó y apostó
-            const gameMissions = await this.missions.updateMissionProgress(gameState.userId, 'game_played');
-            const betMissions = await this.missions.updateMissionProgress(gameState.userId, 'money_bet', betAmount);
-            
-            let allCompleted = [...gameMissions, ...betMissions];
+            const gameMissions = await this.missions.updateMissionProgress(userId, 'game_played');
+            const betMissions = await this.missions.updateMissionProgress(userId, 'money_bet', betAmount);
+	        const trinityLol = await this.missions.checkTrinityCompletion(userId);            
+
+            let allCompleted = [...gameMissions, ...betMissions, trinityLol];
                         
             if (allCompleted.length > 0) {
                 await this.missions.notifyCompletedMissions(message, allCompleted);
@@ -1697,37 +1776,20 @@ class MinigamesSystem {
 
                 finalEarnings = profit
 
-                for (const event of this.events.getActiveEvents()) {
-                    if (event.type === 'fever_time') {
-                        finalEarnings = Math.floor(profit * 1.5); // 🔥 +30%
-                        eventMessage = `🔥 **Tiempo Fiebre** (+${finalEarnings - profit} π-b$)`;
-                        break;
-                    }
-                    else if (event.type === 'market_crash') {
-                        finalEarnings = Math.floor(profit * 1.5); // 📉 -30%
-                        eventMessage = `📉 **Crisis del Mercado** (-${profit - finalEarnings} π-b$)`;
-                        break;
-                    }
-                    else if (event.type === 'server_anniversary') {
-                        finalEarnings = Math.floor(profit * 2);
-                        eventMessage = `🎉 **Aniversario del Servidor** (+${finalEarnings - profit} π-b$)`
-                    }
-                }
-
+                // APLICAR EVENTOS DE DINERO
+                const eventBonus = await this.applyEventEffects(userId, profit, 'minigames');
+                let finalEarnings = eventBonus.finalAmount;
+                
+                // APLICAR ITEMS
                 if (this.shop) {
                     const modifiers = await this.shop.getActiveMultipliers(userId, 'games');
-                    
-                    // Calcular bonus VIP antes de aplicar multiplicador
                     const originalProfit = finalEarnings;
                     finalEarnings = Math.floor(finalEarnings * modifiers.multiplier);
                     const vipBonus = finalEarnings - originalProfit;
                     
-                    // Si hay bonus VIP, actualizar estadísticas
                     if (vipBonus > 0) {
                         await this.shop.updateVipStats(userId, 'bonusEarnings', vipBonus);
                     }
-                                
-                    // Consumir efectos de uso limitado
                     await this.shop.consumeItemUse(userId, 'games');
                 }
 
@@ -1738,6 +1800,8 @@ class MinigamesSystem {
                         itemMessage = `✨ **Items Activos** (x${modifiers.multiplier.toFixed(1)} ganancia)`;
                     }
                 }
+
+                await this.economy.database.incrementGameLimit(userId, gameType);
 
                 userData = await this.economy.getUser(userId);
                 if (userData.balance + finalEarnings > this.economy.config.maxBalance) {
@@ -1782,38 +1846,20 @@ class MinigamesSystem {
 
                 finalEarnings = profit
 
-                for (const event of this.events.getActiveEvents()) {
-                    if (event.type === 'fever_time') {
-                        finalEarnings = Math.floor(profit * 1.5); // 🔥 +30%
-                        eventMessage = `🔥 **Tiempo Fiebre** (+${finalEarnings - profit} π-b$)`;
-                        break;
-                    }
-                    else if (event.type === 'market_crash') {
-                        finalEarnings = Math.floor(profit * 1.5); // 📉 -30%
-                        eventMessage = `📉 **Crisis del Mercado** (-${profit - finalEarnings} π-b$)`;
-                        break;
-                    }
-                    else if (event.type === 'server_anniversary') {
-                        finalEarnings = Math.floor(profit * 2);
-                        eventMessage = `🎉 **Aniversario del Servidor** (+${finalEarnings - profit} π-b$)`
-                    }
-                }
-
-                // Aplicar multiplicadores de items DESPUÉS de los eventos
+                // APLICAR EVENTOS DE DINERO
+                const eventBonuss = await this.applyEventEffects(userId, profit, 'minigames');
+                let finalEarningss = eventBonuss.finalAmount;
+                
+                // APLICAR ITEMS
                 if (this.shop) {
                     const modifiers = await this.shop.getActiveMultipliers(userId, 'games');
+                    const originalProfit = finalEarningss;
+                    finalEarningss = Math.floor(finalEarningss * modifiers.multiplier);
+                    const vipBonus = finalEarningss - originalProfit;
                     
-                    // Calcular bonus VIP antes de aplicar multiplicador
-                    const originalProfit = finalEarnings;
-                    finalEarnings = Math.floor(finalEarnings * modifiers.multiplier);
-                    const vipBonus = finalEarnings - originalProfit;
-                    
-                    // Si hay bonus VIP, actualizar estadísticas
                     if (vipBonus > 0) {
                         await this.shop.updateVipStats(userId, 'bonusEarnings', vipBonus);
                     }
-                                
-                    // Consumir efectos de uso limitado
                     await this.shop.consumeItemUse(userId, 'games');
                 }
 
@@ -1823,6 +1869,8 @@ class MinigamesSystem {
                         itemMessage = `✨ **Items Activos** (x${modifiers.multiplier.toFixed(1)} ganancia)`;
                     }
                 }
+
+                await this.economy.database.incrementGameLimit(userId, gameType);
 
                 userData = await this.economy.getUser(userId);
                 if (userData.balance + finalEarnings > this.economy.config.maxBalance) {
@@ -1860,6 +1908,8 @@ class MinigamesSystem {
                 resultText = '🤝 **¡EMPATE!**';
                 color = '#FFD700';
 
+                await this.economy.database.incrementGameLimit(userId, gameType);
+
                 // *** NUEVO: ACTUALIZAR ESTADÍSTICAS DE ACHIEVEMENTS ***
                 if (this.achievements) {
                     await this.achievements.updateStats(userId, 'game_played');
@@ -1871,6 +1921,8 @@ class MinigamesSystem {
 
                 resultText = '💥 **¡TE PASASTE!**';
                 profit = -finalBet;
+
+                await this.economy.database.incrementGameLimit(userId, gameType);
 
                 if (hasProtection) {
                     let protectionMessage = '🛡️ Tu protección evitó la pérdida de dinero!';
@@ -1901,6 +1953,8 @@ class MinigamesSystem {
 
                 resultText = '💸 **Perdiste...**';
                 profit = -finalBet;
+
+                await this.economy.database.incrementGameLimit(userId, gameType);
 
                 if (hasProtection) {
                     let protectionMessage = '🛡️ Tu protección evitó la pérdida de dinero!';
@@ -2085,12 +2139,6 @@ class MinigamesSystem {
         const now = Date.now();
         let effectiveCooldown = this.getEffectiveCooldown(this.config.roulette.cooldown);
 
-        // Aplicar reducción de items
-        if (this.shop) {
-            const cooldownReduction = await this.shop.getCooldownReduction(userId, 'games');
-            effectiveCooldown = Math.floor(effectiveCooldown * (1 - cooldownReduction));
-        }
-
         if (now - lastRoulette < effectiveCooldown) {
             const timeLeft = effectiveCooldown - (now - lastRoulette);
             return {
@@ -2106,7 +2154,26 @@ class MinigamesSystem {
     async handleRoulette(message, args) {
         const userId = message.author.id;
         const user = await this.economy.getUser(userId);
+
+        // VERIFICAR LÍMITES (igual que lottery)
+        const gameType = 'roulette';
+        const limitConfig = this.dailyLimits[gameType];
+        const status = await this.economy.database.getGameLimitStatus(userId, gameType, limitConfig.cycleHours);
         
+        if (status.cycleCount >= limitConfig.perCycle) {
+            await this.showLimitReached(message, userId, gameType, status, limitConfig);
+            return;
+        }
+
+        if (status.dailyCount >= limitConfig.maxDaily) {
+            await message.reply(
+                `🚫 **Límite diario alcanzado**\n` +
+                `Has alcanzado el máximo de ${limitConfig.maxDaily} partidas de blackjack por día.\n` +
+                `🌅 Vuelve mañana!`
+            );
+            return;
+        }
+
         // Si no hay argumentos suficientes, mostrar ayuda
         if (args.length < 3) {
             const embed = new EmbedBuilder()
@@ -2170,48 +2237,26 @@ class MinigamesSystem {
             return;
         }
     
-        // Girar la ruleta
+        // GIRAR RULETA
         const spinResult = this.spinRoulette();
-        let won = this.checkRouletteWin(validBet, spinResult);
+        const baseWon = this.checkRouletteWin(validBet, spinResult);
+        let won = baseWon;
         let luckMessage = '';
-
-        // Aplicar hora de la suerte
-        for (const event of this.events.getActiveEvents()) {
-            if (event.type === 'lucky_hour') {
-                // Si perdió originalmente, dar 30% chance de ganar igual
-                if (!won && Math.random() < 0.3) {
-                    won = true;
-                    luckMessage = `🍀 **Hora de la Suerte** cambió tu destino!`;
-                }
-                break;
-            }
-        }
         
-        // Aplicar efectos de items de suerte
-        let luckMessages = [luckMessage].filter(msg => msg !== ''); // Conservar mensaje de eventos
-        if (this.shop) {
-            const luckBoost = await this.shop.getActiveMultipliers(userId, 'games');
-            if (luckBoost.luckBoost > 0) {
-                // Para dice, aplicar boost a la probabilidad base
-                if (!won && Math.random() < luckBoost.luckBoost) {
-                    won = true;
-                    luckMessages.push(`🍀 **Boost de Suerte** te dio una segunda oportunidad!`);
-                } else if (luckBoost.luckBoost > 0) {
-                    luckMessages.push(`🍀 **Boost de Suerte** (+${Math.round(luckBoost.luckBoost * 100)}% probabilidad)`);
-                }
+        // Determinar tipo para suerte
+        const luckGameType = validBet.type === 'straight' ? 'roulette_straight' : 'roulette_color';
+        
+        if (!baseWon) {
+            const luckCalc = await this.applyLuckToGame(0, userId, luckGameType);
+            won = Math.random() < luckCalc.winChance;
+            if (won) {
+                luckMessage = luckCalc.luckMessage + '\n🎰 ¡La suerte cambió tu destino!';
             }
-
-            // VIP suerte
-            const vipMultipliers = await this.shop.getVipMultipliers(userId, 'games');
-            if (vipMultipliers.luckBoost > 0 && !won && Math.random() < vipMultipliers.luckBoost) {
-                won = true;
-                luckMessages.push(`💎 **Boost VIP** te salvó!`);
-                await this.economy.shop.updateVipStats(userId, 'luckyWins', 1);
-            }
+        } else {
+            const baseChance = validBet.type === 'straight' ? (1/37) : (18/37);
+            const luckCalc = await this.applyLuckToGame(baseChance, userId, luckGameType);
+            luckMessage = luckCalc.luckMessage;
         }
-
-        // Combinar todos los mensajes de suerte
-        luckMessage = luckMessages.join('\n');
 
         // Establecer cooldown
         this.setCooldown(userId, 'roulette');
@@ -2256,8 +2301,9 @@ class MinigamesSystem {
                 // Siempre actualizar que jugó y apostó
                 const gameMissions = await this.missions.updateMissionProgress(userId, 'game_played');
                 const betMissions = await this.missions.updateMissionProgress(userId, 'money_bet', betAmount);
-                
-                let allCompleted = [...gameMissions, ...betMissions];
+                const trinityLol = await this.missions.checkTrinityCompletion(userId);            
+
+                let allCompleted = [...gameMissions, ...betMissions, trinityLol];
                             
                 if (allCompleted.length > 0) {
                     await this.missions.notifyCompletedMissions(message, allCompleted);
@@ -2275,48 +2321,21 @@ class MinigamesSystem {
             await this.economy.missions.updateMissionProgress(userId, 'consecutive_win');
             await this.economy.missions.updateMissionProgress(userId, 'game_won');
 
-            for (const event of this.events.getActiveEvents()) {
-                if (event.type === 'fever_time') {
-                    finalEarnings = Math.floor(profit * 1.5); // 🔥 +30%
-                    eventMessage = `🔥 **Tiempo Fiebre** (+${finalEarnings - profit} π-b$)`;
-                    break;
-                }
-                else if (event.type === 'market_crash') {
-                    finalEarnings = Math.floor(profit * 1.5); // 📉 -30%
-                    eventMessage = `📉 **Crisis del Mercado** (-${profit - finalEarnings} π-b$)`;
-                    break;
-                }
-                else if (event.type === 'server_anniversary') {
-                    finalEarnings = Math.floor(profit * 2);
-                    eventMessage = `🎉 **Aniversario del Servidor** (+${finalEarnings - profit} π-b$)`
-                }
-            }
-
+            // APLICAR EVENTOS DE DINERO
+            const eventBonus = await this.applyEventEffects(userId, profit, 'minigames');
+            let finalEarnings = eventBonus.finalAmount;
+            
+            // APLICAR ITEMS
             if (this.shop) {
                 const modifiers = await this.shop.getActiveMultipliers(userId, 'games');
-                
-                // Calcular bonus VIP antes de aplicar multiplicador
                 const originalProfit = finalEarnings;
                 finalEarnings = Math.floor(finalEarnings * modifiers.multiplier);
                 const vipBonus = finalEarnings - originalProfit;
                 
-                // Si hay bonus VIP, actualizar estadísticas
                 if (vipBonus > 0) {
                     await this.shop.updateVipStats(userId, 'bonusEarnings', vipBonus);
                 }
-                            
-                // Consumir efectos de uso limitado
                 await this.shop.consumeItemUse(userId, 'games');
-            }
-
-            // AQUÍ VA EL CÓDIGO QUE PREGUNTAS:
-            // Obtener mensajes de items
-            let itemMessage = '';
-            if (this.shop) {
-                const modifiers = await this.shop.getActiveMultipliers(userId, 'games');
-                if (modifiers.multiplier > 1) {
-                    itemMessage = `✨ **Items Activos** (x${modifiers.multiplier.toFixed(1)} ganancia)`;
-                }
             }
 
             const userData = await this.economy.getUser(userId);
@@ -2326,7 +2345,18 @@ class MinigamesSystem {
                 const spaceLeft = userLimit - userData.balance;
                 finalEarnings = Math.min(finalEarnings, spaceLeft);
             }
-            
+
+            // Obtener mensajes de items
+            let itemMessage = '';
+            if (this.shop) {
+                const modifiers = await this.shop.getActiveMultipliers(userId, 'games');
+                if (modifiers.multiplier > 1) {
+                    itemMessage = `✨ **Items Activos** (x${modifiers.multiplier.toFixed(1)} ganancia)`;
+                }
+            }
+
+            await this.economy.database.incrementGameLimit(userId, gameType);
+
             const addResult = await this.economy.addMoney(userId, finalEarnings, 'roulette_win');
             finalEarnings = addResult.actualAmount;
             
@@ -2390,6 +2420,7 @@ class MinigamesSystem {
             }
         } else {
             await this.economy.missions.updateMissionProgress(userId, 'consecutive_loss'); 
+            await this.economy.database.incrementGameLimit(userId, gameType);
 
             const hasProtection = await this.shop.hasGameProtection(userId);
             if (hasProtection) {
@@ -2440,18 +2471,7 @@ class MinigamesSystem {
         }
     
         // Verificar tesoros al final
-        for (const event of this.events.getActiveEvents()) {
-            if (event.type === 'treasure_hunt') {
-                const treasures = await this.events.checkSpecialEvents(userId, 'general');
-                    
-                for (const treasure of treasures) {
-                    if (treasure.type === 'treasure') {
-                        message.reply(`🗺️ **¡Tesoro encontrado!**\n${treasure.description}`);
-                    }
-                }
-                break;
-            }
-        }  
+        await this.checkTreasureHunt(userId, message);
 
         await reply.edit({ embeds: [resultEmbed] });
     }
@@ -2673,9 +2693,10 @@ class MinigamesSystem {
             // Siempre actualizar que jugó y apostó
             const gameMissions = await this.missions.updateMissionProgress(userId, 'game_played');
             const betMissions = await this.missions.updateMissionProgress(userId, 'money_bet', betAmount);
-            
-            let allCompleted = [...gameMissions, ...betMissions];
+	        const trinityLol = await this.missions.checkTrinityCompletion(userId);            
 
+            let allCompleted = [...gameMissions, ...betMissions, trinityLol];
+                        
             if (allCompleted.length > 0) {
                 await this.missions.notifyCompletedMissions(message, allCompleted);
             }
@@ -3202,7 +3223,6 @@ class MinigamesSystem {
         const survivors = game.players.filter(p => p.alive);
         const totalPot = game.pot;
         const winnerPrize = Math.floor(totalPot * this.config.russianRoulette.winnerMultiplier);
-        const houseCut = totalPot - winnerPrize;
     
         let embed = new EmbedBuilder()
             .setTimestamp();
@@ -3214,22 +3234,8 @@ class MinigamesSystem {
             // Un ganador
             const winner = survivors[0];
 
-            for (const event of this.events.getActiveEvents()) {
-                if (event.type === 'fever_time') {
-                    finalEarnings = Math.floor(winnerPrize * 1.5); // 🔥 +30%
-                    eventMessage = `🔥 **Tiempo Fiebre** (+${finalEarnings - winnerPrize} π-b$)`;
-                    break;
-                }
-                else if (event.type === 'market_crash') {
-                    finalEarnings = Math.floor(winnerPrize * 1.5); // 📉 -30%
-                    eventMessage = `📉 **Crisis del Mercado** (-${winnerPrize - finalEarnings} π-b$)`;
-                    break;
-                }
-                else if (event.type === 'server_anniversary') {
-                    finalEarnings = Math.floor(winnerPrize * 2);
-                    eventMessage = `🎉 **Aniversario del Servidor** (+${finalEarnings - winnerPrize} π-b$)`
-                }
-            }     
+            const eventBonus = await this.applyEventEffects(userId, profit, 'minigames');
+            finalEarnings = eventBonus.finalAmount;  
 
             const userData = await this.economy.getUser(winner.id);
             const userLimit = this.economy.shop ? await this.economy.shop.getVipLimit(winner.id) : this.economy.config.maxBalance;
@@ -3281,7 +3287,6 @@ class MinigamesSystem {
                     { name: '👑 GANADOR', value: `<@${winner.id}>`, inline: false },
                     { name: '💰 Premio', value: `${this.formatNumber(winnerPrize)} π-b$`, inline: true },
                     { name: '💎 Pot Total', value: `${this.formatNumber(totalPot)} π-b$`, inline: true },
-                    { name: '🏦 Casa', value: `${this.formatNumber(houseCut)} π-b$ (15%)`, inline: true },
                     { 
                         name: '📊 Resultado Final', 
                         value: game.players.map(p => `${p.alive ? '🏆' : '💀'} ${p.displayName} (${p.shots} disparos)`).join('\n'), 
@@ -3494,9 +3499,10 @@ class MinigamesSystem {
             // Siempre actualizar que jugó y apostó
             const gameMissions = await this.missions.updateMissionProgress(userId, 'game_played');
             const betMissions = await this.missions.updateMissionProgress(userId, 'money_bet', betAmount);
-            
-            let allCompleted = [...gameMissions, ...betMissions];
+	        const trinityLol = await this.missions.checkTrinityCompletion(userId);            
 
+            let allCompleted = [...gameMissions, ...betMissions, trinityLol];
+                        
             if (allCompleted.length > 0) {
                 await this.missions.notifyCompletedMissions(message, allCompleted);
             }
@@ -5581,22 +5587,8 @@ class MinigamesSystem {
         let finalEarnings = winnings;
         let eventMessage = '';
 
-        for (const event of this.events.getActiveEvents()) {
-            if (event.type === 'fever_time') {
-                finalEarnings = Math.floor(winnings * 1.5); // 🔥 +30%
-                eventMessage = `🔥 **Tiempo Fiebre** (+${finalEarnings - winnings} π-b$)`;
-                break;
-            }
-            else if (event.type === 'market_crash') {
-                finalEarnings = Math.floor(winnings * 1.5); // 📉 -30%
-                eventMessage = `📉 **Crisis del Mercado** (-${winnings - finalEarnings} π-b$)`;
-                break;
-            }
-            else if (event.type === 'server_anniversary') {
-                finalEarnings = Math.floor(winnings * 2);
-                eventMessage = `🎉 **Aniversario del Servidor** (+${finalEarnings - winnings} π-b$)`
-            }
-        }        
+        const eventBonus = await this.applyEventEffects(userId, profit, 'minigames');
+        finalEarnings = eventBonus.finalAmount;    
 
         const userData = await this.economy.getUser(winnerId);
         const userLimit = this.economy.shop ? await this.economy.shop.getVipLimit(winnerId) : this.economy.config.maxBalance;
@@ -6179,6 +6171,8 @@ class MinigamesSystem {
     }
     
     async processCommand(message) {
+        const commandName = command.replace('>', '');
+        await this.economy.missions.updateMissionProgress(userId, 'unique_commands_used', commandName);
         // Verificar ingresos pasivos pendientes
         await this.economy.checkPendingPassiveIncome(message.author.id);
         await this.economy.checkAndNotifyItems(message.author.id, message);

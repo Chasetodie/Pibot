@@ -26,7 +26,7 @@ class MissionsSystem {
                 description: 'Envía 10 mensajes en el servidor',
                 type: 'messages',
                 target: 10,
-                reward: { money: 200, xp: 50 },
+                reward: { money: 80, xp: 20 },
                 rarity: 'common'
             },
             'send_messages_25': {
@@ -35,7 +35,7 @@ class MissionsSystem {
                 description: 'Envía 25 mensajes en el servidor',
                 type: 'messages',
                 target: 25,
-                reward: { money: 400, xp: 100 },
+                reward: { money: 150, xp: 40 },
                 rarity: 'uncommon'
             },
             'send_messages_50': {
@@ -44,7 +44,7 @@ class MissionsSystem {
                 description: 'Envía 50 mensajes en el servidor',
                 type: 'messages',
                 target: 50,
-                reward: { money: 800, xp: 200 },
+                reward: { money: 300, xp: 80 },
                 rarity: 'rare'
             },
             
@@ -55,7 +55,7 @@ class MissionsSystem {
                 description: 'Completa un trabajo exitoso',
                 type: 'work',
                 target: 1,
-                reward: { money: 300, xp: 75 },
+                reward: { money: 120, xp: 30 },
                 rarity: 'common'
             },
             'work_3_times': {
@@ -64,7 +64,7 @@ class MissionsSystem {
                 description: 'Completa 3 trabajos en el día',
                 type: 'work',
                 target: 3,
-                reward: { money: 700, xp: 175 },
+                reward: { money: 280, xp: 70 },
                 rarity: 'uncommon'
             },
             'work_5_times': {
@@ -73,7 +73,7 @@ class MissionsSystem {
                 description: 'Completa 5 trabajos en el día',
                 type: 'work',
                 target: 5,
-                reward: { money: 1200, xp: 300 },
+                reward: { money: 480, xp: 120 },
                 rarity: 'rare'
             },
             
@@ -84,7 +84,7 @@ class MissionsSystem {
                 description: 'Gana 1,000 π-b$ en el día',
                 type: 'money_earned_today',
                 target: 1000,
-                reward: { money: 500, xp: 100 },
+                reward: { money: 200, xp: 40 },
                 rarity: 'common'
             },
             'earn_5000': {
@@ -93,7 +93,7 @@ class MissionsSystem {
                 description: 'Gana 5,000 π-b$ en el día',
                 type: 'money_earned_today',
                 target: 5000,
-                reward: { money: 1000, xp: 200 },
+                reward: { money: 400, xp: 80 },
                 rarity: 'uncommon'
             },
             'earn_10000': {
@@ -102,7 +102,7 @@ class MissionsSystem {
                 description: 'Gana 10,000 π-b$ en el día',
                 type: 'money_earned_today',
                 target: 10000,
-                reward: { money: 2000, xp: 400 },
+                reward: { money: 800, xp: 160 },
                 rarity: 'rare'
             },
             
@@ -113,7 +113,7 @@ class MissionsSystem {
                 description: 'Juega 3 minijuegos',
                 type: 'games',
                 target: 3,
-                reward: { money: 400, xp: 100 },
+                reward: { money: 160, xp: 40 },
                 rarity: 'common'
             },
             'play_games_10': {
@@ -122,7 +122,7 @@ class MissionsSystem {
                 description: 'Juega 10 minijuegos',
                 type: 'games',
                 target: 10,
-                reward: { money: 800, xp: 200 },
+                reward: { money: 320, xp: 80 },
                 rarity: 'uncommon'
             },
             'win_games_5': {
@@ -131,7 +131,7 @@ class MissionsSystem {
                 description: 'Gana 5 minijuegos',
                 type: 'games_won',
                 target: 5,
-                reward: { money: 1000, xp: 250 },
+                reward: { money: 400, xp: 100 },
                 rarity: 'rare'
             },
             
@@ -142,7 +142,7 @@ class MissionsSystem {
                 description: 'Transfiere 1,000 π-b$ a otro usuario',
                 type: 'money_transferred',
                 target: 1000,
-                reward: { money: 600, xp: 150 },
+                reward: { money: 240, xp: 60 },
                 rarity: 'uncommon'
             },
             'transfer_money_big': {
@@ -151,30 +151,10 @@ class MissionsSystem {
                 description: 'Transfiere 5,000 π-b$ a otros usuarios',
                 type: 'money_transferred',
                 target: 5000,
-                reward: { money: 1500, xp: 375 },
+                reward: { money: 600, xp: 150 },
                 rarity: 'rare'
             },
-                        
-            // Misiones de balance
-            'maintain_balance_10k': {
-                id: 'maintain_balance_10k',
-                name: '💎 Rico Mantenido',
-                description: 'Mantén un balance de 10,000 π-b$ o más',
-                type: 'balance_check',
-                target: 10000,
-                reward: { money: 1000, xp: 250 },
-                rarity: 'uncommon'
-            },
-            'maintain_balance_50k': {
-                id: 'maintain_balance_50k',
-                name: '👑 Millonario Activo',
-                description: 'Mantén un balance de 50,000 π-b$ o más',
-                type: 'balance_check',
-                target: 50000,
-                reward: { money: 2500, xp: 500 },
-                rarity: 'epic'
-            },
-            
+                                   
             // Misiones de apuestas
             'bet_money': {
                 id: 'bet_money',
@@ -182,7 +162,7 @@ class MissionsSystem {
                 description: 'Apuesta un total de 2,000 π-b$',
                 type: 'money_bet',
                 target: 2000,
-                reward: { money: 800, xp: 150 },
+                reward: { money: 320, xp: 60 },
                 rarity: 'common'
             },
             'win_bets': {
@@ -191,7 +171,7 @@ class MissionsSystem {
                 description: 'Gana 3 apuestas',
                 type: 'bets_won',
                 target: 3,
-                reward: { money: 1200, xp: 250 },
+                reward: { money: 480, xp: 100 },
                 rarity: 'uncommon'
             },
             
@@ -202,7 +182,7 @@ class MissionsSystem {
                 description: 'Completa un robo exitoso',
                 type: 'successful_robberies',
                 target: 1,
-                reward: { money: 1000, xp: 200 },
+                reward: { money: 400, xp: 80 },
                 rarity: 'rare'
             },
             
@@ -213,7 +193,7 @@ class MissionsSystem {
                 description: 'Reclama tu daily reward',
                 type: 'daily_claimed',
                 target: 1,
-                reward: { money: 300, xp: 75 },
+                reward: { money: 120, xp: 30 },
                 rarity: 'common'
             },
             'complete_all_missions': {
@@ -222,7 +202,7 @@ class MissionsSystem {
                 description: 'Completa todas las misiones del día',
                 type: 'missions_completed',
                 target: 4, // Las otras 4 misiones (esta no se cuenta a sí misma)
-                reward: { money: 2000, xp: 500 },
+                reward: { money: 800, xp: 200 },
                 rarity: 'epic'
             },
             
@@ -233,7 +213,7 @@ class MissionsSystem {
                 description: 'Menciona a 3 usuarios diferentes',
                 type: 'mentions_made',
                 target: 3,
-                reward: { money: 400, xp: 100 },
+                reward: { money: 160, xp: 40 },
                 rarity: 'common'
             },
             
@@ -244,7 +224,7 @@ class MissionsSystem {
                 description: 'Envía mensajes en 6 horas diferentes del día',
                 type: 'active_hours',
                 target: 6,
-                reward: { money: 1500, xp: 300 },
+                reward: { money: 600, xp: 120 },
                 rarity: 'rare'
             },
             // Misiones de subastas
@@ -254,7 +234,7 @@ class MissionsSystem {
                 description: 'Crea una subasta hoy',
                 type: 'auctions_created_today',
                 target: 1,
-                reward: { money: 1000, xp: 200 },
+                reward: { money: 400, xp: 80 },
                 rarity: 'uncommon'
             },
             'win_auction': {
@@ -263,7 +243,7 @@ class MissionsSystem {
                 description: 'Gana una subasta en el día',
                 type: 'auctions_won_today',
                 target: 1,
-                reward: { money: 2500, xp: 500 },
+                reward: { money: 1000, xp: 200 },
                 rarity: 'rare'
             },
 
@@ -274,7 +254,7 @@ class MissionsSystem {
                 description: 'Craftea un item hoy',
                 type: 'items_crafted_today',
                 target: 1,
-                reward: { money: 1500, xp: 250 },
+                reward: { money: 600, xp: 100 },
                 rarity: 'uncommon'
             },
 
@@ -285,7 +265,7 @@ class MissionsSystem {
                 description: 'Envía 10 mensajes que contengan emojis',
                 type: 'emoji_messages',
                 target: 10,
-                reward: { money: 600, xp: 150 },
+                reward: { money: 240, xp: 60 },
                 rarity: 'common'
             },
             'react_messages': {
@@ -294,7 +274,7 @@ class MissionsSystem {
                 description: 'Reacciona a 15 mensajes de otros usuarios',
                 type: 'reactions_given',
                 target: 15,
-                reward: { money: 800, xp: 200 },
+                reward: { money: 320, xp: 80 },
                 rarity: 'uncommon'
             },
             'use_commands': {
@@ -303,8 +283,115 @@ class MissionsSystem {
                 description: 'Usa 15 comandos del bot en el día',
                 type: 'commands_used',
                 target: 15,
-                reward: { money: 1200, xp: 300 },
+                reward: { money: 480, xp: 120 },
                 rarity: 'uncommon'
+            },
+            // 1. Misiones de Variedad
+            'use_different_commands': {
+                id: 'use_different_commands',
+                name: '🎯 Explorador',
+                description: 'Usa 5 comandos diferentes hoy',
+                type: 'unique_commands_used',
+                target: 5,
+                reward: { money: 400, xp: 80 },
+                rarity: 'uncommon'
+            },
+
+            // 2. Misiones de Logros
+            'unlock_achievement': {
+                id: 'unlock_achievement',
+                name: '🏆 Cazador de Logros',
+                description: 'Desbloquea 1 logro hoy',
+                type: 'achievements_unlocked_today',
+                target: 1,
+                reward: { money: 800, xp: 200 },
+                rarity: 'rare'
+            },
+
+            // 3. Misiones Sociales Avanzadas
+            'help_someone': {
+                id: 'help_someone',
+                name: '🤝 Ayudante',
+                description: 'Transfiere dinero a 3 usuarios diferentes',
+                type: 'unique_transfers',
+                target: 3,
+                reward: { money: 600, xp: 120 },
+                rarity: 'uncommon'
+            },
+
+            'receive_money': {
+                id: 'receive_money',
+                name: '💝 Receptor',
+                description: 'Recibe dinero de otro usuario',
+                type: 'money_received_today',
+                target: 1,
+                reward: { money: 300, xp: 60 },
+                rarity: 'common'
+            },
+
+            // 4. Misiones de Tienda
+            'buy_item': {
+                id: 'buy_item',
+                name: '🛒 Comprador',
+                description: 'Compra cualquier item de la tienda',
+                type: 'items_bought_today',
+                target: 1,
+                reward: { money: 400, xp: 80 },
+                rarity: 'uncommon'
+            },
+
+            'use_consumable': {
+                id: 'use_consumable',
+                name: '🧪 Consumidor',
+                description: 'Usa 3 items consumibles',
+                type: 'consumables_used',
+                target: 3,
+                reward: { money: 600, xp: 120 },
+                rarity: 'uncommon'
+            },
+
+            // 5. Misiones de XP
+            'gain_xp': {
+                id: 'gain_xp',
+                name: '📚 Estudiante',
+                description: 'Gana 500 XP en total hoy',
+                type: 'xp_gained_today',
+                target: 500,
+                reward: { money: 800, xp: 150 },
+                rarity: 'rare'
+            },
+
+            // 6. Misiones de Actividad Continua
+            'stay_active': {
+                id: 'stay_active',
+                name: '⚡ Incansable',
+                description: 'Envía mensajes en 4 canales diferentes',
+                type: 'unique_channels',
+                target: 4,
+                reward: { money: 500, xp: 100 },
+                rarity: 'uncommon'
+            },
+
+            // 7. Misiones de Economía
+            'reach_balance': {
+                id: 'reach_balance',
+                name: '💰 Meta Financiera',
+                description: 'Alcanza un balance de 5,000 π-b$ (sin contar balance inicial)',
+                type: 'balance_milestone_today',
+                target: 5000,
+                reward: { money: 600, xp: 120 },
+                rarity: 'uncommon'
+            },
+
+            // 8. Misión Especial Diaria
+            'daily_perfectionist': {
+                id: 'daily_perfectionist',
+                name: '💎 Perfeccionista',
+                description: 'Usa Daily, Work y juega un minijuego',
+                type: 'trinity_complete',
+                target: 1,
+                reward: { money: 1000, xp: 200 },
+                rarity: 'epic'
             },
             // Al final de availableMissions, antes de cerrar el objeto
             /*'vip_spend_big': {
@@ -313,7 +400,7 @@ class MissionsSystem {
                 description: 'Gasta 1M π-b$ en la tienda (solo VIPs)',
                 type: 'money_spent_today',
                 target: 1000000,
-                reward: { money: 500000, xp: 1000 },
+                reward: { money: 100000, xp: 500 },
                 rarity: 'legendary',
                 vipOnly: true
             },
@@ -323,7 +410,7 @@ class MissionsSystem {
                 description: 'Gana 15 juegos consecutivos (solo VIPs)', 
                 type: 'consecutive_wins',
                 target: 15,
-                reward: { money: 2000000, xp: 2500 },
+                reward: { money: 200000, xp: 250 },
                 rarity: 'legendary',
                 vipOnly: true
             },
@@ -333,7 +420,7 @@ class MissionsSystem {
                 description: 'Usa 50 comandos sin cooldown (solo VIPs)',
                 type: 'vip_commands_used',
                 target: 50,
-                reward: { money: 1000000, xp: 2000 },
+                reward: { money: 100000, xp: 200 },
                 rarity: 'epic',
                 vipOnly: true
             }*/
@@ -592,7 +679,9 @@ class MissionsSystem {
                     money_spent_today: 0,
                     vip_commands_used: 0,
                     consecutive_wins: 0,
-                    consecutive_losses: 0
+                    consecutive_losses: 0,
+                    starting_balance: user.balance, // ← NUEVO: guardar balance inicial del día
+                    balance_milestone_today: 0
                 }
             };
             
@@ -789,6 +878,63 @@ class MissionsSystem {
                 updateData.daily_stats.consecutive_losses = (user.daily_stats.consecutive_losses || 0) + 1;
                 updateData.daily_stats.consecutive_wins = 0;
                 break;
+            case 'unique_commands_used':
+                // Trackear comandos únicos
+                const uniqueCommands = updateData.daily_stats.unique_commands || new Set();
+                uniqueCommands.add(value); // value = nombre del comando
+                updateData.daily_stats.unique_commands = Array.from(uniqueCommands);
+                break;
+
+            case 'achievements_unlocked_today':
+                updateData.daily_stats.achievements_unlocked_today = (user.daily_stats.achievements_unlocked_today || 0) + 1;
+                break;
+
+            case 'unique_transfers':
+                // Trackear usuarios únicos a los que transferiste
+                const uniqueTransfers = updateData.daily_stats.unique_transfers || new Set();
+                uniqueTransfers.add(value); // value = userId del receptor
+                updateData.daily_stats.unique_transfers = Array.from(uniqueTransfers);
+                break;
+
+            case 'money_received_today':
+                updateData.daily_stats.money_received_today = (user.daily_stats.money_received_today || 0) + value;
+                break;
+
+            case 'items_bought_today':
+                updateData.daily_stats.items_bought_today = (user.daily_stats.items_bought_today || 0) + 1;
+                break;
+
+            case 'consumables_used':
+                updateData.daily_stats.consumables_used = (user.daily_stats.consumables_used || 0) + 1;
+                break;
+
+            case 'xp_gained_today':
+                updateData.daily_stats.xp_gained_today = (user.daily_stats.xp_gained_today || 0) + value;
+                break;
+
+            case 'unique_channels':
+                const uniqueChannels = updateData.daily_stats.unique_channels || new Set();
+                uniqueChannels.add(value); // value = channelId
+                updateData.daily_stats.unique_channels = Array.from(uniqueChannels);
+                break;
+
+            case 'balance_milestone_today':
+                // Trackear ganancia neta del día
+                const startBalance = user.daily_stats.starting_balance || user.balance;
+                const currentGain = user.balance - startBalance;
+                updateData.daily_stats.balance_milestone_today = currentGain;
+                break;
+
+            case 'trinity_complete':
+                // Verificar si completó las 3 cosas
+                const hasDaily = user.daily_stats.daily_claimed_today;
+                const hasWork = (user.daily_stats.work_today || 0) > 0;
+                const hasGame = (user.daily_stats.games_today || 0) > 0;
+                
+                if (hasDaily && hasWork && hasGame) {
+                    updateData.daily_stats.trinity_complete = true;
+                }
+                break;
         }
        
         // Verificar progreso de cada misión
@@ -820,19 +966,19 @@ class MissionsSystem {
                     let eventMessage = '';
 
                     for (const event of this.events.getActiveEvents()) {
-                        if (event.type === 'fever_time') {
-                            finalEarnings = Math.floor(mission.reward.money * 1.4); // 🔥 +30%
-                            eventMessage = `🔥 **Tiempo Fiebre** (+${finalEarnings - mission.reward.money} π-b$)`;
+                        const rewardMultiplier = event.multipliers?.rewards || 1.0;
+                        
+                        if (rewardMultiplier !== 1.0) {
+                            const baseReward = mission.reward.money;
+                            finalEarnings = Math.floor(baseReward * rewardMultiplier);
+                            const diff = finalEarnings - baseReward;
+                            
+                            if (diff > 0) {
+                                eventMessage = `${event.emoji} **${event.name}** (+${diff} π-b$)`;
+                            } else {
+                                eventMessage = `${event.emoji} **${event.name}** (${diff} π-b$)`;
+                            }
                             break;
-                        }
-                        else if (event.type === 'market_crash') {
-                            finalEarnings = Math.floor(mission.reward.money * 0.8); // 📉 -30%
-                            eventMessage = `📉 **Crisis del Mercado** (-${mission.reward.money - finalEarnings} π-b$)`;
-                            break;
-                        }
-                        else if (event.type === 'server_anniversary') {
-                            finalEarnings = Math.floor(mission.reward.money * 2);
-                            eventMessage = `🎉 **Aniversario del Servidor** (+${finalEarnings - mission.reward.money} π-b$)`
                         }
                     }
 
@@ -930,8 +1076,6 @@ class MissionsSystem {
                 return stats.money_transferred_today || 0;
             case 'level_ups':
                 return stats.level_ups_today || 0;
-            case 'balance_check':
-                return user.balance || 0;
             case 'money_bet':
                 return stats.money_bet_today || 0;
             case 'bets_won':
@@ -962,9 +1106,71 @@ class MissionsSystem {
                 return stats.vip_commands_used || 0;
             case 'consecutive_wins':
                 return stats.consecutive_wins || 0; // Esto necesitarás implementarlo aparte
+            case 'unique_commands_used':
+                const commands = stats.unique_commands || [];
+                return Array.isArray(commands) ? commands.length : 0;
+
+            case 'achievements_unlocked_today':
+                return stats.achievements_unlocked_today || 0;
+
+            case 'unique_transfers':
+                const transfers = stats.unique_transfers || [];
+                return Array.isArray(transfers) ? transfers.length : 0;
+
+            case 'money_received_today':
+                return stats.money_received_today || 0;
+
+            case 'items_bought_today':
+                return stats.items_bought_today || 0;
+
+            case 'consumables_used':
+                return stats.consumables_used || 0;
+
+            case 'xp_gained_today':
+                return stats.xp_gained_today || 0;
+
+            case 'unique_channels':
+                const channels = stats.unique_channels || [];
+                return Array.isArray(channels) ? channels.length : 0;
+
+            case 'balance_milestone_today':
+                const startingBalance = user.daily_stats?.starting_balance || 0;
+                const currentBalance = user.balance || 0;
+                const netGain = Math.max(0, currentBalance - startingBalance);
+                return netGain;
+
+            case 'trinity_complete':
+                return stats.trinity_complete ? 1 : 0;
             default:
                 return 0;
         }
+    }
+
+    async checkTrinityCompletion(userId) {
+        const user = await this.economy.getUser(userId);
+        const stats = user.daily_stats || {};
+        
+        const hasDaily = stats.daily_claimed_today === true;
+        const hasWork = (stats.work_today || 0) > 0;
+        const hasGame = (stats.games_today || 0) > 0;
+        
+        // Si completó las 3 cosas y aún no está marcado
+        if (hasDaily && hasWork && hasGame && !stats.trinity_complete) {
+            const updateData = {
+                daily_stats: {
+                    ...stats,
+                    trinity_complete: true
+                }
+            };
+            
+            await this.economy.updateUser(userId, updateData);
+            
+            // Verificar si completó la misión
+            const completedMissions = await this.updateMissionProgress(userId, 'trinity_complete', 1);
+            return completedMissions;
+        }
+        
+        return [];
     }
     
     // Mostrar misiones del usuario
@@ -1126,6 +1332,8 @@ class MissionsSystem {
     
     // Procesador de comandos
     async processCommand(message) {
+        const commandName = command.replace('>', '');
+        await this.economy.missions.updateMissionProgress(userId, 'unique_commands_used', commandName);
         // Verificar ingresos pasivos pendientes
         await this.economy.checkPendingPassiveIncome(message.author.id);
         await this.economy.checkAndNotifyItems(message.author.id, message);

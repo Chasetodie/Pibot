@@ -24,7 +24,7 @@ class EventsSystem {
                 description: 'Gana el doble de XP por mensajes',
                 emoji: '⚡',
                 color: '#FFD700',
-                multiplier: { xp: 1.5 },
+                multiplier: { xp: 1.25 },
                 minDuration: 1800000, // 30 minutos
                 maxDuration: 7200000  // 2 horas
             },
@@ -33,7 +33,7 @@ class EventsSystem {
                 description: 'Aumenta las ganancias de trabajo y daily',
                 emoji: '💰',
                 color: '#00FF00',
-                multiplier: { work: 1.5, daily: 1.75 },
+                multiplier: { work: 1.2, daily: 1.3, rewards: 1.2 },
                 minDuration: 3600000, // 1 hora
                 maxDuration: 14400000 // 4 horas
             },
@@ -52,20 +52,24 @@ class EventsSystem {
                 emoji: '🔥',
                 color: '#FF4500',
                 multiplier: { 
-                    xp: 1.3, 
-                    work: 1.3, 
-                    cooldown: 0.5, 
-                    daily: 1.2, 
-                    minigames: 1.5
+                    xp: 1.25, 
+                    work: 1.15, 
+                    cooldown: 0.7, 
+                    daily: 1.15, 
+                    minigames: 1.25,
+                    rewards: 1.3
                 },
-                minDuration: 900000, // 15 minutos
-                maxDuration: 1800000   // 30 minutos
+                minDuration: 600000, // 10 minutos
+                maxDuration: 1200000 // 20 minutos
             },
             'charity_event': {
                 name: '❤️ Evento de Caridad',
                 description: 'Dona dinero y recibe bonificaciones especiales',
                 emoji: '❤️',
                 color: '#FF69B4',
+                multiplier: {
+                    transfer_bonus: 0.45
+                },
                 minDuration: 600000,  // 10 minutos
                 maxDuration: 900000, // 15 minutos
                 special: true
@@ -85,13 +89,14 @@ class EventsSystem {
                 emoji: '📉',
                 color: '#DC143C',
                 multiplier: { 
-                    work: 0.7, 
-                    daily: 0.8, 
-                    cooldown: 0.4,
-                    minigames: 1.5
+                    work: 0.6, 
+                    daily: 0.7, 
+                    cooldown: 0.8,
+                    minigames: 1.2,
+                    rewards: 0.8
                 },
-                minDuration: 1800000, // 30 minutos
-                maxDuration: 3600000, // 1 hora
+                minDuration: 3600000, // 1 hora
+                maxDuration: 7200000, // 2 hora
                 negative: true
             },
             'week_end': {
@@ -111,28 +116,28 @@ class EventsSystem {
                 emoji: '🎉',
                 color: '#9932CC',
                 multiplier: { 
-                    xp: 2, 
-                    work: 2, 
-                    daily: 2, 
-                    cooldown: 0.3,
-                    minigames: 2
+                    xp: 1.5, 
+                    work: 1.5, 
+                    daily: 1.5, 
+                    cooldown: 0.6,
+                    minigames: 1.5,
+                    rewards: 1.5
                 },
-                minDuration: 14400000, // 4 horas
-                maxDuration: 86400000, // 24 horas
+                minDuration: 3600000, // 1 hora
+                maxDuration: 14400000, // 4 horas
                 special: true,
                 rare: true
             }
         };
         
-        // Probabilidades de eventos (por hora)
         this.eventProbabilities = {
-            'double_xp': 0.15,      // 15%
-            'money_rain': 0.12,     // 12%
-            'lucky_hour': 0.01,     // 1%
-            'fever_time': 0.11,     // 11%
-            'charity_event': 0.02,  // 2%
-            'treasure_hunt': 0.07,  // 7%
-            'market_crash': 0.10//,   // 10%
+            'double_xp': 0.08,      // era 0.15 (15%)
+            'money_rain': 0.06,     // era 0.12 (12%)
+            'lucky_hour': 0.005,    // era 0.01 (1%)
+            'fever_time': 0.05,     // era 0.11 (11%)
+            'charity_event': 0.01,  // era 0.02 (2%)
+            'treasure_hunt': 0.03,  // era 0.07 (7%)
+            'market_crash': 0.04    // era 0.10 (10%)
             //'server_anniversary': 0.01 // 1% (muy raro)
         };
         
@@ -331,7 +336,7 @@ class EventsSystem {
         setInterval(async () => {
             await this.tryCreateRandomEvent();
             console.log('🔄 Verificando eventos automáticos...');
-        }, 3600000); // 30 minutos
+        }, 2 * 60 * 60 * 1000); // 2 horas
 
         // Limpiar eventos expirados cada 1 minutos
         setInterval(async () => {
@@ -702,7 +707,7 @@ class EventsSystem {
         let appliedEvents = [];
         
         for (const event of this.getActiveEvents()) {
-            if (event.type === 'treasure_hunt' && Math.random() < 0.15) { // 15% chance
+            if (event.type === 'treasure_hunt' && Math.random() < 0.05) { // 15% chance
                 // DIFERENTES TIPOS DE TESORO
                 const treasureType = Math.random();
                 let treasureReward = 0;
@@ -712,17 +717,17 @@ class EventsSystem {
                 
                 if (treasureType < 0.55) {
                     // 55% - Tesoro de dinero normal
-                    treasureReward = Math.floor(Math.random() * 2000) + 500; // 500-2500
+                    treasureReward = Math.floor(Math.random() * 800) + 200; // 200-1000
                     treasureDescription = `Cofre de monedas: ${treasureReward} π-b$`;
                     rewardType = 'money';
                 } else if (treasureType < 0.70) {
                     // 15% - Tesoro de dinero premium
-                    treasureReward = Math.floor(Math.random() * 3000) + 1500; // 1500-4500
+                    treasureReward = Math.floor(Math.random() * 1500) + 500; // 500-2000
                     treasureDescription = `Cofre dorado: ${treasureReward} π-b$`;
                     rewardType = 'premium_money';
                 } else {
                     // 30% - Tesoro de XP
-                    xpBonus = Math.floor(Math.random() * 1000) + 500; // 500-1500 XP
+                    xpBonus = Math.floor(Math.random() * 400) + 200; // 200-600 XP
                     treasureDescription = `Pergamino ancestral: +${xpBonus} XP`;
                     rewardType = 'xp';
                 }

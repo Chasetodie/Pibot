@@ -903,6 +903,9 @@ _Totalmente gratis, sin límites_`,
      * Procesar comando de chat
      */
     async processCommand(message) {
+        const commandName = command.replace('>', '');
+        await this.economy.missions.updateMissionProgress(userId, 'unique_commands_used', commandName);
+        
         const args = message.content.toLowerCase().split(' ');
         const command = args[0];
 

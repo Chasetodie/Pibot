@@ -9,6 +9,12 @@ class LocalDatabase {
         this.cacheTimeout = 10 * 60 * 1000;
         this.MAX_CACHE_SIZE = 500;
         this.init();
+
+        // Limpieza automática cada 24 horas
+        setInterval(() => {
+            this.cleanOldGameLimits();
+            this.cleanOldNotifications();
+        }, 24 * 60 * 60 * 1000);
     }
 
     async init() {
@@ -242,9 +248,181 @@ class LocalDatabase {
                 ('piba_counter', 0)
             `);
 
+            // ✅ AGREGAR ESTA TABLA:
+            await this.pool.execute(`
+                CREATE TABLE IF NOT EXISTS daily_game_limits (
+                    user_id VARCHAR(255) NOT NULL,
+                    game_type VARCHAR(50) NOT NULL,
+                    date DATE NOT NULL,
+                    cycle_count INT DEFAULT 0,
+                    daily_count INT DEFAULT 0,
+                    cycle_reset BIGINT NOT NULL,
+                    PRIMARY KEY (user_id, game_type, date),
+                    INDEX idx_date (date)
+                )
+            `);
+            
+            // ✅ AGREGAR TABLA DE NOTIFICACIONES:
+            await this.pool.execute(`
+                CREATE TABLE IF NOT EXISTS limit_notifications (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    user_id VARCHAR(255) NOT NULL,
+                    game_type VARCHAR(50) NOT NULL,
+                    channel_id VARCHAR(255) NOT NULL,
+                    notify_at BIGINT NOT NULL,
+                    notified BOOLEAN DEFAULT 0,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    INDEX idx_notify (notify_at, notified),
+                    INDEX idx_user (user_id)
+                )
+            `);
+
             console.log('🗃️ Tablas MySQL inicializadas');
         } catch (error) {
             console.error('❌ Error creando tablas:', error);
+        }
+    }
+
+    async getGameLimitStatus(userId, gameType, cycleHours) {
+        try {
+            const today = new Date().toISOString().split('T')[0];
+            const now = Date.now();
+            
+            const [rows] = await this.pool.execute(
+                'SELECT * FROM daily_game_limits WHERE user_id = ? AND game_type = ? AND date = ?',
+                [userId, gameType, today]
+            );
+            
+            if (rows.length === 0) {
+                // Primera jugada del día - CREAR registro
+                const cycleReset = now + (cycleHours * 60 * 60 * 1000);
+                await this.pool.execute(`
+                    INSERT INTO daily_game_limits (user_id, game_type, cycle_count, daily_count, cycle_reset, date)
+                    VALUES (?, ?, 0, 0, ?, ?)
+                `, [userId, gameType, cycleReset, today]);
+                
+                return { cycleCount: 0, dailyCount: 0, cycleReset };
+            }
+            
+            const record = rows[0];
+            
+            // Verificar si el ciclo expiró
+            if (now >= record.cycle_reset) {
+                // Reset del ciclo - ACTUALIZAR mismo registro
+                const newCycleReset = now + (cycleHours * 60 * 60 * 1000);
+                await this.pool.execute(`
+                    UPDATE daily_game_limits 
+                    SET cycle_count = 0, cycle_reset = ?
+                    WHERE user_id = ? AND game_type = ? AND date = ?
+                `, [newCycleReset, userId, gameType, today]);
+                
+                return { cycleCount: 0, dailyCount: record.daily_count, cycleReset: newCycleReset };
+            }
+            
+            return {
+                cycleCount: record.cycle_count,
+                dailyCount: record.daily_count,
+                cycleReset: record.cycle_reset
+            };
+        } catch (error) {
+            console.error('Error obteniendo estado de límites:', error);
+            return { cycleCount: 0, dailyCount: 0, cycleReset: Date.now() };
+        }
+    }
+
+    async incrementGameLimit(userId, gameType) {
+        try {
+            const today = new Date().toISOString().split('T')[0];
+            
+            await this.pool.execute(`
+                UPDATE daily_game_limits 
+                SET cycle_count = cycle_count + 1,
+                    daily_count = daily_count + 1
+                WHERE user_id = ? AND game_type = ? AND date = ?
+            `, [userId, gameType, today]);
+            
+            return true;
+        } catch (error) {
+            console.error('Error incrementando límite:', error);
+            return false;
+        }
+    }
+
+    async cleanOldGameLimits() {
+        try {
+            const threeDaysAgo = new Date();
+            threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
+            const dateStr = threeDaysAgo.toISOString().split('T')[0];
+            
+            const [result] = await this.pool.execute(
+                'DELETE FROM daily_game_limits WHERE date < ?',
+                [dateStr]
+            );
+            
+            console.log(`🗑️ Limpiados ${result.affectedRows} registros antiguos de límites`);
+        } catch (error) {
+            console.error('Error limpiando límites antiguos:', error);
+        }
+    }
+
+    async createLimitNotification(userId, gameType, channelId, notifyAt) {
+        try {
+            // Eliminar notificaciones pendientes anteriores del mismo juego
+            await this.pool.execute(
+                'DELETE FROM limit_notifications WHERE user_id = ? AND game_type = ? AND notified = 0',
+                [userId, gameType]
+            );
+            
+            // Crear nueva notificación
+            await this.pool.execute(`
+                INSERT INTO limit_notifications (user_id, game_type, channel_id, notify_at)
+                VALUES (?, ?, ?, ?)
+            `, [userId, gameType, channelId, notifyAt]);
+            
+            return true;
+        } catch (error) {
+            console.error('Error creando notificación de límite:', error);
+            return false;
+        }
+    }
+
+    async getPendingNotifications() {
+        try {
+            const now = Date.now();
+            const [rows] = await this.pool.execute(
+                'SELECT * FROM limit_notifications WHERE notify_at <= ? AND notified = 0',
+                [now]
+            );
+            return rows;
+        } catch (error) {
+            console.error('Error obteniendo notificaciones pendientes:', error);
+            return [];
+        }
+    }
+
+    async markNotificationAsSent(notificationId) {
+        try {
+            await this.pool.execute(
+                'UPDATE limit_notifications SET notified = 1 WHERE id = ?',
+                [notificationId]
+            );
+            return true;
+        } catch (error) {
+            console.error('Error marcando notificación como enviada:', error);
+            return false;
+        }
+    }
+
+    async cleanOldNotifications() {
+        try {
+            const twoDaysAgo = Date.now() - (2 * 24 * 60 * 60 * 1000);
+            const [result] = await this.pool.execute(
+                'DELETE FROM limit_notifications WHERE notified = 1 AND created_at < FROM_UNIXTIME(?)',
+                [twoDaysAgo / 1000]
+            );
+            console.log(`🗑️ Limpiadas ${result.affectedRows} notificaciones antiguas`);
+        } catch (error) {
+            console.error('Error limpiando notificaciones:', error);
         }
     }
 
