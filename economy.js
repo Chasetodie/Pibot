@@ -926,7 +926,7 @@ await this.missions.updateMissionProgress(userId, 'xp_gained_today', xpGained);
         'Hubo una redada policial',
         'El cliente desapareció sin dejar rastro'
     ]
-}
+},
             'paranormalinv': {
                 name: '👻 Investigador Paranormal',
                 cooldown: 4 * 60 * 60 * 1000, // 1 hora
