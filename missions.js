@@ -889,12 +889,12 @@ class MissionsSystem {
                 updateData.daily_stats.achievements_unlocked_today = (user.daily_stats.achievements_unlocked_today || 0) + 1;
                 break;
 
-            case 'unique_transfers':
+            /*case 'unique_transfers':
                 // Trackear usuarios únicos a los que transferiste
                 const uniqueTransfers = updateData.daily_stats.unique_transfers || new Set();
                 uniqueTransfers.add(value); // value = userId del receptor
                 updateData.daily_stats.unique_transfers = Array.from(uniqueTransfers);
-                break;
+                break;*/
 
             case 'money_received_today':
                 updateData.daily_stats.money_received_today = (user.daily_stats.money_received_today || 0) + value;
@@ -1113,9 +1113,9 @@ class MissionsSystem {
             case 'achievements_unlocked_today':
                 return stats.achievements_unlocked_today || 0;
 
-            case 'unique_transfers':
+/*            case 'unique_transfers':
                 const transfers = stats.unique_transfers || [];
-                return Array.isArray(transfers) ? transfers.length : 0;
+                return Array.isArray(transfers) ? transfers.length : 0;*/
 
             case 'money_received_today':
                 return stats.money_received_today || 0;
