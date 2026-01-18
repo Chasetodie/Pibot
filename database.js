@@ -355,6 +355,27 @@ class LocalDatabase {
         try {
             const today = new Date().toISOString().split('T')[0];
             
+            // ✅ PRIMERO: Verificar si existe el registro
+            const [existing] = await this.pool.execute(
+                'SELECT * FROM daily_game_limits WHERE user_id = ? AND game_type = ? AND date = ?',
+                [userId, gameType, today]
+            );
+            
+            if (existing.length === 0) {
+                // Si no existe, crearlo primero (esto no debería pasar, pero por si acaso)
+                console.log(`⚠️ Creando registro faltante para ${userId} - ${gameType}`);
+                const now = Date.now();
+                const cycleReset = now + (4 * 60 * 60 * 1000); // 4 horas
+                
+                await this.pool.execute(`
+                    INSERT INTO daily_game_limits (user_id, game_type, cycle_count, daily_count, cycle_reset, date)
+                    VALUES (?, ?, 1, 1, ?, ?)
+                `, [userId, gameType, cycleReset, today]);
+                
+                return true;
+            }
+            
+            // Si existe, incrementar normalmente
             const [result] = await this.pool.execute(`
                 UPDATE daily_game_limits 
                 SET cycle_count = cycle_count + 1,
@@ -362,13 +383,11 @@ class LocalDatabase {
                 WHERE user_id = ? AND game_type = ? AND date = ?
             `, [userId, gameType, today]);
             
-            // ✅ VERIFICAR que se actualizó
             if (result.affectedRows === 0) {
                 console.error(`⚠️ No se pudo incrementar límite para ${userId} - ${gameType}`);
                 return false;
             }
             
-            console.log(`✅ Límite incrementado: ${gameType} para ${userId}`);
             return true;
         } catch (error) {
             console.error('Error incrementando límite:', error);
