@@ -6931,6 +6931,7 @@ const userId = gameState.userId;
                 case '>lottery':
                 case '>loteria':
                 case '>lotto':
+                    console.log("lol");
                     await this.handleLottery(message, args);
                     break;
                 case '>blackjack':
