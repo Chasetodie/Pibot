@@ -287,9 +287,7 @@ class LocalDatabase {
 
     async getGameLimitStatus(userId, gameType, cycleHours) {
         try {
-            const today = new Date().toLocaleDateString('en-CA', { 
-                timeZone: 'America/Guayaquil' 
-            }); // Formato: "2025-01-17"
+            const today = new Date().toISOString().split('T')[0];
             const now = Date.now();
             
             const [rows] = await this.pool.execute(
@@ -305,21 +303,14 @@ class LocalDatabase {
                     INSERT INTO daily_game_limits (user_id, game_type, cycle_count, daily_count, cycle_reset, date)
                     VALUES (?, ?, 0, 0, ?, ?)
                 `, [userId, gameType, cycleReset, today]);
-                
-                console.log(`✅ Nuevo límite: ${gameType} para ${userId}, reset en 4h`);
-                
+                               
                 return { cycleCount: 0, dailyCount: 0, cycleReset };
             }
             
             const record = rows[0];
-            
-            // ✅ IMPORTANTE: Convertir cycle_reset a número (puede venir como string de MySQL)
-            const cycleResetTimestamp = typeof record.cycle_reset === 'string' 
-                ? parseInt(record.cycle_reset) 
-                : record.cycle_reset;
-            
+                       
             // Verificar si el ciclo expiró
-            if (now >= cycleResetTimestamp) {
+            if (now >= record.cycle_reset) {
                 // Reset del ciclo
                 const newCycleReset = now + (cycleHours * 60 * 60 * 1000);
                 
@@ -328,26 +319,18 @@ class LocalDatabase {
                     SET cycle_count = 0, cycle_reset = ?
                     WHERE user_id = ? AND game_type = ? AND date = ?
                 `, [newCycleReset, userId, gameType, today]);
-                
-                const timeUntilReset = Math.floor((newCycleReset - now) / 60000);
-                console.log(`🔄 Ciclo reseteado: ${gameType} para ${userId}, próximo reset en ${timeUntilReset} minutos`);
-                
+                                
                 return { cycleCount: 0, dailyCount: record.daily_count, cycleReset: newCycleReset };
             }
-            
-            // Log para debugging
-            const timeLeft = Math.floor((cycleResetTimestamp - now) / 60000);
-            console.log(`📊 ${gameType} - ${userId}: ${record.cycle_count} jugadas, reset en ${timeLeft} min`);
-            
+                        
             return {
                 cycleCount: record.cycle_count,
                 dailyCount: record.daily_count,
-                cycleReset: cycleResetTimestamp
+                cycleReset: record.cycle_reset
             };
         } catch (error) {
             console.error('Error obteniendo estado de límites:', error);
-            const fallbackReset = Date.now() + (cycleHours * 60 * 60 * 1000);
-            return { cycleCount: 0, dailyCount: 0, cycleReset: fallbackReset };
+            return { cycleCount: 0, dailyCount: 0, cycleReset: Date.now };
         }
     }
 
@@ -361,7 +344,7 @@ class LocalDatabase {
                     daily_count = daily_count + 1
                 WHERE user_id = ? AND game_type = ? AND date = ?
             `, [userId, gameType, today]);
-            
+
             return true;
         } catch (error) {
             console.error('Error incrementando límite:', error);
