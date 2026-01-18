@@ -2461,7 +2461,7 @@ const userId = gameState.userId;
         // Si no hay argumentos suficientes, mostrar ayuda
         if (args.length < 3) {
             const embed = new EmbedBuilder()
-                .setTitle('🎰 Ruleta - Casino Européo')
+                .setTitle('🎡 Ruleta - Casino Européo')
                 .setDescription('¡Apuesta en la ruleta y gana grandes premios!')
                 .addFields(
                     { name: '📝 Uso', value: '`>roulette <tipo> <cantidad>`', inline: false },
@@ -2572,11 +2572,11 @@ const userId = gameState.userId;
     
         // Crear embed del resultado
         const resultEmbed = new EmbedBuilder()
-            .setTitle('🎰 Ruleta - Resultado')
+            .setTitle('🎡 Ruleta - Resultado')
             .setColor(won ? '#00FF00' : '#FF0000')
             .addFields(
                 { name: '🎯 Tu Apuesta', value: `**${validBet.displayName}**`, inline: true },
-                { name: '🎰 Número Ganador', value: `${this.formatRouletteNumber(spinResult)}`, inline: true },
+                { name: '🎡 Número Ganador', value: `${this.formatRouletteNumber(spinResult)}`, inline: true },
                 { name: '💰 Apuesta', value: `${this.formatNumber(betAmount)} π-b$`, inline: true }
             )
             .setTimestamp();
@@ -3154,6 +3154,8 @@ const userId = gameState.userId;
         let won = false;
         let winAmount = 0;
         let resultText = '';
+        // VERIFICAR LÍMITES (igual que lottery)
+        const gameType = 'slots';
         
         if (result.isJackpot) {
             // 💎💎💎 JACKPOT
@@ -3183,7 +3185,7 @@ const userId = gameState.userId;
             await this.economy.missions.updateMissionProgress(userId, 'consecutive_win');
             await this.economy.missions.updateMissionProgress(userId, 'game_won');
             // INCREMENTAR LÍMITE
-            await this.economy.database.incrementGameLimit(userId, 'slots');
+            await this.economy.database.incrementGameLimit(userId, gameType);
             
             // APLICAR EVENTOS
             const eventBonus = await this.applyEventEffects(userId, winAmount - betAmount, 'minigames');
@@ -3260,7 +3262,7 @@ const userId = gameState.userId;
             // PERDIÓ
             await this.economy.missions.updateMissionProgress(userId, 'consecutive_loss');
             // INCREMENTAR LÍMITE
-            await this.economy.database.incrementGameLimit(userId, 'slots');
+            await this.economy.database.incrementGameLimit(userId, gameType);
             
             const hasProtection = await this.shop.hasGameProtection(userId);
             if (hasProtection) {
@@ -7104,13 +7106,13 @@ const userId = gameState.userId;
                     inline: false 
                 },
                 { 
-                    name: '🎰 Ruleta', 
+                    name: '🎡 Ruleta', 
                     value: '`>roulette <tipo> <cantidad>`\nApuesta: 100-20,000 π-b$\nGanancia: x1.95 - x35\nCooldown: 45 segundos', 
                     inline: false 
                 },
                 { 
                     name: '🎰 Tragaperras', 
-                    value: '`>slots <cantidad>`\nApuesta: 100-8,000 π-b$\nGanancia: x2.5 - x50\nCooldown: 20 segundos', 
+                    value: '`>slots <cantidad>`\nApuesta: 100-8,000 π-b$\nGanancia: x2.5 - x50\nCooldown: 1 minuto', 
                     inline: false 
                 },
                 { 
