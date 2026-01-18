@@ -871,11 +871,28 @@ class AllCommands {
                 .setDescription(`${targetUser} alcanzó el **Nivel ${xpResult.newLevel}**`)
                 .addFields(
                     { name: '📈 XP Ganada', value: `+${xpResult.xpGained} XP`, inline: true },
-                    { name: '🎁 Recompensa', value: `+${xpResult.reward} π-b$`, inline: true },
+                    { name: '🎁 Recompensa Base', value: `+${xpResult.baseReward || xpResult.reward} π-b$`, inline: true },
                     { name: '🏆 Niveles Subidos', value: `${xpResult.levelsGained}`, inline: true }
                 )
                 .setColor('#FFD700')
                 .setTimestamp();
+            
+            // ✅ AGREGAR - Bonus por nivel
+            if (xpResult.levelBonus && xpResult.levelBonus > 0) {
+                levelUpEmbed.addFields({
+                    name: '⭐ Bonus por Nivel',
+                    value: `+${xpResult.levelBonus} π-b$ (${xpResult.newLevel} × 50)`,
+                    inline: false
+                });
+            }
+            
+            // ✅ Total
+            levelUpEmbed.addFields({
+                name: '💰 Total Ganado',
+                value: `**${xpResult.reward} π-b$**`,
+                inline: false
+            });
+            
             await message.channel.send({ embeds: [levelUpEmbed] });
         }
     }

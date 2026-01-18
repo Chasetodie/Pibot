@@ -363,7 +363,6 @@ REGLAS CRÍTICAS DE CONVERSACIÓN:
             "tngtech/tng-r1t-chimera:free",
             "nvidia/nemotron-3-nano-30b-a3b:free",
             "meta-llama/llama-3.3-70b-instruct:free",
-            "mistralai/mistral-7b-instruct:free",
             "allenai/molmo-2-8b:free",
         ];
         
@@ -1004,7 +1003,6 @@ _Totalmente gratis, sin límites_`,
                         { name: "nvidia/nemotron-3-nano-30b-a3b:free", emoji: "🤖", desc: "NVIDIA Nemotron Nano" },
                         { name: "meta-llama/llama-3.3-70b-instruct:free", emoji: "🦙", desc: "LLaMA 3.3 70B Instruct" },
                         { name: "google/gemma-3-27b-it:free", emoji: "💎", desc: "Gemma 3 27B" },
-                        { name: "mistralai/mistral-7b-instruct:free", emoji: "⭐", desc: "Mistral 7B Instruct" },
                         { name: "allenai/molmo-2-8b:free", emoji: "📘", desc: "Molmo 2 8B" },
                     ];
                

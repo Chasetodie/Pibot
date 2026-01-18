@@ -474,13 +474,16 @@ await this.missions.updateMissionProgress(userId, 'xp_gained_today', xpGained);
         
         if (levelUps > 0) {
             const reward = levelUps * this.config.levelUpReward;
+
+            const levelBonus = newLevel * 75;
+            const totalReward = reward + levelBonus;
             
             // Agregar campos de level up
             updateData.level = newLevel;
-            updateData.balance = user.balance + reward;
+            updateData.balance = user.balance + totalReward;
             updateData.stats = {
                 ...user.stats,
-                totalEarned: (user.stats.totalEarned || 0) + reward
+                totalEarned: (user.stats.totalEarned || 0) + totalReward
             };
             
             await this.updateUser(userId, updateData); // ← Reemplaza saveUsers()
@@ -489,8 +492,10 @@ await this.missions.updateMissionProgress(userId, 'xp_gained_today', xpGained);
                 levelUp: true,
                 levelsGained: levelUps,
                 newLevel: newLevel,
-                xpGained: xpGained,
-                reward: reward
+                xpGained: newTotalXp,
+                reward: totalReward,
+                baseReward: reward,
+                levelBonus: levelBonus,
             };
         }
         
@@ -498,7 +503,7 @@ await this.missions.updateMissionProgress(userId, 'xp_gained_today', xpGained);
         
         return {
             levelUp: false,
-            xpGained: xpGained,
+            xpGained: newTotalXp,
             currentLevel: user.level
         };
     }

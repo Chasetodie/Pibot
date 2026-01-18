@@ -288,12 +288,37 @@ async function sendLevelUpSafe(message, xpResult, channel) {
             .setDescription(`${message.author} alcanzó el **Nivel ${xpResult.newLevel}**`)
             .addFields(
                 { name: '📈 XP Ganada', value: `+${xpResult.xpGained} XP`, inline: true },
-                { name: '🎁 Recompensa', value: `+${xpResult.reward} π-b$`, inline: true },
-                { name: '🏆 Niveles Subidos', value: `${xpResult.levelsGained}`, inline: true },
-                { name: '🎉 Extra por Eventos', value: `${xpResult.eventMessage || "No hay eventos Activos"} `, inline: false }                    
+                { name: '🎁 Recompensa Base', value: `+${xpResult.baseReward || xpResult.reward} π-b$`, inline: true },
+                { name: '🏆 Niveles Subidos', value: `${xpResult.levelsGained}`, inline: true }
             )
             .setColor('#FFD700')
             .setTimestamp();
+        
+        // ✅ AGREGAR - Mostrar bonus por nivel si existe
+        if (xpResult.levelBonus && xpResult.levelBonus > 0) {
+            levelUpEmbed.addFields({
+                name: '⭐ Bonus por Nivel',
+                value: `+${xpResult.levelBonus} π-b$ (Nivel ${xpResult.newLevel} × 50)`,
+                inline: false
+            });
+        }
+        
+        // ✅ AGREGAR - Total final
+        levelUpEmbed.addFields({
+            name: '💰 Total Ganado',
+            value: `**${xpResult.reward} π-b$**`,
+            inline: false
+        });
+        
+        // Si hay mensaje de evento
+        if (xpResult.eventMessage) {
+            levelUpEmbed.addFields({
+                name: '🎉 Extra por Eventos',
+                value: xpResult.eventMessage,
+                inline: false
+            });
+        }
+        
         await channel.send({ 
             content: `<@${message.author.id}>`,
             embeds: [levelUpEmbed],

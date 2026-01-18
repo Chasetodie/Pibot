@@ -57,6 +57,7 @@ class LocalDatabase {
                     last_roulette BIGINT DEFAULT 0,
                     last_lotto BIGINT DEFAULT 0,
                     last_blackjack BIGINT DEFAULT 0,
+                    last_slots BIGINT DEFAULT 0,
                     last_name_work TEXT,
                     messages_count INT DEFAULT 0,
                     items TEXT,
@@ -286,7 +287,9 @@ class LocalDatabase {
 
     async getGameLimitStatus(userId, gameType, cycleHours) {
         try {
-            const today = new Date().toISOString().split('T')[0];
+            const today = new Date().toLocaleDateString('en-CA', { 
+                timeZone: 'America/Guayaquil' 
+            }); // Formato: "2025-01-17"
             const now = Date.now();
             
             const [rows] = await this.pool.execute(
@@ -295,39 +298,56 @@ class LocalDatabase {
             );
             
             if (rows.length === 0) {
-                // Primera jugada del día - CREAR registro
+                // Primera jugada del día
                 const cycleReset = now + (cycleHours * 60 * 60 * 1000);
+                
                 await this.pool.execute(`
                     INSERT INTO daily_game_limits (user_id, game_type, cycle_count, daily_count, cycle_reset, date)
                     VALUES (?, ?, 0, 0, ?, ?)
                 `, [userId, gameType, cycleReset, today]);
+                
+                console.log(`✅ Nuevo límite: ${gameType} para ${userId}, reset en 4h`);
                 
                 return { cycleCount: 0, dailyCount: 0, cycleReset };
             }
             
             const record = rows[0];
             
+            // ✅ IMPORTANTE: Convertir cycle_reset a número (puede venir como string de MySQL)
+            const cycleResetTimestamp = typeof record.cycle_reset === 'string' 
+                ? parseInt(record.cycle_reset) 
+                : record.cycle_reset;
+            
             // Verificar si el ciclo expiró
-            if (now >= record.cycle_reset) {
-                // Reset del ciclo - ACTUALIZAR mismo registro
+            if (now >= cycleResetTimestamp) {
+                // Reset del ciclo
                 const newCycleReset = now + (cycleHours * 60 * 60 * 1000);
+                
                 await this.pool.execute(`
                     UPDATE daily_game_limits 
                     SET cycle_count = 0, cycle_reset = ?
                     WHERE user_id = ? AND game_type = ? AND date = ?
                 `, [newCycleReset, userId, gameType, today]);
                 
+                const timeUntilReset = Math.floor((newCycleReset - now) / 60000);
+                console.log(`🔄 Ciclo reseteado: ${gameType} para ${userId}, próximo reset en ${timeUntilReset} minutos`);
+                
                 return { cycleCount: 0, dailyCount: record.daily_count, cycleReset: newCycleReset };
             }
+            
+            // Log para debugging
+            const timeLeft = Math.floor((cycleResetTimestamp - now) / 60000);
+            console.log(`📊 ${gameType} - ${userId}: ${record.cycle_count} jugadas, reset en ${timeLeft} min`);
             
             return {
                 cycleCount: record.cycle_count,
                 dailyCount: record.daily_count,
-                cycleReset: record.cycle_reset
+                cycleReset: cycleResetTimestamp
             };
         } catch (error) {
             console.error('Error obteniendo estado de límites:', error);
-            return { cycleCount: 0, dailyCount: 0, cycleReset: Date.now() };
+            const fallbackReset = Date.now() + (cycleHours * 60 * 60 * 1000);
+            return { cycleCount: 0, dailyCount: 0, cycleReset: fallbackReset };
         }
     }
 
@@ -335,13 +355,20 @@ class LocalDatabase {
         try {
             const today = new Date().toISOString().split('T')[0];
             
-            await this.pool.execute(`
+            const [result] = await this.pool.execute(`
                 UPDATE daily_game_limits 
                 SET cycle_count = cycle_count + 1,
                     daily_count = daily_count + 1
                 WHERE user_id = ? AND game_type = ? AND date = ?
             `, [userId, gameType, today]);
             
+            // ✅ VERIFICAR que se actualizó
+            if (result.affectedRows === 0) {
+                console.error(`⚠️ No se pudo incrementar límite para ${userId} - ${gameType}`);
+                return false;
+            }
+            
+            console.log(`✅ Límite incrementado: ${gameType} para ${userId}`);
             return true;
         } catch (error) {
             console.error('Error incrementando límite:', error);
@@ -756,9 +783,11 @@ class LocalDatabase {
                 last_roulette: 0,
                 last_lotto: 0,
                 last_blackjack: 0,
+                last_slots: 0,
                 last_name_work: "",
                 messages_count: 0,
                 items: {},
+                vipStats: {},
                 stats: {
                     totalEarned: 0,
                     totalSpent: 0,

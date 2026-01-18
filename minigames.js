@@ -41,14 +41,19 @@ this.cooldownCache = new Map();
                 maxDaily: 18        // Máximo 18 al día (3 × 6 ciclos)
             },
             blackjack: {
-                perCycle: 10,       // 10 partidas por ciclo
+                perCycle: 15,       // 15 partidas por ciclo
                 cycleHours: 4,      // Cada 4 horas
-                maxDaily: 60        // Máximo 60 al día (10 × 6 ciclos)
+                maxDaily: 90        // Máximo 90 al día (15 × 6 ciclos)
             },
             roulette: {
                 perCycle: 8,        // 8 partidas por ciclo
                 cycleHours: 4,      // Cada 4 horas
                 maxDaily: 48        // Máximo 48 al día (8 × 6 ciclos)
+            },
+            slots: {
+                perCycle: 10,       // 10 partidas por ciclo
+                cycleHours: 4,      // Cada 4 horas
+                maxDaily: 60        // Máximo 60 al día (10 × 6 ciclos)
             }
         };
 
@@ -124,6 +129,21 @@ setTimeout(() => {
                     column2: 2.7,       // Cambiar de 2.9 a 2.7
                     column3: 2.7        // Cambiar de 2.9 a 2.7
                 }
+            },
+            slots: {
+                minBet: 100,
+                maxBet: 8000,
+                cooldown: 60000, // 1 minuto
+                symbols: {
+                    '💎': { weight: 3, payout: 50 },    // Ultra raro (Jackpot)
+                    '🍒': { weight: 8, payout: 20 },    // Muy raro
+                    '🔔': { weight: 12, payout: 10 },   // Raro
+                    '🍋': { weight: 18, payout: 5 },    // Poco común
+                    '⭐': { weight: 25, payout: 3 },    // Común
+                    '7️⃣': { weight: 34, payout: 2.5 }   // Muy común
+                },
+                jackpotSymbol: '💎',
+                twoMatchMultiplier: 0.5 // 50% de la apuesta si salen 2 iguales
             },
             russianRoulette: {
                 minBet: 300,            // Cambiar de 200 a 300
@@ -354,6 +374,7 @@ async showMyLimits(message) {
             'coinflip': 0.12,          // +12% máximo
             'dice_highlow': 0.12,      // +12% máximo
             'roulette_color': 0.10,    // +10% máximo
+            'slots': 0.12,             // +12% máximo para slots
             'default': 0.15
         };
         
@@ -368,6 +389,7 @@ async showMyLimits(message) {
             'coinflip': 0.62,          // 62% máximo
             'dice_highlow': 0.62,      // 62% máximo
             'roulette_color': 0.58,    // 58% máximo
+            'slots': 0.25,             // 25% máximo de ganar en slots
             'default': 0.65
         };
         
@@ -2857,6 +2879,246 @@ const userId = gameState.userId;
         return `${colorEmoji} **${number}** (${colorName})`;
     }
 
+    async canSlots(userId) {
+        const user = await this.economy.getUser(userId);
+
+        if (this.shop) {
+            const vipMultipliers = await this.shop.getVipMultipliers(userId, 'games');
+            if (vipMultipliers.noCooldown) {
+                return { canSlots: true };
+            }
+        }
+
+        const lastSlots = user.last_slots || 0;
+        const now = Date.now();
+        let effectiveCooldown = await this.getEffectiveCooldown(this.config.slots.cooldown);
+
+        if (now - lastSlots < effectiveCooldown) {
+            const timeLeft = effectiveCooldown - (now - lastSlots);
+            return {
+                canSlots: false,
+                timeLeft: timeLeft
+            };
+        }
+
+        return { canSlots: true };
+    }
+
+    async handleSlots(message, args) {
+        const userId = message.author.id;
+        const user = await this.economy.getUser(userId);
+        
+        if (args.length < 2) {
+            const symbolsList = Object.entries(this.config.slots.symbols)
+                .sort((a, b) => a[1].payout - b[1].payout)
+                .reverse()
+                .map(([emoji, data]) => `${emoji} x${data.payout}`)
+                .join(' | ');
+            
+            const embed = new EmbedBuilder()
+                .setTitle('🎰 Tragaperras - Máquina de la Suerte')
+                .setDescription('¡Gira la máquina y consigue 3 símbolos iguales!')
+                .addFields(
+                    { name: '📝 Uso', value: '`>slots <cantidad>`', inline: false },
+                    { name: '💡 Ejemplo', value: '`>slots 500`', inline: false },
+                    { name: '💰 Apuesta', value: `Min: ${this.formatNumber(this.config.slots.minBet)} π-b$\nMax: ${this.formatNumber(this.config.slots.maxBet)} π-b$`, inline: true },
+                    { name: '🎯 Símbolos', value: symbolsList, inline: false },
+                    { name: '🏆 Premios', value: '**3 iguales:** Pago del símbolo\n**2 iguales:** 50% de la apuesta\n**💎 Jackpot:** x50 tu apuesta', inline: false },
+                    { name: '⏰ Cooldown', value: '20 segundos', inline: true }
+                )
+                .setColor('#FFD700')
+                .setFooter({ text: '🍀 La suerte está de tu lado' });
+            
+            await message.reply({ embeds: [embed] });
+            return;
+        }
+
+        const betAmount = parseInt(args[1]);
+        
+        if (isNaN(betAmount) || betAmount < this.config.slots.minBet || betAmount > this.config.slots.maxBet) {
+            await message.reply(`❌ La apuesta debe ser entre ${this.formatNumber(this.config.slots.minBet)} y ${this.formatNumber(this.config.slots.maxBet)} π-b$`);
+            return;
+        }
+        
+        if (user.balance < betAmount) {
+            await message.reply(`❌ No tienes suficientes π-b Coins. Tu balance: ${this.formatNumber(user.balance)} π-b$`);
+            return;
+        }
+
+        // VERIFICAR LÍMITES
+        const gameType = 'slots';
+        const limitConfig = this.dailyLimits[gameType];
+        const status = await this.economy.database.getGameLimitStatus(userId, gameType, limitConfig.cycleHours);
+
+        if (status.cycleCount >= limitConfig.perCycle) {
+            await this.showLimitReached(message, userId, gameType, status, limitConfig);
+            return;
+        }
+
+        if (status.dailyCount >= limitConfig.maxDaily) {
+            await message.reply(
+                `🚫 **Límite diario alcanzado**\n` +
+                `Has alcanzado el máximo de ${limitConfig.maxDaily} partidas de slots por día.\n` +
+                `🌅 Vuelve mañana!`
+            );
+            return;
+        }
+
+        const canSlotsResult = await this.canSlots(userId);
+        if (!canSlotsResult.canSlots) {
+            await message.reply(`⏰ Debes esperar ${this.formatTime(canSlotsResult.timeLeft)} antes de jugar otra vez`);
+            return;
+        }
+
+        // Animación de giro
+        await this.spinSlotMachine(message, userId, betAmount);
+    }
+
+    async spinSlotMachine(message, userId, betAmount) {
+        const user = await this.economy.getUser(userId);
+        
+        // Generar resultado BASE (sin suerte)
+        const baseResult = this.generateSlotResult();
+        
+        this.setCooldown(userId, 'slots');
+        
+        // ANIMACIÓN: Crear mensaje inicial
+        const spinEmbed = new EmbedBuilder()
+            .setTitle('🎰 Tragaperras Girando...')
+            .setDescription('```\n🎲 | 🎲 | 🎲\n```')
+            .setColor('#FFD700');
+        
+        const reply = await message.reply({ embeds: [spinEmbed] });
+        
+        // Simular giros (5 ediciones)
+        const symbols = Object.keys(this.config.slots.symbols);
+        for (let i = 0; i < 5; i++) {
+            await new Promise(resolve => setTimeout(resolve, 400));
+            
+            const random1 = symbols[Math.floor(Math.random() * symbols.length)];
+            const random2 = symbols[Math.floor(Math.random() * symbols.length)];
+            const random3 = symbols[Math.floor(Math.random() * symbols.length)];
+            
+            spinEmbed.setDescription(`\`\`\`\n${random1} | ${random2} | ${random3}\n\`\`\``);
+            await reply.edit({ embeds: [spinEmbed] });
+        }
+        
+        // APLICAR SUERTE para determinar si gana
+        const [slot1, slot2, slot3] = baseResult.symbols;
+        
+        // Calcular probabilidad base de ganar
+        let baseWinChance = 0;
+        const isNaturalJackpot = slot1 === slot2 && slot2 === slot3 && slot1 === this.config.slots.jackpotSymbol;
+        const isNaturalTriple = slot1 === slot2 && slot2 === slot3;
+        const isNaturalDouble = (slot1 === slot2 || slot2 === slot3 || slot1 === slot3) && !isNaturalTriple;
+        
+        if (isNaturalJackpot) {
+            baseWinChance = 0.001; // 0.1% jackpot natural
+        } else if (isNaturalTriple) {
+            baseWinChance = 0.05; // 5% triple natural
+        } else if (isNaturalDouble) {
+            baseWinChance = 0.15; // 15% doble natural
+        }
+        
+        // APLICAR SUERTE 🍀
+        const luckCalc = await this.applyLuckToGame(baseWinChance, userId, 'slots');
+        const wonByLuck = Math.random() < luckCalc.winChance;
+        
+        let finalResult;
+        let luckMessage = '';
+        
+        if (isNaturalJackpot || isNaturalTriple || isNaturalDouble) {
+            // Ganó naturalmente
+            finalResult = {
+                symbols: baseResult.symbols,
+                isJackpot: isNaturalJackpot,
+                isTriple: isNaturalTriple,
+                isDouble: isNaturalDouble,
+                wonByLuck: false
+            };
+            
+            // Mostrar suerte disponible
+            if (luckCalc.luckMessage) {
+                luckMessage = luckCalc.luckMessage;
+            }
+        } else if (wonByLuck) {
+            // La suerte cambió el resultado 🎰✨
+            // Decidir qué tipo de premio dar
+            const luckRoll = Math.random();
+            
+            if (luckRoll < 0.05) {
+                // 5% - Jackpot por suerte
+                const jackpotSymbol = this.config.slots.jackpotSymbol;
+                finalResult = {
+                    symbols: [jackpotSymbol, jackpotSymbol, jackpotSymbol],
+                    isJackpot: true,
+                    isTriple: true,
+                    isDouble: false,
+                    wonByLuck: true
+                };
+            } else if (luckRoll < 0.35) {
+                // 30% - Triple por suerte
+                const luckySymbol = baseResult.symbols[0];
+                finalResult = {
+                    symbols: [luckySymbol, luckySymbol, luckySymbol],
+                    isJackpot: luckySymbol === this.config.slots.jackpotSymbol,
+                    isTriple: true,
+                    isDouble: false,
+                    wonByLuck: true
+                };
+            } else {
+                // 65% - Doble por suerte
+                finalResult = {
+                    symbols: [baseResult.symbols[0], baseResult.symbols[0], baseResult.symbols[2]],
+                    isJackpot: false,
+                    isTriple: false,
+                    isDouble: true,
+                    wonByLuck: true
+                };
+            }
+            
+            luckMessage = luckCalc.luckMessage + '\n🎰 ¡La suerte cambió el resultado!';
+        } else {
+            // Perdió
+            finalResult = {
+                symbols: baseResult.symbols,
+                isJackpot: false,
+                isTriple: false,
+                isDouble: false,
+                wonByLuck: false
+            };
+        }
+        
+        // Mostrar resultado final
+        await new Promise(resolve => setTimeout(resolve, 800));
+        
+        spinEmbed.setDescription(`\`\`\`\n${finalResult.symbols[0]} | ${finalResult.symbols[1]} | ${finalResult.symbols[2]}\n\`\`\``);
+        
+        // Procesar resultado
+        await this.processSlotResult(message, userId, betAmount, finalResult, spinEmbed, reply, luckMessage);
+    }
+
+    generateSlotResult() {
+        const symbols = Object.keys(this.config.slots.symbols);
+        const weights = Object.values(this.config.slots.symbols).map(s => s.weight);
+        
+        // Función para elegir símbolo basado en pesos
+        const pickSymbol = () => {
+            const totalWeight = weights.reduce((a, b) => a + b, 0);
+            let random = Math.random() * totalWeight;
+            
+            for (let i = 0; i < symbols.length; i++) {
+                random -= weights[i];
+                if (random <= 0) return symbols[i];
+            }
+            return symbols[symbols.length - 1];
+        };
+        
+        return {
+            symbols: [pickSymbol(), pickSymbol(), pickSymbol()]
+        };
+    }
+
     async getRussianGame(gameId) {
         try {
             return await this.economy.database.getRussianGame(gameId);
@@ -2864,6 +3126,179 @@ const userId = gameState.userId;
             console.error('⚠️ Error obteniendo partida:', error);
             return null;
         }
+    }
+
+    async processSlotResult(message, userId, betAmount, result, embed, reply, luckMessage) {
+        const user = await this.economy.getUser(userId);
+        
+        const updateData = {
+            last_slots: Date.now(),
+            stats: {
+                ...user.stats,
+                games_played: (user.stats.games_played || 0) + 1
+            }
+        };
+        
+        // Misiones
+        if (this.missions) {
+            const gameMissions = await this.missions.updateMissionProgress(userId, 'game_played');
+            const betMissions = await this.missions.updateMissionProgress(userId, 'money_bet', betAmount);
+            const trinityLol = await this.missions.checkTrinityCompletion(userId);
+            
+            let allCompleted = [...gameMissions, ...betMissions, trinityLol];
+            if (allCompleted.length > 0) {
+                await this.missions.notifyCompletedMissions(message, allCompleted);
+            }
+        }
+        
+        let won = false;
+        let winAmount = 0;
+        let resultText = '';
+        
+        if (result.isJackpot) {
+            // 💎💎💎 JACKPOT
+            won = true;
+            winAmount = Math.floor(betAmount * this.config.slots.symbols[result.symbols[0]].payout);
+            resultText = `🎉 **¡JACKPOT! 💎💎💎**`;
+            embed.setColor('#00FF00');
+        } else if (result.isTriple) {
+            // 3 iguales
+            won = true;
+            winAmount = Math.floor(betAmount * this.config.slots.symbols[result.symbols[0]].payout);
+            resultText = `🎊 **¡3 IGUALES!** ${result.symbols[0]}${result.symbols[0]}${result.symbols[0]}`;
+            embed.setColor('#00FF00');
+        } else if (result.isDouble) {
+            // 2 iguales
+            won = true;
+            winAmount = Math.floor(betAmount * this.config.slots.twoMatchMultiplier);
+            resultText = `😊 **¡2 Iguales!** Recuperaste la mitad`;
+            embed.setColor('#FFA500');
+        } else {
+            // Perdió
+            resultText = `💸 **Sin suerte esta vez...**`;
+            embed.setColor('#FF0000');
+        }
+        
+        if (won) {
+            await this.economy.missions.updateMissionProgress(userId, 'consecutive_win');
+            await this.economy.missions.updateMissionProgress(userId, 'game_won');
+            // INCREMENTAR LÍMITE
+            await this.economy.database.incrementGameLimit(userId, 'slots');
+            
+            // APLICAR EVENTOS
+            const eventBonus = await this.applyEventEffects(userId, winAmount - betAmount, 'minigames');
+            let finalEarnings = eventBonus.finalAmount;
+            
+            // APLICAR ITEMS
+            if (this.shop) {
+                const modifiers = await this.shop.getActiveMultipliers(userId, 'games');
+                const originalProfit = finalEarnings;
+                finalEarnings = Math.floor(finalEarnings * modifiers.multiplier);
+                const vipBonus = finalEarnings - originalProfit;
+                
+                if (vipBonus > 0) {
+                    await this.shop.updateVipStats(userId, 'bonusEarnings', vipBonus);
+                }
+                await this.shop.consumeItemUse(userId, 'games');
+            }
+            
+            // LÍMITE DE BALANCE
+            const userData = await this.economy.getUser(userId);
+            const userLimit = this.economy.shop ? await this.economy.shop.getVipLimit(userId) : this.economy.config.maxBalance;
+            
+            if (userData.balance + finalEarnings > userLimit) {
+                const spaceLeft = userLimit - userData.balance;
+                finalEarnings = Math.min(finalEarnings, spaceLeft);
+            }
+            
+            const addResult = await this.economy.addMoney(userId, finalEarnings, 'slots_win');
+            finalEarnings = addResult.actualAmount;
+            
+            await this.economy.updateUser(userId, updateData);
+            
+            // Achievements
+            if (this.achievements) {
+                await this.achievements.updateStats(userId, 'game_played');
+                await this.achievements.updateStats(userId, 'game_won');
+                await this.achievements.updateStats(userId, 'money_bet', betAmount);
+                await this.achievements.updateStats(userId, 'bet_win', finalEarnings);
+            }
+            
+            // Misiones win
+            if (this.missions) {
+                const winMissions = await this.missions.updateMissionProgress(userId, 'game_won');
+                const betWonMissions = await this.missions.updateMissionProgress(userId, 'bet_won');
+                const moneyMissions = await this.missions.updateMissionProgress(userId, 'money_earned_today', finalEarnings);
+                
+                let allCompleted = [...winMissions, ...betWonMissions, ...moneyMissions];
+                if (allCompleted.length > 0) {
+                    await this.missions.notifyCompletedMissions(message, allCompleted);
+                }
+            }
+            
+            // Items message
+            let itemMessage = '';
+            if (this.shop) {
+                const modifiers = await this.shop.getActiveMultipliers(userId, 'games');
+                if (modifiers.multiplier > 1) {
+                    itemMessage = `✨ **Items Activos** (x${modifiers.multiplier.toFixed(1)} ganancia)`;
+                }
+            }
+            
+            embed.setTitle('🎰 Tragaperras - ¡GANASTE!')
+                .setDescription(embed.data.description + `\n\n${resultText}`)
+                .addFields(
+                    { name: '💰 Ganancia', value: `+${this.formatNumber(winAmount - betAmount)} π-b$`, inline: true },
+                    { name: '💳 Balance Actual', value: `${this.formatNumber(userData.balance)} π-b$`, inline: true },
+                    { name: '🎉 Bonificaciones', value: this.formatGameBonuses(eventBonus.eventMessage, luckMessage, itemMessage), inline: false }
+                );
+            
+            if (addResult.hitLimit) {
+                await message.reply(`⚠️ **Límite alcanzado:** No pudiste recibir todo el dinero (máximo ${this.formatNumber(userLimit)} π-b$)`);
+            }
+        } else {
+            // PERDIÓ
+            await this.economy.missions.updateMissionProgress(userId, 'consecutive_loss');
+            // INCREMENTAR LÍMITE
+            await this.economy.database.incrementGameLimit(userId, 'slots');
+            
+            const hasProtection = await this.shop.hasGameProtection(userId);
+            if (hasProtection) {
+                const user = await this.economy.getUser(userId);
+                const activeEffects = this.shop.parseActiveEffects(user.activeEffects);
+                
+                let protectionMessage = '🛡️ Tu protección evitó la pérdida!';
+                if (activeEffects['health_potion']) {
+                    protectionMessage = '💊 Tu Poción de Salud te protegió!';
+                } else if (activeEffects['fortune_shield']) {
+                    protectionMessage = '🛡️ Tu Escudo de la Fortuna te protegió!';
+                }
+                
+                await message.reply(protectionMessage);
+            } else {
+                await this.economy.removeMoney(userId, betAmount, 'slots_loss');
+            }
+            
+            await this.economy.updateUser(userId, updateData);
+            
+            if (this.achievements) {
+                await this.achievements.updateStats(userId, 'game_played');
+                await this.achievements.updateStats(userId, 'game_lost');
+                await this.achievements.updateStats(userId, 'money_bet', betAmount);
+            }
+            
+            embed.setTitle('🎰 Tragaperras - Sin Suerte')
+                .setDescription(embed.data.description + `\n\n${resultText}`)
+                .addFields(
+                    { name: '💸 Perdiste', value: `${this.formatNumber(betAmount)} π-b$`, inline: true },
+                    { name: '💳 Balance Actual', value: `${this.formatNumber(user.balance)} π-b$`, inline: true }
+                );
+        }
+        
+        await reply.edit({ embeds: [embed] });
+        
+        // Treasure hunt
+        await this.checkTreasureHunt(userId, message);
     }
 
     async createRussianGameInDB(gameId, gameData) {
@@ -6445,11 +6880,48 @@ const userId = gameState.userId;
 
         try {
             switch (command) {
+<<<<<<< Updated upstream
 case '>limits':
             case '>limites':
             case '>mylimits':
                 await this.showMyLimits(message);
                 break;
+=======
+                case '>checklimits':
+                    const userId = message.author.id;
+                    const debugEmbed = new EmbedBuilder()
+                        .setTitle('🔍 Estado de Límites')
+                        .setColor('#00FF00');
+                    
+                    for (const [gameType, config] of Object.entries(this.dailyLimits)) {
+                        const status = await this.economy.database.getGameLimitStatus(
+                            userId, 
+                            gameType, 
+                            config.cycleHours
+                        );
+                        
+                        const now = Date.now();
+                        const timeLeftMs = status.cycleReset - now;
+                        const hoursLeft = Math.floor(timeLeftMs / (60 * 60 * 1000));
+                        const minutesLeft = Math.floor((timeLeftMs % (60 * 60 * 1000)) / (60 * 1000));
+                        
+                        debugEmbed.addFields({
+                            name: `${gameType}`,
+                            value: 
+                                `**Ciclo:** ${status.cycleCount}/${config.perCycle}\n` +
+                                `**Diario:** ${status.dailyCount}/${config.maxDaily}\n` +
+                                `**Reset en:** ${hoursLeft}h ${minutesLeft}m\n` +
+                                `**Timestamp reset:** ${status.cycleReset}\n` +
+                                `**Timestamp ahora:** ${now}\n` +
+                                `**Tipo de dato:** ${typeof status.cycleReset}`,
+                            inline: false
+                        });
+                    }
+                    
+                    await message.reply({ embeds: [debugEmbed] });
+                    break;
+
+>>>>>>> Stashed changes
                 case '>coinflip':
                 case '>cf':
                 case '>coin':
@@ -6474,6 +6946,11 @@ case '>limits':
                 case '>ruleta':
                 case '>wheel':
                     await this.handleRoulette(message, args);
+                    break;
+                case '>slots':
+                case '>tragaperras':
+                case '>slot':
+                    await this.handleSlots(message, args);
                     break;
                 case '>russian':
                 case '>rr':
@@ -6633,6 +7110,11 @@ case '>limits':
                 { 
                     name: '🎰 Ruleta', 
                     value: '`>roulette <tipo> <cantidad>`\nApuesta: 100-20,000 π-b$\nGanancia: x1.95 - x35\nCooldown: 45 segundos', 
+                    inline: false 
+                },
+                { 
+                    name: '🎰 Tragaperras', 
+                    value: '`>slots <cantidad>`\nApuesta: 100-8,000 π-b$\nGanancia: x2.5 - x50\nCooldown: 20 segundos', 
                     inline: false 
                 },
                 { 

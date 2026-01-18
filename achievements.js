@@ -641,7 +641,7 @@ class AchievementsSystem {
                     };
                 }
 
-                console.log(`🏆 ${userId} completó logro: ${achievement.name}\nRecompensa: ${achievement.reward.money} balance: ${updateData.balance} totalEarned: ${updateData['stats.totalEarned']}`);
+                console.log(`🏆 ${userId} completó logro: ${achievement.name}\nRecompensa: ${achievement.reward.money} balance: ${updateData.balance} totalEarned: ${updateData.stats.totalEarned}`);
 
                 
                 // Agregar XP por separado
