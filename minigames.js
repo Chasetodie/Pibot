@@ -6880,13 +6880,11 @@ const userId = gameState.userId;
 
         try {
             switch (command) {
-<<<<<<< Updated upstream
-case '>limits':
+            case '>limits':
             case '>limites':
             case '>mylimits':
                 await this.showMyLimits(message);
                 break;
-=======
                 case '>checklimits':
                     const userId = message.author.id;
                     const debugEmbed = new EmbedBuilder()
@@ -6920,8 +6918,6 @@ case '>limits':
                     
                     await message.reply({ embeds: [debugEmbed] });
                     break;
-
->>>>>>> Stashed changes
                 case '>coinflip':
                 case '>cf':
                 case '>coin':
