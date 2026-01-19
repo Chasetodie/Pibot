@@ -923,12 +923,7 @@ class ShopSystem {
         
         for (const item of pageItems) {
             let value = `${item.description}\n`;
-            value += `💰 **${item.price}**`;
-            
-            if (effectDesc) {
-                value += ` | ⏱️ ${effectDesc}`;
-            }
-            
+            value += `💰 **${item.price}**`;           
             value += `\n\`>buy ${item.id}\``;
             
             embed.addFields({
