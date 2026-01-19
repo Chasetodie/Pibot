@@ -34,3 +34,42 @@
         { id: 'money', amountRange: [2000, 10000], chance: 0.6 }
     ]
 }
+
+
+// ESPADA (para cuando implementes combate)
+'iron_sword': {
+    id: 'iron_sword',
+    name: '⚔️ Espada de Hierro',
+    description: 'Una espada básica para combate',
+    price: 500000,
+    category: 'equipment',
+    rarity: 'rare',
+    effect: {
+        type: 'weapon',
+        equipmentType: 'sword',
+        attackBonus: 15,
+        baseDurability: 80,
+        durabilityVariation: 15 // 65-95 usos
+    },
+    stackable: false,
+    maxStack: 1
+},
+
+// ARMADURA
+'leather_armor': {
+    id: 'leather_armor',
+    name: '🛡️ Armadura de Cuero',
+    description: 'Protección básica contra ataques',
+    price: 600000,
+    category: 'equipment',
+    rarity: 'rare',
+    effect: {
+        type: 'armor',
+        equipmentType: 'armor',
+        defenseBonus: 20,
+        baseDurability: 120,
+        durabilityVariation: 30 // 90-150 usos
+    },
+    stackable: false,
+    maxStack: 1
+}

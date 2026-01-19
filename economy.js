@@ -1110,6 +1110,31 @@ await this.missions.updateMissionProgress(userId, 'xp_gained_today', xpGained);
             }
         }
 
+        // *** APLICAR BONUS DE EQUIPAMIENTO ***
+        const equipmentBonus = await this.shop.applyEquipmentBonus(userId);
+
+        let equipmentMessage = '';
+        if (equipmentBonus.applied) {
+            const extraMoney = Math.floor(result.amount * equipmentBonus.money);
+            result.amount += extraMoney;
+            result.newBalance += extraMoney;
+            
+            // Generar mensaje de todos los items equipados
+            for (const equip of equipmentBonus.items) {
+                equipmentMessage += `\n${equip.wasBroken ? '💔' : '🛡️'} **${equip.name}**: `;
+                
+                if (equip.wasBroken) {
+                    equipmentMessage += `¡SE ROMPIÓ! (era ${equip.durabilityLost})`;
+                } else {
+                    equipmentMessage += `Durabilidad: ${equip.durabilityLeft}/${equip.maxDurability} (-${equip.durabilityLost})`;
+                }
+            }
+            
+            if (extraMoney > 0) {
+                equipmentMessage = `\n💰 Bonus equipamiento: +${this.formatNumber(extraMoney)} π-b$${equipmentMessage}`;
+            }
+        }
+
         // 3. DESPUÉS aplicar multiplicadores de items
         let itemMessage = '';
         if (this.shop) {
@@ -1143,7 +1168,7 @@ await this.missions.updateMissionProgress(userId, 'xp_gained_today', xpGained);
         await this.updateUser(userId, updateData); // ← Reemplaza saveUsers()    
 
         // ✅ MEJORAR: Combinar todos los mensajes de bonificaciones
-        let allBonusMessages = [eventMessage, pickaxeMessage, itemMessage, vipMessage].filter(msg => msg !== '');
+        let allBonusMessages = [eventMessage, pickaxeMessage, equipmentMessage, itemMessage, vipMessage].filter(msg => msg !== '');
 
         return {
             success: true,
@@ -1154,6 +1179,7 @@ await this.missions.updateMissionProgress(userId, 'xp_gained_today', xpGained);
             jobName: job.name,
             eventMessage: eventMessage,
             pickaxeMessage: pickaxeMessage, // NUEVO
+            equipmentMessage: equipmentMessage,
             itemMessage: itemMessage,       // NUEVO
             vipMessage: vipMessage,         // NUEVO
             allBonusMessages: allBonusMessages, // NUEVO: array con todos los bonos

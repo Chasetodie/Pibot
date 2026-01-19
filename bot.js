@@ -650,6 +650,13 @@ client.on('interactionCreate', async (interaction) => {
             }
         }
 
+        if (interaction.customId?.startsWith('help_')) {
+            await allCommands.handleHelpInteraction(interaction);
+        }
+        if (interaction.customId?.startsWith('ach_')) {
+            await achievements.handleAchievementPagination(interaction);
+        }
+
         if (interaction.isButton()) {
             if (interaction.customId.startsWith('role_') || 
                 interaction.customId.startsWith('nickname_') || 
@@ -658,10 +665,10 @@ client.on('interactionCreate', async (interaction) => {
             }
         }
 
-if (interaction.customId.startsWith('notify_limit_')) {
-                await minigames.handleLimitNotificationButton(interaction);
-                return;
-            }
+        if (interaction.customId.startsWith('notify_limit_')) {
+            await minigames.handleLimitNotificationButton(interaction);
+            return;
+        }
 
         // AGREGAR ESTO: Manejo de botones del blackjack
         if (interaction.customId.startsWith('bj_')) {

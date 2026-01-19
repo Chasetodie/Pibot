@@ -177,6 +177,62 @@ class AchievementsSystem {
                 rarity: 'rare',
                 emoji: '🎰'
             },
+            'triple_seven': {
+                name: '🎰 Triple Siete',
+                description: 'Consigue 7️⃣7️⃣7️⃣ en el tragaperras',
+                requirement: { type: 'triple_seven', value: 1 },
+                reward: { money: 7777, xp: 777 },
+                rarity: 'epic',
+                emoji: '7️⃣'
+            },
+            'diamond_jackpot': {
+                name: '💎 Jackpot de Diamantes',
+                description: 'Consigue 💎💎💎 en el tragaperras',
+                requirement: { type: 'diamond_jackpot', value: 1 },
+                reward: { money: 15000, xp: 1500 },
+                rarity: 'legendary',
+                emoji: '💎'
+            },
+            'slots_beginner': {
+                name: '🎰 Principiante Afortunado',
+                description: 'Gana 10 veces en el tragaperras',
+                requirement: { type: 'slots_wins', value: 10 },
+                reward: { money: 2000, xp: 200 },
+                rarity: 'uncommon',
+                emoji: '🎰'
+            },
+            'slots_expert': {
+                name: '🎲 Experto en Slots',
+                description: 'Gana 50 veces en el tragaperras',
+                requirement: { type: 'slots_wins', value: 50 },
+                reward: { money: 10000, xp: 1000 },
+                rarity: 'rare',
+                emoji: '🎲'
+            },
+            'slots_legend': {
+                name: '👑 Leyenda del Casino',
+                description: 'Gana 200 veces en el tragaperras',
+                requirement: { type: 'slots_wins', value: 200 },
+                reward: { money: 50000, xp: 5000 },
+                rarity: 'legendary',
+                emoji: '👑'
+            },
+            'lucky_double': {
+                name: '🍀 Doble Suerte',
+                description: 'Consigue 100 victorias con dobles (2 iguales)',
+                requirement: { type: 'slots_doubles', value: 100 },
+                reward: { money: 5000, xp: 500 },
+                rarity: 'rare',
+                emoji: '🍀'
+            },
+            'unlucky_streak': {
+                name: '😭 Racha de Mala Suerte',
+                description: 'Pierde 10 veces seguidas en cualquier juego',
+                requirement: { type: 'loss_streak', value: 10 },
+                reward: { money: 3000, xp: 300 },
+                rarity: 'uncommon',
+                emoji: '😭'
+            },
             // Logros especiales
             'ascetic': {
                 name: '🧘 Asceta',
@@ -249,7 +305,7 @@ class AchievementsSystem {
             'completionist': {
                 name: '🏅 Completista',
                 description: 'Obtén todos los logros disponibles',
-                requirement: { type: 'achievements_count', value: 27 }, // Actualizar según total
+                requirement: { type: 'achievements_count', value: () => Object.keys(this.achievements).length - 1 }, // -1 para excluirse a sí mismo
                 reward: { money: 100000, xp: 3000 },
                 rarity: 'legendary',
                 emoji: '🏅'
@@ -389,7 +445,8 @@ class AchievementsSystem {
             }
             
             // Verificar si completó el logro
-            if (currentValue >= req.value && !checkedInSession.has(achievementId)) {
+            const requiredValue = typeof req.value === 'function' ? req.value() : req.value;
+            if (currentValue >= requiredValue && !checkedInSession.has(achievementId)) {
                 // Marcar como verificado en esta sesion
                 checkedInSession.add(achievementId);
 
@@ -557,6 +614,18 @@ class AchievementsSystem {
                     // Contar achievements completados
                     currentValue = Object.values(user.achievements || {}).filter(status => status === 'completed').length;
                     break;
+                case 'triple_seven':
+                    currentValue = user.stats?.triple_seven_count || 0;
+                    break;
+                case 'diamond_jackpot':
+                    currentValue = user.stats?.diamond_jackpot_count || 0;
+                    break;
+                case 'slots_doubles':
+                    currentValue = user.stats?.slots_doubles || 0;
+                    break;
+                case 'loss_streak':
+                    currentValue = user.stats?.current_loss_streak || 0;
+                    break;
                 case 'lottery_wins':
                     currentValue = user.stats?.lottery_wins || 0;
                     break;
@@ -591,7 +660,9 @@ class AchievementsSystem {
             }
             
             // Verificar si completó el logro
-            if (currentValue >= req.value && !checkedInSession.has(achievementId)) {
+            const requiredValue = typeof req.value === 'function' ? req.value() : req.value;
+
+            if (currentValue >= requiredValue && !checkedInSession.has(achievementId)) {
                 // Marcar como verificado en esta sesion
                 checkedInSession.add(achievementId);
 
@@ -713,14 +784,18 @@ class AchievementsSystem {
                     ...user.stats,
                     games_won: (user.stats?.games_won || 0) + 1,
                     current_win_streak: newWinStreak,
-                    best_win_streak: Math.max(user.stats?.best_win_streak || 0, newWinStreak)
+                    best_win_streak: Math.max(user.stats?.best_win_streak || 0, newWinStreak),
+                    current_loss_streak: 0 // ← AGREGAR ESTA LÍNEA
                 };
                 break;
             case 'game_lost':
+                const newLossStreak = (user.stats?.current_loss_streak || 0) + 1;
                 updateData.stats = {
                     ...user.stats,
                     games_lost: (user.stats?.games_lost || 0) + 1,
-                    current_win_streak: 0
+                    current_loss_streak: newLossStreak,
+                    best_loss_streak: Math.max(user.stats?.best_loss_streak || 0, newLossStreak),
+                    current_win_streak: 0 // Resetear racha de victorias
                 };
                 break;
             case 'money_bet':
@@ -758,6 +833,30 @@ class AchievementsSystem {
                 updateData.stats = {
                     ...user.stats,
                     max_single_bet_win: Math.max(user.stats?.max_single_bet_win || 0, value)
+                };
+                break;
+            case 'triple_seven':
+                updateData.stats = {
+                    ...user.stats,
+                    triple_seven_count: (user.stats?.triple_seven_count || 0) + 1
+                };
+                break;
+            case 'diamond_jackpot':
+                updateData.stats = {
+                    ...user.stats,
+                    diamond_jackpot_count: (user.stats?.diamond_jackpot_count || 0) + 1
+                };
+                break;
+            case 'slots_win':
+                updateData.stats = {
+                    ...user.stats,
+                    slots_wins: (user.stats?.slots_wins || 0) + 1
+                };
+                break;
+            case 'slots_double':
+                updateData.stats = {
+                    ...user.stats,
+                    slots_doubles: (user.stats?.slots_doubles || 0) + 1
                 };
                 break;
             case 'daily_claimed':
@@ -1026,6 +1125,21 @@ class AchievementsSystem {
             case 'achievements_count':
                 currentValue = Object.values(user.achievements || {}).filter(status => status === 'completed').length;
                 break;
+            case 'triple_seven':
+                currentValue = user.stats?.triple_seven_count || 0;
+                break;
+            case 'diamond_jackpot':
+                currentValue = user.stats?.diamond_jackpot_count || 0;
+                break;
+            case 'slots_wins':
+                currentValue = user.stats?.slots_wins || 0;
+                break;
+            case 'slots_doubles':
+                currentValue = user.stats?.slots_doubles || 0;
+                break;
+            case 'loss_streak':
+                currentValue = user.stats?.current_loss_streak || 0;
+                break;
         }
         
         return {
@@ -1036,52 +1150,62 @@ class AchievementsSystem {
     }
 
     // Mostrar todos los logros disponibles (sin cambios)
-    async showAllAchievements(message) {
-        const rarityGroups = {
-            'common': [],
-            'uncommon': [],
-            'rare': [],
-            'epic': [],
-            'legendary': []
-        };
+    async showAllAchievements(message, page = 1) {
+        const itemsPerPage = 10; // 10 logros por página
+        const rarityOrder = ['legendary', 'epic', 'rare', 'uncommon', 'common'];
         
-        // Agrupar logros por rareza
-        for (const [id, achievement] of Object.entries(this.achievements)) {
-            rarityGroups[achievement.rarity].push({ id, ...achievement });
+        // Agrupar y aplanar
+        let allAchievements = [];
+        for (const rarity of rarityOrder) {
+            const rarityAchievements = Object.entries(this.achievements)
+                .filter(([id, ach]) => ach.rarity === rarity)
+                .map(([id, ach]) => ({ id, ...ach, rarity }));
+            allAchievements.push(...rarityAchievements);
         }
         
-        const embed = new EmbedBuilder()
-            .setTitle('🏆 Todos los Logros Disponibles')
-            .setDescription(`Total: **${Object.keys(this.achievements).length}** logros`)
-            .setColor('#FFD700')
-            .setTimestamp();
+        const totalPages = Math.ceil(allAchievements.length / itemsPerPage);
+        const startIdx = (page - 1) * itemsPerPage;
+        const pageAchievements = allAchievements.slice(startIdx, startIdx + itemsPerPage);
         
-        // Añadir cada grupo de rareza
-        for (const [rarity, achievements] of Object.entries(rarityGroups)) {
-            if (achievements.length === 0) continue;
-            
-            const rarityEmoji = this.rarityEmojis[rarity];
-            const rarityName = rarity.charAt(0).toUpperCase() + rarity.slice(1);
-            
-            let text = '';
-            for (const achievement of achievements) {
-                const moneyReward = achievement.reward.money ? `${this.formatNumber(achievement.reward.money)} π-b$` : '';
-                const xpReward = achievement.reward.xp ? `${this.formatNumber(achievement.reward.xp)} XP` : '';
-                const rewards = [moneyReward, xpReward].filter(r => r).join(' + ');
-                
-                text += `${achievement.emoji} **${achievement.name}**\n`;
-                text += `${achievement.description}\n`;
-                text += `*Recompensa: ${rewards}*\n\n`;
-            }
+        const embed = new EmbedBuilder()
+            .setTitle('🏆 Logros Disponibles')
+            .setDescription(`Página ${page}/${totalPages} - Total: ${allAchievements.length} logros`)
+            .setColor('#FFD700');
+        
+        for (const achievement of pageAchievements) {
+            const rarityEmoji = this.rarityEmojis[achievement.rarity];
+            const rewards = [];
+            if (achievement.reward.money) rewards.push(`${this.formatNumber(achievement.reward.money)} π-b$`);
+            if (achievement.reward.xp) rewards.push(`${this.formatNumber(achievement.reward.xp)} XP`);
             
             embed.addFields({
-                name: `${rarityEmoji} ${rarityName} (${achievements.length})`,
-                value: text,
-                inline: false
+                name: `${rarityEmoji} ${achievement.emoji} ${achievement.name}`,
+                value: `${achievement.description}\n🎁 ${rewards.join(' + ')}`,
+                inline: true // 2 columnas
             });
         }
         
-        await message.reply({ embeds: [embed] });
+        // AGREGAR BOTONES de navegación
+        const row = new ActionRowBuilder();
+        if (page > 1) {
+            row.addComponents(
+                new ButtonBuilder()
+                    .setCustomId(`ach_prev_${page - 1}`)
+                    .setLabel('◀️ Anterior')
+                    .setStyle(ButtonStyle.Secondary)
+            );
+        }
+        if (page < totalPages) {
+            row.addComponents(
+                new ButtonBuilder()
+                    .setCustomId(`ach_next_${page + 1}`)
+                    .setLabel('Siguiente ▶️')
+                    .setStyle(ButtonStyle.Secondary)
+            );
+        }
+        
+        const components = row.components.length > 0 ? [row] : [];
+        await message.reply({ embeds: [embed], components });
     }
 
     // Crear barra de progreso

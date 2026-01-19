@@ -902,6 +902,7 @@ class AllCommands {
         
         if (result.eventMessage) bonuses.push(result.eventMessage);
         if (result.pickaxeMessage) bonuses.push(result.pickaxeMessage);
+        if (result.equipmentMessage) bonuses.push(result.equipmentMessage);
         if (result.itemMessage) bonuses.push(result.itemMessage);
         if (result.vipMessage) bonuses.push(result.vipMessage);
         
@@ -1979,98 +1980,101 @@ const commandName = command.replace('>', '');
         }
     }
 
-    async showHelp(message) {
+    async showHelp(message, category = 'main') {
         const embed = new EmbedBuilder()
-            .setTitle('📖 Ayuda - Comandos del Bot')
             .setColor('#00BFFF')
-            .addFields(
-                // Economía Básica
-                { 
-                    name: '💰 Economía Básica', 
-                    value: '`>balance [@usuario]` - Ver dinero y nivel\n`>daily` - Reclamar recompensa diaria\n`>work [tipo]` - Trabajar (delivery, programmer, doctor, criminal)\n`>pay @usuario <cantidad>` - Transferir dinero\n`>top [money/level]` - Ver rankings\n`>robar @usuario` - Robar dinero', 
-                    inline: false 
-                },
-                
-                // Tienda y Items
-                { 
-                    name: '🛒 Tienda e Items', 
-                    value: '`>shop [categoría]` - Ver tienda\n`>buy <item_id> [cantidad]` - Comprar items\n`>bag [@usuario]` - Ver inventario\n`>useitem <item_id>` - Usar item\n`>effects` - Ver efectos activos\n`>removeeffect <item_id>` - Quitar efecto permanente\n`>autoworkerbal` - Estado del auto worker\n`>cosmeticos` - Ver cosméticos activos', 
-                    inline: false 
-                },
-                
-                // Personalización
-                { 
-                    name: '✨ Personalización', 
-                    value: '`>setnickname <apodo>` - Cambiar apodo (requiere token)\n`>rolcreate <nombre>` - Crear rol personalizado', 
-                    inline: false 
-                },
-                
-                // VIP
-                { 
-                    name: '👑 Comandos VIP', 
-                    value: '`>vip` - Ver estado VIP\n`>vipwork` - Trabajo VIP\n`>vipgamble` - Apuestas VIP\n`>vipboost` - Boost VIP\n`>vipdaily` - Daily VIP\n`>viphelp` - Ayuda VIP completa', 
-                    inline: false 
-                },
-                
-                // Minijuegos
-                { 
-                    name: '🎮 Minijuegos', 
-                    value: '`>games` - Lista de minijuegos disponibles\n`>coinflip <cara/cruz> <cantidad>`\n`>dice <predicción> <cantidad>`\n`>lottery <número> <cantidad>`\n`>blackjack <cantidad>`\n`>roulette <tipo> <cantidad>`', 
-                    inline: false 
-                },
-                
-                // Apuestas
-                { 
-                    name: '🎲 Sistema de Apuestas', 
-                    value: '`>bet @usuario <cantidad> <descripción>` - Crear apuesta\n`>acceptbet <bet_id>` - Aceptar apuesta\n`>declinebet <bet_id>` - Declinar apuesta\n`>resolvebet <bet_id> <resultado>` - Resolver apuesta\n`>cancelbet <bet_id>` - Cancelar apuesta\n`>mybets` - Ver tus apuestas\n`>betstats [@usuario]` - Estadísticas de apuestas', 
-                    inline: false 
-                },
-                
-                // Intercambios
-                { 
-                    name: '🔄 Intercambios', 
-                    value: '`>trade @usuario` - Iniciar intercambio\n`>tradeadd <item_id> [cantidad]` - Agregar item\n`>trademoney <cantidad>` - Agregar dinero\n`>tradeaccept` - Aceptar intercambio\n`>tradecancel` - Cancelar intercambio\n`>tradeshow` - Ver intercambios activos', 
-                    inline: false 
-                },
-                
-                // Subastas
-                { 
-                    name: '🔨 Subastas', 
-                    value: '`>auction <item_id> <precio_inicial> [minutos]` - Crear subasta\n`>bid <auction_id> <cantidad>` - Pujar\n`>auctions` - Ver subastas activas', 
-                    inline: false 
-                },
-                
-                // Crafteo
-                { 
-                    name: '⚒️ Crafteo', 
-                    value: '`>recipes` - Ver recetas disponibles\n`>craft <recipe_id>` - Craftear item\n`>craftqueue` - Ver cola de crafteo\n`>cancelcraft <craft_id>` - Cancelar crafteo', 
-                    inline: false 
-                },
-                
-                // Misiones y Logros
-                { 
-                    name: '🎯 Misiones y Logros', 
-                    value: '`>missions` - Ver misiones diarias\n`>blockmissions` - Bloquear notificaciones\n`>unblockmissions` - Desbloquear notificaciones\n`>achievements [@usuario]` - Ver logros\n`>allachievements` - Todos los logros\n`>detectachievements` - Detectar logros\n`>detectall` - Detectar todos los logros', 
-                    inline: false 
-                },
-            
-                { 
-                    name: '🤖 Chat IA', 
-                    value: 'Usa `>chathelp` para ver comandos de chat con Pibot\n\nO simplemente respondele un mensaje al bot',
-                    inline: false
-                },
-                
-                // Eventos
-                { 
-                    name: '🎉 Eventos', 
-                    value: '`>events` - Ver eventos activos del servidor', 
-                    inline: false 
-                }
-            )
-            .setFooter({ text: 'Para más información sobre comandos específicos, pregunta en el chat.' })
             .setTimestamp();
+        
+        if (category === 'main') {
+            embed.setTitle('📖 Menú de Ayuda Principal')
+                .setDescription('Selecciona una categoría para ver sus comandos:')
+                .addFields(
+                    { name: '💰 Economía', value: 'Dinero, trabajo, daily', inline: true },
+                    { name: '🛒 Tienda', value: 'Shop, items, efectos', inline: true },
+                    { name: '🎮 Minijuegos', value: 'Gambling y juegos', inline: true },
+                    { name: '🎲 Apuestas', value: 'Sistema de apuestas', inline: true },
+                    { name: '🔄 Trading', value: 'Intercambios y subastas', inline: true },
+                    { name: '⚒️ Crafteo', value: 'Recetas y fabricación', inline: true },
+                    { name: '🏆 Progreso', value: 'Logros y misiones', inline: true },
+                    { name: '👑 VIP', value: 'Comandos premium', inline: true }
+                );
             
-        await message.reply({ embeds: [embed] });
+            // BOTONES para cada categoría
+            const rows = [
+                new ActionRowBuilder().addComponents(
+                    new ButtonBuilder().setCustomId('help_economy').setLabel('💰 Economía').setStyle(ButtonStyle.Primary),
+                    new ButtonBuilder().setCustomId('help_shop').setLabel('🛒 Tienda').setStyle(ButtonStyle.Primary),
+                    new ButtonBuilder().setCustomId('help_games').setLabel('🎮 Minijuegos').setStyle(ButtonStyle.Primary)
+                ),
+                new ActionRowBuilder().addComponents(
+                    new ButtonBuilder().setCustomId('help_betting').setLabel('🎲 Apuestas').setStyle(ButtonStyle.Primary),
+                    new ButtonBuilder().setCustomId('help_trading').setLabel('🔄 Trading').setStyle(ButtonStyle.Primary),
+                    new ButtonBuilder().setCustomId('help_craft').setLabel('⚒️ Crafteo').setStyle(ButtonStyle.Primary)
+                ),
+                new ActionRowBuilder().addComponents(
+                    new ButtonBuilder().setCustomId('help_progress').setLabel('🏆 Progreso').setStyle(ButtonStyle.Primary),
+                    new ButtonBuilder().setCustomId('help_vip').setLabel('👑 VIP').setStyle(ButtonStyle.Primary)
+                )
+            ];
+            
+            await message.reply({ embeds: [embed], components: rows });
+            return;
+        }
+        
+        // CATEGORÍAS INDIVIDUALES (más cortas)
+        const categories = {
+            economy: {
+                title: '💰 Comandos de Economía',
+                fields: [
+                    { name: '>balance', value: 'Ver tu dinero y nivel', inline: true },
+                    { name: '>daily', value: 'Recompensa diaria', inline: true },
+                    { name: '>work [tipo]', value: 'Trabajar por dinero', inline: true },
+                    { name: '>pay @user <$>', value: 'Transferir dinero', inline: true },
+                    { name: '>top', value: 'Ver rankings', inline: true },
+                    { name: '>robar @user', value: 'Robar dinero', inline: true }
+                ]
+            },
+            shop: {
+                title: '🛒 Comandos de Tienda',
+                fields: [
+                    { name: '>shop', value: 'Ver tienda', inline: true },
+                    { name: '>buy <item>', value: 'Comprar item', inline: true },
+                    { name: '>bag', value: 'Ver inventario', inline: true },
+                    { name: '>useitem <item>', value: 'Usar item', inline: true },
+                    { name: '>effects', value: 'Ver efectos activos', inline: true },
+                    { name: '>cosmeticos', value: 'Ver cosmétcos', inline: true }
+                ]
+            }
+            // ... resto de categorías
+        };
+        
+        const cat = categories[category];
+        if (cat) {
+            embed.setTitle(cat.title).addFields(...cat.fields);
+            
+            const backButton = new ActionRowBuilder().addComponents(
+                new ButtonBuilder()
+                    .setCustomId('help_main')
+                    .setLabel('⬅️ Volver al Menú')
+                    .setStyle(ButtonStyle.Secondary)
+            );
+            
+            await message.reply({ embeds: [embed], components: [backButton] });
+        }
+    }
+
+    // MANEJAR interacciones de botones
+    async handleHelpInteraction(interaction) {
+        const category = interaction.customId.replace('help_', '');
+        
+        const fakeMessage = {
+            author: interaction.user,
+            reply: async (options) => {
+                await interaction.update(options);
+            }
+        };
+        
+        await this.showHelp(fakeMessage, category);
     }
 }
 
