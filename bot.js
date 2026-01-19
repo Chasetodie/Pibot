@@ -654,7 +654,7 @@ client.on('interactionCreate', async (interaction) => {
             await allCommands.handleHelpInteraction(interaction);
         }
         if (interaction.customId?.startsWith('ach_')) {
-            await achievements.handleUserAchievements(interaction);
+            await achievements.handleAchievementPagination(interaction);
         }
 
         if (interaction.isButton()) {

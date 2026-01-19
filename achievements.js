@@ -1208,6 +1208,20 @@ class AchievementsSystem {
         await message.reply({ embeds: [embed], components });
     }
 
+    // MANEJAR interacciones de botones
+    async handleAchievementPagination(interaction) {
+        const page = interaction.customId.replace('ach_', '');
+        
+        const fakeMessage = {
+            author: interaction.user,
+            reply: async (options) => {
+                await interaction.update(options);
+            }
+        };
+        
+        await this.showAllAchievements(fakeMessage, page);
+    }
+
     // Crear barra de progreso
     createProgressBar(current, max, length = 10) {
         const percentage = Math.max(0, Math.min(1, current / max));

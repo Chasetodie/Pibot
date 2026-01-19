@@ -2012,9 +2012,14 @@ const commandName = command.replace('>', '');
                     new ButtonBuilder().setCustomId('help_craft').setLabel('⚒️ Crafteo').setStyle(ButtonStyle.Primary)
                 ),
                 new ActionRowBuilder().addComponents(
+                    new ButtonBuilder().setCustomId('help_auctions').setLabel('🔨 Subastas').setStyle(ButtonStyle.Primary),
                     new ButtonBuilder().setCustomId('help_progress').setLabel('🏆 Progreso').setStyle(ButtonStyle.Primary),
                     new ButtonBuilder().setCustomId('help_vip').setLabel('👑 VIP').setStyle(ButtonStyle.Primary)
-                )
+                ),
+                new ActionRowBuilder().addComponents(
+                    new ButtonBuilder().setCustomId('help_events').setLabel('🎉 Eventos').setStyle(ButtonStyle.Primary),
+                    new ButtonBuilder().setCustomId('help_chatIA').setLabel('🤖 Chat IA').setStyle(ButtonStyle.Primary),
+                ),
             ];
             
             await message.reply({ embeds: [embed], components: rows });
@@ -2044,8 +2049,94 @@ const commandName = command.replace('>', '');
                     { name: '>effects', value: 'Ver efectos activos', inline: true },
                     { name: '>cosmeticos', value: 'Ver cosmétcos', inline: true }
                 ]
+            },              
+            vip: {
+                title: '👑 Comandos VIP',
+                fields: [
+                    { name: '>vip', value: 'Ver estado VIP', inline: true },
+                    { name: '>vipwork', value: 'Trabajo VIP', inline: true },
+                    { name: '>vipgamble', value: 'Apuestas VIP', inline: true },
+                    { name: '>vipboost', value: 'Boost VIP', inline: true },
+                    { name: '>vipdaily', value: 'Daily VIP', inline: true },
+                    { name: '>viphelp', value: 'Ayuda VIP completa', inline: true }
+                ]
+            },
+            games: {
+                title: '🎮 Minijuegos',
+                fields: [
+                    { name: '>games', value: 'Lista de minijuegos disponibles', inline: true },
+                    { name: '>coinflip <cara/cruz> <cantidad>', value: 'Lanzar moneda', inline: true },
+                    { name: '>dice <predicción> <cantidad>', value: 'Juego de dados', inline: true },
+                    { name: '>lottery <número> <cantidad>', value: 'Lotería', inline: true },
+                    { name: '>blackjack <cantidad>', value: 'Blackjack', inline: true },
+                    { name: '>roulette <tipo> <cantidad>', value: 'Ruleta', inline: true }
+                ]
+            },
+            betting: {
+                title: '🎲 Sistema de Apuestas',
+                fields: [
+                    { name: '>bet @usuario <cantidad> <descripción>', value: 'Crear apuesta', inline: true },
+                    { name: '>acceptbet <bet_id>', value: 'Aceptar apuesta', inline: true },
+                    { name: '>declinebet <bet_id>', value: 'Declinar apuesta', inline: true },
+                    { name: '>resolvebet <bet_id> <resultado>', value: 'Resolver apuesta', inline: true },
+                    { name: '>cancelbet <bet_id>', value: 'Cancelar apuesta', inline: true },
+                    { name: '>mybets', value: 'Ver tus apuestas', inline: true },
+                    { name: '>betstats [@usuario]', value: 'Estadísticas de apuestas', inline: true }
+                ]
+            },
+            trading: {
+                title: '🔄 Intercambios',
+                fields: [
+                    { name: '>trade @usuario', value: 'Iniciar intercambio', inline: true },
+                    { name: '>tradeadd <item_id> [cantidad]', value: 'Agregar item', inline: true },
+                    { name: '>trademoney <cantidad>', value: 'Agregar dinero', inline: true },
+                    { name: '>tradeaccept', value: 'Aceptar intercambio', inline: true },
+                    { name: '>tradecancel', value: 'Cancelar intercambio', inline: true },
+                    { name: '>tradeshow', value: 'Ver intercambios activos', inline: true }
+                ]
+            },
+            auctions: {
+                title: '🔨 Subastas',
+                fields: [
+                    { name: '>auction <item_id> <precio_inicial> [minutos]', value: 'Crear subasta', inline: true },
+                    { name: '>bid <auction_id> <cantidad>', value: 'Pujar', inline: true },
+                    { name: '>auctions', value: 'Ver subastas activas', inline: true }
+                ]
+            },
+            craft: {
+                title: '⚒️ Crafteo',
+                fields: [
+                    { name: '>recipes', value: 'Ver recetas disponibles', inline: true },
+                    { name: '>craft <recipe_id>', value: 'Craftear item', inline: true },
+                    { name: '>craftqueue', value: 'Ver cola de crafteo', inline: true },
+                    { name: '>cancelcraft <craft_id>', value: 'Cancelar crafteo', inline: true }
+                ]
+            },
+            progress: {
+                title: '🎯 Misiones y Logros',
+                fields: [
+                    { name: '>missions', value: 'Ver misiones diarias', inline: true },
+                    { name: '>blockmissions', value: 'Bloquear notificaciones', inline: true },
+                    { name: '>unblockmissions', value: 'Desbloquear notificaciones', inline: true },
+                    { name: '>achievements [@usuario]', value: 'Ver logros', inline: true },
+                    { name: '>allachievements', value: 'Todos los logros', inline: true },
+                    { name: '>detectachievements', value: 'Detectar logros', inline: true },
+                    { name: '>detectall', value: 'Detectar todos los logros', inline: true }
+                ]
+            },
+            chatIA: {
+                title: '🤖 Chat IA',
+                fields: [
+                    { name: '>chathelp', value: 'Ver comandos de chat con Pibot', inline: false },
+                    { name: 'Respuesta directa', value: 'Responde un mensaje del bot para chatear', inline: false }
+                ]
+            },
+            events: {
+                title: '🎉 Eventos',
+                fields: [
+                    { name: '>events', value: 'Ver eventos activos del servidor', inline: false }
+                ]
             }
-            // ... resto de categorías
         };
         
         const cat = categories[category];
