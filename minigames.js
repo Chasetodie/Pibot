@@ -4227,7 +4227,7 @@ const userId = gameState.userId;
         }
     }
 
-    createRaceEmbed(game) {
+    async createRaceEmbed(game) {
         const trackLength = 20; // Caracteres de pista visual
         
         let raceTrack = '';
