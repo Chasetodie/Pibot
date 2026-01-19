@@ -426,6 +426,21 @@ class AchievementsSystem {
                 case 'single_bet_win':
                     currentValue = user.stats?.max_single_bet_win || 0;
                     break;
+                case 'triple_seven':
+                    currentValue = user.stats?.triple_seven_count || 0;
+                    break;
+                case 'diamond_jackpot':
+                    currentValue = user.stats?.diamond_jackpot_count || 0;
+                    break;
+                case 'slots_doubles':
+                    currentValue = user.stats?.slots_doubles || 0;
+                    break;
+                case 'loss_streak':
+                    currentValue = user.stats?.current_loss_streak || 0;
+                    break;
+                case 'lottery_wins':
+                    currentValue = user.stats?.lottery_wins || 0;
+                    break;
                 case 'inactive_streak':
                     // Calcular días sin usar work ni daily
                     const now = Date.now();

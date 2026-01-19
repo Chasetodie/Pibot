@@ -222,7 +222,7 @@ class AllCommands {
             .addFields(
                 {
                     name: '💰 Ganaste',
-                    value: `**+${this.formatNumber(result.amount)}** ${this.economy.config.currencySymbol}`,
+                    value: `**+${this.formatNumber(result.finalEarnings)}** ${this.economy.config.currencySymbol}`,
                     inline: true
                 },
                 {

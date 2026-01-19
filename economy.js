@@ -724,8 +724,8 @@ await this.missions.updateMissionProgress(userId, 'xp_gained_today', xpGained);
         return {
             success: true,
             amount: amount,
-            oldBalance: user.balance,
-            newBalance: user.balance + finalEarnings,
+            oldBalance: user.balance - finalEarnings,
+            newBalance: user.balance,
             eventMessage: eventMessage,
             finalEarnings: addResult.actualAmount,
             hitLimit: addResult.hitLimit
