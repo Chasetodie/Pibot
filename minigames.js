@@ -3921,20 +3921,25 @@ const userId = gameState.userId;
             .setTitle('🐎 Carrera Multijugador - Esperando Jugadores')
             .setDescription('¡Otros jugadores pueden unirse!')
             .addFields(
+                { name: '👑 Creador', value: `<@${userId}>`, inline: true },
                 { name: '💰 Apuesta', value: `${this.formatNumber(betAmount)} π-b$`, inline: true },
                 { name: '💎 Pot', value: `${this.formatNumber(game.pot)} π-b$`, inline: true },
                 { name: '👥 Jugadores', value: `1/${this.config.horseRace.maxPlayers}`, inline: true },
-                { name: '🎮 Unirse', value: `\`>joinrace\``, inline: false }
+                { name: '⏱️ Tiempo', value: '45 segundos o inicio manual', inline: true },
+                { name: '📋 Participantes', value: `• ${message.author.username}`, inline: false },
+                { name: '🎮 Para Unirse', value: `\`>joinrace\``, inline: true },
+                { name: '🚀 Para Iniciar', value: `\`>startrace\` (solo creador)`, inline: true }
             )
             .setColor('#00FF00')
-            .setTimestamp();
+            .setTimestamp()
+            .setFooter({ text: `Mínimo ${this.config.horseRace.minPlayers} jugadores • Varios pueden apostar al mismo caballo` });
         
         const reply = await message.reply({ embeds: [embed] });
         game.messageId = reply.id;
         
-        // Timer para iniciar
+        // Timer para iniciar automáticamente
         setTimeout(() => {
-            if (game.phase === 'waiting') {
+            if (game.phase === 'waiting' && !game.manualStart) {
                 const playerCount = Object.keys(game.players).length;
                 if (playerCount >= this.config.horseRace.minPlayers) {
                     this.startMultiSelection(game, message);
@@ -4007,6 +4012,62 @@ const userId = gameState.userId;
         }
         
         await message.reply(`✅ ${message.author.username} se unió! (${playerCount}/${this.config.horseRace.maxPlayers})`);
+    }
+
+    async handleStartRace(message) {
+        const gameKey = `horserace_${message.channel.id}`;
+        const game = this.activeGames.get(gameKey);
+        
+        if (!game) {
+            await message.reply('❌ No hay ninguna carrera esperando en este canal');
+            return;
+        }
+        
+        if (game.mode !== 'multi') {
+            await message.reply('❌ Este comando es solo para carreras multijugador');
+            return;
+        }
+        
+        if (game.phase !== 'waiting') {
+            await message.reply('❌ Esta carrera ya comenzó o terminó');
+            return;
+        }
+        
+        if (message.author.id !== game.creatorId) {
+            await message.reply('❌ Solo el creador de la carrera puede iniciarla');
+            return;
+        }
+        
+        const playerCount = Object.keys(game.players).length;
+        
+        if (playerCount < this.config.horseRace.minPlayers) {
+            await message.reply(`❌ Se necesitan al menos ${this.config.horseRace.minPlayers} jugadores para iniciar (hay ${playerCount})`);
+            return;
+        }
+        
+        // ✅ INICIAR LA CARRERA
+        game.manualStart = true;
+        
+        // Deshabilitar el mensaje de espera
+        try {
+            const waitingMsg = await message.channel.messages.fetch(game.messageId);
+            await waitingMsg.edit({ 
+                embeds: [
+                    new EmbedBuilder()
+                        .setTitle('🏁 Carrera Iniciada Manualmente')
+                        .setDescription(`El creador inició la carrera con ${playerCount} jugadores`)
+                        .setColor('#FFD700')
+                ],
+                components: [] 
+            });
+        } catch (error) {
+            console.log('No se pudo actualizar mensaje de espera');
+        }
+        
+        await message.reply(`✅ Iniciando carrera con ${playerCount} jugadores...`);
+        
+        // Iniciar selección de caballos
+        await this.startMultiSelection(game, message);
     }
 
     async startHorseRace(game, message) {
@@ -4181,42 +4242,73 @@ const userId = gameState.userId;
         
         const results = new Map();
         
-        // Calcular premios
+        // ✅ AGRUPAR JUGADORES POR CABALLO
+        const playersByHorse = new Map();
         for (const [playerId, player] of Object.entries(game.players)) {
-            const horse = game.horses[player.horseIndex];
-            const finalBet = player.hasDoubled ? player.bet * 2 : player.bet;
+            const horseIndex = player.horseIndex;
+            if (!playersByHorse.has(horseIndex)) {
+                playersByHorse.set(horseIndex, []);
+            }
+            playersByHorse.get(horseIndex).push({ playerId, player });
+        }
+        
+        // Calcular premios por caballo y repartir
+        for (const [horseIndex, horsePlayers] of playersByHorse.entries()) {
+            const horse = game.horses[horseIndex];
+            const playersCount = horsePlayers.length;
             
-            let winnings = 0;
+            // Calcular premio base del caballo
+            let baseMultiplier = 0;
             let position = 'No clasificó';
             
             if (horse.finishPosition === 1) {
-                winnings = Math.floor(finalBet * this.config.horseRace.payouts.first);
+                baseMultiplier = this.config.horseRace.payouts.first;
                 position = '🥇 1er lugar';
             } else if (horse.finishPosition === 2) {
-                winnings = Math.floor(finalBet * this.config.horseRace.payouts.second);
+                baseMultiplier = this.config.horseRace.payouts.second;
                 position = '🥈 2do lugar';
             } else if (horse.finishPosition === 3) {
-                winnings = Math.floor(finalBet * this.config.horseRace.payouts.third);
+                baseMultiplier = this.config.horseRace.payouts.third;
                 position = '🥉 3er lugar';
             } else if (game.mode === 'bot') {
-                winnings = Math.floor(finalBet * this.config.horseRace.botMode.refundOnNoPodium);
+                baseMultiplier = this.config.horseRace.botMode.refundOnNoPodium;
                 position = '💸 Reembolso parcial';
             }
             
-            const doubledText = player.hasDoubled ? ' (x2 🎲)' : '';
+            // ✅ CALCULAR PREMIO TOTAL DEL CABALLO (suma de todas las apuestas)
+            let totalHorseBet = 0;
+            for (const { player } of horsePlayers) {
+                const finalBet = player.hasDoubled ? player.bet * 2 : player.bet;
+                totalHorseBet += finalBet;
+            }
             
-            results.set(playerId, { 
-                winnings, 
-                position, 
-                horse: horse.emoji, 
-                finalBet,
-                doubled: player.hasDoubled,
-                doubledText 
-            });
+            const totalHorsePrize = Math.floor(totalHorseBet * baseMultiplier);
             
-            // Dar dinero (excepto al bot)
-            if (playerId !== 'bot' && winnings > 0) {
-                await this.economy.addMoney(playerId, winnings, 'horserace_win');
+            // ✅ REPARTIR EQUITATIVAMENTE ENTRE LOS JUGADORES
+            for (const { playerId, player } of horsePlayers) {
+                const finalBet = player.hasDoubled ? player.bet * 2 : player.bet;
+                
+                // Proporción de este jugador del premio total
+                const playerShare = finalBet / totalHorseBet;
+                let winnings = Math.floor(totalHorsePrize * playerShare);
+                
+                const doubledText = player.hasDoubled ? ' (x2 🎲)' : '';
+                const sharedText = playersCount > 1 ? ` [${playersCount} jugadores]` : '';
+                
+                results.set(playerId, { 
+                    winnings, 
+                    position: position + sharedText,
+                    horse: horse.emoji, 
+                    finalBet,
+                    doubled: player.hasDoubled,
+                    doubledText,
+                    playersOnHorse: playersCount
+                });
+                
+                // Dar dinero (excepto al bot)
+                if (playerId !== 'bot' && winnings > 0) {
+                    await this.economy.addMoney(playerId, winnings, 'horserace_win');
+                }
             }
         }
         
@@ -4237,26 +4329,48 @@ const userId = gameState.userId;
     async showRaceResults(game, message, podium, results) {
         let resultsText = '';
         
+        // Agrupar por caballo para mostrar mejor
+        const resultsByHorse = new Map();
         for (const [playerId, data] of results) {
-            const playerName = playerId === 'bot' ? '🤖 Bot' : `<@${playerId}>`;
-            const profit = data.winnings - data.finalBet;
-            const profitText = profit > 0 ? 
-                `+${this.formatNumber(profit)}` : 
-                this.formatNumber(profit);
+            const horseEmoji = data.horse;
+            if (!resultsByHorse.has(horseEmoji)) {
+                resultsByHorse.set(horseEmoji, []);
+            }
+            resultsByHorse.get(horseEmoji).push({ playerId, data });
+        }
+        
+        // Mostrar resultados agrupados por caballo
+        for (const [horseEmoji, players] of resultsByHorse) {
+            const firstPlayer = players[0].data;
             
-            resultsText += `${data.position} | ${data.horse} ${playerName}${data.doubledText}\n` +
-                        `💰 Apuesta: ${this.formatNumber(data.finalBet)} π-b$\n` +
-                        `🏆 Ganancia: ${this.formatNumber(data.winnings)} π-b$ (${profitText})\n\n`;
+            // Header del caballo
+            resultsText += `**${firstPlayer.position} | ${horseEmoji}**\n`;
+            
+            // Mostrar cada jugador que apostó por este caballo
+            for (const { playerId, data } of players) {
+                const playerName = playerId === 'bot' ? '🤖 Bot' : `<@${playerId}>`;
+                const profit = data.winnings - data.finalBet;
+                const profitText = profit > 0 ? 
+                    `+${this.formatNumber(profit)}` : 
+                    this.formatNumber(profit);
+                
+                resultsText += `  ├ ${playerName}${data.doubledText}\n`;
+                resultsText += `  ├ 💰 Apuesta: ${this.formatNumber(data.finalBet)} π-b$\n`;
+                resultsText += `  └ 🏆 Ganancia: ${this.formatNumber(data.winnings)} π-b$ (${profitText})\n`;
+            }
+            
+            resultsText += '\n';
         }
         
         const embed = new EmbedBuilder()
             .setTitle('🏁 ¡CARRERA FINALIZADA!')
             .setDescription(`**🏆 Podio:**\n🥇 ${podium[0]?.emoji}\n🥈 ${podium[1]?.emoji}\n🥉 ${podium[2]?.emoji}`)
             .addFields(
-                { name: '📊 Resultados', value: resultsText, inline: false }
+                { name: '📊 Resultados', value: resultsText || 'No hay resultados', inline: false }
             )
             .setColor('#FFD700')
-            .setTimestamp();
+            .setTimestamp()
+            .setFooter({ text: 'Los premios se reparten equitativamente entre jugadores del mismo caballo' });
         
         await message.channel.send({ embeds: [embed] });
     }
@@ -7923,6 +8037,10 @@ const userId = gameState.userId;
                         await message.reply('❌ No hay carrera multijugador esperando jugadores');
                     }
                     break;
+                case '>startrace':
+                case '>iniciarcarrera':
+                    await this.handleStartRace(message);
+                    break;
                 case '>russian':
                 case '>rr':
                 case '>ruleta-rusa':
@@ -8092,6 +8210,18 @@ const userId = gameState.userId;
                     name: '🔫 Ruleta Rusa (Multiplayer)', 
                     value: '`>russian <cantidad>` - Crear partida\n`>startrussian` - Iniciar (creador)\n`>shoot` - Disparar en tu turno\nApuesta: 200-5,000 π-b$\nJugadores: 2-6\nGanador se lleva 85% del pot', 
                     inline: false 
+                },
+                {
+                    name: '🐎 Carrera de Caballos',
+                    value: '**Bot:** `>horses bot <cantidad>`\n' +
+                        '**Multi:** `>horses multi <cantidad>`\n' +
+                        '`>joinrace` - Unirse a carrera\n' +
+                        '`>startrace` - Iniciar (creador)\n' +
+                        'Apuesta: 200-10,000 π-b$\n' +
+                        'Premios: 🥇x3.0 🥈x1.8 🥉x1.2\n' +
+                        '⚡ Dobla apuesta hasta 75% de carrera\n' +
+                        '👥 Varios pueden elegir el mismo caballo',
+                    inline: false
                 },
                 {
                     name: '🎴 UNO (Multiplayer)',
