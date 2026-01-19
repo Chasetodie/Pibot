@@ -670,10 +670,14 @@ client.on('interactionCreate', async (interaction) => {
             return;
         }
 
-        // AGREGAR ESTO: Manejo de botones del blackjack
         if (interaction.customId.startsWith('bj_')) {
             await minigames.handleBlackjackButtons(interaction);
             return; // Importante: return para no continuar con otros botones
+        }
+
+        if (interaction.customId === 'double_bet_race') {
+            await minigames.handleHorseRaceButtons(interaction);
+            return;
         }
 
         if (interaction.customId.startsWith('shop_')) {
