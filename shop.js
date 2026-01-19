@@ -921,7 +921,9 @@ class ShopSystem {
 
         const discount = this.getWeekendDiscount();
         
-        for (const item of pageItems) {
+        for (const item of pageItems) {            
+            const rarityEmoji = this.rarityEmojis[item.rarity];
+
             let value = `${item.description}\n`;
             value += `💰 **${item.price}**`;           
             value += `\n\`>buy ${item.id}\``;
