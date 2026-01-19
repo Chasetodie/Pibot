@@ -3782,7 +3782,7 @@ const userId = gameState.userId;
             return;
         }
         
-        // ✅ PERMITIR QUE VARIOS JUGADORES ELIJAN EL MISMO CABALLO
+        // ✅ ASIGNAR CABALLO AL JUGADOR
         player.horseIndex = horseIndex;
         
         await interaction.reply({ 
@@ -3790,7 +3790,36 @@ const userId = gameState.userId;
             ephemeral: true 
         });
         
-        // ✅ VERIFICAR SI TODOS ELIGIERON
+        // ✅ SI ES MODO BOT, EL BOT ELIGE AUTOMÁTICAMENTE
+        if (game.mode === 'bot') {
+            // Bot elige aleatoriamente (evitando el del jugador)
+            let botChoice;
+            do {
+                botChoice = Math.floor(Math.random() * 12);
+            } while (botChoice === horseIndex);
+            
+            game.players['bot'].horseIndex = botChoice;
+            
+            // Deshabilitar botones
+            try {
+                const selectionMsg = await interaction.channel.messages.fetch(game.selectionMessageId);
+                await selectionMsg.edit({ components: [] });
+            } catch (error) {
+                console.log('No se pudo deshabilitar botones');
+            }
+            
+            await interaction.channel.send(
+                `✅ **Elecciones confirmadas:**\n` +
+                `👤 <@${userId}> eligió ${game.horses[horseIndex].emoji}\n` +
+                `🤖 Bot eligió ${game.horses[botChoice].emoji}\n\n` +
+                `🏁 ¡La carrera comenzará en 3 segundos!`
+            );
+            
+            setTimeout(() => this.startHorseRace(game, interaction.channel), 3000);
+            return;
+        }
+        
+        // ✅ MODO MULTIJUGADOR: VERIFICAR SI TODOS ELIGIERON
         const allSelected = Object.values(game.players).every(p => p.horseIndex !== null);
         
         if (allSelected) {
@@ -3805,13 +3834,29 @@ const userId = gameState.userId;
             // Mostrar elecciones
             let choices = '';
             for (const [playerId, p] of Object.entries(game.players)) {
-                const name = playerId === 'bot' ? '🤖 Bot' : `<@${playerId}>`;
-                choices += `${name} eligió ${game.horses[p.horseIndex].emoji}\n`;
+                choices += `<@${playerId}> eligió ${game.horses[p.horseIndex].emoji}\n`;
             }
             
-            await interaction.channel.send(`**📋 Elecciones confirmadas:**\n${choices}\n🏁 ¡La carrera comenzará en 3 segundos!`);
+            await interaction.channel.send(
+                `**📋 Todos eligieron:**\n${choices}\n` +
+                `🏁 ¡La carrera comenzará en 3 segundos!`
+            );
             
             setTimeout(() => this.startHorseRace(game, interaction.channel), 3000);
+        } else {
+            // ✅ MOSTRAR QUIÉNES FALTAN
+            const pending = Object.values(game.players)
+                .filter(p => p.horseIndex === null)
+                .map(p => `<@${p.id}>`)
+                .join(', ');
+            
+            const selected = Object.values(game.players).filter(p => p.horseIndex !== null).length;
+            const total = Object.keys(game.players).length;
+            
+            await interaction.channel.send(
+                `⏳ ${selected}/${total} jugadores eligieron\n` +
+                `Esperando: ${pending}`
+            );
         }
     }
 
@@ -3876,15 +3921,6 @@ const userId = gameState.userId;
                 setTimeout(() => this.startHorseRace(game, message), 3000);
             }
         }, 2000);
-        
-        // Timeout si no todos eligen en 45 segundos
-        setTimeout(() => {
-            const allSelected = Object.values(game.players).every(p => p.horseIndex !== null);
-            if (!allSelected) {
-                clearInterval(checkInterval);
-                this.cancelHorseRace(game, message, 'No todos eligieron caballo a tiempo');
-            }
-        }, 45000);
     }
 
     async createMultiHorseRace(message, userId, betAmount, channelId) {
@@ -3936,23 +3972,16 @@ const userId = gameState.userId;
         
         const reply = await message.reply({ embeds: [embed] });
         game.messageId = reply.id;
-        
-        // Timer para iniciar automáticamente
-        setTimeout(() => {
-            if (game.phase === 'waiting' && !game.manualStart) {
-                const playerCount = Object.keys(game.players).length;
-                if (playerCount >= this.config.horseRace.minPlayers) {
-                    this.startMultiSelection(game, message);
-                } else {
-                    this.cancelHorseRace(game, message, 'No hay suficientes jugadores');
-                }
-            }
-        }, this.config.horseRace.joinTime);
     }
 
     async joinHorseRace(message, game, userId, betAmount) {
         if (game.players[userId]) {
             await message.reply('❌ Ya estás en esta carrera');
+            return;
+        }
+        
+        if (game.phase !== 'waiting') {
+            await message.reply('❌ Esta carrera ya comenzó o está en selección de caballos');
             return;
         }
         
@@ -3994,14 +4023,19 @@ const userId = gameState.userId;
             .setTitle('🐎 Carrera Multijugador - Esperando Jugadores')
             .setDescription('¡Otros jugadores pueden unirse!')
             .addFields(
+                { name: '👑 Creador', value: `<@${game.creatorId}>`, inline: true },
                 { name: '💰 Apuesta', value: `${this.formatNumber(betAmount)} π-b$`, inline: true },
                 { name: '💎 Pot', value: `${this.formatNumber(game.pot)} π-b$`, inline: true },
                 { name: '👥 Jugadores', value: `${playerCount}/${this.config.horseRace.maxPlayers}`, inline: true },
+                { name: '⏱️ Tiempo', value: 'Sin límite (inicio manual)', inline: true },
                 { name: '📋 Participantes', value: playersList, inline: false },
-                { name: '🎮 Unirse', value: `\`>joinrace\``, inline: false }
+                { name: '🎮 Para Unirse', value: `\`>joinrace\``, inline: true },
+                { name: '🚀 Para Iniciar', value: `\`>startrace\` (solo creador)`, inline: true },
+                { name: '❌ Para Cancelar', value: `\`>cancelrace\` (solo creador)`, inline: true }
             )
             .setColor('#00FF00')
-            .setTimestamp();
+            .setTimestamp()
+            .setFooter({ text: `Mínimo ${this.config.horseRace.minPlayers} jugadores • Varios pueden apostar al mismo caballo` });
         
         try {
             const channel = await message.client.channels.fetch(game.channelId);
@@ -4029,7 +4063,7 @@ const userId = gameState.userId;
         }
         
         if (game.phase !== 'waiting') {
-            await message.reply('❌ Esta carrera ya comenzó o terminó');
+            await message.reply('❌ Esta carrera ya comenzó o está en selección de caballos');
             return;
         }
         
@@ -4054,7 +4088,7 @@ const userId = gameState.userId;
             await waitingMsg.edit({ 
                 embeds: [
                     new EmbedBuilder()
-                        .setTitle('🏁 Carrera Iniciada Manualmente')
+                        .setTitle('🏁 Carrera Iniciada')
                         .setDescription(`El creador inició la carrera con ${playerCount} jugadores`)
                         .setColor('#FFD700')
                 ],
@@ -4064,10 +4098,53 @@ const userId = gameState.userId;
             console.log('No se pudo actualizar mensaje de espera');
         }
         
-        await message.reply(`✅ Iniciando carrera con ${playerCount} jugadores...`);
+        await message.reply(`✅ Iniciando selección de caballos para ${playerCount} jugadores...`);
         
-        // Iniciar selección de caballos
+        // ✅ INICIAR SELECCIÓN EN EL MISMO CANAL
         await this.startMultiSelection(game, message);
+    }
+
+    async handleCancelRace(message) {
+        const gameKey = `horserace_${message.channel.id}`;
+        const game = this.activeGames.get(gameKey);
+        
+        if (!game) {
+            await message.reply('❌ No hay ninguna carrera activa en este canal');
+            return;
+        }
+        
+        if (message.author.id !== game.creatorId) {
+            await message.reply('❌ Solo el creador de la carrera puede cancelarla');
+            return;
+        }
+        
+        if (game.phase === 'racing' || game.phase === 'finished') {
+            await message.reply('❌ No se puede cancelar una carrera que ya comenzó');
+            return;
+        }
+        
+        // ✅ DEVOLVER DINERO A TODOS
+        for (const [playerId, player] of Object.entries(game.players)) {
+            if (playerId !== 'bot') {
+                await this.economy.addMoney(playerId, player.bet, 'horserace_refund');
+            }
+        }
+        
+        // Limpiar intervalos si existen
+        if (game.updateInterval) {
+            clearInterval(game.updateInterval);
+        }
+        
+        const embed = new EmbedBuilder()
+            .setTitle('❌ Carrera Cancelada')
+            .setDescription(`<@${message.author.id}> canceló la carrera\n\nSe ha devuelto el dinero a todos los participantes`)
+            .setColor('#FF0000')
+            .setTimestamp();
+        
+        await message.reply({ embeds: [embed] });
+        
+        // Limpiar juego
+        this.activeGames.delete(gameKey);
     }
 
     async startHorseRace(game, message) {
@@ -8040,6 +8117,10 @@ const userId = gameState.userId;
                 case '>startrace':
                 case '>iniciarcarrera':
                     await this.handleStartRace(message);
+                    break;
+                case '>cancelrace':
+                case '>cancelarcarrera':
+                    await this.handleCancelRace(message);
                     break;
                 case '>russian':
                 case '>rr':
