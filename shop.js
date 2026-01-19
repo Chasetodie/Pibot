@@ -923,7 +923,7 @@ class ShopSystem {
         
         for (const item of pageItems) {
             let value = `${item.description}\n`;
-            value += `💰 **${priceText}**`;
+            value += `💰 **${item.price}**`;
             
             if (effectDesc) {
                 value += ` | ⏱️ ${effectDesc}`;
