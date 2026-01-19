@@ -680,6 +680,11 @@ client.on('interactionCreate', async (interaction) => {
             return;
         }
 
+        if (interaction.customId.startsWith('select_horse_')) {
+            await minigames.handleHorseSelection(interaction);
+            return;
+        }
+
         if (interaction.customId.startsWith('shop_')) {
             await allCommands.handleShopInteraction(interaction);
             return;
