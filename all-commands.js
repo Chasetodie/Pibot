@@ -2116,12 +2116,11 @@ const commandName = command.replace('>', '');
                 title: '🎯 Misiones y Logros',
                 fields: [
                     { name: '>missions', value: 'Ver misiones diarias', inline: true },
-                    { name: '>blockmissions', value: 'Bloquear notificaciones', inline: true },
-                    { name: '>unblockmissions', value: 'Desbloquear notificaciones', inline: true },
+                    { name: '>blockmissions', value: 'Bloquear notificaciones de las misiones', inline: true },
+                    { name: '>unblockmissions', value: 'Desbloquear notificaciones de las misiones', inline: true },
                     { name: '>achievements [@usuario]', value: 'Ver logros', inline: true },
                     { name: '>allachievements', value: 'Todos los logros', inline: true },
                     { name: '>detectachievements', value: 'Detectar logros', inline: true },
-                    { name: '>detectall', value: 'Detectar todos los logros', inline: true }
                 ]
             },
             chatIA: {

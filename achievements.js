@@ -1208,17 +1208,25 @@ class AchievementsSystem {
         await message.reply({ embeds: [embed], components });
     }
 
-    // MANEJAR interacciones de botones
     async handleAchievementPagination(interaction) {
-        const page = interaction.customId.replace('ach_', '');
-        
+        // ach_prev_2  o  ach_next_3
+        const parts = interaction.customId.split('_');
+        const page = parseInt(parts[2], 10);
+
+        if (isNaN(page)) {
+            return interaction.reply({ 
+                content: '❌ Error al cambiar de página', 
+                ephemeral: true 
+            });
+        }
+
         const fakeMessage = {
             author: interaction.user,
             reply: async (options) => {
                 await interaction.update(options);
             }
         };
-        
+
         await this.showAllAchievements(fakeMessage, page);
     }
 
