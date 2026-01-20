@@ -260,7 +260,7 @@ class ShopSystem {
                 stackable: true,
                 maxStack: 5
             },
-            'condon_pibe2': {
+            /*'condon_pibe2': {
                 id: 'condon_pibe2',
                 name: '🧃 Condón usado del Pibe 2**',
                 description: 'Un objeto misterioso de dudosa efectividad... pero asegura una protección total durante 10 minutos.',
@@ -274,7 +274,7 @@ class ShopSystem {
                 },
                 stackable: true,
                 maxStack: 5
-            },
+            },*/
             'role_token': {
                 id: 'role_token',
                 name: '🎭 Token de Rol Personalizado',
