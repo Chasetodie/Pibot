@@ -3719,9 +3719,9 @@ const userId = gameState.userId;
                 { name: '🎮 Modo', value: game.mode === 'bot' ? 'vs Bot' : 'Multijugador', inline: true }
             )
             .setColor('#FFD700')
-            .setFooter({ text: 'Haz clic en el botón del caballo que quieras' });
+            .setFooter({ text: 'Haz clic en el caballo que quieras o elige aleatoriamente' });
         
-        // ✅ CREAR BOTONES (12 caballos = 3 filas de 4)
+        // ✅ CREAR BOTONES (12 caballos = 3 filas de 4 + 1 fila con botón aleatorio)
         const rows = [];
         for (let i = 0; i < 3; i++) {
             const row = new ActionRowBuilder();
@@ -3738,6 +3738,17 @@ const userId = gameState.userId;
             }
             rows.push(row);
         }
+        
+        // ✅ FILA EXTRA CON BOTÓN ALEATORIO
+        const randomRow = new ActionRowBuilder()
+            .addComponents(
+                new ButtonBuilder()
+                    .setCustomId(`random_horse_${game.id}`)
+                    .setLabel('🎲 Caballo Aleatorio')
+                    .setStyle(ButtonStyle.Success)
+                    .setEmoji('🎲')
+            );
+        rows.push(randomRow);
         
         const selectionMsg = await message.reply({ 
             embeds: [embed], 
@@ -3800,6 +3811,11 @@ const userId = gameState.userId;
             
             game.players['bot'].horseIndex = botChoice;
             
+            // ✅ LIMPIAR TIMEOUT SI EXISTE
+            if (game.selectionTimeout) {
+                clearTimeout(game.selectionTimeout);
+            }
+            
             // Deshabilitar botones
             try {
                 const selectionMsg = await interaction.channel.messages.fetch(game.selectionMessageId);
@@ -3823,6 +3839,11 @@ const userId = gameState.userId;
         const allSelected = Object.values(game.players).every(p => p.horseIndex !== null);
         
         if (allSelected) {
+            // ✅ LIMPIAR TIMEOUT
+            if (game.selectionTimeout) {
+                clearTimeout(game.selectionTimeout);
+            }
+            
             // Deshabilitar botones
             try {
                 const selectionMsg = await interaction.channel.messages.fetch(game.selectionMessageId);
@@ -3860,67 +3881,224 @@ const userId = gameState.userId;
         }
     }
 
+    async handleRandomHorseSelection(interaction) {
+        const parts = interaction.customId.split('_');
+        const gameId = parts[2] + '_' + parts[3]; // horserace_channelId
+        
+        const game = this.activeGames.get(gameId);
+        
+        if (!game) {
+            await interaction.reply({ content: '❌ Carrera no encontrada', ephemeral: true });
+            return;
+        }
+        
+        const userId = interaction.user.id;
+        const player = game.players[userId];
+        
+        if (!player) {
+            await interaction.reply({ content: '❌ No estás en esta carrera', ephemeral: true });
+            return;
+        }
+        
+        if (player.horseIndex !== null) {
+            await interaction.reply({ 
+                content: `❌ Ya elegiste ${game.horses[player.horseIndex].emoji}`, 
+                ephemeral: true 
+            });
+            return;
+        }
+        
+        // ✅ ELEGIR CABALLO ALEATORIO
+        const randomIndex = Math.floor(Math.random() * 12);
+        player.horseIndex = randomIndex;
+        player.randomSelection = true;
+        
+        await interaction.reply({ 
+            content: `🎲 ¡Caballo aleatorio seleccionado!\nElegiste ${game.horses[randomIndex].emoji} (#${randomIndex + 1})`, 
+            ephemeral: true 
+        });
+        
+        // ✅ SI ES MODO BOT, EL BOT ELIGE AUTOMÁTICAMENTE
+        if (game.mode === 'bot') {
+            // Bot elige aleatoriamente (evitando el del jugador)
+            let botChoice;
+            do {
+                botChoice = Math.floor(Math.random() * 12);
+            } while (botChoice === randomIndex);
+            
+            game.players['bot'].horseIndex = botChoice;
+            
+            // ✅ LIMPIAR TIMEOUT SI EXISTE
+            if (game.selectionTimeout) {
+                clearTimeout(game.selectionTimeout);
+            }
+            
+            // Deshabilitar botones
+            try {
+                const selectionMsg = await interaction.channel.messages.fetch(game.selectionMessageId);
+                await selectionMsg.edit({ components: [] });
+            } catch (error) {
+                console.log('No se pudo deshabilitar botones');
+            }
+            
+            await interaction.channel.send(
+                `✅ **Elecciones confirmadas:**\n` +
+                `👤 <@${userId}> eligió ${game.horses[randomIndex].emoji} 🎲\n` +
+                `🤖 Bot eligió ${game.horses[botChoice].emoji}\n\n` +
+                `🏁 ¡La carrera comenzará en 3 segundos!`
+            );
+            
+            setTimeout(() => this.startHorseRace(game, interaction.channel), 3000);
+            return;
+        }
+        
+        // ✅ MODO MULTIJUGADOR: VERIFICAR SI TODOS ELIGIERON
+        const allSelected = Object.values(game.players).every(p => p.horseIndex !== null);
+        
+        if (allSelected) {
+            // ✅ LIMPIAR TIMEOUT
+            if (game.selectionTimeout) {
+                clearTimeout(game.selectionTimeout);
+            }
+            
+            // Deshabilitar botones
+            try {
+                const selectionMsg = await interaction.channel.messages.fetch(game.selectionMessageId);
+                await selectionMsg.edit({ components: [] });
+            } catch (error) {
+                console.log('No se pudo deshabilitar botones');
+            }
+            
+            // Mostrar elecciones (marcar las aleatorias con 🎲)
+            let choices = '';
+            for (const [playerId, p] of Object.entries(game.players)) {
+                const randomMarker = playerId === userId ? ' 🎲' : '';
+                choices += `<@${playerId}> eligió ${game.horses[p.horseIndex].emoji}${randomMarker}\n`;
+            }
+            
+            await interaction.channel.send(
+                `**📋 Todos eligieron:**\n${choices}\n` +
+                `🏁 ¡La carrera comenzará en 3 segundos!`
+            );
+            
+            setTimeout(() => this.startHorseRace(game, interaction.channel), 3000);
+        } else {
+            // ✅ MOSTRAR QUIÉNES FALTAN
+            const pending = Object.values(game.players)
+                .filter(p => p.horseIndex === null)
+                .map(p => `<@${p.id}>`)
+                .join(', ');
+            
+            const selected = Object.values(game.players).filter(p => p.horseIndex !== null).length;
+            const total = Object.keys(game.players).length;
+            
+            await interaction.channel.send(
+                `⏳ ${selected}/${total} jugadores eligieron\n` +
+                `Esperando: ${pending}`
+            );
+        }
+    }
+
     async startMultiSelection(game, message) {
         game.phase = 'selecting';
         
-        // Enviar selección de caballos a cada jugador
-        for (const playerId of Object.keys(game.players)) {
-            try {
-                const user = await message.client.users.fetch(playerId);
-                
-                const horsesDisplay = game.horses.map((h, i) => 
-                    `${h.emoji}`
-                ).join(' ');
-                
-                const embed = new EmbedBuilder()
-                    .setTitle('🐎 Selecciona tu Caballo')
-                    .setDescription(`**Caballos disponibles:**\n${horsesDisplay}`)
-                    .setColor('#FFD700')
-                    .setFooter({ text: 'Haz clic en el caballo que quieras' });
-                
-                // Crear botones
-                const rows = [];
-                for (let i = 0; i < 3; i++) {
-                    const row = new ActionRowBuilder();
-                    for (let j = 0; j < 4; j++) {
-                        const index = i * 4 + j;
-                        if (index < game.horses.length) {
-                            row.addComponents(
-                                new ButtonBuilder()
-                                    .setCustomId(`select_horse_${game.id}_${index}`)
-                                    .setLabel(`${game.horses[index].emoji} ${index + 1}`)
-                                    .setStyle(ButtonStyle.Primary)
-                            );
-                        }
-                    }
-                    rows.push(row);
+        const horsesDisplay = game.horses.map((h, i) => 
+            `${h.emoji}`
+        ).join(' ');
+        
+        const playersList = Object.values(game.players)
+            .map(p => `• ${p.username}`)
+            .join('\n');
+        
+        const embed = new EmbedBuilder()
+            .setTitle('🐎 Selecciona tu Caballo')
+            .setDescription(`**Caballos disponibles:**\n${horsesDisplay}`)
+            .addFields(
+                { name: '👥 Jugadores', value: playersList, inline: false },
+                { name: '💡 Instrucciones', value: 'Haz clic en el botón del caballo que quieras o elige aleatoriamente', inline: false },
+                { name: '⏱️ Tiempo límite', value: '1 minuto 30 segundos (auto-selección aleatoria)', inline: false }
+            )
+            .setColor('#FFD700')
+            .setFooter({ text: 'Todos deben elegir para que la carrera comience' });
+        
+        // ✅ CREAR BOTONES (12 caballos = 3 filas de 4)
+        const rows = [];
+        for (let i = 0; i < 3; i++) {
+            const row = new ActionRowBuilder();
+            for (let j = 0; j < 4; j++) {
+                const index = i * 4 + j;
+                if (index < game.horses.length) {
+                    row.addComponents(
+                        new ButtonBuilder()
+                            .setCustomId(`select_horse_${game.id}_${index}`)
+                            .setLabel(`${game.horses[index].emoji} ${index + 1}`)
+                            .setStyle(ButtonStyle.Primary)
+                    );
                 }
-                
-                await user.send({ embeds: [embed], components: rows });
-            } catch (error) {
-                console.log(`No se pudo enviar DM a ${playerId}`);
             }
+            rows.push(row);
         }
         
-        await message.channel.send('📬 Selección de caballos enviada por DM a todos los jugadores\n⏳ Esperando elecciones...');
+        // ✅ FILA EXTRA CON BOTÓN ALEATORIO
+        const randomRow = new ActionRowBuilder()
+            .addComponents(
+                new ButtonBuilder()
+                    .setCustomId(`random_horse_${game.id}`)
+                    .setLabel('🎲 Caballo Aleatorio')
+                    .setStyle(ButtonStyle.Success)
+                    .setEmoji('🎲')
+            );
+        rows.push(randomRow);
         
-        // ✅ VERIFICAR CADA 2 SEGUNDOS SI TODOS ELIGIERON
-        const checkInterval = setInterval(async () => {
-            const allSelected = Object.values(game.players).every(p => p.horseIndex !== null);
+        const selectionMsg = await message.channel.send({ 
+            embeds: [embed], 
+            components: rows 
+        });
+        
+        game.selectionMessageId = selectionMsg.id;
+        
+        // ✅ TIMEOUT: AUTO-SELECCIÓN DESPUÉS DE 90 SEGUNDOS
+        game.selectionTimeout = setTimeout(async () => {
+            // Verificar quiénes no eligieron
+            const playersWithoutHorse = Object.entries(game.players)
+                .filter(([id, p]) => p.horseIndex === null);
             
-            if (allSelected) {
-                clearInterval(checkInterval);
+            if (playersWithoutHorse.length > 0) {
+                let autoSelectedText = '🎲 **Auto-selección aleatoria:**\n';
                 
-                let choices = '';
-                for (const [playerId, p] of Object.entries(game.players)) {
-                    choices += `<@${playerId}> eligió ${game.horses[p.horseIndex].emoji}\n`;
+                for (const [playerId, player] of playersWithoutHorse) {
+                    // Elegir caballo aleatorio que esté disponible
+                    const randomIndex = Math.floor(Math.random() * 12);
+                    player.horseIndex = randomIndex;
+                    player.randomSelection = true;
+
+                    const playerName = playerId === 'bot' ? '🤖 Bot' : `<@${playerId}>`;
+                    autoSelectedText += `${playerName} → ${game.horses[randomIndex].emoji}\n`;
                 }
                 
-                await message.channel.send(`**📋 Todos eligieron:**\n${choices}\n🏁 ¡La carrera comenzará en 3 segundos!`);
+                await message.channel.send(autoSelectedText);
                 
-                setTimeout(() => this.startHorseRace(game, message), 3000);
+                // Deshabilitar botones
+                try {
+                    await selectionMsg.edit({ components: [] });
+                } catch (error) {
+                    console.log('No se pudo deshabilitar botones');
+                }
+                
+                // Mostrar todas las elecciones
+                let allChoices = '**📋 Elecciones finales:**\n';
+                for (const [playerId, p] of Object.entries(game.players)) {
+                    const name = playerId === 'bot' ? '🤖 Bot' : `<@${playerId}>`;
+                    allChoices += `${name} eligió ${game.horses[p.horseIndex].emoji}\n`;
+                }
+                
+                await message.channel.send(
+                    `${allChoices}\n🏁 ¡La carrera comenzará en 3 segundos!`
+                );
+                
+                setTimeout(() => this.startHorseRace(game, message.channel), 3000);
             }
-        }, 2000);
+        }, 90000); // 1:30 minutos
     }
 
     async createMultiHorseRace(message, userId, betAmount, channelId) {
@@ -4130,9 +4308,12 @@ const userId = gameState.userId;
             }
         }
         
-        // Limpiar intervalos si existen
+        // ✅ LIMPIAR INTERVALOS Y TIMEOUTS
         if (game.updateInterval) {
             clearInterval(game.updateInterval);
+        }
+        if (game.selectionTimeout) {
+            clearTimeout(game.selectionTimeout);
         }
         
         const embed = new EmbedBuilder()
@@ -4147,8 +4328,11 @@ const userId = gameState.userId;
         this.activeGames.delete(gameKey);
     }
 
-    async startHorseRace(game, message) {
+    async startHorseRace(game, messageOrChannel) {
         game.phase = 'racing';
+        
+        // ✅ OBTENER EL CANAL CORRECTAMENTE
+        const channel = messageOrChannel.channel || messageOrChannel;
         
         // Asignar velocidades aleatorias realistas
         game.horses.forEach(horse => {
@@ -4157,7 +4341,7 @@ const userId = gameState.userId;
         
         // Mostrar carrera inicial
         const raceEmbed = await this.createRaceEmbed(game);
-        const raceMsg = await message.channel.send({ 
+        const raceMsg = await channel.send({ 
             embeds: [raceEmbed],
             components: [this.createDoubleButton(game)]
         });
@@ -4166,7 +4350,7 @@ const userId = gameState.userId;
         
         // Actualizar carrera cada 500ms
         game.updateInterval = setInterval(async () => {
-            await this.updateRaceProgress(game, message, raceMsg);
+            await this.updateRaceProgress(game, channel, raceMsg);
         }, this.config.horseRace.updateInterval);
     }
 
@@ -4178,7 +4362,7 @@ const userId = gameState.userId;
         return () => baseSpeed + (Math.random() - 0.5);
     }
 
-    async updateRaceProgress(game, message, raceMsg) {
+    async updateRaceProgress(game, channel, raceMsg) {
         let allFinished = true;
         let finishCount = game.horses.filter(h => h.finished).length;
         
@@ -4222,7 +4406,7 @@ const userId = gameState.userId;
             
             // ✅ ESPERAR UN POCO ANTES DE MOSTRAR RESULTADOS
             setTimeout(async () => {
-                await this.finishHorseRace(game, message, raceMsg);
+                await this.finishHorseRace(game, channel, raceMsg);
             }, 1000);
         }
     }
@@ -4296,7 +4480,7 @@ const userId = gameState.userId;
         return new ActionRowBuilder().addComponents(button);
     }
 
-    async finishHorseRace(game, message, raceMsg) {
+    async finishHorseRace(game, channelOrMessage, raceMsg) {
         // ✅ VERIFICAR QUE NO SE HAYA PROCESADO YA
         if (game.resultsProcessed) {
             return;
@@ -4310,6 +4494,9 @@ const userId = gameState.userId;
         }
         
         game.phase = 'finished';
+        
+        // ✅ OBTENER EL CANAL CORRECTAMENTE
+        const channel = channelOrMessage.channel || channelOrMessage;
         
         // Ordenar caballos por posición final
         const podium = game.horses
@@ -4397,13 +4584,16 @@ const userId = gameState.userId;
         }
         
         // Mostrar resultados
-        await this.showRaceResults(game, message, podium, results);
+        await this.showRaceResults(game, channel, podium, results);
         
         // ✅ LIMPIAR JUEGO
         this.activeGames.delete(game.id);
     }
 
-    async showRaceResults(game, message, podium, results) {
+    async showRaceResults(game, channelOrMessage, podium, results) {
+        // ✅ OBTENER EL CANAL CORRECTAMENTE
+        const channel = channelOrMessage.channel || channelOrMessage;
+        
         let resultsText = '';
         
         // Agrupar por caballo para mostrar mejor
@@ -4431,7 +4621,10 @@ const userId = gameState.userId;
                     `+${this.formatNumber(profit)}` : 
                     this.formatNumber(profit);
                 
-                resultsText += `  ├ ${playerName}${data.doubledText}\n`;
+                // ✅ MARCAR SI FUE SELECCIÓN ALEATORIA (opcional)
+                const randomMarker = game.players[playerId]?.randomSelection ? ' 🎲' : '';
+                
+                resultsText += `  ├ ${playerName}${data.doubledText}${randomMarker}\n`;
                 resultsText += `  ├ 💰 Apuesta: ${this.formatNumber(data.finalBet)} π-b$\n`;
                 resultsText += `  └ 🏆 Ganancia: ${this.formatNumber(data.winnings)} π-b$ (${profitText})\n`;
             }
@@ -4447,9 +4640,9 @@ const userId = gameState.userId;
             )
             .setColor('#FFD700')
             .setTimestamp()
-            .setFooter({ text: 'Los premios se reparten equitativamente entre jugadores del mismo caballo' });
+            .setFooter({ text: '🎲 = Selección aleatoria • Los premios se reparten equitativamente' });
         
-        await message.channel.send({ embeds: [embed] });
+        await channel.send({ embeds: [embed] });
     }
 
     async createRussianGameInDB(gameId, gameData) {
