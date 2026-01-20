@@ -2026,12 +2026,13 @@ const userId = gameState.userId;
             return;
         }
         
-        // ✅ ARREGLAR: Redondear a 1 decimal para comparación
-        const currentProgress = Math.round(game.raceProgress * 10) / 10;
+        // ✅ CALCULAR PROGRESO ACTUAL EN TIEMPO REAL
+        const maxPosition = Math.max(...game.horses.map(h => h.position));
+        const realTimeProgress = (maxPosition / this.config.horseRace.raceDistance) * 100;
         
-        if (currentProgress >= 75.0) {
+        if (realTimeProgress >= 75.0) {
             await interaction.reply({ 
-                content: `❌ Ya es muy tarde para doblar la apuesta (${currentProgress.toFixed(1)}% ≥ 75%)`, 
+                content: `❌ Ya es muy tarde para doblar la apuesta (${realTimeProgress.toFixed(1)}% ≥ 75%)`, 
                 ephemeral: true 
             });
             return;
@@ -2059,7 +2060,7 @@ const userId = gameState.userId;
         
         await interaction.reply({ 
             content: `🎲 **¡Apuesta doblada!**\n` +
-                    `Progreso actual: ${currentProgress.toFixed(1)}%\n` +
+                    `Progreso actual: ${realTimeProgress.toFixed(1)}%\n` +
                     `Apuesta original: ${this.formatNumber(player.bet)} π-b$\n` +
                     `Nueva apuesta total: ${this.formatNumber(newBetAmount)} π-b$\n` +
                     `${game.horses[player.horseIndex].emoji} ¡Vamos!`,
@@ -3800,6 +3801,11 @@ const userId = gameState.userId;
             content: `✅ Elegiste ${game.horses[horseIndex].emoji}!`, 
             ephemeral: true 
         });
+
+        // ✅ ACTUALIZAR EMBED DE SELECCIÓN (si existe la función)
+        if (game.updateSelectionEmbed) {
+            await game.updateSelectionEmbed();
+        }
         
         // ✅ SI ES MODO BOT, EL BOT ELIGE AUTOMÁTICAMENTE
         if (game.mode === 'bot') {
@@ -3917,6 +3923,11 @@ const userId = gameState.userId;
             content: `🎲 ¡Caballo aleatorio seleccionado!\nElegiste ${game.horses[randomIndex].emoji} (#${randomIndex + 1})`, 
             ephemeral: true 
         });
+
+        // ✅ ACTUALIZAR EMBED DE SELECCIÓN
+        if (game.updateSelectionEmbed) {
+            await game.updateSelectionEmbed();
+        }
         
         // ✅ SI ES MODO BOT, EL BOT ELIGE AUTOMÁTICAMENTE
         if (game.mode === 'bot') {
@@ -4006,22 +4017,28 @@ const userId = gameState.userId;
             `${h.emoji}`
         ).join(' ');
         
-        const playersList = Object.values(game.players)
-            .map(p => `• ${p.username}`)
-            .join('\n');
+        // ✅ FUNCIÓN PARA CREAR LISTA DE JUGADORES CON CHECKMARKS
+        const getPlayersList = () => {
+            return Object.values(game.players)
+                .map(p => {
+                    const check = p.horseIndex !== null ? '✅' : '⏳';
+                    return `${check} ${p.username}`;
+                })
+                .join('\n');
+        };
         
         const embed = new EmbedBuilder()
             .setTitle('🐎 Selecciona tu Caballo')
             .setDescription(`**Caballos disponibles:**\n${horsesDisplay}`)
             .addFields(
-                { name: '👥 Jugadores', value: playersList, inline: false },
+                { name: '👥 Jugadores', value: getPlayersList(), inline: false },
                 { name: '💡 Instrucciones', value: 'Haz clic en el botón del caballo que quieras o elige aleatoriamente', inline: false },
                 { name: '⏱️ Tiempo límite', value: '1 minuto 30 segundos (auto-selección aleatoria)', inline: false }
             )
             .setColor('#FFD700')
             .setFooter({ text: 'Todos deben elegir para que la carrera comience' });
         
-        // ✅ CREAR BOTONES (12 caballos = 3 filas de 4)
+        // Crear botones
         const rows = [];
         for (let i = 0; i < 3; i++) {
             const row = new ActionRowBuilder();
@@ -4039,7 +4056,6 @@ const userId = gameState.userId;
             rows.push(row);
         }
         
-        // ✅ FILA EXTRA CON BOTÓN ALEATORIO
         const randomRow = new ActionRowBuilder()
             .addComponents(
                 new ButtonBuilder()
@@ -4057,9 +4073,28 @@ const userId = gameState.userId;
         
         game.selectionMessageId = selectionMsg.id;
         
-        // ✅ TIMEOUT: AUTO-SELECCIÓN DESPUÉS DE 90 SEGUNDOS
+        // ✅ GUARDAR FUNCIÓN PARA ACTUALIZAR EMBED
+        game.updateSelectionEmbed = async () => {
+            const updatedEmbed = new EmbedBuilder()
+                .setTitle('🐎 Selecciona tu Caballo')
+                .setDescription(`**Caballos disponibles:**\n${horsesDisplay}`)
+                .addFields(
+                    { name: '👥 Jugadores', value: getPlayersList(), inline: false },
+                    { name: '💡 Instrucciones', value: 'Haz clic en el botón del caballo que quieras o elige aleatoriamente', inline: false },
+                    { name: '⏱️ Tiempo límite', value: '1 minuto 30 segundos (auto-selección aleatoria)', inline: false }
+                )
+                .setColor('#FFD700')
+                .setFooter({ text: 'Todos deben elegir para que la carrera comience' });
+            
+            try {
+                await selectionMsg.edit({ embeds: [updatedEmbed] });
+            } catch (error) {
+                console.log('No se pudo actualizar embed de selección');
+            }
+        };
+        
+        // Timeout de auto-selección
         game.selectionTimeout = setTimeout(async () => {
-            // Verificar quiénes no eligieron
             const playersWithoutHorse = Object.entries(game.players)
                 .filter(([id, p]) => p.horseIndex === null);
             
@@ -4067,25 +4102,22 @@ const userId = gameState.userId;
                 let autoSelectedText = '🎲 **Auto-selección aleatoria:**\n';
                 
                 for (const [playerId, player] of playersWithoutHorse) {
-                    // Elegir caballo aleatorio que esté disponible
                     const randomIndex = Math.floor(Math.random() * 12);
                     player.horseIndex = randomIndex;
                     player.randomSelection = true;
-
+                    
                     const playerName = playerId === 'bot' ? '🤖 Bot' : `<@${playerId}>`;
                     autoSelectedText += `${playerName} → ${game.horses[randomIndex].emoji}\n`;
                 }
                 
                 await message.channel.send(autoSelectedText);
                 
-                // Deshabilitar botones
                 try {
                     await selectionMsg.edit({ components: [] });
                 } catch (error) {
                     console.log('No se pudo deshabilitar botones');
                 }
                 
-                // Mostrar todas las elecciones
                 let allChoices = '**📋 Elecciones finales:**\n';
                 for (const [playerId, p] of Object.entries(game.players)) {
                     const name = playerId === 'bot' ? '🤖 Bot' : `<@${playerId}>`;
@@ -4098,7 +4130,7 @@ const userId = gameState.userId;
                 
                 setTimeout(() => this.startHorseRace(game, message.channel), 3000);
             }
-        }, 90000); // 1:30 minutos
+        }, 90000);
     }
 
     async createMultiHorseRace(message, userId, betAmount, channelId) {
@@ -4383,12 +4415,7 @@ const userId = gameState.userId;
                 // Velocidad variable
                 const speedValue = horse.speed();
                 horse.position += speedValue;
-                
-                // ✅ DEBUG (opcional - remover después)
-                if (game.horses.indexOf(horse) === 0) {
-                    console.log(`🐎 Caballo 0: pos=${horse.position.toFixed(1)}/${horse.totalDistance}, speed=${speedValue.toFixed(2)}`);
-                }
-                
+                                
                 // Limitar a la distancia total
                 if (horse.position >= horse.totalDistance) {
                     horse.position = horse.totalDistance;
@@ -4404,10 +4431,7 @@ const userId = gameState.userId;
         // Actualizar progreso general
         const maxPosition = Math.max(...game.horses.map(h => h.position));
         game.raceProgress = (maxPosition / this.config.horseRace.raceDistance) * 100;
-        
-        // ✅ DEBUG
-        console.log(`📊 Progreso: ${game.raceProgress.toFixed(1)}%, Max pos: ${maxPosition.toFixed(1)}/${game.horses[0].totalDistance}`);
-        
+               
         // ✅ SOLO ACTUALIZAR SI NO HA TERMINADO
         if (!allFinished) {
             try {
@@ -4542,6 +4566,17 @@ const userId = gameState.userId;
             .slice(0, 3);
         
         const results = new Map();
+
+        // ✅ LÓGICA ESPECIAL PARA MODO BOT
+        if (game.mode === 'bot') {
+            const playerHorse = game.horses[game.players[Object.keys(game.players).find(id => id !== 'bot')].horseIndex];
+            const botHorse = game.horses[game.players['bot'].horseIndex];
+            
+            const playerInPodium = playerHorse.finishPosition <= 3;
+            const botInPodium = botHorse.finishPosition <= 3;
+            
+            console.log(`🎮 Modo Bot: Jugador=${playerInPodium ? 'En podio' : 'Fuera'}, Bot=${botInPodium ? 'En podio' : 'Fuera'}`);
+        }
         
         // ✅ AGRUPAR JUGADORES POR CABALLO
         const playersByHorse = new Map();
@@ -4572,14 +4607,34 @@ const userId = gameState.userId;
                 baseMultiplier = this.config.horseRace.payouts.third;
                 position = '🥉 3er lugar';
             } else {
-                // ✅ REEMBOLSO SOLO EN MODO BOT
+                // ✅ LÓGICA DE REEMBOLSO MEJORADA PARA MODO BOT
                 if (game.mode === 'bot') {
-                    baseMultiplier = this.config.horseRace.botMode.refundOnNoPodium;
-                    position = '💸 Reembolso parcial (50%)';
+                    // Obtener IDs del jugador y bot en este caballo
+                    const playerInThisHorse = horsePlayers.find(hp => hp.playerId !== 'bot');
+                    const botInThisHorse = horsePlayers.find(hp => hp.playerId === 'bot');
+                    
+                    // Verificar si AMBOS están fuera del podio
+                    const playerHorseIndex = game.players[Object.keys(game.players).find(id => id !== 'bot')].horseIndex;
+                    const botHorseIndex = game.players['bot'].horseIndex;
+                    
+                    const playerHorse = game.horses[playerHorseIndex];
+                    const botHorse = game.horses[botHorseIndex];
+                    
+                    const bothOutOfPodium = playerHorse.finishPosition > 3 && botHorse.finishPosition > 3;
+                    
+                    if (bothOutOfPodium) {
+                        // Ambos fuera del podio = 50% cada uno
+                        baseMultiplier = this.config.horseRace.botMode.refundOnNoPodium;
+                        position = '💸 Reembolso parcial (50%) - Ambos fuera del podio';
+                    } else {
+                        // Uno en podio, otro no = el que perdió pierde todo
+                        baseMultiplier = 0;
+                        position = `❌ No clasificó (posición #${horse.finishPosition})`;
+                    }
                 } else {
-                    // ✅ EN MODO MULTI: SIN PREMIO SI NO CLASIFICÓ
+                    // Modo multijugador: sin premio si no clasificó
                     baseMultiplier = 0;
-                    position = '❌ No clasificó';
+                    position = `❌ No clasificó (posición #${horse.finishPosition})`;
                 }
             }
 
