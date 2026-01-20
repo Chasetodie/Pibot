@@ -3697,8 +3697,8 @@ const userId = gameState.userId;
         return HORSE_EMOJIS.map((emoji, index) => ({
             emoji: emoji,
             index: index,
-            position: 0,
-            speed: 0,
+            position: 0,  // ✅ ASEGURAR QUE INICIE EN 0
+            speed: null,  // ✅ Se asignará en startHorseRace
             totalDistance: this.config.horseRace.raceDistance,
             finished: false,
             finishTime: null,
@@ -4334,10 +4334,17 @@ const userId = gameState.userId;
         // ✅ OBTENER EL CANAL CORRECTAMENTE
         const channel = messageOrChannel.channel || messageOrChannel;
         
-        // Asignar velocidades aleatorias realistas
+        // ✅ REINICIAR POSICIONES Y ASIGNAR VELOCIDADES
         game.horses.forEach(horse => {
+            horse.position = 0;  // ✅ ASEGURAR QUE INICIE EN 0
+            horse.finished = false;
+            horse.finishTime = null;
+            horse.finishPosition = null;
             horse.speed = this.getRandomSpeed();
         });
+        
+        // ✅ PROGRESO INICIAL EN 0
+        game.raceProgress = 0;
         
         // Mostrar carrera inicial
         const raceEmbed = await this.createRaceEmbed(game);
@@ -4355,11 +4362,15 @@ const userId = gameState.userId;
     }
 
     getRandomSpeed() {
-        // Velocidad base entre 1.5 y 3.5
-        const baseSpeed = 1.5 + Math.random() * 2;
+        // ✅ VELOCIDAD ENTRE 0.8 Y 2.5 POR UPDATE
+        const baseSpeed = 0.8 + Math.random() * 1.7;
         
-        // Agregar variación cada update (±0.5)
-        return () => baseSpeed + (Math.random() - 0.5);
+        // Retornar función que varía la velocidad ligeramente cada vez
+        return () => {
+            // Variación de ±20% de la velocidad base
+            const variation = baseSpeed * (0.8 + Math.random() * 0.4);
+            return variation;
+        };
     }
 
     async updateRaceProgress(game, channel, raceMsg) {
@@ -4370,7 +4381,13 @@ const userId = gameState.userId;
         game.horses.forEach(horse => {
             if (!horse.finished) {
                 // Velocidad variable
-                horse.position += horse.speed();
+                const speedValue = horse.speed();
+                horse.position += speedValue;
+                
+                // ✅ DEBUG (opcional - remover después)
+                if (game.horses.indexOf(horse) === 0) {
+                    console.log(`🐎 Caballo 0: pos=${horse.position.toFixed(1)}/${horse.totalDistance}, speed=${speedValue.toFixed(2)}`);
+                }
                 
                 // Limitar a la distancia total
                 if (horse.position >= horse.totalDistance) {
@@ -4388,12 +4405,15 @@ const userId = gameState.userId;
         const maxPosition = Math.max(...game.horses.map(h => h.position));
         game.raceProgress = (maxPosition / this.config.horseRace.raceDistance) * 100;
         
+        // ✅ DEBUG
+        console.log(`📊 Progreso: ${game.raceProgress.toFixed(1)}%, Max pos: ${maxPosition.toFixed(1)}/${game.horses[0].totalDistance}`);
+        
         // ✅ SOLO ACTUALIZAR SI NO HA TERMINADO
         if (!allFinished) {
-            const updatedEmbed = this.createRaceEmbed(game);
-            const components = [this.createDoubleButton(game)];
-            
             try {
+                const updatedEmbed = this.createRaceEmbed(game);
+                const components = [this.createDoubleButton(game)];
+                
                 await raceMsg.edit({ embeds: [updatedEmbed], components });
             } catch (error) {
                 console.log('Error actualizando carrera:', error.message);
@@ -4404,6 +4424,8 @@ const userId = gameState.userId;
             game.updateInterval = null;
             game.phase = 'finished';
             
+            console.log('🏁 Carrera terminada, mostrando resultados...');
+            
             // ✅ ESPERAR UN POCO ANTES DE MOSTRAR RESULTADOS
             setTimeout(async () => {
                 await this.finishHorseRace(game, channel, raceMsg);
@@ -4411,7 +4433,7 @@ const userId = gameState.userId;
         }
     }
 
-    async createRaceEmbed(game) {
+    createRaceEmbed(game) {
         const trackLength = 20; // Caracteres de pista visual
         
         let raceTrack = '';
@@ -4422,15 +4444,24 @@ const userId = gameState.userId;
             // Marcar caballos de jugadores
             const playerMarkers = Object.values(game.players)
                 .filter(p => p.horseIndex === i)
-                .map(p => p.id === 'bot' ? '🤖' : '👤')
+                .map(p => {
+                    if (p.id === 'bot') return '🤖';
+                    // Mostrar 💰 si dobló
+                    return p.hasDoubled ? '💰' : '👤';
+                })
                 .join('');
             
             const finishMarker = horse.finished ? ` ${FINISH_LINE} #${horse.finishPosition}` : '';
             
             raceTrack += `${track}${playerMarkers}${finishMarker}\n`;
         });
-
-        // ✅ AGREGAR: Calcular pot total considerando las apuestas dobladas
+        
+        // ✅ VERIFICAR QUE raceTrack NO ESTÉ VACÍO
+        if (!raceTrack || raceTrack.trim() === '') {
+            raceTrack = '🏁 Iniciando carrera...\n';
+        }
+        
+        // ✅ CALCULAR POT TOTAL CONSIDERANDO APUESTAS DOBLADAS
         let totalPot = 0;
         if (game.mode === 'bot') {
             totalPot = Object.values(game.players).reduce((sum, p) => 
@@ -4440,9 +4471,12 @@ const userId = gameState.userId;
             totalPot = game.pot;
         }
         
+        // ✅ ASEGURAR QUE SIEMPRE HAYA DESCRIPCIÓN
+        const description = `\`\`\`\n${raceTrack}\n\`\`\``;
+        
         const embed = new EmbedBuilder()
             .setTitle('🏁 CARRERA DE CABALLOS EN CURSO')
-            .setDescription(`\`\`\`\n${raceTrack}\n\`\`\``)
+            .setDescription(description || '🏁 Iniciando...') // ✅ FALLBACK
             .addFields(
                 { name: '📊 Progreso', value: `${game.raceProgress.toFixed(0)}%`, inline: true },
                 { name: '💰 Pot Total', value: `${this.formatNumber(totalPot)} π-b$`, inline: true },
@@ -4465,15 +4499,18 @@ const userId = gameState.userId;
             .filter(p => p.hasDoubled).length;
         const totalPlayers = Object.keys(game.players).length;
         
+        // ✅ ASEGURAR QUE game.raceProgress EXISTA
+        const currentProgress = game.raceProgress || 0;
+        
         const button = new ButtonBuilder()
             .setCustomId('double_bet_race')
-            .setLabel(`🎲 Doblar Apuesta (${playersWhoDoubled}/${totalPlayers} doblaron)`)
+            .setLabel(`🎲 Doblar Apuesta (${playersWhoDoubled}/${totalPlayers})`)
             .setStyle(ButtonStyle.Danger);
         
         // Deshabilitar si ya pasó el 75%
-        if (game.raceProgress >= 75) {
+        if (currentProgress >= 75) {
             button.setDisabled(true)
-                .setLabel('🚫 Muy tarde para doblar')
+                .setLabel('🚫 Muy tarde (>75%)')
                 .setStyle(ButtonStyle.Secondary);
         }
         
@@ -4534,9 +4571,36 @@ const userId = gameState.userId;
             } else if (horse.finishPosition === 3) {
                 baseMultiplier = this.config.horseRace.payouts.third;
                 position = '🥉 3er lugar';
-            } else if (game.mode === 'bot') {
-                baseMultiplier = this.config.horseRace.botMode.refundOnNoPodium;
-                position = '💸 Reembolso parcial';
+            } else {
+                // ✅ REEMBOLSO SOLO EN MODO BOT
+                if (game.mode === 'bot') {
+                    baseMultiplier = this.config.horseRace.botMode.refundOnNoPodium;
+                    position = '💸 Reembolso parcial (50%)';
+                } else {
+                    // ✅ EN MODO MULTI: SIN PREMIO SI NO CLASIFICÓ
+                    baseMultiplier = 0;
+                    position = '❌ No clasificó';
+                }
+            }
+
+            // ✅ SI NO HAY MULTIPLICADOR, NO DAR DINERO
+            if (baseMultiplier === 0) {
+                for (const { playerId, player } of horsePlayers) {
+                    const finalBet = player.hasDoubled ? player.bet * 2 : player.bet;
+                    const doubledText = player.hasDoubled ? ' (x2 🎲)' : '';
+                    const sharedText = playersCount > 1 ? ` [${playersCount} jugadores]` : '';
+                    
+                    results.set(playerId, { 
+                        winnings: 0,
+                        position: position + sharedText,
+                        horse: horse.emoji, 
+                        finalBet,
+                        doubled: player.hasDoubled,
+                        doubledText,
+                        playersOnHorse: playersCount
+                    });
+                }
+                continue; // ✅ SALTAR AL SIGUIENTE CABALLO
             }
             
             // ✅ CALCULAR PREMIO TOTAL DEL CABALLO (suma de todas las apuestas)
