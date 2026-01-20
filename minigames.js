@@ -2026,17 +2026,8 @@ const userId = gameState.userId;
             return;
         }
         
-        // ✅ CALCULAR PROGRESO ACTUAL EN TIEMPO REAL
-        const maxPosition = Math.max(...game.horses.map(h => h.position));
-        const realTimeProgress = (maxPosition / this.config.horseRace.raceDistance) * 100;
-        
-        if (realTimeProgress >= 75.0) {
-            await interaction.reply({ 
-                content: `❌ Ya es muy tarde para doblar la apuesta (${realTimeProgress.toFixed(1)}% ≥ 75%)`, 
-                ephemeral: true 
-            });
-            return;
-        }
+        // ✅ SI EL BOTÓN ESTÁ ACTIVO, DEJAMOS DOBLAR (sin verificar progreso)
+        // El botón se deshabilita automáticamente al 75%
         
         // Verificar que tenga suficiente dinero
         const user = await this.economy.getUser(userId);
@@ -2060,7 +2051,6 @@ const userId = gameState.userId;
         
         await interaction.reply({ 
             content: `🎲 **¡Apuesta doblada!**\n` +
-                    `Progreso actual: ${realTimeProgress.toFixed(1)}%\n` +
                     `Apuesta original: ${this.formatNumber(player.bet)} π-b$\n` +
                     `Nueva apuesta total: ${this.formatNumber(newBetAmount)} π-b$\n` +
                     `${game.horses[player.horseIndex].emoji} ¡Vamos!`,
@@ -2074,7 +2064,7 @@ const userId = gameState.userId;
         
         const playerValue = this.calculateHandValue(gameState.playerHand);
 
-const userId = gameState.userId;
+        const userId = gameState.userId;
         
         if (playerValue > 21) {
             await this.finishBlackjack(interaction, gameState, 'bust');
@@ -4406,24 +4396,25 @@ const userId = gameState.userId;
     }
 
     async updateRaceProgress(game, channel, raceMsg) {
-        let allFinished = true;
+        // Contar cuántos ya terminaron ANTES de actualizar
         let finishCount = game.horses.filter(h => h.finished).length;
         
+        console.log(`📊 Update: ${finishCount} caballos han terminado, progreso: ${(game.raceProgress || 0).toFixed(1)}%`);
+
         // Actualizar posiciones
         game.horses.forEach(horse => {
             if (!horse.finished) {
                 // Velocidad variable
                 const speedValue = horse.speed();
                 horse.position += speedValue;
-                                
+                
                 // Limitar a la distancia total
                 if (horse.position >= horse.totalDistance) {
                     horse.position = horse.totalDistance;
                     horse.finished = true;
                     horse.finishTime = Date.now();
-                    horse.finishPosition = ++finishCount;
-                } else {
-                    allFinished = false;
+                    finishCount++; // Incrementar aquí
+                    horse.finishPosition = finishCount;
                 }
             }
         });
@@ -4431,29 +4422,50 @@ const userId = gameState.userId;
         // Actualizar progreso general
         const maxPosition = Math.max(...game.horses.map(h => h.position));
         game.raceProgress = (maxPosition / this.config.horseRace.raceDistance) * 100;
-               
-        // ✅ SOLO ACTUALIZAR SI NO HA TERMINADO
-        if (!allFinished) {
-            try {
-                const updatedEmbed = this.createRaceEmbed(game);
-                const components = [this.createDoubleButton(game)];
+        
+        // ✅ VERIFICAR SI YA LLEGARON 5 CABALLOS
+        const finishedHorses = game.horses.filter(h => h.finished);
+        
+        if (finishedHorses.length >= 5) {
+            console.log(`🏁 Ya llegaron ${finishedHorses.length} caballos, terminando carrera...`);
+            
+            // ✅ ASIGNAR POSICIONES A LOS QUE NO TERMINARON
+            const unfinishedHorses = game.horses.filter(h => !h.finished);
+            
+            if (unfinishedHorses.length > 0) {
+                // Ordenar por distancia recorrida (más lejos = mejor posición)
+                unfinishedHorses.sort((a, b) => b.position - a.position);
                 
-                await raceMsg.edit({ embeds: [updatedEmbed], components });
-            } catch (error) {
-                console.log('Error actualizando carrera:', error.message);
+                let nextPosition = finishedHorses.length + 1;
+                for (const horse of unfinishedHorses) {
+                    horse.finished = true;
+                    horse.finishPosition = nextPosition++;
+                    horse.finishTime = Date.now();
+                    console.log(`  📍 ${horse.emoji} clasificado en posición #${horse.finishPosition} (distancia: ${horse.position.toFixed(1)})`);
+                }
             }
-        } else {
+            
             // ✅ DETENER INTERVALO INMEDIATAMENTE
             clearInterval(game.updateInterval);
             game.updateInterval = null;
             game.phase = 'finished';
             
-            console.log('🏁 Carrera terminada, mostrando resultados...');
-            
-            // ✅ ESPERAR UN POCO ANTES DE MOSTRAR RESULTADOS
+            // ✅ MOSTRAR RESULTADOS
             setTimeout(async () => {
                 await this.finishHorseRace(game, channel, raceMsg);
             }, 1000);
+            
+            return; // ✅ IMPORTANTE: SALIR AQUÍ
+        }
+        
+        // ✅ SI NO HAN LLEGADO 5, SEGUIR ACTUALIZANDO
+        try {
+            const updatedEmbed = this.createRaceEmbed(game);
+            const components = [this.createDoubleButton(game)];
+            
+            await raceMsg.edit({ embeds: [updatedEmbed], components });
+        } catch (error) {
+            console.log('Error actualizando carrera:', error.message);
         }
     }
 
@@ -4527,15 +4539,17 @@ const userId = gameState.userId;
         const currentProgress = game.raceProgress || 0;
         
         const button = new ButtonBuilder()
-            .setCustomId('double_bet_race')
-            .setLabel(`🎲 Doblar Apuesta (${playersWhoDoubled}/${totalPlayers})`)
-            .setStyle(ButtonStyle.Danger);
+            .setCustomId('double_bet_race');
         
-        // Deshabilitar si ya pasó el 75%
+        // ✅ DESHABILITAR SI YA PASÓ EL 75%
         if (currentProgress >= 75) {
-            button.setDisabled(true)
-                .setLabel('🚫 Muy tarde (>75%)')
-                .setStyle(ButtonStyle.Secondary);
+            button.setLabel('🚫 Muy tarde (>75%)')
+                .setStyle(ButtonStyle.Secondary)
+                .setDisabled(true);
+        } else {
+            button.setLabel(`🎲 Doblar Apuesta (${playersWhoDoubled}/${totalPlayers})`)
+                .setStyle(ButtonStyle.Danger)
+                .setDisabled(false);
         }
         
         return new ActionRowBuilder().addComponents(button);
@@ -4559,6 +4573,25 @@ const userId = gameState.userId;
         // ✅ OBTENER EL CANAL CORRECTAMENTE
         const channel = channelOrMessage.channel || channelOrMessage;
         
+        // ✅ VERIFICAR QUE TODOS LOS CABALLOS TENGAN POSICIÓN FINAL
+        const unfinishedHorses = game.horses.filter(h => !h.finishPosition);
+        if (unfinishedHorses.length > 0) {
+            console.log(`⚠️ Hay ${unfinishedHorses.length} caballos sin posición final, asignando...`);
+            
+            // Ordenar por distancia
+            unfinishedHorses.sort((a, b) => b.position - a.position);
+            
+            // Encontrar la última posición asignada
+            const maxPosition = Math.max(...game.horses.filter(h => h.finishPosition).map(h => h.finishPosition));
+            let nextPosition = maxPosition + 1;
+            
+            for (const horse of unfinishedHorses) {
+                horse.finished = true;
+                horse.finishPosition = nextPosition++;
+                horse.finishTime = Date.now();
+            }
+        }
+
         // Ordenar caballos por posición final
         const podium = game.horses
             .filter(h => h.finished)
