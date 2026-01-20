@@ -435,7 +435,7 @@ class ShopSystem {
             },
             'bunny_suit_pibe12': {
                 id: 'bunny_suit_pibe12',
-                name: '🐰 Traje de Conejo de Pibe 12',
+                name: '🐰 Traje de Conejita de Pibe 12',
                 description: 'Un traje legendario que aumenta ganancias y suerte (se desgasta con el uso)',
                 price: 850000,
                 category: 'equipment', // CAMBIAR de 'tool' a 'equipment'
