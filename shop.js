@@ -4453,8 +4453,8 @@ class ShopSystem {
         await this.economy.checkPendingPassiveIncome(message.author.id);
         await this.economy.checkAndNotifyItems(message.author.id, message);
 
-        // Probabilidad 5% de recibir maldición aleatoria
-        if (Math.random() < 0.05) {
+        // Probabilidad 3% de recibir maldición aleatoria
+        if (Math.random() < 0.03) {
             await this.applyRandomCurse(message.author.id);
             
             const curseNotif = new EmbedBuilder()
