@@ -2415,7 +2415,7 @@ const userId = gameState.userId;
                         protectionMessage = '🧃 En hora buena, el Condon usado de Pibe 2 te protegió!';
                     }
                     
-                    await message.reply(protectionMessage);
+                    await messageOrInteraction.reply(protectionMessage);
                 } else {
                     await this.economy.removeMoney(userId, finalBet, 'blackjack_loss');
                 }
@@ -2449,7 +2449,7 @@ const userId = gameState.userId;
                         protectionMessage = '🧃 En hora buena, el Condon usado de Pibe 2 te protegió!';
                     }
                     
-                    await message.reply(protectionMessage);
+                    await messageOrInteraction.reply(protectionMessage);
                 } else {
                     await this.economy.removeMoney(userId, finalBet, 'blackjack_loss');
                 }
@@ -3546,6 +3546,7 @@ const userId = gameState.userId;
             
             const hasProtection = await this.shop.hasGameProtection(userId);
             if (hasProtection) {
+                let protectionMessage = '🛡️ Tu protección evitó la pérdida de dinero!';
                 const user = await this.economy.getUser(userId);
                 const activeEffects = this.shop.parseActiveEffects(user.activeEffects);
                 

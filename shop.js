@@ -101,7 +101,7 @@ class ShopSystem {
                 effect: {
                     type: 'protection',
                     prevents: ['robbery_fail', 'money_loss'],
-                    duration: 3600
+                    duration: 1800
                 },
                 stackable: true,
                 maxStack: 2
@@ -836,6 +836,20 @@ class ShopSystem {
         }
         
         return {};
+    }
+
+    // Agregar después de parseActiveEffects() (línea ~180)
+    hasCurseActive(userId, activeEffects = null) {
+        if (!activeEffects) return false;
+        
+        const curse = activeEffects['death_hand_curse'];
+        if (curse && curse.length > 0) {
+            const curseEffect = curse[0];
+            if (curseEffect.expiresAt > Date.now() && curseEffect.disablesEffects) {
+                return true;
+            }
+        }
+        return false;
     }
 
     async getEquippedCosmetics(userId) {
@@ -1577,13 +1591,17 @@ class ShopSystem {
         const user = await this.economy.getUser(userId);
         const activeEffects = this.parseActiveEffects(user.activeEffects);
         
+        // ✅ AGREGAR ESTO AL INICIO
+        if (this.hasCurseActive(userId, activeEffects)) {
+            return false; // Maldición desactiva protección
+        }
+        
         for (const [itemId, effects] of Object.entries(activeEffects)) {
             for (const effect of effects) {
                 if ((effect.type === 'penalty_protection' || effect.type === 'protection') 
                     && effect.expiresAt > Date.now()) {
-                    // CAMBIO: 80% de protección en lugar de 100%
                     const roll = Math.random();
-                    return roll < 0.8; // 80% de proteger, 20% de fallar
+                    return roll < 0.8;
                 }
             }
         }
@@ -1787,6 +1805,18 @@ class ShopSystem {
     async applyEquipmentBonus(userId, equipmentType = null) {
         const user = await this.economy.getUser(userId);
         const activeEffects = this.parseActiveEffects(user.activeEffects);
+
+        // ✅ AGREGAR ESTO AL INICIO
+        if (this.hasCurseActive(userId, activeEffects)) {
+            return {
+                applied: false,
+                money: 0,
+                luck: 0,
+                attack: 0,
+                defense: 0,
+                items: []
+            };
+        }
 
         let bonusData = {
             applied: false,
@@ -2042,7 +2072,12 @@ class ShopSystem {
     async getSuccessBoost(userId, action) {
         const user = await this.economy.getUser(userId);        
         const activeEffects = this.parseActiveEffects(user.activeEffects);        
-        
+
+        // ✅ AGREGAR ESTO AL INICIO
+        if (this.hasCurseActive(userId, activeEffects)) {
+            return { applied: false }; // Maldición desactiva herramientas
+        }
+
         let totalBoost = 0;
         
         // Buscar efectos de success_boost para la acción específica
@@ -2323,6 +2358,11 @@ class ShopSystem {
         const multipliers = await this.getActiveMultipliers(userId, 'all');
         const user = await this.economy.getUser(userId);
         const activeEffects = this.parseActiveEffects(user.activeEffects);
+
+        // ✅ AGREGAR ESTO DESPUÉS DE PARSEAR
+        if (this.hasCurseActive(userId, activeEffects)) {
+            return baseXp; // Maldición desactiva multiplicadores de XP
+        }
         
         let xpMultiplier = 1.0;
         
@@ -2791,6 +2831,12 @@ class ShopSystem {
     async getCooldownReduction(userId, action) {
         const user = await this.economy.getUser(userId);
         const activeEffects = this.parseActiveEffects(user.activeEffects);
+    
+        // ✅ AGREGAR ESTO AL INICIO
+        if (this.hasCurseActive(userId, activeEffects)) {
+            return 0; // Maldición desactiva reducción de cooldowns
+        }
+
         const permanentEffects = this.parseEffects(user.permanentEffects);
         
         let reduction = 0;
@@ -2833,6 +2879,12 @@ class ShopSystem {
         const user = await this.economy.getUser(userId);
 
         const activeEffects = this.parseActiveEffects(user.activeEffects);
+
+        // ✅ AGREGAR ESTO AL INICIO
+        if (this.hasCurseActive(userId, activeEffects)) {
+            return { protected: false, reduction: 0 }; // Maldición desactiva anti-robo
+        }
+
         const permanentEffects = this.parseEffects(user.permanentEffects);
        
         let protection = 0; // 0 = sin protección, 1 = protección completa
@@ -2930,6 +2982,11 @@ class ShopSystem {
         const user = await this.economy.getUser(userId);
         const permanentEffects = this.parseEffects(user.permanentEffects);
         
+        // ✅ AGREGAR ESTO
+        if (this.hasCurseActive(userId, activeEffects)) {
+            return { hasVip: false }; // Maldición desactiva VIP temporalmente
+        }
+
         for (const [itemId, effect] of Object.entries(permanentEffects)) {
             if (effect.type === 'vip_membership') {
                 const now = Date.now();
@@ -3019,6 +3076,11 @@ class ShopSystem {
     async applyPickaxeBonus(userId) {
         const user = await this.economy.getUser(userId);
         const activeEffects = this.parseActiveEffects(user.activeEffects);
+
+        // ✅ AGREGAR ESTO AL INICIO
+        if (this.hasCurseActive(userId, activeEffects)) {
+            return { applied: false }; // Maldición desactiva herramientas
+        }
 
         // Buscar herramientas en activeEffects
         for (const [itemId, effects] of Object.entries(activeEffects)) {
