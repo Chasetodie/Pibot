@@ -350,6 +350,13 @@ async showMyLimits(message) {
     }
 
     async calculateLuck(userId) {
+        // ✅ Verificar si está maldito antes de mostrar boosts
+        const user = await this.economy.getUser(userId);
+        const activeEffects = this.shop.parseActiveEffects(user.activeEffects);
+        const isCursed = this.shop.hasCurseActive(userId, activeEffects);
+
+        const effects = await this.shop.getActiveMultipliers(userId, 'games');
+
         let totalLuckBonus = 0;
         let luckMessages = [];
         
@@ -359,7 +366,13 @@ async showMyLimits(message) {
             if (luckBoost.luckBoost) {
                 const itemBonus = Math.min(luckBoost.luckBoost * 0.4, 0.08);
                 totalLuckBonus += itemBonus;
-                luckMessages.push(`🍀 **Boost de Suerte** (+${Math.round(itemBonus * 100)}%)`);
+
+                if (!isCursed && effects.luckBoost > 0) {
+                    luckMessages.push(`🍀 **Boost de Suerte** (+${Math.round(itemBonus * 100)}%)`);
+                } else if (isCursed && effects.luckBoost < 0) {
+                    // Mostrar penalización de la maldición
+                    luckMessages.push(`☠️ **Maldición Activa** (+${Math.round(effects.luckBoost * 100)}%)`);
+                }
             }
         }
         

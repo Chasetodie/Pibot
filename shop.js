@@ -1326,6 +1326,14 @@ class ShopSystem {
     async processItemUse(userId, itemId, item) {
         const user = await this.economy.getUser(userId);
         
+        const activeEffects = this.parseActiveEffects(user.activeEffects);
+        if (this.hasCurseActive(userId, activeEffects)) {
+            return {
+                success: false,
+                message: '☠️ La Mano del Muerto te impide usar items. Todos tus efectos están desactivados.'
+            };
+        }
+
         // Prevenir uso directo de items lanzables
         if (item.effect.throwable) {
             return { 
@@ -1586,22 +1594,52 @@ class ShopSystem {
         };
     }
 
-    // Método para verificar protección contra penalizaciones
     async hasGameProtection(userId) {
         const user = await this.economy.getUser(userId);
         const activeEffects = this.parseActiveEffects(user.activeEffects);
         
-        // ✅ AGREGAR ESTO AL INICIO
+        // Verificar maldición
         if (this.hasCurseActive(userId, activeEffects)) {
-            return false; // Maldición desactiva protección
+            return false;
         }
         
+        // ✅ Verificar condón del pibe 2 (100% protección)
+        if (activeEffects['condon_pibe2']) {
+            for (const effect of activeEffects['condon_pibe2']) {
+                if (effect.type === 'protection' && effect.expiresAt > Date.now()) {
+                    return true; // 100% garantizado
+                }
+            }
+        }
+        
+        // ✅ Verificar Fortune Shield (90% protección)
+        if (activeEffects['fortune_shield']) {
+            for (const effect of activeEffects['fortune_shield']) {
+                if (effect.type === 'protection' && effect.expiresAt > Date.now()) {
+                    const roll = Math.random();
+                    return roll < 0.9; // 90%
+                }
+            }
+        }
+        
+        // ✅ NUEVO: Verificar Health Potion (60% protección)
+        if (activeEffects['health_potion']) {
+            for (const effect of activeEffects['health_potion']) {
+                if (effect.type === 'penalty_protection' && effect.expiresAt > Date.now()) {
+                    const roll = Math.random();
+                    return roll < 0.6; // 60% de proteger
+                }
+            }
+        }
+        
+        // Verificar otros items de protección (80% por defecto)
         for (const [itemId, effects] of Object.entries(activeEffects)) {
             for (const effect of effects) {
                 if ((effect.type === 'penalty_protection' || effect.type === 'protection') 
                     && effect.expiresAt > Date.now()) {
+                    
                     const roll = Math.random();
-                    return roll < 0.8;
+                    return roll < 0.8; // 80%
                 }
             }
         }
@@ -2120,6 +2158,17 @@ class ShopSystem {
         }
         
         const activeEffects = this.parseActiveEffects(user.activeEffects);
+
+        // ✅ VERIFICAR ESTO ESTÉ AL INICIO, ANTES DE TODO
+        const curse = activeEffects['death_hand_curse'];
+        if (curse && curse.length > 0 && curse[0].expiresAt > Date.now()) {
+            return {
+                multiplier: 1 + curse[0].moneyPenalty, // 0.75 (25% menos)
+                reduction: 0,
+                luckBoost: curse[0].luckPenalty // -0.5
+            };
+        }
+
         const permanentEffects = this.parseEffects(user.permanentEffects);       
         
         let totalMultiplier = 1.0;
@@ -2136,17 +2185,6 @@ class ShopSystem {
                 const targets = effect.targets || [];
                 if (!Array.isArray(targets)) continue;
                 
-                // Verificar maldición
-                const curse = activeEffects['death_hand_curse'];
-                if (curse && curse.length > 0 && curse[0].expiresAt > Date.now()) {
-                    // Solo aplicar penalties, ignorar todos los demás efectos
-                    return {
-                        multiplier: 1 + curse[0].moneyPenalty, // 0.75 (25% menos)
-                        reduction: 0,
-                        luckBoost: curse[0].luckPenalty // -0.5
-                    };
-                }
-
                 const appliesToAction = targets.includes(action) || 
                     (targets.includes('all') && ['work', 'games', 'gambling'].includes(action)) ||
                     (targets.includes('games') && ['coinflip', 'dice', 'roulette'].includes(action));
