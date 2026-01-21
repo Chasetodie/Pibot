@@ -94,7 +94,7 @@ class ShopSystem {
             'fortune_shield': {
                 id: 'fortune_shield',
                 name: '🛡️🍀 Escudo de la Fortuna',
-                description: 'Protege contra pérdidas y fallos durante 1 hora',
+                description: 'Reduce el riesgo contra pérdidas y fallos en un 90% durante 30 minutos',
                 category: 'consumable',
                 rarity: 'epic',
                 price: 80000,
@@ -260,21 +260,21 @@ class ShopSystem {
                 stackable: true,
                 maxStack: 5
             },
-            /*'condon_pibe2': {
+            'condon_pibe2': {
                 id: 'condon_pibe2',
                 name: '🧃 Condón usado del Pibe 2**',
                 description: 'Un objeto misterioso de dudosa efectividad... pero asegura una protección total durante 10 minutos.',
-                price: 6969, // precio meme
+                price: 67676, // precio meme
                 category: 'consumable',
                 rarity: 'epic',
                 effect: {
                     type: 'protection',
                     prevents: ['robbery', 'money_loss'],
-                    duration: 600 // 10 minutos
+                    uses: 1
                 },
                 stackable: true,
                 maxStack: 5
-            },*/
+            },
             'role_token': {
                 id: 'role_token',
                 name: '🎭 Token de Rol Personalizado',
@@ -342,7 +342,24 @@ class ShopSystem {
                 stackable: false,
                 maxStack: 1
             },
-
+            'mano_del_muerto': {
+                id: 'mano_del_muerto',
+                name: '☠️ La Mano del Muerto',
+                description: 'Maldición lanzable que reduce suerte -50% y dinero -25%. Desactiva todos los efectos por 1 hora',
+                price: 10000,
+                category: 'consumable',
+                rarity: 'rare',
+                effect: {
+                    type: 'curse',
+                    luckPenalty: -0.5,
+                    moneyPenalty: -0.25,
+                    disablesEffects: true,
+                    duration: 3600, // 1 hora
+                    throwable: true
+                },
+                stackable: true,
+                maxStack: 10
+            },
             // === ITEMS ESPECIALES ===
             'custom_nickname_token': {
                 id: 'custom_nickname_token',
@@ -401,23 +418,21 @@ class ShopSystem {
                 maxStack: 2
             },
 
-            /*'health_potion': {
+            'health_potion': {
                 id: 'health_potion',
                 name: '💊 Poción de Salud',
-                description: 'Protege contra penalizaciones de juegos fallidos por 1 hora',
-                price: 15000,
+                description: 'Reduce penalizaciones de juegos fallidos en un 90% por 10 minutos',
+                price: 100000,
                 category: 'consumable',
                 rarity: 'uncommon',
                 effect: {
                     type: 'penalty_protection',
                     targets: ['games'],
-                    duration: 3600 // 1 hora
+                    duration: 600 // 1 hora
                 },
                 stackable: true,
                 maxStack: 10
             },
-            */
-
             'experience_multiplier': {
                 id: 'experience_multiplier',
                 name: '📈 Multiplicador de EXP',
@@ -430,6 +445,22 @@ class ShopSystem {
                     targets: ['all'],
                     multiplier: 1.5,
                     duration: 2700 // 45 minutos
+                },
+                stackable: true,
+                maxStack: 5
+            },
+            'moby_dick_pibe4': {
+                id: 'moby_dick_pibe4',
+                name: '🐋 El Moby Dick de Pibe 4',
+                description: 'Aumenta ganancias +24% pero reduce suerte -14% por 30 minutos',
+                price: 44444,
+                category: 'consumable',
+                rarity: 'epic',
+                effect: {
+                    type: 'moby_dick_buff',
+                    moneyMultiplier: 1.24,
+                    luckPenalty: -0.14,
+                    duration: 1800 // 30 minutos
                 },
                 stackable: true,
                 maxStack: 5
@@ -1535,10 +1566,11 @@ class ShopSystem {
         
         for (const [itemId, effects] of Object.entries(activeEffects)) {
             for (const effect of effects) {
-                // Verificar tanto penalty_protection como protection (fortune_shield)
                 if ((effect.type === 'penalty_protection' || effect.type === 'protection') 
                     && effect.expiresAt > Date.now()) {
-                    return true;
+                    // CAMBIO: 80% de protección en lugar de 100%
+                    const roll = Math.random();
+                    return roll < 0.8; // 80% de proteger, 20% de fallar
                 }
             }
         }
@@ -2056,6 +2088,17 @@ class ShopSystem {
                 const targets = effect.targets || [];
                 if (!Array.isArray(targets)) continue;
                 
+                // Verificar maldición
+                const curse = activeEffects['death_hand_curse'];
+                if (curse && curse.length > 0 && curse[0].expiresAt > Date.now()) {
+                    // Solo aplicar penalties, ignorar todos los demás efectos
+                    return {
+                        multiplier: 1 + curse[0].moneyPenalty, // 0.75 (25% menos)
+                        reduction: 0,
+                        luckBoost: curse[0].luckPenalty // -0.5
+                    };
+                }
+
                 const appliesToAction = targets.includes(action) || 
                     (targets.includes('all') && ['work', 'games', 'gambling'].includes(action)) ||
                     (targets.includes('games') && ['coinflip', 'dice', 'roulette'].includes(action));
@@ -2069,6 +2112,13 @@ class ShopSystem {
                     // Para futuro:
                     // if (effect.attackBonus) totalAttack += effect.attackBonus;
                     // if (effect.defenseBonus) totalDefense += effect.defenseBonus;
+                    continue;
+                }
+
+                // Después de verificar equipmentType y antes de los otros checks
+                if (effect.type === 'moby_dick_buff') {
+                    if (effect.moneyMultiplier) totalMultiplier *= effect.moneyMultiplier;
+                    if (effect.luckPenalty) totalLuckBoost += effect.luckPenalty; // Suma negativo
                     continue;
                 }
 
@@ -2567,6 +2617,28 @@ class ShopSystem {
         // Parsear efectos
         const permanentEffects = this.parseEffects(user.permanentEffects);
         const activeEffects = this.parseActiveEffects(user.activeEffects);
+
+        // Verificar si tiene maldición activa
+        const curse = activeEffects['death_hand_curse'];
+        if (curse && curse.length > 0 && curse[0].expiresAt > Date.now()) {
+            const timeLeft = curse[0].expiresAt - Date.now();
+            const minutes = Math.floor(timeLeft / 60000);
+            const seconds = Math.floor((timeLeft % 60000) / 1000);
+            
+            const curseEmbed = new EmbedBuilder()
+                .setTitle('☠️ MALDICIÓN ACTIVA')
+                .setDescription('**La Mano del Muerto** está afectándote.')
+                .addFields(
+                    { name: '💀 Efectos', value: '• Suerte -50%\n• Dinero -25%\n• Todos tus efectos están desactivados', inline: false },
+                    { name: '⏰ Tiempo Restante', value: `${minutes}m ${seconds}s`, inline: true },
+                    { name: '🔮 Lanzado Por', value: `<@${curse[0].appliedBy}>`, inline: true }
+                )
+                .setColor('#8B0000')
+                .setTimestamp();
+            
+            await message.reply({ embeds: [curseEmbed] });
+            return; // No mostrar otros efectos
+        }
 
         const hasPermanent = Object.keys(permanentEffects).length > 0;
         const hasTemporary = Object.keys(activeEffects).length > 0;
@@ -4166,6 +4238,80 @@ class ShopSystem {
         await message.reply({ embeds: [embed] });
     }
 
+    async throwCurse(message, targetUserId) {
+        const user = await this.economy.getUser(message.author.id);
+        const userItems = user.items || {};
+        
+        if (!userItems['mano_del_muerto'] || userItems['mano_del_muerto'].quantity < 1) {
+            await message.reply('❌ No tienes **☠️ La Mano del Muerto** para lanzar.');
+            return;
+        }
+        
+        // Consumir el item
+        const newItems = { ...userItems };
+        newItems['mano_del_muerto'].quantity -= 1;
+        if (newItems['mano_del_muerto'].quantity <= 0) {
+            delete newItems['mano_del_muerto'];
+        }
+        
+        await this.economy.updateUser(message.author.id, { items: newItems });
+        
+        // Aplicar maldición al objetivo
+        const targetUser = await this.economy.getUser(targetUserId);
+        const activeEffects = this.parseActiveEffects(targetUser.activeEffects);
+        
+        const curseEffect = {
+            type: 'death_hand_curse',
+            luckPenalty: -0.5,
+            moneyPenalty: -0.25,
+            disablesEffects: true,
+            appliedAt: Date.now(),
+            expiresAt: Date.now() + 3600000, // 1 hora
+            appliedBy: message.author.id
+        };
+        
+        if (!activeEffects['death_hand_curse']) {
+            activeEffects['death_hand_curse'] = [];
+        }
+        activeEffects['death_hand_curse'].push(curseEffect);
+        
+        await this.economy.updateUser(targetUserId, { activeEffects });
+        
+        const embed = new EmbedBuilder()
+            .setTitle('☠️ Maldición Lanzada')
+            .setDescription(`<@${message.author.id}> lanzó **La Mano del Muerto** a <@${targetUserId}>!`)
+            .addFields(
+                { name: '💀 Efectos', value: '• Suerte -50%\n• Dinero -25%\n• Efectos desactivados', inline: true },
+                { name: '⏰ Duración', value: '1 hora', inline: true }
+            )
+            .setColor('#8B0000')
+            .setTimestamp();
+        
+        await message.reply({ embeds: [embed] });
+    }
+
+    async applyRandomCurse(userId) {
+        const user = await this.economy.getUser(userId);
+        const activeEffects = this.parseActiveEffects(user.activeEffects);
+        
+        const curseEffect = {
+            type: 'death_hand_curse',
+            luckPenalty: -0.5,
+            moneyPenalty: -0.25,
+            disablesEffects: true,
+            appliedAt: Date.now(),
+            expiresAt: Date.now() + 1800000, // 30 minutos
+            appliedBy: 'random' // Identificar que fue aleatorio
+        };
+        
+        if (!activeEffects['death_hand_curse']) {
+            activeEffects['death_hand_curse'] = [];
+        }
+        activeEffects['death_hand_curse'].push(curseEffect);
+        
+        await this.economy.updateUser(userId, { activeEffects });
+    }
+
     // === COMANDOS ===
     async processCommand(message){
         if (message.author.bot) return;
@@ -4173,7 +4319,19 @@ class ShopSystem {
         // Verificar ingresos pasivos pendientes
         await this.economy.checkPendingPassiveIncome(message.author.id);
         await this.economy.checkAndNotifyItems(message.author.id, message);
-       
+
+        /*// Probabilidad 5% de recibir maldición aleatoria
+        if (Math.random() < 0.05) {
+            await this.applyRandomCurse(message.author.id);
+            
+            const curseNotif = new EmbedBuilder()
+                .setTitle('☠️ ¡MALDICIÓN ALEATORIA!')
+                .setDescription('**La Mano del Muerto** apareció de la nada y te maldijo por 30 minutos.')
+                .setColor('#8B0000');
+            
+            await message.reply({ embeds: [curseNotif] });
+        }*/
+
         const args = message.content.toLowerCase().split(' ');
         const command = args[0];
         await this.economy.missions.updateMissionProgress(message.author.id, 'commands_used');
@@ -4217,6 +4375,19 @@ class ShopSystem {
                         return;
                     }
                     await this.useItem(message, args.slice(1).join(' '));
+                    break;
+                case '>throw':
+                case '>lanzar':
+                    if (!args[1]) {
+                        await message.reply('❌ Menciona a quién lanzar la maldición. Ejemplo: `>throw @usuario`');
+                        return;
+                    }
+                    const targetUserId = message.mentions.users.first()?.id;
+                    if (!targetUserId) {
+                        await message.reply('❌ Debes mencionar un usuario válido.');
+                        return;
+                    }
+                    await this.throwCurse(message, targetUserId);
                     break;
                 case '>efectos':
                 case '>effects':

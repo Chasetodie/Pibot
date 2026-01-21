@@ -955,7 +955,6 @@ let luckMessage = '';
                 const user = await this.economy.getUser(userId);
                 const activeEffects = this.shop.parseActiveEffects(user.activeEffects);
                 
-                
                 // Verificar health potion específicamente
                 if (activeEffects['health_potion']) {
                     protectionMessage = '💊 Tu Poción de Salud te protegió de las penalizaciones!';
@@ -1321,9 +1320,11 @@ let luckMessage = '';
                 const activeEffects = this.shop.parseActiveEffects(user.activeEffects);
                 
                 if (activeEffects['health_potion']) {
-                    protectionMessage = '💊 Tu Poción de Salud te protegió!';
+                    protectionMessage = '💊 Tu Poción de Salud te protegió de las penalizaciones!';
                 } else if (activeEffects['fortune_shield']) {
                     protectionMessage = '🛡️ Tu Escudo de la Fortuna te protegió!';
+                } else if (activeEffects['condon_pibe2']) {
+                    protectionMessage = '🧃 En hora buena, el Condon usado de Pibe 2 te protegió!';
                 }
                 
                 await message.reply(protectionMessage);
@@ -1678,9 +1679,11 @@ let luckMessage = '';
                 const activeEffects = this.shop.parseActiveEffects(user.activeEffects);
                 
                 if (activeEffects['health_potion']) {
-                    protectionMessage = '💊 Tu Poción de Salud te protegió!';
+                    protectionMessage = '💊 Tu Poción de Salud te protegió de las penalizaciones!';
                 } else if (activeEffects['fortune_shield']) {
                     protectionMessage = '🛡️ Tu Escudo de la Fortuna te protegió!';
+                } else if (activeEffects['condon_pibe2']) {
+                    protectionMessage = '🧃 En hora buena, el Condon usado de Pibe 2 te protegió!';
                 }
                 
                 await message.reply(protectionMessage);
@@ -2405,9 +2408,11 @@ const userId = gameState.userId;
                     const activeEffects = this.shop.parseActiveEffects(user.activeEffects);
                     
                     if (activeEffects['health_potion']) {
-                        protectionMessage = '💊 Tu Poción de Salud te protegió!';
+                        protectionMessage = '💊 Tu Poción de Salud te protegió de las penalizaciones!';
                     } else if (activeEffects['fortune_shield']) {
                         protectionMessage = '🛡️ Tu Escudo de la Fortuna te protegió!';
+                    } else if (activeEffects['condon_pibe2']) {
+                        protectionMessage = '🧃 En hora buena, el Condon usado de Pibe 2 te protegió!';
                     }
                     
                     await message.reply(protectionMessage);
@@ -2437,9 +2442,11 @@ const userId = gameState.userId;
                     const activeEffects = this.shop.parseActiveEffects(user.activeEffects);
                     
                     if (activeEffects['health_potion']) {
-                        protectionMessage = '💊 Tu Poción de Salud te protegió!';
+                        protectionMessage = '💊 Tu Poción de Salud te protegió de las penalizaciones!';
                     } else if (activeEffects['fortune_shield']) {
                         protectionMessage = '🛡️ Tu Escudo de la Fortuna te protegió!';
+                    } else if (activeEffects['condon_pibe2']) {
+                        protectionMessage = '🧃 En hora buena, el Condon usado de Pibe 2 te protegió!';
                     }
                     
                     await message.reply(protectionMessage);
@@ -2943,9 +2950,11 @@ const userId = gameState.userId;
                 const activeEffects = this.shop.parseActiveEffects(user.activeEffects);
                 
                 if (activeEffects['health_potion']) {
-                    protectionMessage = '💊 Tu Poción de Salud te protegió!';
+                    protectionMessage = '💊 Tu Poción de Salud te protegió de las penalizaciones!';
                 } else if (activeEffects['fortune_shield']) {
                     protectionMessage = '🛡️ Tu Escudo de la Fortuna te protegió!';
+                } else if (activeEffects['condon_pibe2']) {
+                    protectionMessage = '🧃 En hora buena, el Condon usado de Pibe 2 te protegió!';
                 }
                 
                 await message.reply(protectionMessage);
@@ -3540,11 +3549,12 @@ const userId = gameState.userId;
                 const user = await this.economy.getUser(userId);
                 const activeEffects = this.shop.parseActiveEffects(user.activeEffects);
                 
-                let protectionMessage = '🛡️ Tu protección evitó la pérdida!';
                 if (activeEffects['health_potion']) {
-                    protectionMessage = '💊 Tu Poción de Salud te protegió!';
+                    protectionMessage = '💊 Tu Poción de Salud te protegió de las penalizaciones!';
                 } else if (activeEffects['fortune_shield']) {
                     protectionMessage = '🛡️ Tu Escudo de la Fortuna te protegió!';
+                } else if (activeEffects['condon_pibe2']) {
+                    protectionMessage = '🧃 En hora buena, el Condon usado de Pibe 2 te protegió!';
                 }
                 
                 await message.reply(protectionMessage);
@@ -4470,34 +4480,52 @@ const userId = gameState.userId;
     }
 
     createRaceEmbed(game) {
-        const trackLength = 20; // Caracteres de pista visual
+        const trackLength = 20;
+        
+        // ✅ ORDENAR CABALLOS POR POSICIÓN ACTUAL (más avanzados arriba)
+        const sortedHorses = [...game.horses].sort((a, b) => {
+            if (a.finished && b.finished) {
+                return a.finishPosition - b.finishPosition;
+            }
+            if (a.finished) return -1;
+            if (b.finished) return 1;
+            return b.position - a.position;
+        });
         
         let raceTrack = '';
-        game.horses.forEach((horse, i) => {
+        let currentPosition = 1;
+        
+        for (const horse of sortedHorses) {
             const progress = Math.floor((horse.position / horse.totalDistance) * trackLength);
             const track = TRACK_EMOJI.repeat(progress) + horse.emoji + TRACK_EMOJI.repeat(trackLength - progress);
             
             // Marcar caballos de jugadores
             const playerMarkers = Object.values(game.players)
-                .filter(p => p.horseIndex === i)
+                .filter(p => p.horseIndex === horse.index)
                 .map(p => {
                     if (p.id === 'bot') return '🤖';
-                    // Mostrar 💰 si dobló
                     return p.hasDoubled ? '💰' : '👤';
                 })
                 .join('');
             
-            const finishMarker = horse.finished ? ` ${FINISH_LINE} #${horse.finishPosition}` : '';
+            // ✅ MOSTRAR POSICIÓN ACTUAL O FINAL
+            let positionMarker = '';
+            if (horse.finished) {
+                positionMarker = ` ${FINISH_LINE} #${horse.finishPosition}`;
+            } else {
+                // Mostrar posición actual en tiempo real
+                const tempPosition = currentPosition;
+                positionMarker = ` [#${tempPosition}]`;
+                currentPosition++;
+            }
             
-            raceTrack += `${track}${playerMarkers}${finishMarker}\n`;
-        });
+            raceTrack += `${track}${playerMarkers}${positionMarker}\n`;
+        }
         
-        // ✅ VERIFICAR QUE raceTrack NO ESTÉ VACÍO
         if (!raceTrack || raceTrack.trim() === '') {
             raceTrack = '🏁 Iniciando carrera...\n';
         }
         
-        // ✅ CALCULAR POT TOTAL CONSIDERANDO APUESTAS DOBLADAS
         let totalPot = 0;
         if (game.mode === 'bot') {
             totalPot = Object.values(game.players).reduce((sum, p) => 
@@ -4507,14 +4535,17 @@ const userId = gameState.userId;
             totalPot = game.pot;
         }
         
-        // ✅ ASEGURAR QUE SIEMPRE HAYA DESCRIPCIÓN
+        const finishedCount = game.horses.filter(h => h.finished).length;
+        const totalHorses = game.horses.length;
+        
         const description = `\`\`\`\n${raceTrack}\n\`\`\``;
         
         const embed = new EmbedBuilder()
             .setTitle('🏁 CARRERA DE CABALLOS EN CURSO')
-            .setDescription(description || '🏁 Iniciando...') // ✅ FALLBACK
+            .setDescription(description || '🏁 Iniciando...')
             .addFields(
                 { name: '📊 Progreso', value: `${game.raceProgress.toFixed(0)}%`, inline: true },
+                { name: '🏁 Terminaron', value: `${finishedCount}/${totalHorses}`, inline: true },
                 { name: '💰 Pot Total', value: `${this.formatNumber(totalPot)} π-b$`, inline: true },
                 { name: '🎲 Apuestas x2', value: 
                     game.raceProgress < 75 ? 
@@ -4524,7 +4555,7 @@ const userId = gameState.userId;
                 }
             )
             .setColor(game.raceProgress < 50 ? '#00FF00' : game.raceProgress < 75 ? '#FFD700' : '#FF4500')
-            .setFooter({ text: '👤 = Apuesta normal | 💰 = Apuesta x2 | 🤖 = Bot' });
+            .setFooter({ text: '👤 = Normal | 💰 = x2 | 🤖 = Bot | 🏁 = Llegó | [#N] = Posición actual' });
         
         return embed;
     }
@@ -4743,56 +4774,59 @@ const userId = gameState.userId;
     }
 
     async showRaceResults(game, channelOrMessage, podium, results) {
-        // ✅ OBTENER EL CANAL CORRECTAMENTE
         const channel = channelOrMessage.channel || channelOrMessage;
+        
+        const allHorses = game.horses
+            .filter(h => h.finishPosition)
+            .sort((a, b) => a.finishPosition - b.finishPosition);
         
         let resultsText = '';
         
-        // Agrupar por caballo para mostrar mejor
-        const resultsByHorse = new Map();
-        for (const [playerId, data] of results) {
-            const horseEmoji = data.horse;
-            if (!resultsByHorse.has(horseEmoji)) {
-                resultsByHorse.set(horseEmoji, []);
-            }
-            resultsByHorse.get(horseEmoji).push({ playerId, data });
-        }
-        
-        // Mostrar resultados agrupados por caballo
-        for (const [horseEmoji, players] of resultsByHorse) {
-            const firstPlayer = players[0].data;
+        for (const horse of allHorses) {
+            const position = horse.finishPosition;
             
-            // Header del caballo
-            resultsText += `**${firstPlayer.position} | ${horseEmoji}**\n`;
+            // Emoji de posición compacto
+            let posEmoji = position === 1 ? '🥇' : position === 2 ? '🥈' : position === 3 ? '🥉' : `${position}.`;
             
-            // Mostrar cada jugador que apostó por este caballo
-            for (const { playerId, data } of players) {
-                const playerName = playerId === 'bot' ? '🤖 Bot' : `<@${playerId}>`;
-                const profit = data.winnings - data.finalBet;
-                const profitText = profit > 0 ? 
-                    `+${this.formatNumber(profit)}` : 
-                    this.formatNumber(profit);
-                
-                // ✅ MARCAR SI FUE SELECCIÓN ALEATORIA (opcional)
-                const randomMarker = game.players[playerId]?.randomSelection ? ' 🎲' : '';
-                
-                resultsText += `  ├ ${playerName}${data.doubledText}${randomMarker}\n`;
-                resultsText += `  ├ 💰 Apuesta: ${this.formatNumber(data.finalBet)} π-b$\n`;
-                resultsText += `  └ 🏆 Ganancia: ${this.formatNumber(data.winnings)} π-b$ (${profitText})\n`;
+            // Encontrar jugadores
+            const playersOnHorse = [];
+            for (const [playerId, player] of Object.entries(game.players)) {
+                if (player.horseIndex === horse.index) {
+                    playersOnHorse.push({ playerId, player });
+                }
             }
             
-            resultsText += '\n';
+            if (playersOnHorse.length === 0) {
+                resultsText += `${posEmoji} ${horse.emoji}\n`;
+                continue;
+            }
+            
+            // ✅ VERSIÓN COMPACTA: Una línea por jugador
+            for (const { playerId, player } of playersOnHorse) {
+                const playerName = playerId === 'bot' ? '🤖Bot' : `<@${playerId}>`;
+                const finalBet = player.hasDoubled ? player.bet * 2 : player.bet;
+                const resultData = results.get(playerId);
+                const winnings = resultData ? resultData.winnings : 0;
+                const profit = winnings - finalBet;
+                
+                const profitEmoji = profit > 0 ? '✅' : profit < 0 ? '❌' : '➖';
+                const profitText = profit > 0 ? `+${this.formatNumber(profit)}` : this.formatNumber(profit);
+                const doubleEmoji = player.hasDoubled ? '💰' : '';
+                
+                resultsText += `${posEmoji} ${horse.emoji} ${playerName}${doubleEmoji} → ${profitEmoji} ${profitText}\n`;
+            }
         }
         
         const embed = new EmbedBuilder()
             .setTitle('🏁 ¡CARRERA FINALIZADA!')
-            .setDescription(`**🏆 Podio:**\n🥇 ${podium[0]?.emoji}\n🥈 ${podium[1]?.emoji}\n🥉 ${podium[2]?.emoji}`)
-            .addFields(
-                { name: '📊 Resultados', value: resultsText || 'No hay resultados', inline: false }
+            .setDescription(
+                `**🏆 Podio:**\n` +
+                `🥇 ${podium[0]?.emoji} | 🥈 ${podium[1]?.emoji} | 🥉 ${podium[2]?.emoji}\n\n` +
+                `**📊 Clasificación:**\n${resultsText}`
             )
             .setColor('#FFD700')
             .setTimestamp()
-            .setFooter({ text: '🎲 = Selección aleatoria • Los premios se reparten equitativamente' });
+            .setFooter({ text: '💰 = Dobló apuesta | ✅ = Ganó | ❌ = Perdió' });
         
         await channel.send({ embeds: [embed] });
     }
@@ -8367,6 +8401,18 @@ const userId = gameState.userId;
         // Verificar ingresos pasivos pendientes
         await this.economy.checkPendingPassiveIncome(message.author.id);
         await this.economy.checkAndNotifyItems(message.author.id, message);
+
+        /*// Probabilidad 5% de recibir maldición aleatoria
+        if (Math.random() < 0.05) {
+            await this.economy.shop.applyRandomCurse(message.author.id);
+            
+            const curseNotif = new EmbedBuilder()
+                .setTitle('☠️ ¡MALDICIÓN ALEATORIA!')
+                .setDescription('**La Mano del Muerto** apareció de la nada y te maldijo por 30 minutos.')
+                .setColor('#8B0000');
+            
+            await message.reply({ embeds: [curseNotif] });
+        }*/
 
         const args = message.content.toLowerCase().split(' ');
         const command = args[0];
