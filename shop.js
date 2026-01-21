@@ -401,7 +401,7 @@ class ShopSystem {
                 maxStack: 2
             },
 
-            'health_potion': {
+            /*'health_potion': {
                 id: 'health_potion',
                 name: '💊 Poción de Salud',
                 description: 'Protege contra penalizaciones de juegos fallidos por 1 hora',
@@ -416,6 +416,7 @@ class ShopSystem {
                 stackable: true,
                 maxStack: 10
             },
+            */
 
             'experience_multiplier': {
                 id: 'experience_multiplier',
