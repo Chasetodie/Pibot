@@ -1664,7 +1664,7 @@ class AllCommands {
         await this.economy.checkAndNotifyItems(message.author.id, message);
        
         // Probabilidad 5% de recibir maldición aleatoria
-        if (Math.random() < 0.05) {
+        if (Math.random() < 0.03) {
             await this.economy.shop.applyRandomCurse(message.author.id);
             
             const curseNotif = new EmbedBuilder()
