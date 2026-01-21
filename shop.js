@@ -1209,7 +1209,7 @@ class ShopSystem {
             }
             
             // En showBag(), después de calcular el valor del item
-            if (itemId === 'mano_del_muerto') {
+            if (itemId === 'death_hand') {
                 inventoryText += `└ 💡 Uso: \`>throw @usuario\`\n\n`;
             } else {
                 inventoryText += `└ ID: \`${itemId}\`\n\n`;
@@ -4255,16 +4255,16 @@ class ShopSystem {
         const user = await this.economy.getUser(message.author.id);
         const userItems = user.items || {};
         
-        if (!userItems['mano_del_muerto'] || userItems['mano_del_muerto'].quantity < 1) {
+        if (!userItems['death_hand'] || userItems['death_hand'].quantity < 1) {
             await message.reply('❌ No tienes **☠️ La Mano del Muerto** para lanzar.');
             return;
         }
         
         // Consumir el item
         const newItems = { ...userItems };
-        newItems['mano_del_muerto'].quantity -= 1;
-        if (newItems['mano_del_muerto'].quantity <= 0) {
-            delete newItems['mano_del_muerto'];
+        newItems['death_hand'].quantity -= 1;
+        if (newItems['death_hand'].quantity <= 0) {
+            delete newItems['death_hand'];
         }
         
         await this.economy.updateUser(message.author.id, { items: newItems });
