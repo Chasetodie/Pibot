@@ -1668,7 +1668,7 @@ class AllCommands {
             await this.economy.shop.applyRandomCurse(message.author.id);
             
             const curseNotif = new EmbedBuilder()
-                .setTitle('☠️ ¡MALDICIÓN ALEATORIA!')
+                .setTitle('☠️ ¡MALDICIÓN!')
                 .setDescription('**La Mano del Muerto** apareció de la nada y te maldijo por 30 minutos.')
                 .setColor('#8B0000');
             

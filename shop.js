@@ -91,7 +91,7 @@ class ShopSystem {
             },
             
             // Fortune Shield
-            'fortune_shield': {
+            /*'fortune_shield': {
                 id: 'fortune_shield',
                 name: '🛡️🍀 Escudo de la Fortuna',
                 description: 'Reduce el riesgo contra pérdidas y fallos en un 80% durante 30 minutos',
@@ -105,7 +105,7 @@ class ShopSystem {
                 },
                 stackable: true,
                 maxStack: 2
-            },
+            },*/
             
             // XP Booster
             'xp_booster': {
@@ -192,7 +192,7 @@ class ShopSystem {
                 stackable: true,
                 maxStack: 20
             },
-            'anti_theft_shield': {
+            /*'anti_theft_shield': {
                 id: 'anti_theft_shield',
                 name: '🛡️ Escudo Antirrobo',
                 description: 'Te protege de robos por 3 horas',
@@ -221,7 +221,7 @@ class ShopSystem {
                 },
                 stackable: false,
                 maxStack: 1
-            },
+            },*/
 
             'speed_boots': {
                 id: 'speed_boots',
@@ -260,7 +260,7 @@ class ShopSystem {
                 stackable: true,
                 maxStack: 5
             },
-            'condon_pibe2': {
+            /*'condon_pibe2': {
                 id: 'condon_pibe2',
                 name: '🧃 Condón usado del Pibe 2**',
                 description: 'Un objeto misterioso de dudosa efectividad... pero asegura una protección total durante 10 minutos.',
@@ -274,7 +274,7 @@ class ShopSystem {
                 },
                 stackable: true,
                 maxStack: 5
-            },
+            },*/
             'role_token': {
                 id: 'role_token',
                 name: '🎭 Token de Rol Personalizado',
@@ -418,7 +418,7 @@ class ShopSystem {
                 maxStack: 2
             },
 
-            'health_potion': {
+            /*'health_potion': {
                 id: 'health_potion',
                 name: '💊 Poción de Salud',
                 description: 'Reduce penalizaciones de juegos fallidos en un 40% por 10 minutos',
@@ -432,7 +432,7 @@ class ShopSystem {
                 },
                 stackable: true,
                 maxStack: 10
-            },
+            },*/
             'experience_multiplier': {
                 id: 'experience_multiplier',
                 name: '📈 Multiplicador de EXP',
@@ -4458,7 +4458,7 @@ class ShopSystem {
             await this.applyRandomCurse(message.author.id);
             
             const curseNotif = new EmbedBuilder()
-                .setTitle('☠️ ¡MALDICIÓN ALEATORIA!')
+                .setTitle('☠️ ¡MALDICIÓN!')
                 .setDescription('**La Mano del Muerto** apareció de la nada y te maldijo por 30 minutos.')
                 .setColor('#8B0000');
             
