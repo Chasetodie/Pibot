@@ -342,8 +342,8 @@ class ShopSystem {
                 stackable: false,
                 maxStack: 1
             },
-            'mano_del_muerto': {
-                id: 'mano_del_muerto',
+            'death_hand': {
+                id: 'death_hand',
                 name: '☠️ La Mano del Muerto',
                 description: 'Maldición lanzable que reduce suerte -50% y dinero -25%. Desactiva todos los efectos por 1 hora',
                 price: 10000,
@@ -1208,7 +1208,12 @@ class ShopSystem {
                 inventoryText += `├ Valor: Sin valor\n`;
             }
             
-            inventoryText += `└ ID: \`${itemId}\`\n\n`;
+            // En showBag(), después de calcular el valor del item
+            if (itemId === 'mano_del_muerto') {
+                inventoryText += `└ 💡 Uso: \`>throw @usuario\`\n\n`;
+            } else {
+                inventoryText += `└ ID: \`${itemId}\`\n\n`;
+            }
         }
         
         embed.setDescription(inventoryText || 'No tienes comprado ningun item');
@@ -1307,6 +1312,14 @@ class ShopSystem {
     async processItemUse(userId, itemId, item) {
         const user = await this.economy.getUser(userId);
         
+        // Prevenir uso directo de items lanzables
+        if (item.effect.throwable) {
+            return { 
+                success: false, 
+                message: `❌ Este item no se puede usar directamente. Usa \`>throw @usuario\` para lanzarlo.` 
+            };
+        }
+
         switch (item.category) {
             case 'consumable':
                 await this.economy.missions.updateMissionProgress(userId, 'consumables_used', 1);
