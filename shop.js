@@ -94,7 +94,7 @@ class ShopSystem {
             'fortune_shield': {
                 id: 'fortune_shield',
                 name: '🛡️🍀 Escudo de la Fortuna',
-                description: 'Reduce el riesgo contra pérdidas y fallos en un 90% durante 30 minutos',
+                description: 'Reduce el riesgo contra pérdidas y fallos en un 80% durante 30 minutos',
                 category: 'consumable',
                 rarity: 'epic',
                 price: 80000,
@@ -421,7 +421,7 @@ class ShopSystem {
             'health_potion': {
                 id: 'health_potion',
                 name: '💊 Poción de Salud',
-                description: 'Reduce penalizaciones de juegos fallidos en un 90% por 10 minutos',
+                description: 'Reduce penalizaciones de juegos fallidos en un 40% por 10 minutos',
                 price: 100000,
                 category: 'consumable',
                 rarity: 'uncommon',
@@ -1617,7 +1617,7 @@ class ShopSystem {
             for (const effect of activeEffects['fortune_shield']) {
                 if (effect.type === 'protection' && effect.expiresAt > Date.now()) {
                     const roll = Math.random();
-                    return roll < 0.9; // 90%
+                    return roll < 0.8; // 90%
                 }
             }
         }
@@ -1627,7 +1627,7 @@ class ShopSystem {
             for (const effect of activeEffects['health_potion']) {
                 if (effect.type === 'penalty_protection' && effect.expiresAt > Date.now()) {
                     const roll = Math.random();
-                    return roll < 0.6; // 60% de proteger
+                    return roll < 0.4; // 60% de proteger
                 }
             }
         }
@@ -4453,7 +4453,7 @@ class ShopSystem {
         await this.economy.checkPendingPassiveIncome(message.author.id);
         await this.economy.checkAndNotifyItems(message.author.id, message);
 
-        /*// Probabilidad 5% de recibir maldición aleatoria
+        // Probabilidad 5% de recibir maldición aleatoria
         if (Math.random() < 0.05) {
             await this.applyRandomCurse(message.author.id);
             
@@ -4463,7 +4463,7 @@ class ShopSystem {
                 .setColor('#8B0000');
             
             await message.reply({ embeds: [curseNotif] });
-        }*/
+        }
 
         const args = message.content.toLowerCase().split(' ');
         const command = args[0];

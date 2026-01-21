@@ -1305,7 +1305,7 @@ class AchievementsSystem {
         await this.economy.checkPendingPassiveIncome(message.author.id);
         await this.economy.checkAndNotifyItems(message.author.id, message);
 
-        /*// Probabilidad 5% de recibir maldición aleatoria
+        // Probabilidad 5% de recibir maldición aleatoria
         if (Math.random() < 0.05) {
             await this.economy.shop.applyRandomCurse(message.author.id);
             
@@ -1315,7 +1315,7 @@ class AchievementsSystem {
                 .setColor('#8B0000');
             
             await message.reply({ embeds: [curseNotif] });
-        }*/
+        }
 
         const args = message.content.toLowerCase().split(' ');
         const command = args[0];
