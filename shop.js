@@ -2877,40 +2877,58 @@ class ShopSystem {
     // 4. NUEVA FUNCIÓN: Verificar protección contra robos (actualizada)
     async getTheftProtection(userId) {
         const user = await this.economy.getUser(userId);
-
         const activeEffects = this.parseActiveEffects(user.activeEffects);
-
-        // ✅ AGREGAR ESTO AL INICIO
+        
+        // Verificar maldición
         if (this.hasCurseActive(userId, activeEffects)) {
-            return { protected: false, reduction: 0 }; // Maldición desactiva anti-robo
+            return { protected: false, reduction: 0 };
+        }
+        
+        const permanentEffects = this.parseEffects(user.permanentEffects);
+        
+        let protection = 0;
+        
+        // ✅ NUEVO: Verificar condón del pibe 2 (100% protección)
+        if (activeEffects['condon_pibe2']) {
+            for (const effect of activeEffects['condon_pibe2']) {
+                if (effect.type === 'protection' && effect.expiresAt > Date.now()) {
+                    return { protected: true, type: 'condon', reduction: 1.0 }; // 100% garantizado
+                }
+            }
         }
 
-        const permanentEffects = this.parseEffects(user.permanentEffects);
-       
-        let protection = 0; // 0 = sin protección, 1 = protección completa
+        // Verificar Fortune Shield (90% protección según descripción)
+        if (activeEffects['fortune_shield']) {
+            for (const effect of activeEffects['fortune_shield']) {
+                if (effect.type === 'protection' && effect.expiresAt > Date.now()) {
+                    const roll = Math.random();
+                    if (roll < 0.9) {
+                        return { protected: true, type: 'fortune_shield', reduction: 0.9 };
+                    } else {
+                        return { protected: false, type: 'fortune_shield_failed', reduction: 0 };
+                    }
+                }
+            }
+        }
         
-        // Verificar escudo antirrobo temporal
+        // Verificar escudo antirrobo temporal (80% protección)
         if (activeEffects['anti_theft_shield']) {
-            
             for (const effect of activeEffects['anti_theft_shield']) {
                 console.log(`⏰ Efecto expira en:`, effect.expiresAt, 'Ahora:', Date.now());
                 if (effect.type === 'protection' && effect.expiresAt > Date.now()) {
                     console.log(`✅ Protección activa!`);
-                    return { protected: true, type: 'shield', reduction: 1.0 };
-                }
-            }
-        }
-
-        // AGREGAR TU NUEVO ITEM AQUÍ - Ejemplo con un item temporal
-        if (activeEffects['condon_pibe2']) {
-            for (const effect of activeEffects['condon_pibe2']) {
-                if (effect.type === 'protection' && effect.expiresAt > Date.now()) {
-                    return { protected: true, type: 'condon', reduction: 1.0 };
+                    // ✅ CAMBIO: Ahora con probabilidad 80%
+                    const roll = Math.random();
+                    if (roll < 0.8) {
+                        return { protected: true, type: 'shield', reduction: 0.8 };
+                    } else {
+                        return { protected: false, type: 'shield_failed', reduction: 0 };
+                    }
                 }
             }
         }
         
-        // Verificar bóveda permanente
+        // Verificar bóveda permanente (60% protección según tu config)
         if (permanentEffects['permanent_vault']) {
             const vaultEffect = permanentEffects['permanent_vault'];
             if (vaultEffect && vaultEffect.reduction) {
@@ -2918,7 +2936,6 @@ class ShopSystem {
                 if (roll < vaultEffect.reduction) {
                     return { protected: true, type: 'vault' };
                 } else {
-                    // La bóveda falló
                     return { protected: false, type: 'vault_failed', reduction: 0 };
                 }
             }
@@ -2982,6 +2999,9 @@ class ShopSystem {
         const user = await this.economy.getUser(userId);
         const permanentEffects = this.parseEffects(user.permanentEffects);
         
+        // ✅ AGREGAR ESTA LÍNEA QUE FALTÓ
+        const activeEffects = this.parseActiveEffects(user.activeEffects);
+
         // ✅ AGREGAR ESTO
         if (this.hasCurseActive(userId, activeEffects)) {
             return { hasVip: false }; // Maldición desactiva VIP temporalmente
