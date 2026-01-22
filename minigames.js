@@ -905,6 +905,17 @@ let luckMessage = '';
                 const spaceLeft = userLimit - userData.balance;
                 finalEarnings = Math.min(finalEarnings, spaceLeft);
             }
+
+            // ✅ Aplicar penalización de maldición (-25% dinero)
+            const activeEffects = this.shop.parseActiveEffects(user.activeEffects);
+            const curse = activeEffects['death_hand_curse'];
+            let curseMoneyPenalty = 0;
+
+            if (curse && curse.length > 0 && curse[0].expiresAt > Date.now()) {
+                const penaltyAmount = Math.floor(finalEarnings * Math.abs(curse[0].moneyPenalty)); // 0.25 = 25%
+                curseMoneyPenalty = penaltyAmount;
+                finalEarnings -= penaltyAmount;
+            }
            
             const addResult = await this.economy.addMoney(userId, finalEarnings, 'coinflip_win');
             finalEarnings = addResult.actualAmount; // Usar cantidad real
@@ -955,6 +966,14 @@ let luckMessage = '';
                     { name: '💳 Balance Actual', value: `${this.formatNumber(user.balance)} π-b$`, inline: false },
                     { name: '🎉 Bonificaciones', value: this.formatGameBonuses(eventMessage, luckMessage, itemMessage, equipmentMessage), inline: false }
                 );
+
+            if (curseMoneyPenalty > 0) {
+                embed.addFields({
+                    name: '☠️ Penalización de Maldición',
+                    value: `-${this.formatNumber(curseMoneyPenalty)} π-b$ (-25% de ganancias)`,
+                    inline: false
+                });
+            }
 
             if (addResult.hitLimit) {
                 const limitText = userLimit === 20000000 ? '20M π-b$ (VIP)' : '10M π-b$';
@@ -1336,6 +1355,17 @@ let luckMessage = '';
                 }
             }
 
+            // ✅ Aplicar penalización de maldición (-25% dinero)
+            const activeEffects = this.shop.parseActiveEffects(user.activeEffects);
+            const curse = activeEffects['death_hand_curse'];
+            let curseMoneyPenalty = 0;
+
+            if (curse && curse.length > 0 && curse[0].expiresAt > Date.now()) {
+                const penaltyAmount = Math.floor(finalEarnings * Math.abs(curse[0].moneyPenalty)); // 0.25 = 25%
+                curseMoneyPenalty = penaltyAmount;
+                finalEarnings -= penaltyAmount;
+            }
+
             const addResult = await this.economy.addMoney(userId, finalEarnings, 'dice_win');
             finalEarnings = addResult.actualAmount;
             await this.economy.updateUser(userId, updateData);
@@ -1381,6 +1411,15 @@ let luckMessage = '';
                     { name: '💳 Balance Actual', value: `${this.formatNumber(user.balance)} π-b$`, inline: false },
                     { name: '🎉 Bonificaciones', value: this.formatGameBonuses(eventMessage, luckMessage, itemMessage, equipmentMessage), inline: false }
                 );
+
+            if (curseMoneyPenalty > 0) {
+                embed.addFields({
+                    name: '☠️ Penalización de Maldición',
+                    value: `-${this.formatNumber(curseMoneyPenalty)} π-b$ (-25% de ganancias)`,
+                    inline: false
+                });
+            }
+
             if (addResult.hitLimit) {
                 const limitText = userLimit === 20000000 ? '20M π-b$ (VIP)' : '10M π-b$';
                 await message.reply(`⚠️ **Límite alcanzado:** No pudiste recibir todo el dinero porque tienes el máximo permitido (${this.formatNumber(userLimit)} π-b$).`);
@@ -1745,6 +1784,17 @@ let luckMessage = '';
                 }
             }
 
+            // ✅ Aplicar penalización de maldición (-25% dinero)
+            const activeEffects = this.shop.parseActiveEffects(user.activeEffects);
+            const curse = activeEffects['death_hand_curse'];
+            let curseMoneyPenalty = 0;
+
+            if (curse && curse.length > 0 && curse[0].expiresAt > Date.now()) {
+                const penaltyAmount = Math.floor(finalEarnings * Math.abs(curse[0].moneyPenalty)); // 0.25 = 25%
+                curseMoneyPenalty = penaltyAmount;
+                finalEarnings -= penaltyAmount;
+            }
+
             await this.economy.database.incrementGameLimit(userId, gameType);
 
             const addResult = await this.economy.addMoney(userId, finalEarnings, 'lottery_win');     
@@ -1802,6 +1852,15 @@ let luckMessage = '';
                     { name: '💳 Balance Actual', value: `${this.formatNumber(user.balance)} π-b$ 🚀`, inline: false },
                     { name: '🎉 Bonificaciones', value: this.formatGameBonuses(eventMessage, luckMessage, itemMessage, equipmentMessage), inline: false }
                 );
+
+            if (curseMoneyPenalty > 0) {
+                embed.addFields({
+                    name: '☠️ Penalización de Maldición',
+                    value: `-${this.formatNumber(curseMoneyPenalty)} π-b$ (-25% de ganancias)`,
+                    inline: false
+                });
+            }
+
             if (addResult.hitLimit) {
                 const limitText = userLimit === 20000000 ? '20M π-b$ (VIP)' : '10M π-b$';
                 await message.reply(`⚠️ **Límite alcanzado:** No pudiste recibir todo el dinero porque tienes el máximo permitido (${this.formatNumber(userLimit)} π-b$).`);
@@ -2409,7 +2468,8 @@ const userId = gameState.userId;
         const activeEffects = this.shop.parseActiveEffects(user.activeEffects);
         let hasProtected = false;
         let protectionMessage = '';
-
+        const curse = activeEffects['death_hand_curse'];
+        let curseMoneyPenalty = 0;
 
         switch (result) {
             case 'blackjack':
@@ -2472,6 +2532,12 @@ const userId = gameState.userId;
                 if (userData.balance + finalEarnings > this.economy.config.maxBalance) {
                     const spaceLeft = this.economy.config.maxBalance - userData.balance;
                     finalEarnings = Math.min(finalEarnings, spaceLeft);
+                }
+
+                if (curse && curse.length > 0 && curse[0].expiresAt > Date.now()) {
+                    const penaltyAmount = Math.floor(finalEarnings * Math.abs(curse[0].moneyPenalty)); // 0.25 = 25%
+                    curseMoneyPenalty = penaltyAmount;
+                    finalEarnings -= penaltyAmount;
                 }
 
                 addResult = await this.economy.addMoney(userId, finalEarnings, 'blackjack_win');
@@ -2561,6 +2627,12 @@ const userId = gameState.userId;
                     finalEarnings = Math.min(finalEarnings, spaceLeft);
                 }
                 
+                if (curse && curse.length > 0 && curse[0].expiresAt > Date.now()) {
+                    const penaltyAmount = Math.floor(finalEarnings * Math.abs(curse[0].moneyPenalty)); // 0.25 = 25%
+                    curseMoneyPenalty = penaltyAmount;
+                    finalEarnings -= penaltyAmount;
+                }
+
                 addResult = await this.economy.addMoney(userId, finalEarnings, 'blackjack_win');
                 finalEarnings = addResult.actualAmount;
                 
@@ -2801,6 +2873,14 @@ const userId = gameState.userId;
         
         if (doubled) {
             embed.addFields({ name: '🔄 Especial', value: 'Apuesta doblada', inline: true });
+        }
+
+        if (curseMoneyPenalty > 0) {
+            embed.addFields({
+                name: '☠️ Penalización de Maldición',
+                value: `-${this.formatNumber(curseMoneyPenalty)} π-b$ (-25% de ganancias)`,
+                inline: false
+            });
         }
     
         embed.setTimestamp(); 
@@ -3172,6 +3252,17 @@ const userId = gameState.userId;
 
             await this.economy.database.incrementGameLimit(userId, gameType);
 
+            // ✅ Aplicar penalización de maldición (-25% dinero)
+            const activeEffects = this.shop.parseActiveEffects(user.activeEffects);
+            const curse = activeEffects['death_hand_curse'];
+            let curseMoneyPenalty = 0;
+
+            if (curse && curse.length > 0 && curse[0].expiresAt > Date.now()) {
+                const penaltyAmount = Math.floor(finalEarnings * Math.abs(curse[0].moneyPenalty)); // 0.25 = 25%
+                curseMoneyPenalty = penaltyAmount;
+                finalEarnings -= penaltyAmount;
+            }
+
             const addResult = await this.economy.addMoney(userId, finalEarnings, 'roulette_win');
             finalEarnings = addResult.actualAmount;
             
@@ -3228,6 +3319,14 @@ const userId = gameState.userId;
                     inline: false 
                 });
             } 
+
+            if (curseMoneyPenalty > 0) {
+                embed.addFields({
+                    name: '☠️ Penalización de Maldición',
+                    value: `-${this.formatNumber(curseMoneyPenalty)} π-b$ (-25% de ganancias)`,
+                    inline: false
+                });
+            }
 
             if (addResult.hitLimit) {
                 const limitText = userLimit === 20000000 ? '20M π-b$ (VIP)' : '10M π-b$';
@@ -3345,7 +3444,7 @@ const userId = gameState.userId;
         const curse = activeEffects['death_hand_curse'];
         // Al final, después de crear el embed de resultado
         if (curse && curse.length > 0 && curse[0].expiresAt > Date.now()) {
-            embed.addFields({
+            resultEmbed.addFields({
                 name: '☠️ Maldición Activa',
                 value: won 
                     ? `Tu ganancia fue reducida por la maldición (-25% dinero)`
@@ -3855,6 +3954,17 @@ const userId = gameState.userId;
             const addResult = await this.economy.addMoney(userId, finalEarnings, 'slots_win');
             finalEarnings = addResult.actualAmount;
             
+            // ✅ Aplicar penalización de maldición (-25% dinero)
+            const activeEffects = this.shop.parseActiveEffects(user.activeEffects);
+            const curse = activeEffects['death_hand_curse'];
+            let curseMoneyPenalty = 0;
+
+            if (curse && curse.length > 0 && curse[0].expiresAt > Date.now()) {
+                const penaltyAmount = Math.floor(finalEarnings * Math.abs(curse[0].moneyPenalty)); // 0.25 = 25%
+                curseMoneyPenalty = penaltyAmount;
+                finalEarnings -= penaltyAmount;
+            }
+
             await this.economy.updateUser(userId, updateData);
             
             // Achievements
@@ -3894,6 +4004,14 @@ const userId = gameState.userId;
                     { name: '🎉 Bonificaciones', value: this.formatGameBonuses(eventBonus.eventMessage, luckMessage, itemMessage, equipmentMessage), inline: false }
                 );
             
+            if (curseMoneyPenalty > 0) {
+                embed.addFields({
+                    name: '☠️ Penalización de Maldición',
+                    value: `-${this.formatNumber(curseMoneyPenalty)} π-b$ (-25% de ganancias)`,
+                    inline: false
+                });
+            }
+
             if (addResult.hitLimit) {
                 await message.reply(`⚠️ **Límite alcanzado:** No pudiste recibir todo el dinero (máximo ${this.formatNumber(userLimit)} π-b$)`);
             }
