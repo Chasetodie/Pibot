@@ -3321,7 +3321,7 @@ const userId = gameState.userId;
             } 
 
             if (curseMoneyPenalty > 0) {
-                embed.addFields({
+                resultEmbed.addFields({
                     name: '☠️ Penalización de Maldición',
                     value: `-${this.formatNumber(curseMoneyPenalty)} π-b$ (-25% de ganancias)`,
                     inline: false
