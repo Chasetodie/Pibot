@@ -815,11 +815,27 @@ async getEffectiveCooldown(baseCooldown) {
             return;
         }
 
+        const randomRoll = Math.random();
+        const result = randomRoll < 0.5 ? 'cara' : 'cruz';
+
         const luckCalc = await this.applyLuckToGame(0.5, userId, 'coinflip');
-        const result = Math.random() < luckCalc.winChance ? 'cara' : 'cruz';
-        const won = result === normalizedChoice;
-let luckMessage = '';
+        const baseWon = result === normalizedChoice;
         
+        let won = baseWon;
+        let luckMessage = '';
+        
+        if (!baseWon) {
+            // Si perdió naturalmente, la suerte puede salvarlo
+            const luckRoll = Math.random();
+            if (luckRoll < luckCalc.winChance - 0.5) { // Solo el bonus de suerte
+                won = true;
+                luckMessage = luckCalc.luckMessage + '\n🪙 ¡La suerte cambió el resultado!';
+            }
+        } else {
+            // Si ganó naturalmente, mostrar suerte disponible
+            luckMessage = luckCalc.luckMessage;
+        }
+
         // Establecer cooldown
         this.setCooldown(userId, 'coinflip');
 
