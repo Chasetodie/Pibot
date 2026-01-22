@@ -91,7 +91,7 @@ class ShopSystem {
             },
             
             // Fortune Shield
-            /*'fortune_shield': {
+            'fortune_shield': {
                 id: 'fortune_shield',
                 name: '🛡️🍀 Escudo de la Fortuna',
                 description: 'Reduce el riesgo contra pérdidas y fallos en un 80% durante 30 minutos',
@@ -105,7 +105,7 @@ class ShopSystem {
                 },
                 stackable: true,
                 maxStack: 2
-            },*/
+            },
             
             // XP Booster
             'xp_booster': {
@@ -192,7 +192,7 @@ class ShopSystem {
                 stackable: true,
                 maxStack: 20
             },
-            /*'anti_theft_shield': {
+            'anti_theft_shield': {
                 id: 'anti_theft_shield',
                 name: '🛡️ Escudo Antirrobo',
                 description: 'Te protege de robos por 3 horas',
@@ -221,7 +221,7 @@ class ShopSystem {
                 },
                 stackable: false,
                 maxStack: 1
-            },*/
+            },
 
             'speed_boots': {
                 id: 'speed_boots',
@@ -260,7 +260,7 @@ class ShopSystem {
                 stackable: true,
                 maxStack: 5
             },
-            /*'condon_pibe2': {
+            'condon_pibe2': {
                 id: 'condon_pibe2',
                 name: '🧃 Condón usado del Pibe 2**',
                 description: 'Un objeto misterioso de dudosa efectividad... pero asegura una protección total durante 10 minutos.',
@@ -269,12 +269,13 @@ class ShopSystem {
                 rarity: 'epic',
                 effect: {
                     type: 'protection',
-                    prevents: ['robbery', 'money_loss'],
-                    uses: 1
+                    prevents: ['game_loss', 'money_loss'],
+                    uses: 1,
+                    duration: null
                 },
                 stackable: true,
                 maxStack: 5
-            },*/
+            },
             'role_token': {
                 id: 'role_token',
                 name: '🎭 Token de Rol Personalizado',
@@ -418,7 +419,7 @@ class ShopSystem {
                 maxStack: 2
             },
 
-            /*'health_potion': {
+            'health_potion': {
                 id: 'health_potion',
                 name: '💊 Poción de Salud',
                 description: 'Reduce penalizaciones de juegos fallidos en un 40% por 10 minutos',
@@ -432,7 +433,8 @@ class ShopSystem {
                 },
                 stackable: true,
                 maxStack: 10
-            },*/
+            },
+
             'experience_multiplier': {
                 id: 'experience_multiplier',
                 name: '📈 Multiplicador de EXP',
@@ -1603,48 +1605,50 @@ class ShopSystem {
             return false;
         }
         
-        // ✅ Verificar condón del pibe 2 (100% protección)
+        // ✅ CONDÓN: 100% protección, 1 uso, SE CONSUME AQUÍ
         if (activeEffects['condon_pibe2']) {
-            for (const effect of activeEffects['condon_pibe2']) {
-                if (effect.type === 'protection' && effect.expiresAt > Date.now()) {
+            for (let i = activeEffects['condon_pibe2'].length - 1; i >= 0; i--) {
+                const effect = activeEffects['condon_pibe2'][i];
+                if (effect.type === 'protection' && effect.usesLeft > 0) {
+                    // Consumir el uso
+                    effect.usesLeft -= 1;
+                    
+                    // Si se acabaron los usos, remover
+                    if (effect.usesLeft <= 0) {
+                        activeEffects['condon_pibe2'].splice(i, 1);
+                        if (activeEffects['condon_pibe2'].length === 0) {
+                            delete activeEffects['condon_pibe2'];
+                        }
+                    }
+                    
+                    // Actualizar AHORA
+                    await this.economy.updateUser(userId, { activeEffects });
                     return true; // 100% garantizado
                 }
             }
         }
         
-        // ✅ Verificar Fortune Shield (90% protección)
+        // ✅ FORTUNE SHIELD: 80% protección (con probabilidad)
         if (activeEffects['fortune_shield']) {
             for (const effect of activeEffects['fortune_shield']) {
                 if (effect.type === 'protection' && effect.expiresAt > Date.now()) {
                     const roll = Math.random();
-                    return roll < 0.8; // 90%
+                    return roll < 0.80; // 80% de proteger
                 }
             }
         }
         
-        // ✅ NUEVO: Verificar Health Potion (60% protección)
+        // ✅ HEALTH POTION: 40% protección (con probabilidad)
         if (activeEffects['health_potion']) {
             for (const effect of activeEffects['health_potion']) {
                 if (effect.type === 'penalty_protection' && effect.expiresAt > Date.now()) {
                     const roll = Math.random();
-                    return roll < 0.4; // 60% de proteger
+                    return roll < 0.40; // 40% de proteger
                 }
             }
         }
         
-        // Verificar otros items de protección (80% por defecto)
-        for (const [itemId, effects] of Object.entries(activeEffects)) {
-            for (const effect of effects) {
-                if ((effect.type === 'penalty_protection' || effect.type === 'protection') 
-                    && effect.expiresAt > Date.now()) {
-                    
-                    const roll = Math.random();
-                    return roll < 0.8; // 80%
-                }
-            }
-        }
-        
-        return false;
+        return false; // Sin protección
     }
     
     // === APLICAR EFECTO CONSUMIBLE ===
@@ -2165,7 +2169,7 @@ class ShopSystem {
             return {
                 multiplier: 1 + curse[0].moneyPenalty, // 0.75 (25% menos)
                 reduction: 0,
-                luckBoost: curse[0].luckPenalty // -0.5
+                luckBoost: curse[0].luckPenalty // -0.5 (ya es negativo, no agregar -)
             };
         }
 
@@ -4453,8 +4457,8 @@ class ShopSystem {
         await this.economy.checkPendingPassiveIncome(message.author.id);
         await this.economy.checkAndNotifyItems(message.author.id, message);
 
-        // Probabilidad 3% de recibir maldición aleatoria
-        if (Math.random() < 0.03) {
+        // Probabilidad 1% de recibir maldición aleatoria
+        if (Math.random() < 0.01) {
             await this.applyRandomCurse(message.author.id);
             
             const curseNotif = new EmbedBuilder()

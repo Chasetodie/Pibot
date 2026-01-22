@@ -363,15 +363,15 @@ async showMyLimits(message) {
         // 1. Items de suerte (máximo +8%)
         if (this.shop) {
             const luckBoost = await this.shop.getActiveMultipliers(userId, 'games');
-            if (luckBoost.luckBoost) {
-                const itemBonus = Math.min(luckBoost.luckBoost * 0.4, 0.08);
-                totalLuckBonus += itemBonus;
-
-                if (!isCursed && effects.luckBoost > 0) {
+            if (luckBoost.luckBoost !== 0) { // ← Cambiar de > 0 a !== 0
+                const itemBonus = Math.min(Math.abs(luckBoost.luckBoost) * 0.4, 0.08);
+                
+                if (!isCursed && luckBoost.luckBoost > 0) {
+                    totalLuckBonus += itemBonus;
                     luckMessages.push(`🍀 **Boost de Suerte** (+${Math.round(itemBonus * 100)}%)`);
-                } else if (isCursed && effects.luckBoost < 0) {
-                    // Mostrar penalización de la maldición
-                    luckMessages.push(`☠️ **Maldición Activa** (+${Math.round(effects.luckBoost * 100)}%)`);
+                } else if (isCursed && luckBoost.luckBoost < 0) {
+                    totalLuckBonus += luckBoost.luckBoost; // ← Ya es negativo
+                    luckMessages.push(`☠️ **Maldición Activa** (${Math.round(luckBoost.luckBoost * 100)}%)`);
                 }
             }
         }
@@ -415,7 +415,8 @@ async showMyLimits(message) {
         };
         
         const maxBonus = maxBonusByGame[gameType] || maxBonusByGame['default'];
-        const cappedBonus = Math.min(luck.luckBonus, maxBonus);
+        const rawBonus = luck.luckBoost;
+        const cappedBonus = Math.max(-0.50, Math.min(rawBonus, maxBonus)); // ← Limitar entre -50% y +max%
         
         // Límite absoluto de probabilidad de ganar
         const maxWinChance = {
@@ -430,14 +431,14 @@ async showMyLimits(message) {
         };
         
         const finalChance = Math.min(
-            baseChance + cappedBonus, 
+            Math.max(0, baseChance + cappedBonus), 
             maxWinChance[gameType] || maxWinChance['default']
         );
         
         return {
             winChance: finalChance,
             luckMessage: luck.luckMessage,
-            luckApplied: cappedBonus > 0
+            luckApplied: cappedBonus !== 0
         };
     }
 
@@ -960,26 +961,75 @@ let luckMessage = '';
                 await message.reply(`⚠️ **Límite alcanzado:** No pudiste recibir todo el dinero porque tienes el máximo permitido (${this.formatNumber(userLimit)} π-b$).`);
             }
         } else {
-            const hasProtection = await this.shop.hasGameProtection(userId);
-            let protectionMessage = '🛡️ Tu protección evitó la pérdida de dinero!';
+            await this.economy.missions.updateMissionProgress(userId, 'consecutive_loss');
+            // ✅ NUEVO: Sistema de protección mejorado
+            const user = await this.economy.getUser(userId);
+            const activeEffects = this.shop.parseActiveEffects(user.activeEffects);
+            
+            let protected = false;
+            let protectionMessage = '';
 
-            if (hasProtection) {
-                // Determinar qué protección se activó
-                const user = await this.economy.getUser(userId);
-                const activeEffects = this.shop.parseActiveEffects(user.activeEffects);
-                
-                // Verificar health potion específicamente
-                if (activeEffects['health_potion']) {
-                    protectionMessage = '💊 Tu Poción de Salud te protegió de las penalizaciones!';
-                } else if (activeEffects['fortune_shield']) {
-                    protectionMessage = '🛡️ Tu Escudo de la Fortuna te protegió!';
-                } else if (activeEffects['condon_pibe2']) {
-                    protectionMessage = '🧃 En hora buena, el Condon usado de Pibe 2 te protegió!';
+            // 1️⃣ CONDÓN: 100% garantizado, 1 uso
+            if (activeEffects['condon_pibe2']) {
+                for (let i = activeEffects['condon_pibe2'].length - 1; i >= 0; i--) {
+                    const effect = activeEffects['condon_pibe2'][i];
+                    if (effect.type === 'protection' && effect.usesLeft > 0) {
+                        protected = true;
+                        effect.usesLeft -= 1;
+                        
+                        if (effect.usesLeft <= 0) {
+                            activeEffects['condon_pibe2'].splice(i, 1);
+                            if (activeEffects['condon_pibe2'].length === 0) {
+                                delete activeEffects['condon_pibe2'];
+                            }
+                        }
+                        
+                        await this.economy.updateUser(userId, { activeEffects });
+                        protectionMessage = '🧃 ¡El Condón usado de Pibe 2 te protegió! (100% - último uso consumido)';
+                        break;
+                    }
                 }
-                
+            }
+            
+            // 2️⃣ FORTUNE SHIELD: 80% probabilidad
+            if (!protected && activeEffects['fortune_shield']) {
+                for (const effect of activeEffects['fortune_shield']) {
+                    if (effect.type === 'protection' && effect.expiresAt > Date.now()) {
+                        const roll = Math.random();
+                        if (roll < 0.80) {
+                            protected = true;
+                            protectionMessage = '🛡️ Tu Escudo de la Fortuna te protegió (80% de suerte)';
+                        } else {
+                            protectionMessage = '💔 Tu Escudo de la Fortuna falló esta vez (tenías 80% de protección)';
+                        }
+                        break;
+                    }
+                }
+            }
+            
+            // 3️⃣ HEALTH POTION: 40% probabilidad
+            if (!protected && activeEffects['health_potion']) {
+                for (const effect of activeEffects['health_potion']) {
+                    if (effect.type === 'penalty_protection' && effect.expiresAt > Date.now()) {
+                        const roll = Math.random();
+                        if (roll < 0.40) {
+                            protected = true;
+                            protectionMessage = '💊 Tu Poción de Salud redujo las penalizaciones (40% de suerte)';
+                        } else {
+                            protectionMessage = '💔 Tu Poción de Salud no pudo protegerte esta vez (tenías 40% de protección)';
+                        }
+                        break;
+                    }
+                }
+            }
+            
+            // ✅ Aplicar protección o pérdida
+            if (protected) {
                 await message.reply(protectionMessage);
             } else {
-                await this.economy.missions.updateMissionProgress(userId, 'consecutive_loss'); 
+                if (protectionMessage) {
+                    await message.reply(protectionMessage); // Mostrar que falló
+                }
                 await this.economy.removeMoney(userId, betAmount, 'coinflip_loss');
             }
 
@@ -1013,6 +1063,19 @@ let luckMessage = '';
 
         // Verificar tesoros al final
         await this.checkTreasureHunt(userId, message);
+
+        const activeEffects = this.shop.parseActiveEffects(user.activeEffects);
+        const curse = activeEffects['death_hand_curse'];
+        // Al final, después de crear el embed de resultado
+        if (curse && curse.length > 0 && curse[0].expiresAt > Date.now()) {
+            embed.addFields({
+                name: '☠️ Maldición Activa',
+                value: won 
+                    ? `Tu ganancia fue reducida por la maldición (-25% dinero)`
+                    : `La maldición empeoró tu suerte (-50% probabilidad)`,
+                inline: false
+            });
+        }
 
         await message.reply({ embeds: [embed] });
     }
@@ -1211,7 +1274,6 @@ let luckMessage = '';
 
         const winAmount = Math.floor(betAmount * multiplier);
         const profit = winAmount - betAmount;
-        let finalEarnings = profit;
         let eventMessage = '';
         
         if (won) {
@@ -1324,25 +1386,76 @@ let luckMessage = '';
                 await message.reply(`⚠️ **Límite alcanzado:** No pudiste recibir todo el dinero porque tienes el máximo permitido (${this.formatNumber(userLimit)} π-b$).`);
             }
         } else {
-
-            const hasProtection = await this.shop.hasGameProtection(userId);
-            if (hasProtection) {
-                let protectionMessage = '🛡️ Tu protección evitó la pérdida de dinero!';
-                
-                const user = await this.economy.getUser(userId);
-                const activeEffects = this.shop.parseActiveEffects(user.activeEffects);
-                
-                if (activeEffects['health_potion']) {
-                    protectionMessage = '💊 Tu Poción de Salud te protegió de las penalizaciones!';
-                } else if (activeEffects['fortune_shield']) {
-                    protectionMessage = '🛡️ Tu Escudo de la Fortuna te protegió!';
-                } else if (activeEffects['condon_pibe2']) {
-                    protectionMessage = '🧃 En hora buena, el Condon usado de Pibe 2 te protegió!';
+            await this.economy.missions.updateMissionProgress(userId, 'consecutive_loss');
+            
+            // ✅ NUEVO: Sistema de protección mejorado
+            const user = await this.economy.getUser(userId);
+            const activeEffects = this.shop.parseActiveEffects(user.activeEffects);
+            
+            let protected = false;
+            let protectionMessage = '';
+            
+            // 1️⃣ CONDÓN: 100% garantizado, 1 uso
+            if (activeEffects['condon_pibe2']) {
+                for (let i = activeEffects['condon_pibe2'].length - 1; i >= 0; i--) {
+                    const effect = activeEffects['condon_pibe2'][i];
+                    if (effect.type === 'protection' && effect.usesLeft > 0) {
+                        protected = true;
+                        effect.usesLeft -= 1;
+                        
+                        if (effect.usesLeft <= 0) {
+                            activeEffects['condon_pibe2'].splice(i, 1);
+                            if (activeEffects['condon_pibe2'].length === 0) {
+                                delete activeEffects['condon_pibe2'];
+                            }
+                        }
+                        
+                        await this.economy.updateUser(userId, { activeEffects });
+                        protectionMessage = '🧃 ¡El Condón usado de Pibe 2 te protegió! (100% - último uso consumido)';
+                        break;
+                    }
                 }
-                
+            }
+            
+            // 2️⃣ FORTUNE SHIELD: 80% probabilidad
+            if (!protected && activeEffects['fortune_shield']) {
+                for (const effect of activeEffects['fortune_shield']) {
+                    if (effect.type === 'protection' && effect.expiresAt > Date.now()) {
+                        const roll = Math.random();
+                        if (roll < 0.80) {
+                            protected = true;
+                            protectionMessage = '🛡️ Tu Escudo de la Fortuna te protegió (80% de suerte)';
+                        } else {
+                            protectionMessage = '💔 Tu Escudo de la Fortuna falló esta vez (tenías 80% de protección)';
+                        }
+                        break;
+                    }
+                }
+            }
+            
+            // 3️⃣ HEALTH POTION: 40% probabilidad
+            if (!protected && activeEffects['health_potion']) {
+                for (const effect of activeEffects['health_potion']) {
+                    if (effect.type === 'penalty_protection' && effect.expiresAt > Date.now()) {
+                        const roll = Math.random();
+                        if (roll < 0.40) {
+                            protected = true;
+                            protectionMessage = '💊 Tu Poción de Salud redujo las penalizaciones (40% de suerte)';
+                        } else {
+                            protectionMessage = '💔 Tu Poción de Salud no pudo protegerte esta vez (tenías 40% de protección)';
+                        }
+                        break;
+                    }
+                }
+            }
+            
+            // ✅ Aplicar protección o pérdida
+            if (protected) {
                 await message.reply(protectionMessage);
             } else {
-                await this.economy.missions.updateMissionProgress(userId, 'consecutive_loss'); 
+                if (protectionMessage) {
+                    await message.reply(protectionMessage); // Mostrar que falló
+                }
                 await this.economy.removeMoney(userId, betAmount, 'dice_loss');
             }
             
@@ -1365,6 +1478,19 @@ let luckMessage = '';
 
         // Verificar tesoros al final
         await this.checkTreasureHunt(userId, message);
+
+        const activeEffects = this.shop.parseActiveEffects(user.activeEffects);
+        const curse = activeEffects['death_hand_curse'];
+        // Al final, después de crear el embed de resultado
+        if (curse && curse.length > 0 && curse[0].expiresAt > Date.now()) {
+            embed.addFields({
+                name: '☠️ Maldición Activa',
+                value: won 
+                    ? `Tu ganancia fue reducida por la maldición (-25% dinero)`
+                    : `La maldición empeoró tu suerte (-50% probabilidad)`,
+                inline: false
+            });
+        }
 
         await message.reply({ embeds: [embed] });
     }
@@ -1681,26 +1807,77 @@ let luckMessage = '';
                 await message.reply(`⚠️ **Límite alcanzado:** No pudiste recibir todo el dinero porque tienes el máximo permitido (${this.formatNumber(userLimit)} π-b$).`);
             }
         } else {
-            await this.economy.missions.updateMissionProgress(userId, 'consecutive_loss'); 
             await this.economy.database.incrementGameLimit(userId, gameType);
-
-            const hasProtection = await this.shop.hasGameProtection(userId);
-            if (hasProtection) {
-                let protectionMessage = '🛡️ Tu protección evitó la pérdida de dinero!';
-                
-                const user = await this.economy.getUser(userId);
-                const activeEffects = this.shop.parseActiveEffects(user.activeEffects);
-                
-                if (activeEffects['health_potion']) {
-                    protectionMessage = '💊 Tu Poción de Salud te protegió de las penalizaciones!';
-                } else if (activeEffects['fortune_shield']) {
-                    protectionMessage = '🛡️ Tu Escudo de la Fortuna te protegió!';
-                } else if (activeEffects['condon_pibe2']) {
-                    protectionMessage = '🧃 En hora buena, el Condon usado de Pibe 2 te protegió!';
+            await this.economy.missions.updateMissionProgress(userId, 'consecutive_loss');
+            
+            // ✅ NUEVO: Sistema de protección mejorado
+            const user = await this.economy.getUser(userId);
+            const activeEffects = this.shop.parseActiveEffects(user.activeEffects);
+            
+            let protected = false;
+            let protectionMessage = '';
+            
+            // 1️⃣ CONDÓN: 100% garantizado, 1 uso
+            if (activeEffects['condon_pibe2']) {
+                for (let i = activeEffects['condon_pibe2'].length - 1; i >= 0; i--) {
+                    const effect = activeEffects['condon_pibe2'][i];
+                    if (effect.type === 'protection' && effect.usesLeft > 0) {
+                        protected = true;
+                        effect.usesLeft -= 1;
+                        
+                        if (effect.usesLeft <= 0) {
+                            activeEffects['condon_pibe2'].splice(i, 1);
+                            if (activeEffects['condon_pibe2'].length === 0) {
+                                delete activeEffects['condon_pibe2'];
+                            }
+                        }
+                        
+                        await this.economy.updateUser(userId, { activeEffects });
+                        protectionMessage = '🧃 ¡El Condón usado de Pibe 2 te protegió! (100% - último uso consumido)';
+                        break;
+                    }
                 }
-                
+            }
+            
+            // 2️⃣ FORTUNE SHIELD: 80% probabilidad
+            if (!protected && activeEffects['fortune_shield']) {
+                for (const effect of activeEffects['fortune_shield']) {
+                    if (effect.type === 'protection' && effect.expiresAt > Date.now()) {
+                        const roll = Math.random();
+                        if (roll < 0.80) {
+                            protected = true;
+                            protectionMessage = '🛡️ Tu Escudo de la Fortuna te protegió (80% de suerte)';
+                        } else {
+                            protectionMessage = '💔 Tu Escudo de la Fortuna falló esta vez (tenías 80% de protección)';
+                        }
+                        break;
+                    }
+                }
+            }
+            
+            // 3️⃣ HEALTH POTION: 40% probabilidad
+            if (!protected && activeEffects['health_potion']) {
+                for (const effect of activeEffects['health_potion']) {
+                    if (effect.type === 'penalty_protection' && effect.expiresAt > Date.now()) {
+                        const roll = Math.random();
+                        if (roll < 0.40) {
+                            protected = true;
+                            protectionMessage = '💊 Tu Poción de Salud redujo las penalizaciones (40% de suerte)';
+                        } else {
+                            protectionMessage = '💔 Tu Poción de Salud no pudo protegerte esta vez (tenías 40% de protección)';
+                        }
+                        break;
+                    }
+                }
+            }
+            
+            // ✅ Aplicar protección o pérdida
+            if (protected) {
                 await message.reply(protectionMessage);
             } else {
+                if (protectionMessage) {
+                    await message.reply(protectionMessage); // Mostrar que falló
+                }
                 await this.economy.removeMoney(userId, betAmount, 'lottery');
             }
             
@@ -1738,7 +1915,20 @@ let luckMessage = '';
 
         // Verificar tesoros al final
         await this.checkTreasureHunt(userId, message);
-    
+
+        const activeEffects = this.shop.parseActiveEffects(user.activeEffects);
+        const curse = activeEffects['death_hand_curse'];
+        // Al final, después de crear el embed de resultado
+        if (curse && curse.length > 0 && curse[0].expiresAt > Date.now()) {
+            embed.addFields({
+                name: '☠️ Maldición Activa',
+                value: won 
+                    ? `Tu ganancia fue reducida por la maldición (-25% dinero)`
+                    : `La maldición empeoró tu suerte (-50% probabilidad)`,
+                inline: false
+            });
+        }
+
         await reply.edit({ embeds: [resultEmbed] });
     }
 
@@ -2217,6 +2407,10 @@ const userId = gameState.userId;
         let userData;
         const equipmentBonus = await this.shop.applyEquipmentBonus(userId);
         let equipmentMessage = '';        
+        const activeEffects = this.shop.parseActiveEffects(user.activeEffects);
+        let protected = false;
+        let protectionMessage = '';
+
 
         switch (result) {
             case 'blackjack':
@@ -2407,31 +2601,76 @@ const userId = gameState.userId;
                 }
                 break;
             case 'bust':
-                await this.economy.missions.updateMissionProgress(userId, 'consecutive_loss'); 
-
                 resultText = '💥 **¡TE PASASTE!**';
                 profit = -finalBet;
 
                 await this.economy.database.incrementGameLimit(userId, gameType);
-
-                if (hasProtection) {
-                    let protectionMessage = '🛡️ Tu protección evitó la pérdida de dinero!';
-                    
-                    const user = await this.economy.getUser(userId);
-                    const activeEffects = this.shop.parseActiveEffects(user.activeEffects);
-                    
-                    if (activeEffects['health_potion']) {
-                        protectionMessage = '💊 Tu Poción de Salud te protegió de las penalizaciones!';
-                    } else if (activeEffects['fortune_shield']) {
-                        protectionMessage = '🛡️ Tu Escudo de la Fortuna te protegió!';
-                    } else if (activeEffects['condon_pibe2']) {
-                        protectionMessage = '🧃 En hora buena, el Condon usado de Pibe 2 te protegió!';
+                await this.economy.missions.updateMissionProgress(userId, 'consecutive_loss');
+                
+                // 1️⃣ CONDÓN: 100% garantizado, 1 uso
+                if (activeEffects['condon_pibe2']) {
+                    for (let i = activeEffects['condon_pibe2'].length - 1; i >= 0; i--) {
+                        const effect = activeEffects['condon_pibe2'][i];
+                        if (effect.type === 'protection' && effect.usesLeft > 0) {
+                            protected = true;
+                            effect.usesLeft -= 1;
+                            
+                            if (effect.usesLeft <= 0) {
+                                activeEffects['condon_pibe2'].splice(i, 1);
+                                if (activeEffects['condon_pibe2'].length === 0) {
+                                    delete activeEffects['condon_pibe2'];
+                                }
+                            }
+                            
+                            await this.economy.updateUser(userId, { activeEffects });
+                            protectionMessage = '🧃 ¡El Condón usado de Pibe 2 te protegió! (100% - último uso consumido)';
+                            break;
+                        }
                     }
-                    
-                    await messageOrInteraction.reply(protectionMessage);
+                }
+                
+                // 2️⃣ FORTUNE SHIELD: 80% probabilidad
+                if (!protected && activeEffects['fortune_shield']) {
+                    for (const effect of activeEffects['fortune_shield']) {
+                        if (effect.type === 'protection' && effect.expiresAt > Date.now()) {
+                            const roll = Math.random();
+                            if (roll < 0.80) {
+                                protected = true;
+                                protectionMessage = '🛡️ Tu Escudo de la Fortuna te protegió (80% de suerte)';
+                            } else {
+                                protectionMessage = '💔 Tu Escudo de la Fortuna falló esta vez (tenías 80% de protección)';
+                            }
+                            break;
+                        }
+                    }
+                }
+                
+                // 3️⃣ HEALTH POTION: 40% probabilidad
+                if (!protected && activeEffects['health_potion']) {
+                    for (const effect of activeEffects['health_potion']) {
+                        if (effect.type === 'penalty_protection' && effect.expiresAt > Date.now()) {
+                            const roll = Math.random();
+                            if (roll < 0.40) {
+                                protected = true;
+                                protectionMessage = '💊 Tu Poción de Salud redujo las penalizaciones (40% de suerte)';
+                            } else {
+                                protectionMessage = '💔 Tu Poción de Salud no pudo protegerte esta vez (tenías 40% de protección)';
+                            }
+                            break;
+                        }
+                    }
+                }
+                
+                // ✅ Aplicar protección o pérdida
+                if (protected) {
+                    await message.reply(protectionMessage);
                 } else {
+                    if (protectionMessage) {
+                        await message.reply(protectionMessage); // Mostrar que falló
+                    }
                     await this.economy.removeMoney(userId, finalBet, 'blackjack_loss');
                 }
+
 
                 // *** NUEVO: ACTUALIZAR ESTADÍSTICAS DE ACHIEVEMENTS ***
                 if (this.achievements) {
@@ -2441,29 +2680,73 @@ const userId = gameState.userId;
                 }
                 break;
             case 'lose':
-                await this.economy.missions.updateMissionProgress(userId, 'consecutive_loss'); 
-
                 resultText = '💸 **Perdiste...**';
                 profit = -finalBet;
 
                 await this.economy.database.incrementGameLimit(userId, gameType);
-
-                if (hasProtection) {
-                    let protectionMessage = '🛡️ Tu protección evitó la pérdida de dinero!';
-                    
-                    const user = await this.economy.getUser(userId);
-                    const activeEffects = this.shop.parseActiveEffects(user.activeEffects);
-                    
-                    if (activeEffects['health_potion']) {
-                        protectionMessage = '💊 Tu Poción de Salud te protegió de las penalizaciones!';
-                    } else if (activeEffects['fortune_shield']) {
-                        protectionMessage = '🛡️ Tu Escudo de la Fortuna te protegió!';
-                    } else if (activeEffects['condon_pibe2']) {
-                        protectionMessage = '🧃 En hora buena, el Condon usado de Pibe 2 te protegió!';
+                await this.economy.missions.updateMissionProgress(userId, 'consecutive_loss');
+                
+                // 1️⃣ CONDÓN: 100% garantizado, 1 uso
+                if (activeEffects['condon_pibe2']) {
+                    for (let i = activeEffects['condon_pibe2'].length - 1; i >= 0; i--) {
+                        const effect = activeEffects['condon_pibe2'][i];
+                        if (effect.type === 'protection' && effect.usesLeft > 0) {
+                            protected = true;
+                            effect.usesLeft -= 1;
+                            
+                            if (effect.usesLeft <= 0) {
+                                activeEffects['condon_pibe2'].splice(i, 1);
+                                if (activeEffects['condon_pibe2'].length === 0) {
+                                    delete activeEffects['condon_pibe2'];
+                                }
+                            }
+                            
+                            await this.economy.updateUser(userId, { activeEffects });
+                            protectionMessage = '🧃 ¡El Condón usado de Pibe 2 te protegió! (100% - último uso consumido)';
+                            break;
+                        }
                     }
-                    
-                    await messageOrInteraction.reply(protectionMessage);
+                }
+                
+                // 2️⃣ FORTUNE SHIELD: 80% probabilidad
+                if (!protected && activeEffects['fortune_shield']) {
+                    for (const effect of activeEffects['fortune_shield']) {
+                        if (effect.type === 'protection' && effect.expiresAt > Date.now()) {
+                            const roll = Math.random();
+                            if (roll < 0.80) {
+                                protected = true;
+                                protectionMessage = '🛡️ Tu Escudo de la Fortuna te protegió (80% de suerte)';
+                            } else {
+                                protectionMessage = '💔 Tu Escudo de la Fortuna falló esta vez (tenías 80% de protección)';
+                            }
+                            break;
+                        }
+                    }
+                }
+                
+                // 3️⃣ HEALTH POTION: 40% probabilidad
+                if (!protected && activeEffects['health_potion']) {
+                    for (const effect of activeEffects['health_potion']) {
+                        if (effect.type === 'penalty_protection' && effect.expiresAt > Date.now()) {
+                            const roll = Math.random();
+                            if (roll < 0.40) {
+                                protected = true;
+                                protectionMessage = '💊 Tu Poción de Salud redujo las penalizaciones (40% de suerte)';
+                            } else {
+                                protectionMessage = '💔 Tu Poción de Salud no pudo protegerte esta vez (tenías 40% de protección)';
+                            }
+                            break;
+                        }
+                    }
+                }
+                
+                // ✅ Aplicar protección o pérdida
+                if (protected) {
+                    await message.reply(protectionMessage);
                 } else {
+                    if (protectionMessage) {
+                        await message.reply(protectionMessage); // Mostrar que falló
+                    }
                     await this.economy.removeMoney(userId, finalBet, 'blackjack_loss');
                 }
 
@@ -2952,26 +3235,77 @@ const userId = gameState.userId;
                 await message.reply(`⚠️ **Límite alcanzado:** No pudiste recibir todo el dinero porque tienes el máximo permitido (${this.formatNumber(userLimit)} π-b$).`);
             }
         } else {
-            await this.economy.missions.updateMissionProgress(userId, 'consecutive_loss'); 
             await this.economy.database.incrementGameLimit(userId, gameType);
-
-            const hasProtection = await this.shop.hasGameProtection(userId);
-            if (hasProtection) {
-                let protectionMessage = '🛡️ Tu protección evitó la pérdida de dinero!';
-                
-                const user = await this.economy.getUser(userId);
-                const activeEffects = this.shop.parseActiveEffects(user.activeEffects);
-                
-                if (activeEffects['health_potion']) {
-                    protectionMessage = '💊 Tu Poción de Salud te protegió de las penalizaciones!';
-                } else if (activeEffects['fortune_shield']) {
-                    protectionMessage = '🛡️ Tu Escudo de la Fortuna te protegió!';
-                } else if (activeEffects['condon_pibe2']) {
-                    protectionMessage = '🧃 En hora buena, el Condon usado de Pibe 2 te protegió!';
+            await this.economy.missions.updateMissionProgress(userId, 'consecutive_loss');
+            
+            // ✅ NUEVO: Sistema de protección mejorado
+            const user = await this.economy.getUser(userId);
+            const activeEffects = this.shop.parseActiveEffects(user.activeEffects);
+            
+            let protected = false;
+            let protectionMessage = '';
+            
+            // 1️⃣ CONDÓN: 100% garantizado, 1 uso
+            if (activeEffects['condon_pibe2']) {
+                for (let i = activeEffects['condon_pibe2'].length - 1; i >= 0; i--) {
+                    const effect = activeEffects['condon_pibe2'][i];
+                    if (effect.type === 'protection' && effect.usesLeft > 0) {
+                        protected = true;
+                        effect.usesLeft -= 1;
+                        
+                        if (effect.usesLeft <= 0) {
+                            activeEffects['condon_pibe2'].splice(i, 1);
+                            if (activeEffects['condon_pibe2'].length === 0) {
+                                delete activeEffects['condon_pibe2'];
+                            }
+                        }
+                        
+                        await this.economy.updateUser(userId, { activeEffects });
+                        protectionMessage = '🧃 ¡El Condón usado de Pibe 2 te protegió! (100% - último uso consumido)';
+                        break;
+                    }
                 }
-                
+            }
+            
+            // 2️⃣ FORTUNE SHIELD: 80% probabilidad
+            if (!protected && activeEffects['fortune_shield']) {
+                for (const effect of activeEffects['fortune_shield']) {
+                    if (effect.type === 'protection' && effect.expiresAt > Date.now()) {
+                        const roll = Math.random();
+                        if (roll < 0.80) {
+                            protected = true;
+                            protectionMessage = '🛡️ Tu Escudo de la Fortuna te protegió (80% de suerte)';
+                        } else {
+                            protectionMessage = '💔 Tu Escudo de la Fortuna falló esta vez (tenías 80% de protección)';
+                        }
+                        break;
+                    }
+                }
+            }
+            
+            // 3️⃣ HEALTH POTION: 40% probabilidad
+            if (!protected && activeEffects['health_potion']) {
+                for (const effect of activeEffects['health_potion']) {
+                    if (effect.type === 'penalty_protection' && effect.expiresAt > Date.now()) {
+                        const roll = Math.random();
+                        if (roll < 0.40) {
+                            protected = true;
+                            protectionMessage = '💊 Tu Poción de Salud redujo las penalizaciones (40% de suerte)';
+                        } else {
+                            protectionMessage = '💔 Tu Poción de Salud no pudo protegerte esta vez (tenías 40% de protección)';
+                        }
+                        break;
+                    }
+                }
+            }
+            
+            // ✅ Aplicar protección o pérdida
+            if (protected) {
                 await message.reply(protectionMessage);
             } else {
+                if (protectionMessage) {
+                    await message.reply(protectionMessage); // Mostrar que falló
+                }
                 await this.economy.removeMoney(userId, betAmount, 'roulette_loss');
             }
             
@@ -3008,6 +3342,19 @@ const userId = gameState.userId;
         // Verificar tesoros al final
         await this.checkTreasureHunt(userId, message);
 
+        const activeEffects = this.shop.parseActiveEffects(user.activeEffects);
+        const curse = activeEffects['death_hand_curse'];
+        // Al final, después de crear el embed de resultado
+        if (curse && curse.length > 0 && curse[0].expiresAt > Date.now()) {
+            embed.addFields({
+                name: '☠️ Maldición Activa',
+                value: won 
+                    ? `Tu ganancia fue reducida por la maldición (-25% dinero)`
+                    : `La maldición empeoró tu suerte (-50% probabilidad)`,
+                inline: false
+            });
+        }
+        
         await reply.edit({ embeds: [resultEmbed] });
     }
     
@@ -3552,27 +3899,77 @@ const userId = gameState.userId;
                 await message.reply(`⚠️ **Límite alcanzado:** No pudiste recibir todo el dinero (máximo ${this.formatNumber(userLimit)} π-b$)`);
             }
         } else {
-            // PERDIÓ
-            await this.economy.missions.updateMissionProgress(userId, 'consecutive_loss');
-            // INCREMENTAR LÍMITE
             await this.economy.database.incrementGameLimit(userId, gameType);
+            await this.economy.missions.updateMissionProgress(userId, 'consecutive_loss');
             
-            const hasProtection = await this.shop.hasGameProtection(userId);
-            if (hasProtection) {
-                let protectionMessage = '🛡️ Tu protección evitó la pérdida de dinero!';
-                const user = await this.economy.getUser(userId);
-                const activeEffects = this.shop.parseActiveEffects(user.activeEffects);
-                
-                if (activeEffects['health_potion']) {
-                    protectionMessage = '💊 Tu Poción de Salud te protegió de las penalizaciones!';
-                } else if (activeEffects['fortune_shield']) {
-                    protectionMessage = '🛡️ Tu Escudo de la Fortuna te protegió!';
-                } else if (activeEffects['condon_pibe2']) {
-                    protectionMessage = '🧃 En hora buena, el Condon usado de Pibe 2 te protegió!';
+            // ✅ NUEVO: Sistema de protección mejorado
+            const user = await this.economy.getUser(userId);
+            const activeEffects = this.shop.parseActiveEffects(user.activeEffects);
+            
+            let protected = false;
+            let protectionMessage = '';
+            
+            // 1️⃣ CONDÓN: 100% garantizado, 1 uso
+            if (activeEffects['condon_pibe2']) {
+                for (let i = activeEffects['condon_pibe2'].length - 1; i >= 0; i--) {
+                    const effect = activeEffects['condon_pibe2'][i];
+                    if (effect.type === 'protection' && effect.usesLeft > 0) {
+                        protected = true;
+                        effect.usesLeft -= 1;
+                        
+                        if (effect.usesLeft <= 0) {
+                            activeEffects['condon_pibe2'].splice(i, 1);
+                            if (activeEffects['condon_pibe2'].length === 0) {
+                                delete activeEffects['condon_pibe2'];
+                            }
+                        }
+                        
+                        await this.economy.updateUser(userId, { activeEffects });
+                        protectionMessage = '🧃 ¡El Condón usado de Pibe 2 te protegió! (100% - último uso consumido)';
+                        break;
+                    }
                 }
-                
+            }
+            
+            // 2️⃣ FORTUNE SHIELD: 80% probabilidad
+            if (!protected && activeEffects['fortune_shield']) {
+                for (const effect of activeEffects['fortune_shield']) {
+                    if (effect.type === 'protection' && effect.expiresAt > Date.now()) {
+                        const roll = Math.random();
+                        if (roll < 0.80) {
+                            protected = true;
+                            protectionMessage = '🛡️ Tu Escudo de la Fortuna te protegió (80% de suerte)';
+                        } else {
+                            protectionMessage = '💔 Tu Escudo de la Fortuna falló esta vez (tenías 80% de protección)';
+                        }
+                        break;
+                    }
+                }
+            }
+            
+            // 3️⃣ HEALTH POTION: 40% probabilidad
+            if (!protected && activeEffects['health_potion']) {
+                for (const effect of activeEffects['health_potion']) {
+                    if (effect.type === 'penalty_protection' && effect.expiresAt > Date.now()) {
+                        const roll = Math.random();
+                        if (roll < 0.40) {
+                            protected = true;
+                            protectionMessage = '💊 Tu Poción de Salud redujo las penalizaciones (40% de suerte)';
+                        } else {
+                            protectionMessage = '💔 Tu Poción de Salud no pudo protegerte esta vez (tenías 40% de protección)';
+                        }
+                        break;
+                    }
+                }
+            }
+            
+            // ✅ Aplicar protección o pérdida
+            if (protected) {
                 await message.reply(protectionMessage);
             } else {
+                if (protectionMessage) {
+                    await message.reply(protectionMessage); // Mostrar que falló
+                }
                 await this.economy.removeMoney(userId, betAmount, 'slots_loss');
             }
             
@@ -3599,7 +3996,20 @@ const userId = gameState.userId;
                 await this.achievements.notifyAchievements(message, unlockedAchievements);
             }
         }
-        
+
+        const activeEffects = this.shop.parseActiveEffects(user.activeEffects);
+        const curse = activeEffects['death_hand_curse'];
+        // Al final, después de crear el embed de resultado
+        if (curse && curse.length > 0 && curse[0].expiresAt > Date.now()) {
+            embed.addFields({
+                name: '☠️ Maldición Activa',
+                value: won 
+                    ? `Tu ganancia fue reducida por la maldición (-25% dinero)`
+                    : `La maldición empeoró tu suerte (-50% probabilidad)`,
+                inline: false
+            });
+        }
+
         await reply.edit({ embeds: [embed] });
         
         // Treasure hunt
@@ -4494,52 +4904,34 @@ const userId = gameState.userId;
     }
 
     createRaceEmbed(game) {
-        const trackLength = 20;
-        
-        // ✅ ORDENAR CABALLOS POR POSICIÓN ACTUAL (más avanzados arriba)
-        const sortedHorses = [...game.horses].sort((a, b) => {
-            if (a.finished && b.finished) {
-                return a.finishPosition - b.finishPosition;
-            }
-            if (a.finished) return -1;
-            if (b.finished) return 1;
-            return b.position - a.position;
-        });
+        const trackLength = 20; // Caracteres de pista visual
         
         let raceTrack = '';
-        let currentPosition = 1;
-        
-        for (const horse of sortedHorses) {
+        game.horses.forEach((horse, i) => {
             const progress = Math.floor((horse.position / horse.totalDistance) * trackLength);
             const track = TRACK_EMOJI.repeat(progress) + horse.emoji + TRACK_EMOJI.repeat(trackLength - progress);
             
             // Marcar caballos de jugadores
             const playerMarkers = Object.values(game.players)
-                .filter(p => p.horseIndex === horse.index)
+                .filter(p => p.horseIndex === i)
                 .map(p => {
                     if (p.id === 'bot') return '🤖';
+                    // Mostrar 💰 si dobló
                     return p.hasDoubled ? '💰' : '👤';
                 })
                 .join('');
             
-            // ✅ MOSTRAR POSICIÓN ACTUAL O FINAL
-            let positionMarker = '';
-            if (horse.finished) {
-                positionMarker = ` ${FINISH_LINE} #${horse.finishPosition}`;
-            } else {
-                // Mostrar posición actual en tiempo real
-                const tempPosition = currentPosition;
-                positionMarker = ` [#${tempPosition}]`;
-                currentPosition++;
-            }
+            const finishMarker = horse.finished ? ` ${FINISH_LINE} #${horse.finishPosition}` : '';
             
-            raceTrack += `${track}${playerMarkers}${positionMarker}\n`;
-        }
+            raceTrack += `${track}${playerMarkers}${finishMarker}\n`;
+        });
         
+        // ✅ VERIFICAR QUE raceTrack NO ESTÉ VACÍO
         if (!raceTrack || raceTrack.trim() === '') {
             raceTrack = '🏁 Iniciando carrera...\n';
         }
         
+        // ✅ CALCULAR POT TOTAL CONSIDERANDO APUESTAS DOBLADAS
         let totalPot = 0;
         if (game.mode === 'bot') {
             totalPot = Object.values(game.players).reduce((sum, p) => 
@@ -4549,6 +4941,7 @@ const userId = gameState.userId;
             totalPot = game.pot;
         }
         
+        // ✅ MOSTRAR CUÁNTOS HAN TERMINADO
         const finishedCount = game.horses.filter(h => h.finished).length;
         const totalHorses = game.horses.length;
         
@@ -4569,7 +4962,7 @@ const userId = gameState.userId;
                 }
             )
             .setColor(game.raceProgress < 50 ? '#00FF00' : game.raceProgress < 75 ? '#FFD700' : '#FF4500')
-            .setFooter({ text: '👤 = Normal | 💰 = x2 | 🤖 = Bot | 🏁 = Llegó | [#N] = Posición actual' });
+            .setFooter({ text: '👤 = Normal | 💰 = Apuesta x2 | 🤖 = Bot | 🏁 = Llegó' });
         
         return embed;
     }
@@ -8416,8 +8809,8 @@ const userId = gameState.userId;
         await this.economy.checkPendingPassiveIncome(message.author.id);
         await this.economy.checkAndNotifyItems(message.author.id, message);
 
-        // Probabilidad 5% de recibir maldición aleatoria
-        if (Math.random() < 0.03) {
+        // Probabilidad 1% de recibir maldición aleatoria
+        if (Math.random() < 0.01) {
             await this.economy.shop.applyRandomCurse(message.author.id);
             
             const curseNotif = new EmbedBuilder()
