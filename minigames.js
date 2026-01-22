@@ -1048,7 +1048,7 @@ let luckMessage = '';
                     { name: '🎯 Tu Elección', value: normalizedChoice === 'cara' ? '🟡 Cara' : '⚪ Cruz', inline: true },
                 );
 
-            if (hasProtection) {
+            if (hasProtected) {
                 embed.addFields(
                     { name: '🛡️ Protección', value: `${protectionMessage}`, inline: false }
                 );
@@ -2401,7 +2401,6 @@ const userId = gameState.userId;
         let eventMessage = '';
         let itemMessage = '';
         const gameType = 'blackjack';
-        const hasProtection = await this.shop.hasGameProtection(userId);;
 
         let addResult;
         let userData;
@@ -2663,10 +2662,10 @@ const userId = gameState.userId;
                 
                 // ✅ Aplicar protección o pérdida
                 if (hasProtected) {
-                    await message.reply(protectionMessage);
+                    await messageOrInteraction.reply(protectionMessage);
                 } else {
                     if (protectionMessage) {
-                        await message.reply(protectionMessage); // Mostrar que falló
+                        await messageOrInteraction.reply(protectionMessage); // Mostrar que falló
                     }
                     await this.economy.removeMoney(userId, finalBet, 'blackjack_loss');
                 }
@@ -2742,10 +2741,10 @@ const userId = gameState.userId;
                 
                 // ✅ Aplicar protección o pérdida
                 if (hasProtected) {
-                    await message.reply(protectionMessage);
+                    await messageOrInteraction.reply(protectionMessage);
                 } else {
                     if (protectionMessage) {
-                        await message.reply(protectionMessage); // Mostrar que falló
+                        await messageOrInteraction.reply(protectionMessage); // Mostrar que falló
                     }
                     await this.economy.removeMoney(userId, finalBet, 'blackjack_loss');
                 }
