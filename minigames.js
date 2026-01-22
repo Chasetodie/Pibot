@@ -815,6 +815,7 @@ async getEffectiveCooldown(baseCooldown) {
             return;
         }
 
+        console.log('RANDOM:', Math.random());
         const randomRoll = Math.random();
         const result = randomRoll < 0.5 ? 'cara' : 'cruz';
 
