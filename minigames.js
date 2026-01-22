@@ -966,7 +966,7 @@ let luckMessage = '';
             const user = await this.economy.getUser(userId);
             const activeEffects = this.shop.parseActiveEffects(user.activeEffects);
             
-            let protected = false;
+            let hasProtected = false;
             let protectionMessage = '';
 
             // 1️⃣ CONDÓN: 100% garantizado, 1 uso
@@ -974,7 +974,7 @@ let luckMessage = '';
                 for (let i = activeEffects['condon_pibe2'].length - 1; i >= 0; i--) {
                     const effect = activeEffects['condon_pibe2'][i];
                     if (effect.type === 'protection' && effect.usesLeft > 0) {
-                        protected = true;
+                        hasProtected = true;
                         effect.usesLeft -= 1;
                         
                         if (effect.usesLeft <= 0) {
@@ -992,12 +992,12 @@ let luckMessage = '';
             }
             
             // 2️⃣ FORTUNE SHIELD: 80% probabilidad
-            if (!protected && activeEffects['fortune_shield']) {
+            if (!hasProtected && activeEffects['fortune_shield']) {
                 for (const effect of activeEffects['fortune_shield']) {
                     if (effect.type === 'protection' && effect.expiresAt > Date.now()) {
                         const roll = Math.random();
                         if (roll < 0.80) {
-                            protected = true;
+                            hasProtected = true;
                             protectionMessage = '🛡️ Tu Escudo de la Fortuna te protegió (80% de suerte)';
                         } else {
                             protectionMessage = '💔 Tu Escudo de la Fortuna falló esta vez (tenías 80% de protección)';
@@ -1008,12 +1008,12 @@ let luckMessage = '';
             }
             
             // 3️⃣ HEALTH POTION: 40% probabilidad
-            if (!protected && activeEffects['health_potion']) {
+            if (!hasProtected && activeEffects['health_potion']) {
                 for (const effect of activeEffects['health_potion']) {
                     if (effect.type === 'penalty_protection' && effect.expiresAt > Date.now()) {
                         const roll = Math.random();
                         if (roll < 0.40) {
-                            protected = true;
+                            hasProtected = true;
                             protectionMessage = '💊 Tu Poción de Salud redujo las penalizaciones (40% de suerte)';
                         } else {
                             protectionMessage = '💔 Tu Poción de Salud no pudo protegerte esta vez (tenías 40% de protección)';
@@ -1024,7 +1024,7 @@ let luckMessage = '';
             }
             
             // ✅ Aplicar protección o pérdida
-            if (protected) {
+            if (hasProtected) {
                 await message.reply(protectionMessage);
             } else {
                 if (protectionMessage) {
@@ -1392,7 +1392,7 @@ let luckMessage = '';
             const user = await this.economy.getUser(userId);
             const activeEffects = this.shop.parseActiveEffects(user.activeEffects);
             
-            let protected = false;
+            let hasProtected = false;
             let protectionMessage = '';
             
             // 1️⃣ CONDÓN: 100% garantizado, 1 uso
@@ -1400,7 +1400,7 @@ let luckMessage = '';
                 for (let i = activeEffects['condon_pibe2'].length - 1; i >= 0; i--) {
                     const effect = activeEffects['condon_pibe2'][i];
                     if (effect.type === 'protection' && effect.usesLeft > 0) {
-                        protected = true;
+                        hasProtected = true;
                         effect.usesLeft -= 1;
                         
                         if (effect.usesLeft <= 0) {
@@ -1418,12 +1418,12 @@ let luckMessage = '';
             }
             
             // 2️⃣ FORTUNE SHIELD: 80% probabilidad
-            if (!protected && activeEffects['fortune_shield']) {
+            if (!hasProtected && activeEffects['fortune_shield']) {
                 for (const effect of activeEffects['fortune_shield']) {
                     if (effect.type === 'protection' && effect.expiresAt > Date.now()) {
                         const roll = Math.random();
                         if (roll < 0.80) {
-                            protected = true;
+                            hasProtected = true;
                             protectionMessage = '🛡️ Tu Escudo de la Fortuna te protegió (80% de suerte)';
                         } else {
                             protectionMessage = '💔 Tu Escudo de la Fortuna falló esta vez (tenías 80% de protección)';
@@ -1434,12 +1434,12 @@ let luckMessage = '';
             }
             
             // 3️⃣ HEALTH POTION: 40% probabilidad
-            if (!protected && activeEffects['health_potion']) {
+            if (!hasProtected && activeEffects['health_potion']) {
                 for (const effect of activeEffects['health_potion']) {
                     if (effect.type === 'penalty_protection' && effect.expiresAt > Date.now()) {
                         const roll = Math.random();
                         if (roll < 0.40) {
-                            protected = true;
+                            hasProtected = true;
                             protectionMessage = '💊 Tu Poción de Salud redujo las penalizaciones (40% de suerte)';
                         } else {
                             protectionMessage = '💔 Tu Poción de Salud no pudo protegerte esta vez (tenías 40% de protección)';
@@ -1450,7 +1450,7 @@ let luckMessage = '';
             }
             
             // ✅ Aplicar protección o pérdida
-            if (protected) {
+            if (hasProtected) {
                 await message.reply(protectionMessage);
             } else {
                 if (protectionMessage) {
@@ -1814,7 +1814,7 @@ let luckMessage = '';
             const user = await this.economy.getUser(userId);
             const activeEffects = this.shop.parseActiveEffects(user.activeEffects);
             
-            let protected = false;
+            let hasProtected = false;
             let protectionMessage = '';
             
             // 1️⃣ CONDÓN: 100% garantizado, 1 uso
@@ -1822,7 +1822,7 @@ let luckMessage = '';
                 for (let i = activeEffects['condon_pibe2'].length - 1; i >= 0; i--) {
                     const effect = activeEffects['condon_pibe2'][i];
                     if (effect.type === 'protection' && effect.usesLeft > 0) {
-                        protected = true;
+                        hasProtected = true;
                         effect.usesLeft -= 1;
                         
                         if (effect.usesLeft <= 0) {
@@ -1840,12 +1840,12 @@ let luckMessage = '';
             }
             
             // 2️⃣ FORTUNE SHIELD: 80% probabilidad
-            if (!protected && activeEffects['fortune_shield']) {
+            if (!hasProtected && activeEffects['fortune_shield']) {
                 for (const effect of activeEffects['fortune_shield']) {
                     if (effect.type === 'protection' && effect.expiresAt > Date.now()) {
                         const roll = Math.random();
                         if (roll < 0.80) {
-                            protected = true;
+                            hasProtected = true;
                             protectionMessage = '🛡️ Tu Escudo de la Fortuna te protegió (80% de suerte)';
                         } else {
                             protectionMessage = '💔 Tu Escudo de la Fortuna falló esta vez (tenías 80% de protección)';
@@ -1856,12 +1856,12 @@ let luckMessage = '';
             }
             
             // 3️⃣ HEALTH POTION: 40% probabilidad
-            if (!protected && activeEffects['health_potion']) {
+            if (!hasProtected && activeEffects['health_potion']) {
                 for (const effect of activeEffects['health_potion']) {
                     if (effect.type === 'penalty_protection' && effect.expiresAt > Date.now()) {
                         const roll = Math.random();
                         if (roll < 0.40) {
-                            protected = true;
+                            hasProtected = true;
                             protectionMessage = '💊 Tu Poción de Salud redujo las penalizaciones (40% de suerte)';
                         } else {
                             protectionMessage = '💔 Tu Poción de Salud no pudo protegerte esta vez (tenías 40% de protección)';
@@ -1872,7 +1872,7 @@ let luckMessage = '';
             }
             
             // ✅ Aplicar protección o pérdida
-            if (protected) {
+            if (hasProtected) {
                 await message.reply(protectionMessage);
             } else {
                 if (protectionMessage) {
@@ -2408,7 +2408,7 @@ const userId = gameState.userId;
         const equipmentBonus = await this.shop.applyEquipmentBonus(userId);
         let equipmentMessage = '';        
         const activeEffects = this.shop.parseActiveEffects(user.activeEffects);
-        let protected = false;
+        let hasProtected = false;
         let protectionMessage = '';
 
 
@@ -2612,7 +2612,7 @@ const userId = gameState.userId;
                     for (let i = activeEffects['condon_pibe2'].length - 1; i >= 0; i--) {
                         const effect = activeEffects['condon_pibe2'][i];
                         if (effect.type === 'protection' && effect.usesLeft > 0) {
-                            protected = true;
+                            hasProtected = true;
                             effect.usesLeft -= 1;
                             
                             if (effect.usesLeft <= 0) {
@@ -2630,12 +2630,12 @@ const userId = gameState.userId;
                 }
                 
                 // 2️⃣ FORTUNE SHIELD: 80% probabilidad
-                if (!protected && activeEffects['fortune_shield']) {
+                if (!hasProtected && activeEffects['fortune_shield']) {
                     for (const effect of activeEffects['fortune_shield']) {
                         if (effect.type === 'protection' && effect.expiresAt > Date.now()) {
                             const roll = Math.random();
                             if (roll < 0.80) {
-                                protected = true;
+                                hasProtected = true;
                                 protectionMessage = '🛡️ Tu Escudo de la Fortuna te protegió (80% de suerte)';
                             } else {
                                 protectionMessage = '💔 Tu Escudo de la Fortuna falló esta vez (tenías 80% de protección)';
@@ -2646,12 +2646,12 @@ const userId = gameState.userId;
                 }
                 
                 // 3️⃣ HEALTH POTION: 40% probabilidad
-                if (!protected && activeEffects['health_potion']) {
+                if (!hasProtected && activeEffects['health_potion']) {
                     for (const effect of activeEffects['health_potion']) {
                         if (effect.type === 'penalty_protection' && effect.expiresAt > Date.now()) {
                             const roll = Math.random();
                             if (roll < 0.40) {
-                                protected = true;
+                                hasProtected = true;
                                 protectionMessage = '💊 Tu Poción de Salud redujo las penalizaciones (40% de suerte)';
                             } else {
                                 protectionMessage = '💔 Tu Poción de Salud no pudo protegerte esta vez (tenías 40% de protección)';
@@ -2662,7 +2662,7 @@ const userId = gameState.userId;
                 }
                 
                 // ✅ Aplicar protección o pérdida
-                if (protected) {
+                if (hasProtected) {
                     await message.reply(protectionMessage);
                 } else {
                     if (protectionMessage) {
@@ -2691,7 +2691,7 @@ const userId = gameState.userId;
                     for (let i = activeEffects['condon_pibe2'].length - 1; i >= 0; i--) {
                         const effect = activeEffects['condon_pibe2'][i];
                         if (effect.type === 'protection' && effect.usesLeft > 0) {
-                            protected = true;
+                            hasProtected = true;
                             effect.usesLeft -= 1;
                             
                             if (effect.usesLeft <= 0) {
@@ -2709,12 +2709,12 @@ const userId = gameState.userId;
                 }
                 
                 // 2️⃣ FORTUNE SHIELD: 80% probabilidad
-                if (!protected && activeEffects['fortune_shield']) {
+                if (!hasProtected && activeEffects['fortune_shield']) {
                     for (const effect of activeEffects['fortune_shield']) {
                         if (effect.type === 'protection' && effect.expiresAt > Date.now()) {
                             const roll = Math.random();
                             if (roll < 0.80) {
-                                protected = true;
+                                hasProtected = true;
                                 protectionMessage = '🛡️ Tu Escudo de la Fortuna te protegió (80% de suerte)';
                             } else {
                                 protectionMessage = '💔 Tu Escudo de la Fortuna falló esta vez (tenías 80% de protección)';
@@ -2725,12 +2725,12 @@ const userId = gameState.userId;
                 }
                 
                 // 3️⃣ HEALTH POTION: 40% probabilidad
-                if (!protected && activeEffects['health_potion']) {
+                if (!hasProtected && activeEffects['health_potion']) {
                     for (const effect of activeEffects['health_potion']) {
                         if (effect.type === 'penalty_protection' && effect.expiresAt > Date.now()) {
                             const roll = Math.random();
                             if (roll < 0.40) {
-                                protected = true;
+                                hasProtected = true;
                                 protectionMessage = '💊 Tu Poción de Salud redujo las penalizaciones (40% de suerte)';
                             } else {
                                 protectionMessage = '💔 Tu Poción de Salud no pudo protegerte esta vez (tenías 40% de protección)';
@@ -2741,7 +2741,7 @@ const userId = gameState.userId;
                 }
                 
                 // ✅ Aplicar protección o pérdida
-                if (protected) {
+                if (hasProtected) {
                     await message.reply(protectionMessage);
                 } else {
                     if (protectionMessage) {
@@ -3242,7 +3242,7 @@ const userId = gameState.userId;
             const user = await this.economy.getUser(userId);
             const activeEffects = this.shop.parseActiveEffects(user.activeEffects);
             
-            let protected = false;
+            let hasProtected = false;
             let protectionMessage = '';
             
             // 1️⃣ CONDÓN: 100% garantizado, 1 uso
@@ -3250,7 +3250,7 @@ const userId = gameState.userId;
                 for (let i = activeEffects['condon_pibe2'].length - 1; i >= 0; i--) {
                     const effect = activeEffects['condon_pibe2'][i];
                     if (effect.type === 'protection' && effect.usesLeft > 0) {
-                        protected = true;
+                        hasProtected = true;
                         effect.usesLeft -= 1;
                         
                         if (effect.usesLeft <= 0) {
@@ -3268,12 +3268,12 @@ const userId = gameState.userId;
             }
             
             // 2️⃣ FORTUNE SHIELD: 80% probabilidad
-            if (!protected && activeEffects['fortune_shield']) {
+            if (!hasProtected && activeEffects['fortune_shield']) {
                 for (const effect of activeEffects['fortune_shield']) {
                     if (effect.type === 'protection' && effect.expiresAt > Date.now()) {
                         const roll = Math.random();
                         if (roll < 0.80) {
-                            protected = true;
+                            hasProtected = true;
                             protectionMessage = '🛡️ Tu Escudo de la Fortuna te protegió (80% de suerte)';
                         } else {
                             protectionMessage = '💔 Tu Escudo de la Fortuna falló esta vez (tenías 80% de protección)';
@@ -3284,12 +3284,12 @@ const userId = gameState.userId;
             }
             
             // 3️⃣ HEALTH POTION: 40% probabilidad
-            if (!protected && activeEffects['health_potion']) {
+            if (!hasProtected && activeEffects['health_potion']) {
                 for (const effect of activeEffects['health_potion']) {
                     if (effect.type === 'penalty_protection' && effect.expiresAt > Date.now()) {
                         const roll = Math.random();
                         if (roll < 0.40) {
-                            protected = true;
+                            hasProtected = true;
                             protectionMessage = '💊 Tu Poción de Salud redujo las penalizaciones (40% de suerte)';
                         } else {
                             protectionMessage = '💔 Tu Poción de Salud no pudo protegerte esta vez (tenías 40% de protección)';
@@ -3300,7 +3300,7 @@ const userId = gameState.userId;
             }
             
             // ✅ Aplicar protección o pérdida
-            if (protected) {
+            if (hasProtected) {
                 await message.reply(protectionMessage);
             } else {
                 if (protectionMessage) {
@@ -3906,7 +3906,7 @@ const userId = gameState.userId;
             const user = await this.economy.getUser(userId);
             const activeEffects = this.shop.parseActiveEffects(user.activeEffects);
             
-            let protected = false;
+            let hasProtected = false;
             let protectionMessage = '';
             
             // 1️⃣ CONDÓN: 100% garantizado, 1 uso
@@ -3914,7 +3914,7 @@ const userId = gameState.userId;
                 for (let i = activeEffects['condon_pibe2'].length - 1; i >= 0; i--) {
                     const effect = activeEffects['condon_pibe2'][i];
                     if (effect.type === 'protection' && effect.usesLeft > 0) {
-                        protected = true;
+                        hasProtected = true;
                         effect.usesLeft -= 1;
                         
                         if (effect.usesLeft <= 0) {
@@ -3932,12 +3932,12 @@ const userId = gameState.userId;
             }
             
             // 2️⃣ FORTUNE SHIELD: 80% probabilidad
-            if (!protected && activeEffects['fortune_shield']) {
+            if (!hasProtected && activeEffects['fortune_shield']) {
                 for (const effect of activeEffects['fortune_shield']) {
                     if (effect.type === 'protection' && effect.expiresAt > Date.now()) {
                         const roll = Math.random();
                         if (roll < 0.80) {
-                            protected = true;
+                            hasProtected = true;
                             protectionMessage = '🛡️ Tu Escudo de la Fortuna te protegió (80% de suerte)';
                         } else {
                             protectionMessage = '💔 Tu Escudo de la Fortuna falló esta vez (tenías 80% de protección)';
@@ -3948,12 +3948,12 @@ const userId = gameState.userId;
             }
             
             // 3️⃣ HEALTH POTION: 40% probabilidad
-            if (!protected && activeEffects['health_potion']) {
+            if (!hasProtected && activeEffects['health_potion']) {
                 for (const effect of activeEffects['health_potion']) {
                     if (effect.type === 'penalty_protection' && effect.expiresAt > Date.now()) {
                         const roll = Math.random();
                         if (roll < 0.40) {
-                            protected = true;
+                            hasProtected = true;
                             protectionMessage = '💊 Tu Poción de Salud redujo las penalizaciones (40% de suerte)';
                         } else {
                             protectionMessage = '💔 Tu Poción de Salud no pudo protegerte esta vez (tenías 40% de protección)';
@@ -3964,7 +3964,7 @@ const userId = gameState.userId;
             }
             
             // ✅ Aplicar protección o pérdida
-            if (protected) {
+            if (hasProtected) {
                 await message.reply(protectionMessage);
             } else {
                 if (protectionMessage) {
