@@ -9031,7 +9031,7 @@ const userId = gameState.userId;
                 case '>slot':
                     await this.handleSlots(message, args);
                     break;
-                case '>horserace':
+                /*case '>horserace':
                 case '>horses':
                 case '>caballos':
                     await this.handleHorseRace(message, args);
@@ -9053,7 +9053,7 @@ const userId = gameState.userId;
                 case '>cancelrace':
                 case '>cancelarcarrera':
                     await this.handleCancelRace(message);
-                    break;
+                    break;*/
                 case '>russian':
                 case '>rr':
                 case '>ruleta-rusa':
@@ -9224,7 +9224,7 @@ const userId = gameState.userId;
                     value: '`>russian <cantidad>` - Crear partida\n`>startrussian` - Iniciar (creador)\n`>shoot` - Disparar en tu turno\nApuesta: 200-5,000 π-b$\nJugadores: 2-6\nGanador se lleva 85% del pot', 
                     inline: false 
                 },
-                {
+                /*{
                     name: '🐎 Carrera de Caballos',
                     value: '**Bot:** `>horses bot <cantidad>`\n' +
                         '**Multi:** `>horses multi <cantidad>`\n' +
@@ -9235,7 +9235,7 @@ const userId = gameState.userId;
                         '⚡ Dobla apuesta hasta 75% de carrera\n' +
                         '👥 Varios pueden elegir el mismo caballo',
                     inline: false
-                },
+                },*/
                 {
                     name: '🎴 UNO (Multiplayer)',
                     value: '`>ujoin <cantidad>` - Crear partida\n`>ustart` - Iniciar (creador)\n`>uplay <color> <numero>` - Lanzar una carta\n`>upickup` - Agarra una carta\n`>uhand` - Muestra tu mano\n`>sayuno` - Usalo cuando tengas una carta\n`>ucallout` - El jugador no dijo Uno\n`>utable` - Muestra la mesa\n`>uleave` - Abandona el juego\nApuesta: 100-10,000 π-b$\nJugadores: 2-8\nGanador se lleva 85% del pot',
