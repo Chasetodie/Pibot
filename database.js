@@ -863,11 +863,20 @@ class LocalDatabase {
     }
 
     async getOldActivePots(currentWeekStart) {
-        const result = await this.pool.execute(
-            'SELECT * FROM weekly_pot WHERE status = ? AND week_start < ? ORDER BY week_start ASC',
-            ['active', currentWeekStart]
-        );
-        return result;
+        try {
+            const [rows] = await this.pool.execute(`
+                SELECT * FROM weekly_pot 
+                WHERE status = 'active' 
+                AND week_start < ? 
+                ORDER BY week_start ASC
+            `, [currentWeekStart]);
+            
+            console.log(`📊 Pozos antiguos encontrados: ${rows.length}`);
+            return rows || [];
+        } catch (error) {
+            console.error('Error obteniendo pozos antiguos:', error);
+            return [];
+        }
     }
 
     async updateUser(userId, updateData) {
