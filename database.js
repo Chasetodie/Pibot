@@ -878,6 +878,27 @@ class LocalDatabase {
         });
     }
 
+    async getOldActivePots(currentWeekStart) {
+        return new Promise((resolve, reject) => {
+            this.db.all(
+                `SELECT week_start, status, total_money, participant_count 
+                FROM weekly_pots 
+                WHERE status = 'active' 
+                AND week_start < ? 
+                ORDER BY week_start ASC`,
+                [currentWeekStart],
+                (err, rows) => {
+                    if (err) {
+                        console.error('Error obteniendo pozos antiguos:', err);
+                        reject(err);
+                    } else {
+                        resolve(rows || []);
+                    }
+                }
+            );
+        });
+    }
+
     async updateUser(userId, updateData) {
         try {
             // Primero obtener el usuario actual

@@ -654,6 +654,9 @@ class AchievementsSystem {
                 case 'slots_doubles':
                     currentValue = user.stats?.slots_doubles || 0;
                     break;
+                case 'slots_wins':
+                    currentValue = user.stats?.slots_wins || 0;
+                    break;
                 case 'loss_streak':
                     currentValue = user.stats?.current_loss_streak || 0;
                     break;

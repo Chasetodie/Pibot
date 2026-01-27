@@ -9614,83 +9614,61 @@ const userId = gameState.userId;
                         await message.reply(`❌ Error: ${error.message}`);
                     }
                     break;
-                case '>forcedistribute':
+                case '>fixoldpots':
                     if (!message.member.permissions.has('Administrator')) {
                         await message.reply('❌ Solo administradores');
                         return;
                     }
                     
                     try {
+                        await message.reply('🔍 Buscando pozos antiguos sin distribuir...');
+                        
+                        // Obtener el pozo actual
                         const currentPot = await this.economy.database.getCurrentWeeklyPot();
                         
                         if (!currentPot) {
-                            await message.reply('❌ No hay pozo activo para distribuir');
+                            await message.reply('❌ No hay pozo actual');
                             return;
                         }
                         
-                        if (currentPot.status !== 'active') {
-                            await message.reply(`⚠️ El pozo actual ya está marcado como: **${currentPot.status}**`);
+                        // Verificar si hay pozos antiguos activos
+                        // (Necesitarás agregar este método en database.js - te lo doy abajo)
+                        const oldPots = await this.economy.database.getOldActivePots(currentPot.week_start);
+                        
+                        if (oldPots.length === 0) {
+                            await message.reply('✅ No hay pozos antiguos pendientes');
                             return;
                         }
                         
-                        await message.reply('🎲 Distribuyendo pozo manualmente...');
+                        await message.reply(`⚠️ Encontrados **${oldPots.length}** pozos antiguos sin distribuir. Procesando...`);
                         
-                        await this.distributePot(currentPot);
+                        let distributed = 0;
+                        let errors = 0;
                         
-                        // Esperar 2 segundos
-                        await new Promise(resolve => setTimeout(resolve, 2000));
-                        
-                        // Crear nuevo pozo
-                        const newPot = await this.economy.database.getCurrentWeeklyPot();
+                        for (const oldPot of oldPots) {
+                            try {
+                                console.log(`📦 Distribuyendo pozo antiguo: ${oldPot.week_start}`);
+                                await this.distributePot(oldPot);
+                                distributed++;
+                                
+                                // Esperar 1 segundo entre distribuciones
+                                await new Promise(resolve => setTimeout(resolve, 1000));
+                                
+                            } catch (error) {
+                                console.error(`❌ Error distribuyendo pozo ${oldPot.week_start}:`, error);
+                                errors++;
+                            }
+                        }
                         
                         await message.reply(
-                            `✅ **Distribución completada**\n` +
-                            `📦 Pozo anterior: week_start=${currentPot.week_start}\n` +
-                            `🆕 Nuevo pozo: week_start=${newPot.week_start}, status=${newPot.status}`
+                            `✅ **Proceso completado**\n` +
+                            `📦 Distribuidos: ${distributed}\n` +
+                            `❌ Errores: ${errors}\n` +
+                            `🆕 Pozo actual: ${currentPot.week_start}`
                         );
                         
                     } catch (error) {
-                        console.error('Error en forcedistribute:', error);
-                        await message.reply(`❌ Error: ${error.message}`);
-                    }
-                    break;
-                case '>pothistory':
-                    if (!message.member.permissions.has('Administrator')) {
-                        await message.reply('❌ Solo administradores');
-                        return;
-                    }
-                    
-                    try {
-                        const history = await this.economy.database.getPotHistory(5);
-                        
-                        if (history.length === 0) {
-                            await message.reply('📊 No hay historial de pozos');
-                            return;
-                        }
-                        
-                        const embed = new EmbedBuilder()
-                            .setTitle('📜 Historial de Pozos')
-                            .setColor('#8B4513');
-                        
-                        for (const pot of history) {
-                            const date = new Date(pot.week_start).toLocaleDateString();
-                            const statusEmoji = pot.status === 'completed' ? '✅' : '⏳';
-                            
-                            embed.addFields({
-                                name: `${statusEmoji} ${date}`,
-                                value: 
-                                    `Status: **${pot.status}**\n` +
-                                    `💰 Total: ${this.formatNumber(pot.total_money)} π-b$\n` +
-                                    `👥 Participantes: ${pot.participant_count}\n` +
-                                    `🏆 Ganador: ${pot.money_winner ? `<@${pot.money_winner}>` : 'N/A'}`,
-                                inline: false
-                            });
-                        }
-                        
-                        await message.reply({ embeds: [embed] });
-                        
-                    } catch (error) {
-                        console.error('Error en pothistory:', error);
+                        console.error('Error en fixoldpots:', error);
                         await message.reply(`❌ Error: ${error.message}`);
                     }
                     break;
