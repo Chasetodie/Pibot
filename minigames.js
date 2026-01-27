@@ -9569,36 +9569,130 @@ const userId = gameState.userId;
                         return;
                     }
                     
-                    const allPots = await this.economy.database.query(
-                        'SELECT week_start, status, total_money, participant_count FROM weekly_pots ORDER BY week_start DESC LIMIT 5'
-                    );
-                    
-                    let debugText = '**📊 Últimos 5 pozos:**\n```\n';
-                    for (const p of allPots) {
-                        const date = new Date(p.week_start).toLocaleDateString();
-                        debugText += `${date} | ${p.status} | ${p.total_money}$ | ${p.participant_count} users\n`;
+                    try {
+                        // Obtener el pozo actual
+                        const currentPot = await this.economy.database.getCurrentWeeklyPot();
+                        
+                        // Obtener contribuciones del pozo actual
+                        const contributions = currentPot 
+                            ? await this.economy.database.getPotContributions(currentPot.week_start)
+                            : [];
+                        
+                        const participants = [...new Set(contributions.map(c => c.user_id))];
+                        
+                        const embed = new EmbedBuilder()
+                            .setTitle('📊 Debug: Pozo Semanal')
+                            .setColor('#FFD700');
+                        
+                        if (!currentPot) {
+                            embed.setDescription('❌ No hay pozo activo');
+                        } else {
+                            const weekStart = new Date(currentPot.week_start);
+                            const weekEnd = new Date(currentPot.week_start + this.potConfig.weekDuration);
+                            const now = Date.now();
+                            const timeLeft = weekEnd - now;
+                            
+                            const daysLeft = Math.floor(timeLeft / (24 * 60 * 60 * 1000));
+                            const hoursLeft = Math.floor((timeLeft % (24 * 60 * 60 * 1000)) / (60 * 60 * 1000));
+                            
+                            embed.addFields(
+                                { name: '🆔 Week Start', value: `${currentPot.week_start}`, inline: true },
+                                { name: '📅 Fecha Inicio', value: weekStart.toLocaleDateString(), inline: true },
+                                { name: '🏁 Fecha Fin', value: weekEnd.toLocaleDateString(), inline: true },
+                                { name: '⏰ Tiempo Restante', value: `${daysLeft}d ${hoursLeft}h`, inline: true },
+                                { name: '📊 Status', value: currentPot.status, inline: true },
+                                { name: '💰 Dinero Total', value: `${this.formatNumber(currentPot.total_money)} π-b$`, inline: true },
+                                { name: '👥 Participantes', value: `${participants.length}`, inline: true },
+                                { name: '📦 Contribuciones', value: `${contributions.length}`, inline: true },
+                                { name: '🔢 Expirado?', value: now >= weekEnd.getTime() ? '✅ SÍ' : '❌ NO', inline: true }
+                            );
+                        }
+                        
+                        await message.reply({ embeds: [embed] });
+                    } catch (error) {
+                        console.error('Error en debugpot:', error);
+                        await message.reply(`❌ Error: ${error.message}`);
                     }
-                    debugText += '```';
-                    
-                    await message.reply(debugText);
                     break;
-                case '>cleanpots':
+                case '>forcedistribute':
                     if (!message.member.permissions.has('Administrator')) {
                         await message.reply('❌ Solo administradores');
                         return;
                     }
                     
-                    // Marcar todos los pozos antiguos como completados excepto el más reciente
-                    const result = await this.economy.database.query(`
-                        UPDATE weekly_pots 
-                        SET status = 'completed' 
-                        WHERE status = 'active' 
-                        AND week_start < (
-                            SELECT MAX(week_start) FROM weekly_pots
-                        )
-                    `);
+                    try {
+                        const currentPot = await this.economy.database.getCurrentWeeklyPot();
+                        
+                        if (!currentPot) {
+                            await message.reply('❌ No hay pozo activo para distribuir');
+                            return;
+                        }
+                        
+                        if (currentPot.status !== 'active') {
+                            await message.reply(`⚠️ El pozo actual ya está marcado como: **${currentPot.status}**`);
+                            return;
+                        }
+                        
+                        await message.reply('🎲 Distribuyendo pozo manualmente...');
+                        
+                        await this.distributePot(currentPot);
+                        
+                        // Esperar 2 segundos
+                        await new Promise(resolve => setTimeout(resolve, 2000));
+                        
+                        // Crear nuevo pozo
+                        const newPot = await this.economy.database.getCurrentWeeklyPot();
+                        
+                        await message.reply(
+                            `✅ **Distribución completada**\n` +
+                            `📦 Pozo anterior: week_start=${currentPot.week_start}\n` +
+                            `🆕 Nuevo pozo: week_start=${newPot.week_start}, status=${newPot.status}`
+                        );
+                        
+                    } catch (error) {
+                        console.error('Error en forcedistribute:', error);
+                        await message.reply(`❌ Error: ${error.message}`);
+                    }
+                    break;
+                case '>pothistory':
+                    if (!message.member.permissions.has('Administrator')) {
+                        await message.reply('❌ Solo administradores');
+                        return;
+                    }
                     
-                    await message.reply(`✅ Limpiados ${result.affectedRows || 0} pozos antiguos`);
+                    try {
+                        const history = await this.economy.database.getPotHistory(5);
+                        
+                        if (history.length === 0) {
+                            await message.reply('📊 No hay historial de pozos');
+                            return;
+                        }
+                        
+                        const embed = new EmbedBuilder()
+                            .setTitle('📜 Historial de Pozos')
+                            .setColor('#8B4513');
+                        
+                        for (const pot of history) {
+                            const date = new Date(pot.week_start).toLocaleDateString();
+                            const statusEmoji = pot.status === 'completed' ? '✅' : '⏳';
+                            
+                            embed.addFields({
+                                name: `${statusEmoji} ${date}`,
+                                value: 
+                                    `Status: **${pot.status}**\n` +
+                                    `💰 Total: ${this.formatNumber(pot.total_money)} π-b$\n` +
+                                    `👥 Participantes: ${pot.participant_count}\n` +
+                                    `🏆 Ganador: ${pot.money_winner ? `<@${pot.money_winner}>` : 'N/A'}`,
+                                inline: false
+                            });
+                        }
+                        
+                        await message.reply({ embeds: [embed] });
+                        
+                    } catch (error) {
+                        console.error('Error en pothistory:', error);
+                        await message.reply(`❌ Error: ${error.message}`);
+                    }
                     break;
                 case '>games':
                 case '>minigames':

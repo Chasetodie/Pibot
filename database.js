@@ -862,6 +862,22 @@ class LocalDatabase {
         }
     }
 
+    async getPotHistory(limit = 5) {
+        return new Promise((resolve, reject) => {
+            this.db.all(
+                `SELECT week_start, status, total_money, participant_count, money_winner 
+                FROM weekly_pots 
+                ORDER BY week_start DESC 
+                LIMIT ?`,
+                [limit],
+                (err, rows) => {
+                    if (err) reject(err);
+                    else resolve(rows || []);
+                }
+            );
+        });
+    }
+
     async updateUser(userId, updateData) {
         try {
             // Primero obtener el usuario actual
