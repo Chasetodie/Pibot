@@ -217,6 +217,22 @@ class AchievementsSystem {
                 rarity: 'legendary',
                 emoji: '👑'
             },
+            'vending_regular': {
+                name: '🥤 Cliente Regular',
+                description: 'Usa la máquina expendedora 500 veces',
+                requirement: { type: 'vending_plays', value: 500 },
+                reward: { money: 15000, xp: 1500 },
+                rarity: 'epic',
+                emoji: '🥤'
+            },
+            'vending_addict': {
+                name: '🤖 Adicto a las Bebidas',
+                description: 'Usa la máquina expendedora 5000 veces',
+                requirement: { type: 'vending_plays', value: 5000 },
+                reward: { money: 100000, xp: 10000 },
+                rarity: 'legendary',
+                emoji: '🤖'
+            },
             'lucky_double': {
                 name: '🍀 Doble Suerte',
                 description: 'Consigue 100 victorias con dobles (2 iguales)',
@@ -874,6 +890,12 @@ class AchievementsSystem {
                     slots_doubles: (user.stats?.slots_doubles || 0) + 1
                 };
                 break;
+            case 'vending_plays':
+                updateData.stats = {
+                    ...user.stats,
+                    vending_plays: (user.stats?.vending_plays || 0) + value
+                };
+                break;
             case 'daily_claimed':
                 const lastDaily = user.last_daily;
                 const now = Date.now();
@@ -1151,6 +1173,9 @@ class AchievementsSystem {
                 break;
             case 'slots_doubles':
                 currentValue = user.stats?.slots_doubles || 0;
+                break;
+            case 'vending_plays':
+                currentValue = user.stats?.vending_plays || 0;
                 break;
             case 'loss_streak':
                 currentValue = user.stats?.current_loss_streak || 0;

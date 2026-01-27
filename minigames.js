@@ -58,6 +58,11 @@ this.cooldownCache = new Map();
                 perCycle: 10,       // 10 partidas por ciclo
                 cycleHours: 4,      // Cada 4 horas
                 maxDaily: 60        // Máximo 60 al día (10 × 6 ciclos)
+            },
+            horses: {
+                perCycle: 4,       // 10 partidas por ciclo
+                cycleHours: 4,      // Cada 4 horas
+                maxDaily: 40        // Máximo 60 al día (10 × 6 ciclos)
             }
         };
 
@@ -167,6 +172,13 @@ setTimeout(() => {
                     botWinChance: 0.45, // 45% de que el bot gane
                     refundOnNoPodium: 0.5 // Devolver 50% si ninguno queda en podio
                 }
+            },
+            vendingMachine: {
+                minBet: 10,
+                maxBet: 10,        // Fijo en 10
+                cooldown: 900000,  // 15 minutos (15 * 60 * 1000)
+                winAmount: 40,
+                failChance: 0.55   // 55% de fallo
             },
             russianRoulette: {
                 minBet: 300,            // Cambiar de 200 a 300
@@ -4162,7 +4174,7 @@ const userId = gameState.userId;
                 .addFields(
                     { name: '🎮 Modos de Juego', value: '**Bot:** `>horses bot <cantidad>`\n**Multijugador:** `>horses multi <cantidad>`', inline: false },
                     { name: '🏆 Premios', value: '🥇 1er lugar: x3.0\n🥈 2do lugar: x1.8\n🥉 3er lugar: x1.2', inline: true },
-                    { name: '💰 Apuestas', value: `Min: ${this.formatNumber(this.config.horseRace.minBet)} π-b$\nMax: ${this.formatNumber(this.config.horseRace.maxBet)} π-b$`, inline: true },
+                    { name: '💰 Apuestas - Bot', value: `Min: ${this.formatNumber(this.config.horseRace.minBet)} π-b$\nMax: ${this.formatNumber(this.config.horseRace.maxBet)} π-b$`, inline: true },
                     { name: '🎯 Características', value: '• 12 caballos compiten\n• Dobla tu apuesta (1 vez)\n• Solo antes del 75% de carrera\n• Velocidad aleatoria realista', inline: false }
                 )
                 .setColor('#8B4513');
@@ -4179,12 +4191,17 @@ const userId = gameState.userId;
             await message.reply('❌ Modo inválido. Usa: `bot` o `multi`');
             return;
         }
-        
+
+        if ( mode === 'bot' && (isNaN(betAmount) || betAmount < this.config.horseRace.minBet || betAmount > 5000)){
+            await message.reply(`❌ La apuesta debe ser entre ${this.formatNumber(this.config.horseRace.minBet)} y 5000 π-b$`);
+            return;
+        }
+
         if (isNaN(betAmount) || betAmount < this.config.horseRace.minBet || betAmount > this.config.horseRace.maxBet) {
             await message.reply(`❌ La apuesta debe ser entre ${this.formatNumber(this.config.horseRace.minBet)} y ${this.formatNumber(this.config.horseRace.maxBet)} π-b$`);
             return;
         }
-        
+       
         const user = await this.economy.getUser(userId);
         if (user.balance < betAmount) {
             await message.reply(`❌ No tienes suficientes π-b Coins. Balance: ${this.formatNumber(user.balance)} π-b$`);
@@ -4205,6 +4222,27 @@ const userId = gameState.userId;
         
         // Crear nueva carrera
         if (mode === 'bot') {
+            // VERIFICAR LÍMITES
+            const gameType = 'horses';
+            const limitConfig = this.dailyLimits[gameType];
+            const status = await this.economy.database.getGameLimitStatus(userId, gameType, limitConfig.cycleHours);
+            
+            if (status.cycleCount >= limitConfig.perCycle) {
+                await this.showLimitReached(message, userId, gameType, status, limitConfig);
+                return;
+            }
+            
+            // Verificar límite diario
+            if (status.dailyCount >= limitConfig.maxDaily) {
+                await message.reply(
+                    `🚫 **Límite diario alcanzado**\n` +
+                    `Has alcanzado el máximo de ${limitConfig.maxDaily} partidas de caballos por día.\n` +
+                    `🌅 Vuelve mañana!`
+                );
+                return;
+            }
+
+            await this.economy.database.incrementGameLimit(userId, gameType);
             await this.createBotHorseRace(message, userId, betAmount);
         } else {
             await this.createMultiHorseRace(message, userId, betAmount, channelId);
@@ -4319,7 +4357,7 @@ const userId = gameState.userId;
         // ✅ TIMEOUT: Si no elige en 30 segundos
         setTimeout(() => {
             if (game.players[userId].horseIndex === null) {
-                this.cancelHorseRace(game, message, 'Tiempo agotado para seleccionar');
+                this.handleCancelRace(message);
             }
         }, 30000);
     }
@@ -5279,6 +5317,19 @@ const userId = gameState.userId;
                 // Proporción de este jugador del premio total
                 const playerShare = finalBet / totalHorseBet;
                 let winnings = Math.floor(totalHorsePrize * playerShare);
+                
+                if (game.mode === 'bot'){
+                    // ✅ Aplicar penalización de maldición (-25% dinero)
+                    const activeEffects = this.shop.parseActiveEffects(player.activeEffects);
+                    const curse = activeEffects['death_hand_curse'];
+                    let curseMoneyPenalty = 0;
+
+                    if (curse && curse.length > 0 && curse[0].expiresAt > Date.now()) {
+                        const penaltyAmount = Math.floor(winnings * Math.abs(curse[0].moneyPenalty)); // 0.25 = 25%
+                        curseMoneyPenalty = penaltyAmount;
+                        winnings -= penaltyAmount;
+                    }
+                }
                 
                 const doubledText = player.hasDoubled ? ' (x2 🎲)' : '';
                 const sharedText = playersCount > 1 ? ` [${playersCount} jugadores]` : '';
@@ -8574,32 +8625,59 @@ const userId = gameState.userId;
     async checkWeeklyPotExpiry() {
         try {
             const currentPot = await this.economy.database.getCurrentWeeklyPot();
-            if (!currentPot) return;
+            if (!currentPot) {
+                console.log('⚠️ No hay pozo actual');
+                return;
+            }
+            
+            // Solo verificar si está activo
+            if (currentPot.status !== 'active') {
+                console.log('ℹ️ El pozo actual no está activo, saltando verificación');
+                return;
+            }
             
             const weekEnd = currentPot.week_start + this.potConfig.weekDuration;
+            const now = Date.now();
             
-            if (Date.now() >= weekEnd && currentPot.status === 'active') {
+            // Verificar si ya expiró
+            if (now >= weekEnd) {
+                console.log(`🎯 Pozo expirado, distribuyendo (week_start: ${currentPot.week_start})`);
+                
+                // Distribuir y esperar a que termine completamente
                 await this.distributePot(currentPot);
                 
-                // Crear nuevo pozo inmediatamente después de distribución natural
-                console.log('Creando nuevo pozo para la próxima semana...');
-                await this.economy.database.getCurrentWeeklyPot();
+                // Esperar 2 segundos antes de crear el nuevo
+                await new Promise(resolve => setTimeout(resolve, 2000));
+                
+                // Ahora sí crear el nuevo pozo
+                console.log('✅ Creando nuevo pozo semanal...');
+                const newPot = await this.economy.database.getCurrentWeeklyPot();
+                
+                if (newPot) {
+                    console.log(`✅ Nuevo pozo creado: week_start=${newPot.week_start}, status=${newPot.status}`);
+                }
             }
         } catch (error) {
-            console.error('Error verificando expiración del pozo:', error);
+            console.error('❌ Error verificando expiración del pozo:', error);
         }
     }
 
     async distributePot(pot) {
         try {
-            console.log(`Distribuyendo pozo de la semana ${pot.week_start}`);
+            console.log(`📦 Distribuyendo pozo de la semana ${pot.week_start}`);
+            
+            // ✅ VERIFICAR QUE REALMENTE ESTÁ ACTIVO
+            if (pot.status !== 'active') {
+                console.log('⚠️ Este pozo ya fue distribuido, saltando...');
+                return;
+            }
             
             // Obtener todos los participantes
             const contributions = await this.economy.database.getPotContributions(pot.week_start);
             const participants = [...new Set(contributions.map(c => c.user_id))];
             
             if (participants.length === 0) {
-                console.log('No hay participantes en el pozo');
+                console.log('ℹ️ No hay participantes en el pozo');
                 await this.economy.database.completePot(pot.week_start, null, []);
                 return;
             }
@@ -8618,6 +8696,10 @@ const userId = gameState.userId;
                     contributor: item.user_id
                 });
             }
+            
+            // ✅ MARCAR COMO COMPLETADO PRIMERO (antes de distribuir premios)
+            await this.economy.database.completePot(pot.week_start, moneyWinner, itemWinners);
+            console.log(`✅ Pozo marcado como completado (week_start: ${pot.week_start})`);
             
             // Distribuir premios
             if (pot.total_money > 0) {
@@ -8642,16 +8724,16 @@ const userId = gameState.userId;
                 await this.economy.updateUser(itemWin.winner, { items: userItems });
             }
             
-            // Marcar como completado
-            await this.economy.database.completePot(pot.week_start, moneyWinner, itemWinners);
-            
-            // NUEVO: Anunciar resultados
+            // Anunciar resultados
             await this.announceWeeklyPotResults(pot, moneyWinner, itemWinners, participants.length);
             
-            console.log(`Pozo distribuido - Dinero: ${moneyWinner}, Items: ${itemWinners.length}`);
+            console.log(`🎉 Pozo distribuido exitosamente - Dinero: ${moneyWinner}, Items: ${itemWinners.length}`);
             
         } catch (error) {
-            console.error('Error distribuyendo pozo:', error);
+            console.error('❌ Error distribuyendo pozo:', error);
+            // ✅ AGREGAR ROLLBACK EN CASO DE ERROR
+            console.error('⚠️ Intentando rollback...');
+            // No marcar como completado si hay error
         }
     }
     
@@ -8659,7 +8741,7 @@ const userId = gameState.userId;
         try {
             // Lista de canales donde anunciar (agrega tus IDs de canales aquí)
             const announcementChannels = [
-                '1402479944382152714', // Canal principal
+                '1404905496644685834', // Canal principal
                 'TU_CHANNEL_ID_2'  // Canal de economía
             ];
             
@@ -8937,6 +9019,315 @@ const userId = gameState.userId;
             await message.reply('❌ Error cargando el estado del pozo');
         }
     }
+
+    async canVendingMachine(userId) {
+        const user = await this.economy.getUser(userId);
+
+        if (this.shop) {
+            const vipMultipliers = await this.shop.getVipMultipliers(userId, 'games');
+            if (vipMultipliers.noCooldown) {
+                return { canPlay: true };
+            }
+        }
+
+        const cacheKey = `${userId}-vending`;
+        const cachedCooldown = this.cooldownCache.get(cacheKey);
+        const now = Date.now();
+        
+        let effectiveCooldown = await this.getEffectiveCooldown(this.config.vendingMachine.cooldown);
+
+        if (this.shop) {
+            const cooldownReduction = await this.shop.getCooldownReduction(userId, 'games');
+            effectiveCooldown = Math.floor(effectiveCooldown * (1 - cooldownReduction));
+        }
+        
+        if (cachedCooldown && (now - cachedCooldown < effectiveCooldown)) {
+            const timeLeft = effectiveCooldown - (now - cachedCooldown);
+            return { canPlay: false, timeLeft };
+        }
+
+        const lastPlay = user.last_vending || 0;
+        if (now - lastPlay < effectiveCooldown) {
+            const timeLeft = effectiveCooldown - (now - lastPlay);
+            return { canPlay: false, timeLeft };
+        }
+
+        return { canPlay: true };
+    }
+
+    async handleVendingMachine(message, args) {
+        const userId = message.author.id;
+        const user = await this.economy.getUser(userId);
+        
+        // Mostrar ayuda si no hay args
+        if (args.length < 1) {
+            const embed = new EmbedBuilder()
+                .setTitle('🥤 Máquina Expendedora')
+                .setDescription('¡Inserta 10 π-b$ y cruza los dedos!')
+                .addFields(
+                    { name: '💰 Costo', value: '10 π-b$', inline: true },
+                    { name: '🎁 Premio', value: '40 π-b$', inline: true },
+                    { name: '📊 Probabilidad', value: '45% de ganar', inline: true },
+                    { name: '⏰ Cooldown', value: '15 minutos', inline: true },
+                    { name: '🎮 Uso', value: '`>vending`', inline: false }
+                )
+                .setColor('#FF6B6B');
+            
+            await message.reply({ embeds: [embed] });
+            return;
+        }
+
+        const betAmount = this.config.vendingMachine.minBet;
+        
+        // Verificar fondos
+        if (user.balance < betAmount) {
+            await message.reply(`❌ Necesitas ${this.formatNumber(betAmount)} π-b$ para usar la máquina`);
+            return;
+        }
+
+        // Verificar cooldown
+        const canPlay = await this.canVendingMachine(userId);
+        if (!canPlay.canPlay) {
+            await message.reply(`⏰ Debes esperar ${this.formatTime(canPlay.timeLeft)} antes de usar la máquina otra vez`);
+            return;
+        }
+
+        // Quitar dinero
+        await this.economy.removeMoney(userId, betAmount, 'vending_bet');
+        
+        // Determinar resultado
+        const won = Math.random() > this.config.vendingMachine.failChance;
+        
+        // Establecer cooldown
+        this.setCooldown(userId, 'vending');
+        
+        const updateData = {
+            last_vending: Date.now(),
+            stats: {
+                ...user.stats,
+                games_played: (user.stats.games_played || 0) + 1,
+                vending_plays: (user.stats.vending_plays || 0) + 1
+            }
+        };
+
+        await this.economy.updateUser(userId, updateData);
+
+        // Misiones
+        if (this.missions) {
+            const gameMissions = await this.missions.updateMissionProgress(userId, 'game_played');
+            const betMissions = await this.missions.updateMissionProgress(userId, 'money_bet', betAmount);
+            const trinityLol = await this.missions.checkTrinityCompletion(userId);
+            
+            let allCompleted = [...gameMissions, ...betMissions, trinityLol];
+            if (allCompleted.length > 0) {
+                await this.missions.notifyCompletedMissions(message, allCompleted);
+            }
+        }
+
+        // Crear embed resultado
+        const embed = new EmbedBuilder()
+            .setTitle('🥤 Máquina Expendedora')
+            .setTimestamp();
+
+        if (won) {
+            await this.economy.missions.updateMissionProgress(userId, 'consecutive_win');
+            await this.economy.missions.updateMissionProgress(userId, 'game_won');
+
+            let finalEarnings = this.config.vendingMachine.winAmount;
+            
+            // Aplicar eventos
+            const eventBonus = await this.applyEventEffects(userId, finalEarnings, 'minigames');
+            finalEarnings = eventBonus.finalAmount;
+            
+            // Aplicar items
+            if (this.shop) {
+                const modifiers = await this.shop.getActiveMultipliers(userId, 'games');
+                const originalProfit = finalEarnings;
+                finalEarnings = Math.floor(finalEarnings * modifiers.multiplier);
+                const vipBonus = finalEarnings - originalProfit;
+                
+                if (vipBonus > 0) {
+                    await this.shop.updateVipStats(userId, 'bonusEarnings', vipBonus);
+                }
+                await this.shop.consumeItemUse(userId, 'games');
+            }
+
+            const equipmentBonus = await this.shop.applyEquipmentBonus(userId);
+            let equipmentMessage = '';
+            
+            if (equipmentBonus.applied && equipmentBonus.money > 0) {
+                const extraMoney = Math.floor(finalEarnings * equipmentBonus.money);
+                finalEarnings += extraMoney;
+                
+                for (const equip of equipmentBonus.items) {
+                    equipmentMessage += `\n${equip.wasBroken ? '💔' : '🛡️'} **${equip.name}**: `;
+                    
+                    if (equip.wasBroken) {
+                        equipmentMessage += `¡SE ROMPIÓ! (era ${equip.durabilityLost})`;
+                    } else {
+                        equipmentMessage += `${equip.durabilityLeft}/${equip.maxDurability} (-${equip.durabilityLost})`;
+                    }
+                }
+                
+                if (extraMoney > 0) {
+                    equipmentMessage = `💰 +${this.formatNumber(extraMoney)} π-b$ (equipamiento)${equipmentMessage}`;
+                }
+            }
+
+            const userData = await this.economy.getUser(userId);
+            const userLimit = this.economy.shop ? await this.economy.shop.getVipLimit(userId) : this.economy.config.maxBalance;
+
+            if (userData.balance + finalEarnings > userLimit) {
+                const spaceLeft = userLimit - userData.balance;
+                finalEarnings = Math.min(finalEarnings, spaceLeft);
+            }
+
+            let itemMessage = '';
+            if (this.shop) {
+                const modifiers = await this.shop.getActiveMultipliers(userId, 'games');
+                if (modifiers.multiplier > 1) {
+                    itemMessage = `✨ **Items Activos** (x${modifiers.multiplier.toFixed(1)} ganancia)`;
+                }
+            }
+
+            const activeEffects = this.shop.parseActiveEffects(user.activeEffects);
+            const curse = activeEffects['death_hand_curse'];
+            let curseMoneyPenalty = 0;
+
+            if (curse && curse.length > 0 && curse[0].expiresAt > Date.now()) {
+                const penaltyAmount = Math.floor(finalEarnings * Math.abs(curse[0].moneyPenalty));
+                curseMoneyPenalty = penaltyAmount;
+                finalEarnings -= penaltyAmount;
+            }
+
+            const addResult = await this.economy.addMoney(userId, finalEarnings, 'vending_win');
+            finalEarnings = addResult.actualAmount;
+            
+            // Achievements
+            if (this.achievements) {
+                await this.achievements.updateStats(userId, 'game_played');
+                await this.achievements.updateStats(userId, 'game_won');
+                await this.achievements.updateStats(userId, 'money_bet', betAmount);
+                await this.achievements.updateStats(userId, 'bet_win', finalEarnings);
+                await this.achievements.updateStats(userId, 'vending_plays', 1);
+            }
+
+            if (this.missions) {
+                const winMissions = await this.missions.updateMissionProgress(userId, 'game_won');
+                const betWonMissions = await this.missions.updateMissionProgress(userId, 'bet_won');
+                const moneyMissions = await this.missions.updateMissionProgress(userId, 'money_earned_today', finalEarnings);
+                
+                let allCompleted = [...winMissions, ...betWonMissions, ...moneyMissions];
+                if (allCompleted.length > 0) {
+                    await this.missions.notifyCompletedMissions(message, allCompleted);
+                }
+            }
+
+            embed.setDescription('🎉 **¡CAYÓ LA BEBIDA!**')
+                .setColor('#00FF00')
+                .addFields(
+                    { name: '💰 Ganancia', value: `+${this.formatNumber(finalEarnings)} π-b$`, inline: true },
+                    { name: '💳 Balance Actual', value: `${this.formatNumber(userData.balance)} π-b$`, inline: true },
+                    { name: '🎉 Bonificaciones', value: this.formatGameBonuses(eventBonus.eventMessage, '', itemMessage, equipmentMessage), inline: false }
+                );
+
+            if (curseMoneyPenalty > 0) {
+                embed.addFields({
+                    name: '☠️ Penalización de Maldición',
+                    value: `-${this.formatNumber(curseMoneyPenalty)} π-b$ (-25% de ganancias)`,
+                    inline: false
+                });
+            }
+
+            if (addResult.hitLimit) {
+                await message.reply(`⚠️ **Límite alcanzado:** No pudiste recibir todo el dinero (${this.formatNumber(userLimit)} π-b$)`);
+            }
+        } else {
+            await this.economy.missions.updateMissionProgress(userId, 'consecutive_loss');
+            
+            // Sistema de protección
+            const activeEffects = this.shop.parseActiveEffects(user.activeEffects);
+            let hasProtected = false;
+            let protectionMessage = '';
+            
+            if (activeEffects['condon_pibe2']) {
+                for (let i = activeEffects['condon_pibe2'].length - 1; i >= 0; i--) {
+                    const effect = activeEffects['condon_pibe2'][i];
+                    if (effect.type === 'protection' && effect.usesLeft > 0) {
+                        hasProtected = true;
+                        effect.usesLeft -= 1;
+                        
+                        if (effect.usesLeft <= 0) {
+                            activeEffects['condon_pibe2'].splice(i, 1);
+                            if (activeEffects['condon_pibe2'].length === 0) {
+                                delete activeEffects['condon_pibe2'];
+                            }
+                        }
+                        
+                        await this.economy.updateUser(userId, { activeEffects });
+                        protectionMessage = '🧃 ¡El Condón usado de Pibe 2 te protegió!';
+                        break;
+                    }
+                }
+            }
+            
+            if (!hasProtected && activeEffects['fortune_shield']) {
+                for (const effect of activeEffects['fortune_shield']) {
+                    if (effect.type === 'protection' && effect.expiresAt > Date.now()) {
+                        const roll = Math.random();
+                        if (roll < 0.80) {
+                            hasProtected = true;
+                            protectionMessage = '🛡️ Tu Escudo de la Fortuna te protegió';
+                        } else {
+                            protectionMessage = '💔 Tu Escudo de la Fortuna falló';
+                        }
+                        break;
+                    }
+                }
+            }
+            
+            if (!hasProtected && activeEffects['health_potion']) {
+                for (const effect of activeEffects['health_potion']) {
+                    if (effect.type === 'penalty_protection' && effect.expiresAt > Date.now()) {
+                        const roll = Math.random();
+                        if (roll < 0.40) {
+                            hasProtected = true;
+                            protectionMessage = '💊 Tu Poción de Salud te protegió';
+                        } else {
+                            protectionMessage = '💔 Tu Poción de Salud falló';
+                        }
+                        break;
+                    }
+                }
+            }
+            
+            if (hasProtected) {
+                await message.reply(protectionMessage);
+                await this.economy.addMoney(userId, betAmount, 'vending_refund');
+            } else {
+                if (protectionMessage) {
+                    await message.reply(protectionMessage);
+                }
+            }
+
+            if (this.achievements) {
+                await this.achievements.updateStats(userId, 'game_played');
+                await this.achievements.updateStats(userId, 'game_lost');
+                await this.achievements.updateStats(userId, 'money_bet', betAmount);
+                await this.achievements.updateStats(userId, 'vending_plays', 1);
+            }
+
+            embed.setDescription('💸 **¡SE ATASCÓ!**')
+                .setColor('#FF0000')
+                .addFields(
+                    { name: '💸 Perdiste', value: `${this.formatNumber(betAmount)} π-b$`, inline: true },
+                    { name: '💳 Balance Actual', value: `${this.formatNumber(user.balance)} π-b$`, inline: true }
+                );
+        }
+
+        await this.checkTreasureHunt(userId, message);
+        await message.reply({ embeds: [embed] });
+    }
     
     async processCommand(message) {
         // Verificar ingresos pasivos pendientes
@@ -9031,7 +9422,7 @@ const userId = gameState.userId;
                 case '>slot':
                     await this.handleSlots(message, args);
                     break;
-                /*case '>horserace':
+                case '>horserace':
                 case '>horses':
                 case '>caballos':
                     await this.handleHorseRace(message, args);
@@ -9053,7 +9444,12 @@ const userId = gameState.userId;
                 case '>cancelrace':
                 case '>cancelarcarrera':
                     await this.handleCancelRace(message);
-                    break;*/
+                    break;
+                case '>vending':
+                case '>vendingmachine':
+                case '>maquina':
+                    await this.handleVendingMachine(message, args);
+                    break;
                 case '>russian':
                 case '>rr':
                 case '>ruleta-rusa':
@@ -9167,6 +9563,43 @@ const userId = gameState.userId;
                 case '>holethings':
                     await this.showPotStatus(message);
                     break;
+                case '>debugpot':
+                    if (!message.member.permissions.has('Administrator')) {
+                        await message.reply('❌ Solo administradores');
+                        return;
+                    }
+                    
+                    const allPots = await this.economy.database.query(
+                        'SELECT week_start, status, total_money, participant_count FROM weekly_pots ORDER BY week_start DESC LIMIT 5'
+                    );
+                    
+                    let debugText = '**📊 Últimos 5 pozos:**\n```\n';
+                    for (const p of allPots) {
+                        const date = new Date(p.week_start).toLocaleDateString();
+                        debugText += `${date} | ${p.status} | ${p.total_money}$ | ${p.participant_count} users\n`;
+                    }
+                    debugText += '```';
+                    
+                    await message.reply(debugText);
+                    break;
+                case '>cleanpots':
+                    if (!message.member.permissions.has('Administrator')) {
+                        await message.reply('❌ Solo administradores');
+                        return;
+                    }
+                    
+                    // Marcar todos los pozos antiguos como completados excepto el más reciente
+                    const result = await this.economy.database.query(`
+                        UPDATE weekly_pots 
+                        SET status = 'completed' 
+                        WHERE status = 'active' 
+                        AND week_start < (
+                            SELECT MAX(week_start) FROM weekly_pots
+                        )
+                    `);
+                    
+                    await message.reply(`✅ Limpiados ${result.affectedRows || 0} pozos antiguos`);
+                    break;
                 case '>games':
                 case '>minigames':
                 case '>juegos':
@@ -9224,7 +9657,7 @@ const userId = gameState.userId;
                     value: '`>russian <cantidad>` - Crear partida\n`>startrussian` - Iniciar (creador)\n`>shoot` - Disparar en tu turno\nApuesta: 200-5,000 π-b$\nJugadores: 2-6\nGanador se lleva 85% del pot', 
                     inline: false 
                 },
-                /*{
+                {
                     name: '🐎 Carrera de Caballos',
                     value: '**Bot:** `>horses bot <cantidad>`\n' +
                         '**Multi:** `>horses multi <cantidad>`\n' +
@@ -9235,7 +9668,12 @@ const userId = gameState.userId;
                         '⚡ Dobla apuesta hasta 75% de carrera\n' +
                         '👥 Varios pueden elegir el mismo caballo',
                     inline: false
-                },*/
+                },
+                { 
+                    name: '🥤 Máquina Expendedora', 
+                    value: '`>vending`\nCosto: 10 π-b$\nPremio: 40 π-b$\nProbabilidad: 45%\nCooldown: 15 minutos', 
+                    inline: false 
+                },
                 {
                     name: '🎴 UNO (Multiplayer)',
                     value: '`>ujoin <cantidad>` - Crear partida\n`>ustart` - Iniciar (creador)\n`>uplay <color> <numero>` - Lanzar una carta\n`>upickup` - Agarra una carta\n`>uhand` - Muestra tu mano\n`>sayuno` - Usalo cuando tengas una carta\n`>ucallout` - El jugador no dijo Uno\n`>utable` - Muestra la mesa\n`>uleave` - Abandona el juego\nApuesta: 100-10,000 π-b$\nJugadores: 2-8\nGanador se lleva 85% del pot',
