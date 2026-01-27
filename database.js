@@ -795,6 +795,7 @@ class LocalDatabase {
                     current_loss_streak: 0, 
                     auctions_won: 0, 
                     items_crafted: 0,
+                    vending_plays: 0,
                 },
                 bet_stats: {
                     wins: 0,
@@ -816,17 +817,19 @@ class LocalDatabase {
                     lastPayout: 0,
                     payoutCount: 0
                 },
-                lastPassivePayout: 0
+                lastPassivePayout: 0,
+                last_vending: 0,
             };
 
             await this.pool.execute(`
                 INSERT INTO users (
                     id, balance, level, xp, total_xp, last_daily, last_work,
                     last_robbery, last_coinflip, last_dice, last_roulette,
-                    last_lotto, last_blackjack, last_name_work, messages_count,
+                    last_lotto, last_blackjack, last_slots, last_name_work, messages_count,
                     items, stats, bet_stats, daily_missions, daily_missions_date,
-                    daily_stats, achievements
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    daily_stats, achievements, passiveIncomeStats, lastPassivePayout,
+                    last_vending
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             `, [
                 newUser.id, newUser.balance, newUser.level, newUser.xp, newUser.total_xp,
                 newUser.last_daily, newUser.last_work, newUser.last_robbery,
