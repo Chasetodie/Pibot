@@ -9103,11 +9103,11 @@ const userId = gameState.userId;
         
         const updateData = {
             last_vending: Date.now(),
-            stats: {
+            /*stats: {
                 ...user.stats,
                 games_played: (user.stats.games_played || 0) + 1,
                 vending_plays: (user.stats.vending_plays || 0) + 1
-            }
+            }*/
         };
 
         await this.economy.updateUser(userId, updateData);
