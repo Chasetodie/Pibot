@@ -657,6 +657,8 @@ class AchievementsSystem {
                 case 'slots_wins':
                     currentValue = user.stats?.slots_wins || 0;
                     break;
+                case 'vending_plays':
+                    currentValue = user.stats?.vending_plays || 0;
                 case 'loss_streak':
                     currentValue = user.stats?.current_loss_streak || 0;
                     break;
@@ -881,7 +883,7 @@ class AchievementsSystem {
                     diamond_jackpot_count: (user.stats?.diamond_jackpot_count || 0) + 1
                 };
                 break;
-            case 'slots_win':
+            case 'slots_wins':
                 updateData.stats = {
                     ...user.stats,
                     slots_wins: (user.stats?.slots_wins || 0) + 1

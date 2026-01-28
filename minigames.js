@@ -3924,10 +3924,6 @@ const userId = gameState.userId;
         if (won) {
             await this.economy.missions.updateMissionProgress(userId, 'consecutive_win');
             await this.economy.missions.updateMissionProgress(userId, 'game_won');
-            // ✅ ACTUALIZAR ESTADÍSTICA DE VICTORIAS EN SLOTS
-            if (this.achievements) {
-                await this.achievements.updateStats(userId, 'slots_win');
-            }
             // INCREMENTAR LÍMITE
             await this.economy.database.incrementGameLimit(userId, gameType);
             
@@ -3980,7 +3976,7 @@ const userId = gameState.userId;
                 finalEarnings = Math.min(finalEarnings, spaceLeft);
             }
             
-            const addResult = await this.economy.addMoney(userId, finalEarnings, 'slots_win');
+            const addResult = await this.economy.addMoney(userId, finalEarnings, 'slots_wins');
             finalEarnings = addResult.actualAmount;
             
             // ✅ Aplicar penalización de maldición (-25% dinero)
@@ -4002,6 +3998,7 @@ const userId = gameState.userId;
                 await this.achievements.updateStats(userId, 'game_won');
                 await this.achievements.updateStats(userId, 'money_bet', betAmount);
                 await this.achievements.updateStats(userId, 'bet_win', finalEarnings);
+                await this.achievements.updateStats(userId, 'slots_wins');
             }
             
             // Misiones win
