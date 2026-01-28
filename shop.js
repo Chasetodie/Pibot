@@ -485,15 +485,15 @@ class ShopSystem {
                 stackable: false,
                 maxStack: 1
             },
-            'instant_cooldown_reset': {
-                id: 'instant_cooldown_reset',
-                name: '⚡ Reset Instantáneo',
-                description: 'Elimina todos los cooldowns inmediatamente (1 uso)',
+            'pay_to_win': {
+                id: 'pay_to_win',
+                name: '⚡ Pay To Win',
+                description: 'Elimina todos los cooldowns (A excepción del daily) inmediatamente (1 uso)',
                 price: 200000,
                 category: 'consumable',
                 rarity: 'epic',
                 effect: {
-                    type: 'instant_cooldown_reset',
+                    type: 'pay_to_win',
                     targets: ['all'],
                     uses: 1
                 },
@@ -576,7 +576,7 @@ class ShopSystem {
                     type: 'open_chest',
                     rewards: [
                         // Tier 1: Items buenos garantizados (40%)
-                        { id: 'instant_cooldown_reset', chance: 0.20 }, // 200k
+                        { id: 'pay_to_win', chance: 0.20 }, // 200k
                         { id: 'golden_skin', chance: 0.12 },         // 200k
                         { id: 'diamond_crown', chance: 0.08 },       // 120k
                         
@@ -1348,7 +1348,7 @@ class ShopSystem {
             case 'consumable':
                 await this.economy.missions.updateMissionProgress(userId, 'consumables_used', 1);
 
-                if (item.effect.type === 'instant_cooldown_reset') {
+                if (item.effect.type === 'pay_to_win') {
                     return await this.resetAllCooldowns(userId, item);
                 }
 
@@ -1578,7 +1578,7 @@ class ShopSystem {
         const user = await this.economy.getUser(userId);
         
         const updateData = {
-            last_daily: 0,
+            //last_daily: 0,
             last_work: 0,
             last_robbery: 0,
             last_coinflip: 0,

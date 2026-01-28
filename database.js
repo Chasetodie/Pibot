@@ -586,6 +586,34 @@ class LocalDatabase {
         }
     }
 
+    async deletePotContributions(weekStart) {
+        try {
+            const [result] = await this.pool.execute(`
+                DELETE FROM pot_contributions WHERE week_start = ?
+            `, [weekStart]);
+            
+            console.log(`🧹 Eliminadas ${result.affectedRows} contribuciones del pozo ${weekStart}`);
+            return true;
+        } catch (error) {
+            console.error('Error eliminando contribuciones:', error);
+            return false;
+        }
+    }
+
+    async deleteCompletedPot(weekStart) {
+        try {
+            const [result] = await this.pool.execute(`
+                DELETE FROM weekly_pot WHERE week_start = ? AND status = 'completed'
+            `, [weekStart]);
+            
+            console.log(`🗑️ Eliminado pozo ${weekStart} de la base de datos`);
+            return true;
+        } catch (error) {
+            console.error('Error eliminando pozo:', error);
+            return false;
+        }
+    }
+
     getWeekStart() {
         const now = new Date();
         const dayOfWeek = now.getDay(); // 0 = domingo, 1 = lunes, etc.

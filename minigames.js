@@ -8675,7 +8675,17 @@ const userId = gameState.userId;
             
             if (participants.length === 0) {
                 console.log('ℹ️ No hay participantes en el pozo');
+                
+                // ✅ MARCAR COMO COMPLETADO
                 await this.economy.database.completePot(pot.week_start, null, []);
+                
+                // ✅ ELIMINAR CONTRIBUCIONES (aunque esté vacío)
+                await this.economy.database.deletePotContributions(pot.week_start);
+                
+                // ✅ ELIMINAR EL POZO COMPLETADO
+                await this.economy.database.deleteCompletedPot(pot.week_start);
+                
+                console.log('🧹 Pozo vacío limpiado de la base de datos');
                 return;
             }
             
@@ -8726,11 +8736,20 @@ const userId = gameState.userId;
             
             console.log(`🎉 Pozo distribuido exitosamente - Dinero: ${moneyWinner}, Items: ${itemWinners.length}`);
             
+            // ✅ ESPERAR 2 SEGUNDOS ANTES DE LIMPIAR (para que el anuncio se envíe)
+            await new Promise(resolve => setTimeout(resolve, 2000));
+            
+            // ✅ ELIMINAR CONTRIBUCIONES
+            await this.economy.database.deletePotContributions(pot.week_start);
+            
+            // ✅ ELIMINAR EL POZO COMPLETADO
+            await this.economy.database.deleteCompletedPot(pot.week_start);
+            
+            console.log(`🧹 Pozo ${pot.week_start} eliminado completamente de la base de datos`);
+            
         } catch (error) {
             console.error('❌ Error distribuyendo pozo:', error);
-            // ✅ AGREGAR ROLLBACK EN CASO DE ERROR
-            console.error('⚠️ Intentando rollback...');
-            // No marcar como completado si hay error
+            console.error('⚠️ El pozo NO fue eliminado debido al error');
         }
     }
     
@@ -9570,12 +9589,17 @@ const userId = gameState.userId;
                         // Obtener el pozo actual
                         const currentPot = await this.economy.database.getCurrentWeeklyPot();
                         
-                        // Obtener contribuciones del pozo actual
-                        const contributions = currentPot 
-                            ? await this.economy.database.getPotContributions(currentPot.week_start)
-                            : [];
+                        // Contar pozos completados
+                        const [completedPots] = await this.economy.database.pool.execute(`
+                            SELECT COUNT(*) as count FROM weekly_pot WHERE status = 'completed'
+                        `);
                         
-                        const participants = [...new Set(contributions.map(c => c.user_id))];
+                        // Contar contribuciones huérfanas (sin pozo activo)
+                        const [orphanContribs] = await this.economy.database.pool.execute(`
+                            SELECT COUNT(*) as count FROM pot_contributions pc
+                            LEFT JOIN weekly_pot wp ON pc.week_start = wp.week_start
+                            WHERE wp.week_start IS NULL OR wp.status = 'completed'
+                        `);
                         
                         const embed = new EmbedBuilder()
                             .setTitle('📊 Debug: Pozo Semanal')
@@ -9584,6 +9608,9 @@ const userId = gameState.userId;
                         if (!currentPot) {
                             embed.setDescription('❌ No hay pozo activo');
                         } else {
+                            const contributions = await this.economy.database.getPotContributions(currentPot.week_start);
+                            const participants = [...new Set(contributions.map(c => c.user_id))];
+                            
                             const weekStart = new Date(currentPot.week_start);
                             const weekEnd = new Date(currentPot.week_start + this.potConfig.weekDuration);
                             const now = Date.now();
@@ -9605,9 +9632,51 @@ const userId = gameState.userId;
                             );
                         }
                         
+                        // ✅ AGREGAR INFO DE BASURA EN DB
+                        embed.addFields(
+                            { name: '🗑️ Pozos completados en DB', value: `${completedPots[0].count}`, inline: true },
+                            { name: '👻 Contribuciones huérfanas', value: `${orphanContribs[0].count}`, inline: true }
+                        );
+                        
+                        if (completedPots[0].count > 0 || orphanContribs[0].count > 0) {
+                            embed.setFooter({ text: 'Usa >cleancompletedpots para limpiar' });
+                        }
+                        
                         await message.reply({ embeds: [embed] });
                     } catch (error) {
                         console.error('Error en debugpot:', error);
+                        await message.reply(`❌ Error: ${error.message}`);
+                    }
+                    break;
+                case '>cleancompletedpots':
+                    if (!message.member.permissions.has('Administrator')) {
+                        await message.reply('❌ Solo administradores');
+                        return;
+                    }
+                    
+                    try {
+                        await message.reply('🔍 Buscando pozos completados antiguos...');
+                        
+                        // Eliminar contribuciones de pozos completados
+                        const [contribResult] = await this.economy.database.pool.execute(`
+                            DELETE pc FROM pot_contributions pc
+                            INNER JOIN weekly_pot wp ON pc.week_start = wp.week_start
+                            WHERE wp.status = 'completed'
+                        `);
+                        
+                        // Eliminar pozos completados
+                        const [potResult] = await this.economy.database.pool.execute(`
+                            DELETE FROM weekly_pot WHERE status = 'completed'
+                        `);
+                        
+                        await message.reply(
+                            `✅ **Limpieza completada**\n` +
+                            `🧹 Contribuciones eliminadas: ${contribResult.affectedRows}\n` +
+                            `🗑️ Pozos eliminados: ${potResult.affectedRows}`
+                        );
+                        
+                    } catch (error) {
+                        console.error('Error en cleancompletedpots:', error);
                         await message.reply(`❌ Error: ${error.message}`);
                     }
                     break;
