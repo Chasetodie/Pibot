@@ -70,15 +70,16 @@ this.cooldownCache = new Map();
             this.checkWeeklyPotExpiry();
         }, 60 * 60 * 1000);
 
-        // Limpiar registros de límites antiguos cada 6 horas
+        // Limpiar registros de límites antiguos cada 1 hora
         setInterval(async () => {
             await this.economy.database.cleanOldGameLimits();
-        }, 6 * 60 * 60 * 1000); // 6 horas
+        }, 60 * 60 * 1000); // 1 hora
 
         // Ejecutar limpieza al iniciar (después de 10 segundos)
         setTimeout(async () => {
             console.log('🧹 Ejecutando limpieza inicial de límites...');
-            await this.economy.database.cleanOldGameLimits();
+            const deleted = await this.economy.database.cleanOldGameLimits();
+            console.log(`✅ Limpiados ${deleted} registros de días anteriores`);
         }, 10000);
 
         setTimeout(() => {

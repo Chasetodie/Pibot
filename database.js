@@ -290,14 +290,14 @@ class LocalDatabase {
             const today = new Date().toISOString().split('T')[0];
             const now = Date.now();
             
-            // ✅ LIMPIAR REGISTROS ANTIGUOS PRIMERO (más de 2 días)
-            const twoDaysAgo = new Date();
-            twoDaysAgo.setDate(twoDaysAgo.getDate() - 2);
-            const oldDate = twoDaysAgo.toISOString().split('T')[0];
+            // ✅ LIMPIAR REGISTROS ANTIGUOS DEL USUARIO (antes de ayer)
+            const yesterday = new Date();
+            yesterday.setDate(yesterday.getDate() - 1);
+            const yesterdayDate = yesterday.toISOString().split('T')[0];
             
             await this.pool.execute(
                 'DELETE FROM daily_game_limits WHERE user_id = ? AND date < ?',
-                [userId, oldDate]
+                [userId, yesterdayDate]
             );
             
             const [rows] = await this.pool.execute(
@@ -346,18 +346,20 @@ class LocalDatabase {
 
     async cleanOldGameLimits() {
         try {
-            // Eliminar registros de más de 2 días
-            const twoDaysAgo = new Date();
-            twoDaysAgo.setDate(twoDaysAgo.getDate() - 2);
-            const oldDate = twoDaysAgo.toISOString().split('T')[0];
+            // Mantener solo HOY y AYER
+            const today = new Date().toISOString().split('T')[0];
+            
+            const yesterday = new Date();
+            yesterday.setDate(yesterday.getDate() - 1);
+            const yesterdayDate = yesterday.toISOString().split('T')[0];
             
             const [result] = await this.pool.execute(
                 'DELETE FROM daily_game_limits WHERE date < ?',
-                [oldDate]
+                [yesterdayDate]
             );
             
             if (result.affectedRows > 0) {
-                console.log(`🧹 Limpiados ${result.affectedRows} registros antiguos de límites de juego`);
+                console.log(`🧹 Limpiados ${result.affectedRows} registros antiguos (manteniendo ${today} y ${yesterdayDate})`);
             }
             
             return result.affectedRows;
@@ -382,23 +384,6 @@ class LocalDatabase {
         } catch (error) {
             console.error('Error incrementando límite:', error);
             return false;
-        }
-    }
-
-    async cleanOldGameLimits() {
-        try {
-            const threeDaysAgo = new Date();
-            threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
-            const dateStr = threeDaysAgo.toISOString().split('T')[0];
-            
-            const [result] = await this.pool.execute(
-                'DELETE FROM daily_game_limits WHERE date < ?',
-                [dateStr]
-            );
-            
-            console.log(`🗑️ Limpiados ${result.affectedRows} registros antiguos de límites`);
-        } catch (error) {
-            console.error('Error limpiando límites antiguos:', error);
         }
     }
 
