@@ -1080,7 +1080,7 @@ class LocalDatabase {
         try {
             const cutoffTime = Date.now() - timeframe;
             
-            const users = await this.db.all(`
+            const users = await this.pool.executre(`
                 SELECT DISTINCT id 
                 FROM users 
                 WHERE last_work > ? 
