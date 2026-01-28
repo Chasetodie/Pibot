@@ -290,6 +290,16 @@ class LocalDatabase {
             const today = new Date().toISOString().split('T')[0];
             const now = Date.now();
             
+            // ✅ LIMPIAR REGISTROS ANTIGUOS PRIMERO (más de 2 días)
+            const twoDaysAgo = new Date();
+            twoDaysAgo.setDate(twoDaysAgo.getDate() - 2);
+            const oldDate = twoDaysAgo.toISOString().split('T')[0];
+            
+            await this.pool.execute(
+                'DELETE FROM daily_game_limits WHERE user_id = ? AND date < ?',
+                [userId, oldDate]
+            );
+            
             const [rows] = await this.pool.execute(
                 'SELECT * FROM daily_game_limits WHERE user_id = ? AND game_type = ? AND date = ?',
                 [userId, gameType, today]
@@ -303,12 +313,12 @@ class LocalDatabase {
                     INSERT INTO daily_game_limits (user_id, game_type, cycle_count, daily_count, cycle_reset, date)
                     VALUES (?, ?, 0, 0, ?, ?)
                 `, [userId, gameType, cycleReset, today]);
-                               
+                            
                 return { cycleCount: 0, dailyCount: 0, cycleReset };
             }
             
             const record = rows[0];
-                       
+                    
             // Verificar si el ciclo expiró
             if (now >= record.cycle_reset) {
                 // Reset del ciclo
@@ -330,7 +340,30 @@ class LocalDatabase {
             };
         } catch (error) {
             console.error('Error obteniendo estado de límites:', error);
-            return { cycleCount: 0, dailyCount: 0, cycleReset: Date.now };
+            return { cycleCount: 0, dailyCount: 0, cycleReset: Date.now() };
+        }
+    }
+
+    async cleanOldGameLimits() {
+        try {
+            // Eliminar registros de más de 2 días
+            const twoDaysAgo = new Date();
+            twoDaysAgo.setDate(twoDaysAgo.getDate() - 2);
+            const oldDate = twoDaysAgo.toISOString().split('T')[0];
+            
+            const [result] = await this.pool.execute(
+                'DELETE FROM daily_game_limits WHERE date < ?',
+                [oldDate]
+            );
+            
+            if (result.affectedRows > 0) {
+                console.log(`🧹 Limpiados ${result.affectedRows} registros antiguos de límites de juego`);
+            }
+            
+            return result.affectedRows;
+        } catch (error) {
+            console.error('Error limpiando límites antiguos:', error);
+            return 0;
         }
     }
 

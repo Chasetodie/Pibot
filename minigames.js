@@ -70,9 +70,20 @@ this.cooldownCache = new Map();
             this.checkWeeklyPotExpiry();
         }, 60 * 60 * 1000);
 
-setTimeout(() => {
-        this.startNotificationChecker();
-    }, 5000);
+        // Limpiar registros de límites antiguos cada 6 horas
+        setInterval(async () => {
+            await this.economy.database.cleanOldGameLimits();
+        }, 6 * 60 * 60 * 1000); // 6 horas
+
+        // Ejecutar limpieza al iniciar (después de 10 segundos)
+        setTimeout(async () => {
+            console.log('🧹 Ejecutando limpieza inicial de límites...');
+            await this.economy.database.cleanOldGameLimits();
+        }, 10000);
+
+        setTimeout(() => {
+            this.startNotificationChecker();
+        }, 5000);
         
         // Configuración de minijuegos
         this.config = {
