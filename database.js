@@ -1075,6 +1075,28 @@ class LocalDatabase {
         }
     }
 
+    // Obtener usuarios activos recientemente
+    async getRecentActiveUsers(timeframe = 86400000) {
+        try {
+            const cutoffTime = Date.now() - timeframe;
+            
+            const users = await this.db.all(`
+                SELECT DISTINCT id 
+                FROM users 
+                WHERE last_work > ? 
+                OR last_daily > ? 
+                OR last_coinflip > ?
+                OR last_dice > ?
+                LIMIT 100
+            `, [cutoffTime, cutoffTime, cutoffTime, cutoffTime]);
+            
+            return users.map(u => u.id);
+        } catch (error) {
+            console.error('Error obteniendo usuarios activos:', error);
+            return [];
+        }
+    }
+
     // Métodos para shop_items
     async getShopItems() {
         try {

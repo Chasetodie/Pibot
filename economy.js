@@ -53,6 +53,39 @@ class EconomySystem {
         
         // Map para trackear robos activos
         this.activeRobberies = new Map();
+        this.startAutoCleanup();
+    }
+
+    // ✅ NUEVO MÉTODO: Limpieza automática en background
+    startAutoCleanup() {
+        setInterval(async () => {
+            try {
+                console.log('🧹 Ejecutando limpieza automática de items...');
+                
+                // Obtener usuarios activos (que han jugado en las últimas 24h)
+                const recentUsers = await this.database.getRecentActiveUsers(86400000); // 24h
+                
+                if (!recentUsers || recentUsers.length === 0) {
+                    console.log('ℹ️ No hay usuarios activos recientes');
+                    return;
+                }
+                
+                let cleanedCount = 0;
+                
+                for (const userId of recentUsers) {
+                    // Limpiar sin notificar (isAutomatic = true, message = null)
+                    await this.checkAndNotifyItems(userId, null, true);
+                    cleanedCount++;
+                }
+                
+                console.log(`✅ Limpieza completada: ${cleanedCount} usuarios procesados`);
+                
+            } catch (error) {
+                console.error('❌ Error en limpieza automática:', error);
+            }
+        }, 300000); // Cada 5 minutos
+        
+        console.log('🕒 Sistema de limpieza automática iniciado (cada 5 min)');
     }
 
     async initializeDatabase() {
@@ -95,7 +128,8 @@ class EconomySystem {
         }
     }
 
-    async checkAndNotifyItems(userId, message, isAutomatic = false) {
+    async checkAndNotifyItems(userId, message = null, isAutomatic = false) {
+        // ✅ ARREGLO 1: Prevenir ejecuciones simultáneas
         if (this.processingNotifications.has(userId)) {
             return;
         }
@@ -110,16 +144,24 @@ class EconomySystem {
                 low: 0 
             };
             
-            // Elegir qué timestamp usar según si es automático o manual
+            // ✅ ARREGLO 2: Cooldown diferente según tipo
+            const cooldown = isAutomatic ? 300000 : 60000; // Auto: 5min, Manual: 1min
             const expiredTimestamp = isAutomatic ? userNotifications.expiredAuto : userNotifications.expiredManual;
-            const shouldNotifyExpired = (now - expiredTimestamp) > this.notificationCooldown;
+            const shouldNotifyExpired = (now - expiredTimestamp) > cooldown;
             
             if (shouldNotifyExpired) {
                 const cleanupResult = await this.shop.cleanupExpiredEffects(userId);
-                if (cleanupResult.expiredItems.length > 0) {
-                    await this.shop.notifyExpiredItems(userId, cleanupResult.expiredItems, message);
+                
+                if (cleanupResult.hasChanges && cleanupResult.expiredItems.length > 0) {
+                    // ✅ ARREGLO 3: Solo notificar si hay mensaje válido
+                    if (message && message.reply) {
+                        await this.shop.notifyExpiredItems(userId, cleanupResult.expiredItems, message);
+                    } else {
+                        // Log silencioso si no hay mensaje (limpieza automática)
+                        console.log(`🧹 Items expirados limpiados para ${userId.slice(-4)}: ${cleanupResult.expiredItems.length}`);
+                    }
                     
-                    // Actualizar el timestamp correspondiente
+                    // Actualizar timestamp
                     if (isAutomatic) {
                         userNotifications.expiredAuto = now;
                     } else {
@@ -128,9 +170,9 @@ class EconomySystem {
                 }
             }
             
-            // Para items con pocos usos, solo en notificaciones manuales
-            if (!isAutomatic) {
-                const shouldNotifyLow = (now - userNotifications.low) > this.notificationCooldown;
+            // ✅ ARREGLO 4: Items bajos solo en comandos manuales Y con mensaje válido
+            if (!isAutomatic && message && message.reply) {
+                const shouldNotifyLow = (now - userNotifications.low) > 180000; // 3 minutos
                 if (shouldNotifyLow) {
                     const lowItems = await this.shop.checkLowItems(userId);
                     if (lowItems.length > 0) {
@@ -142,6 +184,8 @@ class EconomySystem {
             
             this.lastNotifications.set(userId, userNotifications);
             
+        } catch (error) {
+            console.error(`❌ Error verificando items de ${userId.slice(-4)}:`, error);
         } finally {
             this.processingNotifications.delete(userId);
         }
