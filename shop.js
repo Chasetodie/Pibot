@@ -263,7 +263,7 @@ class ShopSystem {
             'condon_pibe2': {
                 id: 'condon_pibe2',
                 name: '🧃 Condón usado del Pibe 2**',
-                description: 'Un objeto misterioso de dudosa efectividad... pero asegura una protección total durante 10 minutos.',
+                description: 'Un objeto misterioso de dudosa efectividad... pero asegura una protección total (1 uso).',
                 price: 67676, // precio meme
                 category: 'consumable',
                 rarity: 'epic',
@@ -336,9 +336,9 @@ class ShopSystem {
                 rarity: 'legendary',
                 effect: { 
                     type: 'passive_income', 
-                    minAmount: 2000, 
-                    maxAmount: 5000, 
-                    interval: 7200000 
+                    minAmount: 5000, 
+                    maxAmount: 12000, 
+                    interval: 3600000 
                 },
                 stackable: false,
                 maxStack: 1
@@ -852,6 +852,91 @@ class ShopSystem {
             }
         }
         return false;
+    }
+
+    // Sistema de notificaciones de items expirados
+    async checkAndNotifyExpiredItems(userId, message) {
+        const user = await this.economy.getUser(userId);
+        const activeEffects = this.parseActiveEffects(user.activeEffects);
+        const now = Date.now();
+        
+        let expiredItems = [];
+        let soonToExpireItems = [];
+        let itemsToRemove = [];
+        
+        // Revisar cada item activo
+        for (const [itemId, effects] of Object.entries(activeEffects)) {
+            if (!Array.isArray(effects)) continue;
+            
+            for (let i = effects.length - 1; i >= 0; i--) {
+                const effect = effects[i];
+                
+                // Solo revisar efectos con expiración
+                if (!effect.expiresAt) continue;
+                
+                const timeLeft = effect.expiresAt - now;
+                const item = this.shopItems[itemId];
+                const itemName = item?.name || itemId;
+                
+                // Item ya expiró
+                if (timeLeft <= 0) {
+                    expiredItems.push(itemName);
+                    itemsToRemove.push({ itemId, index: i });
+                }
+                // Item expira en menos de 5 minutos
+                else if (timeLeft <= 300000) {
+                    const minutesLeft = Math.ceil(timeLeft / 60000);
+                    soonToExpireItems.push({
+                        name: itemName,
+                        minutes: minutesLeft
+                    });
+                }
+            }
+        }
+        
+        // Limpiar items expirados
+        for (const { itemId, index } of itemsToRemove) {
+            activeEffects[itemId].splice(index, 1);
+            if (activeEffects[itemId].length === 0) {
+                delete activeEffects[itemId];
+            }
+        }
+        
+        // Guardar cambios si hubo items expirados
+        if (itemsToRemove.length > 0) {
+            await this.economy.updateUser(userId, { activeEffects });
+        }
+        
+        // Enviar notificaciones
+        if (expiredItems.length > 0) {
+            const embed = new EmbedBuilder()
+                .setTitle('⏰ Efectos Expirados')
+                .setDescription(`Los siguientes efectos han terminado:\n\n${expiredItems.map(name => `❌ ${name}`).join('\n')}`)
+                .setColor('#FF6B6B')
+                .setFooter({ text: 'Compra más items en la tienda con >shop' })
+                .setTimestamp();
+            
+            try {
+                await message.reply({ embeds: [embed] });
+            } catch (error) {
+                console.error('Error enviando notificación de expiración:', error);
+            }
+        }
+        
+        if (soonToExpireItems.length > 0) {
+            const embed = new EmbedBuilder()
+                .setTitle('⚠️ Efectos Próximos a Expirar')
+                .setDescription(`Estos efectos están por terminar:\n\n${soonToExpireItems.map(item => `⏱️ ${item.name} - **${item.minutes}min** restantes`).join('\n')}`)
+                .setColor('#FFA500')
+                .setFooter({ text: 'Usa tus items antes de que expiren' })
+                .setTimestamp();
+            
+            try {
+                await message.reply({ embeds: [embed] });
+            } catch (error) {
+                console.error('Error enviando notificación de advertencia:', error);
+            }
+        }
     }
 
     async getEquippedCosmetics(userId) {
@@ -4455,7 +4540,7 @@ class ShopSystem {
 
         // Verificar ingresos pasivos pendientes
         await this.economy.checkPendingPassiveIncome(message.author.id);
-        await this.economy.checkAndNotifyItems(message.author.id, message);
+        await this.checkAndNotifyExpiredItems(message.author.id, message);
 
         // Probabilidad 1% de recibir maldición aleatoria
         if (Math.random() < 0.01) {

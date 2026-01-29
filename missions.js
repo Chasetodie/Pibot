@@ -1334,7 +1334,7 @@ class MissionsSystem {
     async processCommand(message) {
         // Verificar ingresos pasivos pendientes
         await this.economy.checkPendingPassiveIncome(message.author.id);
-        await this.economy.checkAndNotifyItems(message.author.id, message);
+        await this.economy.checkAndNotifyExpiredItems(message.author.id, message);
 
         const args = message.content.toLowerCase().split(' ');
         const command = args[0];

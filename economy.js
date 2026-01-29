@@ -12,9 +12,6 @@ class EconomySystem {
         this.initializeDatabase();
         this.events = null;
         this.processingPassiveIncome = new Set();
-        this.processingNotifications = new Set();
-        this.lastNotifications = new Map();
-        this.notificationCooldown = 60 * 60 * 1000;
         
         // Configuración del sistema
         this.config = {
@@ -53,57 +50,6 @@ class EconomySystem {
         
         // Map para trackear robos activos
         this.activeRobberies = new Map();
-        this.startAutoCleanup();
-    }
-
-    // ✅ NUEVO MÉTODO: Limpieza automática en background
-    startAutoCleanup() {
-        setInterval(async () => {
-            try {
-                console.log('🧹 Ejecutando limpieza automática de items...');
-                
-                // ✅ ARREGLO: Manejar posibles errores en getRecentActiveUsers
-                let recentUsers = [];
-                try {
-                    recentUsers = await this.database.getRecentActiveUsers(86400000);
-                } catch (dbError) {
-                    console.error('❌ Error obteniendo usuarios:', dbError);
-                    return;
-                }
-                
-                // ✅ ARREGLO: Validar que sea un array válido
-                if (!Array.isArray(recentUsers) || recentUsers.length === 0) {
-                    console.log('ℹ️ No hay usuarios activos recientes');
-                    return;
-                }
-                
-                let cleanedCount = 0;
-                let errorCount = 0;
-                
-                for (const userId of recentUsers) {
-                    // ✅ ARREGLO: Validar userId antes de procesar
-                    if (!userId || typeof userId !== 'string') {
-                        console.warn('⚠️ UserID inválido detectado:', userId);
-                        continue;
-                    }
-                    
-                    try {
-                        await this.checkAndNotifyItems(userId, null, true);
-                        cleanedCount++;
-                    } catch (userError) {
-                        console.error(`❌ Error limpiando usuario ${userId.slice(-4)}:`, userError.message);
-                        errorCount++;
-                    }
-                }
-                
-                console.log(`✅ Limpieza completada: ${cleanedCount} usuarios procesados${errorCount > 0 ? ` (${errorCount} errores)` : ''}`);
-                
-            } catch (error) {
-                console.error('❌ Error en limpieza automática:', error);
-            }
-        }, 300000); // Cada 5 minutos
-        
-        console.log('🕒 Sistema de limpieza automática iniciado (cada 5 min)');
     }
 
     async initializeDatabase() {
@@ -146,85 +92,6 @@ class EconomySystem {
         }
     }
 
-    async checkAndNotifyItems(userId, message = null, isAutomatic = false) {
-        // ✅ ARREGLO: Validar userId al inicio
-        if (!userId || typeof userId !== 'string') {
-            console.error('❌ UserID inválido en checkAndNotifyItems:', userId);
-            return;
-        }
-        
-        if (this.processingNotifications.has(userId)) {
-            return;
-        }
-        
-        this.processingNotifications.add(userId);
-        
-        try {
-            const now = Date.now();
-            const userNotifications = this.lastNotifications.get(userId) || { 
-                expiredAuto: 0, 
-                expiredManual: 0, 
-                low: 0 
-            };
-            
-            const cooldown = isAutomatic ? 300000 : 60000;
-            const expiredTimestamp = isAutomatic ? userNotifications.expiredAuto : userNotifications.expiredManual;
-            const shouldNotifyExpired = (now - expiredTimestamp) > cooldown;
-            
-            if (shouldNotifyExpired) {
-                // ✅ ARREGLO: Try-catch específico para cleanupExpiredEffects
-                let cleanupResult = null;
-                try {
-                    cleanupResult = await this.shop.cleanupExpiredEffects(userId);
-                } catch (cleanupError) {
-                    console.error(`❌ Error limpiando efectos de ${userId.slice(-4)}:`, cleanupError.message);
-                    return; // Salir si falla el cleanup
-                }
-                
-                if (cleanupResult && cleanupResult.hasChanges && cleanupResult.expiredItems.length > 0) {
-                    if (message && message.reply) {
-                        try {
-                            await this.shop.notifyExpiredItems(userId, cleanupResult.expiredItems, message);
-                        } catch (notifyError) {
-                            console.error(`❌ Error notificando a ${userId.slice(-4)}:`, notifyError.message);
-                        }
-                    } else {
-                        console.log(`🧹 Items expirados limpiados para ${userId.slice(-4)}: ${cleanupResult.expiredItems.length}`);
-                    }
-                    
-                    if (isAutomatic) {
-                        userNotifications.expiredAuto = now;
-                    } else {
-                        userNotifications.expiredManual = now;
-                    }
-                }
-            }
-            
-            // Items bajos solo en comandos manuales
-            if (!isAutomatic && message && message.reply) {
-                const shouldNotifyLow = (now - userNotifications.low) > 180000;
-                if (shouldNotifyLow) {
-                    try {
-                        const lowItems = await this.shop.checkLowItems(userId);
-                        if (lowItems.length > 0) {
-                            await this.shop.notifyLowItems(userId, lowItems, message);
-                            userNotifications.low = now;
-                        }
-                    } catch (lowError) {
-                        console.error(`❌ Error verificando items bajos:`, lowError.message);
-                    }
-                }
-            }
-            
-            this.lastNotifications.set(userId, userNotifications);
-            
-        } catch (error) {
-            console.error(`❌ Error verificando items de ${userId ? userId.slice(-4) : 'unknown'}:`, error);
-        } finally {
-            this.processingNotifications.delete(userId);
-        }
-    }
-
     async checkPendingPassiveIncome(userId) {
         if (this.processingPassiveIncome.has(userId)) {
             return; // Ya se está procesando para este usuario
@@ -244,7 +111,41 @@ class EconomySystem {
                     const now = Date.now();
                     
                     if (now - lastPayout >= 3600000) {
-                        await this.shop.processPassiveIncome();
+                        // ✅ PROCESAR SOLO ESTE USUARIO
+                        const amount = Math.floor(
+                            Math.random() * (effect.maxAmount - effect.minAmount + 1)
+                        ) + effect.minAmount;
+                        
+                        if (user.balance + amount <= this.config.maxBalance) {
+                            const currentStats = user.passiveIncomeStats || { 
+                                totalEarned: 0, 
+                                lastPayout: 0, 
+                                payoutCount: 0 
+                            };
+                            
+                            let parsedStats = currentStats;
+                            if (typeof currentStats === 'string') {
+                                try {
+                                    parsedStats = JSON.parse(currentStats);
+                                } catch {
+                                    parsedStats = { totalEarned: 0, lastPayout: 0, payoutCount: 0 };
+                                }
+                            }
+                            
+                            const newStats = {
+                                totalEarned: parsedStats.totalEarned + amount,
+                                lastPayout: now,
+                                payoutCount: parsedStats.payoutCount + 1
+                            };
+                            
+                            await this.updateUser(userId, {
+                                balance: user.balance + amount,
+                                lastPassivePayout: now,
+                                passiveIncomeStats: newStats
+                            });
+                            
+                            console.log(`🤖 Ingreso pasivo: ${amount} π-b$ para ${userId.slice(-4)}`);
+                        }
                         break;
                     }
                 }

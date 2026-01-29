@@ -9360,7 +9360,7 @@ const userId = gameState.userId;
     async processCommand(message) {
         // Verificar ingresos pasivos pendientes
         await this.economy.checkPendingPassiveIncome(message.author.id);
-        await this.economy.checkAndNotifyItems(message.author.id, message);
+        await this.economy.shop.checkAndNotifyExpiredItems(message.author.id, message);
 
         // Probabilidad 1% de recibir maldición aleatoria
         if (Math.random() < 0.01) {
