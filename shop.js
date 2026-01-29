@@ -854,7 +854,7 @@ class ShopSystem {
         return false;
     }
 
-    // Sistema de notificaciones de items expirados (VERSIÓN MEJORADA)
+    // Sistema de notificaciones de items expirados (VERSIÓN ANTI-DUPLICADOS)
     async checkAndNotifyExpiredItems(userId, message) {
         const user = await this.economy.getUser(userId);
         const activeEffects = this.parseActiveEffects(user.activeEffects);
@@ -864,16 +864,31 @@ class ShopSystem {
         const notificationCooldown = 5 * 60 * 1000; // 5 minutos
         if (!this.lastNotification) this.lastNotification = new Map();
         
+        // NUEVO: Sistema para evitar notificaciones duplicadas en el mismo segundo
+        if (!this.notificationLock) this.notificationLock = new Map();
+        const lockKey = `${userId}-${Math.floor(now / 1000)}`; // Agrupar por segundo
+        
+        // Si ya se notificó a este usuario en este segundo, salir
+        if (this.notificationLock.has(lockKey)) {
+            return;
+        }
+        
         const lastNotified = this.lastNotification.get(userId) || 0;
         const timeSinceLastNotif = now - lastNotified;
         
-        let expiredItems = [];
-        let soonToExpireItems = [];
+        // Usar Set para evitar duplicados automáticamente
+        let expiredItemsSet = new Set();
+        let soonToExpireMap = new Map(); // Usar Map para guardar el menor tiempo
         let itemsToRemove = [];
         
         // Revisar cada item activo
         for (const [itemId, effects] of Object.entries(activeEffects)) {
             if (!Array.isArray(effects)) continue;
+            
+            const item = this.shopItems[itemId];
+            const itemName = item?.name || itemId;
+            let hasExpiredEffect = false;
+            let minTimeLeft = Infinity;
             
             for (let i = effects.length - 1; i >= 0; i--) {
                 const effect = effects[i];
@@ -882,27 +897,30 @@ class ShopSystem {
                 if (!effect.expiresAt) continue;
                 
                 const timeLeft = effect.expiresAt - now;
-                const item = this.shopItems[itemId];
-                const itemName = item?.name || itemId;
                 
                 // Item ya expiró
                 if (timeLeft <= 0) {
-                    expiredItems.push(itemName);
+                    hasExpiredEffect = true;
                     itemsToRemove.push({ itemId, index: i });
                 }
-                // Item expira en menos de 5 minutos (solo si no hemos notificado recientemente)
-                else if (timeLeft <= 300000 && timeSinceLastNotif >= notificationCooldown) {
-                    const minutesLeft = Math.ceil(timeLeft / 60000);
-                    
-                    // Evitar duplicados en la lista
-                    const alreadyAdded = soonToExpireItems.find(item => item.name === itemName);
-                    if (!alreadyAdded) {
-                        soonToExpireItems.push({
-                            name: itemName,
-                            minutes: minutesLeft
-                        });
+                // Item expira en menos de 5 minutos
+                else if (timeLeft <= 300000) {
+                    // Guardar el tiempo mínimo de expiración para este item
+                    if (timeLeft < minTimeLeft) {
+                        minTimeLeft = timeLeft;
                     }
                 }
+            }
+            
+            // Agregar a expiredItems solo una vez por item
+            if (hasExpiredEffect) {
+                expiredItemsSet.add(itemName);
+            }
+            
+            // Agregar a soonToExpire solo si no hemos notificado recientemente
+            if (minTimeLeft < 300000 && minTimeLeft > 0 && timeSinceLastNotif >= notificationCooldown) {
+                const minutesLeft = Math.ceil(minTimeLeft / 60000);
+                soonToExpireMap.set(itemName, minutesLeft);
             }
         }
         
@@ -919,11 +937,21 @@ class ShopSystem {
             await this.economy.updateUser(userId, { activeEffects });
         }
         
+        // Convertir Set y Map a arrays para mostrar
+        const expiredItems = Array.from(expiredItemsSet);
+        const soonToExpireItems = Array.from(soonToExpireMap).map(([name, minutes]) => ({
+            name,
+            minutes
+        }));
+        
         // Enviar notificaciones SOLO si hay algo que notificar
         let notificationSent = false;
         
         // Notificar items expirados (siempre notifica cuando expiran)
         if (expiredItems.length > 0) {
+            // Marcar como bloqueado ANTES de enviar
+            this.notificationLock.set(lockKey, true);
+            
             const embed = new EmbedBuilder()
                 .setTitle('⏰ Efectos Expirados')
                 .setDescription(`Los siguientes efectos han terminado:\n\n${expiredItems.map(name => `❌ ${name}`).join('\n')}`)
@@ -941,6 +969,9 @@ class ShopSystem {
         
         // Notificar items próximos a expirar (solo si pasó el cooldown)
         if (soonToExpireItems.length > 0 && timeSinceLastNotif >= notificationCooldown) {
+            // Marcar como bloqueado ANTES de enviar
+            this.notificationLock.set(lockKey, true);
+            
             const embed = new EmbedBuilder()
                 .setTitle('⚠️ Efectos Próximos a Expirar')
                 .setDescription(`Estos efectos están por terminar:\n\n${soonToExpireItems.map(item => `⏱️ ${item.name} - **${item.minutes}min** restantes`).join('\n')}`)
@@ -960,6 +991,11 @@ class ShopSystem {
         if (notificationSent) {
             this.lastNotification.set(userId, now);
         }
+        
+        // Limpiar locks antiguos después de 2 segundos
+        setTimeout(() => {
+            this.notificationLock.delete(lockKey);
+        }, 2000);
     }
 
     async getEquippedCosmetics(userId) {
