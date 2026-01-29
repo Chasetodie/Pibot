@@ -854,11 +854,18 @@ class ShopSystem {
         return false;
     }
 
-    // Sistema de notificaciones de items expirados
+    // Sistema de notificaciones de items expirados (VERSIÓN MEJORADA)
     async checkAndNotifyExpiredItems(userId, message) {
         const user = await this.economy.getUser(userId);
         const activeEffects = this.parseActiveEffects(user.activeEffects);
         const now = Date.now();
+        
+        // Sistema de cooldown para notificaciones (5 minutos)
+        const notificationCooldown = 5 * 60 * 1000; // 5 minutos
+        if (!this.lastNotification) this.lastNotification = new Map();
+        
+        const lastNotified = this.lastNotification.get(userId) || 0;
+        const timeSinceLastNotif = now - lastNotified;
         
         let expiredItems = [];
         let soonToExpireItems = [];
@@ -883,13 +890,18 @@ class ShopSystem {
                     expiredItems.push(itemName);
                     itemsToRemove.push({ itemId, index: i });
                 }
-                // Item expira en menos de 5 minutos
-                else if (timeLeft <= 300000) {
+                // Item expira en menos de 5 minutos (solo si no hemos notificado recientemente)
+                else if (timeLeft <= 300000 && timeSinceLastNotif >= notificationCooldown) {
                     const minutesLeft = Math.ceil(timeLeft / 60000);
-                    soonToExpireItems.push({
-                        name: itemName,
-                        minutes: minutesLeft
-                    });
+                    
+                    // Evitar duplicados en la lista
+                    const alreadyAdded = soonToExpireItems.find(item => item.name === itemName);
+                    if (!alreadyAdded) {
+                        soonToExpireItems.push({
+                            name: itemName,
+                            minutes: minutesLeft
+                        });
+                    }
                 }
             }
         }
@@ -907,7 +919,10 @@ class ShopSystem {
             await this.economy.updateUser(userId, { activeEffects });
         }
         
-        // Enviar notificaciones
+        // Enviar notificaciones SOLO si hay algo que notificar
+        let notificationSent = false;
+        
+        // Notificar items expirados (siempre notifica cuando expiran)
         if (expiredItems.length > 0) {
             const embed = new EmbedBuilder()
                 .setTitle('⏰ Efectos Expirados')
@@ -918,12 +933,14 @@ class ShopSystem {
             
             try {
                 await message.reply({ embeds: [embed] });
+                notificationSent = true;
             } catch (error) {
                 console.error('Error enviando notificación de expiración:', error);
             }
         }
         
-        if (soonToExpireItems.length > 0) {
+        // Notificar items próximos a expirar (solo si pasó el cooldown)
+        if (soonToExpireItems.length > 0 && timeSinceLastNotif >= notificationCooldown) {
             const embed = new EmbedBuilder()
                 .setTitle('⚠️ Efectos Próximos a Expirar')
                 .setDescription(`Estos efectos están por terminar:\n\n${soonToExpireItems.map(item => `⏱️ ${item.name} - **${item.minutes}min** restantes`).join('\n')}`)
@@ -933,9 +950,15 @@ class ShopSystem {
             
             try {
                 await message.reply({ embeds: [embed] });
+                notificationSent = true;
             } catch (error) {
                 console.error('Error enviando notificación de advertencia:', error);
             }
+        }
+        
+        // Actualizar timestamp de última notificación si se envió alguna
+        if (notificationSent) {
+            this.lastNotification.set(userId, now);
         }
     }
 
