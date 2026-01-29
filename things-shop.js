@@ -407,11 +407,12 @@ if (bidAmount < auction.currentBid + minimumIncrement) {
                 const channel = client.channels.cache.get(auction.channelId);
                 const recipe = this.shop.shopItems[auction.itemName];
                 const realItemName = recipe ? recipe.name : auction.itemName;
+                const emojiData = this.shop.shopItems[auction.itemId];
                 
                 if (channel) {
                     const embed = new EmbedBuilder()
                         .setTitle('🔨 Subasta Terminada')
-                        .setDescription(`Subasta de **${realItemName}** ha finalizado`)
+                        .setDescription(`Subasta de ${emojiData.emoji} **${realItemName}** ha finalizado`)
                         .setColor(auction.highestBidder ? '#00FF00' : '#FF6600')
                         .setTimestamp();
                     
