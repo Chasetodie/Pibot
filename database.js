@@ -1080,7 +1080,8 @@ class LocalDatabase {
         try {
             const cutoffTime = Date.now() - timeframe;
             
-            const users = await this.pool.execute(`
+            // ✅ ARREGLO: Query para MySQL
+            const [rows] = await this.pool.execute(`
                 SELECT DISTINCT id 
                 FROM users 
                 WHERE last_work > ? 
@@ -1090,12 +1091,16 @@ class LocalDatabase {
                 LIMIT 100
             `, [cutoffTime, cutoffTime, cutoffTime, cutoffTime]);
             
-            return users.map(u => u.id);
+            // ✅ ARREGLO: Filtrar undefined/null
+            return rows
+                .map(u => u.id)
+                .filter(id => id !== null && id !== undefined && id !== '');
+                
         } catch (error) {
-            console.error('Error obteniendo usuarios activos:', error);
-            return [];
+            console.error('❌ Error obteniendo usuarios activos:', error);
+            return []; // Retornar array vacío en caso de error
         }
-    }
+    }   
 
     // Métodos para shop_items
     async getShopItems() {

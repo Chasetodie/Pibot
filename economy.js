@@ -62,23 +62,41 @@ class EconomySystem {
             try {
                 console.log('🧹 Ejecutando limpieza automática de items...');
                 
-                // Obtener usuarios activos (que han jugado en las últimas 24h)
-                const recentUsers = await this.database.getRecentActiveUsers(86400000); // 24h
+                // ✅ ARREGLO: Manejar posibles errores en getRecentActiveUsers
+                let recentUsers = [];
+                try {
+                    recentUsers = await this.database.getRecentActiveUsers(86400000);
+                } catch (dbError) {
+                    console.error('❌ Error obteniendo usuarios:', dbError);
+                    return;
+                }
                 
-                if (!recentUsers || recentUsers.length === 0) {
+                // ✅ ARREGLO: Validar que sea un array válido
+                if (!Array.isArray(recentUsers) || recentUsers.length === 0) {
                     console.log('ℹ️ No hay usuarios activos recientes');
                     return;
                 }
                 
                 let cleanedCount = 0;
+                let errorCount = 0;
                 
                 for (const userId of recentUsers) {
-                    // Limpiar sin notificar (isAutomatic = true, message = null)
-                    await this.checkAndNotifyItems(userId, null, true);
-                    cleanedCount++;
+                    // ✅ ARREGLO: Validar userId antes de procesar
+                    if (!userId || typeof userId !== 'string') {
+                        console.warn('⚠️ UserID inválido detectado:', userId);
+                        continue;
+                    }
+                    
+                    try {
+                        await this.checkAndNotifyItems(userId, null, true);
+                        cleanedCount++;
+                    } catch (userError) {
+                        console.error(`❌ Error limpiando usuario ${userId.slice(-4)}:`, userError.message);
+                        errorCount++;
+                    }
                 }
                 
-                console.log(`✅ Limpieza completada: ${cleanedCount} usuarios procesados`);
+                console.log(`✅ Limpieza completada: ${cleanedCount} usuarios procesados${errorCount > 0 ? ` (${errorCount} errores)` : ''}`);
                 
             } catch (error) {
                 console.error('❌ Error en limpieza automática:', error);
@@ -129,7 +147,12 @@ class EconomySystem {
     }
 
     async checkAndNotifyItems(userId, message = null, isAutomatic = false) {
-        // ✅ ARREGLO 1: Prevenir ejecuciones simultáneas
+        // ✅ ARREGLO: Validar userId al inicio
+        if (!userId || typeof userId !== 'string') {
+            console.error('❌ UserID inválido en checkAndNotifyItems:', userId);
+            return;
+        }
+        
         if (this.processingNotifications.has(userId)) {
             return;
         }
@@ -144,24 +167,31 @@ class EconomySystem {
                 low: 0 
             };
             
-            // ✅ ARREGLO 2: Cooldown diferente según tipo
-            const cooldown = isAutomatic ? 300000 : 60000; // Auto: 5min, Manual: 1min
+            const cooldown = isAutomatic ? 300000 : 60000;
             const expiredTimestamp = isAutomatic ? userNotifications.expiredAuto : userNotifications.expiredManual;
             const shouldNotifyExpired = (now - expiredTimestamp) > cooldown;
             
             if (shouldNotifyExpired) {
-                const cleanupResult = await this.shop.cleanupExpiredEffects(userId);
+                // ✅ ARREGLO: Try-catch específico para cleanupExpiredEffects
+                let cleanupResult = null;
+                try {
+                    cleanupResult = await this.shop.cleanupExpiredEffects(userId);
+                } catch (cleanupError) {
+                    console.error(`❌ Error limpiando efectos de ${userId.slice(-4)}:`, cleanupError.message);
+                    return; // Salir si falla el cleanup
+                }
                 
-                if (cleanupResult.hasChanges && cleanupResult.expiredItems.length > 0) {
-                    // ✅ ARREGLO 3: Solo notificar si hay mensaje válido
+                if (cleanupResult && cleanupResult.hasChanges && cleanupResult.expiredItems.length > 0) {
                     if (message && message.reply) {
-                        await this.shop.notifyExpiredItems(userId, cleanupResult.expiredItems, message);
+                        try {
+                            await this.shop.notifyExpiredItems(userId, cleanupResult.expiredItems, message);
+                        } catch (notifyError) {
+                            console.error(`❌ Error notificando a ${userId.slice(-4)}:`, notifyError.message);
+                        }
                     } else {
-                        // Log silencioso si no hay mensaje (limpieza automática)
                         console.log(`🧹 Items expirados limpiados para ${userId.slice(-4)}: ${cleanupResult.expiredItems.length}`);
                     }
                     
-                    // Actualizar timestamp
                     if (isAutomatic) {
                         userNotifications.expiredAuto = now;
                     } else {
@@ -170,14 +200,18 @@ class EconomySystem {
                 }
             }
             
-            // ✅ ARREGLO 4: Items bajos solo en comandos manuales Y con mensaje válido
+            // Items bajos solo en comandos manuales
             if (!isAutomatic && message && message.reply) {
-                const shouldNotifyLow = (now - userNotifications.low) > 180000; // 3 minutos
+                const shouldNotifyLow = (now - userNotifications.low) > 180000;
                 if (shouldNotifyLow) {
-                    const lowItems = await this.shop.checkLowItems(userId);
-                    if (lowItems.length > 0) {
-                        await this.shop.notifyLowItems(userId, lowItems, message);
-                        userNotifications.low = now;
+                    try {
+                        const lowItems = await this.shop.checkLowItems(userId);
+                        if (lowItems.length > 0) {
+                            await this.shop.notifyLowItems(userId, lowItems, message);
+                            userNotifications.low = now;
+                        }
+                    } catch (lowError) {
+                        console.error(`❌ Error verificando items bajos:`, lowError.message);
                     }
                 }
             }
@@ -185,7 +219,7 @@ class EconomySystem {
             this.lastNotifications.set(userId, userNotifications);
             
         } catch (error) {
-            console.error(`❌ Error verificando items de ${userId.slice(-4)}:`, error);
+            console.error(`❌ Error verificando items de ${userId ? userId.slice(-4) : 'unknown'}:`, error);
         } finally {
             this.processingNotifications.delete(userId);
         }
