@@ -9442,12 +9442,6 @@ const userId = gameState.userId;
             );
             return;
         }
-       
-        // Verificar fondos
-        if (user.balance < betAmount) {
-            await message.reply(`❌ No tienes suficientes π-b Coins. Tu balance: ${this.formatNumber(user.balance)} π-b$`);
-            return;
-        }
 
         const canTrivia = await this.canTrivia(userId);
         if (!canTrivia.canPlay) {
@@ -9615,8 +9609,7 @@ const userId = gameState.userId;
                 if (this.achievements) {
                     await this.achievements.updateStats(userId, 'game_played');
                     await this.achievements.updateStats(userId, 'game_won');
-                    await this.achievements.updateStats(userId, 'money_bet', betAmount);
-                    await this.achievements.updateStats(userId, 'bet_win', finalEarnings);
+                    await this.achievements.updateStats(userId, 'bet_win', finalMoney);
                 }        
 
                 const resultEmbed = new EmbedBuilder()
