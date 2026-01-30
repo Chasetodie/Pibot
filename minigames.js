@@ -64,11 +64,6 @@ this.cooldownCache = new Map();
                 cycleHours: 4,      // Cada 4 horas
                 maxDaily: 40        // Máximo 60 al día (10 × 6 ciclos)
             },
-            trivia: {
-                perCycle: 8,        // 8 partidas por ciclo
-                cycleHours: 4,      // Cada 4 horas
-                maxDaily: 48        // Máximo 48 al día
-            }
         };
 
         setInterval(() => {
@@ -193,8 +188,8 @@ this.cooldownCache = new Map();
             trivia: {
                 minBet: 0,              // Gratis para jugar
                 maxBet: 0,              // Gratis
-                cooldown: 120000,       // 2 minutos
-                timePerQuestion: 20000, // 20 segundos por pregunta
+                cooldown: 60000,       // 2 minutos
+                timePerQuestion: 15000, // 20 segundos por pregunta
                 questionsPerGame: 5,    // 5 preguntas por partida
                 rewards: {
                     perfect: { money: 1000, xp: 250 },    // 5/5 correctas
@@ -288,40 +283,40 @@ this.cooldownCache = new Map();
         this.cooldowns = new Map(); // Para cooldowns por usuario
     }
 
-async showMyLimits(message) {
-    const userId = message.author.id;
-    const embed = new EmbedBuilder()
-        .setTitle('⏱️ Tus Límites de Juego')
-        .setDescription('Sistema de ciclos de 4 horas\n💡 Usa el botón 🔔 cuando alcances un límite para recibir notificaciones')
-        .setColor('#FFD700')
-        .setTimestamp();
-    
-    for (const [gameType, config] of Object.entries(this.dailyLimits)) {
-        const status = await this.economy.database.getGameLimitStatus(userId, gameType, config.cycleHours);
+    async showMyLimits(message) {
+        const userId = message.author.id;
+        const embed = new EmbedBuilder()
+            .setTitle('⏱️ Tus Límites de Juego')
+            .setDescription('Sistema de ciclos de 4 horas\n💡 Usa el botón 🔔 cuando alcances un límite para recibir notificaciones')
+            .setColor('#FFD700')
+            .setTimestamp();
         
-        const timeLeft = status.cycleReset - Date.now();
-        const hoursLeft = Math.floor(timeLeft / (60 * 60 * 1000));
-        const minutesLeft = Math.floor((timeLeft % (60 * 60 * 1000)) / (60 * 1000));
+        for (const [gameType, config] of Object.entries(this.dailyLimits)) {
+            const status = await this.economy.database.getGameLimitStatus(userId, gameType, config.cycleHours);
+            
+            const timeLeft = status.cycleReset - Date.now();
+            const hoursLeft = Math.floor(timeLeft / (60 * 60 * 1000));
+            const minutesLeft = Math.floor((timeLeft % (60 * 60 * 1000)) / (60 * 1000));
+            
+            const gameName = gameType.charAt(0).toUpperCase() + gameType.slice(1);
+            const cycleBar = '█'.repeat(status.cycleCount) + '░'.repeat(config.perCycle - status.cycleCount);
+            
+            const statusEmoji = status.cycleCount >= config.perCycle ? '🔴' : '🟢';
+            
+            embed.addFields({
+                name: `${statusEmoji} ${gameName}`,
+                value: 
+                    `**Ciclo:** ${status.cycleCount}/${config.perCycle} ${cycleBar}\n` +
+                    `**Hoy:** ${status.dailyCount}/${config.maxDaily}\n` +
+                    `⏰ ${hoursLeft}h ${minutesLeft}m`,
+                inline: true
+            });
+        }
         
-        const gameName = gameType.charAt(0).toUpperCase() + gameType.slice(1);
-        const cycleBar = '█'.repeat(status.cycleCount) + '░'.repeat(config.perCycle - status.cycleCount);
+        embed.setFooter({ text: 'Los ciclos se resetean cada 4 horas • 🔔 Activa notificaciones cuando alcances un límite' });
         
-        const statusEmoji = status.cycleCount >= config.perCycle ? '🔴' : '🟢';
-        
-        embed.addFields({
-            name: `${statusEmoji} ${gameName}`,
-            value: 
-                `**Ciclo:** ${status.cycleCount}/${config.perCycle} ${cycleBar}\n` +
-                `**Hoy:** ${status.dailyCount}/${config.maxDaily}\n` +
-                `⏰ ${hoursLeft}h ${minutesLeft}m`,
-            inline: true
-        });
+        await message.reply({ embeds: [embed] });
     }
-    
-    embed.setFooter({ text: 'Los ciclos se resetean cada 4 horas • 🔔 Activa notificaciones cuando alcances un límite' });
-    
-    await message.reply({ embeds: [embed] });
-}
 
     startCacheCleanup() {
         setInterval(() => {
@@ -560,120 +555,120 @@ async showMyLimits(message) {
         await message.reply({ embeds: [embed], components: [row] });
     }
 
-// ==========================================
-// SISTEMA DE NOTIFICACIONES DE LÍMITES
-// ==========================================
+    // ==========================================
+    // SISTEMA DE NOTIFICACIONES DE LÍMITES
+    // ==========================================
 
-async handleLimitNotificationButton(interaction) {
-    if (!interaction.customId.startsWith('notify_limit_')) return;
-    
-    const [, , gameType, userId] = interaction.customId.split('_');
-    
-    if (interaction.user.id !== userId) {
-        await interaction.reply({ 
-            content: '❌ Este botón no es para ti.', 
-            ephemeral: true 
-        });
-        return;
-    }
-    
-    await interaction.deferReply({ ephemeral: true });
-    
-    const limitConfig = this.dailyLimits[gameType];
-    const status = await this.economy.database.getGameLimitStatus(
-        userId, 
-        gameType, 
-        limitConfig.cycleHours
-    );
-    
-    // Crear notificación en la base de datos
-    const success = await this.economy.database.createLimitNotification(
-        userId,
-        gameType,
-        interaction.channelId,
-        status.cycleReset
-    );
-    
-    if (success) {
-        const timeLeft = status.cycleReset - Date.now();
-        const hoursLeft = Math.floor(timeLeft / (60 * 60 * 1000));
-        const minutesLeft = Math.floor((timeLeft % (60 * 60 * 1000)) / (60 * 1000));
+    async handleLimitNotificationButton(interaction) {
+        if (!interaction.customId.startsWith('notify_limit_')) return;
         
-        await interaction.editReply({
-            content: `✅ **Notificación programada**\n` +
-                     `Te avisaré en este canal cuando tus límites de **${gameType}** se recarguen.\n` +
-                     `⏰ Tiempo estimado: ${hoursLeft}h ${minutesLeft}m`
-        });
+        const [, , gameType, userId] = interaction.customId.split('_');
         
-        // Deshabilitar el botón
-        const disabledRow = new ActionRowBuilder()
-            .addComponents(
-                new ButtonBuilder()
-                    .setCustomId('disabled')
-                    .setLabel('✅ Notificación activada')
-                    .setStyle(ButtonStyle.Success)
-                    .setDisabled(true)
-            );
-        
-        try {
-            await interaction.message.edit({ components: [disabledRow] });
-        } catch (error) {
-            console.log('No se pudo editar el botón:', error.message);
+        if (interaction.user.id !== userId) {
+            await interaction.reply({ 
+                content: '❌ Este botón no es para ti.', 
+                ephemeral: true 
+            });
+            return;
         }
-    } else {
-        await interaction.editReply({
-            content: '❌ Error al programar la notificación. Intenta de nuevo.'
-        });
-    }
-}
-
-startNotificationChecker() {
-    // Verificar notificaciones cada 1 minuto
-    setInterval(async () => {
-        await this.checkPendingNotifications();
-    }, 60000);
-    
-    console.log('🔔 Sistema de notificaciones de límites iniciado');
-}
-
-async checkPendingNotifications() {
-    try {
-        const notifications = await this.economy.database.getPendingNotifications();
         
-        for (const notif of notifications) {
+        await interaction.deferReply({ ephemeral: true });
+        
+        const limitConfig = this.dailyLimits[gameType];
+        const status = await this.economy.database.getGameLimitStatus(
+            userId, 
+            gameType, 
+            limitConfig.cycleHours
+        );
+        
+        // Crear notificación en la base de datos
+        const success = await this.economy.database.createLimitNotification(
+            userId,
+            gameType,
+            interaction.channelId,
+            status.cycleReset
+        );
+        
+        if (success) {
+            const timeLeft = status.cycleReset - Date.now();
+            const hoursLeft = Math.floor(timeLeft / (60 * 60 * 1000));
+            const minutesLeft = Math.floor((timeLeft % (60 * 60 * 1000)) / (60 * 1000));
+            
+            await interaction.editReply({
+                content: `✅ **Notificación programada**\n` +
+                        `Te avisaré en este canal cuando tus límites de **${gameType}** se recarguen.\n` +
+                        `⏰ Tiempo estimado: ${hoursLeft}h ${minutesLeft}m`
+            });
+            
+            // Deshabilitar el botón
+            const disabledRow = new ActionRowBuilder()
+                .addComponents(
+                    new ButtonBuilder()
+                        .setCustomId('disabled')
+                        .setLabel('✅ Notificación activada')
+                        .setStyle(ButtonStyle.Success)
+                        .setDisabled(true)
+                );
+            
             try {
-                const channel = await this.client.channels.fetch(notif.channel_id);
-                if (!channel) {
-                    await this.economy.database.markNotificationAsSent(notif.id);
-                    continue;
-                }
-                
-                const gameName = notif.game_type.charAt(0).toUpperCase() + notif.game_type.slice(1);
-                
-                const embed = new EmbedBuilder()
-                    .setTitle('🔔 Límites Recargados')
-                    .setDescription(
-                        `<@${notif.user_id}>, tus límites de **${gameName}** se han recargado.\n\n` +
-                        `✅ Ya puedes volver a jugar!`
-                    )
-                    .setColor('#00FF00')
-                    .setTimestamp();
-                
-                await channel.send({ embeds: [embed] });
-                await this.economy.database.markNotificationAsSent(notif.id);
-                
-                console.log(`✅ Notificación enviada a ${notif.user_id} para ${notif.game_type}`);
-                
+                await interaction.message.edit({ components: [disabledRow] });
             } catch (error) {
-                console.error(`Error enviando notificación ${notif.id}:`, error);
-                // Marcar como enviada para evitar reintento infinito
-                await this.economy.database.markNotificationAsSent(notif.id);
+                console.log('No se pudo editar el botón:', error.message);
             }
+        } else {
+            await interaction.editReply({
+                content: '❌ Error al programar la notificación. Intenta de nuevo.'
+            });
         }
-    } catch (error) {
-        console.error('Error verificando notificaciones:', error);
     }
-}
+
+    startNotificationChecker() {
+        // Verificar notificaciones cada 1 minuto
+        setInterval(async () => {
+            await this.checkPendingNotifications();
+        }, 60000);
+        
+        console.log('🔔 Sistema de notificaciones de límites iniciado');
+    }
+
+    async checkPendingNotifications() {
+        try {
+            const notifications = await this.economy.database.getPendingNotifications();
+            
+            for (const notif of notifications) {
+                try {
+                    const channel = await this.client.channels.fetch(notif.channel_id);
+                    if (!channel) {
+                        await this.economy.database.markNotificationAsSent(notif.id);
+                        continue;
+                    }
+                    
+                    const gameName = notif.game_type.charAt(0).toUpperCase() + notif.game_type.slice(1);
+                    
+                    const embed = new EmbedBuilder()
+                        .setTitle('🔔 Límites Recargados')
+                        .setDescription(
+                            `<@${notif.user_id}>, tus límites de **${gameName}** se han recargado.\n\n` +
+                            `✅ Ya puedes volver a jugar!`
+                        )
+                        .setColor('#00FF00')
+                        .setTimestamp();
+                    
+                    await channel.send({ embeds: [embed] });
+                    await this.economy.database.markNotificationAsSent(notif.id);
+                    
+                    console.log(`✅ Notificación enviada a ${notif.user_id} para ${notif.game_type}`);
+                    
+                } catch (error) {
+                    console.error(`Error enviando notificación ${notif.id}:`, error);
+                    // Marcar como enviada para evitar reintento infinito
+                    await this.economy.database.markNotificationAsSent(notif.id);
+                }
+            }
+        } catch (error) {
+            console.error('Error verificando notificaciones:', error);
+        }
+    }
 
     // Verificar cooldown de usuario
     checkCooldown(userId, gameType) {
@@ -9424,25 +9419,6 @@ const userId = gameState.userId;
             return;
         }
         
-        // VERIFICAR LÍMITES (igual que lottery)
-        const gameType = 'trivia';
-        const limitConfig = this.dailyLimits[gameType];
-        const status = await this.economy.database.getGameLimitStatus(userId, gameType, limitConfig.cycleHours);
-        
-        if (status.cycleCount >= limitConfig.perCycle) {
-            await this.showLimitReached(message, userId, gameType, status, limitConfig);
-            return;
-        }
-
-        if (status.dailyCount >= limitConfig.maxDaily) {
-            await message.reply(
-                `🚫 **Límite diario alcanzado**\n` +
-                `Has alcanzado el máximo de ${limitConfig.maxDaily} partidas de blackjack por día.\n` +
-                `🌅 Vuelve mañana!`
-            );
-            return;
-        }
-
         const canTrivia = await this.canTrivia(userId);
         if (!canTrivia.canPlay) {
             await message.reply(`⏰ Debes esperar ${this.formatTime(canTrivia.timeLeft)} antes de jugar otra vez`);
@@ -9474,6 +9450,14 @@ const userId = gameState.userId;
         }
 
         try {
+            // Mensaje de carga
+            const loadingEmbed = new EmbedBuilder()
+                .setTitle('🌐 Preparando Trivia...')
+                .setDescription('Estamos traduciendo tus preguntas al español...')
+                .setColor('#9932CC');
+            
+            const loadingMessage = await message.reply({ embeds: [loadingEmbed] });
+
             // Obtener preguntas de OpenTDB
             const apiUrl = `https://opentdb.com/api.php?amount=${this.config.trivia.questionsPerGame}&difficulty=${difficultyMap[difficulty]}&type=multiple`;
             
@@ -9481,12 +9465,23 @@ const userId = gameState.userId;
             const data = await response.json();
 
             if (data.response_code !== 0 || !data.results || data.results.length === 0) {
-                return message.reply('❌ No se pudieron obtener preguntas. Intenta de nuevo.');
+                await loadingMessage.edit({ 
+                    embeds: [new EmbedBuilder()
+                        .setTitle('❌ Error')
+                        .setDescription('No se pudieron obtener preguntas. Intenta de nuevo.')
+                        .setColor('#FF0000')
+                    ]
+                });
+                return;
             }
 
             // Traducir preguntas
             const questions = await Promise.all(data.results.map(async (q) => {
+                // console.log('📝 Original:', q.question);
+                
                 const translatedQuestion = await this.translateText(this.decodeHTML(q.question));
+                // console.log('✅ Traducida:', translatedQuestion);
+                
                 const translatedCorrect = await this.translateText(this.decodeHTML(q.correct_answer));
                 const translatedIncorrect = await Promise.all(
                     q.incorrect_answers.map(ans => this.translateText(this.decodeHTML(ans)))
@@ -9499,138 +9494,145 @@ const userId = gameState.userId;
                     question: translatedQuestion,
                     correct: translatedCorrect,
                     answers: allAnswers,
-                    category: await this.translateText(this.decodeHTML(q.category))  // ← También traducir categoría
+                    category: await this.translateText(this.decodeHTML(q.category))
                 };
             }));
 
             // Marcar como activo
             this.activeGames.set(`trivia_${userId}`, true);
 
-            // AGREGAR ESTO: Embed de inicio
+            // Actualizar mensaje: Iniciando juego
             const startEmbed = new EmbedBuilder()
                 .setTitle('🧠 Iniciando Trivia...')
                 .setDescription(`**Dificultad:** ${difficulty.toUpperCase()}\n**Preguntas:** ${questions.length}\n**Tiempo:** ${this.config.trivia.timePerQuestion / 1000} segundos por pregunta`)
                 .setColor('#9932CC')
                 .setFooter({ text: 'El juego comenzará en 3 segundos...' });
 
-            await message.reply({ embeds: [startEmbed] });
+            await loadingMessage.edit({ embeds: [startEmbed] });
 
             // Esperar 3 segundos
             await new Promise(resolve => setTimeout(resolve, 3000));
 
+            // Variables del juego
             let currentQuestion = 0;
             let correctAnswers = 0;
-            const gameEmbed = new EmbedBuilder()
-                .setTitle(`🧠 Trivia - Pregunta ${currentQuestion + 1}/${questions.length}`)
-                .setDescription(questions[currentQuestion].question)
-                .setColor('#9932CC')
-                .addFields(
-                    { name: 'Dificultad', value: difficulty.toUpperCase(), inline: true },
-                    { name: 'Categoría', value: questions[currentQuestion].category, inline: true }
-                )
-                .setFooter({ text: `Tienes ${this.config.trivia.timePerQuestion / 1000} segundos para responder` });
+            let gameMessage = loadingMessage; // Reutilizar el mismo mensaje
 
-            const buttons = new ActionRowBuilder();
-            questions[currentQuestion].answers.forEach((answer, index) => {
-                buttons.addComponents(
-                    new ButtonBuilder()
-                        .setCustomId(`trivia_${index}`)
-                        .setLabel(answer.substring(0, 80))
-                        .setStyle(ButtonStyle.Primary)
-                );
-            });
+            // Función para mostrar pregunta
+            const showQuestion = async () => {
+                const q = questions[currentQuestion];
+                const letters = ['A', 'B', 'C', 'D'];
+                
+                // Crear texto de opciones
+                let optionsText = '';
+                q.answers.forEach((answer, index) => {
+                    optionsText += `**${letters[index]})** ${answer}\n\n`;
+                });
 
-            const gameMessage = await message.reply({ embeds: [gameEmbed], components: [buttons] });
-
-            const collector = gameMessage.createMessageComponentCollector({
-                filter: (i) => i.user.id === userId,
-                time: this.config.trivia.timePerQuestion * this.config.trivia.questionsPerGame + 10000  // Total para todas las preguntas + 10 seg extra
-            });
-
-            let questionTimeout = null;
-
-            // Función para manejar timeout de pregunta individual
-            const handleQuestionTimeout = () => {
-                questionTimeout = setTimeout(async () => {
-                    if (currentQuestion < questions.length) {
-                        await gameMessage.channel.send(`⏰ <@${userId}> Se acabó el tiempo para la pregunta ${currentQuestion + 1}!`);
-                        
-                        currentQuestion++;
-                        
-                        if (currentQuestion < questions.length) {
-                            // Siguiente pregunta
-                            await showNextQuestion();
-                        } else {
-                            // Fin del juego
-                            collector.stop('finished');
-                        }
-                    }
-                }, this.config.trivia.timePerQuestion);
-            };
-
-            // Función para mostrar siguiente pregunta
-            const showNextQuestion = async () => {
-                const nextEmbed = new EmbedBuilder()
-                    .setTitle(`🧠 Trivia - Pregunta ${currentQuestion + 1}/${questions.length}`)
-                    .setDescription(questions[currentQuestion].question)
+                const questionEmbed = new EmbedBuilder()
+                    .setTitle(`🧠 Pregunta ${currentQuestion + 1}/${questions.length}`)
+                    .setDescription(`**${q.question}**\n\n${optionsText}`)
                     .setColor('#9932CC')
                     .addFields(
-                        { name: 'Dificultad', value: difficulty.toUpperCase(), inline: true },
-                        { name: 'Categoría', value: questions[currentQuestion].category, inline: true },
-                        { name: 'Progreso', value: `✅ ${correctAnswers} correctas`, inline: true }
+                        { name: '📊 Dificultad', value: difficulty.toUpperCase(), inline: true },
+                        { name: '📚 Categoría', value: q.category, inline: true },
+                        { name: '✅ Correctas', value: `${correctAnswers}`, inline: true }
                     )
-                    .setFooter({ text: `Tienes ${this.config.trivia.timePerQuestion / 1000} segundos para responder` });
+                    .setFooter({ text: `⏱️ Tienes ${this.config.trivia.timePerQuestion / 1000} segundos para responder` });
 
-                const nextButtons = new ActionRowBuilder();
-                questions[currentQuestion].answers.forEach((answer, index) => {
-                    nextButtons.addComponents(
+                const buttons = new ActionRowBuilder();
+                letters.forEach((letter, index) => {
+                    buttons.addComponents(
                         new ButtonBuilder()
                             .setCustomId(`trivia_${index}`)
-                            .setLabel(answer.substring(0, 80))
+                            .setLabel(letter)
                             .setStyle(ButtonStyle.Primary)
                     );
                 });
 
-                await gameMessage.edit({ embeds: [nextEmbed], components: [nextButtons] });
-                handleQuestionTimeout(); // Iniciar timeout para esta pregunta
-            };
+                await gameMessage.edit({ embeds: [questionEmbed], components: [buttons] });
 
-            // Iniciar timeout para la primera pregunta
-            handleQuestionTimeout();
+                // Timeout para esta pregunta
+                const timeoutPromise = new Promise((resolve) => {
+                    setTimeout(() => resolve('timeout'), this.config.trivia.timePerQuestion);
+                });
 
-            collector.on('collect', async (interaction) => {
-                // Cancelar el timeout de la pregunta actual
-                if (questionTimeout) {
-                    clearTimeout(questionTimeout);
-                    questionTimeout = null;
+                // Esperar respuesta del usuario
+                const filter = (i) => i.user.id === userId && i.customId.startsWith('trivia_');
+                const collectorPromise = gameMessage.awaitMessageComponent({ 
+                    filter, 
+                    time: this.config.trivia.timePerQuestion 
+                }).catch(() => null);
+
+                const result = await Promise.race([timeoutPromise, collectorPromise]);
+
+                if (result === 'timeout' || !result) {
+                    // Timeout - Mostrar respuesta correcta
+                    const timeoutEmbed = new EmbedBuilder()
+                        .setTitle('⏰ ¡Se acabó el tiempo!')
+                        .setDescription(
+                            `**Pregunta:** ${q.question}\n\n` +
+                            `❌ **No respondiste a tiempo**\n\n` +
+                            `✅ **Respuesta correcta:** ${q.correct}`
+                        )
+                        .setColor('#FF0000');
+
+                    await gameMessage.edit({ embeds: [timeoutEmbed], components: [] });
+                    await new Promise(resolve => setTimeout(resolve, 5000));
+
+                    currentQuestion++;
+                    if (currentQuestion < questions.length) {
+                        await showQuestion();
+                    } else {
+                        await endGame();
+                    }
+                    return;
                 }
-                
+
+                // Usuario respondió
+                const interaction = result;
                 const answerIndex = parseInt(interaction.customId.split('_')[1]);
-                const selectedAnswer = questions[currentQuestion].answers[answerIndex];
-                const isCorrect = selectedAnswer === questions[currentQuestion].correct;
+                const selectedAnswer = q.answers[answerIndex];
+                const isCorrect = selectedAnswer === q.correct;
 
                 if (isCorrect) {
                     correctAnswers++;
-                    await interaction.reply({ content: `✅ **¡Correcto!**`, ephemeral: true });
+                    
+                    const correctEmbed = new EmbedBuilder()
+                        .setTitle('✅ ¡Correcto!')
+                        .setDescription(
+                            `**Pregunta:** ${q.question}\n\n` +
+                            `✅ **Tu respuesta:** ${selectedAnswer}\n\n` +
+                            `¡Bien hecho!`
+                        )
+                        .setColor('#00FF00');
+
+                    await interaction.update({ embeds: [correctEmbed], components: [] });
                 } else {
-                    await interaction.reply({ 
-                        content: `❌ **Incorrecto.** La respuesta correcta era: **${questions[currentQuestion].correct}**`, 
-                        ephemeral: true 
-                    });
+                    const wrongEmbed = new EmbedBuilder()
+                        .setTitle('❌ Incorrecto')
+                        .setDescription(
+                            `**Pregunta:** ${q.question}\n\n` +
+                            `❌ **Tu respuesta:** ${selectedAnswer}\n` +
+                            `✅ **Respuesta correcta:** ${q.correct}`
+                        )
+                        .setColor('#FF0000');
+
+                    await interaction.update({ embeds: [wrongEmbed], components: [] });
                 }
+
+                await new Promise(resolve => setTimeout(resolve, 5000));
 
                 currentQuestion++;
-
                 if (currentQuestion < questions.length) {
-                    // Siguiente pregunta
-                    await showNextQuestion();
+                    await showQuestion();
                 } else {
-                    // Fin del juego
-                    collector.stop('finished');
+                    await endGame();
                 }
-            });
+            };
 
-            collector.on('end', async (collected, reason) => {
+            // Función para finalizar el juego
+            const endGame = async () => {
                 this.activeGames.delete(`trivia_${userId}`);
 
                 // Calcular recompensas
@@ -9646,9 +9648,6 @@ const userId = gameState.userId;
                 // Otorgar recompensas
                 await this.economy.addMoney(userId, finalMoney);
                 await this.economy.addXp(userId, finalXP);
-
-                await this.economy.database.incrementGameLimit(userId, gameType);
-
                 await this.economy.updateUser(userId, updateData);
 
                 // *** NUEVO: ACTUALIZAR ESTADÍSTICAS DE ACHIEVEMENTS ***
@@ -9670,7 +9669,10 @@ const userId = gameState.userId;
                     .setFooter({ text: 'Usa >trivia [easy/medium/hard] para jugar de nuevo' });
 
                 await gameMessage.edit({ embeds: [resultEmbed], components: [] });
-            });
+            };
+
+            // Iniciar el juego
+            await showQuestion();
 
         } catch (error) {
             this.activeGames.delete(`trivia_${userId}`);
