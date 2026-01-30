@@ -10163,9 +10163,9 @@ const userId = gameState.userId;
                         await message.reply(`❌ Error: ${error.message}`);
                     }
                     break;
-                case '>trivia':
+                /*case '>trivia':
                     await this.playTrivia(message, args);
-                    break;
+                    break;*/
                 case '>games':
                 case '>minigames':
                 case '>juegos':
