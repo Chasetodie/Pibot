@@ -309,14 +309,29 @@ class AchievementsSystem {
                 rarity: 'epic',
                 emoji: '⚒️'
             },
-
+            'big_win': {
+                name: '💵 Gran Ganador',
+                description: 'Gana más de 50,000 π-b$ en una sola apuesta',
+                requirement: { type: 'single_bet_win', value: 50000 },
+                reward: { money: 5000, xp: 500 },
+                rarity: 'rare',
+                emoji: '💵'
+            },
             'jackpot': {
                 name: '🎰 Jackpot!',
-                description: 'Gana más de 500,000 π-b$ en una sola apuesta',
-                requirement: { type: 'single_bet_win', value: 500000 },
-                reward: { money: 25000, xp: 1500 },
-                rarity: 'legendary',
+                description: 'Gana más de 150,000 π-b$ en una sola apuesta',
+                requirement: { type: 'single_bet_win', value: 150000 },
+                reward: { money: 15000, xp: 1500 },
+                rarity: 'epic',
                 emoji: '🎰'
+            },
+            'mega_jackpot': {
+                name: '💎 Mega Jackpot',
+                description: 'Gana más de 300,000 π-b$ en una sola apuesta',
+                requirement: { type: 'single_bet_win', value: 300000 },
+                reward: { money: 50000, xp: 5000 },
+                rarity: 'legendary',
+                emoji: '💎'
             },
             'completionist': {
                 name: '🏅 Completista',

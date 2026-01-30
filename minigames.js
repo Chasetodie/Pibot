@@ -866,10 +866,6 @@ async getEffectiveCooldown(baseCooldown) {
 
         const updateData = {
             last_coinflip: Date.now(),
-            stats: {
-                ...user.stats,
-                games_played: (user.stats.games_played || 0) + 1
-            }
         }
 
         // Crear embed del resultado
@@ -1300,10 +1296,6 @@ async getEffectiveCooldown(baseCooldown) {
         
         const updateData = {
             last_dice: Date.now(),
-            stats: {
-                ...user.stats,
-                games_played: (user.stats.games_played || 0) + 1
-            }        
         }
 
         // Emojis del dado
@@ -1711,10 +1703,6 @@ async getEffectiveCooldown(baseCooldown) {
         
         const updateData = {
             last_lotto: Date.now(),
-            stats: {
-                ...user.stats,
-                games_played: (user.stats.games_played || 0) + 1
-            }
         };
 
         await this.economy.updateUser(userId, updateData);
@@ -2487,10 +2475,6 @@ const userId = gameState.userId;
         
         const updateData = {
             last_blackjack: Date.now(),
-            stats: {
-                ...user.stats,
-                games_played: (user.stats.games_played || 0) + 1
-            }
         };
         
         let profit = 0;
@@ -3176,10 +3160,6 @@ const userId = gameState.userId;
     
         const updateData = {
             last_roulette: Date.now(),
-            stats: {
-                ...user.stats,
-                games_played: (user.stats.games_played || 0) + 1
-            }
         };
 
         await this.economy.updateUser(userId, updateData);
@@ -3870,10 +3850,6 @@ const userId = gameState.userId;
         
         const updateData = {
             last_slots: Date.now(),
-            stats: {
-                ...user.stats,
-                games_played: (user.stats.games_played || 0) + 1
-            }
         };
         
         // Misiones
@@ -9131,11 +9107,6 @@ const userId = gameState.userId;
         
         const updateData = {
             last_vending: Date.now(),
-            /*stats: {
-                ...user.stats,
-                games_played: (user.stats.games_played || 0) + 1,
-                vending_plays: (user.stats.vending_plays || 0) + 1
-            }*/
         };
 
         await this.economy.updateUser(userId, updateData);
@@ -9590,6 +9561,24 @@ const userId = gameState.userId;
                 case '>potstatus':
                 case '>holethings':
                     await this.showPotStatus(message);
+                    break;
+                case '>checkstats':
+                    const user = await this.economy.getUser(message.author.id);
+                    
+                    const embed = new EmbedBuilder()
+                        .setTitle('📊 Tus Estadísticas')
+                        .addFields(
+                            { name: 'Juegos jugados', value: `${user.stats?.games_played || 0}`, inline: true },
+                            { name: 'Juegos ganados', value: `${user.stats?.games_won || 0}`, inline: true },
+                            { name: 'Juegos perdidos', value: `${user.stats?.games_lost || 0}`, inline: true },
+                            { name: 'Dinero apostado', value: `${this.formatNumber(user.stats?.total_bet || 0)} π-b$`, inline: true },
+                            { name: 'Racha victorias', value: `${user.stats?.current_win_streak || 0}`, inline: true },
+                            { name: 'Mejor racha', value: `${user.stats?.best_win_streak || 0}`, inline: true },
+                            { name: 'Mayor ganancia', value: `${this.formatNumber(user.stats?.max_single_bet_win || 0)} π-b$`, inline: true }
+                        )
+                        .setColor('#FFD700');
+                    
+                    await message.reply({ embeds: [embed] });
                     break;
                 case '>debugpot':
                     if (!message.member.permissions.has('Administrator')) {
