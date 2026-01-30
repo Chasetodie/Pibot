@@ -9454,7 +9454,7 @@ const userId = gameState.userId;
             return message.reply('❌ Ya estás en una partida de trivia.');
         }
 
-        const difficulty = args[0].toLowerCase();
+        const difficulty = args[1].toLowerCase();
         // Validar dificultad
         if (!['easy', 'medium', 'hard'].includes(difficulty)) {
             return message.reply('❌ Dificultad inválida. Usa: `easy`, `medium` o `hard`');
