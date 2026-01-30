@@ -854,7 +854,7 @@ class ShopSystem {
         return false;
     }
 
-    // Sistema de notificaciones de items expirados (VERSIÓN ANTI-DUPLICADOS)
+    // Sistema de notificaciones de items expirados (VERSIÓN MEJORADA v2)
     async checkAndNotifyExpiredItems(userId, message) {
         const user = await this.economy.getUser(userId);
         const activeEffects = this.parseActiveEffects(user.activeEffects);
@@ -864,138 +864,146 @@ class ShopSystem {
         const notificationCooldown = 5 * 60 * 1000; // 5 minutos
         if (!this.lastNotification) this.lastNotification = new Map();
         
-        // NUEVO: Sistema para evitar notificaciones duplicadas en el mismo segundo
-        if (!this.notificationLock) this.notificationLock = new Map();
-        const lockKey = `${userId}-${Math.floor(now / 1000)}`; // Agrupar por segundo
+        // MEJORADO: Sistema de lock por usuario (no por segundo)
+        if (!this.notificationLock) this.notificationLock = new Set();
         
-        // Si ya se notificó a este usuario en este segundo, salir
-        if (this.notificationLock.has(lockKey)) {
+        // Si este usuario ya está siendo procesado, salir inmediatamente
+        if (this.notificationLock.has(userId)) {
             return;
         }
         
-        const lastNotified = this.lastNotification.get(userId) || 0;
-        const timeSinceLastNotif = now - lastNotified;
+        // Marcar que estamos procesando este usuario
+        this.notificationLock.add(userId);
         
-        // Usar Set para evitar duplicados automáticamente
-        let expiredItemsSet = new Set();
-        let soonToExpireMap = new Map(); // Usar Map para guardar el menor tiempo
-        let itemsToRemove = [];
-        
-        // Revisar cada item activo
-        for (const [itemId, effects] of Object.entries(activeEffects)) {
-            if (!Array.isArray(effects)) continue;
+        try {
+            const lastNotified = this.lastNotification.get(userId) || 0;
+            const timeSinceLastNotif = now - lastNotified;
             
-            const item = this.shopItems[itemId];
-            const itemName = item?.name || itemId;
-            let hasExpiredEffect = false;
-            let minTimeLeft = Infinity;
+            // Usar Set para evitar duplicados automáticamente
+            let expiredItemsSet = new Set();
+            let soonToExpireMap = new Map();
+            let itemsToRemove = [];
             
-            for (let i = effects.length - 1; i >= 0; i--) {
-                const effect = effects[i];
+            // Revisar cada item activo
+            for (const [itemId, effects] of Object.entries(activeEffects)) {
+                if (!Array.isArray(effects)) continue;
                 
-                // Solo revisar efectos con expiración
-                if (!effect.expiresAt) continue;
+                // Obtener información del item
+                const item = this.shopItems[itemId];
+                let itemName;
                 
-                const timeLeft = effect.expiresAt - now;
-                
-                // Item ya expiró
-                if (timeLeft <= 0) {
-                    hasExpiredEffect = true;
-                    itemsToRemove.push({ itemId, index: i });
+                // Manejar nombre especial para la maldición
+                if (itemId === 'death_hand_curse') {
+                    itemName = '☠️ Maldición de la Mano del Muerto';
+                } else {
+                    itemName = item ? item.name : itemId;
                 }
-                // Item expira en menos de 5 minutos
-                else if (timeLeft <= 300000) {
-                    // Guardar el tiempo mínimo de expiración para este item
-                    if (timeLeft < minTimeLeft) {
-                        minTimeLeft = timeLeft;
+                
+                let hasExpiredEffect = false;
+                let minTimeLeft = Infinity;
+                
+                for (let i = effects.length - 1; i >= 0; i--) {
+                    const effect = effects[i];
+                    
+                    // Solo revisar efectos con expiración
+                    if (!effect.expiresAt) continue;
+                    
+                    const timeLeft = effect.expiresAt - now;
+                    
+                    // Item ya expiró
+                    if (timeLeft <= 0) {
+                        hasExpiredEffect = true;
+                        itemsToRemove.push({ itemId, index: i });
+                    }
+                    // Item expira en menos de 5 minutos
+                    else if (timeLeft <= 300000) {
+                        // Guardar el tiempo mínimo de expiración para este item
+                        if (timeLeft < minTimeLeft) {
+                            minTimeLeft = timeLeft;
+                        }
                     }
                 }
+                
+                // Agregar a expiredItems solo una vez por item
+                if (hasExpiredEffect) {
+                    expiredItemsSet.add(itemName);
+                }
+                
+                // Agregar a soonToExpire solo si no hemos notificado recientemente
+                if (minTimeLeft < 300000 && minTimeLeft > 0 && timeSinceLastNotif >= notificationCooldown) {
+                    const minutesLeft = Math.ceil(minTimeLeft / 60000);
+                    soonToExpireMap.set(itemName, minutesLeft);
+                }
             }
             
-            // Agregar a expiredItems solo una vez por item
-            if (hasExpiredEffect) {
-                expiredItemsSet.add(itemName);
+            // Limpiar items expirados
+            for (const { itemId, index } of itemsToRemove) {
+                activeEffects[itemId].splice(index, 1);
+                if (activeEffects[itemId].length === 0) {
+                    delete activeEffects[itemId];
+                }
             }
             
-            // Agregar a soonToExpire solo si no hemos notificado recientemente
-            if (minTimeLeft < 300000 && minTimeLeft > 0 && timeSinceLastNotif >= notificationCooldown) {
-                const minutesLeft = Math.ceil(minTimeLeft / 60000);
-                soonToExpireMap.set(itemName, minutesLeft);
+            // Guardar cambios si hubo items expirados
+            if (itemsToRemove.length > 0) {
+                await this.economy.updateUser(userId, { activeEffects });
             }
-        }
-        
-        // Limpiar items expirados
-        for (const { itemId, index } of itemsToRemove) {
-            activeEffects[itemId].splice(index, 1);
-            if (activeEffects[itemId].length === 0) {
-                delete activeEffects[itemId];
+            
+            // Convertir Set y Map a arrays para mostrar
+            const expiredItems = Array.from(expiredItemsSet);
+            const soonToExpireItems = Array.from(soonToExpireMap).map(([name, minutes]) => ({
+                name,
+                minutes
+            }));
+            
+            // Enviar notificaciones SOLO si hay algo que notificar
+            let notificationSent = false;
+            
+            // Notificar items expirados (siempre notifica cuando expiran)
+            if (expiredItems.length > 0) {
+                const embed = new EmbedBuilder()
+                    .setTitle('⏰ Efectos Expirados')
+                    .setDescription(`Los siguientes efectos han terminado:\n\n${expiredItems.map(name => `❌ ${name}`).join('\n')}`)
+                    .setColor('#FF6B6B')
+                    .setFooter({ text: 'Compra más items en la tienda con >shop' })
+                    .setTimestamp();
+                
+                try {
+                    await message.reply({ embeds: [embed] });
+                    notificationSent = true;
+                } catch (error) {
+                    console.error('Error enviando notificación de expiración:', error);
+                }
             }
-        }
-        
-        // Guardar cambios si hubo items expirados
-        if (itemsToRemove.length > 0) {
-            await this.economy.updateUser(userId, { activeEffects });
-        }
-        
-        // Convertir Set y Map a arrays para mostrar
-        const expiredItems = Array.from(expiredItemsSet);
-        const soonToExpireItems = Array.from(soonToExpireMap).map(([name, minutes]) => ({
-            name,
-            minutes
-        }));
-        
-        // Enviar notificaciones SOLO si hay algo que notificar
-        let notificationSent = false;
-        
-        // Notificar items expirados (siempre notifica cuando expiran)
-        if (expiredItems.length > 0) {
-            // Marcar como bloqueado ANTES de enviar
-            this.notificationLock.set(lockKey, true);
             
-            const embed = new EmbedBuilder()
-                .setTitle('⏰ Efectos Expirados')
-                .setDescription(`Los siguientes efectos han terminado:\n\n${expiredItems.map(name => `❌ ${name}`).join('\n')}`)
-                .setColor('#FF6B6B')
-                .setFooter({ text: 'Compra más items en la tienda con >shop' })
-                .setTimestamp();
-            
-            try {
-                await message.reply({ embeds: [embed] });
-                notificationSent = true;
-            } catch (error) {
-                console.error('Error enviando notificación de expiración:', error);
+            // Notificar items próximos a expirar (solo si pasó el cooldown)
+            if (soonToExpireItems.length > 0 && timeSinceLastNotif >= notificationCooldown) {
+                const embed = new EmbedBuilder()
+                    .setTitle('⚠️ Efectos Próximos a Expirar')
+                    .setDescription(`Estos efectos están por terminar:\n\n${soonToExpireItems.map(item => `⏱️ ${item.name} - **${item.minutes}min** restantes`).join('\n')}`)
+                    .setColor('#FFA500')
+                    .setFooter({ text: 'Usa tus items antes de que expiren' })
+                    .setTimestamp();
+                
+                try {
+                    await message.reply({ embeds: [embed] });
+                    notificationSent = true;
+                } catch (error) {
+                    console.error('Error enviando notificación de advertencia:', error);
+                }
             }
-        }
-        
-        // Notificar items próximos a expirar (solo si pasó el cooldown)
-        if (soonToExpireItems.length > 0 && timeSinceLastNotif >= notificationCooldown) {
-            // Marcar como bloqueado ANTES de enviar
-            this.notificationLock.set(lockKey, true);
             
-            const embed = new EmbedBuilder()
-                .setTitle('⚠️ Efectos Próximos a Expirar')
-                .setDescription(`Estos efectos están por terminar:\n\n${soonToExpireItems.map(item => `⏱️ ${item.name} - **${item.minutes}min** restantes`).join('\n')}`)
-                .setColor('#FFA500')
-                .setFooter({ text: 'Usa tus items antes de que expiren' })
-                .setTimestamp();
-            
-            try {
-                await message.reply({ embeds: [embed] });
-                notificationSent = true;
-            } catch (error) {
-                console.error('Error enviando notificación de advertencia:', error);
+            // Actualizar timestamp de última notificación si se envió alguna
+            if (notificationSent) {
+                this.lastNotification.set(userId, now);
             }
+            
+        } finally {
+            // IMPORTANTE: Liberar el lock después de 1 segundo
+            setTimeout(() => {
+                this.notificationLock.delete(userId);
+            }, 1000);
         }
-        
-        // Actualizar timestamp de última notificación si se envió alguna
-        if (notificationSent) {
-            this.lastNotification.set(userId, now);
-        }
-        
-        // Limpiar locks antiguos después de 2 segundos
-        setTimeout(() => {
-            this.notificationLock.delete(lockKey);
-        }, 2000);
     }
 
     async getEquippedCosmetics(userId) {
