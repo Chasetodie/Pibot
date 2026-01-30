@@ -9513,7 +9513,6 @@ const userId = gameState.userId;
             let currentQuestion = 0;
             let correctAnswers = 0;
             let gameMessage = loadingMessage; // Reutilizar el mismo mensaje
-            let tempMessage = null;
 
             // Función para mostrar pregunta
             const showQuestion = async () => {
@@ -9552,16 +9551,6 @@ const userId = gameState.userId;
 
                 await gameMessage.edit({ embeds: [questionEmbed], components: [buttons] });
 
-                // Borrar mensaje temporal si existe
-                if (tempMessage) {
-                    try {
-                        await tempMessage.delete();
-                        tempMessage = null;
-                    } catch (error) {
-                        // Ignorar si ya fue borrado
-                    }
-                }
-
                 // Timeout para esta pregunta
                 const timeoutPromise = new Promise((resolve) => {
                     setTimeout(() => resolve('timeout'), this.config.trivia.timePerQuestion);
@@ -9599,9 +9588,7 @@ const userId = gameState.userId;
 
                     currentQuestion++;
                     if (currentQuestion < questions.length) {
-                        // Enviar nuevo mensaje para la siguiente pregunta
-                        tempMessage = await message.channel.send({ content: '⏳ Cargando siguiente pregunta...' });
-                        gameMessage = tempMessage;
+                        gameMessage = await message.channel.send({ content: ' ' });
                         await showQuestion();
                     } else {
                         await endGame();
