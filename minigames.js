@@ -9486,7 +9486,11 @@ const userId = gameState.userId;
 
             // Traducir preguntas
             const questions = await Promise.all(data.results.map(async (q) => {
+                console.log('📝 Original:', q.question);
+                
                 const translatedQuestion = await this.translateText(this.decodeHTML(q.question));
+                console.log('✅ Traducida:', translatedQuestion);
+                
                 const translatedCorrect = await this.translateText(this.decodeHTML(q.correct_answer));
                 const translatedIncorrect = await Promise.all(
                     q.incorrect_answers.map(ans => this.translateText(this.decodeHTML(ans)))
@@ -9499,7 +9503,7 @@ const userId = gameState.userId;
                     question: translatedQuestion,
                     correct: translatedCorrect,
                     answers: allAnswers,
-                    category: q.category
+                    category: await this.translateText(this.decodeHTML(q.category))  // ← También traducir categoría
                 };
             }));
 
@@ -9597,7 +9601,7 @@ const userId = gameState.userId;
 
                 // Otorgar recompensas
                 await this.economy.addMoney(userId, finalMoney);
-                await this.economy.addXP(userId, finalXP);
+                await this.economy.addXp(userId, finalXP);
 
                 // Incrementar límite
                 await this.incrementDailyLimit(userId, 'trivia');
@@ -9632,25 +9636,25 @@ const userId = gameState.userId;
         }
     }
 
-    // Método auxiliar para traducir texto
     async translateText(text) {
         try {
-            const response = await fetch('https://libretranslate.com/translate', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    q: text,
-                    source: 'en',
-                    target: 'es',
-                    format: 'text'
-                })
-            });
-
+            // MyMemory API (más confiable y gratuita)
+            const encodedText = encodeURIComponent(text);
+            const url = `https://api.mymemory.translated.net/get?q=${encodedText}&langpair=en|es`;
+            
+            const response = await fetch(url);
             const data = await response.json();
-            return data.translatedText || text;
+            
+            if (data.responseData && data.responseData.translatedText) {
+                return data.responseData.translatedText;
+            }
+            
+            // Si falla, devolver original
+            return text;
+            
         } catch (error) {
-            console.error('Error traduciendo:', error);
-            return text; // Si falla, devolver texto original
+            console.error('⚠️ Error traduciendo:', error.message);
+            return text;
         }
     }
 
@@ -9664,9 +9668,26 @@ const userId = gameState.userId;
             '&gt;': '>',
             '&rsquo;': `'`,
             '&ldquo;': '"',
-            '&rdquo;': '"'
+            '&rdquo;': '"',
+            '&apos;': "'",
+            '&nbsp;': ' ',
+            '&eacute;': 'é',
+            '&oacute;': 'ó',
+            '&iacute;': 'í',
+            '&aacute;': 'á',
+            '&uacute;': 'ú',
+            '&ntilde;': 'ñ'
         };
-        return html.replace(/&[^;]+;/g, match => entities[match] || match);
+        
+        let decoded = html;
+        for (const [entity, char] of Object.entries(entities)) {
+            decoded = decoded.split(entity).join(char);
+        }
+        
+        // Decodificar entidades numéricas (&#39; etc)
+        decoded = decoded.replace(/&#(\d+);/g, (match, dec) => String.fromCharCode(dec));
+        
+        return decoded;
     }
 
     async processCommand(message) {
