@@ -9469,6 +9469,9 @@ const userId = gameState.userId;
             'hard': 'hard'
         };
 
+        // Establecer cooldown
+        this.setCooldown(userId, 'trivia');
+
         const updateData = {
             last_trivia: Date.now(),
         }
@@ -9603,8 +9606,7 @@ const userId = gameState.userId;
                 await this.economy.addMoney(userId, finalMoney);
                 await this.economy.addXp(userId, finalXP);
 
-                // Incrementar límite
-                await this.incrementDailyLimit(userId, 'trivia');
+                await this.economy.database.incrementGameLimit(userId, gameType);
 
                 await this.economy.updateUser(userId, updateData);
 
