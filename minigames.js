@@ -9398,7 +9398,7 @@ const userId = gameState.userId;
                     { name: '🎯 Dificultades', value: 'Easy • Medium • Hard', inline: true },
                     { 
                         name: '💎 Recompensas (Medium)', 
-                        value: '**5/5**: 1,000 π-b$ + 250 XP\n**4/5**: 600 π-b$ + 150 XP\n**3/5**: 300 π-b$ + 75 XP\n**<3**: 50 π-b$ + 25 XP', 
+                        value: '**5/5**: 1,000 π-b$ + 250 XP\n**4/5**: 600 π-b$ + 150 XP\n**3/5**: 300 π-b$ + 75 XP\n**< 3**: 50 π-b$ + 25 XP', 
                         inline: false 
                     },
                     { 
@@ -9477,11 +9477,7 @@ const userId = gameState.userId;
 
             // Traducir preguntas
             const questions = await Promise.all(data.results.map(async (q) => {
-                // console.log('📝 Original:', q.question);
-                
                 const translatedQuestion = await this.translateText(this.decodeHTML(q.question));
-                // console.log('✅ Traducida:', translatedQuestion);
-                
                 const translatedCorrect = await this.translateText(this.decodeHTML(q.correct_answer));
                 const translatedIncorrect = await Promise.all(
                     q.incorrect_answers.map(ans => this.translateText(this.decodeHTML(ans)))
@@ -9517,6 +9513,7 @@ const userId = gameState.userId;
             let currentQuestion = 0;
             let correctAnswers = 0;
             let gameMessage = loadingMessage; // Reutilizar el mismo mensaje
+            let tempMessage = null;
 
             // Función para mostrar pregunta
             const showQuestion = async () => {
@@ -9526,18 +9523,21 @@ const userId = gameState.userId;
                 // Crear texto de opciones
                 let optionsText = '';
                 q.answers.forEach((answer, index) => {
-                    optionsText += `**${letters[index]})** ${answer}\n\n`;
+                    // Limitar respuestas a 100 caracteres para que no se vea muy largo
+                    const truncatedAnswer = answer;
+                    optionsText += `**${letters[index]})**  ${truncatedAnswer}\n`;
                 });
 
                 const questionEmbed = new EmbedBuilder()
                     .setTitle(`🧠 Pregunta ${currentQuestion + 1}/${questions.length}`)
-                    .setDescription(`**${q.question}**\n\n${optionsText}`)
-                    .setColor('#9932CC')
+                    .setDescription(`**${q.question}**`)
                     .addFields(
+                        { name: '📝 Opciones', value: optionsText, inline: false },
                         { name: '📊 Dificultad', value: difficulty.toUpperCase(), inline: true },
                         { name: '📚 Categoría', value: q.category, inline: true },
                         { name: '✅ Correctas', value: `${correctAnswers}`, inline: true }
                     )
+                    .setColor('#9932CC')
                     .setFooter({ text: `⏱️ Tienes ${this.config.trivia.timePerQuestion / 1000} segundos para responder` });
 
                 const buttons = new ActionRowBuilder();
@@ -9551,6 +9551,16 @@ const userId = gameState.userId;
                 });
 
                 await gameMessage.edit({ embeds: [questionEmbed], components: [buttons] });
+
+                // Borrar mensaje temporal si existe
+                if (tempMessage) {
+                    try {
+                        await tempMessage.delete();
+                        tempMessage = null;
+                    } catch (error) {
+                        // Ignorar si ya fue borrado
+                    }
+                }
 
                 // Timeout para esta pregunta
                 const timeoutPromise = new Promise((resolve) => {
@@ -9590,7 +9600,8 @@ const userId = gameState.userId;
                     currentQuestion++;
                     if (currentQuestion < questions.length) {
                         // Enviar nuevo mensaje para la siguiente pregunta
-                        gameMessage = await message.channel.send({ content: '⏳ Cargando siguiente pregunta...' });
+                        tempMessage = await message.channel.send({ content: '⏳ Cargando siguiente pregunta...' });
+                        gameMessage = tempMessage;
                         await showQuestion();
                     } else {
                         await endGame();
@@ -9686,7 +9697,8 @@ const userId = gameState.userId;
                     )
                     .setFooter({ text: 'Usa >trivia [easy/medium/hard] para jugar de nuevo' });
 
-                await gameMessage.edit({ embeds: [resultEmbed], components: [] });
+                // Enviar mensaje final nuevo (no editar)
+                await message.channel.send({ embeds: [resultEmbed] });
             };
 
             // Iniciar el juego
