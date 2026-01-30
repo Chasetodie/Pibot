@@ -63,6 +63,11 @@ this.cooldownCache = new Map();
                 perCycle: 4,       // 10 partidas por ciclo
                 cycleHours: 4,      // Cada 4 horas
                 maxDaily: 40        // Máximo 60 al día (10 × 6 ciclos)
+            },
+            trivia: {
+                perCycle: 8,        // 8 partidas por ciclo
+                cycleHours: 4,      // Cada 4 horas
+                maxDaily: 48        // Máximo 48 al día
             }
         };
 
@@ -183,6 +188,24 @@ this.cooldownCache = new Map();
                 botMode: {
                     botWinChance: 0.45, // 45% de que el bot gane
                     refundOnNoPodium: 0.5 // Devolver 50% si ninguno queda en podio
+                }
+            },
+            trivia: {
+                minBet: 0,              // Gratis para jugar
+                maxBet: 0,              // Gratis
+                cooldown: 120000,       // 2 minutos
+                timePerQuestion: 20000, // 20 segundos por pregunta
+                questionsPerGame: 5,    // 5 preguntas por partida
+                rewards: {
+                    perfect: { money: 1000, xp: 250 },    // 5/5 correctas
+                    good: { money: 600, xp: 150 },         // 4/5 correctas
+                    decent: { money: 300, xp: 75 },        // 3/5 correctas
+                    participation: { money: 50, xp: 25 }   // Menos de 3
+                },
+                difficulties: {
+                    easy: { multiplier: 1.0, xp: 30 },
+                    medium: { multiplier: 1.5, xp: 50 },
+                    hard: { multiplier: 2.0, xp: 80 }
                 }
             },
             vendingMachine: {
@@ -9327,7 +9350,333 @@ const userId = gameState.userId;
         await this.checkTreasureHunt(userId, message);
         await message.reply({ embeds: [embed] });
     }
+
+    async canTrivia(userId) {
+        const user = await this.economy.getUser(userId);
+
+        if (this.shop) {
+            const vipMultipliers = await this.shop.getVipMultipliers(userId, 'games');
+            if (vipMultipliers.noCooldown) {
+                return { canPlay: true };
+            }
+        }
+
+        const cacheKey = `${userId}-trivia`;
+        const cachedCooldown = this.cooldownCache.get(cacheKey);
+        const now = Date.now();
+        
+        let effectiveCooldown = await this.getEffectiveCooldown(this.config.trivia.cooldown);
+
+        if (this.shop) {
+            const cooldownReduction = await this.shop.getCooldownReduction(userId, 'games');
+            effectiveCooldown = Math.floor(effectiveCooldown * (1 - cooldownReduction));
+        }
+        
+        if (cachedCooldown && (now - cachedCooldown < effectiveCooldown)) {
+            const timeLeft = effectiveCooldown - (now - cachedCooldown);
+            return { canPlay: false, timeLeft };
+        }
+
+        const lastPlay = user.last_trivia || 0;
+        if (now - lastPlay < effectiveCooldown) {
+            const timeLeft = effectiveCooldown - (now - lastPlay);
+            return { canPlay: false, timeLeft };
+        }
+
+        return { canPlay: true };
+    }
     
+    async playTrivia(message, args) {
+        const userId = message.author.id;
+        const user = await this.economy.getUser(userId);
+        
+        if (args.length < 1) {
+            const embed = new EmbedBuilder()
+                .setTitle('🧠 Trivia - Pon a prueba tus conocimientos')
+                .setDescription('Responde 5 preguntas de cultura general traducidas al español')
+                .addFields(
+                    { name: '💰 Costo', value: 'Gratis', inline: true },
+                    { name: '⏰ Cooldown', value: '2 minutos', inline: true },
+                    { name: '❓ Preguntas', value: '5 por partida', inline: true },
+                    { name: '⏱️ Tiempo', value: '20 seg/pregunta', inline: true },
+                    { name: '📊 Límite Diario', value: '48 partidas', inline: true },
+                    { name: '🎯 Dificultades', value: 'Easy • Medium • Hard', inline: true },
+                    { 
+                        name: '💎 Recompensas (Medium)', 
+                        value: '**5/5**: 1,000 π-b$ + 250 XP\n**4/5**: 600 π-b$ + 150 XP\n**3/5**: 300 π-b$ + 75 XP\n**<3**: 50 π-b$ + 25 XP', 
+                        inline: false 
+                    },
+                    { 
+                        name: '🔥 Multiplicadores', 
+                        value: '**Easy**: x1.0\n**Medium**: x1.5\n**Hard**: x2.0', 
+                        inline: false 
+                    },
+                    { 
+                        name: '🎮 Uso', 
+                        value: '`>trivia` - Dificultad media\n`>trivia easy` - Fácil\n`>trivia hard` - Difícil', 
+                        inline: false 
+                    }
+                )
+                .setColor('#9932CC')
+                .setFooter({ text: '¡Demuestra cuánto sabes y gana recompensas!' });
+            
+            await message.reply({ embeds: [embed] });
+            return;
+        }
+
+        // VERIFICAR LÍMITES (igual que lottery)
+        const gameType = 'trivia';
+        const limitConfig = this.dailyLimits[gameType];
+        const status = await this.economy.database.getGameLimitStatus(userId, gameType, limitConfig.cycleHours);
+        
+        if (status.cycleCount >= limitConfig.perCycle) {
+            await this.showLimitReached(message, userId, gameType, status, limitConfig);
+            return;
+        }
+
+        if (status.dailyCount >= limitConfig.maxDaily) {
+            await message.reply(
+                `🚫 **Límite diario alcanzado**\n` +
+                `Has alcanzado el máximo de ${limitConfig.maxDaily} partidas de blackjack por día.\n` +
+                `🌅 Vuelve mañana!`
+            );
+            return;
+        }
+       
+        // Verificar fondos
+        if (user.balance < betAmount) {
+            await message.reply(`❌ No tienes suficientes π-b Coins. Tu balance: ${this.formatNumber(user.balance)} π-b$`);
+            return;
+        }
+
+        const canTrivia = await this.canTrivia(userId);
+        if (!canTrivia.canPlay) {
+            await message.reply(`⏰ Debes esperar ${this.formatTime(canTrivia.timeLeft)} antes de jugar otra vez`);
+            return;
+        }
+
+        // Verificar si ya está en un juego
+        if (this.activeGames.has(`trivia_${userId}`)) {
+            return message.reply('❌ Ya estás en una partida de trivia.');
+        }
+
+        // Dificultad (argumento opcional)
+        let difficulty = 'medium';
+        if (args[0]) {
+            const diff = args[0].toLowerCase();
+            if (['easy', 'medium', 'hard'].includes(diff)) {
+                difficulty = diff;
+            }
+        }
+
+        const difficultyMap = {
+            'easy': 'easy',
+            'medium': 'medium',
+            'hard': 'hard'
+        };
+
+        const updateData = {
+            last_trivia: Date.now(),
+        }
+
+        try {
+            // Obtener preguntas de OpenTDB
+            const apiUrl = `https://opentdb.com/api.php?amount=${this.config.trivia.questionsPerGame}&difficulty=${difficultyMap[difficulty]}&type=multiple`;
+            
+            const response = await fetch(apiUrl);
+            const data = await response.json();
+
+            if (data.response_code !== 0 || !data.results || data.results.length === 0) {
+                return message.reply('❌ No se pudieron obtener preguntas. Intenta de nuevo.');
+            }
+
+            // Traducir preguntas
+            const questions = await Promise.all(data.results.map(async (q) => {
+                const translatedQuestion = await this.translateText(this.decodeHTML(q.question));
+                const translatedCorrect = await this.translateText(this.decodeHTML(q.correct_answer));
+                const translatedIncorrect = await Promise.all(
+                    q.incorrect_answers.map(ans => this.translateText(this.decodeHTML(ans)))
+                );
+
+                // Mezclar respuestas
+                const allAnswers = [translatedCorrect, ...translatedIncorrect].sort(() => Math.random() - 0.5);
+
+                return {
+                    question: translatedQuestion,
+                    correct: translatedCorrect,
+                    answers: allAnswers,
+                    category: q.category
+                };
+            }));
+
+            // Marcar como activo
+            this.activeGames.set(`trivia_${userId}`, true);
+            this.setCooldown(cooldownKey);
+
+            let currentQuestion = 0;
+            let correctAnswers = 0;
+            const gameEmbed = new EmbedBuilder()
+                .setTitle(`🧠 Trivia - Pregunta ${currentQuestion + 1}/${questions.length}`)
+                .setDescription(questions[currentQuestion].question)
+                .setColor('#9932CC')
+                .addFields(
+                    { name: 'Dificultad', value: difficulty.toUpperCase(), inline: true },
+                    { name: 'Categoría', value: questions[currentQuestion].category, inline: true }
+                )
+                .setFooter({ text: `Tienes ${this.config.trivia.timePerQuestion / 1000} segundos para responder` });
+
+            const buttons = new ActionRowBuilder();
+            questions[currentQuestion].answers.forEach((answer, index) => {
+                buttons.addComponents(
+                    new ButtonBuilder()
+                        .setCustomId(`trivia_${index}`)
+                        .setLabel(answer.substring(0, 80))
+                        .setStyle(ButtonStyle.Primary)
+                );
+            });
+
+            const gameMessage = await message.reply({ embeds: [gameEmbed], components: [buttons] });
+
+            const collector = gameMessage.createMessageComponentCollector({
+                filter: (i) => i.user.id === userId,
+                time: this.config.trivia.timePerQuestion
+            });
+
+            collector.on('collect', async (interaction) => {
+                const answerIndex = parseInt(interaction.customId.split('_')[1]);
+                const selectedAnswer = questions[currentQuestion].answers[answerIndex];
+                const isCorrect = selectedAnswer === questions[currentQuestion].correct;
+
+                if (isCorrect) {
+                    correctAnswers++;
+                    await interaction.reply({ content: `✅ **¡Correcto!**`, ephemeral: true });
+                } else {
+                    await interaction.reply({ 
+                        content: `❌ **Incorrecto.** La respuesta correcta era: **${questions[currentQuestion].correct}**`, 
+                        ephemeral: true 
+                    });
+                }
+
+                currentQuestion++;
+
+                if (currentQuestion < questions.length) {
+                    // Siguiente pregunta
+                    const nextEmbed = new EmbedBuilder()
+                        .setTitle(`🧠 Trivia - Pregunta ${currentQuestion + 1}/${questions.length}`)
+                        .setDescription(questions[currentQuestion].question)
+                        .setColor('#9932CC')
+                        .addFields(
+                            { name: 'Dificultad', value: difficulty.toUpperCase(), inline: true },
+                            { name: 'Categoría', value: questions[currentQuestion].category, inline: true },
+                            { name: 'Progreso', value: `✅ ${correctAnswers} correctas`, inline: true }
+                        )
+                        .setFooter({ text: `Tienes ${this.config.trivia.timePerQuestion / 1000} segundos para responder` });
+
+                    const nextButtons = new ActionRowBuilder();
+                    questions[currentQuestion].answers.forEach((answer, index) => {
+                        nextButtons.addComponents(
+                            new ButtonBuilder()
+                                .setCustomId(`trivia_${index}`)
+                                .setLabel(answer.substring(0, 80))
+                                .setStyle(ButtonStyle.Primary)
+                        );
+                    });
+
+                    await gameMessage.edit({ embeds: [nextEmbed], components: [nextButtons] });
+                } else {
+                    // Fin del juego
+                    collector.stop('finished');
+                }
+            });
+
+            collector.on('end', async (collected, reason) => {
+                this.activeGames.delete(`trivia_${userId}`);
+
+                // Calcular recompensas
+                let reward = this.config.trivia.rewards.participation;
+                if (correctAnswers === 5) reward = this.config.trivia.rewards.perfect;
+                else if (correctAnswers === 4) reward = this.config.trivia.rewards.good;
+                else if (correctAnswers === 3) reward = this.config.trivia.rewards.decent;
+
+                const diffMultiplier = this.config.trivia.difficulties[difficulty].multiplier;
+                const finalMoney = Math.floor(reward.money * diffMultiplier);
+                const finalXP = Math.floor(reward.xp * diffMultiplier);
+
+                // Otorgar recompensas
+                await this.economy.addMoney(userId, finalMoney);
+                await this.economy.addXP(userId, finalXP);
+
+                // Incrementar límite
+                await this.incrementDailyLimit(userId, 'trivia');
+
+                await this.economy.updateUser(userId, updateData);
+
+                // *** NUEVO: ACTUALIZAR ESTADÍSTICAS DE ACHIEVEMENTS ***
+                if (this.achievements) {
+                    await this.achievements.updateStats(userId, 'game_played');
+                    await this.achievements.updateStats(userId, 'game_won');
+                    await this.achievements.updateStats(userId, 'money_bet', betAmount);
+                    await this.achievements.updateStats(userId, 'bet_win', finalEarnings);
+                }        
+
+                const resultEmbed = new EmbedBuilder()
+                    .setTitle('🎯 ¡Trivia Completada!')
+                    .setDescription(`Respondiste **${correctAnswers}/${questions.length}** preguntas correctamente`)
+                    .setColor(correctAnswers >= 3 ? '#00FF00' : '#FF0000')
+                    .addFields(
+                        { name: '💰 Dinero ganado', value: `${finalMoney} π-b$`, inline: true },
+                        { name: '⭐ XP ganada', value: `${finalXP} XP`, inline: true },
+                        { name: '📊 Dificultad', value: difficulty.toUpperCase(), inline: true }
+                    )
+                    .setFooter({ text: 'Usa >trivia [easy/medium/hard] para jugar de nuevo' });
+
+                await gameMessage.edit({ embeds: [resultEmbed], components: [] });
+            });
+
+        } catch (error) {
+            this.activeGames.delete(`trivia_${userId}`);
+            console.error('Error en trivia:', error);
+            await message.reply('❌ Ocurrió un error al cargar la trivia. Intenta de nuevo.');
+        }
+    }
+
+    // Método auxiliar para traducir texto
+    async translateText(text) {
+        try {
+            const response = await fetch('https://libretranslate.com/translate', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    q: text,
+                    source: 'en',
+                    target: 'es',
+                    format: 'text'
+                })
+            });
+
+            const data = await response.json();
+            return data.translatedText || text;
+        } catch (error) {
+            console.error('Error traduciendo:', error);
+            return text; // Si falla, devolver texto original
+        }
+    }
+
+    // Decodificar HTML entities
+    decodeHTML(html) {
+        const entities = {
+            '&quot;': '"',
+            '&#039;': "'",
+            '&amp;': '&',
+            '&lt;': '<',
+            '&gt;': '>',
+            '&rsquo;': `'`,
+            '&ldquo;': '"',
+            '&rdquo;': '"'
+        };
+        return html.replace(/&[^;]+;/g, match => entities[match] || match);
+    }
+
     async processCommand(message) {
         // Verificar ingresos pasivos pendientes
         await this.economy.checkPendingPassiveIncome(message.author.id);
@@ -9739,6 +10088,9 @@ const userId = gameState.userId;
                         await message.reply(`❌ Error: ${error.message}`);
                     }
                     break;
+                case '>trivia':
+                    await this.playTrivia(message, args);
+                    break;
                 case '>games':
                 case '>minigames':
                 case '>juegos':
@@ -9823,11 +10175,16 @@ const userId = gameState.userId;
                     value: '`>potcontribute money/item <valor>` - Contribuir\n`>holethings` - Ver contenido del pozo\nRango: 100-50k π-b$ | Max 3 items/usuario\nDistribución aleatoria semanal entre participantes',
                     inline: false,
                 },
+                {
+                    name: '🧠 Trivia',
+                    value: '`>trivia [easy/medium/hard]`\nGratis\nRecompensa: hasta 2,000 π-b$ + 500 XP\n5 preguntas por partida\nCooldown: 2 minutos',
+                    inline: false
+                },
                 { 
                     name: '🔮 Próximamente', 
-                    value: '• Poker\n• Trivia\n• Memory Game', 
+                    value: '• Poker\n• Memory Game', 
                     inline: false 
-                }
+                },
             )
             .setFooter({ text: 'Juega responsablemente - La casa siempre tiene ventaja' })
             .setTimestamp();

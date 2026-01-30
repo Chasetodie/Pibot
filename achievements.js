@@ -333,6 +333,30 @@ class AchievementsSystem {
                 rarity: 'legendary',
                 emoji: '💎'
             },
+            'trivia_beginner': {
+                name: '🧠 Cerebrito',
+                description: 'Completa tu primera trivia perfecta (5/5)',
+                requirement: { type: 'trivia_perfect', value: 1 },
+                reward: { money: 500, xp: 150 },
+                rarity: 'uncommon',
+                emoji: '🧠'
+            },
+            'trivia_master': {
+                name: '🎓 Genio de la Trivia',
+                description: 'Completa 10 trivias perfectas',
+                requirement: { type: 'trivia_perfect', value: 10 },
+                reward: { money: 5000, xp: 1000 },
+                rarity: 'epic',
+                emoji: '🎓'
+            },
+            'trivia_legend': {
+                name: '🏆 Enciclopedia Viviente',
+                description: 'Completa 50 trivias perfectas',
+                requirement: { type: 'trivia_perfect', value: 50 },
+                reward: { money: 25000, xp: 5000 },
+                rarity: 'legendary',
+                emoji: '🏆'
+            },
             'completionist': {
                 name: '🏅 Completista',
                 description: 'Obtén todos los logros disponibles',
@@ -465,6 +489,12 @@ class AchievementsSystem {
                     break;
                 case 'slots_doubles':
                     currentValue = user.stats?.slots_doubles || 0;
+                    break;
+                case 'slots_wins':
+                    currentValue = user.stats?.slots_wins || 0;
+                    break;
+                case 'trivia_perfect':
+                    currentValue = user.stats?.trivia_perfect || 0;
                     break;
                 case 'loss_streak':
                     currentValue = user.stats?.current_loss_streak || 0;
@@ -671,6 +701,9 @@ class AchievementsSystem {
                     break;
                 case 'slots_wins':
                     currentValue = user.stats?.slots_wins || 0;
+                    break;
+                case 'trivia_perfect':
+                    currentValue = user.stats?.trivia_perfect || 0;
                     break;
                 case 'vending_plays':
                     currentValue = user.stats?.vending_plays || 0;
@@ -904,10 +937,16 @@ class AchievementsSystem {
                     slots_wins: (user.stats?.slots_wins || 0) + 1
                 };
                 break;
-            case 'slots_double':
+            case 'trivia_perfect':
                 updateData.stats = {
                     ...user.stats,
-                    slots_doubles: (user.stats?.slots_doubles || 0) + 1
+                    trivia_perfect: (user.stats?.trivia_perfect || 0) + 1
+                };
+                break;
+            case 'slots_wins':
+                updateData.stats = {
+                    ...user.stats,
+                    slots_wins: (user.stats?.slots_wins || 0) + 1
                 };
                 break;
             case 'vending_plays':
@@ -1193,6 +1232,9 @@ class AchievementsSystem {
                 break;
             case 'slots_doubles':
                 currentValue = user.stats?.slots_doubles || 0;
+                break;
+            case 'trivia_perfect':
+                currentValue = user.stats?.trivia_perfect || 0;
                 break;
             case 'vending_plays':
                 currentValue = user.stats?.vending_plays || 0;

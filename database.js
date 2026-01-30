@@ -842,6 +842,7 @@ class LocalDatabase {
                     auctions_won: 0, 
                     items_crafted: 0,
                     vending_plays: 0,
+                    trivia_perfect: 0,
                 },
                 bet_stats: {
                     wins: 0,
@@ -865,6 +866,7 @@ class LocalDatabase {
                 },
                 lastPassivePayout: 0,
                 last_vending: 0,
+                last_trivia: 0,
             };
 
             await this.pool.execute(`
@@ -874,8 +876,8 @@ class LocalDatabase {
                     last_lotto, last_blackjack, last_slots, last_name_work, messages_count,
                     items, stats, bet_stats, daily_missions, daily_missions_date,
                     daily_stats, achievements, passiveIncomeStats, lastPassivePayout,
-                    last_vending
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    last_vending, last_trivia
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             `, [
                 newUser.id, newUser.balance, newUser.level, newUser.xp, newUser.total_xp,
                 newUser.last_daily, newUser.last_work, newUser.last_robbery,
