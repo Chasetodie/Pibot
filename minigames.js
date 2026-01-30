@@ -9389,13 +9389,6 @@ const userId = gameState.userId;
     async playTrivia(message, args) {
         const userId = message.author.id;
 
-        // DEBUG: Ver qué contiene args
-        console.log('🔍 DEBUG TRIVIA:');
-        console.log('args completo:', args);
-        console.log('args.length:', args.length);
-        console.log('args[0]:', args[0]);
-        console.log('args[1]:', args[1]);
-
         // Si no hay argumentos, mostrar ayuda
         if (args.length < 2) {
             const embed = new EmbedBuilder()
