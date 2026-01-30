@@ -9391,10 +9391,10 @@ const userId = gameState.userId;
                 .setDescription('Responde 5 preguntas de cultura general traducidas al español')
                 .addFields(
                     { name: '💰 Costo', value: 'Gratis', inline: true },
-                    { name: '⏰ Cooldown', value: '2 minutos', inline: true },
+                    { name: '⏰ Cooldown', value: '1 minutos', inline: true },
                     { name: '❓ Preguntas', value: '5 por partida', inline: true },
-                    { name: '⏱️ Tiempo', value: '30 seg/pregunta', inline: true },
-                    { name: '📊 Límite Diario', value: '48 partidas', inline: true },
+                    { name: '⏱️ Tiempo', value: '15 seg/pregunta', inline: true },
+                    { name: '📊 Sin límites', value: 'Diviertete!', inline: true },
                     { name: '🎯 Dificultades', value: 'Easy • Medium • Hard', inline: true },
                     { 
                         name: '💎 Recompensas (Medium)', 
@@ -9580,8 +9580,17 @@ const userId = gameState.userId;
                     await gameMessage.edit({ embeds: [timeoutEmbed], components: [] });
                     await new Promise(resolve => setTimeout(resolve, 5000));
 
+                    // Borrar el mensaje anterior
+                    try {
+                        await gameMessage.delete();
+                    } catch (error) {
+                        console.log('No se pudo borrar el mensaje:', error.message);
+                    }
+
                     currentQuestion++;
                     if (currentQuestion < questions.length) {
+                        // Enviar nuevo mensaje para la siguiente pregunta
+                        gameMessage = await message.channel.send({ content: '⏳ Cargando siguiente pregunta...' });
                         await showQuestion();
                     } else {
                         await endGame();
@@ -9623,8 +9632,17 @@ const userId = gameState.userId;
 
                 await new Promise(resolve => setTimeout(resolve, 5000));
 
+                // Borrar el mensaje anterior
+                try {
+                    await gameMessage.delete();
+                } catch (error) {
+                    console.log('No se pudo borrar el mensaje:', error.message);
+                }
+
                 currentQuestion++;
                 if (currentQuestion < questions.length) {
+                    // Enviar nuevo mensaje para la siguiente pregunta
+                    gameMessage = await message.channel.send({ content: '⏳ Cargando siguiente pregunta...' });
                     await showQuestion();
                 } else {
                     await endGame();
