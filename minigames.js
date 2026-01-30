@@ -9505,7 +9505,6 @@ const userId = gameState.userId;
 
             // Marcar como activo
             this.activeGames.set(`trivia_${userId}`, true);
-            this.setCooldown(cooldownKey);
 
             let currentQuestion = 0;
             let correctAnswers = 0;
