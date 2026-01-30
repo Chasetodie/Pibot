@@ -9389,8 +9389,8 @@ const userId = gameState.userId;
     async playTrivia(message, args) {
         const userId = message.author.id;
 
-        // Si no hay argumentos O si pide help/info, mostrar ayuda
-        if (args.length === 0 || args[0] === 'help' || args[0] === 'info') {
+        // Si no hay argumentos, mostrar ayuda
+        if (args.length === 0) {
             const embed = new EmbedBuilder()
                 .setTitle('🧠 Trivia - Pon a prueba tus conocimientos')
                 .setDescription('Responde 5 preguntas de cultura general traducidas al español')
@@ -9454,11 +9454,10 @@ const userId = gameState.userId;
             return message.reply('❌ Ya estás en una partida de trivia.');
         }
 
-        // Dificultad OBLIGATORIA
+        // Verificar dificultad válida
         const difficulty = args[0].toLowerCase();
-
         if (!['easy', 'medium', 'hard'].includes(difficulty)) {
-            return message.reply('❌ Debes especificar una dificultad: `easy`, `medium` o `hard`');
+            return message.reply('❌ Dificultad inválida. Usa: `easy`, `medium` o `hard`');
         }
 
         const difficultyMap = {
