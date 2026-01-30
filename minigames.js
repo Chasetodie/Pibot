@@ -9390,7 +9390,7 @@ const userId = gameState.userId;
         const userId = message.author.id;
 
         // Si no hay argumentos, mostrar ayuda
-        if (args.length === 0) {
+        if (args.length < 1) {
             const embed = new EmbedBuilder()
                 .setTitle('🧠 Trivia - Pon a prueba tus conocimientos')
                 .setDescription('Responde 5 preguntas de cultura general traducidas al español')
@@ -9423,7 +9423,7 @@ const userId = gameState.userId;
             await message.reply({ embeds: [embed] });
             return;
         }
-
+        
         // VERIFICAR LÍMITES (igual que lottery)
         const gameType = 'trivia';
         const limitConfig = this.dailyLimits[gameType];
@@ -9454,8 +9454,8 @@ const userId = gameState.userId;
             return message.reply('❌ Ya estás en una partida de trivia.');
         }
 
-        // Verificar dificultad válida
         const difficulty = args[0].toLowerCase();
+        // Validar dificultad
         if (!['easy', 'medium', 'hard'].includes(difficulty)) {
             return message.reply('❌ Dificultad inválida. Usa: `easy`, `medium` o `hard`');
         }
