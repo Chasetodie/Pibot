@@ -91,9 +91,15 @@ class BettingSystem {
 
     // ✅ CORREGIDO: Generar ID único para apuesta
     generateBetId(challengerId, opponentId) {
-        // Ordenar IDs para que siempre sea el mismo ID sin importar quién inicie
-        const sortedIds = [challengerId, opponentId].sort();
-        return `${sortedIds[0].slice(-6)}_${sortedIds[1].slice(-6)}_${Date.now()}`;
+        const sorted = [challengerId, opponentId].sort().join('-');
+
+        let hash = 0;
+        for (let i = 0; i < sorted.length; i++) {
+            hash = ((hash << 5) - hash) + sorted.charCodeAt(i);
+            hash |= 0;
+        }
+
+        return `BET-${Math.abs(hash).toString(36).substring(0, 6).toUpperCase()}`;
     }
 
     // ✅ CORREGIDO: Crear apuesta

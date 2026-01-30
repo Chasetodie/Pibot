@@ -75,6 +75,21 @@ calculateMinimumIncrement(currentBid) {
             return null;
         }
     }
+
+    generateAuctionId(itemId) {
+        const itemShort = itemId
+            .split('_')
+            .map(w => w[0])
+            .join('')
+            .toUpperCase(); // rainbow_badge → RB
+
+        const randomPart = Math.random()
+            .toString(36)
+            .substring(2, 8)
+            .toUpperCase(); // 6 chars
+
+        return `AUC-${itemShort}-${randomPart}`;
+    }
     
     async createAuction(message, itemId, startingBid, duration = 3600000) { // 1 hora por defecto
         const userId = message.author.id;
@@ -171,7 +186,7 @@ calculateMinimumIncrement(currentBid) {
             }
         }
         
-        const auctionId = `${userId}_${itemId}_${Date.now()}`;
+        const auctionId = this.generateAuctionId(itemId);
         const auction = {
             id: auctionId,
             seller: userId,
@@ -405,14 +420,13 @@ if (bidAmount < auction.currentBid + minimumIncrement) {
         if (client && auction.channelId) {
             try {
                 const channel = client.channels.cache.get(auction.channelId);
-                const recipe = this.shop.shopItems[auction.itemName];
-                const realItemName = recipe ? recipe.name : auction.itemName;
-                const emojiData = this.shop.shopItems[auction.itemId];
+                const itemData = this.shop.shopItems[auction.itemId];
+                const realItemName = itemData ? itemData.name : auction.itemName;
                 
                 if (channel) {
                     const embed = new EmbedBuilder()
                         .setTitle('🔨 Subasta Terminada')
-                        .setDescription(`Subasta de ${emojiData.emoji} **${realItemName}** ha finalizado`)
+                        .setDescription(`Subasta de **${realItemName}** ha finalizado`)
                         .setColor(auction.highestBidder ? '#00FF00' : '#FF6600')
                         .setTimestamp();
                     

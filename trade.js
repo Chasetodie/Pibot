@@ -279,6 +279,13 @@ class TradeSystem {
             return false;
         }
     }
+
+    generateTradeId() {
+        return 'TRD-' + Math.random()
+            .toString(36)
+            .substring(2, 8)
+            .toUpperCase();
+    }
     
     // Iniciar intercambio
     async startTrade(message, targetUser) {
@@ -315,7 +322,7 @@ class TradeSystem {
             return;
         }
         
-        const tradeId = `${userId}_${targetId}_${Date.now()}`;
+        const tradeId = this.generateTradeId();
         const tradeData = {
             id: tradeId,
             initiator: userId,
