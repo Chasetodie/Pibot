@@ -9390,7 +9390,7 @@ const userId = gameState.userId;
         const userId = message.author.id;
 
         // Si no hay argumentos, mostrar ayuda
-        if (args.length < 2) {
+        if (args.length < 0) {
             const embed = new EmbedBuilder()
                 .setTitle('🧠 Trivia - Pon a prueba tus conocimientos')
                 .setDescription('Responde 5 preguntas de cultura general traducidas al español')
