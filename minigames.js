@@ -2026,7 +2026,7 @@ async getEffectiveCooldown(baseCooldown) {
         const curse = activeEffects['death_hand_curse'];
         // Al final, después de crear el embed de resultado
         if (curse && curse.length > 0 && curse[0].expiresAt > Date.now()) {
-            embed.addFields({
+            resultEmbed.addFields({
                 name: '☠️ Maldición Activa',
                 value: won 
                     ? `Tu ganancia fue reducida por la maldición (-25% dinero)`
