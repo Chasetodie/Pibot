@@ -1851,6 +1851,7 @@ const commandName = command.replace('>', '');
                     await this.trades.updateTradeEmbed(message.channel, currentTrade);
                     break;
                 case '>auction':
+                case '>auctions':
                     if (args.length < 3) {
                         const embed = new EmbedBuilder()
                             .setTitle('🔨 Sistema de Subastas - Guía')

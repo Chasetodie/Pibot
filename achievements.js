@@ -943,10 +943,10 @@ class AchievementsSystem {
                     trivia_perfect: (user.stats?.trivia_perfect || 0) + 1
                 };
                 break;
-            case 'slots_wins':
+            case 'slots_double':
                 updateData.stats = {
                     ...user.stats,
-                    slots_wins: (user.stats?.slots_wins || 0) + 1
+                    slots_double: (user.stats?.slots_double || 0) + 1
                 };
                 break;
             case 'vending_plays':

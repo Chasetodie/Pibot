@@ -98,7 +98,7 @@ calculateMinimumIncrement(currentBid) {
         
         // ✅ Verificar que el item existe en el inventario
         if (!userItems[itemId] || userItems[itemId].quantity < 1) {
-            await message.reply(`❌ No tienes **${itemId}** para subastar.`);
+            await message.reply(`❌ No tienes el item **"${itemId}"** para subastar.`);
             return;
         }
         
@@ -119,7 +119,7 @@ calculateMinimumIncrement(currentBid) {
         if (item.category === 'permanent') {
             const hasActiveEffect = await this.hasActivePermanentEffect(userId, itemId);
             if (hasActiveEffect) {
-                await message.reply(`❌ No puedes subastar **${item.name}** porque ya tienes el efecto permanente activo. Solo se pueden subastar items permanentes sin usar.`);
+                await message.reply(`❌ No puedes subastar el item **"${item.name}"** porque ya tienes el efecto permanente activo. Solo se pueden subastar items permanentes sin usar.`);
                 return;
             }
         }
