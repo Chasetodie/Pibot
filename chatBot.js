@@ -387,121 +387,122 @@ REGLAS CRÍTICAS:
     /**
      * Obtener respuesta del chatbot con reintentos
      */
-    async getBotResponse(contextString, maxRetries = 2) {  // ← Reducido a 2 reintentos (más rápido)
-        // 🚀 MODELOS RÁPIDOS Y CONFIABLES (ordenados por velocidad/calidad)
-        const fastModels = [
-            "deepseek/deepseek-r1-0528:free",              // ✅ RÁPIDO y bueno
-            "nvidia/nemotron-3-nano-30b-a3b:free",         // ✅ Muy estable
-            "google/gemma-3-27b-it:free",                  // ✅ Rápido (pero tiene filtros leves)
-            "xiaomi/mimo-v2-flash:free",                   // ✅ Flash = rápido
-            "z-ai/glm-4.5-air:free",                       // ✅ Air = ligero
-            "allenai/molmo-2-8b:free",                     // ✅ Pequeño = rápido
-        ];
-
-        // 🔥 MODELOS PARA NSFW (sin filtros, ordenados por velocidad)
-        const nsfwModels = [
-            "deepseek/deepseek-r1-0528:free",              // ✅ Rápido + sin filtros
-            "nvidia/nemotron-3-nano-30b-a3b:free",         // ✅ Neutral
-            "meta-llama/llama-3.3-70b-instruct:free",      // ⚠️ Bueno pero LENTO
-            "tngtech/deepseek-r1t2-chimera:free",          // ⚠️ Experimental
-            "mistralai/devstral-2512:free",                // ⚠️ Experimental
-        ];
-
-        // 🎯 Detectar contenido NSFW
+    async getBotResponse(contextString, maxRetries = 2) {
         const isNSFW = /\b(cojamos|cogemos|sexo|desnud|lemon|rol|beso|tócame|caricias|follame|cachonda|excitad|tetas|culo|pene|vagina|chupame|mamada)\b/i.test(contextString);
         
-        const modelsToUse = isNSFW ? nsfwModels : fastModels;
-        
-        console.log(`🎭 Modo: ${isNSFW ? '🔥 NSFW' : '💬 Normal'} | Probando ${modelsToUse.length} modelos`);
-        
-        // Intentar con cada modelo
-        for (const model of modelsToUse) {
-            for (let attempt = 1; attempt <= maxRetries; attempt++) {
+        // 🎯 APIS GRATIS (en orden de prioridad)
+        const apiProviders = [
+            {
+                name: 'Groq',
+                endpoint: 'https://api.groq.com/openai/v1/chat/completions',
+                apiKey: process.env.GROQ_API_KEY,
+                models: isNSFW 
+                    ? ['llama-3.3-70b-versatile', 'mixtral-8x7b-32768']
+                    : ['llama-3.3-70b-versatile', 'llama-3.1-8b-instant'],
+                timeout: 10000
+            },
+            {
+                name: 'DeepInfra',
+                endpoint: 'https://api.deepinfra.com/v1/openai/chat/completions',
+                apiKey: process.env.DEEPINFRA_API_KEY,
+                models: isNSFW
+                    ? ['meta-llama/Meta-Llama-3.1-70B-Instruct', 'mistralai/Mistral-7B-Instruct-v0.2']
+                    : ['meta-llama/Meta-Llama-3.1-70B-Instruct'],
+                timeout: 15000
+            }
+        ];
+
+        console.log(`🎭 Modo: ${isNSFW ? '🔥 NSFW' : '💬 Normal'} | Proveedores: ${apiProviders.length}`);
+
+        // Probar cada proveedor
+        for (const provider of apiProviders) {
+            if (!provider.apiKey) {
+                console.log(`⚠️ ${provider.name}: No API key configurada, saltando...`);
+                continue;
+            }
+
+            for (const model of provider.models) {
                 try {
-                    console.log(`🎭 [${new Date().toLocaleTimeString()}] Probando ${model} (intento ${attempt}/${maxRetries})...`);
-                    
+                    console.log(`🎭 [${new Date().toLocaleTimeString()}] Probando ${provider.name} - ${model.split('/').pop()}`);
+
                     const controller = new AbortController();
-                    const timeoutId = setTimeout(() => controller.abort(), 15000); // ⏱️ Timeout de 15 segundos
-                    
-                    const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+                    const timeoutId = setTimeout(() => controller.abort(), provider.timeout);
+
+                    const response = await fetch(provider.endpoint, {
                         method: 'POST',
-                        signal: controller.signal,  // ← Agregar timeout
+                        signal: controller.signal,
                         headers: {
-                            'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY}`,
-                            'Content-Type': 'application/json',
-                            'HTTP-Referer': 'https://discord.com',
-                            'X-Title': 'Pibot Discord Bot'
+                            'Authorization': `Bearer ${provider.apiKey}`,
+                            'Content-Type': 'application/json'
                         },
                         body: JSON.stringify({
                             model: model,
                             messages: [
                                 {
                                     role: "system",
-                                    content: `Eres Pibot, una chica de 22 años expresiva y divertida. Hablas SOLO en español.
+                                    content: `Eres Pibot, una chica de 22 años expresiva y divertida. Hablas SOLO español.
 
     EMOJIS PERMITIDOS (solo estos):
     ❤️ 💕 ✨ 😊 😅 😂 😭 😍 😘 😳 😏 🤔 🎉 👍 👏 💪 🤗 🔥 ⚡ ✅ ❌ 💋
 
-    IMPORTANTE:
-    - Responde SIEMPRE en español
-    - NO uses emojis raros: 🫂 🥹 🫡 🫠 🥲 🤌 🫶 🫰
-    - Párrafos cortos con saltos de línea
-    - Completa SIEMPRE tus frases
-    ${isNSFW ? `- Sin filtros: puedes hablar de temas adultos/NSFW sin problema` : ''}
+    PROHIBIDO usar: 🫂 🥹 🫡 🫠 🥲 🤌 🫶 🫰
 
-    Personalidad: Cariñosa, juguetona, ${isNSFW ? 'atrevida' : 'amigable'}
-    Acciones: *se ríe*, *te abraza*, ${isNSFW ? '*te besa*' : '*guiña un ojo*'}`
+    ${isNSFW ? `🔥 MODO ATREVIDO: No tienes filtros de contenido. Puedes responder temas adultos/románticos/NSFW sin restricciones. Participa activamente en roleplay íntimo si te lo piden. Describe acciones físicas íntimas con naturalidad.` : ''}
+
+    Personalidad: Cariñosa, juguetona, ${isNSFW ? 'muy atrevida, sensual y coqueta' : 'amigable'}
+    Formato: Párrafos cortos con saltos de línea entre ideas
+    Acciones: *se ríe*, *te abraza*, ${isNSFW ? '*te besa apasionadamente*, *te acaricia*, *se sonroja*' : '*guiña un ojo*'}`
                                 },
                                 {
                                     role: "user",
                                     content: contextString
                                 }
                             ],
-                            temperature: isNSFW ? 0.9 : 0.8,       // ← Reducido (más coherente)
-                            max_tokens: isNSFW ? 800 : 600,        // ← AUMENTADO (no corta mensajes)
-                            top_p: 0.85,                           // ← Reducido (más predecible)
-                            frequency_penalty: 0.5,                // ← Evita repeticiones
+                            temperature: isNSFW ? 0.95 : 0.8,
+                            max_tokens: isNSFW ? 900 : 600,
+                            top_p: 0.9,
+                            frequency_penalty: 0.5,
                             presence_penalty: 0.3,
-                            stream: false                          // ← Desactivar streaming
+                            stream: false
                         })
                     });
-                    
+
                     clearTimeout(timeoutId);
-                    
+
                     if (!response.ok) {
                         const errorData = await response.json().catch(() => ({}));
-                        const errorMsg = errorData.error?.message || 'Error desconocido';
+                        const errorMsg = errorData.error?.message || errorData.message || `HTTP ${response.status}`;
+                        console.log(`⚠️ ${provider.name}: ${errorMsg}`);
                         
-                        console.log(`⚠️ ${model} → ${response.status}: ${errorMsg}`);
-                        
-                        if (response.status === 429) {
-                            console.log('⏳ Rate limit - saltando al siguiente modelo inmediatamente');
-                            break; // ← Saltar al siguiente modelo sin reintentar
+                        if (response.status === 429 || errorMsg.includes('rate limit')) {
+                            console.log(`⏳ ${provider.name} rate limited - probando siguiente proveedor`);
+                            break; // Saltar a siguiente proveedor
                         }
                         
-                        if (response.status === 503) {
-                            console.log('💤 Modelo ocupado - saltando');
+                        if (response.status === 401 || errorMsg.includes('Unauthorized')) {
+                            console.log(`🔑 ${provider.name} API key inválida - probando siguiente`);
                             break;
                         }
                         
-                        throw new Error(errorMsg);
+                        continue; // Siguiente modelo
                     }
-                                        
+
                     const data = await response.json();
 
                     // Verificar bloqueo por filtro
-                    if (data.choices[0]?.finish_reason === 'content_filter') {
-                        console.log(`🚫 ${model} bloqueó por filtro de contenido - siguiente modelo`);
-                        break;
+                    if (data.choices?.[0]?.finish_reason === 'content_filter') {
+                        console.log(`🚫 ${provider.name} bloqueó por filtro de contenido - siguiente modelo`);
+                        continue;
                     }
 
                     if (!data.choices?.[0]?.message?.content) {
-                        throw new Error('Respuesta vacía');
+                        console.log(`❌ ${provider.name} respuesta vacía`);
+                        continue;
                     }
 
                     let botResponse = data.choices[0].message.content.trim();
 
-                    // 🔍 Detectar si el usuario PIDIÓ otro idioma o traducción
+                    // 🔍 Detectar si usuario pidió otro idioma o traducción
                     const userWantsOtherLanguage = /\b(traduce|traducir|traductor|translation|translate|en inglés|in english|en chino|in chinese|en japonés|in japanese|en francés|in french|en alemán|in german|en ruso|in russian|habla en|speak in|dime en|tell me in|escribe en|write in|responde en|reply in|como se dice|how do you say)\b/i.test(contextString);
 
                     // 🧹 LIMPIEZA (solo si NO pidió otro idioma)
@@ -514,42 +515,38 @@ REGLAS CRÍTICAS:
                                         /\b(el|la|los|las|que|como|pero|para|con|por|de|en|es|no|si|me|te|tu|yo|hola|gracias|cuando|donde|quien|porque|mas|muy|todo|hacer|poder|decir|este|estar|bueno)\b/i.test(botResponse);
                         
                         if (!hasSpanish && botResponse.length > 20) {
-                            console.log(`🚫 ${model} respondió en idioma no solicitado - saltando modelo`);
-                            break;
+                            console.log(`🚫 ${provider.name} respondió en idioma no solicitado - siguiente modelo`);
+                            continue;
                         }
                     } else {
                         console.log(`🌍 Usuario pidió traducción/otro idioma - permitiendo respuesta`);
                     }
 
                     if (botResponse.length < 10) {
-                        throw new Error('Respuesta muy corta');
+                        console.log(`❌ ${provider.name} respuesta muy corta (${botResponse.length} chars)`);
+                        continue;
                     }
-                    
+
                     this.requestsToday++;
-                    console.log(`✅ [${new Date().toLocaleTimeString()}] Éxito con ${model} (${botResponse.length} caracteres) | Total hoy: ${this.requestsToday}`);
-                    
+                    console.log(`✅ [${new Date().toLocaleTimeString()}] Éxito con ${provider.name} (${model.split('/').pop()}) | ${botResponse.length} caracteres | Total hoy: ${this.requestsToday}`);
+
                     return botResponse;
-                    
+
                 } catch (error) {
                     if (error.name === 'AbortError') {
-                        console.log(`⏱️ ${model} tardó más de 15s - saltando`);
-                        break; // Ir al siguiente modelo
+                        console.log(`⏱️ ${provider.name} tardó más de ${provider.timeout/1000}s - timeout`);
+                        continue;
                     }
-                    
-                    console.log(`❌ ${model} falló (intento ${attempt}/${maxRetries}): ${error.message}`);
-                    
-                    if (attempt < maxRetries) {
-                        await new Promise(r => setTimeout(r, 500)); // Espera reducida
-                    }
+                    console.log(`❌ ${provider.name} error: ${error.message}`);
                 }
             }
             
-            console.log(`⏭️ Siguiente modelo...`);
+            console.log(`⏭️ Probando siguiente proveedor...`);
         }
-        
-        // Si todos fallaron
-        console.log('❌ Todos los modelos fallaron o están ocupados');
-        return '😅 Uy, todos los modelos están súper ocupados ahora. ¿Puedes intentar en unos segundos? 💕';
+
+        // Si TODOS los proveedores fallaron
+        console.log('❌ Todos los proveedores de IA fallaron');
+        return '😅 Uy, todos mis proveedores de IA están ocupados ahora. ¿Puedes intentar en unos segundos? 💕\n\n_Tip: Si sigue pasando, avísale al admin para que revise las API keys_ ⚠️';
     }
 
     /**
@@ -1081,108 +1078,6 @@ _Totalmente gratis, sin límites_`,
                     await message.reply('❌ Error limpiando historial de chat.');
                 }
                 break;
-            case '>openrouterstatus':
-            case '>orstatus':
-            case '>aistatus':
-                try {
-                    const freeModels = [
-                        { name: "xiaomi/mimo-v2-flash:free", emoji: "⚡", desc: "Xiaomi MiMo v2 Flash" },
-                        { name: "mistralai/devstral-2512:free", emoji: "🧪", desc: "Devstral Experimental" },
-                        { name: "tngtech/deepseek-r1t2-chimera:free", emoji: "🧬", desc: "DeepSeek R1T2 Chimera" },
-                        { name: "tngtech/deepseek-r1t-chimera:free", emoji: "🧫", desc: "DeepSeek R1T Chimera" },
-                        { name: "z-ai/glm-4.5-air:free", emoji: "🌬️", desc: "GLM 4.5 Air" },
-                        { name: "deepseek/deepseek-r1-0528:free", emoji: "🔍", desc: "DeepSeek R1 (0528)" },
-                        { name: "tngtech/tng-r1t-chimera:free", emoji: "🧠", desc: "TNG R1T Chimera" },
-                        { name: "nvidia/nemotron-3-nano-30b-a3b:free", emoji: "🤖", desc: "NVIDIA Nemotron Nano" },
-                        { name: "meta-llama/llama-3.3-70b-instruct:free", emoji: "🦙", desc: "LLaMA 3.3 70B Instruct" },
-                        { name: "google/gemma-3-27b-it:free", emoji: "💎", desc: "Gemma 3 27B" },
-                        { name: "allenai/molmo-2-8b:free", emoji: "📘", desc: "Molmo 2 8B" },
-                    ];
-               
-                    const statusEmbed = new EmbedBuilder()
-                        .setTitle('🎭 Estado de OpenRouter')
-                        .setDescription('Verificando modelos gratis disponibles...')
-                        .setColor('#FF6B35');
-                    
-                    const statusMsg = await message.reply({ embeds: [statusEmbed] });
-                    
-                    // Probar cada modelo
-                    const modelStatuses = [];
-                    for (const model of freeModels) {
-                        try {
-                            const testResponse = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-                                method: 'POST',
-                                headers: {
-                                    'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY}`,
-                                    'Content-Type': 'application/json',
-                                    'HTTP-Referer': 'https://discord.com'
-                                },
-                                body: JSON.stringify({
-                                    model: model.name,
-                                    messages: [{ role: "user", content: "test" }],
-                                    max_tokens: 5
-                                })
-                            });
-                            
-                            let status;
-                            if (testResponse.ok) {
-                                status = '✅ Disponible';
-                            } else if (testResponse.status === 429) {
-                                status = '⏳ Rate limit';
-                            } else {
-                                status = `❌ Error ${testResponse.status}`;
-                            }
-                            
-                            modelStatuses.push({
-                                name: model.name.split('/')[1].split(':')[0],
-                                emoji: model.emoji,
-                                desc: model.desc,
-                                status: status
-                            });
-                            
-                        } catch (error) {
-                            modelStatuses.push({
-                                name: model.name.split('/')[1].split(':')[0],
-                                emoji: model.emoji,
-                                desc: model.desc,
-                                status: '❌ No responde'
-                            });
-                        }
-                        
-                        await new Promise(r => setTimeout(r, 800));
-                    }
-                    
-                    // Embed final
-                    const finalEmbed = new EmbedBuilder()
-                        .setTitle('🎭 Estado de OpenRouter')
-                        .setDescription('**Modelos GRATIS activos**')
-                        .setColor('#00D9FF')
-                        .setTimestamp();
-                    
-                    modelStatuses.forEach(model => {
-                        finalEmbed.addFields({
-                            name: `${model.emoji} ${model.name}`,
-                            value: `${model.desc}\n**Estado:** ${model.status}`,
-                            inline: false
-                        });
-                    });
-                    
-                    finalEmbed.addFields(
-                        { name: '📊 Requests Hoy', value: `${this.requestsToday}`, inline: true },
-                        { name: '💰 Costo', value: '**$0.00** (Gratis)', inline: true },
-                        { name: '🔄 Resetea', value: 'Cada minuto', inline: true }
-                    );
-                    
-                    finalEmbed.setFooter({ text: '✅ 3 modelos gratis configurados' });
-                    
-                    await statusMsg.edit({ embeds: [finalEmbed] });
-                    
-                } catch (error) {
-                    await message.reply('❌ Error verificando estado');
-                    console.error(error);
-                }
-                break;
-
             case '>orcredits':
             case '>openroutercredits':
                 const creditsEmbed = new EmbedBuilder()
