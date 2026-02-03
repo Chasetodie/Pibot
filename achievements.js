@@ -1212,6 +1212,11 @@ class AchievementsSystem {
                 currentValue = user.stats?.current_loss_streak || 0;
                 break;
         }
+
+        let requiredValue = req.value;
+        if (typeof req.value === 'function') {
+            requiredValue = req.value();
+        }
         
         return {
             current: currentValue,
