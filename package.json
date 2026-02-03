@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.55.0",
+    "axios": "^1.13.4",
     "discord.js": "^14.14.1",
     "dotenv": "^16.3.1",
     "emoji-regex": "^10.5.0",

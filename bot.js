@@ -22,6 +22,7 @@ const {
     AuctionSystem,
     CraftingSystem
 } = require('./things-shop');
+const NSFWSystem = require('./nsfw.js');
 
 if (typeof File === 'undefined') {
   global.File = class File {
@@ -64,6 +65,8 @@ const shop = new ShopSystem(economy);
 const minigames = new MinigamesSystem(economy, shop, client);
 
 const music = new MusicSystem(client);
+
+const nsfw = new NSFWSystem();
 
 const database = new LocalDatabase();
 database.startCacheCleanup();
@@ -917,7 +920,8 @@ client.on('messageCreate', async (message) => {
                 minigames.processCommand(message),
                 music.processCommand(message),
                 commandHandler.processCommand(message),
-                chatbot.processCommand(message)
+                chatbot.processCommand(message),
+                nsfw.processCommand(message)
             ]);
         } catch (error) {
             console.error('❌ Error comando:', error.message);
