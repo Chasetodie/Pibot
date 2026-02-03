@@ -3,23 +3,14 @@ const axios = require('axios');
 
 class NSFWSystem {
     constructor() {
-        // APIs disponibles
-        this.apis = {
-            nekotina: 'https://nekotina.com/api/v2.1',
-            rule34: 'https://api.rule34.xxx/index.php',
-            gelbooru: 'https://gelbooru.com/index.php'
-        };
+        // Verificar si el canal es NSFW
+        this.isNSFWChannel = (channel) => channel.nsfw === true;
         
         // Géneros para fuckdetect
         this.genders = {
             male: ['pibe', 'chico', 'macho', 'men', 'boy', 'masculino', 'hombre', 'varon'],
             female: ['piba', 'chica', 'mujer', 'girl', 'woman', 'femenino', 'nena']
         };
-    }
-
-    // Verificar si el canal es NSFW
-    isNSFWChannel(channel) {
-        return channel.nsfw === true;
     }
 
     // Detectar género por apodo
@@ -37,46 +28,84 @@ class NSFWSystem {
         return 'unknown';
     }
 
+    // Obtener imagen de Rule34 (mejorado)
+    async getRule34Image(tags) {
+        try {
+            // Usar la API XML y parsearla
+            const response = await axios.get('https://rule34.xxx/index.php', {
+                params: {
+                    page: 'dapi',
+                    s: 'post',
+                    q: 'index',
+                    limit: 100,
+                    tags: tags,
+                    json: 1
+                },
+                headers: {
+                    'User-Agent': 'Mozilla/5.0'
+                },
+                timeout: 10000
+            });
+
+            console.log('[NSFW] Respuesta de Rule34:', response.data ? 'OK' : 'Vacío');
+
+            if (!response.data || response.data.length === 0) {
+                return null;
+            }
+
+            const posts = response.data.filter(post => post.file_url);
+            if (posts.length === 0) return null;
+
+            const randomPost = posts[Math.floor(Math.random() * posts.length)];
+            return randomPost.file_url;
+
+        } catch (error) {
+            console.error('[NSFW] Error en Rule34:', error.message);
+            return null;
+        }
+    }
+
+    // Alternativa: Nekos.life (más confiable)
+    async getNekosLife(category) {
+        try {
+            const response = await axios.get(`https://nekos.life/api/v2/img/${category}`, {
+                timeout: 10000
+            });
+
+            console.log('[NSFW] Respuesta de Nekos.life:', response.data);
+
+            return response.data?.url || null;
+
+        } catch (error) {
+            console.error('[NSFW] Error en Nekos.life:', error.message);
+            return null;
+        }
+    }
+
     // Comando !r34 <tags>
     async handleRule34(message, args) {
         if (!this.isNSFWChannel(message.channel)) {
             return message.reply('🔞 Este comando solo funciona en canales NSFW.');
         }
 
-        const tags = args.join(' ') || 'rating:explicit';
+        const tags = args.join('_') || 'hentai';
         
-        try {
-            const response = await axios.get(this.apis.rule34, {
-                params: {
-                    page: 'dapi',
-                    s: 'post',
-                    q: 'index',
-                    json: 1,
-                    limit: 100,
-                    tags: tags
-                },
-                timeout: 10000
-            });
+        await message.channel.sendTyping();
 
-            if (!response.data || response.data.length === 0) {
-                return message.reply('❌ No se encontraron resultados para esos tags.');
-            }
+        const imageUrl = await this.getRule34Image(tags);
 
-            const randomPost = response.data[Math.floor(Math.random() * response.data.length)];
-            
-            const embed = new EmbedBuilder()
-                .setTitle('🔞 Rule34')
-                .setDescription(`**Tags:** ${tags}`)
-                .setImage(randomPost.file_url)
-                .setColor('#FF69B4')
-                .setFooter({ text: `ID: ${randomPost.id} | Score: ${randomPost.score}` });
-
-            await message.reply({ embeds: [embed] });
-
-        } catch (error) {
-            console.error('Error en Rule34:', error);
-            await message.reply('❌ Error al obtener la imagen. Intenta con otros tags.');
+        if (!imageUrl) {
+            return message.reply(`❌ No se encontraron resultados para: \`${tags}\`\nIntenta con otros tags.`);
         }
+
+        const embed = new EmbedBuilder()
+            .setTitle('🔞 Rule34')
+            .setDescription(`**Tags:** ${tags.replace(/_/g, ' ')}`)
+            .setImage(imageUrl)
+            .setColor('#FF69B4')
+            .setFooter({ text: 'Rule34.xxx' });
+
+        await message.reply({ embeds: [embed] });
     }
 
     // Comando !img <name> <cantidad>
@@ -85,47 +114,22 @@ class NSFWSystem {
             return message.reply('🔞 Este comando solo funciona en canales NSFW.');
         }
 
-        const name = args[0] || 'random';
-        const count = Math.min(parseInt(args[1]) || 1, 5); // Máximo 5 imágenes
+        const name = args[0] || 'hentai';
+        const count = Math.min(parseInt(args[1]) || 1, 3); // Máximo 3 para no hacer spam
 
-        try {
-            const images = [];
-            
-            for (let i = 0; i < count; i++) {
-                const response = await axios.get(this.apis.rule34, {
-                    params: {
-                        page: 'dapi',
-                        s: 'post',
-                        q: 'index',
-                        json: 1,
-                        limit: 100,
-                        tags: `${name} rating:explicit`
-                    },
-                    timeout: 10000
-                });
+        await message.channel.sendTyping();
 
-                if (response.data && response.data.length > 0) {
-                    const randomPost = response.data[Math.floor(Math.random() * response.data.length)];
-                    images.push(randomPost.file_url);
-                }
-            }
+        for (let i = 0; i < count; i++) {
+            const imageUrl = await this.getRule34Image(name);
 
-            if (images.length === 0) {
-                return message.reply('❌ No se encontraron imágenes.');
-            }
-
-            for (const img of images) {
+            if (imageUrl) {
                 const embed = new EmbedBuilder()
                     .setTitle(`🔞 ${name}`)
-                    .setImage(img)
+                    .setImage(imageUrl)
                     .setColor('#FF1493');
 
                 await message.reply({ embeds: [embed] });
             }
-
-        } catch (error) {
-            console.error('Error en !img:', error);
-            await message.reply('❌ Error al obtener imágenes.');
         }
     }
 
@@ -135,36 +139,26 @@ class NSFWSystem {
             return message.reply('🔞 Este comando solo funciona en canales NSFW.');
         }
 
-        try {
-            const response = await axios.get(this.apis.rule34, {
-                params: {
-                    page: 'dapi',
-                    s: 'post',
-                    q: 'index',
-                    json: 1,
-                    limit: 100,
-                    tags: 'sex animated gif rating:explicit'
-                },
-                timeout: 10000
-            });
+        await message.channel.sendTyping();
 
-            if (!response.data || response.data.length === 0) {
-                return message.reply('❌ No se encontraron GIFs.');
-            }
+        // Intentar con nekos.life primero (más confiable)
+        let imageUrl = await this.getNekosLife('nsfw_neko_gif');
 
-            const randomPost = response.data[Math.floor(Math.random() * response.data.length)];
-            
-            const embed = new EmbedBuilder()
-                .setTitle('🔞 NSFW')
-                .setImage(randomPost.file_url)
-                .setColor('#FF0000');
-
-            await message.reply({ embeds: [embed] });
-
-        } catch (error) {
-            console.error('Error en !fuck:', error);
-            await message.reply('❌ Error al obtener el GIF.');
+        // Si falla, intentar con Rule34
+        if (!imageUrl) {
+            imageUrl = await this.getRule34Image('animated sex gif');
         }
+
+        if (!imageUrl) {
+            return message.reply('❌ No se pudo obtener el GIF. Intenta de nuevo.');
+        }
+
+        const embed = new EmbedBuilder()
+            .setTitle('🔞 NSFW')
+            .setImage(imageUrl)
+            .setColor('#FF0000');
+
+        await message.reply({ embeds: [embed] });
     }
 
     // Comando !fuckdetect
@@ -177,52 +171,43 @@ class NSFWSystem {
         const nickname = targetUser.displayName;
         const gender = this.detectGender(nickname);
 
-        let tags = 'sex animated gif rating:explicit';
+        await message.channel.sendTyping();
+
+        let tags = 'sex animated';
+        let genderText = '👫 Hetero';
+        let category = 'nsfw_neko_gif';
 
         // Determinar tags según género detectado
         if (gender === 'male') {
-            tags = 'yaoi animated gif rating:explicit'; // Pibe x Pibe
+            tags = 'yaoi animated';
+            genderText = '👨‍❤️‍👨 Yaoi';
+            category = 'yaoi';
         } else if (gender === 'female') {
-            tags = 'yuri animated gif rating:explicit'; // Piba x Piba
-        } else {
-            tags = 'sex animated gif rating:explicit'; // Hetero por defecto
+            tags = 'yuri animated';
+            genderText = '👩‍❤️‍👩 Yuri';
+            category = 'yuri';
         }
 
-        try {
-            const response = await axios.get(this.apis.rule34, {
-                params: {
-                    page: 'dapi',
-                    s: 'post',
-                    q: 'index',
-                    json: 1,
-                    limit: 100,
-                    tags: tags
-                },
-                timeout: 10000
-            });
+        // Intentar primero con nekos.life
+        let imageUrl = await this.getNekosLife(category);
 
-            if (!response.data || response.data.length === 0) {
-                return message.reply('❌ No se encontraron GIFs para este género.');
-            }
-
-            const randomPost = response.data[Math.floor(Math.random() * response.data.length)];
-            
-            let genderText = '👫 Hetero';
-            if (gender === 'male') genderText = '👨‍❤️‍👨 Yaoi';
-            if (gender === 'female') genderText = '👩‍❤️‍👩 Yuri';
-
-            const embed = new EmbedBuilder()
-                .setTitle('🔞 FuckDetect')
-                .setDescription(`**Usuario:** ${targetUser.displayName}\n**Género detectado:** ${genderText}`)
-                .setImage(randomPost.file_url)
-                .setColor('#FF1493');
-
-            await message.reply({ embeds: [embed] });
-
-        } catch (error) {
-            console.error('Error en !fuckdetect:', error);
-            await message.reply('❌ Error al obtener el GIF.');
+        // Si falla, usar Rule34
+        if (!imageUrl) {
+            imageUrl = await this.getRule34Image(tags);
         }
+
+        if (!imageUrl) {
+            return message.reply('❌ No se pudo obtener el contenido. Intenta de nuevo.');
+        }
+
+        const embed = new EmbedBuilder()
+            .setTitle('🔞 FuckDetect')
+            .setDescription(`**Usuario:** ${targetUser.displayName}\n**Género detectado:** ${genderText}`)
+            .setImage(imageUrl)
+            .setColor('#FF1493')
+            .setFooter({ text: `Basado en el apodo: ${nickname}` });
+
+        await message.reply({ embeds: [embed] });
     }
 
     // Procesador de comandos
