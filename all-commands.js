@@ -2131,8 +2131,9 @@ const commandName = command.replace('>', '');
                     { name: '>missions', value: 'Ver misiones diarias', inline: true },
                     { name: '>blockmissions', value: 'Bloquear notificaciones de las misiones', inline: true },
                     { name: '>unblockmissions', value: 'Desbloquear notificaciones de las misiones', inline: true },
-                    { name: '>achievements [@usuario]', value: 'Ver logros', inline: true },
-                    { name: '>allachievements', value: 'Todos los logros', inline: true },
+                    { name: '>achievements [@usuario]', value: 'Ver logros desbloqueados', inline: true },
+                    { name: '>progress', value: 'Ver progreso de tus logros', inline: true },
+                    { name: '>allachievements', value: 'Ver todos los logros', inline: true },
                     { name: '>detectachievements', value: 'Detectar logros', inline: true },
                 ]
             },
