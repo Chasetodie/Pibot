@@ -1,5 +1,6 @@
 const { EmbedBuilder } = require('discord.js');
 const axios = require('axios');
+const xml2js = require('xml2js');
 
 class NSFWSystem {
     constructor() {
@@ -28,10 +29,10 @@ class NSFWSystem {
         return 'unknown';
     }
 
-    // Obtener imagen de Rule34 (usando API oficial)
+    // Obtener imagen de Rule34 (parseando XML correctamente)
     async getRule34Image(tags) {
         try {
-            const pid = Math.floor(Math.random() * 100); // Página aleatoria
+            const pid = Math.floor(Math.random() * 100);
             
             const response = await axios.get('https://api.rule34.xxx/index.php', {
                 params: {
@@ -48,27 +49,39 @@ class NSFWSystem {
                 timeout: 15000
             });
 
-            console.log('[NSFW] Respuesta de Rule34:', response.data ? 'OK' : 'Vacío');
-            console.log('[NSFW] Tipo de respuesta:', typeof response.data);
+            console.log('[NSFW] Respuesta de Rule34 recibida');
 
-            // La API devuelve XML, necesitamos parsearlo
             if (!response.data) {
                 return null;
             }
 
-            // Buscar URLs en el XML
-            const urlMatches = response.data.matchAll(/file_url="([^"]+)"/g);
-            const urls = [...urlMatches].map(match => match[1]);
+            // Parsear el XML
+            const parser = new xml2js.Parser();
+            const result = await parser.parseStringPromise(response.data);
 
-            if (urls.length === 0) {
-                console.log('[NSFW] No se encontraron URLs en la respuesta');
+            console.log('[NSFW] XML parseado correctamente');
+
+            // Verificar si hay posts
+            if (!result.posts || !result.posts.post || result.posts.post.length === 0) {
+                console.log('[NSFW] No hay posts en la respuesta');
                 return null;
             }
 
-            const randomUrl = urls[Math.floor(Math.random() * urls.length)];
-            console.log('[NSFW] URL obtenida:', randomUrl);
+            // Obtener URLs de los posts
+            const posts = result.posts.post;
+            const validPosts = posts.filter(post => post.$ && post.$.file_url);
 
-            return randomUrl;
+            if (validPosts.length === 0) {
+                console.log('[NSFW] No hay posts con file_url');
+                return null;
+            }
+
+            const randomPost = validPosts[Math.floor(Math.random() * validPosts.length)];
+            const imageUrl = randomPost.$.file_url;
+
+            console.log('[NSFW] URL obtenida:', imageUrl);
+
+            return imageUrl;
 
         } catch (error) {
             console.error('[NSFW] Error en Rule34:', error.message);
@@ -76,12 +89,65 @@ class NSFWSystem {
         }
     }
 
-    // Obtener GIF de Gelbooru (alternativa más confiable para GIFs)
+    // Obtener GIF de Gelbooru (usando API JSON)
     async getGelbooruGif(tags) {
         try {
             const pid = Math.floor(Math.random() * 50);
             
             const response = await axios.get('https://gelbooru.com/index.php', {
+                params: {
+                    page: 'dapi',
+                    s: 'post',
+                    q: 'index',
+                    json: 1,
+                    limit: 100,
+                    pid: pid,
+                    tags: tags + ' animated sort:random'
+                },
+                headers: {
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+                },
+                timeout: 15000
+            });
+
+            console.log('[NSFW] Respuesta de Gelbooru:', response.data ? 'OK' : 'Vacío');
+
+            if (!response.data || !response.data.post || response.data.post.length === 0) {
+                console.log('[NSFW] No hay posts en Gelbooru');
+                return null;
+            }
+
+            // Filtrar solo GIFs y videos
+            const gifs = response.data.post.filter(post => 
+                post.file_url && (
+                    post.file_url.endsWith('.gif') || 
+                    post.file_url.endsWith('.mp4') || 
+                    post.file_url.endsWith('.webm')
+                )
+            );
+
+            if (gifs.length === 0) {
+                console.log('[NSFW] No se encontraron GIFs en Gelbooru');
+                return null;
+            }
+
+            const randomGif = gifs[Math.floor(Math.random() * gifs.length)];
+            console.log('[NSFW] GIF obtenido de Gelbooru:', randomGif.file_url);
+
+            return randomGif.file_url;
+
+        } catch (error) {
+            console.error('[NSFW] Error en Gelbooru:', error.message);
+            return null;
+        }
+    }
+
+    // Obtener GIF solo de Rule34
+    async getRule34Gif(tags) {
+        try {
+            const pid = Math.floor(Math.random() * 100);
+            
+            const response = await axios.get('https://api.rule34.xxx/index.php', {
                 params: {
                     page: 'dapi',
                     s: 'post',
@@ -96,35 +162,28 @@ class NSFWSystem {
                 timeout: 15000
             });
 
-            console.log('[NSFW] Respuesta de Gelbooru:', response.data ? 'OK' : 'Vacío');
+            if (!response.data) return null;
 
-            if (!response.data) {
+            const parser = new xml2js.Parser();
+            const result = await parser.parseStringPromise(response.data);
+
+            if (!result.posts || !result.posts.post || result.posts.post.length === 0) {
                 return null;
             }
 
-            // Buscar URLs de archivos en el XML
-            const urlMatches = response.data.matchAll(/file_url="([^"]+)"/g);
-            const urls = [...urlMatches].map(match => match[1].replace(/&amp;/g, '&'));
+            // Filtrar solo GIFs
+            const posts = result.posts.post.filter(post => {
+                const url = post.$.file_url;
+                return url && (url.endsWith('.gif') || url.endsWith('.mp4') || url.endsWith('.webm'));
+            });
 
-            // Filtrar solo GIFs y videos
-            const gifs = urls.filter(url => 
-                url.endsWith('.gif') || 
-                url.endsWith('.mp4') || 
-                url.endsWith('.webm')
-            );
+            if (posts.length === 0) return null;
 
-            if (gifs.length === 0) {
-                console.log('[NSFW] No se encontraron GIFs');
-                return null;
-            }
-
-            const randomGif = gifs[Math.floor(Math.random() * gifs.length)];
-            console.log('[NSFW] GIF obtenido:', randomGif);
-
-            return randomGif;
+            const randomPost = posts[Math.floor(Math.random() * posts.length)];
+            return randomPost.$.file_url;
 
         } catch (error) {
-            console.error('[NSFW] Error en Gelbooru:', error.message);
+            console.error('[NSFW] Error obteniendo GIF:', error.message);
             return null;
         }
     }
@@ -190,6 +249,7 @@ class NSFWSystem {
 
         // Usar Gelbooru para GIFs
         let imageUrl = await this.getGelbooruGif('sex');
+        //let imageUrl = await this.getRule34Gif('sex');
 
         // Si falla, intentar con Rule34
         if (!imageUrl) {
@@ -238,6 +298,7 @@ class NSFWSystem {
 
         // Usar Gelbooru para GIFs
         let imageUrl = await this.getGelbooruGif(tags);
+        //let imageUrl = await this.getRule34Gif('sex');
 
         // Si falla, usar Rule34
         if (!imageUrl) {

@@ -18,6 +18,7 @@
     "express": "^4.21.2",
     "kazagumo": "^3.3.0",
     "mysql2": "^3.14.3",
-    "shoukaku": "^4.1.1"
+    "shoukaku": "^4.1.1",
+    "xml2js": "^0.6.2"
   }
 }
