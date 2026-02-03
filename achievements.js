@@ -1213,11 +1213,6 @@ class AchievementsSystem {
                 break;
         }
 
-        let requiredValue = req.value;
-        if (typeof req.value === 'function') {
-            requiredValue = req.value();
-        }
-        
         return {
             current: currentValue,
             required: req.value,
@@ -1391,12 +1386,18 @@ class AchievementsSystem {
                 const isCompleted = user.achievements[id] === 'completed';
                 const progress = this.calculateProgress(user, achievement);
                 
+                // Manejar si progress.required es una función
+                let requiredValue = progress.required;
+                if (typeof progress.required === 'function') {
+                    requiredValue = progress.required();
+                }
+                
                 const status = isCompleted ? '✅' : '⏳';
-                const progressBar = this.createProgressBar(progress.current, progress.required, 10);
-                const percentage = Math.min(100, progress.percentage).toFixed(0);
+                const progressBar = this.createProgressBar(progress.current, requiredValue, 10);
+                const percentage = Math.min(100, (progress.current / requiredValue) * 100).toFixed(0);
                 
                 rarityText += `${status} ${achievement.emoji} **${achievement.name}**\n`;
-                rarityText += `\`${progressBar}\` ${this.formatNumber(progress.current)}/${this.formatNumber(progress.required)} (${percentage}%)\n\n`;
+                rarityText += `\`${progressBar}\` ${this.formatNumber(progress.current)}/${this.formatNumber(requiredValue)} (${percentage}%)\n\n`;
             }
             
             if (rarityText) {
