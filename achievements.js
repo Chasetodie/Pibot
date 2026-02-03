@@ -1359,57 +1359,99 @@ class AchievementsSystem {
         await this.showProgressAchievements(message);
     }
 
-    // Mostrar progreso de todos los logros
-    async showProgressAchievements(message) {
+    // Mostrar progreso de todos los logros (con paginación por rareza)
+    async showProgressAchievements(message, rarityPage = 0) {
         const userId = message.author.id;
         await this.initializeUserAchievements(userId);
         const user = await this.economy.getUser(userId);
         
+        const rarityOrder = ['legendary', 'epic', 'rare', 'uncommon', 'common'];
+        const currentRarity = rarityOrder[rarityPage];
+        
         const embed = new EmbedBuilder()
             .setTitle(`📊 Progreso de Logros - ${message.author.displayName}`)
-            .setColor('#FFA500')
-            .setDescription('Aquí puedes ver el progreso de todos tus logros:')
+            .setColor(this.rarityColors[currentRarity])
+            .setDescription(`Mostrando: **${this.rarityEmojis[currentRarity]} ${currentRarity.toUpperCase()}**`)
             .setThumbnail(message.author.displayAvatarURL({ dynamic: true }))
             .setTimestamp();
 
-        const rarityOrder = ['legendary', 'epic', 'rare', 'uncommon', 'common'];
+        const achievementsOfRarity = Object.entries(this.achievements)
+            .filter(([id, ach]) => ach.rarity === currentRarity);
         
-        for (const rarity of rarityOrder) {
-            const achievementsOfRarity = Object.entries(this.achievements)
-                .filter(([id, ach]) => ach.rarity === rarity);
+        let rarityText = '';
+        let completedCount = 0;
+        
+        for (const [id, achievement] of achievementsOfRarity) {
+            const isCompleted = user.achievements[id] === 'completed';
+            if (isCompleted) completedCount++;
             
-            if (achievementsOfRarity.length === 0) continue;
-            
-            let rarityText = '';
-            
-            for (const [id, achievement] of achievementsOfRarity) {
-                const isCompleted = user.achievements[id] === 'completed';
-                const progress = this.calculateProgress(user, achievement);
-                
-                // Manejar si progress.required es una función
-                let requiredValue = progress.required;
-                if (typeof progress.required === 'function') {
-                    requiredValue = progress.required();
-                }
-                
-                const status = isCompleted ? '✅' : '⏳';
-                const progressBar = this.createProgressBar(progress.current, requiredValue, 10);
-                const percentage = Math.min(100, (progress.current / requiredValue) * 100).toFixed(0);
-                
-                rarityText += `${status} ${achievement.emoji} **${achievement.name}**\n`;
-                rarityText += `\`${progressBar}\` ${this.formatNumber(progress.current)}/${this.formatNumber(requiredValue)} (${percentage}%)\n\n`;
-            }
-            
-            if (rarityText) {
-                embed.addFields({
-                    name: `${this.rarityEmojis[rarity]} ${rarity.toUpperCase()}`,
-                    value: rarityText.trim(),
-                    inline: false
-                });
-            }
-        }
+            const progress = this.calculateProgress(user, achievement);
 
-        await message.reply({ embeds: [embed] });
+            let requiredValue = progress.required;
+            if (typeof progress.required === 'function') {
+                requiredValue = progress.required();
+            }
+            
+            const status = isCompleted ? '✅' : '⏳';
+            const progressBar = this.createProgressBar(progress.current, progress.required, 10);
+            const percentage = Math.min(100, progress.percentage).toFixed(0);
+            
+            rarityText += `${status} ${achievement.emoji} **${achievement.name}**\n`;
+            rarityText += `*${achievement.description}*\n`;
+            rarityText += `\`${progressBar}\` ${this.formatNumber(progress.current)}/${this.formatNumber(progress.required)} (${percentage}%)\n\n`;
+        }
+        
+        embed.addFields({
+            name: `${this.rarityEmojis[currentRarity]} Logros ${currentRarity.toUpperCase()} (${completedCount}/${achievementsOfRarity.length})`,
+            value: rarityText || 'No hay logros de esta rareza',
+            inline: false
+        });
+        
+        // Botones de navegación
+        const row = new ActionRowBuilder();
+        
+        if (rarityPage > 0) {
+            row.addComponents(
+                new ButtonBuilder()
+                    .setCustomId(`progress_prev_${rarityPage - 1}`)
+                    .setLabel(`◀️ ${rarityOrder[rarityPage - 1].toUpperCase()}`)
+                    .setStyle(ButtonStyle.Secondary)
+            );
+        }
+        
+        if (rarityPage < rarityOrder.length - 1) {
+            row.addComponents(
+                new ButtonBuilder()
+                    .setCustomId(`progress_next_${rarityPage + 1}`)
+                    .setLabel(`${rarityOrder[rarityPage + 1].toUpperCase()} ▶️`)
+                    .setStyle(ButtonStyle.Primary)
+            );
+        }
+        
+        const components = row.components.length > 0 ? [row] : [];
+        await message.reply({ embeds: [embed], components });
+    }
+
+    // Handler para la paginación de progreso
+    async handleProgressPagination(interaction) {
+        const parts = interaction.customId.split('_');
+        const page = parseInt(parts[2], 10);
+        
+        if (isNaN(page)) {
+            return interaction.reply({ 
+                content: '❌ Error al cambiar de página', 
+                ephemeral: true 
+            });
+        }
+        
+        const fakeMessage = {
+            author: interaction.user,
+            reply: async (options) => {
+                await interaction.update(options);
+            }
+        };
+        
+        await this.showProgressAchievements(fakeMessage, page);
     }
    
     // NUEVO: Procesador de comandos

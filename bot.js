@@ -607,6 +607,10 @@ client.on('interactionCreate', async (interaction) => {
             return;
         }
 
+        if (interaction.customId.startsWith('progress_prev_') || interaction.customId.startsWith('progress_next_')) {
+            await achievements.handleProgressPagination(interaction);
+        }
+
         if (interaction.customId.startsWith('bj_')) {
             await minigames.handleBlackjackButtons(interaction);
             return; // Importante: return para no continuar con otros botones
