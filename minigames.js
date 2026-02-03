@@ -9549,7 +9549,7 @@ const userId = gameState.userId;
                     );
                 });
 
-                await gameMessage.edit({ embeds: [questionEmbed], components: [buttons] });
+                await gameMessage.reply({ embeds: [questionEmbed], components: [buttons] });
 
                 // Timeout para esta pregunta
                 const timeoutPromise = new Promise((resolve) => {
