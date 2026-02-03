@@ -9638,8 +9638,6 @@ const userId = gameState.userId;
 
                 currentQuestion++;
                 if (currentQuestion < questions.length) {
-                    // Enviar nuevo mensaje para la siguiente pregunta
-                    gameMessage = await message.channel.send({ content: '⏳ Cargando siguiente pregunta...' });
                     await showQuestion();
                 } else {
                     await endGame();
@@ -9740,9 +9738,7 @@ const userId = gameState.userId;
                 
                 // Limpiar comillas si las agregó
                 translatedText = translatedText.replace(/^["']|["']$/g, '');
-                
-                console.log(`🌐 Traducción exitosa: "${text.substring(0, 30)}..." → "${translatedText.substring(0, 30)}..."`);
-                
+                                
                 return translatedText;
             } else {
                 const errorData = await response.json().catch(() => ({}));
