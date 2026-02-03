@@ -1090,7 +1090,7 @@ class AchievementsSystem {
         const progressPercentage = ((unlockedCount / totalAchievements) * 100).toFixed(1);
         
         const embed = new EmbedBuilder()
-            .setTitle(`🏆 Logros de ${displayName}`)
+            .setTitle(`🏆 Logros Completados - ${displayName}`)
             .setDescription(`**${unlockedCount}/${totalAchievements}** logros desbloqueados (${progressPercentage}%)`)
             .setColor('#FFD700')
             .setThumbnail((targetUser || message.author).displayAvatarURL({ dynamic: true }))
@@ -1129,42 +1129,11 @@ class AchievementsSystem {
                 value: unlockedText || 'Ninguno',
                 inline: false
             });
-        }
-        
-        // Mostrar progreso de logros cercanos
-        const nearCompletion = [];
-        for (const [achievementId, achievement] of Object.entries(this.achievements)) {
-            if (user.achievements[achievementId] === 'completed') continue;
-            
-            const progress = this.calculateProgress(user, achievement);
-            if (progress && progress.percentage >= 25) {
-                nearCompletion.push({
-                    id: achievementId,
-                    achievement: achievement,
-                    progress: progress
-                });
-            }
-        }
-        
-        if (nearCompletion.length > 0) {
-            nearCompletion.sort((a, b) => b.progress.percentage - a.progress.percentage);
-            
-            let progressText = '';
-            for (let i = 0; i < Math.min(5, nearCompletion.length); i++) {
-                const item = nearCompletion[i];
-                const prog = item.progress;
-                const rarityEmoji = this.rarityEmojis[item.achievement.rarity];
-                
-                const progressBar = this.createProgressBar(prog.current, prog.required, 8);
-                progressText += `${rarityEmoji} ${item.achievement.emoji} **${item.achievement.name}**\n`;
-                progressText += `\`${progressBar}\` ${prog.percentage.toFixed(1)}%\n`;
-                progressText += `${this.formatNumber(prog.current)}/${this.formatNumber(prog.required)}\n\n`;
-            }
-            
+        } else {
+            // Si no tiene logros completados
             embed.addFields({
-                name: '📊 Progreso Actual',
-                value: progressText,
-                inline: false
+                name: '❌ Sin logros',
+                value: '¡Aún no has completado ningún logro! Usa `>progress` para ver tu progreso.'
             });
         }
         
@@ -1385,6 +1354,57 @@ class AchievementsSystem {
             });
         }
     }
+
+    async handleProgressAchievements(message) {
+        await this.showProgressAchievements(message);
+    }
+
+    // Mostrar progreso de todos los logros
+    async showProgressAchievements(message) {
+        const userId = message.author.id;
+        await this.initializeUserAchievements(userId);
+        const user = await this.economy.getUser(userId);
+        
+        const embed = new EmbedBuilder()
+            .setTitle(`📊 Progreso de Logros - ${message.author.displayName}`)
+            .setColor('#FFA500')
+            .setDescription('Aquí puedes ver el progreso de todos tus logros:')
+            .setThumbnail(message.author.displayAvatarURL({ dynamic: true }))
+            .setTimestamp();
+
+        const rarityOrder = ['legendary', 'epic', 'rare', 'uncommon', 'common'];
+        
+        for (const rarity of rarityOrder) {
+            const achievementsOfRarity = Object.entries(this.achievements)
+                .filter(([id, ach]) => ach.rarity === rarity);
+            
+            if (achievementsOfRarity.length === 0) continue;
+            
+            let rarityText = '';
+            
+            for (const [id, achievement] of achievementsOfRarity) {
+                const isCompleted = user.achievements[id] === 'completed';
+                const progress = this.calculateProgress(user, achievement);
+                
+                const status = isCompleted ? '✅' : '⏳';
+                const progressBar = this.createProgressBar(progress.current, progress.required, 10);
+                const percentage = Math.min(100, progress.percentage).toFixed(0);
+                
+                rarityText += `${status} ${achievement.emoji} **${achievement.name}**\n`;
+                rarityText += `\`${progressBar}\` ${this.formatNumber(progress.current)}/${this.formatNumber(progress.required)} (${percentage}%)\n\n`;
+            }
+            
+            if (rarityText) {
+                embed.addFields({
+                    name: `${this.rarityEmojis[rarity]} ${rarity.toUpperCase()}`,
+                    value: rarityText.trim(),
+                    inline: false
+                });
+            }
+        }
+
+        await message.reply({ embeds: [embed] });
+    }
    
     // NUEVO: Procesador de comandos
     async processCommand(message) {
@@ -1411,7 +1431,12 @@ class AchievementsSystem {
                 case '>todoslogros':
                     await this.handleAllAchievements(message);
                     break;
-                
+                case '>progress':              // ← NUEVO
+                case '>progreso':              // ← NUEVO
+                case '>progressachievements':  // ← NUEVO
+                    await this.handleProgressAchievements(message);
+                    break;
+
                 case '>detectachievements':
                 case '>detectlogros':
                 case '>detect':
