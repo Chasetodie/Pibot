@@ -9588,7 +9588,6 @@ const userId = gameState.userId;
 
                     currentQuestion++;
                     if (currentQuestion < questions.length) {
-                        gameMessage = await message.channel.send({ content: ' ' });
                         await showQuestion();
                     } else {
                         await endGame();
@@ -9698,9 +9697,80 @@ const userId = gameState.userId;
         }
     }
 
-    async translateText(text) {
+    async translateText(text, sourceLang = 'auto', targetLang = 'es') {
         try {
-            // MyMemory API (más confiable y gratuita)
+            // 🤖 Usar Groq para traducción (rápido y gratis)
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 8000);
+            
+            const translationPrompt = sourceLang === 'auto' 
+                ? `Traduce el siguiente texto al español. Responde SOLO con la traducción, sin explicaciones ni texto adicional:\n\n"${text}"`
+                : `Translate the following text from ${sourceLang} to ${targetLang}. Respond ONLY with the translation, no explanations:\n\n"${text}"`;
+            
+            const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+                method: 'POST',
+                signal: controller.signal,
+                headers: {
+                    'Authorization': `Bearer ${process.env.GROQ_API_KEY}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    model: 'llama-3.1-8b-instant', // Modelo rápido para traducciones
+                    messages: [
+                        { 
+                            role: 'system', 
+                            content: 'Eres un traductor profesional. Respondes SOLO con la traducción exacta, sin comentarios adicionales.' 
+                        },
+                        { 
+                            role: 'user', 
+                            content: translationPrompt 
+                        }
+                    ],
+                    temperature: 0.3, // Baja temperatura para traducciones precisas
+                    max_tokens: 500,
+                    stream: false
+                })
+            });
+            
+            clearTimeout(timeoutId);
+            
+            if (response.ok) {
+                const data = await response.json();
+                let translatedText = data.choices[0].message.content.trim();
+                
+                // Limpiar comillas si las agregó
+                translatedText = translatedText.replace(/^["']|["']$/g, '');
+                
+                console.log(`🌐 Traducción exitosa: "${text.substring(0, 30)}..." → "${translatedText.substring(0, 30)}..."`);
+                
+                return translatedText;
+            } else {
+                const errorData = await response.json().catch(() => ({}));
+                console.error('⚠️ Error en traducción Groq:', errorData.error?.message || response.status);
+                
+                // Fallback a API externa si Groq falla
+                return await this.translateTextFallback(text);
+            }
+            
+        } catch (error) {
+            if (error.name === 'AbortError') {
+                console.error('⏱️ Timeout en traducción, usando fallback');
+            } else {
+                console.error('❌ Error traduciendo con Groq:', error.message);
+            }
+            
+            // Fallback a API externa
+            return await this.translateTextFallback(text);
+        }
+    }
+
+    /**
+     * Fallback: Traducción con API externa si Groq falla
+     */
+    async translateTextFallback(text) {
+        try {
+            console.log('🔄 Usando API de traducción de fallback...');
+            
             const encodedText = encodeURIComponent(text);
             const url = `https://api.mymemory.translated.net/get?q=${encodedText}&langpair=en|es`;
             
@@ -9708,14 +9778,16 @@ const userId = gameState.userId;
             const data = await response.json();
             
             if (data.responseData && data.responseData.translatedText) {
+                console.log('✅ Traducción fallback exitosa');
                 return data.responseData.translatedText;
             }
             
-            // Si falla, devolver original
+            // Si todo falla, devolver texto original
+            console.log('⚠️ Fallback también falló, retornando texto original');
             return text;
             
         } catch (error) {
-            console.error('⚠️ Error traduciendo:', error.message);
+            console.error('❌ Error en traducción fallback:', error.message);
             return text;
         }
     }
@@ -10163,9 +10235,9 @@ const userId = gameState.userId;
                         await message.reply(`❌ Error: ${error.message}`);
                     }
                     break;
-                /*case '>trivia':
+                case '>trivia':
                     await this.playTrivia(message, args);
-                    break;*/
+                    break;
                 case '>games':
                 case '>minigames':
                 case '>juegos':
