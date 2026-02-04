@@ -32,9 +32,13 @@ class NSFWSystem {
         return 'unknown';
     }
 
-    // Obtener imagen de Rule34.xxx (CON autenticación)
+    // Obtener imagen de Rule34.xxx (CON autenticación + debug)
     async getRule34ImageAuth(tags, apiKey, userId) {
         try {
+            console.log('[NSFW DEBUG] API Key:', apiKey ? 'Sí tiene' : 'No tiene');
+            console.log('[NSFW DEBUG] User ID:', userId ? 'Sí tiene' : 'No tiene');
+            console.log('[NSFW DEBUG] Tags:', tags);
+            
             const response = await axios.get('https://api.rule34.xxx/index.php', {
                 params: {
                     page: 'dapi',
@@ -51,9 +55,11 @@ class NSFWSystem {
                 timeout: 15000
             });
 
-            console.log('[NSFW] Rule34.xxx respuesta recibida');
+            console.log('[NSFW DEBUG] Respuesta tipo:', typeof response.data);
+            console.log('[NSFW DEBUG] Primeros 500 caracteres:', response.data.substring(0, 500));
 
             if (!response.data) {
+                console.log('[NSFW DEBUG] No hay data');
                 return null;
             }
 
@@ -61,22 +67,44 @@ class NSFWSystem {
             const parser = new xml2js.Parser();
             const result = await parser.parseStringPromise(response.data);
 
+            console.log('[NSFW DEBUG] Estructura completa:', JSON.stringify(result, null, 2));
+
             if (!result.posts || !result.posts.post || result.posts.post.length === 0) {
+                console.log('[NSFW DEBUG] No hay posts en result.posts');
+                
+                // Intentar ver si hay error
+                if (result.posts && result.posts.$) {
+                    console.log('[NSFW DEBUG] Atributos de posts:', result.posts.$);
+                }
+                
                 return null;
             }
 
             const posts = result.posts.post;
+            console.log('[NSFW DEBUG] Número de posts:', posts.length);
+            console.log('[NSFW DEBUG] Primer post completo:', JSON.stringify(posts[0], null, 2));
+            
             const validPosts = posts.filter(post => post.$ && post.$.file_url);
+            console.log('[NSFW DEBUG] Posts válidos:', validPosts.length);
 
             if (validPosts.length === 0) {
                 return null;
             }
 
             const randomPost = validPosts[Math.floor(Math.random() * validPosts.length)];
-            return randomPost.$.file_url;
+            const imageUrl = randomPost.$.file_url;
+            
+            console.log('[NSFW DEBUG] URL final:', imageUrl);
+
+            return imageUrl;
 
         } catch (error) {
-            console.error('[NSFW] Error en Rule34.xxx:', error.message);
+            console.error('[NSFW ERROR] Error completo:', error);
+            console.error('[NSFW ERROR] Mensaje:', error.message);
+            if (error.response) {
+                console.error('[NSFW ERROR] Status:', error.response.status);
+                console.error('[NSFW ERROR] Data:', error.response.data);
+            }
             return null;
         }
     }
