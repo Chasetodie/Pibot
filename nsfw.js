@@ -7,7 +7,7 @@ class NSFWSystem {
         // Verificar si el canal es NSFW
         this.isNSFWChannel = (channel) => channel.nsfw === true;
         
-        this.rule34ApiKey = '5895418';  // ← Reemplazar
+        this.rule34ApiKey = process.env.API_34;  // ← Reemplazar
         this.rule34UserId = '5895418';  // ← Reemplazar
 
         // Géneros para fuckdetect
