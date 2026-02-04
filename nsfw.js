@@ -250,7 +250,7 @@ class NSFWSystem {
         }
 
         const tags = args[0] || 'hentai';
-        const count = Math.min(parseInt(args[1]) || 1, 5);
+        const count = Math.min(parseInt(args[1]) || 1, 10);
 
         await message.channel.sendTyping();
 
@@ -277,7 +277,7 @@ class NSFWSystem {
         }
 
         const category = args[0] || 'waifu';
-        const count = Math.min(parseInt(args[1]) || 1, 5);
+        const count = Math.min(parseInt(args[1]) || 1, 10);
 
         await message.channel.sendTyping();
 
@@ -304,7 +304,7 @@ class NSFWSystem {
         }
 
         const category = args[0] || 'neko';
-        const count = Math.min(parseInt(args[1]) || 1, 5);
+        const count = Math.min(parseInt(args[1]) || 1, 10);
 
         await message.channel.sendTyping();
 
@@ -331,7 +331,7 @@ class NSFWSystem {
         }
 
         const category = args[0] || 'waifu';
-        const count = Math.min(parseInt(args[1]) || 1, 5);
+        const count = Math.min(parseInt(args[1]) || 1, 10);
 
         await message.channel.sendTyping();
 
@@ -372,12 +372,12 @@ class NSFWSystem {
         }
 
         const category = args[0] || 'waifu';
-        const count = Math.min(parseInt(args[1]) || 1, 3);
+        const count = Math.min(parseInt(args[1]) || 1, 10);
 
         await message.channel.sendTyping();
 
-        // Obtener de los 3 proveedores
-        const rule34Results = await this.getRule34(category, count * 2);
+        // Obtener de los 3 proveedores (agregar "animated" a Rule34)
+        const rule34Results = await this.getRule34(category + ' animated', count * 3);
         const waifuResults = await this.getWaifuPics(category, 'nsfw', count * 2);
         const nekosResults = await this.getNekosBest(category, count * 2);
         
@@ -385,7 +385,7 @@ class NSFWSystem {
         const gifs = this.filterAnimated(allResults);
 
         if (gifs.length === 0) {
-            return message.reply(`❌ No se encontraron GIFs para: \`${category}\``);
+            return message.reply(`❌ No se encontraron GIFs para: \`${category}\`\n💡 Intenta con otras categorías como: hentai, pokemon, anime`);
         }
 
         const selected = gifs.slice(0, count);
@@ -407,12 +407,12 @@ class NSFWSystem {
         }
 
         const category = args[0] || 'waifu';
-        const count = Math.min(parseInt(args[1]) || 1, 3);
+        const count = Math.min(parseInt(args[1]) || 1, 10);
 
         await message.channel.sendTyping();
 
-        // Obtener de los 3 proveedores
-        const rule34Results = await this.getRule34(category, count * 3);
+        // Obtener de los 3 proveedores (agregar "video" o "animated" a Rule34)
+        const rule34Results = await this.getRule34(category + ' video animated', count * 5);
         const waifuResults = await this.getWaifuPics(category, 'nsfw', count * 3);
         const nekosResults = await this.getNekosBest(category, count * 3);
         
@@ -422,7 +422,7 @@ class NSFWSystem {
         );
 
         if (videos.length === 0) {
-            return message.reply(`❌ No se encontraron videos para: \`${category}\``);
+            return message.reply(`❌ No se encontraron videos para: \`${category}\`\n💡 Los videos son raros, intenta con: hentai, sex, pokemon`);
         }
 
         const selected = videos.slice(0, count);
@@ -437,7 +437,7 @@ class NSFWSystem {
         }
     }
 
-    // Comando !fuck mejorado
+    // Comando !fuck mejorado con menciones
     async handleFuck(message, args) {
         if (!this.isNSFWChannel(message.channel)) {
             return message.reply('🔞 Este comando solo funciona en canales NSFW.');
@@ -445,9 +445,9 @@ class NSFWSystem {
 
         await message.channel.sendTyping();
 
-        // Obtener GIFs de los 3 proveedores
-        const rule34Results = await this.getRule34('sex animated', 10);
-        const waifuResults = await this.getWaifuPics('blowjob', 'nsfw', 5);
+        // Obtener GIFs animados
+        const rule34Results = await this.getRule34('sex animated', 20);
+        const waifuResults = await this.getWaifuPics('blowjob', 'nsfw', 10);
         
         const allResults = [...rule34Results, ...waifuResults];
         const gifs = this.filterAnimated(allResults);
@@ -457,25 +457,39 @@ class NSFWSystem {
         if (gifs.length > 0) {
             selectedGif = gifs[Math.floor(Math.random() * gifs.length)];
         } else {
-            // Fallback a cualquier resultado
-            const fallback = await this.getWaifuPics('waifu', 'nsfw', 3);
-            selectedGif = fallback[0];
+            // Fallback sin filtro de GIF
+            if (allResults.length > 0) {
+                selectedGif = allResults[Math.floor(Math.random() * allResults.length)];
+            }
         }
 
         if (!selectedGif) {
-            return message.reply('❌ No se pudo obtener un GIF. Intenta de nuevo.');
+            return message.reply('❌ No se pudo obtener contenido. Intenta de nuevo.');
         }
 
-        // Crear nombres aleatorios para el embed
-        const names1 = ['Sakura', 'Hinata', 'Asuna', 'Mikasa', 'Rem', 'Zero Two', 'Megumin', 'Nezuko', 'Rias', 'Aqua'];
-        const names2 = ['Naruto', 'Kirito', 'Eren', 'Subaru', 'Hiro', 'Kazuma', 'Tanjiro', 'Issei', 'Luffy', 'Goku'];
+        // Obtener 2 miembros aleatorios del servidor
+        const members = message.guild.members.cache.filter(m => !m.user.bot);
+        const membersArray = Array.from(members.values());
         
-        const person1 = names1[Math.floor(Math.random() * names1.length)];
-        const person2 = names2[Math.floor(Math.random() * names2.length)];
+        let person1, person2;
+        
+        if (membersArray.length >= 2) {
+            // Elegir 2 miembros aleatorios
+            const shuffled = membersArray.sort(() => 0.5 - Math.random());
+            person1 = shuffled[0].displayName;
+            person2 = shuffled[1].displayName;
+        } else {
+            // Fallback a nombres genéricos
+            const names1 = ['Sakura', 'Hinata', 'Asuna', 'Mikasa', 'Rem', 'Zero Two', 'Megumin', 'Nezuko', 'Rias', 'Aqua'];
+            const names2 = ['Naruto', 'Kirito', 'Eren', 'Subaru', 'Hiro', 'Kazuma', 'Tanjiro', 'Issei', 'Luffy', 'Goku'];
+            
+            person1 = names1[Math.floor(Math.random() * names1.length)];
+            person2 = names2[Math.floor(Math.random() * names2.length)];
+        }
 
         const embed = new EmbedBuilder()
             .setTitle('🔞 FUCK')
-            .setDescription(`💕 **${person1}** hizo el amor con **${person2}** 💕`)
+            .setDescription(`💕 **${person1}** se folló a **${person2}** 💕`)
             .setImage(selectedGif.url)
             .setColor('#FF0069')
             .addFields(
@@ -488,12 +502,13 @@ class NSFWSystem {
         await message.reply({ embeds: [embed] });
     }
 
-    // Comando !fuckdetect mejorado
+    // Comando !fuckdetect mejorado con menciones
     async handleFuckDetect(message, args) {
         if (!this.isNSFWChannel(message.channel)) {
             return message.reply('🔞 Este comando solo funciona en canales NSFW.');
         }
 
+        // El usuario objetivo (mencionado o el que ejecuta el comando)
         const targetUser = message.mentions.members.first() || message.member;
         const nickname = targetUser.displayName;
         const gender = this.detectGender(nickname);
@@ -502,18 +517,44 @@ class NSFWSystem {
 
         let category = 'sex';
         let genderText = '👫 Hetero';
+        let person2 = null;
+
+        // Obtener otro miembro del servidor
+        const members = message.guild.members.cache.filter(m => !m.user.bot && m.id !== targetUser.id);
+        const membersArray = Array.from(members.values());
 
         if (gender === 'male') {
             category = 'yaoi';
             genderText = '👨‍❤️‍👨 Yaoi';
+            // Buscar otro "pibe"
+            const males = membersArray.filter(m => this.detectGender(m.displayName) === 'male');
+            if (males.length > 0) {
+                person2 = males[Math.floor(Math.random() * males.length)].displayName;
+            }
         } else if (gender === 'female') {
             category = 'yuri';
             genderText = '👩‍❤️‍👩 Yuri';
+            // Buscar otra "piba"
+            const females = membersArray.filter(m => this.detectGender(m.displayName) === 'female');
+            if (females.length > 0) {
+                person2 = females[Math.floor(Math.random() * females.length)].displayName;
+            }
+        } else {
+            // Hetero - buscar del género opuesto
+            if (membersArray.length > 0) {
+                person2 = membersArray[Math.floor(Math.random() * membersArray.length)].displayName;
+            }
+        }
+
+        // Fallback si no hay person2
+        if (!person2) {
+            const fallbackNames = ['Sakura', 'Naruto', 'Hinata', 'Sasuke', 'Asuna', 'Kirito'];
+            person2 = fallbackNames[Math.floor(Math.random() * fallbackNames.length)];
         }
 
         // Buscar en los 3 proveedores
-        const rule34Results = await this.getRule34(category + ' animated', 10);
-        const waifuResults = await this.getWaifuPics(category === 'yaoi' ? 'trap' : 'waifu', 'nsfw', 5);
+        const rule34Results = await this.getRule34(category + ' animated', 15);
+        const waifuResults = await this.getWaifuPics(category === 'yaoi' ? 'trap' : 'waifu', 'nsfw', 10);
         
         const allResults = [...rule34Results, ...waifuResults];
         const gifs = this.filterAnimated(allResults);
@@ -524,8 +565,10 @@ class NSFWSystem {
             selectedGif = gifs[Math.floor(Math.random() * gifs.length)];
         } else {
             // Fallback
-            const fallback = await this.getRule34(category, 3);
-            selectedGif = fallback[0];
+            const fallback = await this.getRule34(category, 5);
+            if (fallback.length > 0) {
+                selectedGif = fallback[0];
+            }
         }
 
         if (!selectedGif) {
@@ -534,7 +577,11 @@ class NSFWSystem {
 
         const embed = new EmbedBuilder()
             .setTitle('🔞 FuckDetect')
-            .setDescription(`**Usuario:** ${targetUser.displayName}\n**Género detectado:** ${genderText}`)
+            .setDescription(
+                `**Usuario detectado:** ${targetUser.displayName}\n` +
+                `**Género:** ${genderText}\n\n` +
+                `💕 **${targetUser.displayName}** se folló a **${person2}** 💕`
+            )
             .setImage(selectedGif.url)
             .setColor('#FF1493')
             .addFields(
