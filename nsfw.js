@@ -7,6 +7,9 @@ class NSFWSystem {
         // Verificar si el canal es NSFW
         this.isNSFWChannel = (channel) => channel.nsfw === true;
         
+        this.rule34ApiKey = '5895418';  // ← Reemplazar
+        this.rule34UserId = '5895418';  // ← Reemplazar
+
         // Géneros para fuckdetect
         this.genders = {
             male: ['pibe', 'chico', 'macho', 'men', 'boy', 'masculino', 'hombre', 'varon'],
@@ -29,19 +32,18 @@ class NSFWSystem {
         return 'unknown';
     }
 
-    // Obtener imagen de Rule34 (parseando XML correctamente)
-    async getRule34Image(tags) {
+    // Obtener imagen de Rule34.xxx (CON autenticación)
+    async getRule34ImageAuth(tags, apiKey, userId) {
         try {
-            const pid = Math.floor(Math.random() * 100);
-            
             const response = await axios.get('https://api.rule34.xxx/index.php', {
                 params: {
                     page: 'dapi',
                     s: 'post',
                     q: 'index',
                     limit: 100,
-                    pid: pid,
-                    tags: tags
+                    tags: tags,
+                    api_key: apiKey,
+                    user_id: userId
                 },
                 headers: {
                     'User-Agent': 'DiscordBot/1.0'
@@ -49,42 +51,32 @@ class NSFWSystem {
                 timeout: 15000
             });
 
-            console.log('[NSFW] Respuesta de Rule34 recibida');
+            console.log('[NSFW] Rule34.xxx respuesta recibida');
 
             if (!response.data) {
                 return null;
             }
 
-            // Parsear el XML
+            const xml2js = require('xml2js');
             const parser = new xml2js.Parser();
             const result = await parser.parseStringPromise(response.data);
 
-            console.log('[NSFW] XML parseado correctamente');
-
-            // Verificar si hay posts
             if (!result.posts || !result.posts.post || result.posts.post.length === 0) {
-                console.log('[NSFW] No hay posts en la respuesta');
                 return null;
             }
 
-            // Obtener URLs de los posts
             const posts = result.posts.post;
             const validPosts = posts.filter(post => post.$ && post.$.file_url);
 
             if (validPosts.length === 0) {
-                console.log('[NSFW] No hay posts con file_url');
                 return null;
             }
 
             const randomPost = validPosts[Math.floor(Math.random() * validPosts.length)];
-            const imageUrl = randomPost.$.file_url;
-
-            console.log('[NSFW] URL obtenida:', imageUrl);
-
-            return imageUrl;
+            return randomPost.$.file_url;
 
         } catch (error) {
-            console.error('[NSFW] Error en Rule34:', error.message);
+            console.error('[NSFW] Error en Rule34.xxx:', error.message);
             return null;
         }
     }
@@ -198,7 +190,7 @@ class NSFWSystem {
         
         await message.channel.sendTyping();
 
-        const imageUrl = await this.getRule34Image(tags);
+        const imageUrl = await this.getRule34ImageAuth(tags, this.rule34ApiKey, this.rule34UserId);
 
         if (!imageUrl) {
             return message.reply(`❌ No se encontraron resultados para: \`${tags}\`\nIntenta con otros tags.`);
@@ -226,7 +218,7 @@ class NSFWSystem {
         await message.channel.sendTyping();
 
         for (let i = 0; i < count; i++) {
-            const imageUrl = await this.getRule34Image(name);
+            const imageUrl = await this.getRule34ImageAuth(tags, this.rule34ApiKey, this.rule34UserId);
 
             if (imageUrl) {
                 const embed = new EmbedBuilder()
@@ -253,7 +245,7 @@ class NSFWSystem {
 
         // Si falla, intentar con Rule34
         if (!imageUrl) {
-            imageUrl = await this.getRule34Image('sex animated');
+            imageUrl = await this.getRule34ImageAuth('sex animated', this.rule34ApiKey, this.rule34UserId);
         }
 
         if (!imageUrl) {
@@ -302,7 +294,7 @@ class NSFWSystem {
 
         // Si falla, usar Rule34
         if (!imageUrl) {
-            imageUrl = await this.getRule34Image(tags + ' animated');
+            imageUrl = await this.getRule34ImageAuth(tags + ' animated', this.rule34ApiKey, this.rule34UserId);
         }
 
         if (!imageUrl) {

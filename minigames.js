@@ -9518,6 +9518,13 @@ const userId = gameState.userId;
             const showQuestion = async () => {
                 const q = questions[currentQuestion];
                 const letters = ['A', 'B', 'C', 'D'];
+
+                // LOG: Mostrar pregunta y respuesta correcta
+                console.log(`\n📝 TRIVIA - Pregunta ${currentQuestion + 1}/${questions.length}`);
+                console.log(`❓ Pregunta: ${q.question}`);
+                console.log(`✅ Respuesta correcta: ${q.correct}`);
+                console.log(`📚 Categoría: ${q.category}`);
+                console.log(`📊 Opciones: ${q.answers.join(' | ')}\n`);
                 
                 // Crear texto de opciones
                 let optionsText = '';
@@ -9588,6 +9595,10 @@ const userId = gameState.userId;
 
                     currentQuestion++;
                     if (currentQuestion < questions.length) {
+                        const loadingEmbed = new EmbedBuilder()
+                            .setDescription('⏳ Preparando siguiente pregunta...')
+                            .setColor('#9932CC');
+                        gameMessage = await message.channel.send({ embeds: [loadingEmbed] });
                         await showQuestion();
                     } else {
                         await endGame();
@@ -9638,8 +9649,10 @@ const userId = gameState.userId;
 
                 currentQuestion++;
                 if (currentQuestion < questions.length) {
-                    // Enviar nuevo mensaje para la siguiente pregunta
-                    gameMessage = await message.channel.send({ content: '⏳ Cargando siguiente pregunta...' });
+                        const loadingEmbed = new EmbedBuilder()
+                            .setDescription('⏳ Preparando siguiente pregunta...')
+                            .setColor('#9932CC');
+                        gameMessage = await message.channel.send({ embeds: [loadingEmbed] });
                     await showQuestion();
                 } else {
                     await endGame();
@@ -9744,8 +9757,6 @@ const userId = gameState.userId;
                 
                 // Limpiar comillas si las agregó
                 translatedText = translatedText.replace(/^["']|["']$/g, '');
-                
-                console.log(`🌐 Traducción exitosa: "${text.substring(0, 30)}..." → "${translatedText.substring(0, 30)}..."`);
                 
                 return translatedText;
             } else {
