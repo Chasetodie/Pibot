@@ -9652,7 +9652,11 @@ const userId = gameState.userId;
 
                 // Calcular recompensas
                 let reward = this.config.trivia.rewards.participation;
-                if (correctAnswers === 5) reward = this.config.trivia.rewards.perfect;
+                if (correctAnswers === 5)
+                {
+                    reward = this.config.trivia.rewards.perfect;      
+                    await this.achievements.updateStats(userId, 'trivia_perfect');
+                } 
                 else if (correctAnswers === 4) reward = this.config.trivia.rewards.good;
                 else if (correctAnswers === 3) reward = this.config.trivia.rewards.decent;
 
