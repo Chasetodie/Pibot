@@ -943,10 +943,10 @@ class AchievementsSystem {
                     trivia_perfect: (user.stats?.trivia_perfect || 0) + 1
                 };
                 break;
-            case 'slots_double':
+            case 'slots_doubles':
                 updateData.stats = {
                     ...user.stats,
-                    slots_double: (user.stats?.slots_double || 0) + 1
+                    slots_doubles: (user.stats?.slots_doubles || 0) + 1
                 };
                 break;
             case 'vending_plays':
@@ -1389,7 +1389,9 @@ class AchievementsSystem {
         
         for (const [id, achievement] of achievementsOfRarity) {
             const isCompleted = user.achievements[id] === 'completed';
-            if (isCompleted) completedCount++;
+            
+            // ← AGREGAR ESTA LÍNEA: Saltar logros completados
+            if (isCompleted) continue;
             
             const progress = this.calculateProgress(user, achievement);
             
@@ -1409,20 +1411,18 @@ class AchievementsSystem {
         
         // Botones de navegación
         const row = new ActionRowBuilder();
-        
         if (rarityPage > 0) {
             row.addComponents(
                 new ButtonBuilder()
-                    .setCustomId(`progress_prev_${rarityPage - 1}`)
+                    .setCustomId(`progress_prev_${rarityPage - 1}_${message.author.id}`) // ← Agregar userId
                     .setLabel(`◀️ ${rarityOrder[rarityPage - 1].toUpperCase()}`)
                     .setStyle(ButtonStyle.Secondary)
             );
         }
-        
         if (rarityPage < rarityOrder.length - 1) {
             row.addComponents(
                 new ButtonBuilder()
-                    .setCustomId(`progress_next_${rarityPage + 1}`)
+                    .setCustomId(`progress_next_${rarityPage + 1}_${message.author.id}`) // ← Agregar userId
                     .setLabel(`${rarityOrder[rarityPage + 1].toUpperCase()} ▶️`)
                     .setStyle(ButtonStyle.Primary)
             );
@@ -1432,10 +1432,18 @@ class AchievementsSystem {
         await message.reply({ embeds: [embed], components });
     }
 
-    // Handler para la paginación de progreso
     async handleProgressPagination(interaction) {
         const parts = interaction.customId.split('_');
         const page = parseInt(parts[2], 10);
+        const originalUserId = parts[3]; // ← Obtener el userId del botón
+        
+        // Verificar que sea el mismo usuario
+        if (interaction.user.id !== originalUserId) {
+            return interaction.reply({ 
+                content: '❌ Solo el usuario que ejecutó el comando puede usar estos botones.', 
+                ephemeral: true 
+            });
+        }
         
         if (isNaN(page)) {
             return interaction.reply({ 

@@ -11,8 +11,6 @@ class NSFWSystem {
         
         // Ejemplos de categorías (pero acepta CUALQUIER categoría)
         this.rule34Examples = ['hentai', 'pokemon', 'anime', '1girl', 'solo', 'yaoi', 'yuri', 'furry', 'trap', 'ass', 'boobs'];
-        this.waifuExamples = ['waifu', 'neko', 'trap', 'blowjob'];
-        this.nekosExamples = ['neko', 'kitsune', 'waifu', 'husbando'];
         
         this.genders = {
             male: ['pibe', 'chico', 'macho', 'men', 'boy', 'masculino', 'hombre', 'varon'],
@@ -54,6 +52,8 @@ class NSFWSystem {
     async getRule34(tags, amount = 1) {
         try {
             const results = [];
+
+            const filteredTags = tags + ' -ai_generated -stable_diffusion -midjourney -dall-e';
             
             for (let i = 0; i < amount; i++) {
                 const pid = Math.floor(Math.random() * 100);
@@ -65,7 +65,7 @@ class NSFWSystem {
                     q: 'index',
                     limit: 100,
                     pid: pid,
-                    tags: tags,
+                    tags: filteredTags,
                     json: 1,
                     user_id: this.rule34UserId
                 };
@@ -122,70 +122,6 @@ class NSFWSystem {
         }
     }
 
-    // Obtener contenido de Waifu.pics (acepta cualquier categoría)
-    async getWaifuPics(category = 'waifu', type = 'nsfw', amount = 1) {
-        try {
-            const results = [];
-            
-            for (let i = 0; i < amount; i++) {
-                const response = await axios.get(`https://api.waifu.pics/${type}/${category}`, {
-                    timeout: 10000
-                });
-
-                if (response.data && response.data.url) {
-                    results.push({
-                        url: response.data.url,
-                        source: 'Waifu.pics',
-                        category: category,
-                        artist: 'Unknown',
-                        filename: this.getFileName(response.data.url)
-                    });
-                }
-                
-                if (i < amount - 1) {
-                    await new Promise(resolve => setTimeout(resolve, 500));
-                }
-            }
-
-            console.log('[NSFW] Waifu.pics:', results.length, 'resultados');
-            return results;
-
-        } catch (error) {
-            console.error('[NSFW] Error en Waifu.pics:', error.message);
-            return [];
-        }
-    }
-
-    // Obtener contenido de Nekos.best (acepta cualquier categoría)
-    async getNekosBest(category = 'neko', amount = 1) {
-        try {
-            const response = await axios.get(`https://nekos.best/api/v2/${category}`, {
-                params: { amount: Math.min(amount, 20) },
-                timeout: 10000
-            });
-
-            if (!response.data || !response.data.results) {
-                return [];
-            }
-
-            const results = response.data.results.map(item => ({
-                url: item.url,
-                source: 'Nekos.best',
-                category: category,
-                artist: item.artist_name || item.artist_href || 'Unknown',
-                filename: this.getFileName(item.url),
-                anime: item.anime_name || null
-            }));
-
-            console.log('[NSFW] Nekos.best:', results.length, 'resultados');
-            return results;
-
-        } catch (error) {
-            console.error('[NSFW] Error en Nekos.best:', error.message);
-            return [];
-        }
-    }
-
     // Filtrar solo GIFs/videos
     filterAnimated(results) {
         return results.filter(item => this.isAnimated(item.url));
@@ -196,11 +132,11 @@ class NSFWSystem {
         return results.filter(item => !this.isAnimated(item.url));
     }
 
-    // Crear embed con información completa
     createNSFWEmbed(item, title = '🔞 NSFW') {
         const embed = new EmbedBuilder()
             .setTitle(title)
-            .setImage(item.url)
+            .setURL(item.url) // ← Cambiar de setImage a setURL para videos
+            .setDescription(`**[Clic aquí para ver el contenido](${item.url})**`) // ← Agregar link clickeable
             .setColor('#FF69B4')
             .addFields(
                 { name: '📂 Nombre', value: item.filename, inline: true },
@@ -210,6 +146,15 @@ class NSFWSystem {
             )
             .setFooter({ text: `Proveedor: ${item.source}` })
             .setTimestamp();
+        
+        // Intentar poner imagen/video (puede fallar con algunos formatos)
+        try {
+            if (item.url.endsWith('.jpg') || item.url.endsWith('.png') || item.url.endsWith('.gif')) {
+                embed.setImage(item.url);
+            }
+        } catch (e) {
+            console.log('[NSFW] No se pudo setear imagen:', e.message);
+        }
 
         // Si tiene ID (de Rule34)
         if (item.id) {
@@ -219,11 +164,6 @@ class NSFWSystem {
         // Si tiene score (de Rule34)
         if (item.score !== undefined) {
             embed.addFields({ name: '⭐ Score', value: item.score.toString(), inline: true });
-        }
-
-        // Si tiene anime (de Nekos.best)
-        if (item.anime) {
-            embed.addFields({ name: '📺 Anime', value: item.anime, inline: true });
         }
         
         // Si tiene tags (de Rule34) - mostrar solo los primeros
@@ -270,89 +210,21 @@ class NSFWSystem {
         }
     }
 
-    // Comando !waifu <categoría> <cantidad>
-    async handleWaifu(message, args) {
-        if (!this.isNSFWChannel(message.channel)) {
-            return message.reply('🔞 Este comando solo funciona en canales NSFW.');
-        }
-
-        const category = args[0] || 'waifu';
-        const count = Math.min(parseInt(args[1]) || 1, 10);
-
-        await message.channel.sendTyping();
-
-        const results = await this.getWaifuPics(category, 'nsfw', count);
-
-        if (results.length === 0) {
-            return message.reply(`❌ No se encontraron imágenes para: \`${category}\`\n**Ejemplos de categorías:** ${this.waifuExamples.join(', ')}`);
-        }
-
-        for (const item of results) {
-            const embed = this.createNSFWEmbed(item, '🔞 Waifu.pics');
-            await message.reply({ embeds: [embed] });
-            
-            if (results.length > 1) {
-                await new Promise(resolve => setTimeout(resolve, 1000));
-            }
-        }
-    }
-
-    // Comando !neko <categoría> <cantidad>
-    async handleNeko(message, args) {
-        if (!this.isNSFWChannel(message.channel)) {
-            return message.reply('🔞 Este comando solo funciona en canales NSFW.');
-        }
-
-        const category = args[0] || 'neko';
-        const count = Math.min(parseInt(args[1]) || 1, 10);
-
-        await message.channel.sendTyping();
-
-        const results = await this.getNekosBest(category, count);
-
-        if (results.length === 0) {
-            return message.reply(`❌ No se encontraron imágenes para: \`${category}\`\n**Ejemplos de categorías:** ${this.nekosExamples.join(', ')}`);
-        }
-
-        for (const item of results) {
-            const embed = this.createNSFWEmbed(item, '🔞 Nekos.best');
-            await message.reply({ embeds: [embed] });
-            
-            if (results.length > 1) {
-                await new Promise(resolve => setTimeout(resolve, 1000));
-            }
-        }
-    }
-
     // Comando !nsfw <categoría> <cantidad> (fusión de los 3 proveedores)
     async handleNSFW(message, args) {
         if (!this.isNSFWChannel(message.channel)) {
             return message.reply('🔞 Este comando solo funciona en canales NSFW.');
         }
 
-        const category = args[0] || 'waifu';
+        const category = args[0] || 'hentai';
         const count = Math.min(parseInt(args[1]) || 1, 10);
 
         await message.channel.sendTyping();
 
-        // Intentar con los 3 proveedores en orden
-        let results = [];
-        
-        // Intentar Rule34 primero
-        results = await this.getRule34(category, count);
-        
-        // Si no hay resultados, intentar Waifu.pics
-        if (results.length === 0) {
-            results = await this.getWaifuPics(category, 'nsfw', count);
-        }
-        
-        // Si aún no hay, intentar Nekos.best
-        if (results.length === 0) {
-            results = await this.getNekosBest(category, count);
-        }
+        const results = await this.getRule34(category + ' -ai_generated', count);
 
         if (results.length === 0) {
-            return message.reply(`❌ No se encontraron imágenes para: \`${category}\`\n**Intenta con otras categorías o usa !nsfwhelp**`);
+            return message.reply(`❌ No se encontraron imágenes para: \`${category}\``);
         }
 
         for (const item of results) {
@@ -365,27 +237,21 @@ class NSFWSystem {
         }
     }
 
-    // Comando !gifs <categoría> <cantidad>
     async handleGifs(message, args) {
         if (!this.isNSFWChannel(message.channel)) {
             return message.reply('🔞 Este comando solo funciona en canales NSFW.');
         }
 
-        const category = args[0] || 'waifu';
+        const category = args[0] || 'hentai';
         const count = Math.min(parseInt(args[1]) || 1, 10);
 
         await message.channel.sendTyping();
 
-        // Obtener de los 3 proveedores (agregar "animated" a Rule34)
-        const rule34Results = await this.getRule34(category + ' animated', count * 3);
-        const waifuResults = await this.getWaifuPics(category, 'nsfw', count * 2);
-        const nekosResults = await this.getNekosBest(category, count * 2);
-        
-        const allResults = [...rule34Results, ...waifuResults, ...nekosResults];
-        const gifs = this.filterAnimated(allResults);
+        const rule34Results = await this.getRule34(category + ' animated -ai_generated', count * 3);
+        const gifs = this.filterAnimated(rule34Results);
 
         if (gifs.length === 0) {
-            return message.reply(`❌ No se encontraron GIFs para: \`${category}\`\n💡 Intenta con otras categorías como: hentai, pokemon, anime`);
+            return message.reply(`❌ No se encontraron GIFs para: \`${category}\``);
         }
 
         const selected = gifs.slice(0, count);
@@ -400,29 +266,23 @@ class NSFWSystem {
         }
     }
 
-    // Comando !videos <categoría> <cantidad>
     async handleVideos(message, args) {
         if (!this.isNSFWChannel(message.channel)) {
             return message.reply('🔞 Este comando solo funciona en canales NSFW.');
         }
 
-        const category = args[0] || 'waifu';
+        const category = args[0] || 'hentai';
         const count = Math.min(parseInt(args[1]) || 1, 10);
 
         await message.channel.sendTyping();
 
-        // Obtener de los 3 proveedores (agregar "video" o "animated" a Rule34)
-        const rule34Results = await this.getRule34(category + ' video animated', count * 5);
-        const waifuResults = await this.getWaifuPics(category, 'nsfw', count * 3);
-        const nekosResults = await this.getNekosBest(category, count * 3);
-        
-        const allResults = [...rule34Results, ...waifuResults, ...nekosResults];
-        const videos = allResults.filter(item => 
+        const rule34Results = await this.getRule34(category + ' video animated -ai_generated', count * 5);
+        const videos = rule34Results.filter(item => 
             item.url.endsWith('.mp4') || item.url.endsWith('.webm')
         );
 
         if (videos.length === 0) {
-            return message.reply(`❌ No se encontraron videos para: \`${category}\`\n💡 Los videos son raros, intenta con: hentai, sex, pokemon`);
+            return message.reply(`❌ No se encontraron videos para: \`${category}\``);
         }
 
         const selected = videos.slice(0, count);
@@ -437,20 +297,31 @@ class NSFWSystem {
         }
     }
 
-    // Comando !fuck mejorado con menciones
+    // Comando !fuck mejorado (requiere mención o reply)
     async handleFuck(message, args) {
         if (!this.isNSFWChannel(message.channel)) {
             return message.reply('🔞 Este comando solo funciona en canales NSFW.');
         }
 
+        // Obtener usuario mencionado o reply
+        let targetUser = null;
+        
+        if (message.mentions.members.size > 0) {
+            targetUser = message.mentions.members.first();
+        } else if (message.reference) {
+            const repliedMessage = await message.channel.messages.fetch(message.reference.messageId);
+            targetUser = repliedMessage.member;
+        }
+        
+        if (!targetUser) {
+            return message.reply('❌ Debes mencionar a alguien o responder a su mensaje.\n**Ejemplo:** `!fuck @usuario`');
+        }
+
         await message.channel.sendTyping();
 
         // Obtener GIFs animados
-        const rule34Results = await this.getRule34('sex animated', 20);
-        const waifuResults = await this.getWaifuPics('blowjob', 'nsfw', 10);
-        
-        const allResults = [...rule34Results, ...waifuResults];
-        const gifs = this.filterAnimated(allResults);
+        const rule34Results = await this.getRule34('sex animated -ai_generated', 20);
+        const gifs = this.filterAnimated(rule34Results);
 
         let selectedGif = null;
 
@@ -458,8 +329,8 @@ class NSFWSystem {
             selectedGif = gifs[Math.floor(Math.random() * gifs.length)];
         } else {
             // Fallback sin filtro de GIF
-            if (allResults.length > 0) {
-                selectedGif = allResults[Math.floor(Math.random() * allResults.length)];
+            if (rule34Results.length > 0) {
+                selectedGif = rule34Results[Math.floor(Math.random() * rule34Results.length)];
             }
         }
 
@@ -467,30 +338,13 @@ class NSFWSystem {
             return message.reply('❌ No se pudo obtener contenido. Intenta de nuevo.');
         }
 
-        // Obtener 2 miembros aleatorios del servidor
-        const members = message.guild.members.cache.filter(m => !m.user.bot);
-        const membersArray = Array.from(members.values());
-        
-        let person1, person2;
-        
-        if (membersArray.length >= 2) {
-            // Elegir 2 miembros aleatorios
-            const shuffled = membersArray.sort(() => 0.5 - Math.random());
-            person1 = shuffled[0].displayName;
-            person2 = shuffled[1].displayName;
-        } else {
-            // Fallback a nombres genéricos
-            const names1 = ['Sakura', 'Hinata', 'Asuna', 'Mikasa', 'Rem', 'Zero Two', 'Megumin', 'Nezuko', 'Rias', 'Aqua'];
-            const names2 = ['Naruto', 'Kirito', 'Eren', 'Subaru', 'Hiro', 'Kazuma', 'Tanjiro', 'Issei', 'Luffy', 'Goku'];
-            
-            person1 = names1[Math.floor(Math.random() * names1.length)];
-            person2 = names2[Math.floor(Math.random() * names2.length)];
-        }
+        const person1 = message.author.displayName;
+        const person2 = targetUser.displayName;
 
         const embed = new EmbedBuilder()
             .setTitle('🔞 FUCK')
             .setDescription(`💕 **${person1}** se folló a **${person2}** 💕`)
-            .setImage(selectedGif.url)
+            .setURL(selectedGif.url)
             .setColor('#FF0069')
             .addFields(
                 { name: '📂 Nombre', value: selectedGif.filename, inline: true },
@@ -498,18 +352,39 @@ class NSFWSystem {
             )
             .setFooter({ text: 'Disfruta responsablemente 🔞' })
             .setTimestamp();
+        
+        // Intentar setear imagen si es .gif o .jpg
+        try {
+            if (selectedGif.url.endsWith('.gif') || selectedGif.url.endsWith('.jpg') || selectedGif.url.endsWith('.png')) {
+                embed.setImage(selectedGif.url);
+            }
+        } catch (e) {
+            console.log('[NSFW] No se pudo setear imagen');
+        }
 
         await message.reply({ embeds: [embed] });
     }
 
-    // Comando !fuckdetect mejorado con menciones
+    // Comando !fuckdetect mejorado (requiere mención o reply)
     async handleFuckDetect(message, args) {
         if (!this.isNSFWChannel(message.channel)) {
             return message.reply('🔞 Este comando solo funciona en canales NSFW.');
         }
 
-        // El usuario objetivo (mencionado o el que ejecuta el comando)
-        const targetUser = message.mentions.members.first() || message.member;
+        // Obtener usuario mencionado o reply
+        let targetUser = null;
+        
+        if (message.mentions.members.size > 0) {
+            targetUser = message.mentions.members.first();
+        } else if (message.reference) {
+            const repliedMessage = await message.channel.messages.fetch(message.reference.messageId);
+            targetUser = repliedMessage.member;
+        }
+        
+        if (!targetUser) {
+            return message.reply('❌ Debes mencionar a alguien o responder a su mensaje.\n**Ejemplo:** `!fd @usuario`');
+        }
+
         const nickname = targetUser.displayName;
         const gender = this.detectGender(nickname);
 
@@ -517,47 +392,18 @@ class NSFWSystem {
 
         let category = 'sex';
         let genderText = '👫 Hetero';
-        let person2 = null;
-
-        // Obtener otro miembro del servidor
-        const members = message.guild.members.cache.filter(m => !m.user.bot && m.id !== targetUser.id);
-        const membersArray = Array.from(members.values());
 
         if (gender === 'male') {
             category = 'yaoi';
             genderText = '👨‍❤️‍👨 Yaoi';
-            // Buscar otro "pibe"
-            const males = membersArray.filter(m => this.detectGender(m.displayName) === 'male');
-            if (males.length > 0) {
-                person2 = males[Math.floor(Math.random() * males.length)].displayName;
-            }
         } else if (gender === 'female') {
             category = 'yuri';
             genderText = '👩‍❤️‍👩 Yuri';
-            // Buscar otra "piba"
-            const females = membersArray.filter(m => this.detectGender(m.displayName) === 'female');
-            if (females.length > 0) {
-                person2 = females[Math.floor(Math.random() * females.length)].displayName;
-            }
-        } else {
-            // Hetero - buscar del género opuesto
-            if (membersArray.length > 0) {
-                person2 = membersArray[Math.floor(Math.random() * membersArray.length)].displayName;
-            }
         }
 
-        // Fallback si no hay person2
-        if (!person2) {
-            const fallbackNames = ['Sakura', 'Naruto', 'Hinata', 'Sasuke', 'Asuna', 'Kirito'];
-            person2 = fallbackNames[Math.floor(Math.random() * fallbackNames.length)];
-        }
-
-        // Buscar en los 3 proveedores
-        const rule34Results = await this.getRule34(category + ' animated', 15);
-        const waifuResults = await this.getWaifuPics(category === 'yaoi' ? 'trap' : 'waifu', 'nsfw', 10);
-        
-        const allResults = [...rule34Results, ...waifuResults];
-        const gifs = this.filterAnimated(allResults);
+        // Buscar GIFs
+        const rule34Results = await this.getRule34(category + ' animated -ai_generated', 20);
+        const gifs = this.filterAnimated(rule34Results);
 
         let selectedGif = null;
 
@@ -565,7 +411,7 @@ class NSFWSystem {
             selectedGif = gifs[Math.floor(Math.random() * gifs.length)];
         } else {
             // Fallback
-            const fallback = await this.getRule34(category, 5);
+            const fallback = await this.getRule34(category + ' -ai_generated', 10);
             if (fallback.length > 0) {
                 selectedGif = fallback[0];
             }
@@ -575,14 +421,17 @@ class NSFWSystem {
             return message.reply('❌ No se pudo obtener contenido. Intenta de nuevo.');
         }
 
+        const person1 = message.author.displayName;
+        const person2 = targetUser.displayName;
+
         const embed = new EmbedBuilder()
             .setTitle('🔞 FuckDetect')
             .setDescription(
                 `**Usuario detectado:** ${targetUser.displayName}\n` +
                 `**Género:** ${genderText}\n\n` +
-                `💕 **${targetUser.displayName}** se folló a **${person2}** 💕`
+                `💕 **${person1}** se folló a **${person2}** 💕`
             )
-            .setImage(selectedGif.url)
+            .setURL(selectedGif.url)
             .setColor('#FF1493')
             .addFields(
                 { name: '📂 Nombre', value: selectedGif.filename, inline: true },
@@ -591,72 +440,15 @@ class NSFWSystem {
             )
             .setFooter({ text: `Basado en el apodo: ${nickname}` })
             .setTimestamp();
-
-        await message.reply({ embeds: [embed] });
-    }
-
-    // Comando !nsfwhelp
-    async handleHelp(message) {
-        const embed = new EmbedBuilder()
-            .setTitle('🔞 Sistema NSFW - Ayuda')
-            .setDescription('Lista de comandos disponibles para canales NSFW\n**Nota:** Acepta CUALQUIER categoría, no hay límites')
-            .setColor('#FF69B4')
-            .addFields(
-                {
-                    name: '📌 Comandos Principales',
-                    value: 
-                        '`>nsfw <categoría> <cantidad>` - Buscar contenido (3 proveedores)\n' +
-                        '`>fuck` - GIF aleatorio con descripción romántica\n' +
-                        '`>fuckdetect` o `>fd` - Detecta género y muestra contenido\n',
-                    inline: false
-                },
-                {
-                    name: '🎨 Por Proveedor Específico',
-                    value:
-                        '`>r34 <tags> <cantidad>` - Rule34.xxx (cualquier tag)\n' +
-                        '`>waifu <categoría> <cantidad>` - Waifu.pics\n' +
-                        '`>neko <categoría> <cantidad>` - Nekos.best\n',
-                    inline: false
-                },
-                {
-                    name: '🎬 Por Tipo de Contenido',
-                    value:
-                        '`>gifs <categoría> <cantidad>` - Solo GIFs (3 proveedores)\n' +
-                        '`>videos <categoría> <cantidad>` - Solo videos (3 proveedores)\n',
-                    inline: false
-                },
-                {
-                    name: '🏷️ Ejemplos de Categorías Rule34',
-                    value: this.rule34Examples.join(', ') + ', **y cualquier otro tag**',
-                    inline: false
-                },
-                {
-                    name: '🏷️ Ejemplos de Categorías Waifu.pics',
-                    value: this.waifuExamples.join(', ') + ', **prueba otras**',
-                    inline: false
-                },
-                {
-                    name: '🏷️ Ejemplos de Categorías Nekos.best',
-                    value: this.nekosExamples.join(', ') + ', **prueba otras**',
-                    inline: false
-                },
-                {
-                    name: '💡 Ejemplos de Uso',
-                    value:
-                        '`>r34 pokemon 3` - 3 imágenes de Pokemon en Rule34\n' +
-                        '`>r34 1girl+solo` - Usa + para combinar tags\n' +
-                        '`>waifu trap 2` - 2 imágenes de Waifu.pics\n' +
-                        '`>neko neko` - 1 imagen de Nekos.best\n' +
-                        '`>nsfw hentai 5` - 5 imágenes de cualquier proveedor\n' +
-                        '`>gifs neko 2` - 2 GIFs de los 3 proveedores\n' +
-                        '`>videos waifu` - 1 video\n' +
-                        '`>fd @usuario` - Detectar género y mostrar contenido\n' +
-                        '`>fuck` - GIF aleatorio con descripción',
-                    inline: false
-                }
-            )
-            .setFooter({ text: '🔞 Solo en canales NSFW | No hay límites de categorías' })
-            .setTimestamp();
+        
+        // Intentar setear imagen
+        try {
+            if (selectedGif.url.endsWith('.gif') || selectedGif.url.endsWith('.jpg') || selectedGif.url.endsWith('.png')) {
+                embed.setImage(selectedGif.url);
+            }
+        } catch (e) {
+            console.log('[NSFW] No se pudo setear imagen');
+        }
 
         await message.reply({ embeds: [embed] });
     }
@@ -670,14 +462,6 @@ class NSFWSystem {
             switch (command) {
                 case '>r34':
                     await this.handleR34(message, args);
-                    break;
-
-                case '>waifu':
-                    await this.handleWaifu(message, args);
-                    break;
-
-                case '>neko':
-                    await this.handleNeko(message, args);
                     break;
 
                 case '>nsfw':
@@ -699,11 +483,6 @@ class NSFWSystem {
                 case '>fuckdetect':
                 case '>fd':
                     await this.handleFuckDetect(message, args);
-                    break;
-
-                case '>nsfwhelp':
-                case '>hentaihelp':
-                    await this.handleHelp(message);
                     break;
             }
         } catch (error) {

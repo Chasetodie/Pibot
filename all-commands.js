@@ -2030,6 +2030,7 @@ const commandName = command.replace('>', '');
                     new ButtonBuilder().setCustomId('help_vip').setLabel('👑 VIP').setStyle(ButtonStyle.Primary)
                 ),
                 new ActionRowBuilder().addComponents(
+                    new ButtonBuilder().setCustomId('help_nsfw').setLabel('🔞 NSFW').setStyle(ButtonStyle.Primary),
                     new ButtonBuilder().setCustomId('help_events').setLabel('🎉 Eventos').setStyle(ButtonStyle.Primary),
                     new ButtonBuilder().setCustomId('help_chatIA').setLabel('🤖 Chat IA').setStyle(ButtonStyle.Primary),
                 ),
@@ -2148,6 +2149,17 @@ const commandName = command.replace('>', '');
                 title: '🎉 Eventos',
                 fields: [
                     { name: '>events', value: 'Ver eventos activos del servidor', inline: false }
+                ]
+            },
+            nsfw: {
+                title: '🔞 NSFW',
+                fields: [
+                    { name: '>nsfw <categoría> <cantidad>', value: 'Buscar contenido', inline: false },
+                    { name: '>fuck', value: 'Mención/reply requerido', inline: false },
+                    { name: '>fuckdetect o >fd', value: 'FuckDetect con mención/reply', inline: false },
+                    { name: '>r34 <tags> <cantidad>', value: 'Buscar por tags (ej: `!r34 pokemon 5`)', inline: false },
+                    { name: '>gifs <categoría> <cantidad>', value: 'Solo GIFs animados', inline: false },
+                    { name: '>videos <categoría> <cantidad>', value: 'Solo videos MP4/WEBM', inline: false },
                 ]
             }
         };

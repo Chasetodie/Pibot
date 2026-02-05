@@ -191,11 +191,14 @@ this.cooldownCache = new Map();
                 cooldown: 60000,       // 2 minutos
                 timePerQuestion: 15000, // 20 segundos por pregunta
                 questionsPerGame: 5,    // 5 preguntas por partida
+                hintsPerGame: 2,
+                hintPenalty: 0.4,
+                hintsOnlyHard: true,
                 rewards: {
-                    perfect: { money: 1000, xp: 250 },    // 5/5 correctas
-                    good: { money: 600, xp: 150 },         // 4/5 correctas
-                    decent: { money: 300, xp: 75 },        // 3/5 correctas
-                    participation: { money: 50, xp: 25 }   // Menos de 3
+                    perfect: { money: 1000, xp: 50 },    // 5/5 correctas
+                    good: { money: 600, xp: 30 },         // 4/5 correctas
+                    decent: { money: 300, xp: 15 },        // 3/5 correctas
+                    participation: { money: 50, xp: 5 }   // Menos de 3
                 },
                 difficulties: {
                     easy: { multiplier: 1.0, xp: 30 },
@@ -3919,7 +3922,7 @@ const userId = gameState.userId;
 
             // ✅ DETECTAR DOBLE
             if (this.achievements) {
-                await this.achievements.updateStats(userId, 'slots_double');
+                await this.achievements.updateStats(userId, 'slots_doubles');
             }
         } else {
             // Perdió
@@ -9398,7 +9401,7 @@ const userId = gameState.userId;
                     { name: '🎯 Dificultades', value: 'Easy • Medium • Hard', inline: true },
                     { 
                         name: '💎 Recompensas (Medium)', 
-                        value: '**5/5**: 1,000 π-b$ + 250 XP\n**4/5**: 600 π-b$ + 150 XP\n**3/5**: 300 π-b$ + 75 XP\n**< 3**: 50 π-b$ + 25 XP', 
+                        value: '**5/5**: 1,000 π-b$ + 50 XP\n**4/5**: 600 π-b$ + 30 XP\n**3/5**: 300 π-b$ + 15 XP\n**< 3**: 50 π-b$ + 5 XP', 
                         inline: false 
                     },
                     { 
@@ -9407,8 +9410,13 @@ const userId = gameState.userId;
                         inline: false 
                     },
                     { 
+                        name: '💡 Pistas', 
+                        value: '**2 pistas** por partida\n**Solo en:** Medium y Hard\n**Penalización:** -60% recompensa\n**Efecto:** Elimina 1 respuesta incorrecta', 
+                        inline: false 
+                    },
+                    { 
                         name: '🎮 Uso', 
-                        value: '`>trivia easy` - Fácil\n`>trivia medium` - Normal\n`>trivia hard` - Difícil', 
+                        value: '`>trivia <dificultad> [modo]`\n\n**Dificultades:** easy, medium, hard\n**Modos:** multiple (4 opciones) o tof (verdadero/falso)\n\n**Ejemplos:**\n`>trivia easy` - Fácil opción múltiple\n`>trivia hard tof` - Difícil verdadero/falso', 
                         inline: false 
                     }
                 )
@@ -9431,10 +9439,19 @@ const userId = gameState.userId;
         }
 
         const difficulty = args[1].toLowerCase();
+        
         // Validar dificultad
         if (!['easy', 'medium', 'hard'].includes(difficulty)) {
             return message.reply('❌ Dificultad inválida. Usa: `easy`, `medium` o `hard`');
         }
+        
+        // Modo de juego (multiple choice o true/false)
+        const gameMode = args[2] ? args[2].toLowerCase() : 'multiple';
+        if (!['multiple', 'tof', 'truefalse'].includes(gameMode)) {
+            return message.reply('❌ Modo inválido. Usa: `multiple` (opción múltiple) o `tof` (verdadero/falso)');
+        }
+        
+        const isTrueFalse = ['tof', 'truefalse'].includes(gameMode);
 
         const difficultyMap = {
             'easy': 'easy',
@@ -9459,7 +9476,8 @@ const userId = gameState.userId;
             const loadingMessage = await message.reply({ embeds: [loadingEmbed] });
 
             // Obtener preguntas de OpenTDB
-            const apiUrl = `https://opentdb.com/api.php?amount=${this.config.trivia.questionsPerGame}&difficulty=${difficultyMap[difficulty]}&type=multiple`;
+            const questionType = isTrueFalse ? 'boolean' : 'multiple';
+            const apiUrl = `https://opentdb.com/api.php?amount=${this.config.trivia.questionsPerGame}&difficulty=${difficultyMap[difficulty]}&type=${questionType}`;
             
             const response = await fetch(apiUrl);
             const data = await response.json();
@@ -9477,21 +9495,64 @@ const userId = gameState.userId;
 
             // Traducir preguntas
             const questions = await Promise.all(data.results.map(async (q) => {
-                const translatedQuestion = await this.translateText(this.decodeHTML(q.question));
-                const translatedCorrect = await this.translateText(this.decodeHTML(q.correct_answer));
-                const translatedIncorrect = await Promise.all(
-                    q.incorrect_answers.map(ans => this.translateText(this.decodeHTML(ans)))
+                // Decodificar primero
+                const decodedQuestion = this.decodeHTML(q.question);
+                const decodedCorrect = this.decodeHTML(q.correct_answer);
+                const decodedIncorrect = q.incorrect_answers.map(ans => this.decodeHTML(ans));
+
+                // Para True/False, traducir directamente
+                if (isTrueFalse) {
+                    const translatedQuestion = await this.translateText(decodedQuestion);
+                    const translatedCorrect = decodedCorrect === 'True' ? 'Verdadero' : 'Falso';
+                    const translatedIncorrect = decodedIncorrect[0] === 'True' ? 'Verdadero' : 'Falso';
+                    const allAnswers = [translatedCorrect, translatedIncorrect].sort(() => Math.random() - 0.5);
+                    
+                    return {
+                        question: translatedQuestion,
+                        correct: translatedCorrect,
+                        answers: allAnswers,
+                        category: await this.translateText(this.decodeHTML(q.category)),
+                        isTrueFalse: true
+                    };
+                }
+
+                const allAnswersOriginal = [decodedCorrect, ...decodedIncorrect];
+                
+                // Intentar traducción con contexto (todo junto)
+                const contextTranslation = await this.translateTriviaQuestion(
+                    decodedQuestion, 
+                    allAnswersOriginal, 
+                    decodedCorrect
                 );
+                
+                if (contextTranslation) {
+                    // Traducción exitosa con contexto
+                    const translatedCorrect = contextTranslation.answers[allAnswersOriginal.indexOf(decodedCorrect)];
+                    
+                    return {
+                        question: contextTranslation.question,
+                        correct: translatedCorrect,
+                        answers: contextTranslation.answers.sort(() => Math.random() - 0.5), // Mezclar
+                        category: await this.translateText(this.decodeHTML(q.category))
+                    };
+                } else {
+                    // Fallback: traducción individual (método antiguo)
+                    console.log('⚠️ Usando traducción individual para esta pregunta');
+                    const translatedQuestion = await this.translateText(decodedQuestion);
+                    const translatedCorrect = await this.translateText(decodedCorrect);
+                    const translatedIncorrect = await Promise.all(
+                        decodedIncorrect.map(ans => this.translateText(ans))
+                    );
 
-                // Mezclar respuestas
-                const allAnswers = [translatedCorrect, ...translatedIncorrect].sort(() => Math.random() - 0.5);
+                    const allAnswers = [translatedCorrect, ...translatedIncorrect].sort(() => Math.random() - 0.5);
 
-                return {
-                    question: translatedQuestion,
-                    correct: translatedCorrect,
-                    answers: allAnswers,
-                    category: await this.translateText(this.decodeHTML(q.category))
-                };
+                    return {
+                        question: translatedQuestion,
+                        correct: translatedCorrect,
+                        answers: allAnswers,
+                        category: await this.translateText(this.decodeHTML(q.category))
+                    };
+                }
             }));
 
             // Marcar como activo
@@ -9513,11 +9574,14 @@ const userId = gameState.userId;
             let currentQuestion = 0;
             let correctAnswers = 0;
             let gameMessage = loadingMessage; // Reutilizar el mismo mensaje
+            let hintsRemaining = this.config.trivia.hintsPerGame;
+            let usedHintThisQuestion = false;
+            let questionResults = []; // Para guardar resultados de cada pregunta
 
             // Función para mostrar pregunta
             const showQuestion = async () => {
                 const q = questions[currentQuestion];
-                const letters = ['A', 'B', 'C', 'D'];
+                const letters = q.isTrueFalse ? ['V', 'F'] : ['A', 'B', 'C', 'D'];
 
                 // LOG: Mostrar pregunta y respuesta correcta
                 console.log(`\n📝 TRIVIA - Pregunta ${currentQuestion + 1}/${questions.length}`);
@@ -9526,17 +9590,17 @@ const userId = gameState.userId;
                 console.log(`📚 Categoría: ${q.category}`);
                 console.log(`📊 Opciones: ${q.answers.join(' | ')}\n`);
                 
-                // Crear texto de opciones
+                // Crear texto de opciones (con límite de caracteres)
                 let optionsText = '';
                 q.answers.forEach((answer, index) => {
-                    // Limitar respuestas a 100 caracteres para que no se vea muy largo
-                    const truncatedAnswer = answer;
-                    optionsText += `**${letters[index]})**  ${truncatedAnswer}\n`;
+                    const truncatedAnswer = answer.length > 100 ? answer.substring(0, 97) + '...' : answer;
+                    const displayLetter = q.isTrueFalse ? (answer === 'Verdadero' ? 'V' : 'F') : letters[index];
+                    optionsText += `**${displayLetter})**  ${truncatedAnswer}\n`;
                 });
 
                 const questionEmbed = new EmbedBuilder()
                     .setTitle(`🧠 Pregunta ${currentQuestion + 1}/${questions.length}`)
-                    .setDescription(`**${q.question}**`)
+                    .setDescription(`<@${userId}>, responde esta pregunta:\n\n**${q.question}**`)
                     .addFields(
                         { name: '📝 Opciones', value: optionsText, inline: false },
                         { name: '📊 Dificultad', value: difficulty.toUpperCase(), inline: true },
@@ -9547,14 +9611,44 @@ const userId = gameState.userId;
                     .setFooter({ text: `⏱️ Tienes ${this.config.trivia.timePerQuestion / 1000} segundos para responder` });
 
                 const buttons = new ActionRowBuilder();
-                letters.forEach((letter, index) => {
+            
+                if (q.isTrueFalse) {
+                    // Botones para True/False
                     buttons.addComponents(
                         new ButtonBuilder()
-                            .setCustomId(`trivia_${index}`)
-                            .setLabel(letter)
-                            .setStyle(ButtonStyle.Primary)
+                            .setCustomId('trivia_0')
+                            .setLabel(q.answers[0] === 'Verdadero' ? 'V - Verdadero' : 'F - Falso')
+                            .setStyle(q.answers[0] === 'Verdadero' ? ButtonStyle.Success : ButtonStyle.Danger),
+                        new ButtonBuilder()
+                            .setCustomId('trivia_1')
+                            .setLabel(q.answers[1] === 'Verdadero' ? 'V - Verdadero' : 'F - Falso')
+                            .setStyle(q.answers[1] === 'Verdadero' ? ButtonStyle.Success : ButtonStyle.Danger)
                     );
-                });
+                } else {
+                    // Botones para Multiple Choice
+                    letters.forEach((letter, index) => {
+                        buttons.addComponents(
+                            new ButtonBuilder()
+                                .setCustomId(`trivia_${index}`)
+                                .setLabel(letter)
+                                .setStyle(ButtonStyle.Primary)
+                        );
+                    });
+                }
+
+                // Botón de pista (solo si quedan pistas y NO es easy ni True/False)
+                const canUseHint = hintsRemaining > 0 && 
+                                difficulty !== 'easy' && 
+                                !q.isTrueFalse;
+                
+                if (canUseHint) {
+                    buttons.addComponents(
+                        new ButtonBuilder()
+                            .setCustomId('trivia_hint')
+                            .setLabel(`💡 Pista (${hintsRemaining})`)
+                            .setStyle(ButtonStyle.Secondary)
+                    );
+                }
 
                 await gameMessage.edit({ embeds: [questionEmbed], components: [buttons] });
 
@@ -9565,28 +9659,173 @@ const userId = gameState.userId;
 
                 // Esperar respuesta del usuario
                 const filter = (i) => i.user.id === userId && i.customId.startsWith('trivia_');
-                const collectorPromise = gameMessage.awaitMessageComponent({ 
-                    filter, 
-                    time: this.config.trivia.timePerQuestion 
-                }).catch(() => null);
+                
+                let answered = false;
+                while (!answered) {
+                    const collectorPromise = gameMessage.awaitMessageComponent({ 
+                        filter, 
+                        time: this.config.trivia.timePerQuestion + 5000 // +5 segundos de gracia
+                    }).catch((error) => {
+                        console.log('⚠️ Collector error:', error.message);
+                        return null;
+                    });
 
-                const result = await Promise.race([timeoutPromise, collectorPromise]);
+                    const result = await Promise.race([timeoutPromise, collectorPromise]);
 
-                if (result === 'timeout' || !result) {
-                    // Timeout - Mostrar respuesta correcta
-                    const timeoutEmbed = new EmbedBuilder()
-                        .setTitle('⏰ ¡Se acabó el tiempo!')
-                        .setDescription(
-                            `**Pregunta:** ${q.question}\n\n` +
-                            `❌ **No respondiste a tiempo**\n\n` +
-                            `✅ **Respuesta correcta:** ${q.correct}`
-                        )
-                        .setColor('#FF0000');
+                    if (result === 'timeout' || !result) {
+                        // Timeout - Mostrar respuesta correcta
+                        const timeoutEmbed = new EmbedBuilder()
+                            .setTitle('⏰ ¡Se acabó el tiempo!')
+                            .setDescription(
+                                `**Pregunta:** ${q.question}\n\n` +
+                                `❌ **No respondiste a tiempo**\n\n` +
+                                `✅ **Respuesta correcta:** ${q.correct}`
+                            )
+                            .setColor('#FF0000');
 
-                    await gameMessage.edit({ embeds: [timeoutEmbed], components: [] });
+                        await gameMessage.edit({ embeds: [timeoutEmbed], components: [] });
+                        await new Promise(resolve => setTimeout(resolve, 5000));
+
+                        // Guardar resultado
+                        questionResults.push({
+                            question: q.question.length > 100 ? q.question.substring(0, 97) + '...' : q.question,
+                            userAnswer: null,
+                            correctAnswer: q.correct,
+                            correct: false
+                        });
+
+                        try {
+                            await gameMessage.delete();
+                        } catch (error) {
+                            console.log('No se pudo borrar el mensaje:', error.message);
+                        }
+
+                        currentQuestion++;
+                        usedHintThisQuestion = false;
+                        
+                        if (currentQuestion < questions.length) {
+                            const loadingEmbed = new EmbedBuilder()
+                                .setDescription('⏳ Preparando siguiente pregunta...')
+                                .setColor('#9932CC');
+                            gameMessage = await message.channel.send({ embeds: [loadingEmbed] });
+                            await showQuestion();
+                        } else {
+                            await endGame();
+                        }
+                        return;
+                    }
+
+                    const interaction = result;
+
+                    // Si pidió una pista
+                    if (interaction.customId === 'trivia_hint') {
+                        // No permitir pistas en True/False
+                        if (q.isTrueFalse) {
+                            await interaction.reply({ 
+                                content: '❌ No puedes usar pistas en preguntas de Verdadero/Falso', 
+                                ephemeral: true 
+                            });
+                            continue;
+                        }
+                        
+                        // No permitir pistas en easy (por si acaso)
+                        if (difficulty === 'easy') {
+                            await interaction.reply({ 
+                                content: '❌ Las pistas no están disponibles en dificultad fácil', 
+                                ephemeral: true 
+                            });
+                            continue;
+                        }
+
+                        hintsRemaining--;
+                        usedHintThisQuestion = true;
+                        
+                        // Eliminar una respuesta incorrecta
+                        const wrongAnswers = q.answers.filter(ans => ans !== q.correct);
+                        const toRemove = wrongAnswers[Math.floor(Math.random() * wrongAnswers.length)];
+                        const remainingAnswers = q.answers.filter(ans => ans !== toRemove);
+                        
+                        // Recrear embed con menos opciones
+                        let newOptionsText = '';
+                        const newLetters = ['A', 'B', 'C'];
+                        remainingAnswers.forEach((answer, index) => {
+                            const truncatedAnswer = answer.length > 100 ? answer.substring(0, 97) + '...' : answer;
+                            newOptionsText += `**${newLetters[index]})**  ${truncatedAnswer}\n`;
+                        });
+
+                        const hintEmbed = new EmbedBuilder()
+                            .setTitle(`🧠 Pregunta ${currentQuestion + 1}/${questions.length}`)
+                            .setDescription(`<@${userId}>, responde esta pregunta:\n\n**${q.question}**`)
+                            .addFields(
+                                { name: '💡 Pista usada - Eliminé 1 respuesta incorrecta (quedan 3 opciones)', value: newOptionsText, inline: false },
+                                { name: '📊 Dificultad', value: difficulty.toUpperCase(), inline: true },
+                                { name: '📚 Categoría', value: q.category, inline: true },
+                                { name: '✅ Correctas', value: `${correctAnswers}`, inline: true }
+                            )
+                            .setColor('#FFA500')
+                            .setFooter({ text: `⚠️ Recompensa reducida al 40% | ${hintsRemaining} pistas restantes` });
+
+                        const newButtons = new ActionRowBuilder();
+                        newLetters.forEach((letter, index) => {
+                            newButtons.addComponents(
+                                new ButtonBuilder()
+                                    .setCustomId(`trivia_hint_${index}`)
+                                    .setLabel(letter)
+                                    .setStyle(ButtonStyle.Primary)
+                            );
+                        });
+
+                        await interaction.update({ embeds: [hintEmbed], components: [newButtons] });
+                        
+                        // Actualizar el array de respuestas y continuar esperando
+                        q.answers = remainingAnswers;
+                        continue; // Volver a esperar respuesta
+                    }
+
+                    // Si es una respuesta normal
+                    answered = true;
+                    const answerIndex = parseInt(interaction.customId.split('_')[interaction.customId.split('_').length - 1]);
+                    const selectedAnswer = q.answers[answerIndex];
+                    const isCorrect = selectedAnswer === q.correct;
+
+                    // Guardar resultado
+                    questionResults.push({
+                        question: q.question.length > 100 ? q.question.substring(0, 97) + '...' : q.question,
+                        userAnswer: selectedAnswer,
+                        correctAnswer: q.correct,
+                        correct: isCorrect
+                    });
+
+                    if (isCorrect) {
+                        correctAnswers++;
+                        
+                        const correctEmbed = new EmbedBuilder()
+                            .setTitle('✅ ¡Correcto!')
+                            .setDescription(
+                                `<@${userId}> respondió correctamente\n\n` +
+                                `**Pregunta:** ${q.question}\n\n` +
+                                `✅ **Respuesta:** ${selectedAnswer}\n\n` +
+                                `¡Bien hecho!${usedHintThisQuestion ? '\n\n⚠️ Usaste pista - Recompensa reducida' : ''}`
+                            )
+                            .setColor('#00FF00');
+
+                        await interaction.update({ embeds: [correctEmbed], components: [] });
+                    } else {
+                        const wrongEmbed = new EmbedBuilder()
+                            .setTitle('❌ Incorrecto')
+                            .setDescription(
+                                `<@${userId}> respondió incorrectamente\n\n` +
+                                `**Pregunta:** ${q.question}\n\n` +
+                                `❌ **Tu respuesta:** ${selectedAnswer}\n` +
+                                `✅ **Respuesta correcta:** ${q.correct}`
+                            )
+                            .setColor('#FF0000');
+
+                        await interaction.update({ embeds: [wrongEmbed], components: [] });
+                    }
+
                     await new Promise(resolve => setTimeout(resolve, 5000));
 
-                    // Borrar el mensaje anterior
                     try {
                         await gameMessage.delete();
                     } catch (error) {
@@ -9594,6 +9833,8 @@ const userId = gameState.userId;
                     }
 
                     currentQuestion++;
+                    usedHintThisQuestion = false;
+                    
                     if (currentQuestion < questions.length) {
                         const loadingEmbed = new EmbedBuilder()
                             .setDescription('⏳ Preparando siguiente pregunta...')
@@ -9603,61 +9844,8 @@ const userId = gameState.userId;
                     } else {
                         await endGame();
                     }
-                    return;
                 }
-
-                // Usuario respondió
-                const interaction = result;
-                const answerIndex = parseInt(interaction.customId.split('_')[1]);
-                const selectedAnswer = q.answers[answerIndex];
-                const isCorrect = selectedAnswer === q.correct;
-
-                if (isCorrect) {
-                    correctAnswers++;
-                    
-                    const correctEmbed = new EmbedBuilder()
-                        .setTitle('✅ ¡Correcto!')
-                        .setDescription(
-                            `**Pregunta:** ${q.question}\n\n` +
-                            `✅ **Tu respuesta:** ${selectedAnswer}\n\n` +
-                            `¡Bien hecho!`
-                        )
-                        .setColor('#00FF00');
-
-                    await interaction.update({ embeds: [correctEmbed], components: [] });
-                } else {
-                    const wrongEmbed = new EmbedBuilder()
-                        .setTitle('❌ Incorrecto')
-                        .setDescription(
-                            `**Pregunta:** ${q.question}\n\n` +
-                            `❌ **Tu respuesta:** ${selectedAnswer}\n` +
-                            `✅ **Respuesta correcta:** ${q.correct}`
-                        )
-                        .setColor('#FF0000');
-
-                    await interaction.update({ embeds: [wrongEmbed], components: [] });
-                }
-
-                await new Promise(resolve => setTimeout(resolve, 5000));
-
-                // Borrar el mensaje anterior
-                try {
-                    await gameMessage.delete();
-                } catch (error) {
-                    console.log('No se pudo borrar el mensaje:', error.message);
-                }
-
-                currentQuestion++;
-                if (currentQuestion < questions.length) {
-                        const loadingEmbed = new EmbedBuilder()
-                            .setDescription('⏳ Preparando siguiente pregunta...')
-                            .setColor('#9932CC');
-                        gameMessage = await message.channel.send({ embeds: [loadingEmbed] });
-                    await showQuestion();
-                } else {
-                    await endGame();
-                }
-            };
+            }
 
             // Función para finalizar el juego
             const endGame = async () => {
@@ -9674,8 +9862,11 @@ const userId = gameState.userId;
                 else if (correctAnswers === 3) reward = this.config.trivia.rewards.decent;
 
                 const diffMultiplier = this.config.trivia.difficulties[difficulty].multiplier;
-                const finalMoney = Math.floor(reward.money * diffMultiplier);
-                const finalXP = Math.floor(reward.xp * diffMultiplier);
+                const hintsUsed = this.config.trivia.hintsPerGame - hintsRemaining;
+                const hintMultiplier = hintsUsed > 0 ? this.config.trivia.hintPenalty : 1;
+                
+                const finalMoney = Math.floor(reward.money * diffMultiplier * hintMultiplier);
+                const finalXP = Math.floor(reward.xp * diffMultiplier * hintMultiplier);
 
                 // Otorgar recompensas
                 await this.economy.addMoney(userId, finalMoney);
@@ -9688,20 +9879,71 @@ const userId = gameState.userId;
                     await this.achievements.updateStats(userId, 'game_won');
                     await this.achievements.updateStats(userId, 'bet_win', finalMoney);
                 }        
+            
+                // Crear resumen de preguntas
+                let questionsReview = '';
+                questionResults.forEach((result, index) => {
+                    const emoji = result.correct ? '✅' : '❌';
+                    questionsReview += `${emoji} **Pregunta ${index + 1}:** ${result.question}\n`;
+                    questionsReview += `   **Tu respuesta:** ${result.userAnswer || 'Sin respuesta'}\n`;
+                    if (!result.correct) {
+                        questionsReview += `   **Correcta:** ${result.correctAnswer}\n`;
+                    }
+                    questionsReview += '\n';
+                });
 
+                const hintsUsedd = this.config.trivia.hintsPerGame - hintsRemaining;
+                
                 const resultEmbed = new EmbedBuilder()
                     .setTitle('🎯 ¡Trivia Completada!')
-                    .setDescription(`Respondiste **${correctAnswers}/${questions.length}** preguntas correctamente`)
-                    .setColor(correctAnswers >= 3 ? '#00FF00' : '#FF0000')
+                    .setDescription(
+                        `Respondiste **${correctAnswers}/${questions.length}** preguntas correctamente\n` +
+                        `${hintsUsedd > 0 ? `💡 Pistas usadas: ${hintsUsedd} (Recompensa -50%)\n` : ''}`
+                    )
                     .addFields(
                         { name: '💰 Dinero ganado', value: `${finalMoney} π-b$`, inline: true },
                         { name: '⭐ XP ganada', value: `${finalXP} XP`, inline: true },
                         { name: '📊 Dificultad', value: difficulty.toUpperCase(), inline: true }
                     )
-                    .setFooter({ text: 'Usa >trivia [easy/medium/hard] para jugar de nuevo' });
+                    .setColor(correctAnswers >= 3 ? '#00FF00' : '#FF0000')
+                    .setFooter({ text: 'Usa >trivia [easy/medium/hard] [multiple/tof] para jugar de nuevo' });
 
-                // Enviar mensaje final nuevo (no editar)
-                await message.channel.send({ embeds: [resultEmbed] });
+                // Si el resumen es muy largo, dividirlo en múltiples embeds
+                if (questionsReview.length > 1024) {
+                    // Dividir en chunks de ~900 caracteres
+                    const chunks = [];
+                    let currentChunk = '';
+                    const lines = questionsReview.split('\n\n');
+                    
+                    for (const line of lines) {
+                        if ((currentChunk + line).length > 900) {
+                            chunks.push(currentChunk);
+                            currentChunk = line + '\n\n';
+                        } else {
+                            currentChunk += line + '\n\n';
+                        }
+                    }
+                    if (currentChunk) chunks.push(currentChunk);
+                    
+                    // Primer embed con stats
+                    await message.channel.send({ embeds: [resultEmbed] });
+                    
+                    // Embeds adicionales con preguntas
+                    for (let i = 0; i < chunks.length; i++) {
+                        const reviewEmbed = new EmbedBuilder()
+                            .setTitle(`📝 Resumen de Preguntas (${i + 1}/${chunks.length})`)
+                            .setDescription(chunks[i])
+                            .setColor('#9932CC');
+                        await message.channel.send({ embeds: [reviewEmbed] });
+                    }
+                } else {
+                    resultEmbed.addFields({
+                        name: '📝 Resumen de Preguntas',
+                        value: questionsReview,
+                        inline: false
+                    });
+                    await message.channel.send({ embeds: [resultEmbed] });
+                }
             };
 
             // Iniciar el juego
@@ -9711,6 +9953,92 @@ const userId = gameState.userId;
             this.activeGames.delete(`trivia_${userId}`);
             console.error('Error en trivia:', error);
             await message.reply('❌ Ocurrió un error al cargar la trivia. Intenta de nuevo.');
+        }
+    }
+
+    /**
+     * Traducir pregunta de trivia con contexto
+     */
+    async translateTriviaQuestion(question, answers, correctAnswer) {
+        try {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 10000);
+            
+            const prompt = `Eres un traductor experto de trivias. Traduce la siguiente pregunta y respuestas al español de forma natural y clara.
+
+    PREGUNTA: ${question}
+
+    RESPUESTAS:
+    1. ${answers[0]} ${answers[0] === correctAnswer ? '(CORRECTA)' : ''}
+    2. ${answers[1]} ${answers[1] === correctAnswer ? '(CORRECTA)' : ''}
+    3. ${answers[2]} ${answers[2] === correctAnswer ? '(CORRECTA)' : ''}
+    4. ${answers[3]} ${answers[3] === correctAnswer ? '(CORRECTA)' : ''}
+
+    Responde en este formato exacto (sin agregar texto extra):
+    PREGUNTA: [traducción de la pregunta]
+    R1: [traducción respuesta 1]
+    R2: [traducción respuesta 2]
+    R3: [traducción respuesta 3]
+    R4: [traducción respuesta 4]`;
+            
+            const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+                method: 'POST',
+                signal: controller.signal,
+                headers: {
+                    'Authorization': `Bearer ${process.env.GROQ_API_KEY}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    model: 'llama-3.3-70b-versatile', // Modelo más potente para mejor contexto
+                    messages: [
+                        { 
+                            role: 'system', 
+                            content: 'Eres un traductor profesional especializado en trivias y preguntas de conocimiento general. Traduces de forma natural y clara, manteniendo el sentido original.' 
+                        },
+                        { 
+                            role: 'user', 
+                            content: prompt 
+                        }
+                    ],
+                    temperature: 0.2, // Muy baja para consistencia
+                    max_tokens: 800,
+                    stream: false
+                })
+            });
+            
+            clearTimeout(timeoutId);
+            
+            if (response.ok) {
+                const data = await response.json();
+                const content = data.choices[0].message.content.trim();
+                
+                // Parsear la respuesta
+                const lines = content.split('\n').filter(line => line.trim());
+                const translatedQuestion = lines.find(l => l.startsWith('PREGUNTA:'))?.replace('PREGUNTA:', '').trim();
+                const r1 = lines.find(l => l.startsWith('R1:'))?.replace('R1:', '').trim();
+                const r2 = lines.find(l => l.startsWith('R2:'))?.replace('R2:', '').trim();
+                const r3 = lines.find(l => l.startsWith('R3:'))?.replace('R3:', '').trim();
+                const r4 = lines.find(l => l.startsWith('R4:'))?.replace('R4:', '').trim();
+                
+                if (translatedQuestion && r1 && r2 && r3 && r4) {
+                    return {
+                        question: translatedQuestion,
+                        answers: [r1, r2, r3, r4]
+                    };
+                }
+                
+                // Si el parsing falla, usar método original
+                console.log('⚠️ Parsing de trivia falló, usando método individual');
+                return null;
+                
+            } else {
+                console.error('⚠️ Error en traducción de trivia con Groq');
+                return null;
+            }
+            
+        } catch (error) {
+            console.error('❌ Error traduciendo trivia:', error.message);
+            return null;
         }
     }
 
