@@ -191,7 +191,7 @@ this.cooldownCache = new Map();
                 cooldown: 60000,       // 2 minutos
                 timePerQuestion: 15000, // 20 segundos por pregunta
                 questionsPerGame: 5,    // 5 preguntas por partida
-                hintsPerGame: 2,
+                hintsPerGame: 3,
                 hintPenalty: 0.4,
                 hintsOnlyHard: true,
                 rewards: {
@@ -9411,7 +9411,7 @@ const userId = gameState.userId;
                     },
                     { 
                         name: '💡 Pistas', 
-                        value: '**2 pistas** por partida\n**Solo en:** Medium y Hard\n**Penalización:** -60% recompensa\n**Efecto:** Elimina 1 respuesta incorrecta', 
+                        value: '**2 pistas** por partida\n**Solo en:** Multiple - Medium y Hard\n**Penalización:** -60% recompensa\n**Efecto:** Elimina 1 respuesta incorrecta', 
                         inline: false 
                     },
                     { 
@@ -9559,9 +9559,15 @@ const userId = gameState.userId;
             this.activeGames.set(`trivia_${userId}`, true);
 
             // Actualizar mensaje: Iniciando juego
+            const modeText = isTrueFalse ? 'Verdadero o Falso' : 'Opción Múltiple';
             const startEmbed = new EmbedBuilder()
                 .setTitle('🧠 Iniciando Trivia...')
-                .setDescription(`**Dificultad:** ${difficulty.toUpperCase()}\n**Preguntas:** ${questions.length}\n**Tiempo:** ${this.config.trivia.timePerQuestion / 1000} segundos por pregunta`)
+                .setDescription(
+                    `**Modo:** ${modeText}\n` +
+                    `**Dificultad:** ${difficulty.toUpperCase()}\n` +
+                    `**Preguntas:** ${questions.length}\n` +
+                    `**Tiempo:** ${this.config.trivia.timePerQuestion / 1000} segundos por pregunta`
+                )
                 .setColor('#9932CC')
                 .setFooter({ text: 'El juego comenzará en 3 segundos...' });
 
@@ -9592,11 +9598,16 @@ const userId = gameState.userId;
                 
                 // Crear texto de opciones (con límite de caracteres)
                 let optionsText = '';
-                q.answers.forEach((answer, index) => {
-                    const truncatedAnswer = answer.length > 100 ? answer.substring(0, 97) + '...' : answer;
-                    const displayLetter = q.isTrueFalse ? (answer === 'Verdadero' ? 'V' : 'F') : letters[index];
-                    optionsText += `**${displayLetter})**  ${truncatedAnswer}\n`;
-                });
+                if (q.isTrueFalse) {
+                    // Para True/False: sin letras, solo las opciones
+                    optionsText = q.answers.map(ans => `${ans}`).join('  •  ');
+                } else {
+                    // Para Multiple Choice: con letras
+                    q.answers.forEach((answer, index) => {
+                        const truncatedAnswer = answer.length > 100 ? answer.substring(0, 97) + '...' : answer;
+                        optionsText += `**${letters[index]})**  ${truncatedAnswer}\n`;
+                    });
+                }
 
                 const questionEmbed = new EmbedBuilder()
                     .setTitle(`🧠 Pregunta ${currentQuestion + 1}/${questions.length}`)
@@ -9893,17 +9904,19 @@ const userId = gameState.userId;
                 });
 
                 const hintsUsedd = this.config.trivia.hintsPerGame - hintsRemaining;
+                const modeText = isTrueFalse ? 'Verdadero/Falso' : 'Opción Múltiple';
                 
                 const resultEmbed = new EmbedBuilder()
                     .setTitle('🎯 ¡Trivia Completada!')
                     .setDescription(
                         `Respondiste **${correctAnswers}/${questions.length}** preguntas correctamente\n` +
-                        `${hintsUsedd > 0 ? `💡 Pistas usadas: ${hintsUsedd} (Recompensa -50%)\n` : ''}`
+                        `${hintsUsed > 0 ? `💡 Pistas usadas: ${hintsUsed} (Recompensa -60%)\n` : ''}`
                     )
                     .addFields(
                         { name: '💰 Dinero ganado', value: `${finalMoney} π-b$`, inline: true },
                         { name: '⭐ XP ganada', value: `${finalXP} XP`, inline: true },
-                        { name: '📊 Dificultad', value: difficulty.toUpperCase(), inline: true }
+                        { name: '📊 Dificultad', value: difficulty.toUpperCase(), inline: true },
+                        { name: '🎮 Modo', value: modeText, inline: true }
                     )
                     .setColor(correctAnswers >= 3 ? '#00FF00' : '#FF0000')
                     .setFooter({ text: 'Usa >trivia [easy/medium/hard] [multiple/tof] para jugar de nuevo' });

@@ -135,26 +135,33 @@ class NSFWSystem {
     createNSFWEmbed(item, title = '🔞 NSFW') {
         const embed = new EmbedBuilder()
             .setTitle(title)
-            .setURL(item.url) // ← Cambiar de setImage a setURL para videos
-            .setDescription(`**[Clic aquí para ver el contenido](${item.url})**`) // ← Agregar link clickeable
             .setColor('#FF69B4')
-            .addFields(
-                { name: '📂 Nombre', value: item.filename, inline: true },
-                { name: '🏷️ Categoría', value: item.category, inline: true },
-                { name: '🎨 Artista', value: item.artist, inline: true },
-                { name: '🌐 Fuente', value: item.source, inline: true }
-            )
             .setFooter({ text: `Proveedor: ${item.source}` })
             .setTimestamp();
-        
-        // Intentar poner imagen/video (puede fallar con algunos formatos)
-        try {
-            if (item.url.endsWith('.jpg') || item.url.endsWith('.png') || item.url.endsWith('.gif')) {
-                embed.setImage(item.url);
-            }
-        } catch (e) {
-            console.log('[NSFW] No se pudo setear imagen:', e.message);
+
+        // Detectar tipo de contenido
+        const isImage = item.url.match(/\.(jpg|jpeg|png|gif|webp)$/i);
+        const isVideo = item.url.match(/\.(mp4|webm)$/i);
+
+        if (isImage) {
+            // Para imágenes y GIFs, usar setImage
+            embed.setImage(item.url);
+        } else if (isVideo) {
+            // Para videos, incrustar en el mismo embed
+            embed.setImage(item.url); // Discord intentará mostrar el video
+            embed.setDescription(`🎬 **Video:** [Abrir en navegador](${item.url})\n*Si no se reproduce, usa el link*`);
+        } else {
+            // Para otros formatos
+            embed.setDescription(`📎 **[Click para ver contenido](${item.url})**`);
         }
+
+        // Campos de información
+        embed.addFields(
+            { name: '📂 Nombre', value: item.filename, inline: true },
+            { name: '🏷️ Categoría', value: item.category, inline: true },
+            { name: '🎨 Artista', value: item.artist, inline: true },
+            { name: '🌐 Fuente', value: item.source, inline: true }
+        );
 
         // Si tiene ID (de Rule34)
         if (item.id) {
@@ -166,7 +173,7 @@ class NSFWSystem {
             embed.addFields({ name: '⭐ Score', value: item.score.toString(), inline: true });
         }
         
-        // Si tiene tags (de Rule34) - mostrar solo los primeros
+        // Si tiene tags (de Rule34)
         if (item.tags) {
             const tagsArray = item.tags.split(' ').slice(0, 10);
             const tagsText = tagsArray.join(', ');
@@ -189,15 +196,39 @@ class NSFWSystem {
             return message.reply('🔞 Este comando solo funciona en canales NSFW.');
         }
 
-        const tags = args[0] || 'hentai';
-        const count = Math.min(parseInt(args[1]) || 1, 10);
+        // ← NUEVO: Procesar argumentos correctamente
+        let tags = 'hentai';
+        let count = 1;
+
+        if (args.length > 0) {
+            // El último argumento puede ser un número
+            const lastArg = args[args.length - 1];
+            
+            if (!isNaN(lastArg) && parseInt(lastArg) > 0) {
+                // Último arg es número -> es la cantidad
+                count = Math.min(parseInt(lastArg), 10);
+                tags = args.slice(0, -1).join(' '); // Todo lo demás son tags
+            } else {
+                // No hay número -> todos son tags
+                tags = args.join(' ');
+                count = 1;
+            }
+        }
+
+        // Si tags quedó vacío, usar default
+        if (!tags || tags.trim() === '') {
+            tags = 'hentai';
+        }
+
+        console.log('[NSFW DEBUG] Tags finales:', tags);
+        console.log('[NSFW DEBUG] Cantidad:', count);
 
         await message.channel.sendTyping();
 
         const results = await this.getRule34(tags, count);
 
         if (results.length === 0) {
-            return message.reply(`❌ No se encontraron imágenes para: \`${tags}\`\n**Puedes usar cualquier tag de Rule34.xxx**\n**Ejemplos:** ${this.rule34Examples.slice(0, 5).join(', ')}`);
+            return message.reply(`❌ No se encontraron imágenes para: \`${tags}\`\n**Intenta con otros tags**`);
         }
 
         for (const item of results) {
@@ -216,15 +247,38 @@ class NSFWSystem {
             return message.reply('🔞 Este comando solo funciona en canales NSFW.');
         }
 
-        const category = args[0] || 'hentai';
-        const count = Math.min(parseInt(args[1]) || 1, 10);
+        // Procesar argumentos correctamente
+        let tags = 'hentai';
+        let count = 1;
+
+        if (args.length > 0) {
+            const lastArg = args[args.length - 1];
+            
+            if (!isNaN(lastArg) && parseInt(lastArg) > 0) {
+                // Último arg es número -> es la cantidad
+                count = Math.min(parseInt(lastArg), 10);
+                tags = args.slice(0, -1).join(' '); // Todo lo demás son tags
+            } else {
+                // No hay número -> todos son tags
+                tags = args.join(' ');
+                count = 1;
+            }
+        }
+
+        // Si tags quedó vacío, usar default
+        if (!tags || tags.trim() === '') {
+            tags = 'hentai';
+        }
+
+        console.log('[NSFW DEBUG] Tags finales:', tags);
+        console.log('[NSFW DEBUG] Cantidad:', count);
 
         await message.channel.sendTyping();
 
-        const results = await this.getRule34(category + ' -ai_generated', count);
+        const results = await this.getRule34(tags + ' -ai_generated', count);
 
         if (results.length === 0) {
-            return message.reply(`❌ No se encontraron imágenes para: \`${category}\``);
+            return message.reply(`❌ No se encontraron imágenes para: \`${tags}\`\n**Intenta con otros tags**`);
         }
 
         for (const item of results) {
@@ -242,16 +296,42 @@ class NSFWSystem {
             return message.reply('🔞 Este comando solo funciona en canales NSFW.');
         }
 
-        const category = args[0] || 'hentai';
-        const count = Math.min(parseInt(args[1]) || 1, 10);
+        // Procesar argumentos correctamente
+        let tags = 'hentai';
+        let count = 1;
+
+        if (args.length > 0) {
+            const lastArg = args[args.length - 1];
+            
+            if (!isNaN(lastArg) && parseInt(lastArg) > 0) {
+                // Último arg es número -> es la cantidad
+                count = Math.min(parseInt(lastArg), 10);
+                tags = args.slice(0, -1).join(' '); // Todo lo demás son tags
+            } else {
+                // No hay número -> todos son tags
+                tags = args.join(' ');
+                count = 1;
+            }
+        }
+
+        // Si tags quedó vacío, usar default
+        if (!tags || tags.trim() === '') {
+            tags = 'hentai';
+        }
+
+        console.log('[GIFS DEBUG] Tags finales:', tags);
+        console.log('[GIFS DEBUG] Cantidad:', count);
 
         await message.channel.sendTyping();
 
-        const rule34Results = await this.getRule34(category + ' animated -ai_generated', count * 3);
-        const gifs = this.filterAnimated(rule34Results);
+        // Buscar con "animated" para obtener GIFs
+        const rule34Results = await this.getRule34(tags + ' animated -ai_generated', count * 3);
+        
+        // Filtrar SOLO GIFs (no videos)
+        const gifs = rule34Results.filter(item => item.url.endsWith('.gif'));
 
         if (gifs.length === 0) {
-            return message.reply(`❌ No se encontraron GIFs para: \`${category}\``);
+            return message.reply(`❌ No se encontraron GIFs para: \`${tags}\`\n💡 Intenta con: hentai, pokemon, anime`);
         }
 
         const selected = gifs.slice(0, count);
@@ -271,18 +351,44 @@ class NSFWSystem {
             return message.reply('🔞 Este comando solo funciona en canales NSFW.');
         }
 
-        const category = args[0] || 'hentai';
-        const count = Math.min(parseInt(args[1]) || 1, 10);
+        // Procesar argumentos correctamente
+        let tags = 'hentai';
+        let count = 1;
+
+        if (args.length > 0) {
+            const lastArg = args[args.length - 1];
+            
+            if (!isNaN(lastArg) && parseInt(lastArg) > 0) {
+                // Último arg es número -> es la cantidad
+                count = Math.min(parseInt(lastArg), 10);
+                tags = args.slice(0, -1).join(' '); // Todo lo demás son tags
+            } else {
+                // No hay número -> todos son tags
+                tags = args.join(' ');
+                count = 1;
+            }
+        }
+
+        // Si tags quedó vacío, usar default
+        if (!tags || tags.trim() === '') {
+            tags = 'hentai';
+        }
+
+        console.log('[VIDEOS DEBUG] Tags finales:', tags);
+        console.log('[VIDEOS DEBUG] Cantidad:', count);
 
         await message.channel.sendTyping();
 
-        const rule34Results = await this.getRule34(category + ' video animated -ai_generated', count * 5);
+        // Buscar videos específicamente
+        const rule34Results = await this.getRule34(tags + ' video animated -ai_generated', count * 5);
+        
+        // Filtrar SOLO videos
         const videos = rule34Results.filter(item => 
             item.url.endsWith('.mp4') || item.url.endsWith('.webm')
         );
 
         if (videos.length === 0) {
-            return message.reply(`❌ No se encontraron videos para: \`${category}\``);
+            return message.reply(`❌ No se encontraron videos para: \`${tags}\`\n💡 Los videos son raros, intenta: hentai, sex, pokemon`);
         }
 
         const selected = videos.slice(0, count);
@@ -303,7 +409,6 @@ class NSFWSystem {
             return message.reply('🔞 Este comando solo funciona en canales NSFW.');
         }
 
-        // Obtener usuario mencionado o reply
         let targetUser = null;
         
         if (message.mentions.members.size > 0) {
@@ -319,32 +424,26 @@ class NSFWSystem {
 
         await message.channel.sendTyping();
 
-        // Obtener GIFs animados
-        const rule34Results = await this.getRule34('sex animated -ai_generated', 20);
-        const gifs = this.filterAnimated(rule34Results);
+        // ← CAMBIAR: Buscar SOLO GIFs desde el principio con límite bajo
+        const rule34Results = await this.getRule34('sex animated -ai_generated', 5);
+        
+        // Filtrar SOLO GIFs (no videos)
+        const gifs = rule34Results.filter(item => item.url.endsWith('.gif'));
 
-        let selectedGif = null;
-
-        if (gifs.length > 0) {
-            selectedGif = gifs[Math.floor(Math.random() * gifs.length)];
-        } else {
-            // Fallback sin filtro de GIF
-            if (rule34Results.length > 0) {
-                selectedGif = rule34Results[Math.floor(Math.random() * rule34Results.length)];
-            }
+        if (gifs.length === 0) {
+            return message.reply('❌ No se encontraron GIFs. Intenta de nuevo.');
         }
 
-        if (!selectedGif) {
-            return message.reply('❌ No se pudo obtener contenido. Intenta de nuevo.');
-        }
+        const selectedGif = gifs[Math.floor(Math.random() * gifs.length)];
 
-        const person1 = message.author.displayName;
-        const person2 = targetUser.displayName;
+        // ← ARREGLAR: El autor del comando se folla al mencionado
+        const person1 = message.author.displayName; // Quien ejecuta el comando
+        const person2 = targetUser.displayName;     // Quien fue mencionado
 
         const embed = new EmbedBuilder()
             .setTitle('🔞 FUCK')
             .setDescription(`💕 **${person1}** se folló a **${person2}** 💕`)
-            .setURL(selectedGif.url)
+            .setImage(selectedGif.url) // GIF siempre se puede mostrar con setImage
             .setColor('#FF0069')
             .addFields(
                 { name: '📂 Nombre', value: selectedGif.filename, inline: true },
@@ -352,15 +451,6 @@ class NSFWSystem {
             )
             .setFooter({ text: 'Disfruta responsablemente 🔞' })
             .setTimestamp();
-        
-        // Intentar setear imagen si es .gif o .jpg
-        try {
-            if (selectedGif.url.endsWith('.gif') || selectedGif.url.endsWith('.jpg') || selectedGif.url.endsWith('.png')) {
-                embed.setImage(selectedGif.url);
-            }
-        } catch (e) {
-            console.log('[NSFW] No se pudo setear imagen');
-        }
 
         await message.reply({ embeds: [embed] });
     }
@@ -371,7 +461,6 @@ class NSFWSystem {
             return message.reply('🔞 Este comando solo funciona en canales NSFW.');
         }
 
-        // Obtener usuario mencionado o reply
         let targetUser = null;
         
         if (message.mentions.members.size > 0) {
@@ -385,41 +474,51 @@ class NSFWSystem {
             return message.reply('❌ Debes mencionar a alguien o responder a su mensaje.\n**Ejemplo:** `!fd @usuario`');
         }
 
-        const nickname = targetUser.displayName;
-        const gender = this.detectGender(nickname);
+        // ← CAMBIAR: Detectar género de AMBOS usuarios
+        const authorNickname = message.author.displayName;
+        const targetNickname = targetUser.displayName;
+        
+        const authorGender = this.detectGender(authorNickname);
+        const targetGender = this.detectGender(targetNickname);
+
+        console.log('[FD DEBUG] Autor:', authorNickname, '- Género:', authorGender);
+        console.log('[FD DEBUG] Target:', targetNickname, '- Género:', targetGender);
 
         await message.channel.sendTyping();
 
         let category = 'sex';
         let genderText = '👫 Hetero';
 
-        if (gender === 'male') {
+        // Determinar categoría según combinación de géneros
+        if (authorGender === 'male' && targetGender === 'male') {
             category = 'yaoi';
-            genderText = '👨‍❤️‍👨 Yaoi';
-        } else if (gender === 'female') {
+            genderText = '👨‍❤️‍👨 Yaoi (Pibe x Pibe)';
+        } else if (authorGender === 'female' && targetGender === 'female') {
             category = 'yuri';
-            genderText = '👩‍❤️‍👩 Yuri';
-        }
-
-        // Buscar GIFs
-        const rule34Results = await this.getRule34(category + ' animated -ai_generated', 20);
-        const gifs = this.filterAnimated(rule34Results);
-
-        let selectedGif = null;
-
-        if (gifs.length > 0) {
-            selectedGif = gifs[Math.floor(Math.random() * gifs.length)];
+            genderText = '👩‍❤️‍👩 Yuri (Piba x Piba)';
+        } else if (
+            (authorGender === 'male' && targetGender === 'female') ||
+            (authorGender === 'female' && targetGender === 'male')
+        ) {
+            category = 'sex';
+            genderText = '👫 Hetero (Pibe x Piba)';
         } else {
-            // Fallback
-            const fallback = await this.getRule34(category + ' -ai_generated', 10);
-            if (fallback.length > 0) {
-                selectedGif = fallback[0];
-            }
+            // Si no detecta ninguno, asumir hetero
+            category = 'sex';
+            genderText = '👫 Hetero (géneros no detectados)';
         }
 
-        if (!selectedGif) {
-            return message.reply('❌ No se pudo obtener contenido. Intenta de nuevo.');
+        console.log('[FD DEBUG] Categoría seleccionada:', category);
+
+        // Buscar SOLO GIFs
+        const rule34Results = await this.getRule34(category + ' animated -ai_generated', 5);
+        const gifs = rule34Results.filter(item => item.url.endsWith('.gif'));
+
+        if (gifs.length === 0) {
+            return message.reply('❌ No se encontraron GIFs para esta categoría. Intenta de nuevo.');
         }
+
+        const selectedGif = gifs[Math.floor(Math.random() * gifs.length)];
 
         const person1 = message.author.displayName;
         const person2 = targetUser.displayName;
@@ -427,28 +526,20 @@ class NSFWSystem {
         const embed = new EmbedBuilder()
             .setTitle('🔞 FuckDetect')
             .setDescription(
-                `**Usuario detectado:** ${targetUser.displayName}\n` +
-                `**Género:** ${genderText}\n\n` +
+                `**Autor:** ${person1} (${authorGender || 'desconocido'})\n` +
+                `**Target:** ${person2} (${targetGender || 'desconocido'})\n` +
+                `**Categoría:** ${genderText}\n\n` +
                 `💕 **${person1}** se folló a **${person2}** 💕`
             )
-            .setURL(selectedGif.url)
+            .setImage(selectedGif.url)
             .setColor('#FF1493')
             .addFields(
                 { name: '📂 Nombre', value: selectedGif.filename, inline: true },
                 { name: '🏷️ Categoría', value: selectedGif.category, inline: true },
                 { name: '🌐 Fuente', value: selectedGif.source, inline: true }
             )
-            .setFooter({ text: `Basado en el apodo: ${nickname}` })
+            .setFooter({ text: `Basado en apodos: ${authorNickname} + ${targetNickname}` })
             .setTimestamp();
-        
-        // Intentar setear imagen
-        try {
-            if (selectedGif.url.endsWith('.gif') || selectedGif.url.endsWith('.jpg') || selectedGif.url.endsWith('.png')) {
-                embed.setImage(selectedGif.url);
-            }
-        } catch (e) {
-            console.log('[NSFW] No se pudo setear imagen');
-        }
 
         await message.reply({ embeds: [embed] });
     }

@@ -1386,7 +1386,14 @@ class AchievementsSystem {
         
         let rarityText = '';
         let completedCount = 0;
+        let totalInRarity = achievementsOfRarity.length;
         
+        // ← AGREGAR: Contar completados ANTES del loop
+        for (const [id, achievement] of achievementsOfRarity) {
+            const isCompleted = user.achievements[id] === 'completed';
+            if (isCompleted) completedCount++;
+        }
+
         for (const [id, achievement] of achievementsOfRarity) {
             const isCompleted = user.achievements[id] === 'completed';
             
@@ -1395,7 +1402,7 @@ class AchievementsSystem {
             
             const progress = this.calculateProgress(user, achievement);
             
-            const status = isCompleted ? '✅' : '⏳';
+            const status = '⏳';
             const progressBar = this.createProgressBar(progress.current, progress.required, 10);
             const percentage = Math.min(100, progress.percentage).toFixed(0);
             
@@ -1404,7 +1411,7 @@ class AchievementsSystem {
         }
         
         embed.addFields({
-            name: `${this.rarityEmojis[currentRarity]} Logros ${currentRarity.toUpperCase()} (${completedCount}/${achievementsOfRarity.length})`,
+            name: `${this.rarityEmojis[currentRarity]} Logros ${currentRarity.toUpperCase()} (${completedCount}/${totalInRarity})`,
             value: rarityText || 'No hay logros de esta rareza',
             inline: false
         });
