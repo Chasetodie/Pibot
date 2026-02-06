@@ -345,7 +345,7 @@ class AchievementsSystem {
                 name: '🎓 Genio de la Trivia',
                 description: 'Completa 10 trivias perfectas',
                 requirement: { type: 'trivia_perfect', value: 10 },
-                reward: { money: 5000, xp: 1000 },
+                reward: { money: 5000, xp: 500 },
                 rarity: 'epic',
                 emoji: '🎓'
             },
@@ -359,9 +359,9 @@ class AchievementsSystem {
             },
             'trivia_tof_master': {
                 name: '✅ Maestro del Verdadero/Falso',
-                description: 'Completa 20 trivias perfectas en modo True/False (10/10)',
-                requirement: { type: 'trivia_tof_perfect', value: 20 },
-                reward: { money: 10000, xp: 2000 },
+                description: 'Completa 25 trivias perfectas en modo True/False (10/10)',
+                requirement: { type: 'trivia_tof_perfect', value: 25 },
+                reward: { money: 10000, xp: 1000 },
                 rarity: 'epic',
                 emoji: '✅'
             },
