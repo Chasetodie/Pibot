@@ -25,10 +25,11 @@ class MinigamesSystem {
         this.client = client;
         this.events = null;
         this.activeGames = new Map(); // Para manejar juegos en progreso
-this.cooldownCache = new Map();
+        this.cooldownCache = new Map();
         this.minigamesCache = new Map();
         this.MAX_CACHE_SIZE = 500;
         this.cacheTimeout = 10 * 60 * 1000;
+        this.recentTriviaQuestions = new Map(); // ← AGREGAR ESTO
 
         this.potConfig = {
             minMoney: 1000,
@@ -9383,6 +9384,18 @@ const userId = gameState.userId;
 
         return { canPlay: true };
     }
+
+    // Limpiar preguntas antiguas del cache (más de 30 minutos)
+    cleanOldTriviaQuestions() {
+        const now = Date.now();
+        const maxAge = 30 * 60 * 1000; // 30 minutos
+        
+        for (const [userId, data] of this.recentTriviaQuestions.entries()) {
+            if (now - data.timestamp > maxAge) {
+                this.recentTriviaQuestions.delete(userId);
+            }
+        }
+    }
     
     async playTrivia(message, args) {
         const userId = message.author.id;
@@ -9395,7 +9408,7 @@ const userId = gameState.userId;
                 .addFields(
                     { name: '💰 Costo', value: 'Gratis', inline: true },
                     { name: '⏰ Cooldown', value: '1 minutos', inline: true },
-                    { name: '❓ Preguntas', value: '5 por partida', inline: true },
+                    { name: '❓ Preguntas', value: 'Multiple: 5 | T/F: 10', inline: true },
                     { name: '⏱️ Tiempo', value: '15 seg/pregunta', inline: true },
                     { name: '📊 Sin límites', value: 'Diviertete!', inline: true },
                     { name: '🎯 Dificultades', value: 'Easy • Medium • Hard', inline: true },
@@ -9477,7 +9490,8 @@ const userId = gameState.userId;
 
             // Obtener preguntas de OpenTDB
             const questionType = isTrueFalse ? 'boolean' : 'multiple';
-            const apiUrl = `https://opentdb.com/api.php?amount=${this.config.trivia.questionsPerGame}&difficulty=${difficultyMap[difficulty]}&type=${questionType}`;
+            const questionAmount = isTrueFalse ? 10 : this.config.trivia.questionsPerGame; // 10 para T/F, 5 para múltiple
+            const apiUrl = `https://opentdb.com/api.php?amount=${questionAmount}&difficulty=${difficultyMap[difficulty]}&type=${questionType}`;
             
             const response = await fetch(apiUrl);
             const data = await response.json();
@@ -9492,6 +9506,33 @@ const userId = gameState.userId;
                 });
                 return;
             }
+
+            // Limpiar preguntas antiguas
+            this.cleanOldTriviaQuestions();
+
+            // Filtrar preguntas repetidas (si el usuario jugó recientemente)
+            const userRecentQuestions = this.recentTriviaQuestions.get(userId);
+            let filteredResults = data.results;
+            
+            if (userRecentQuestions && userRecentQuestions.questions.length > 0) {
+                const recentQuestionsSet = new Set(userRecentQuestions.questions);
+                filteredResults = data.results.filter(q => !recentQuestionsSet.has(q.question));
+                
+                // Si se filtraron demasiadas, tomar lo que haya
+                if (filteredResults.length < questionAmount) {
+                    console.log(`⚠️ Solo ${filteredResults.length} preguntas únicas, usando todas las disponibles`);
+                    filteredResults = data.results; // Usar todas si no hay suficientes únicas
+                }
+            }
+
+            // Tomar solo la cantidad necesaria
+            const selectedQuestions = filteredResults.slice(0, questionAmount);
+            
+            // Guardar las preguntas para evitar repetición
+            this.recentTriviaQuestions.set(userId, {
+                questions: selectedQuestions.map(q => q.question),
+                timestamp: Date.now()
+            });
 
             // Traducir preguntas
             const questions = await Promise.all(data.results.map(async (q) => {
@@ -9864,17 +9905,46 @@ const userId = gameState.userId;
 
                 // Calcular recompensas
                 let reward = this.config.trivia.rewards.participation;
-                if (correctAnswers === 5)
-                {
-                    reward = this.config.trivia.rewards.perfect;      
-                    await this.achievements.updateStats(userId, 'trivia_perfect');
+                // Calcular recompensas según preguntas correctas
+                const totalQuestions = isTrueFalse ? 10 : 5;
+                
+                if (correctAnswers === totalQuestions) {
+                    // Perfecto (5/5 o 10/10)
+                    reward = this.config.trivia.rewards.perfect;
+                    await this.economy.achievements.updateStats(userId, 'trivia_perfect');
+                    
+                    // Si fue T/F perfecta, también actualizar stat específica
+                    if (isTrueFalse) {
+                        await this.economy.achievements.updateStats(userId, 'trivia_tof_perfect');
+                    }
                 } 
-                else if (correctAnswers === 4) reward = this.config.trivia.rewards.good;
-                else if (correctAnswers === 3) reward = this.config.trivia.rewards.decent;
+                else if (isTrueFalse) {
+                    // Recompensas para True/False (10 preguntas)
+                    if (correctAnswers >= 8) reward = this.config.trivia.rewards.good;      // 8-9/10
+                    else if (correctAnswers >= 6) reward = this.config.trivia.rewards.decent; // 6-7/10
+                    else reward = this.config.trivia.rewards.participation; // menos de 6
+                }
+                else {
+                    // Recompensas para Multiple Choice (5 preguntas)
+                    if (correctAnswers === 4) reward = this.config.trivia.rewards.good;      // 4/5
+                    else if (correctAnswers === 3) reward = this.config.trivia.rewards.decent; // 3/5
+                    else reward = this.config.trivia.rewards.participation; // menos de 3
+                }
 
                 const diffMultiplier = this.config.trivia.difficulties[difficulty].multiplier;
                 const hintsUsed = this.config.trivia.hintsPerGame - hintsRemaining;
                 const hintMultiplier = hintsUsed > 0 ? this.config.trivia.hintPenalty : 1;
+
+                // ✅ Aplicar penalización de maldición (-25% dinero)
+                const activeEffects = this.shop.parseActiveEffects(user.activeEffects);
+                const curse = activeEffects['death_hand_curse'];
+                let curseMoneyPenalty = 0;
+
+                if (curse && curse.length > 0 && curse[0].expiresAt > Date.now()) {
+                    const penaltyAmount = Math.floor(reward.money * Math.abs(curse[0].moneyPenalty)); // 0.25 = 25%
+                    curseMoneyPenalty = penaltyAmount;
+                    reward.money -= penaltyAmount;
+                }
                 
                 const finalMoney = Math.floor(reward.money * diffMultiplier * hintMultiplier);
                 const finalXP = Math.floor(reward.xp * diffMultiplier * hintMultiplier);
@@ -9955,6 +10025,23 @@ const userId = gameState.userId;
                         value: questionsReview,
                         inline: false
                     });
+
+                    // Verificar tesoros al final
+                    await this.checkTreasureHunt(userId, message);
+
+                    const activeEffects = this.shop.parseActiveEffects(user.activeEffects);
+                    const curse = activeEffects['death_hand_curse'];
+                    // Al final, después de crear el embed de resultado
+                    if (curse && curse.length > 0 && curse[0].expiresAt > Date.now()) {
+                        resultEmbed.addFields({
+                            name: '☠️ Maldición Activa',
+                            value: won 
+                                ? `Tu ganancia fue reducida por la maldición (-25% dinero)`
+                                : `La maldición empeoró tu suerte (-50% probabilidad)`,
+                            inline: false
+                        });
+                    }
+
                     await message.channel.send({ embeds: [resultEmbed] });
                 }
             };

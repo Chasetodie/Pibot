@@ -357,6 +357,14 @@ class AchievementsSystem {
                 rarity: 'legendary',
                 emoji: '🏆'
             },
+            'trivia_tof_master': {
+                name: '✅ Maestro del Verdadero/Falso',
+                description: 'Completa 20 trivias perfectas en modo True/False (10/10)',
+                requirement: { type: 'trivia_tof_perfect', value: 20 },
+                reward: { money: 10000, xp: 2000 },
+                rarity: 'epic',
+                emoji: '✅'
+            },
             'completionist': {
                 name: '🏅 Completista',
                 description: 'Obtén todos los logros disponibles',
@@ -495,6 +503,9 @@ class AchievementsSystem {
                     break;
                 case 'trivia_perfect':
                     currentValue = user.stats?.trivia_perfect || 0;
+                    break;
+                case 'trivia_tof_perfect':
+                    currentValue = user.stats?.trivia_tof_perfect || 0;
                     break;
                 case 'loss_streak':
                     currentValue = user.stats?.current_loss_streak || 0;
@@ -704,6 +715,9 @@ class AchievementsSystem {
                     break;
                 case 'trivia_perfect':
                     currentValue = user.stats?.trivia_perfect || 0;
+                    break;
+                case 'trivia_tof_perfect':
+                    currentValue = user.stats?.trivia_tof_perfect || 0;
                     break;
                 case 'vending_plays':
                     currentValue = user.stats?.vending_plays || 0;
@@ -941,6 +955,12 @@ class AchievementsSystem {
                 updateData.stats = {
                     ...user.stats,
                     trivia_perfect: (user.stats?.trivia_perfect || 0) + 1
+                };
+                break;
+            case 'trivia_tof_perfect':
+                updateData.stats = {
+                    ...user.stats,
+                    trivia_tof_perfect: (user.stats?.trivia_tof_perfect || 0) + 1
                 };
                 break;
             case 'slots_doubles':
