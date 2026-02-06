@@ -9901,6 +9901,8 @@ const userId = gameState.userId;
 
             // Función para finalizar el juego
             const endGame = async () => {
+                const userId = message.author.id;
+                const user = await this.economy.getUser(userId);
                 this.activeGames.delete(`trivia_${userId}`);
 
                 // Calcular recompensas

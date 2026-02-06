@@ -361,7 +361,7 @@ class AchievementsSystem {
                 name: '✅ Maestro del Verdadero/Falso',
                 description: 'Completa 25 trivias perfectas en modo True/False (10/10)',
                 requirement: { type: 'trivia_tof_perfect', value: 25 },
-                reward: { money: 10000, xp: 1000 },
+                reward: { money: 10000, xp: 1500 },
                 rarity: 'epic',
                 emoji: '✅'
             },
