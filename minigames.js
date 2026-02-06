@@ -9545,8 +9545,7 @@ const userId = gameState.userId;
                 if (isTrueFalse) {
                     const translatedQuestion = await this.translateText(decodedQuestion);
                     const translatedCorrect = decodedCorrect === 'True' ? 'Verdadero' : 'Falso';
-                    const translatedIncorrect = decodedIncorrect[0] === 'True' ? 'Verdadero' : 'Falso';
-                    const allAnswers = [translatedCorrect, translatedIncorrect].sort(() => Math.random() - 0.5);
+                    const allAnswers = ['Verdadero', 'Falso'];
                     
                     return {
                         question: translatedQuestion,
