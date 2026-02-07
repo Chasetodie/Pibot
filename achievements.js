@@ -1225,6 +1225,9 @@ class AchievementsSystem {
             case 'trivia_perfect':
                 currentValue = user.stats?.trivia_perfect || 0;
                 break;
+            case 'trivia_tof_perfect':
+                currentValue = user.stats?.trivia_tof_perfect || 0;
+                break;
             case 'vending_plays':
                 currentValue = user.stats?.vending_plays || 0;
                 break;
