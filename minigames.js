@@ -10095,14 +10095,21 @@ const userId = gameState.userId;
     }
 
     /**
-     * Traducir pregunta de trivia con contexto
+     * Traducir pregunta de trivia con contexto mejorado
      */
     async translateTriviaQuestion(question, answers, correctAnswer) {
         try {
             const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 10000);
+            const timeoutId = setTimeout(() => controller.abort(), 12000); // 12 segundos
             
-            const prompt = `Eres un traductor experto de trivias. Traduce la siguiente pregunta y respuestas al español de forma natural y clara.
+            const prompt = `Eres un traductor experto especializado en trivias de cultura general. Tu trabajo es traducir preguntas y respuestas del inglés al español de forma NATURAL y CONTEXTUAL.
+
+    REGLAS IMPORTANTES:
+    1. Si la pregunta menciona títulos de películas, series, canciones o libros, NO los traduzcas literalmente. Usa el título conocido en español si existe, o déjalo en inglés si es más reconocible.
+    2. Si hay nombres propios (personas, lugares, marcas), NO los traduzcas.
+    3. Si hay símbolos o caracteres especiales raros, reemplázalos por su equivalente correcto.
+    4. Mantén el sentido y contexto original de la pregunta.
+    5. Las respuestas deben ser consistentes con la pregunta traducida.
 
     PREGUNTA: ${question}
 
@@ -10112,12 +10119,12 @@ const userId = gameState.userId;
     3. ${answers[2]} ${answers[2] === correctAnswer ? '(CORRECTA)' : ''}
     4. ${answers[3]} ${answers[3] === correctAnswer ? '(CORRECTA)' : ''}
 
-    Responde en este formato exacto (sin agregar texto extra):
-    PREGUNTA: [traducción de la pregunta]
-    R1: [traducción respuesta 1]
-    R2: [traducción respuesta 2]
-    R3: [traducción respuesta 3]
-    R4: [traducción respuesta 4]`;
+    IMPORTANTE: Responde EXACTAMENTE en este formato (sin agregar texto extra, explicaciones ni markdown):
+    PREGUNTA: [traducción natural de la pregunta]
+    R1: [traducción de respuesta 1]
+    R2: [traducción de respuesta 2]
+    R3: [traducción de respuesta 3]
+    R4: [traducción de respuesta 4]`;
             
             const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
                 method: 'POST',
@@ -10127,19 +10134,19 @@ const userId = gameState.userId;
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({
-                    model: 'llama-3.3-70b-versatile', // Modelo más potente para mejor contexto
+                    model: 'llama-3.3-70b-versatile',
                     messages: [
                         { 
                             role: 'system', 
-                            content: 'Eres un traductor profesional especializado en trivias y preguntas de conocimiento general. Traduces de forma natural y clara, manteniendo el sentido original.' 
+                            content: 'Eres un traductor profesional de trivias. Traduces de forma natural y contextual, respetando títulos de obras, nombres propios y contexto cultural. Respondes SOLO en el formato solicitado, sin texto adicional.' 
                         },
                         { 
                             role: 'user', 
                             content: prompt 
                         }
                     ],
-                    temperature: 0.2, // Muy baja para consistencia
-                    max_tokens: 800,
+                    temperature: 0.1, // Muy baja para consistencia
+                    max_tokens: 1000,
                     stream: false
                 })
             });
@@ -10150,6 +10157,8 @@ const userId = gameState.userId;
                 const data = await response.json();
                 const content = data.choices[0].message.content.trim();
                 
+                console.log('🤖 Respuesta de traducción:', content);
+                
                 // Parsear la respuesta
                 const lines = content.split('\n').filter(line => line.trim());
                 const translatedQuestion = lines.find(l => l.startsWith('PREGUNTA:'))?.replace('PREGUNTA:', '').trim();
@@ -10159,18 +10168,42 @@ const userId = gameState.userId;
                 const r4 = lines.find(l => l.startsWith('R4:'))?.replace('R4:', '').trim();
                 
                 if (translatedQuestion && r1 && r2 && r3 && r4) {
+                    console.log('✅ Traducción parseada exitosamente');
                     return {
                         question: translatedQuestion,
                         answers: [r1, r2, r3, r4]
                     };
                 }
                 
-                // Si el parsing falla, usar método original
-                console.log('⚠️ Parsing de trivia falló, usando método individual');
+                // Si el parsing falla, intentar parsing alternativo
+                console.log('⚠️ Parsing estándar falló, intentando parsing alternativo');
+                
+                // Intentar extraer con regex más flexible
+                const qMatch = content.match(/PREGUNTA:\s*(.+?)(?=R1:|$)/s);
+                const r1Match = content.match(/R1:\s*(.+?)(?=R2:|$)/s);
+                const r2Match = content.match(/R2:\s*(.+?)(?=R3:|$)/s);
+                const r3Match = content.match(/R3:\s*(.+?)(?=R4:|$)/s);
+                const r4Match = content.match(/R4:\s*(.+?)$/s);
+                
+                if (qMatch && r1Match && r2Match && r3Match && r4Match) {
+                    console.log('✅ Traducción parseada con regex alternativo');
+                    return {
+                        question: qMatch[1].trim(),
+                        answers: [
+                            r1Match[1].trim(),
+                            r2Match[1].trim(),
+                            r3Match[1].trim(),
+                            r4Match[1].trim()
+                        ]
+                    };
+                }
+                
+                console.log('❌ Parsing de trivia falló completamente, usando método individual');
                 return null;
                 
             } else {
-                console.error('⚠️ Error en traducción de trivia con Groq');
+                const errorData = await response.json().catch(() => ({}));
+                console.error('⚠️ Error en traducción de trivia con Groq:', errorData.error?.message || response.status);
                 return null;
             }
             
@@ -10182,13 +10215,12 @@ const userId = gameState.userId;
 
     async translateText(text, sourceLang = 'auto', targetLang = 'es') {
         try {
-            // 🤖 Usar Groq para traducción (rápido y gratis)
             const controller = new AbortController();
             const timeoutId = setTimeout(() => controller.abort(), 8000);
             
             const translationPrompt = sourceLang === 'auto' 
-                ? `Traduce el siguiente texto al español. Responde SOLO con la traducción, sin explicaciones ni texto adicional:\n\n"${text}"`
-                : `Translate the following text from ${sourceLang} to ${targetLang}. Respond ONLY with the translation, no explanations:\n\n"${text}"`;
+                ? `Traduce el siguiente texto al español de forma NATURAL y CONTEXTUAL. Si hay títulos de obras (películas, series, canciones, libros), NO los traduzcas literalmente - usa el título conocido en español o déjalos en inglés si son más reconocibles así. Si hay nombres propios, NO los traduzcas. Responde SOLO con la traducción, sin explicaciones:\n\n"${text}"`
+                : `Translate the following text from ${sourceLang} to ${targetLang} in a NATURAL and CONTEXTUAL way. Do NOT literally translate titles of works (movies, series, songs, books) - use the known title in the target language or leave them in English if more recognizable. Do NOT translate proper nouns. Respond ONLY with the translation, no explanations:\n\n"${text}"`;
             
             const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
                 method: 'POST',
@@ -10198,18 +10230,18 @@ const userId = gameState.userId;
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({
-                    model: 'llama-3.1-8b-instant', // Modelo rápido para traducciones
+                    model: 'llama-3.1-8b-instant',
                     messages: [
                         { 
                             role: 'system', 
-                            content: 'Eres un traductor profesional. Respondes SOLO con la traducción exacta, sin comentarios adicionales.' 
+                            content: 'Eres un traductor profesional que traduce de forma natural y contextual, respetando títulos de obras, nombres propios y contexto cultural. Respondes SOLO con la traducción exacta, sin comentarios adicionales.' 
                         },
                         { 
                             role: 'user', 
                             content: translationPrompt 
                         }
                     ],
-                    temperature: 0.3, // Baja temperatura para traducciones precisas
+                    temperature: 0.2, // Baja para traducciones más consistentes
                     max_tokens: 500,
                     stream: false
                 })
@@ -10291,16 +10323,39 @@ const userId = gameState.userId;
             '&iacute;': 'í',
             '&aacute;': 'á',
             '&uacute;': 'ú',
-            '&ntilde;': 'ñ'
+            '&ntilde;': 'ñ',
+            '&aring;': 'å',
+            '&ouml;': 'ö',
+            '&auml;': 'ä',
+            '&uuml;': 'ü',
+            '&Aring;': 'Å',
+            '&Ouml;': 'Ö',
+            '&Auml;': 'Ä',
+            '&Uuml;': 'Ü',
+            '&euro;': '€',
+            '&pound;': '£',
+            '&copy;': '©',
+            '&reg;': '®',
+            '&trade;': '™',
+            '&deg;': '°',
+            '&plusmn;': '±',
+            '&frac12;': '½',
+            '&frac14;': '¼',
+            '&frac34;': '¾'
         };
         
         let decoded = html;
+        
+        // Decodificar entidades HTML predefinidas
         for (const [entity, char] of Object.entries(entities)) {
             decoded = decoded.split(entity).join(char);
         }
         
-        // Decodificar entidades numéricas (&#39; etc)
+        // Decodificar entidades numéricas decimales (&#123;)
         decoded = decoded.replace(/&#(\d+);/g, (match, dec) => String.fromCharCode(dec));
+        
+        // Decodificar entidades numéricas hexadecimales (&#x7B;)
+        decoded = decoded.replace(/&#x([0-9a-fA-F]+);/g, (match, hex) => String.fromCharCode(parseInt(hex, 16)));
         
         return decoded;
     }
