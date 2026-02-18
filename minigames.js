@@ -9507,32 +9507,71 @@ const userId = gameState.userId;
                 return;
             }
 
-            // Limpiar preguntas antiguas
+            // Limpiar preguntas antiguas primero
             this.cleanOldTriviaQuestions();
 
-            // Filtrar preguntas repetidas (si el usuario jugó recientemente)
+            // Obtener preguntas recientes del usuario
             const userRecentQuestions = this.recentTriviaQuestions.get(userId);
-            let filteredResults = data.results;
+            let availableQuestions = data.results;
             
+            // Si el usuario jugó recientemente, filtrar preguntas repetidas
             if (userRecentQuestions && userRecentQuestions.questions.length > 0) {
-                const recentQuestionsSet = new Set(userRecentQuestions.questions);
-                filteredResults = data.results.filter(q => !recentQuestionsSet.has(q.question));
+                console.log(`📝 Usuario tiene ${userRecentQuestions.questions.length} preguntas recientes guardadas`);
                 
-                // Si se filtraron demasiadas, tomar lo que haya
-                if (filteredResults.length < questionAmount) {
-                    console.log(`⚠️ Solo ${filteredResults.length} preguntas únicas, usando todas las disponibles`);
-                    filteredResults = data.results; // Usar todas si no hay suficientes únicas
+                const recentQuestionsSet = new Set(userRecentQuestions.questions);
+                const uniqueQuestions = data.results.filter(q => !recentQuestionsSet.has(q.question));
+                
+                console.log(`✅ Preguntas únicas disponibles: ${uniqueQuestions.length}/${data.results.length}`);
+                
+                // Si hay suficientes preguntas únicas, usar solo esas
+                if (uniqueQuestions.length >= questionAmount) {
+                    availableQuestions = uniqueQuestions;
+                    console.log(`✨ Usando solo preguntas únicas`);
+                } else {
+                    // Si no hay suficientes, pedir más preguntas a la API
+                    console.log(`⚠️ No hay suficientes preguntas únicas, pidiendo más a la API...`);
+                    
+                    try {
+                        const extraAmount = questionAmount * 3; // Pedir 3x para tener más opciones
+                        const extraApiUrl = `https://opentdb.com/api.php?amount=${extraAmount}&difficulty=${difficultyMap[difficulty]}&type=${questionType}`;
+                        const extraResponse = await fetch(extraApiUrl);
+                        const extraData = await extraResponse.json();
+                        
+                        if (extraData.response_code === 0 && extraData.results) {
+                            // Filtrar de nuevo con más preguntas
+                            const allQuestions = [...data.results, ...extraData.results];
+                            const moreUniqueQuestions = allQuestions.filter(q => !recentQuestionsSet.has(q.question));
+                            
+                            console.log(`✅ Con preguntas extra: ${moreUniqueQuestions.length} únicas disponibles`);
+                            availableQuestions = moreUniqueQuestions.length >= questionAmount 
+                                ? moreUniqueQuestions 
+                                : allQuestions; // Si aún no hay suficientes, usar todas
+                        }
+                    } catch (error) {
+                        console.error('Error obteniendo preguntas extra:', error);
+                        availableQuestions = data.results; // Usar las originales si falla
+                    }
                 }
             }
 
             // Tomar solo la cantidad necesaria
-            const selectedQuestions = filteredResults.slice(0, questionAmount);
+            const selectedQuestions = availableQuestions.slice(0, questionAmount);
             
-            // Guardar las preguntas para evitar repetición
+            console.log(`🎯 Preguntas seleccionadas: ${selectedQuestions.length}`);
+            
+            // Actualizar el cache con las nuevas preguntas (agregar a las existentes)
+            const existingQuestions = userRecentQuestions ? userRecentQuestions.questions : [];
+            const newQuestions = selectedQuestions.map(q => q.question);
+            
+            // Combinar y limitar a las últimas 50 preguntas
+            const combinedQuestions = [...existingQuestions, ...newQuestions].slice(-50);
+            
             this.recentTriviaQuestions.set(userId, {
-                questions: selectedQuestions.map(q => q.question),
+                questions: combinedQuestions,
                 timestamp: Date.now()
             });
+            
+            console.log(`💾 Cache actualizado: ${combinedQuestions.length} preguntas guardadas para el usuario`);
 
             // Traducir preguntas
             const questions = await Promise.all(data.results.map(async (q) => {
