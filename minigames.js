@@ -10075,9 +10075,7 @@ const userId = gameState.userId;
                     if (curse && curse.length > 0 && curse[0].expiresAt > Date.now()) {
                         resultEmbed.addFields({
                             name: '☠️ Maldición Activa',
-                            value: won 
-                                ? `Tu ganancia fue reducida por la maldición (-25% dinero)`
-                                : `La maldición empeoró tu suerte (-50% probabilidad)`,
+                            value: `Tu ganancia fue reducida por la maldición (-25% dinero)`,
                             inline: false
                         });
                     }
