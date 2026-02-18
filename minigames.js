@@ -10156,9 +10156,7 @@ const userId = gameState.userId;
             if (response.ok) {
                 const data = await response.json();
                 const content = data.choices[0].message.content.trim();
-                
-                console.log('🤖 Respuesta de traducción:', content);
-                
+                                
                 // Parsear la respuesta
                 const lines = content.split('\n').filter(line => line.trim());
                 const translatedQuestion = lines.find(l => l.startsWith('PREGUNTA:'))?.replace('PREGUNTA:', '').trim();
