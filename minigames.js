@@ -10135,14 +10135,7 @@ const userId = gameState.userId;
                     emoji = '🎲';
                     valueFormatter = (user) => `${user.trivia_played} partidas`;
                     break;
-                    
-                case 'tof':
-                    leaderboard = await this.economy.getTriviaTofLeaderboard(10);
-                    title = '✅ Top 10 - True/False Perfectas';
-                    emoji = '✔️';
-                    valueFormatter = (user) => `${user.trivia_tof_perfect} perfectas T/F`;
-                    break;
-                    
+                                    
                 default:
                     // Mostrar ayuda
                     const helpEmbed = new EmbedBuilder()
@@ -10983,7 +10976,7 @@ const userId = gameState.userId;
                 },
                 { 
                     name: '📊 Rankings - Trivia', 
-                    value: '`>trivialb` - Ver rankings de trivia\n`>trivialb [perfect/streak/accuracy/played/tof]`', 
+                    value: '`>trivialb` - Ver rankings de trivia\n`>trivialb [perfect/accuracy/played]`', 
                     inline: false 
                 },
                 { 
