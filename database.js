@@ -1080,20 +1080,27 @@ class LocalDatabase {
     // Trivia - Top Perfectas
     async getTriviaLeaderboard(limit = 10) {
         try {
-            const [rows] = await this.pool.execute(`
-                SELECT 
-                    id,
-                    JSON_EXTRACT(stats, '$.trivia_perfect') as trivia_perfect
-                FROM users
-                WHERE JSON_EXTRACT(stats, '$.trivia_perfect') > 0
-                ORDER BY trivia_perfect DESC
-                LIMIT ?
-            `, [limit]);
-            
-            return rows.map(row => ({
-                userId: row.user_id,
-                trivia_perfect: parseInt(row.trivia_perfect) || 0
-            }));
+            const [rows] = await this.pool.execute(
+                'SELECT id, stats FROM users'
+            );
+
+            const users = rows.map(row => {
+                let stats = {};
+                try {
+                    stats = JSON.parse(row.stats || '{}');
+                } catch {}
+
+                return {
+                    userId: row.id,
+                    trivia_perfect: parseInt(stats.trivia_perfect) || 0
+                };
+            });
+
+            return users
+                .filter(u => u.trivia_perfect > 0)
+                .sort((a, b) => b.trivia_perfect - a.trivia_perfect)
+                .slice(0, limit);
+
         } catch (error) {
             console.error('❌ Error obteniendo ranking de trivia perfectas:', error);
             return [];
@@ -1103,25 +1110,41 @@ class LocalDatabase {
     // Trivia - Top Accuracy
     async getTriviaAccuracyLeaderboard(limit = 10) {
         try {
-            const [rows] = await this.pool.execute(`
-                SELECT 
-                    id,
-                    JSON_EXTRACT(stats, '$.trivia_correct_total') as correct,
-                    JSON_EXTRACT(stats, '$.trivia_questions_total') as total,
-                    JSON_EXTRACT(stats, '$.trivia_played') as played,
-                    ROUND((JSON_EXTRACT(stats, '$.trivia_correct_total') / JSON_EXTRACT(stats, '$.trivia_questions_total')) * 100, 1) as accuracy
-                FROM users
-                WHERE JSON_EXTRACT(stats, '$.trivia_played') >= 5
-                ORDER BY accuracy DESC, total DESC
-                LIMIT ?
-            `, [limit]);
-            
-            return rows.map(row => ({
-                userId: row.user_id,
-                accuracy: parseFloat(row.accuracy) || 0,
-                correct: parseInt(row.correct) || 0,
-                total: parseInt(row.total) || 0
-            }));
+            const [rows] = await this.pool.execute(
+                'SELECT id, stats FROM users'
+            );
+
+            const users = rows.map(row => {
+                let stats = {};
+                try {
+                    stats = JSON.parse(row.stats || '{}');
+                } catch {}
+
+                const correct = parseInt(stats.trivia_correct_total) || 0;
+                const total = parseInt(stats.trivia_questions_total) || 0;
+                const played = parseInt(stats.trivia_played) || 0;
+
+                const accuracy = total > 0 ? (correct / total) * 100 : 0;
+
+                return {
+                    userId: row.id,
+                    accuracy,
+                    correct,
+                    total,
+                    played
+                };
+            });
+
+            return users
+                .filter(u => u.played >= 5 && u.total > 0)
+                .sort((a, b) => {
+                    if (b.accuracy !== a.accuracy) {
+                        return b.accuracy - a.accuracy;
+                    }
+                    return b.total - a.total;
+                })
+                .slice(0, limit);
+
         } catch (error) {
             console.error('❌ Error obteniendo ranking de accuracy:', error);
             return [];
@@ -1131,20 +1154,27 @@ class LocalDatabase {
     // Trivia - Top Played
     async getTriviaPlayedLeaderboard(limit = 10) {
         try {
-            const [rows] = await this.pool.execute(`
-                SELECT 
-                    id,
-                    JSON_EXTRACT(stats, '$.trivia_played') as trivia_played
-                FROM users
-                WHERE JSON_EXTRACT(stats, '$.trivia_played') > 0
-                ORDER BY trivia_played DESC
-                LIMIT ?
-            `, [limit]);
-            
-            return rows.map(row => ({
-                userId: row.user_id,
-                trivia_played: parseInt(row.trivia_played) || 0
-            }));
+            const [rows] = await this.pool.execute(
+                'SELECT id, stats FROM users'
+            );
+
+            const users = rows.map(row => {
+                let stats = {};
+                try {
+                    stats = JSON.parse(row.stats || '{}');
+                } catch {}
+
+                return {
+                    userId: row.id,
+                    trivia_played: parseInt(stats.trivia_played) || 0
+                };
+            });
+
+            return users
+                .filter(u => u.trivia_played > 0)
+                .sort((a, b) => b.trivia_played - a.trivia_played)
+                .slice(0, limit);
+
         } catch (error) {
             console.error('❌ Error obteniendo ranking de partidas:', error);
             return [];
@@ -1154,20 +1184,27 @@ class LocalDatabase {
     // Trivia - Top True/False
     async getTriviaTofLeaderboard(limit = 10) {
         try {
-            const [rows] = await this.pool.execute(`
-                SELECT 
-                    id,
-                    JSON_EXTRACT(stats, '$.trivia_tof_perfect') as trivia_tof_perfect
-                FROM users
-                WHERE JSON_EXTRACT(stats, '$.trivia_tof_perfect') > 0
-                ORDER BY trivia_tof_perfect DESC
-                LIMIT ?
-            `, [limit]);
-            
-            return rows.map(row => ({
-                userId: row.user_id,
-                trivia_tof_perfect: parseInt(row.trivia_tof_perfect) || 0
-            }));
+            const [rows] = await this.pool.execute(
+                'SELECT id, stats FROM users'
+            );
+
+            const users = rows.map(row => {
+                let stats = {};
+                try {
+                    stats = JSON.parse(row.stats || '{}');
+                } catch {}
+
+                return {
+                    userId: row.id,
+                    trivia_tof_perfect: parseInt(stats.trivia_tof_perfect) || 0
+                };
+            });
+
+            return users
+                .filter(u => u.trivia_tof_perfect > 0)
+                .sort((a, b) => b.trivia_tof_perfect - a.trivia_tof_perfect)
+                .slice(0, limit);
+
         } catch (error) {
             console.error('❌ Error obteniendo ranking de T/F:', error);
             return [];
