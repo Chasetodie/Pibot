@@ -624,6 +624,42 @@ await this.missions.updateMissionProgress(userId, 'xp_gained_today', xpGained);
         }
     }
 
+    async getTriviaLeaderboard(limit = 10) {
+        try {
+            return await this.database.getTriviaLeaderboard(limit);
+        } catch (error) {
+            console.error('❌ Error obteniendo ranking de trivia:', error);
+            return [];
+        }
+    }
+
+    async getTriviaAccuracyLeaderboard(limit = 10) {
+        try {
+            return await this.database.getTriviaAccuracyLeaderboard(limit);
+        } catch (error) {
+            console.error('❌ Error obteniendo ranking de accuracy:', error);
+            return [];
+        }
+    }
+
+    async getTriviaPlayedLeaderboard(limit = 10) {
+        try {
+            return await this.database.getTriviaPlayedLeaderboard(limit);
+        } catch (error) {
+            console.error('❌ Error obteniendo ranking de partidas:', error);
+            return [];
+        }
+    }
+
+    async getTriviaTofLeaderboard(limit = 10) {
+        try {
+            return await this.database.getTriviaTofLeaderboard(limit);
+        } catch (error) {
+            console.error('❌ Error obteniendo ranking de T/F:', error);
+            return [];
+        }
+    }
+
     // Verificar si puede usar daily
     async canUseDaily(userId) {
         const user = await this.getUser(userId);

@@ -1077,6 +1077,103 @@ class LocalDatabase {
         }
     }
 
+    // Trivia - Top Perfectas
+    async getTriviaLeaderboard(limit = 10) {
+        try {
+            const [rows] = await this.pool.execute(`
+                SELECT 
+                    id,
+                    JSON_EXTRACT(stats, '$.trivia_perfect') as trivia_perfect
+                FROM users
+                WHERE JSON_EXTRACT(stats, '$.trivia_perfect') > 0
+                ORDER BY trivia_perfect DESC
+                LIMIT ?
+            `, [limit]);
+            
+            return rows.map(row => ({
+                userId: row.user_id,
+                trivia_perfect: parseInt(row.trivia_perfect) || 0
+            }));
+        } catch (error) {
+            console.error('❌ Error obteniendo ranking de trivia perfectas:', error);
+            return [];
+        }
+    }
+
+    // Trivia - Top Accuracy
+    async getTriviaAccuracyLeaderboard(limit = 10) {
+        try {
+            const [rows] = await this.pool.execute(`
+                SELECT 
+                    id,
+                    JSON_EXTRACT(stats, '$.trivia_correct_total') as correct,
+                    JSON_EXTRACT(stats, '$.trivia_questions_total') as total,
+                    JSON_EXTRACT(stats, '$.trivia_played') as played,
+                    ROUND((JSON_EXTRACT(stats, '$.trivia_correct_total') / JSON_EXTRACT(stats, '$.trivia_questions_total')) * 100, 1) as accuracy
+                FROM users
+                WHERE JSON_EXTRACT(stats, '$.trivia_played') >= 5
+                ORDER BY accuracy DESC, total DESC
+                LIMIT ?
+            `, [limit]);
+            
+            return rows.map(row => ({
+                userId: row.user_id,
+                accuracy: parseFloat(row.accuracy) || 0,
+                correct: parseInt(row.correct) || 0,
+                total: parseInt(row.total) || 0
+            }));
+        } catch (error) {
+            console.error('❌ Error obteniendo ranking de accuracy:', error);
+            return [];
+        }
+    }
+
+    // Trivia - Top Played
+    async getTriviaPlayedLeaderboard(limit = 10) {
+        try {
+            const [rows] = await this.pool.execute(`
+                SELECT 
+                    id,
+                    JSON_EXTRACT(stats, '$.trivia_played') as trivia_played
+                FROM users
+                WHERE JSON_EXTRACT(stats, '$.trivia_played') > 0
+                ORDER BY trivia_played DESC
+                LIMIT ?
+            `, [limit]);
+            
+            return rows.map(row => ({
+                userId: row.user_id,
+                trivia_played: parseInt(row.trivia_played) || 0
+            }));
+        } catch (error) {
+            console.error('❌ Error obteniendo ranking de partidas:', error);
+            return [];
+        }
+    }
+
+    // Trivia - Top True/False
+    async getTriviaTofLeaderboard(limit = 10) {
+        try {
+            const [rows] = await this.pool.execute(`
+                SELECT 
+                    id,
+                    JSON_EXTRACT(stats, '$.trivia_tof_perfect') as trivia_tof_perfect
+                FROM users
+                WHERE JSON_EXTRACT(stats, '$.trivia_tof_perfect') > 0
+                ORDER BY trivia_tof_perfect DESC
+                LIMIT ?
+            `, [limit]);
+            
+            return rows.map(row => ({
+                userId: row.user_id,
+                trivia_tof_perfect: parseInt(row.trivia_tof_perfect) || 0
+            }));
+        } catch (error) {
+            console.error('❌ Error obteniendo ranking de T/F:', error);
+            return [];
+        }
+    }
+
     // Obtener usuarios activos recientemente
     async getRecentActiveUsers(timeframe = 86400000) {
         try {

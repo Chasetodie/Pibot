@@ -10107,45 +10107,44 @@ const userId = gameState.userId;
 
     async showTriviaLeaderboard(message, args) {
         try {
-            // Determinar tipo de ranking (por defecto: perfectas)
-            const rankingType = args[1] ? args[1].toLowerCase() : 'perfect';
+            const type = args[1]?.toLowerCase() || 'perfect';
             
-            let orderBy, title, description, valueField;
+            let leaderboard, title, emoji, valueFormatter;
             
-            switch (rankingType) {
+            switch (type) {
                 case 'perfect':
                 case 'perfectas':
-                    orderBy = 'trivia_perfect';
+                    leaderboard = await this.economy.getTriviaLeaderboard(10);
                     title = '🏆 Top 10 - Trivias Perfectas';
-                    description = 'Jugadores con más trivias perfectas (5/5 o 10/10)';
-                    valueField = (row) => `${row.trivia_perfect} perfectas`;
+                    emoji = '🎯';
+                    valueFormatter = (user) => `${user.trivia_perfect} perfectas`;
                     break;
                     
                 case 'accuracy':
                 case 'precision':
-                    orderBy = 'accuracy';
+                    leaderboard = await this.economy.getTriviaAccuracyLeaderboard(10);
                     title = '🎯 Top 10 - Precisión';
-                    description = 'Jugadores con mejor % de aciertos (mínimo 5 partidas)';
-                    valueField = (row) => `${row.accuracy}% (${row.trivia_correct_total}/${row.trivia_questions_total})`;
+                    emoji = '📊';
+                    valueFormatter = (user) => `${user.accuracy}% (${user.correct}/${user.total})`;
                     break;
                     
                 case 'played':
                 case 'partidas':
-                    orderBy = 'trivia_played';
+                    leaderboard = await this.economy.getTriviaPlayedLeaderboard(10);
                     title = '🎮 Top 10 - Más Partidas';
-                    description = 'Jugadores que más han jugado trivia';
-                    valueField = (row) => `${row.trivia_played} partidas`;
+                    emoji = '🎲';
+                    valueFormatter = (user) => `${user.trivia_played} partidas`;
                     break;
                     
                 case 'tof':
-                    orderBy = 'trivia_tof_perfect';
+                    leaderboard = await this.economy.getTriviaTofLeaderboard(10);
                     title = '✅ Top 10 - True/False Perfectas';
-                    description = 'Jugadores con más trivias perfectas en modo Verdadero/Falso';
-                    valueField = (row) => `${row.trivia_tof_perfect} perfectas T/F`;
+                    emoji = '✔️';
+                    valueFormatter = (user) => `${user.trivia_tof_perfect} perfectas T/F`;
                     break;
                     
                 default:
-                    // Mostrar ayuda si el tipo no es válido
+                    // Mostrar ayuda
                     const helpEmbed = new EmbedBuilder()
                         .setTitle('📊 Rankings de Trivia')
                         .setDescription('Consulta los mejores jugadores de trivia')
@@ -10158,11 +10157,6 @@ const userId = gameState.userId;
                                     '`>trivialb played` - Más partidas jugadas\n' +
                                     '`>trivialb tof` - Perfectas en True/False',
                                 inline: false 
-                            },
-                            { 
-                                name: '💡 Ejemplo', 
-                                value: '`>trivialb` - Muestra ranking de perfectas\n`>trivialb accuracy` - Muestra ranking de precisión', 
-                                inline: false 
                             }
                         )
                         .setColor('#9932CC');
@@ -10171,117 +10165,48 @@ const userId = gameState.userId;
                     return;
             }
             
-            // Construir query según el tipo
-            let query;
-            if (orderBy === 'accuracy') {
-                query = `
-                    SELECT 
-                        u.user_id, 
-                        u.username,
-                        JSON_EXTRACT(u.stats, '$.trivia_correct_total') as trivia_correct_total,
-                        JSON_EXTRACT(u.stats, '$.trivia_questions_total') as trivia_questions_total,
-                        JSON_EXTRACT(u.stats, '$.trivia_played') as trivia_played,
-                        ROUND((JSON_EXTRACT(u.stats, '$.trivia_correct_total') / JSON_EXTRACT(u.stats, '$.trivia_questions_total')) * 100, 1) as accuracy
-                    FROM users u
-                    WHERE JSON_EXTRACT(u.stats, '$.trivia_played') >= 5
-                    ORDER BY accuracy DESC, trivia_questions_total DESC
-                    LIMIT 10
-                `;
-            } else {
-                query = `
-                    SELECT 
-                        u.user_id, 
-                        u.username,
-                        JSON_EXTRACT(u.stats, '$.${orderBy}') as ${orderBy},
-                        JSON_EXTRACT(u.stats, '$.trivia_correct_total') as trivia_correct_total,
-                        JSON_EXTRACT(u.stats, '$.trivia_questions_total') as trivia_questions_total
-                    FROM users u
-                    WHERE JSON_EXTRACT(u.stats, '$.${orderBy}') > 0
-                    ORDER BY ${orderBy} DESC
-                    LIMIT 10
-                `;
+            if (leaderboard.length === 0) {
+                await message.reply('❌ No hay usuarios en este ranking todavía.');
+                return;
             }
             
-            // Ejecutar query
-            const [rows] = await this.economy.database.pool.execute(query);
-            
-            if (rows.length === 0) {
-                return message.reply('❌ No hay datos suficientes para mostrar este ranking aún.');
-            }
-            
-            // Crear embed del ranking
             const embed = new EmbedBuilder()
                 .setTitle(title)
-                .setDescription(description)
                 .setColor('#FFD700')
                 .setTimestamp();
             
-            // Emojis de medallas
-            const medals = ['🥇', '🥈', '🥉'];
+            let description = '';
             
-            // Construir texto del ranking
-            let rankingText = '';
-            
-            for (let i = 0; i < rows.length; i++) {
-                const row = rows[i];
-                const medal = i < 3 ? medals[i] : `**${i + 1}.**`;
-                const username = row.username || `<@${row.user_id}>`;
+            for (let i = 0; i < leaderboard.length; i++) {
+                const user = leaderboard[i];
+                let medal = '';
                 
-                rankingText += `${medal} **${username}** - ${valueField(row)}\n`;
-            }
-            
-            embed.addFields({
-                name: '📋 Clasificación',
-                value: rankingText,
-                inline: false
-            });
-            
-            // Mostrar posición del usuario que ejecutó el comando
-            const userId = message.author.id;
-            const user = await this.economy.getUser(userId);
-            
-            if (user && user.stats) {
-                let userPosition = '?';
-                let userValue = '0';
-                
-                if (orderBy === 'accuracy' && user.stats.trivia_played >= 5) {
-                    const userAccuracy = ((user.stats.trivia_correct_total / user.stats.trivia_questions_total) * 100).toFixed(1);
-                    userValue = `${userAccuracy}%`;
-                    
-                    const [posRows] = await this.economy.database.pool.execute(`
-                        SELECT COUNT(*) + 1 as position
-                        FROM users u
-                        WHERE JSON_EXTRACT(u.stats, '$.trivia_played') >= 5
-                        AND (JSON_EXTRACT(u.stats, '$.trivia_correct_total') / JSON_EXTRACT(u.stats, '$.trivia_questions_total')) > ?
-                    `, [(user.stats.trivia_correct_total / user.stats.trivia_questions_total)]);
-                    
-                    userPosition = posRows[0].position;
-                    
-                } else if (user.stats[orderBy] && user.stats[orderBy] > 0) {
-                    userValue = user.stats[orderBy];
-                    
-                    const [posRows] = await this.economy.database.pool.execute(`
-                        SELECT COUNT(*) + 1 as position
-                        FROM users u
-                        WHERE JSON_EXTRACT(u.stats, '$.${orderBy}') > ?
-                    `, [user.stats[orderBy]]);
-                    
-                    userPosition = posRows[0].position;
+                switch (i) {
+                    case 0: medal = '🥇'; break;
+                    case 1: medal = '🥈'; break;
+                    case 2: medal = '🥉'; break;
+                    default: medal = `**${i + 1}.**`; break;
                 }
                 
-                embed.setFooter({ 
-                    text: `Tu posición: #${userPosition} con ${userValue}` 
-                });
-            } else {
-                embed.setFooter({ 
-                    text: 'Aún no tienes estadísticas en este ranking' 
-                });
+                description += `${medal} <@${user.userId}>\n${emoji} ${valueFormatter(user)}\n\n`;
             }
+            
+            embed.setDescription(description);
+            
+            // Footer con otros rankings disponibles
+            const footerTexts = {
+                'perfect': 'Usa >trivialb accuracy para ver precisión',
+                'accuracy': 'Usa >trivialb played para ver partidas jugadas',
+                'played': 'Usa >trivialb tof para ver T/F perfectas',
+                'tof': 'Usa >trivialb perfect para ver trivias perfectas'
+            };
+            
+            embed.setFooter({ text: footerTexts[type] || 'Usa >trivialb para ver rankings' });
             
             await message.reply({ embeds: [embed] });
             
         } catch (error) {
-            console.error('Error mostrando ranking de trivia:', error);
+            console.error('❌ Error mostrando ranking de trivia:', error);
             await message.reply('❌ Ocurrió un error al cargar el ranking. Intenta de nuevo.');
         }
     }

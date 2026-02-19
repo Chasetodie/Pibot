@@ -316,7 +316,6 @@ const rest = new REST({ version: '10' }).setToken(process.env.TOKEN);
 // Evento cuando el bot está listo
 client.once('ready', async () => {
     console.log(`✅ Bot conectado como ${client.user.tag}`);
-    console.log(`🔧 Comandos disponibles: !contadores, !reset, !reload, !help`);
     await minigames.loadActiveRussianGames(client);
     await minigames.loadActiveUnoGames(client);
     await trades.loadActiveTrades(client);
