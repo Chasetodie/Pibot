@@ -10000,6 +10000,17 @@ const userId = gameState.userId;
                     await this.achievements.updateStats(userId, 'game_won');
                     await this.achievements.updateStats(userId, 'bet_win', finalMoney);
                 }        
+                               
+                const updateDataTrivia = {
+                    stats: {
+                        ...user.stats,
+                        trivia_played: (user.stats?.trivia_played || 0) + 1,
+                        trivia_correct_total: (user.stats?.trivia_correct_total || 0) + correctAnswers,
+                        trivia_questions_total: (user.stats?.trivia_questions_total || 0) + questions.length
+                    }
+                };
+                
+                await this.economy.updateUser(userId, updateDataTrivia);
             
                 // Crear resumen de preguntas
                 let questionsReview = '';
@@ -10091,6 +10102,187 @@ const userId = gameState.userId;
             this.activeGames.delete(`trivia_${userId}`);
             console.error('Error en trivia:', error);
             await message.reply('❌ Ocurrió un error al cargar la trivia. Intenta de nuevo.');
+        }
+    }
+
+    async showTriviaLeaderboard(message, args) {
+        try {
+            // Determinar tipo de ranking (por defecto: perfectas)
+            const rankingType = args[1] ? args[1].toLowerCase() : 'perfect';
+            
+            let orderBy, title, description, valueField;
+            
+            switch (rankingType) {
+                case 'perfect':
+                case 'perfectas':
+                    orderBy = 'trivia_perfect';
+                    title = '🏆 Top 10 - Trivias Perfectas';
+                    description = 'Jugadores con más trivias perfectas (5/5 o 10/10)';
+                    valueField = (row) => `${row.trivia_perfect} perfectas`;
+                    break;
+                    
+                case 'accuracy':
+                case 'precision':
+                    orderBy = 'accuracy';
+                    title = '🎯 Top 10 - Precisión';
+                    description = 'Jugadores con mejor % de aciertos (mínimo 5 partidas)';
+                    valueField = (row) => `${row.accuracy}% (${row.trivia_correct_total}/${row.trivia_questions_total})`;
+                    break;
+                    
+                case 'played':
+                case 'partidas':
+                    orderBy = 'trivia_played';
+                    title = '🎮 Top 10 - Más Partidas';
+                    description = 'Jugadores que más han jugado trivia';
+                    valueField = (row) => `${row.trivia_played} partidas`;
+                    break;
+                    
+                case 'tof':
+                    orderBy = 'trivia_tof_perfect';
+                    title = '✅ Top 10 - True/False Perfectas';
+                    description = 'Jugadores con más trivias perfectas en modo Verdadero/Falso';
+                    valueField = (row) => `${row.trivia_tof_perfect} perfectas T/F`;
+                    break;
+                    
+                default:
+                    // Mostrar ayuda si el tipo no es válido
+                    const helpEmbed = new EmbedBuilder()
+                        .setTitle('📊 Rankings de Trivia')
+                        .setDescription('Consulta los mejores jugadores de trivia')
+                        .addFields(
+                            { 
+                                name: '🎮 Tipos de Ranking', 
+                                value: 
+                                    '`>trivialb` o `>trivialb perfect` - Trivias perfectas\n' +
+                                    '`>trivialb accuracy` - Mejor precisión\n' +
+                                    '`>trivialb played` - Más partidas jugadas\n' +
+                                    '`>trivialb tof` - Perfectas en True/False',
+                                inline: false 
+                            },
+                            { 
+                                name: '💡 Ejemplo', 
+                                value: '`>trivialb` - Muestra ranking de perfectas\n`>trivialb accuracy` - Muestra ranking de precisión', 
+                                inline: false 
+                            }
+                        )
+                        .setColor('#9932CC');
+                    
+                    await message.reply({ embeds: [helpEmbed] });
+                    return;
+            }
+            
+            // Construir query según el tipo
+            let query;
+            if (orderBy === 'accuracy') {
+                query = `
+                    SELECT 
+                        u.user_id, 
+                        u.username,
+                        JSON_EXTRACT(u.stats, '$.trivia_correct_total') as trivia_correct_total,
+                        JSON_EXTRACT(u.stats, '$.trivia_questions_total') as trivia_questions_total,
+                        JSON_EXTRACT(u.stats, '$.trivia_played') as trivia_played,
+                        ROUND((JSON_EXTRACT(u.stats, '$.trivia_correct_total') / JSON_EXTRACT(u.stats, '$.trivia_questions_total')) * 100, 1) as accuracy
+                    FROM users u
+                    WHERE JSON_EXTRACT(u.stats, '$.trivia_played') >= 5
+                    ORDER BY accuracy DESC, trivia_questions_total DESC
+                    LIMIT 10
+                `;
+            } else {
+                query = `
+                    SELECT 
+                        u.user_id, 
+                        u.username,
+                        JSON_EXTRACT(u.stats, '$.${orderBy}') as ${orderBy},
+                        JSON_EXTRACT(u.stats, '$.trivia_correct_total') as trivia_correct_total,
+                        JSON_EXTRACT(u.stats, '$.trivia_questions_total') as trivia_questions_total
+                    FROM users u
+                    WHERE JSON_EXTRACT(u.stats, '$.${orderBy}') > 0
+                    ORDER BY ${orderBy} DESC
+                    LIMIT 10
+                `;
+            }
+            
+            // Ejecutar query
+            const [rows] = await this.economy.database.pool.execute(query);
+            
+            if (rows.length === 0) {
+                return message.reply('❌ No hay datos suficientes para mostrar este ranking aún.');
+            }
+            
+            // Crear embed del ranking
+            const embed = new EmbedBuilder()
+                .setTitle(title)
+                .setDescription(description)
+                .setColor('#FFD700')
+                .setTimestamp();
+            
+            // Emojis de medallas
+            const medals = ['🥇', '🥈', '🥉'];
+            
+            // Construir texto del ranking
+            let rankingText = '';
+            
+            for (let i = 0; i < rows.length; i++) {
+                const row = rows[i];
+                const medal = i < 3 ? medals[i] : `**${i + 1}.**`;
+                const username = row.username || `<@${row.user_id}>`;
+                
+                rankingText += `${medal} **${username}** - ${valueField(row)}\n`;
+            }
+            
+            embed.addFields({
+                name: '📋 Clasificación',
+                value: rankingText,
+                inline: false
+            });
+            
+            // Mostrar posición del usuario que ejecutó el comando
+            const userId = message.author.id;
+            const user = await this.economy.getUser(userId);
+            
+            if (user && user.stats) {
+                let userPosition = '?';
+                let userValue = '0';
+                
+                if (orderBy === 'accuracy' && user.stats.trivia_played >= 5) {
+                    const userAccuracy = ((user.stats.trivia_correct_total / user.stats.trivia_questions_total) * 100).toFixed(1);
+                    userValue = `${userAccuracy}%`;
+                    
+                    const [posRows] = await this.economy.database.pool.execute(`
+                        SELECT COUNT(*) + 1 as position
+                        FROM users u
+                        WHERE JSON_EXTRACT(u.stats, '$.trivia_played') >= 5
+                        AND (JSON_EXTRACT(u.stats, '$.trivia_correct_total') / JSON_EXTRACT(u.stats, '$.trivia_questions_total')) > ?
+                    `, [(user.stats.trivia_correct_total / user.stats.trivia_questions_total)]);
+                    
+                    userPosition = posRows[0].position;
+                    
+                } else if (user.stats[orderBy] && user.stats[orderBy] > 0) {
+                    userValue = user.stats[orderBy];
+                    
+                    const [posRows] = await this.economy.database.pool.execute(`
+                        SELECT COUNT(*) + 1 as position
+                        FROM users u
+                        WHERE JSON_EXTRACT(u.stats, '$.${orderBy}') > ?
+                    `, [user.stats[orderBy]]);
+                    
+                    userPosition = posRows[0].position;
+                }
+                
+                embed.setFooter({ 
+                    text: `Tu posición: #${userPosition} con ${userValue}` 
+                });
+            } else {
+                embed.setFooter({ 
+                    text: 'Aún no tienes estadísticas en este ranking' 
+                });
+            }
+            
+            await message.reply({ embeds: [embed] });
+            
+        } catch (error) {
+            console.error('Error mostrando ranking de trivia:', error);
+            await message.reply('❌ Ocurrió un error al cargar el ranking. Intenta de nuevo.');
         }
     }
 
@@ -10772,6 +10964,9 @@ const userId = gameState.userId;
                 case '>trivia':
                     await this.playTrivia(message, args);
                     break;
+                case '>trivialb':
+                    await this.showTriviaLeaderboard(message, args);
+                    break;
                 case '>games':
                 case '>minigames':
                 case '>juegos':
@@ -10860,6 +11055,11 @@ const userId = gameState.userId;
                     name: '🧠 Trivia',
                     value: '`>trivia [easy/medium/hard]`\nGratis\nRecompensa: hasta 2,000 π-b$ + 500 XP\n5 preguntas por partida\nCooldown: 2 minutos',
                     inline: false
+                },
+                { 
+                    name: '📊 Rankings - Trivia', 
+                    value: '`>trivialb` - Ver rankings de trivia\n`>trivialb [perfect/streak/accuracy/played/tof]`', 
+                    inline: false 
                 },
                 { 
                     name: '🔮 Próximamente', 
