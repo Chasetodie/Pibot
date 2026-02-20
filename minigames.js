@@ -9429,7 +9429,7 @@ const userId = gameState.userId;
                     },
                     { 
                         name: '🎮 Uso', 
-                        value: '`>trivia <dificultad> [modo]`\n\n**Dificultades:** easy, medium, hard\n**Modos:** multiple (4 opciones) o tof (verdadero/falso)\n\n**Ejemplos:**\n`>trivia easy` - Fácil opción múltiple\n`>trivia hard tof` - Difícil verdadero/falso', 
+                        value: '`>trivia <dificultad> [modo] [categoría]`\n\n**Dificultades:** easy, medium, hard\n**Modos:** multiple, tof\n**Categorías:** peliculas, musica, deportes, historia, ciencia, videojuegos, anime, geografia, etc.\n\n**Ejemplos:**\n`>trivia easy` - Fácil mixto\n`>trivia hard tof deportes` - Difícil T/F de deportes\n`>trivia medium peliculas` - Normal de películas', 
                         inline: false 
                     }
                 )
@@ -9452,24 +9452,78 @@ const userId = gameState.userId;
         }
 
         const difficulty = args[1].toLowerCase();
-        
+
         // Validar dificultad
         if (!['easy', 'medium', 'hard'].includes(difficulty)) {
             return message.reply('❌ Dificultad inválida. Usa: `easy`, `medium` o `hard`');
         }
-        
-        // Modo de juego (multiple choice o true/false)
-        const gameMode = args[2] ? args[2].toLowerCase() : 'multiple';
-        if (!['multiple', 'tof', 'truefalse'].includes(gameMode)) {
-            return message.reply('❌ Modo inválido. Usa: `multiple` (opción múltiple) o `tof` (verdadero/falso)');
+
+        // Detectar modo y categoría
+        let gameMode = 'multiple';  // Por defecto
+        let categoryId = null;
+        let categoryName = 'Mixto';
+
+        const arg2 = args[2] ? args[2].toLowerCase() : null;
+        const arg3 = args[3] ? args[3].toLowerCase() : null;
+
+        // Caso 1: >trivia easy tof peliculas
+        // arg2 = tof (modo), arg3 = peliculas (categoría)
+        if (arg2 && ['multiple', 'tof', 'truefalse'].includes(arg2)) {
+            gameMode = arg2;
+            
+            // Revisar si hay categoría en arg3
+            if (arg3 && categories[arg3]) {
+                categoryId = categories[arg3];
+                categoryName = arg3.charAt(0).toUpperCase() + arg3.slice(1);
+            }
         }
-        
+        // Caso 2: >trivia easy peliculas
+        // arg2 = peliculas (categoría), NO hay modo (usar default: multiple)
+        else if (arg2 && categories[arg2]) {
+            categoryId = categories[arg2];
+            categoryName = arg2.charAt(0).toUpperCase() + arg2.slice(1);
+            // gameMode ya es 'multiple' por defecto
+        }
+        // Caso 3: >trivia easy xyz (ni modo ni categoría válidos)
+        else if (arg2) {
+            return message.reply(
+                '❌ Modo o categoría inválida.\n\n' +
+                '**Modos:** `multiple`, `tof`\n' +
+                '**Categorías:** peliculas, musica, deportes, historia, ciencia, videojuegos, anime, etc.\n\n' +
+                '**Ejemplos:**\n' +
+                '`>trivia easy` - Fácil mixto\n' +
+                '`>trivia easy peliculas` - Fácil de películas\n' +
+                '`>trivia easy tof deportes` - Fácil T/F de deportes'
+            );
+        }
+
         const isTrueFalse = ['tof', 'truefalse'].includes(gameMode);
 
         const difficultyMap = {
             'easy': 'easy',
             'medium': 'medium',
             'hard': 'hard'
+        };
+
+        // Mapa de categorías
+        const categories = {
+            'general': 9,
+            'libros': 10, 'books': 10,
+            'peliculas': 11, 'movies': 11, 'cine': 11,
+            'musica': 12, 'music': 12,
+            'tv': 14, 'television': 14,
+            'videojuegos': 15, 'videogames': 15, 'games': 15,
+            'ciencia': 17, 'science': 17, 'naturaleza': 17,
+            'computacion': 18, 'computers': 18, 'informatica': 18,
+            'matematicas': 19, 'math': 19, 'mates': 19,
+            'mitologia': 20, 'mythology': 20,
+            'deportes': 21, 'sports': 21,
+            'geografia': 22, 'geography': 22, 'geo': 22,
+            'historia': 23, 'history': 23,
+            'arte': 25, 'art': 25,
+            'animales': 27, 'animals': 27,
+            'anime': 31, 'manga': 31,
+            'cartoons': 32, 'caricaturas': 32
         };
 
         // Establecer cooldown
@@ -9490,8 +9544,9 @@ const userId = gameState.userId;
 
             // Obtener preguntas de OpenTDB
             const questionType = isTrueFalse ? 'boolean' : 'multiple';
-            const questionAmount = isTrueFalse ? 10 : this.config.trivia.questionsPerGame; // 10 para T/F, 5 para múltiple
-            const apiUrl = `https://opentdb.com/api.php?amount=${questionAmount}&difficulty=${difficultyMap[difficulty]}&type=${questionType}`;
+            const questionAmount = isTrueFalse ? 10 : this.config.trivia.questionsPerGame;
+            const categoryParam = categoryId ? `&category=${categoryId}` : '';
+            const apiUrl = `https://opentdb.com/api.php?amount=${questionAmount}&difficulty=${difficultyMap[difficulty]}&type=${questionType}${categoryParam}`;
             
             const response = await fetch(apiUrl);
             const data = await response.json();
@@ -9642,6 +9697,7 @@ const userId = gameState.userId;
             const startEmbed = new EmbedBuilder()
                 .setTitle('🧠 Iniciando Trivia...')
                 .setDescription(
+                    `**Categoría:** ${categoryName}\n` +
                     `**Modo:** ${modeText}\n` +
                     `**Dificultad:** ${difficulty.toUpperCase()}\n` +
                     `**Preguntas:** ${questions.length}\n` +
@@ -10037,7 +10093,8 @@ const userId = gameState.userId;
                         { name: '💰 Dinero ganado', value: `${finalMoney} π-b$`, inline: true },
                         { name: '⭐ XP ganada', value: `${finalXP} XP`, inline: true },
                         { name: '📊 Dificultad', value: difficulty.toUpperCase(), inline: true },
-                        { name: '🎮 Modo', value: modeText, inline: true }
+                        { name: '🎮 Modo', value: modeText, inline: true },
+                        { name: '📚 Categoría', value: categoryName, inline: true }
                     )
                     .setColor(correctAnswers >= 3 ? '#00FF00' : '#FF0000')
                     .setFooter({ text: 'Usa >trivia [easy/medium/hard] [multiple/tof] para jugar de nuevo' });
