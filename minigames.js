@@ -9458,6 +9458,27 @@ const userId = gameState.userId;
             return message.reply('❌ Dificultad inválida. Usa: `easy`, `medium` o `hard`');
         }
 
+        // Mapa de categorías
+        const categories = {
+            'general': 9,
+            'libros': 10, 'books': 10,
+            'peliculas': 11, 'movies': 11, 'cine': 11,
+            'musica': 12, 'music': 12,
+            'tv': 14, 'television': 14,
+            'videojuegos': 15, 'videogames': 15, 'games': 15,
+            'ciencia': 17, 'science': 17, 'naturaleza': 17,
+            'computacion': 18, 'computers': 18, 'informatica': 18,
+            'matematicas': 19, 'math': 19, 'mates': 19,
+            'mitologia': 20, 'mythology': 20,
+            'deportes': 21, 'sports': 21,
+            'geografia': 22, 'geography': 22, 'geo': 22,
+            'historia': 23, 'history': 23,
+            'arte': 25, 'art': 25,
+            'animales': 27, 'animals': 27,
+            'anime': 31, 'manga': 31,
+            'cartoons': 32, 'caricaturas': 32
+        };
+
         // Detectar modo y categoría
         let gameMode = 'multiple';  // Por defecto
         let categoryId = null;
@@ -9503,27 +9524,6 @@ const userId = gameState.userId;
             'easy': 'easy',
             'medium': 'medium',
             'hard': 'hard'
-        };
-
-        // Mapa de categorías
-        const categories = {
-            'general': 9,
-            'libros': 10, 'books': 10,
-            'peliculas': 11, 'movies': 11, 'cine': 11,
-            'musica': 12, 'music': 12,
-            'tv': 14, 'television': 14,
-            'videojuegos': 15, 'videogames': 15, 'games': 15,
-            'ciencia': 17, 'science': 17, 'naturaleza': 17,
-            'computacion': 18, 'computers': 18, 'informatica': 18,
-            'matematicas': 19, 'math': 19, 'mates': 19,
-            'mitologia': 20, 'mythology': 20,
-            'deportes': 21, 'sports': 21,
-            'geografia': 22, 'geography': 22, 'geo': 22,
-            'historia': 23, 'history': 23,
-            'arte': 25, 'art': 25,
-            'animales': 27, 'animals': 27,
-            'anime': 31, 'manga': 31,
-            'cartoons': 32, 'caricaturas': 32
         };
 
         // Establecer cooldown
