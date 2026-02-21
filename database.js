@@ -879,14 +879,33 @@ class LocalDatabase {
                     last_vending, last_trivia
                 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             `, [
-                newUser.id, newUser.balance, newUser.level, newUser.xp, newUser.total_xp,
-                newUser.last_daily, newUser.last_work, newUser.last_robbery,
-                newUser.last_coinflip, newUser.last_dice, newUser.last_roulette,
-                newUser.last_lotto, newUser.last_blackjack, newUser.last_name_work,
-                newUser.messages_count, JSON.stringify(newUser.items),
-                JSON.stringify(newUser.stats), JSON.stringify(newUser.bet_stats),
-                JSON.stringify(newUser.daily_missions), newUser.daily_missions_date,
-                JSON.stringify(newUser.daily_stats), JSON.stringify(newUser.achievements)
+                newUser.id,
+                newUser.balance,
+                newUser.level,
+                newUser.xp,
+                newUser.total_xp,
+                newUser.last_daily,
+                newUser.last_work,
+                newUser.last_robbery,
+                newUser.last_coinflip,
+                newUser.last_dice,
+                newUser.last_roulette,
+                newUser.last_lotto,
+                newUser.last_blackjack,
+                newUser.last_slots, // ✅ ahora sí
+                newUser.last_name_work,
+                newUser.messages_count,
+                JSON.stringify(newUser.items),
+                JSON.stringify(newUser.stats),
+                JSON.stringify(newUser.bet_stats),
+                JSON.stringify(newUser.daily_missions),
+                newUser.daily_missions_date,
+                JSON.stringify(newUser.daily_stats),
+                JSON.stringify(newUser.achievements),
+                JSON.stringify(newUser.passiveIncomeStats),
+                newUser.lastPassivePayout,
+                newUser.last_vending,
+                newUser.last_trivia
             ]);
 
             // Guardar en caché antes de retornar
