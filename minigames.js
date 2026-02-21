@@ -10206,7 +10206,7 @@ const userId = gameState.userId;
                             { 
                                 name: '🎮 Tipos de Ranking', 
                                 value: 
-                                    '`>trivialb` o `>trivialb perfect` - Trivias perfectas\n' +
+                                    '`>trivialb perfect` - Trivias perfectas\n' +
                                     '`>trivialb accuracy` - Mejor precisión\n' +
                                     '`>trivialb played` - Más partidas jugadas\n',
                                 inline: false 
