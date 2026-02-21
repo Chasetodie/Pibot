@@ -9510,7 +9510,7 @@ const userId = gameState.userId;
             return message.reply(
                 '❌ Modo o categoría inválida.\n\n' +
                 '**Modos:** `multiple`, `tof`\n' +
-                '**Categorías:** peliculas, musica, deportes, historia, ciencia, videojuegos, anime, etc.\n\n' +
+                '**Categorías:** Usa `>triviacat` para ver todas\n\n' +
                 '**Ejemplos:**\n' +
                 '`>trivia easy` - Fácil mixto\n' +
                 '`>trivia easy peliculas` - Fácil de películas\n' +
@@ -9565,8 +9565,9 @@ const userId = gameState.userId;
             // Limpiar preguntas antiguas primero
             this.cleanOldTriviaQuestions();
 
-            // Obtener preguntas recientes del usuario
-            const userRecentQuestions = this.recentTriviaQuestions.get(userId);
+            // Obtener preguntas recientes del usuario (por categoría y dificultad)
+            const cacheKeys = `${userId}_${difficulty}_${categoryId || 'all'}`;
+            const userRecentQuestions = this.recentTriviaQuestions.get(cacheKeys);
             let availableQuestions = data.results;
             
             // Si el usuario jugó recientemente, filtrar preguntas repetidas
@@ -9613,20 +9614,22 @@ const userId = gameState.userId;
             const selectedQuestions = availableQuestions.slice(0, questionAmount);
             
             console.log(`🎯 Preguntas seleccionadas: ${selectedQuestions.length}`);
-            
-            // Actualizar el cache con las nuevas preguntas (agregar a las existentes)
-            const existingQuestions = userRecentQuestions ? userRecentQuestions.questions : [];
+                        
+            // Guardar las preguntas para evitar repetición (por categoría y dificultad)
+            const cacheKey = `${userId}_${difficulty}_${categoryId || 'all'}`;
+            const existingCache = this.recentTriviaQuestions.get(cacheKey);
+            const existingQuestions = existingCache ? existingCache.questions : [];
             const newQuestions = selectedQuestions.map(q => q.question);
             
-            // Combinar y limitar a las últimas 50 preguntas
-            const combinedQuestions = [...existingQuestions, ...newQuestions].slice(-50);
+            // Combinar y limitar a las últimas 100 preguntas por categoría
+            const combinedQuestions = [...existingQuestions, ...newQuestions].slice(-100);
             
-            this.recentTriviaQuestions.set(userId, {
+            this.recentTriviaQuestions.set(cacheKey, {
                 questions: combinedQuestions,
                 timestamp: Date.now()
             });
             
-            console.log(`💾 Cache actualizado: ${combinedQuestions.length} preguntas guardadas para el usuario`);
+            console.log(`💾 Cache actualizado para ${difficulty}/${categoryName}: ${combinedQuestions.length} preguntas guardadas`);
 
             // Traducir preguntas
             const questions = await Promise.all(data.results.map(async (q) => {
@@ -10164,7 +10167,7 @@ const userId = gameState.userId;
 
     async showTriviaLeaderboard(message, args) {
         try {
-            const type = args[1]?.toLowerCase() || 'perfect';
+            const type = args[1]?.toLowerCase();
             
             let leaderboard, title, emoji, valueFormatter;
             
@@ -10261,6 +10264,64 @@ const userId = gameState.userId;
         }
     }
 
+    async showTriviaCategories(message) {
+        const embed = new EmbedBuilder()
+            .setTitle('📚 Categorías de Trivia')
+            .setDescription('Elige una categoría para preguntas específicas')
+            .setColor('#9932CC')
+            .addFields(
+                {
+                    name: '🎬 Entretenimiento',
+                    value: 
+                        '`peliculas` / `movies` / `cine`\n' +
+                        '`musica` / `music`\n' +
+                        '`tv` / `television`\n' +
+                        '`videojuegos` / `videogames` / `games`\n' +
+                        '`anime` / `manga`\n' +
+                        '`cartoons` / `caricaturas`',
+                    inline: true
+                },
+                {
+                    name: '📖 Conocimiento',
+                    value:
+                        '`general`\n' +
+                        '`libros` / `books`\n' +
+                        '`historia` / `history`\n' +
+                        '`geografia` / `geography` / `geo`\n' +
+                        '`mitologia` / `mythology`\n' +
+                        '`arte` / `art`',
+                    inline: true
+                },
+                {
+                    name: '🔬 Ciencias',
+                    value:
+                        '`ciencia` / `science` / `naturaleza`\n' +
+                        '`computacion` / `computers` / `informatica`\n' +
+                        '`matematicas` / `math` / `mates`',
+                    inline: true
+                },
+                {
+                    name: '⚽ Otros',
+                    value:
+                        '`deportes` / `sports`\n' +
+                        '`animales` / `animals`',
+                    inline: true
+                },
+                {
+                    name: '💡 Ejemplos de Uso',
+                    value:
+                        '`>trivia easy peliculas`\n' +
+                        '`>trivia medium tof deportes`\n' +
+                        '`>trivia hard anime`',
+                    inline: false
+                }
+            )
+            .setFooter({ text: 'Usa >trivia <dificultad> [modo] [categoría]' })
+            .setTimestamp();
+        
+        await message.reply({ embeds: [embed] });
+    }
+
     /**
      * Traducir pregunta de trivia con contexto mejorado
      */
@@ -10277,6 +10338,8 @@ const userId = gameState.userId;
     3. Si hay símbolos o caracteres especiales raros, reemplázalos por su equivalente correcto.
     4. Mantén el sentido y contexto original de la pregunta.
     5. Las respuestas deben ser consistentes con la pregunta traducida.
+    6. Si una pregunta es muy larga o compleja, tradúcela de forma más concisa manteniendo el sentido, pero NO la cortes a medias.
+    7. SIEMPRE traduce la pregunta completa, nunca la dejes incompleta.
 
     PREGUNTA: ${question}
 
@@ -10941,6 +11004,11 @@ const userId = gameState.userId;
                     break;
                 case '>trivialb':
                     await this.showTriviaLeaderboard(message, args);
+                    break;
+                case '>triviacategorias':
+                case '>triviacategories':
+                case '>triviacat':
+                    await this.showTriviaCategories(message);
                     break;
                 case '>games':
                 case '>minigames':
