@@ -10010,12 +10010,13 @@ const userId = gameState.userId;
                 if (correctAnswers === totalQuestions) {
                     // Perfecto (5/5 o 10/10)
                     reward = this.config.trivia.rewards.perfect;
-                    await this.economy.achievements.updateStats(userId, 'trivia_perfect');
-                    
+
                     // Si fue T/F perfecta, también actualizar stat específica
                     if (isTrueFalse) {
                         await this.economy.achievements.updateStats(userId, 'trivia_tof_perfect');
                     }
+                    else
+                        await this.economy.achievements.updateStats(userId, 'trivia_perfect');                
                 } 
                 else if (isTrueFalse) {
                     // Recompensas para True/False (10 preguntas)
@@ -10207,8 +10208,7 @@ const userId = gameState.userId;
                                 value: 
                                     '`>trivialb` o `>trivialb perfect` - Trivias perfectas\n' +
                                     '`>trivialb accuracy` - Mejor precisión\n' +
-                                    '`>trivialb played` - Más partidas jugadas\n' +
-                                    '`>trivialb tof` - Perfectas en True/False',
+                                    '`>trivialb played` - Más partidas jugadas\n',
                                 inline: false 
                             }
                         )
