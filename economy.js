@@ -435,7 +435,7 @@ class EconomySystem {
             xpGained = await this.shop.applyXpEffects(userId, xpGained);
         }
 
-await this.missions.updateMissionProgress(userId, 'xp_gained_today', xpGained);
+        await this.missions.updateMissionProgress(userId, 'xp_gained_today', xpGained);
        
         const oldLevel = user.level;
         const newXp = user.xp + xpGained;
@@ -651,11 +651,11 @@ await this.missions.updateMissionProgress(userId, 'xp_gained_today', xpGained);
         }
     }
 
-    async getTriviaTofLeaderboard(limit = 10) {
+    async getTriviaSurvivalLeaderboard(limit = 10) {
         try {
-            return await this.database.getTriviaTofLeaderboard(limit);
+            return await this.database.getTriviaSurvivalLeaderboard(limit);
         } catch (error) {
-            console.error('❌ Error obteniendo ranking de T/F:', error);
+            console.error('❌ Error obteniendo ranking de supervivencia:', error);
             return [];
         }
     }

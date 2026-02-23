@@ -190,7 +190,7 @@ class MinigamesSystem {
                 minBet: 0,              // Gratis para jugar
                 maxBet: 0,              // Gratis
                 cooldown: 60000,       // 2 minutos
-                timePerQuestion: 15000, // 20 segundos por pregunta
+                timePerQuestion: 15000, // 15 segundos por pregunta
                 questionsPerGame: 5,    // 5 preguntas por partida
                 hintsPerGame: 3,
                 hintPenalty: 0.4,
@@ -205,7 +205,15 @@ class MinigamesSystem {
                     easy: { multiplier: 1.0, xp: 30 },
                     medium: { multiplier: 1.5, xp: 50 },
                     hard: { multiplier: 2.0, xp: 80 }
-                }
+                },
+                survival: {
+                    timePerQuestion: 10000,        // 10 segundos (más rápido)
+                    baseReward: 100,               // 100 π-b$ por pregunta correcta
+                    baseXP: 10,                    // 10 XP por pregunta correcta
+                    difficultyIncrement: 5,        // Cada 5 preguntas sube dificultad
+                    multiplierPerLevel: 1.5,       // x1.5 por cada nivel de dificultad
+                    cooldown: 300000               // 5 minutos de cooldown
+                },
             },
             vendingMachine: {
                 minBet: 10,
@@ -10166,6 +10174,370 @@ const userId = gameState.userId;
         }
     }
 
+    async playTriviaSurvival(message, args) {
+        const userId = message.author.id;
+        
+        // Mostrar ayuda si piden
+        if (!args[1] || args[1] !== 'start') {
+            const embed = new EmbedBuilder()
+                .setTitle('🏃 Modo Supervivencia - Trivia')
+                .setDescription('¡Responde preguntas hasta que falles! La dificultad aumenta cada 5 correctas.')
+                .addFields(
+                    { name: '⏱️ Tiempo', value: '10 segundos por pregunta', inline: true },
+                    { name: '💰 Recompensa', value: 'Acumulativa (+50% cada nivel)', inline: true },
+                    { name: '📈 Dificultad', value: 'Progresiva cada 5 preguntas', inline: true },
+                    { name: '🚫 Pistas', value: 'No disponibles', inline: true },
+                    { name: '⏰ Cooldown', value: '5 minutos', inline: true },
+                    { name: '🎯 Objetivo', value: 'Sobrevivir el mayor tiempo posible', inline: true },
+                    { 
+                        name: '💎 Sistema de Recompensas', 
+                        value: 
+                            '**Nivel 1 (1-5):** 100 π-b$ + 10 XP por pregunta\n' +
+                            '**Nivel 2 (6-10):** 150 π-b$ + 15 XP por pregunta\n' +
+                            '**Nivel 3 (11-15):** 225 π-b$ + 22 XP por pregunta\n' +
+                            '**Y así sucesivamente...**',
+                        inline: false 
+                    },
+                    { 
+                        name: '🎮 Uso', 
+                        value: '`>triviasurv start` - Iniciar modo supervivencia\n`>triviasurv start [categoría]` - Con categoría específica', 
+                        inline: false 
+                    }
+                )
+                .setColor('#FF4500')
+                .setFooter({ text: '¡Compite por el récord más alto!' });
+            
+            await message.reply({ embeds: [embed] });
+            return;
+        }
+        
+        // Verificar cooldown
+        const cooldownKey = `trivia_survival_${userId}`;
+        if (this.isOnCooldown(cooldownKey, this.config.trivia.survival.cooldown)) {
+            const remaining = this.getCooldownRemaining(cooldownKey, this.config.trivia.survival.cooldown);
+            return message.reply(`⏰ Espera ${Math.ceil(remaining / 1000)} segundos antes de jugar supervivencia de nuevo.`);
+        }
+
+        // Verificar si ya está en un juego
+        if (this.activeGames.has(`trivia_survival_${userId}`)) {
+            return message.reply('❌ Ya estás en una partida de supervivencia.');
+        }
+
+        // Mapa de categorías (mismo que en trivia normal)
+        const categories = {
+            'general': 9,
+            'libros': 10, 'books': 10,
+            'peliculas': 11, 'movies': 11, 'cine': 11,
+            'musica': 12, 'music': 12,
+            'tv': 14, 'television': 14,
+            'videojuegos': 15, 'videogames': 15, 'games': 15,
+            'ciencia': 17, 'science': 17, 'naturaleza': 17,
+            'computacion': 18, 'computers': 18, 'informatica': 18,
+            'matematicas': 19, 'math': 19, 'mates': 19,
+            'mitologia': 20, 'mythology': 20,
+            'deportes': 21, 'sports': 21,
+            'geografia': 22, 'geography': 22, 'geo': 22,
+            'historia': 23, 'history': 23,
+            'arte': 25, 'art': 25,
+            'animales': 27, 'animals': 27,
+            'anime': 31, 'manga': 31,
+            'cartoons': 32, 'caricaturas': 32
+        };
+
+        // Categoría (opcional, en args[2] porque args[1] es 'start')
+        let categoryId = null;
+        let categoryName = 'Mixto';
+        
+        const arg2 = args[2] ? args[2].toLowerCase() : null;
+        if (arg2 && categories[arg2]) {
+            categoryId = categories[arg2];
+            categoryName = arg2.charAt(0).toUpperCase() + arg2.slice(1);
+        }
+
+        try {
+            // Marcar como activo
+            this.activeGames.set(`trivia_survival_${userId}`, true);
+            this.setCooldown(cooldownKey);
+
+            // Variables del juego
+            let correctStreak = 0;
+            let totalCorrect = 0;
+            let totalEarned = 0;
+            let totalXP = 0;
+            let currentDifficulty = 'easy';
+            let currentLevel = 1;
+            let askedQuestions = new Set();
+
+            // Mensaje inicial
+            const startEmbed = new EmbedBuilder()
+                .setTitle('🏃 ¡Modo Supervivencia Iniciado!')
+                .setDescription(
+                    `**Categoría:** ${categoryName}\n` +
+                    `**Dificultad Inicial:** Easy\n` +
+                    `**Tiempo por pregunta:** 10 segundos\n\n` +
+                    `¡Responde correctamente para seguir adelante!`
+                )
+                .setColor('#FF4500')
+                .setFooter({ text: 'El juego comenzará en 3 segundos...' });
+
+            let gameMessage = await message.reply({ embeds: [startEmbed] });
+            await new Promise(resolve => setTimeout(resolve, 3000));
+
+            // Función para obtener siguiente pregunta
+            const getNextQuestion = async () => {
+                // Determinar dificultad según racha
+                if (correctStreak >= 10) {
+                    currentDifficulty = 'hard';
+                    currentLevel = 3;
+                } else if (correctStreak >= 5) {
+                    currentDifficulty = 'medium';
+                    currentLevel = 2;
+                } else {
+                    currentDifficulty = 'easy';
+                    currentLevel = 1;
+                }
+
+                let q = null;
+                let attempts = 0;
+                const maxAttempts = 10; // Intentar hasta 10 veces para encontrar pregunta única
+
+                // Intentar obtener pregunta no repetida
+                while (attempts < maxAttempts) {
+                    // Obtener pregunta de la API (pedir 5 para tener opciones)
+                    const categoryParam = categoryId ? `&category=${categoryId}` : '';
+                    const apiUrl = `https://opentdb.com/api.php?amount=5&difficulty=${currentDifficulty}&type=multiple${categoryParam}`;
+                    
+                    const response = await fetch(apiUrl);
+                    const data = await response.json();
+
+                    if (data.response_code !== 0 || !data.results || data.results.length === 0) {
+                        throw new Error('No se pudo obtener pregunta');
+                    }
+
+                    // Buscar una pregunta que no se haya usado
+                    for (const question of data.results) {
+                        if (!askedQuestions.has(question.question)) {
+                            q = question;
+                            askedQuestions.add(question.question);
+                            console.log(`✅ Pregunta única #${totalCorrect + 1} (${askedQuestions.size} preguntas usadas)`);
+                            break;
+                        }
+                    }
+
+                    if (q) break; // Si encontró una pregunta única, salir del loop
+                    
+                    attempts++;
+                    console.log(`⚠️ Todas las preguntas ya fueron usadas, intento ${attempts}/${maxAttempts}`);
+                }
+
+                // Si después de intentar no encuentra pregunta única, usar cualquiera
+                if (!q) {
+                    console.log('⚠️ No se encontró pregunta única, permitiendo repetición');
+                    const categoryParam = categoryId ? `&category=${categoryId}` : '';
+                    const apiUrl = `https://opentdb.com/api.php?amount=1&difficulty=${currentDifficulty}&type=multiple${categoryParam}`;
+                    
+                    const response = await fetch(apiUrl);
+                    const data = await response.json();
+                    
+                    if (data.response_code !== 0 || !data.results || data.results.length === 0) {
+                        throw new Error('No se pudo obtener pregunta');
+                    }
+                    
+                    q = data.results[0];
+                }
+
+                // Decodificar y traducir
+                const decodedQuestion = this.decodeHTML(q.question);
+                const decodedCorrect = this.decodeHTML(q.correct_answer);
+                const decodedIncorrect = q.incorrect_answers.map(ans => this.decodeHTML(ans));
+                const allAnswersOriginal = [decodedCorrect, ...decodedIncorrect];
+
+                // Traducir con contexto
+                const contextTranslation = await this.translateTriviaQuestion(
+                    decodedQuestion,
+                    allAnswersOriginal,
+                    decodedCorrect
+                );
+
+                let translatedQuestion, translatedCorrect, allAnswers;
+
+                if (contextTranslation) {
+                    translatedQuestion = contextTranslation.question;
+                    translatedCorrect = contextTranslation.answers[allAnswersOriginal.indexOf(decodedCorrect)];
+                    allAnswers = contextTranslation.answers.sort(() => Math.random() - 0.5);
+                } else {
+                    translatedQuestion = await this.translateText(decodedQuestion);
+                    translatedCorrect = await this.translateText(decodedCorrect);
+                    const translatedIncorrect = await Promise.all(
+                        decodedIncorrect.map(ans => this.translateText(ans))
+                    );
+                    allAnswers = [translatedCorrect, ...translatedIncorrect].sort(() => Math.random() - 0.5);
+                }
+
+                return {
+                    question: translatedQuestion,
+                    correct: translatedCorrect,
+                    answers: allAnswers,
+                    category: await this.translateText(this.decodeHTML(q.category))
+                };
+            };
+
+            // Función para mostrar pregunta
+            const showQuestion = async () => {
+                const question = await getNextQuestion();
+                const letters = ['A', 'B', 'C', 'D'];
+
+                // Calcular recompensa actual
+                const multiplier = Math.pow(this.config.trivia.survival.multiplierPerLevel, currentLevel - 1);
+                const currentReward = Math.floor(this.config.trivia.survival.baseReward * multiplier);
+                const currentXPReward = Math.floor(this.config.trivia.survival.baseXP * multiplier);
+
+                // Crear texto de opciones
+                let optionsText = '';
+                question.answers.forEach((answer, index) => {
+                    const truncatedAnswer = answer.length > 100 ? answer.substring(0, 97) + '...' : answer;
+                    optionsText += `**${letters[index]})**  ${truncatedAnswer}\n`;
+                });
+
+                const questionEmbed = new EmbedBuilder()
+                    .setTitle(`🏃 Supervivencia - Pregunta #${totalCorrect + 1}`)
+                    .setDescription(`<@${userId}>, responde esta pregunta:\n\n**${question.question}**`)
+                    .addFields(
+                        { name: '📝 Opciones', value: optionsText, inline: false },
+                        { name: '📊 Nivel', value: `${currentLevel} (${currentDifficulty.toUpperCase()})`, inline: true },
+                        { name: '🔥 Racha', value: `${correctStreak}`, inline: true },
+                        { name: '💰 Próxima recompensa', value: `${currentReward} π-b$ + ${currentXPReward} XP`, inline: true }
+                    )
+                    .setColor('#FF4500')
+                    .setFooter({ text: `⏱️ Tienes 10 segundos | 💎 Total ganado: ${totalEarned} π-b$` });
+
+                const buttons = new ActionRowBuilder();
+                letters.forEach((letter, index) => {
+                    buttons.addComponents(
+                        new ButtonBuilder()
+                            .setCustomId(`survival_${index}`)
+                            .setLabel(letter)
+                            .setStyle(ButtonStyle.Primary)
+                    );
+                });
+
+                await gameMessage.edit({ embeds: [questionEmbed], components: [buttons] });
+
+                // Esperar respuesta (20 segundos)
+                try {
+                    const filter = (i) => i.user.id === userId && i.customId.startsWith('survival_');
+                    const interaction = await gameMessage.awaitMessageComponent({ 
+                        filter, 
+                        time: this.config.trivia.survival.timePerQuestion 
+                    });
+
+                    const answerIndex = parseInt(interaction.customId.split('_')[1]);
+                    const selectedAnswer = question.answers[answerIndex];
+                    const isCorrect = selectedAnswer === question.correct;
+
+                    if (isCorrect) {
+                        // ✅ Correcto - Continuar
+                        correctStreak++;
+                        totalCorrect++;
+                        totalEarned += currentReward;
+                        totalXP += currentXPReward;
+
+                        const correctEmbed = new EmbedBuilder()
+                            .setTitle('✅ ¡Correcto!')
+                            .setDescription(
+                                `**Pregunta:** ${question.question}\n\n` +
+                                `✅ **Respuesta:** ${selectedAnswer}\n\n` +
+                                `+${currentReward} π-b$ | +${currentXPReward} XP`
+                            )
+                            .setColor('#00FF00');
+
+                        await interaction.update({ embeds: [correctEmbed], components: [] });
+                        await new Promise(resolve => setTimeout(resolve, 2000));
+
+                        // Siguiente pregunta
+                        await showQuestion();
+
+                    } else {
+                        // ❌ Incorrecto - Fin del juego
+                        await endGame(interaction, question, selectedAnswer, false);
+                    }
+
+                } catch (error) {
+                    // Timeout - Fin del juego
+                    await endGame(null, question, null, true);
+                }
+            };
+
+            // Función para terminar el juego
+            const endGame = async (interaction, question, userAnswer, timeout) => {
+                this.activeGames.delete(`trivia_survival_${userId}`);
+
+                const wrongEmbed = new EmbedBuilder()
+                    .setTitle(timeout ? '⏰ ¡Se acabó el tiempo!' : '❌ Respuesta Incorrecta')
+                    .setDescription(
+                        `**Pregunta:** ${question.question}\n\n` +
+                        (timeout ? `❌ **No respondiste a tiempo**\n` : `❌ **Tu respuesta:** ${userAnswer}\n`) +
+                        `✅ **Respuesta correcta:** ${question.correct}`
+                    )
+                    .setColor('#FF0000');
+
+                if (interaction) {
+                    await interaction.update({ embeds: [wrongEmbed], components: [] });
+                } else {
+                    await gameMessage.edit({ embeds: [wrongEmbed], components: [] });
+                }
+
+                await new Promise(resolve => setTimeout(resolve, 5000));
+
+                // Otorgar recompensas acumuladas
+                await this.economy.addMoney(userId, totalEarned);
+                await this.economy.addXP(userId, totalXP);
+
+                // Actualizar stats
+                const user = await this.economy.getUser(userId);
+                const currentRecord = user.stats?.trivia_survival_record || 0;
+                const newRecord = Math.max(currentRecord, totalCorrect);
+
+                const updateDataSurvival = {
+                    stats: {
+                        ...user.stats,
+                        trivia_survival_record: newRecord,
+                        trivia_survival_played: (user.stats?.trivia_survival_played || 0) + 1
+                    }
+                };
+
+                await this.economy.updateUser(userId, updateDataSurvival);
+
+                // Embed de resultados
+                const resultEmbed = new EmbedBuilder()
+                    .setTitle('🏁 ¡Supervivencia Terminada!')
+                    .setDescription(
+                        `Sobreviviste **${totalCorrect}** preguntas correctas\n` +
+                        (newRecord > currentRecord ? `\n🎉 **¡NUEVO RÉCORD PERSONAL!**\n` : '')
+                    )
+                    .addFields(
+                        { name: '💰 Total ganado', value: `${totalEarned} π-b$`, inline: true },
+                        { name: '⭐ XP ganada', value: `${totalXP} XP`, inline: true },
+                        { name: '🏆 Tu récord', value: `${newRecord} preguntas`, inline: true },
+                        { name: '📊 Dificultad alcanzada', value: currentDifficulty.toUpperCase(), inline: true },
+                        { name: '📚 Categoría', value: categoryName, inline: true }
+                    )
+                    .setColor(totalCorrect >= 10 ? '#FFD700' : '#FF4500')
+                    .setFooter({ text: 'Usa >triviasurv para jugar de nuevo' });
+
+                await message.channel.send({ embeds: [resultEmbed] });
+            };
+
+            // Iniciar el juego
+            await showQuestion();
+
+        } catch (error) {
+            this.activeGames.delete(`trivia_survival_${userId}`);
+            console.error('Error en supervivencia:', error);
+            await message.reply('❌ Ocurrió un error en el modo supervivencia. Intenta de nuevo.');
+        }
+    }
+
     async showTriviaLeaderboard(message, args) {
         try {
             const type = args[1]?.toLowerCase();
@@ -10196,7 +10568,15 @@ const userId = gameState.userId;
                     emoji = '🎲';
                     valueFormatter = (user) => `${user.trivia_played} partidas`;
                     break;
-                                    
+                               
+                case 'survival':
+                case 'supervivencia':
+                    leaderboard = await this.economy.getTriviaSurvivalLeaderboard(10);
+                    title = '🏃 Top 10 - Récord Supervivencia';
+                    emoji = '🔥';
+                    valueFormatter = (user) => `${user.trivia_survival_record} preguntas`;
+                    break;
+
                 default:
                     // Mostrar ayuda
                     const helpEmbed = new EmbedBuilder()
@@ -11001,6 +11381,11 @@ const userId = gameState.userId;
                     break;
                 case '>trivia':
                     await this.playTrivia(message, args);
+                    break;
+                case '>triviasurvival':
+                case '>triviasurv':
+                case '>survival':
+                    await this.playTriviaSurvival(message, args);
                     break;
                 case '>trivialb':
                     await this.showTriviaLeaderboard(message, args);
