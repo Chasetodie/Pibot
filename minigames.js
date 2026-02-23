@@ -736,31 +736,31 @@ setCooldown(userId, gameType) {
 
     // En minigames.js, REEMPLAZAR getEffectiveCooldown():
 
-async getEffectiveCooldown(baseCooldown) {
-    let effectiveCooldown = baseCooldown;
-    
-    // Verificar que events esté disponible
-    if (!this.events) {
-        console.log('⚠️ Events no disponible en cooldown');
+    async getEffectiveCooldown(baseCooldown) {
+        let effectiveCooldown = baseCooldown;
+        
+        // Verificar que events esté disponible
+        if (!this.events) {
+            console.log('⚠️ Events no disponible en cooldown');
+            return effectiveCooldown;
+        }
+        
+        try {
+            // Aplicar eventos
+            const activeEvents = this.events.getActiveEvents();
+            for (const event of activeEvents) {
+                if (event.multipliers?.cooldown) {
+                    effectiveCooldown = Math.floor(baseCooldown * event.multipliers.cooldown);
+                    console.log(`⏰ Cooldown modificado por ${event.name}: ${baseCooldown}ms → ${effectiveCooldown}ms`);
+                    break;
+                }
+            }
+        } catch (error) {
+            console.error('Error aplicando eventos a cooldown:', error);
+        }
+        
         return effectiveCooldown;
     }
-    
-    try {
-        // Aplicar eventos
-        const activeEvents = this.events.getActiveEvents();
-        for (const event of activeEvents) {
-            if (event.multipliers?.cooldown) {
-                effectiveCooldown = Math.floor(baseCooldown * event.multipliers.cooldown);
-                console.log(`⏰ Cooldown modificado por ${event.name}: ${baseCooldown}ms → ${effectiveCooldown}ms`);
-                break;
-            }
-        }
-    } catch (error) {
-        console.error('Error aplicando eventos a cooldown:', error);
-    }
-    
-    return effectiveCooldown;
-}
 
     async canCoinflip(userId) {
     const user = await this.economy.getUser(userId);
@@ -10174,6 +10174,41 @@ const userId = gameState.userId;
         }
     }
 
+    async canTriviaSurvival(userId) {
+        const user = await this.economy.getUser(userId);
+
+        if (this.shop) {
+            const vipMultipliers = await this.shop.getVipMultipliers(userId, 'games');
+            if (vipMultipliers.noCooldown) {
+                return { canPlay: true };
+            }
+        }
+
+        const cacheKey = `${userId}-trivia_survival`;
+        const cachedCooldown = this.cooldownCache.get(cacheKey);
+        const now = Date.now();
+        
+        let effectiveCooldown = await this.getEffectiveCooldown(this.config.trivia.survival.cooldown);
+
+        if (this.shop) {
+            const cooldownReduction = await this.shop.getCooldownReduction(userId, 'games');
+            effectiveCooldown = Math.floor(effectiveCooldown * (1 - cooldownReduction));
+        }
+        
+        if (cachedCooldown && (now - cachedCooldown < effectiveCooldown)) {
+            const timeLeft = effectiveCooldown - (now - cachedCooldown);
+            return { canPlay: false, timeLeft };
+        }
+
+        const lastPlay = user.last_trivia_survival || 0;
+        if (now - lastPlay < effectiveCooldown) {
+            const timeLeft = effectiveCooldown - (now - lastPlay);
+            return { canPlay: false, timeLeft };
+        }
+
+        return { canPlay: true };
+    }
+
     async playTriviaSurvival(message, args) {
         const userId = message.author.id;
         
@@ -10211,11 +10246,10 @@ const userId = gameState.userId;
             return;
         }
         
-        // Verificar cooldown
-        const cooldownKey = `trivia_survival_${userId}`;
-        if (this.isOnCooldown(cooldownKey, this.config.trivia.survival.cooldown)) {
-            const remaining = this.getCooldownRemaining(cooldownKey, this.config.trivia.survival.cooldown);
-            return message.reply(`⏰ Espera ${Math.ceil(remaining / 1000)} segundos antes de jugar supervivencia de nuevo.`);
+        const canTrivia = await this.canTriviaSurvival(userId);
+        if (!canTrivia.canPlay) {
+            await message.reply(`⏰ Debes esperar ${this.formatTime(canTrivia.timeLeft)} antes de jugar otra vez`);
+            return;
         }
 
         // Verificar si ya está en un juego

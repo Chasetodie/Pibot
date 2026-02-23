@@ -807,9 +807,12 @@ class LocalDatabase {
                 last_blackjack: 0,
                 last_slots: 0,
                 last_name_work: "",
+                lastPassivePayout: 0,
+                last_vending: 0,
+                last_trivia: 0,
+                last_trivia_survival: 0,
                 messages_count: 0,
                 items: {},
-                vipStats: {},
                 stats: {
                     totalEarned: 0,
                     totalSpent: 0,
@@ -860,6 +863,7 @@ class LocalDatabase {
                     total_lost: 0,
                     net_profit: 0
                 },
+                vipStats: {},
                 daily_missions: {},
                 daily_missions_date: null,
                 daily_stats: {
@@ -868,25 +872,55 @@ class LocalDatabase {
                     money_earned_today: 0
                 },
                 achievements: {},
+                missions_reset_today: 0,
+                missions_notifications_blocked: 0,
+                cosmetics: {},
+                permanentEffects: {},
+                activeEffects: {},
                 passiveIncomeStats: {
                     totalEarned: 0,
                     lastPayout: 0,
                     payoutCount: 0
                 },
-                lastPassivePayout: 0,
-                last_vending: 0,
-                last_trivia: 0,
             };
 
             await this.pool.execute(`
                 INSERT INTO users (
-                    id, balance, level, xp, total_xp, last_daily, last_work,
-                    last_robbery, last_coinflip, last_dice, last_roulette,
-                    last_lotto, last_blackjack, last_slots, last_name_work, messages_count,
-                    items, stats, bet_stats, daily_missions, daily_missions_date,
-                    daily_stats, achievements, passiveIncomeStats, lastPassivePayout,
-                    last_vending, last_trivia
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    id, 
+                    balance, 
+                    level, 
+                    xp, 
+                    total_xp, 
+                    last_daily, 
+                    last_work,
+                    last_robbery, 
+                    last_coinflip, 
+                    last_dice, 
+                    last_roulette,
+                    last_lotto, 
+                    last_blackjack, 
+                    last_slots, 
+                    last_name_work, 
+                    lastPassivePayout, 
+                    last_vending, 
+                    last_trivia, 
+                    last_trivia_survival, 
+                    messages_count, 
+                    items, 
+                    stats, 
+                    bet_stats, 
+                    vipStats,
+                    daily_missions, 
+                    daily_missions_date, 
+                    daily_stats, 
+                    achievements, 
+                    missions_reset_today,
+                    missions_notifications_blocked,
+                    cosmetics,
+                    permanentEffects,
+                    activeEffects,
+                    passiveIncomeStats
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             `, [
                 newUser.id,
                 newUser.balance,
@@ -901,20 +935,27 @@ class LocalDatabase {
                 newUser.last_roulette,
                 newUser.last_lotto,
                 newUser.last_blackjack,
-                newUser.last_slots, // ✅ ahora sí
+                newUser.last_slots,
                 newUser.last_name_work,
+                newUser.lastPassivePayout,
+                newUser.last_vending,
+                newUser.last_trivia,
+                newUser.last_trivia_survival,
                 newUser.messages_count,
                 JSON.stringify(newUser.items),
                 JSON.stringify(newUser.stats),
                 JSON.stringify(newUser.bet_stats),
+                JSON.stringify(newUser.vipStats),
                 JSON.stringify(newUser.daily_missions),
                 newUser.daily_missions_date,
                 JSON.stringify(newUser.daily_stats),
                 JSON.stringify(newUser.achievements),
-                JSON.stringify(newUser.passiveIncomeStats),
-                newUser.lastPassivePayout,
-                newUser.last_vending,
-                newUser.last_trivia
+                newUser.missions_reset_today,
+                newUser.missions_notifications_blocked,
+                JSON.stringify(newUser.cosmetics),
+                JSON.stringify(newUser.permanentEffects),
+                JSON.stringify(newUser.activeEffects),
+                JSON.stringify(newUser.passiveIncomeStats)
             ]);
 
             // Guardar en caché antes de retornar
