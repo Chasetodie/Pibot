@@ -10456,48 +10456,63 @@ const userId = gameState.userId;
 
                 await gameMessage.edit({ embeds: [questionEmbed], components: [buttons] });
 
-                // Esperar respuesta (20 segundos)
-                try {
-                    const filter = (i) => i.user.id === userId && i.customId.startsWith('survival_');
-                    const interaction = await gameMessage.awaitMessageComponent({ 
-                        filter, 
-                        time: this.config.trivia.survival.timePerQuestion 
-                    });
+                // Esperar respuesta con flag de control
+                let gameEnded = false;
+                
+                const timeoutPromise = new Promise((resolve) => {
+                    setTimeout(() => resolve('timeout'), this.config.trivia.survival.timePerQuestion);
+                });
 
-                    const answerIndex = parseInt(interaction.customId.split('_')[1]);
-                    const selectedAnswer = question.answers[answerIndex];
-                    const isCorrect = selectedAnswer === question.correct;
+                const collectorPromise = gameMessage.awaitMessageComponent({ 
+                    filter: (i) => i.user.id === userId && i.customId.startsWith('survival_'),
+                    time: this.config.trivia.survival.timePerQuestion + 2000 
+                }).catch(() => null);
 
-                    if (isCorrect) {
-                        // ✅ Correcto - Continuar
-                        correctStreak++;
-                        totalCorrect++;
-                        totalEarned += currentReward;
-                        totalXP += currentXPReward;
+                const result = await Promise.race([timeoutPromise, collectorPromise]);
 
-                        const correctEmbed = new EmbedBuilder()
-                            .setTitle('✅ ¡Correcto!')
-                            .setDescription(
-                                `**Pregunta:** ${question.question}\n\n` +
-                                `✅ **Respuesta:** ${selectedAnswer}\n\n` +
-                                `+${currentReward} π-b$ | +${currentXPReward} XP`
-                            )
-                            .setColor('#00FF00');
+                if (gameEnded) return; // Si ya terminó, no hacer nada
 
-                        await interaction.update({ embeds: [correctEmbed], components: [] });
-                        await new Promise(resolve => setTimeout(resolve, 2000));
-
-                        // Siguiente pregunta
-                        await showQuestion();
-
-                    } else {
-                        // ❌ Incorrecto - Fin del juego
-                        await endGame(interaction, question, selectedAnswer, false);
-                    }
-
-                } catch (error) {
-                    // Timeout - Fin del juego
+                if (result === 'timeout' || !result) {
+                    // ⏰ Timeout - Fin del juego
+                    gameEnded = true;
                     await endGame(null, question, null, true);
+                    return;
+                }
+
+                // Usuario respondió
+                const interaction = result;
+                const answerIndex = parseInt(interaction.customId.split('_')[1]);
+                const selectedAnswer = question.answers[answerIndex];
+                const isCorrect = selectedAnswer === question.correct;
+
+                if (isCorrect) {
+                    // ✅ Correcto - Continuar
+                    correctStreak++;
+                    totalCorrect++;
+                    totalEarned += currentReward;
+                    totalXP += currentXPReward;
+
+                    const correctEmbed = new EmbedBuilder()
+                        .setTitle('✅ ¡Correcto!')
+                        .setDescription(
+                            `**Pregunta:** ${question.question}\n\n` +
+                            `✅ **Respuesta:** ${selectedAnswer}\n\n` +
+                            `+${currentReward} π-b$ | +${currentXPReward} XP`
+                        )
+                        .setColor('#00FF00');
+
+                    await interaction.update({ embeds: [correctEmbed], components: [] });
+                    await new Promise(resolve => setTimeout(resolve, 2000));
+
+                    if (gameEnded) return; // Verificar de nuevo antes de continuar
+
+                    // Siguiente pregunta
+                    await showQuestion();
+
+                } else {
+                    // ❌ Incorrecto - Fin del juego
+                    gameEnded = true;
+                    await endGame(interaction, question, selectedAnswer, false);
                 }
             };
 
@@ -10521,18 +10536,7 @@ const userId = gameState.userId;
                 }
 
                 await new Promise(resolve => setTimeout(resolve, 5000));
-
-                // ✅ Aplicar penalización de maldición (-25% dinero)
-                const activeEffectss = this.shop.parseActiveEffects(user.activeEffects);
-                const curses = activeEffectss['death_hand_curse'];
-                let curseMoneyPenalty = 0;
-
-                if (curses && curses.length > 0 && curses[0].expiresAt > Date.now()) {
-                    const penaltyAmount = Math.floor(reward.money * Math.abs(curses[0].moneyPenalty)); // 0.25 = 25%
-                    curseMoneyPenalty = penaltyAmount;
-                    reward.money -= penaltyAmount;
-                }
-                
+               
                 // Actualizar stats
                 const user = await this.economy.getUser(userId);
                 const currentRecord = user.stats?.trivia_survival_record || 0;
@@ -10545,6 +10549,17 @@ const userId = gameState.userId;
                         trivia_survival_played: (user.stats?.trivia_survival_played || 0) + 1
                     }
                 };
+
+                // ✅ Aplicar penalización de maldición (-25% dinero)
+                const activeEffectss = this.shop.parseActiveEffects(user.activeEffects);
+                const curses = activeEffectss['death_hand_curse'];
+                let curseMoneyPenalty = 0;
+
+                if (curses && curses.length > 0 && curses[0].expiresAt > Date.now()) {
+                    const penaltyAmount = Math.floor(reward.money * Math.abs(curses[0].moneyPenalty)); // 0.25 = 25%
+                    curseMoneyPenalty = penaltyAmount;
+                    totalEarned -= penaltyAmount;
+                }
 
                 // Otorgar recompensas acumuladas
                 await this.economy.addMoney(userId, totalEarned);
