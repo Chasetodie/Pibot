@@ -10291,7 +10291,6 @@ const userId = gameState.userId;
         try {
             // Marcar como activo
             this.activeGames.set(`trivia_survival_${userId}`, true);
-            this.setCooldown(cooldownKey);
 
             // Variables del juego
             let correctStreak = 0;
