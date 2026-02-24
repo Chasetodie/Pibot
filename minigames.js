@@ -10522,9 +10522,20 @@ const userId = gameState.userId;
 
                 await new Promise(resolve => setTimeout(resolve, 5000));
 
+                // ✅ Aplicar penalización de maldición (-25% dinero)
+                const activeEffectss = this.shop.parseActiveEffects(user.activeEffects);
+                const curses = activeEffectss['death_hand_curse'];
+                let curseMoneyPenalty = 0;
+
+                if (curses && curses.length > 0 && curses[0].expiresAt > Date.now()) {
+                    const penaltyAmount = Math.floor(reward.money * Math.abs(curses[0].moneyPenalty)); // 0.25 = 25%
+                    curseMoneyPenalty = penaltyAmount;
+                    reward.money -= penaltyAmount;
+                }
+                
                 // Otorgar recompensas acumuladas
                 await this.economy.addMoney(userId, totalEarned);
-                await this.economy.addXP(userId, totalXP);
+                await this.economy.addXp(userId, totalXP);
 
                 // Actualizar stats
                 const user = await this.economy.getUser(userId);
@@ -10557,6 +10568,20 @@ const userId = gameState.userId;
                     )
                     .setColor(totalCorrect >= 10 ? '#FFD700' : '#FF4500')
                     .setFooter({ text: 'Usa >triviasurv para jugar de nuevo' });
+
+                    // Verificar tesoros al final
+                    await this.checkTreasureHunt(userId, message);
+
+                    const activeEffects = this.shop.parseActiveEffects(user.activeEffects);
+                    const curse = activeEffects['death_hand_curse'];
+                    // Al final, después de crear el embed de resultado
+                    if (curse && curse.length > 0 && curse[0].expiresAt > Date.now()) {
+                        resultEmbed.addFields({
+                            name: '☠️ Maldición Activa',
+                            value: `Tu ganancia fue reducida por la maldición (-25% dinero)`,
+                            inline: false
+                        });
+                    }
 
                 await message.channel.send({ embeds: [resultEmbed] });
             };
