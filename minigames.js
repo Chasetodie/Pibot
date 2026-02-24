@@ -10533,10 +10533,6 @@ const userId = gameState.userId;
                     reward.money -= penaltyAmount;
                 }
                 
-                // Otorgar recompensas acumuladas
-                await this.economy.addMoney(userId, totalEarned);
-                await this.economy.addXp(userId, totalXP);
-
                 // Actualizar stats
                 const user = await this.economy.getUser(userId);
                 const currentRecord = user.stats?.trivia_survival_record || 0;
@@ -10550,6 +10546,9 @@ const userId = gameState.userId;
                     }
                 };
 
+                // Otorgar recompensas acumuladas
+                await this.economy.addMoney(userId, totalEarned);
+                await this.economy.addXp(userId, totalXP);
                 await this.economy.updateUser(userId, updateDataSurvival);
 
                 // Embed de resultados
