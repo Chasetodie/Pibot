@@ -10556,7 +10556,7 @@ const userId = gameState.userId;
                 let curseMoneyPenalty = 0;
 
                 if (curses && curses.length > 0 && curses[0].expiresAt > Date.now()) {
-                    const penaltyAmount = Math.floor(reward.money * Math.abs(curses[0].moneyPenalty)); // 0.25 = 25%
+                    const penaltyAmount = Math.floor(totalEarned * Math.abs(curses[0].moneyPenalty)); // 0.25 = 25%
                     curseMoneyPenalty = penaltyAmount;
                     totalEarned -= penaltyAmount;
                 }
