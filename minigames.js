@@ -10235,7 +10235,7 @@ const userId = gameState.userId;
                     },
                     { 
                         name: '🎮 Uso', 
-                        value: '`>triviasurv start` - Iniciar modo supervivencia\n`>triviasurv start [categoría]` - Con categoría específica', 
+                        value: '`>triviasurv start` - Iniciar modo supervivencia (categorías mixtas)', 
                         inline: false 
                     }
                 )
@@ -10257,42 +10257,12 @@ const userId = gameState.userId;
             return message.reply('❌ Ya estás en una partida de supervivencia.');
         }
 
-        // Mapa de categorías (mismo que en trivia normal)
-        const categories = {
-            'general': 9,
-            'libros': 10, 'books': 10,
-            'peliculas': 11, 'movies': 11, 'cine': 11,
-            'musica': 12, 'music': 12,
-            'tv': 14, 'television': 14,
-            'videojuegos': 15, 'videogames': 15, 'games': 15,
-            'ciencia': 17, 'science': 17, 'naturaleza': 17,
-            'computacion': 18, 'computers': 18, 'informatica': 18,
-            'matematicas': 19, 'math': 19, 'mates': 19,
-            'mitologia': 20, 'mythology': 20,
-            'deportes': 21, 'sports': 21,
-            'geografia': 22, 'geography': 22, 'geo': 22,
-            'historia': 23, 'history': 23,
-            'arte': 25, 'art': 25,
-            'animales': 27, 'animals': 27,
-            'anime': 31, 'manga': 31,
-            'cartoons': 32, 'caricaturas': 32
-        };
-
-        // Categoría (opcional, en args[2] porque args[1] es 'start')
-        let categoryId = null;
-        let categoryName = 'Mixto';
-        
-        const arg2 = args[2] ? args[2].toLowerCase() : null;
-        if (arg2 && categories[arg2]) {
-            categoryId = categories[arg2];
-            categoryName = arg2.charAt(0).toUpperCase() + arg2.slice(1);
-        }
-
         try {
             // Marcar como activo
             this.activeGames.set(`trivia_survival_${userId}`, true);
 
             // Variables del juego
+            const categoryName = 'Mixto';
             let correctStreak = 0;
             let totalCorrect = 0;
             let totalEarned = 0;
@@ -10337,8 +10307,7 @@ const userId = gameState.userId;
                 // Intentar obtener pregunta no repetida
                 while (attempts < maxAttempts) {
                     // Obtener pregunta de la API (pedir 5 para tener opciones)
-                    const categoryParam = categoryId ? `&category=${categoryId}` : '';
-                    const apiUrl = `https://opentdb.com/api.php?amount=5&difficulty=${currentDifficulty}&type=multiple${categoryParam}`;
+                    const apiUrl = `https://opentdb.com/api.php?amount=5&difficulty=${currentDifficulty}&type=multiple`;
                     
                     const response = await fetch(apiUrl);
                     const data = await response.json();
@@ -10366,8 +10335,7 @@ const userId = gameState.userId;
                 // Si después de intentar no encuentra pregunta única, usar cualquiera
                 if (!q) {
                     console.log('⚠️ No se encontró pregunta única, permitiendo repetición');
-                    const categoryParam = categoryId ? `&category=${categoryId}` : '';
-                    const apiUrl = `https://opentdb.com/api.php?amount=1&difficulty=${currentDifficulty}&type=multiple${categoryParam}`;
+                    const apiUrl = `https://opentdb.com/api.php?amount=1&difficulty=${currentDifficulty}&type=multiple`;
                     
                     const response = await fetch(apiUrl);
                     const data = await response.json();
