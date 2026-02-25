@@ -207,7 +207,7 @@ class MinigamesSystem {
                     hard: { multiplier: 2.0, xp: 80 }
                 },
                 survival: {
-                    timePerQuestion: 10000,        // 10 segundos (más rápido)
+                    timePerQuestion: 15000,        // 10 segundos (más rápido)
                     baseReward: 100,               // 100 π-b$ por pregunta correcta
                     baseXP: 10,                    // 10 XP por pregunta correcta
                     difficultyIncrement: 5,        // Cada 5 preguntas sube dificultad
@@ -10218,7 +10218,7 @@ const userId = gameState.userId;
                 .setTitle('🏃 Modo Supervivencia - Trivia')
                 .setDescription('¡Responde preguntas hasta que falles! La dificultad aumenta cada 5 correctas.')
                 .addFields(
-                    { name: '⏱️ Tiempo', value: '10 segundos por pregunta', inline: true },
+                    { name: '⏱️ Tiempo', value: '15 segundos por pregunta', inline: true },
                     { name: '💰 Recompensa', value: 'Acumulativa (+50% cada nivel)', inline: true },
                     { name: '📈 Dificultad', value: 'Progresiva cada 5 preguntas', inline: true },
                     { name: '🚫 Pistas', value: 'No disponibles', inline: true },
@@ -10307,7 +10307,7 @@ const userId = gameState.userId;
                 .setDescription(
                     `**Categoría:** ${categoryName}\n` +
                     `**Dificultad Inicial:** Easy\n` +
-                    `**Tiempo por pregunta:** 10 segundos\n\n` +
+                    `**Tiempo por pregunta:** 15 segundos\n\n` +
                     `¡Responde correctamente para seguir adelante!`
                 )
                 .setColor('#FF4500')
@@ -10442,7 +10442,7 @@ const userId = gameState.userId;
                         { name: '💰 Próxima recompensa', value: `${currentReward} π-b$ + ${currentXPReward} XP`, inline: true }
                     )
                     .setColor('#FF4500')
-                    .setFooter({ text: `⏱️ Tienes 10 segundos | 💎 Total ganado: ${totalEarned} π-b$` });
+                    .setFooter({ text: `⏱️ Tienes 15 segundos | 💎 Total ganado: ${totalEarned} π-b$` });
 
                 const buttons = new ActionRowBuilder();
                 letters.forEach((letter, index) => {
@@ -10523,7 +10523,7 @@ const userId = gameState.userId;
                 const wrongEmbed = new EmbedBuilder()
                     .setTitle(timeout ? '⏰ ¡Se acabó el tiempo!' : '❌ Respuesta Incorrecta')
                     .setDescription(
-                        `**Pregunta:** ${question.question}\n\n` +
+                        `**Pregunta final:** ${question.question}\n\n` +
                         (timeout ? `❌ **No respondiste a tiempo**\n` : `❌ **Tu respuesta:** ${userAnswer}\n`) +
                         `✅ **Respuesta correcta:** ${question.correct}`
                     )
@@ -10536,6 +10536,13 @@ const userId = gameState.userId;
                 }
 
                 await new Promise(resolve => setTimeout(resolve, 5000));
+
+                // Borrar el mensaje de la pregunta
+                try {
+                    await gameMessage.delete();
+                } catch (error) {
+                    console.log('No se pudo borrar mensaje:', error.message);
+                }
                
                 // Actualizar stats
                 const user = await this.economy.getUser(userId);
@@ -10566,12 +10573,12 @@ const userId = gameState.userId;
                 await this.economy.addXp(userId, totalXP);
                 await this.economy.updateUser(userId, updateDataSurvival);
 
-                // Embed de resultados
                 const resultEmbed = new EmbedBuilder()
                     .setTitle('🏁 ¡Supervivencia Terminada!')
                     .setDescription(
                         `Sobreviviste **${totalCorrect}** preguntas correctas\n` +
-                        (newRecord > currentRecord ? `\n🎉 **¡NUEVO RÉCORD PERSONAL!**\n` : '')
+                        (newRecord > currentRecord ? `\n🎉 **¡NUEVO RÉCORD PERSONAL!**\n` : '') +
+                        `\n💀 **Fallaste en:** ${question.question.substring(0, 100)}${question.question.length > 100 ? '...' : ''}`
                     )
                     .addFields(
                         { name: '💰 Total ganado', value: `${totalEarned} π-b$`, inline: true },
@@ -10660,7 +10667,8 @@ const userId = gameState.userId;
                                 value: 
                                     '`>trivialb perfect` - Trivias perfectas\n' +
                                     '`>trivialb accuracy` - Mejor precisión\n' +
-                                    '`>trivialb played` - Más partidas jugadas\n',
+                                    '`>trivialb played` - Más partidas jugadas\n' +
+                                    '`>trivialb survival` - Récord Supervivencia',
                                 inline: false 
                             }
                         )
