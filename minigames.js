@@ -10302,49 +10302,82 @@ const userId = gameState.userId;
 
                 let q = null;
                 let attempts = 0;
-                const maxAttempts = 10; // Intentar hasta 10 veces para encontrar pregunta única
+                const maxAttempts = 10;
+                let apiAttempts = 0;
+                const maxApiAttempts = 3; // Reintentar hasta 3 veces si falla la API
 
                 // Intentar obtener pregunta no repetida
-                while (attempts < maxAttempts) {
-                    // Obtener pregunta de la API (pedir 5 para tener opciones)
-                    const apiUrl = `https://opentdb.com/api.php?amount=5&difficulty=${currentDifficulty}&type=multiple`;
-                    
-                    const response = await fetch(apiUrl);
-                    const data = await response.json();
+                while (attempts < maxAttempts && apiAttempts < maxApiAttempts) {
+                    try {
+                        // Obtener pregunta de la API (pedir 5 para tener opciones)
+                        const apiUrl = `https://opentdb.com/api.php?amount=5&difficulty=${currentDifficulty}&type=multiple`;
+                        
+                        // Agregar timeout de 15 segundos
+                        const controller = new AbortController();
+                        const timeoutId = setTimeout(() => controller.abort(), 15000);
+                        
+                        const response = await fetch(apiUrl, { signal: controller.signal });
+                        clearTimeout(timeoutId);
+                        
+                        const data = await response.json();
 
-                    if (data.response_code !== 0 || !data.results || data.results.length === 0) {
-                        throw new Error('No se pudo obtener pregunta');
-                    }
-
-                    // Buscar una pregunta que no se haya usado
-                    for (const question of data.results) {
-                        if (!askedQuestions.has(question.question)) {
-                            q = question;
-                            askedQuestions.add(question.question);
-                            console.log(`✅ Pregunta única #${totalCorrect + 1} (${askedQuestions.size} preguntas usadas)`);
-                            break;
+                        if (data.response_code !== 0 || !data.results || data.results.length === 0) {
+                            throw new Error('No se pudo obtener pregunta');
                         }
-                    }
 
-                    if (q) break; // Si encontró una pregunta única, salir del loop
-                    
-                    attempts++;
-                    console.log(`⚠️ Todas las preguntas ya fueron usadas, intento ${attempts}/${maxAttempts}`);
+                        // Buscar una pregunta que no se haya usado
+                        for (const question of data.results) {
+                            if (!askedQuestions.has(question.question)) {
+                                q = question;
+                                askedQuestions.add(question.question);
+                                console.log(`✅ Pregunta única #${totalCorrect + 1} (${askedQuestions.size} preguntas usadas)`);
+                                break;
+                            }
+                        }
+
+                        if (q) break; // Si encontró una pregunta única, salir del loop
+                        
+                        attempts++;
+                        console.log(`⚠️ Todas las preguntas ya fueron usadas, intento ${attempts}/${maxAttempts}`);
+                        
+                    } catch (error) {
+                        apiAttempts++;
+                        console.error(`❌ Error obteniendo preguntas (intento ${apiAttempts}/${maxApiAttempts}):`, error.message);
+                        
+                        if (apiAttempts >= maxApiAttempts) {
+                            throw new Error('No se pudo conectar con la API de trivia después de varios intentos');
+                        }
+                        
+                        // Esperar 2 segundos antes de reintentar
+                        await new Promise(resolve => setTimeout(resolve, 2000));
+                    }
                 }
 
                 // Si después de intentar no encuentra pregunta única, usar cualquiera
                 if (!q) {
                     console.log('⚠️ No se encontró pregunta única, permitiendo repetición');
-                    const apiUrl = `https://opentdb.com/api.php?amount=1&difficulty=${currentDifficulty}&type=multiple`;
                     
-                    const response = await fetch(apiUrl);
-                    const data = await response.json();
-                    
-                    if (data.response_code !== 0 || !data.results || data.results.length === 0) {
-                        throw new Error('No se pudo obtener pregunta');
+                    try {
+                        const apiUrl = `https://opentdb.com/api.php?amount=1&difficulty=${currentDifficulty}&type=multiple`;
+                        
+                        const controller = new AbortController();
+                        const timeoutId = setTimeout(() => controller.abort(), 15000);
+                        
+                        const response = await fetch(apiUrl, { signal: controller.signal });
+                        clearTimeout(timeoutId);
+                        
+                        const data = await response.json();
+                        
+                        if (data.response_code !== 0 || !data.results || data.results.length === 0) {
+                            throw new Error('No se pudo obtener pregunta');
+                        }
+                        
+                        q = data.results[0];
+                        
+                    } catch (error) {
+                        console.error('❌ Error crítico obteniendo pregunta:', error);
+                        throw new Error('No se pudo obtener pregunta de la API');
                     }
-                    
-                    q = data.results[0];
                 }
 
                 // Decodificar y traducir
