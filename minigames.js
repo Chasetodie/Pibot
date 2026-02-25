@@ -10578,7 +10578,8 @@ const userId = gameState.userId;
                     .setDescription(
                         `Sobreviviste **${totalCorrect}** preguntas correctas\n` +
                         (newRecord > currentRecord ? `\n🎉 **¡NUEVO RÉCORD PERSONAL!**\n` : '') +
-                        `\n💀 **Fallaste en:** ${question.question.substring(0, 100)}${question.question.length > 100 ? '...' : ''}`
+                        `\n💀 **Fallaste en:** ${question.question.substring(0, 100)}${question.question.length > 100 ? '...' : ''}` +
+                        `\n✅ **Respuesta correcta:** ${question.correct}`
                     )
                     .addFields(
                         { name: '💰 Total ganado', value: `${totalEarned} π-b$`, inline: true },
