@@ -214,6 +214,18 @@ class MinigamesSystem {
                     multiplierPerLevel: 1.5,       // x1.5 por cada nivel de dificultad
                     cooldown: 300000               // 5 minutos de cooldown
                 },
+                competitive: {
+                    minPlayers: 2,
+                    maxPlayers: 6,
+                    joinTime: 45000,               // 45 segundos para unirse
+                    timePerQuestion: 25000,         // 25 segundos por pregunta
+                    questionsPerGame: 5,            // 5 preguntas
+                    minBet: 0,                      // Apuesta mínima (0 = gratis)
+                    maxBet: 5000,                   // Apuesta máxima
+                    winnerMultiplier: 0.85,         // Ganador se lleva 85% del pot
+                    speedBonusMax: 50,              // Máximo 50 puntos por velocidad
+                    cooldown: 180000                // 3 minutos
+                },
             },
             vendingMachine: {
                 minBet: 10,
@@ -10619,6 +10631,433 @@ const userId = gameState.userId;
         }
     }
 
+    // ===== MODO COMPETITIVO =====
+
+    async handleTriviaCompetitive(message, args) {
+        const userId = message.author.id;
+        const channelId = message.channel.id;
+        
+        // Verificar si ya hay una partida en este canal
+        if (this.activeGames.has(`trivia_comp_${channelId}`)) {
+            return message.reply('❌ Ya hay una partida competitiva en este canal. Usa `>jt` para unirte.');
+        }
+        
+        // Mostrar ayuda
+        if (!args[1] || args[1] === 'help' || args[1] === 'info') {
+            const embed = new EmbedBuilder()
+                .setTitle('⚔️ Modo Competitivo - Trivia')
+                .setDescription('¡Compite contra otros jugadores con las mismas preguntas!')
+                .addFields(
+                    { name: '👥 Jugadores', value: '2-6 jugadores', inline: true },
+                    { name: '❓ Preguntas', value: '5 preguntas', inline: true },
+                    { name: '⏱️ Tiempo', value: '25 seg/pregunta', inline: true },
+                    { name: '💰 Apuesta', value: 'Opcional (0-5,000 π-b$)', inline: true },
+                    { name: '⏰ Tiempo de espera', value: '45 segundos', inline: true },
+                    { name: '🏆 Premio', value: 'Ganador: 85% del pot', inline: true },
+                    {
+                        name: '📊 Sistema de Puntos',
+                        value:
+                            '• **Respuesta correcta:** 100 puntos base\n' +
+                            '• **Velocidad:** Hasta +50 puntos\n' +
+                            '• El más rápido gana más puntos',
+                        inline: false
+                    },
+                    {
+                        name: '🎮 Comandos',
+                        value:
+                            '`>triviamulti <apuesta>` - Crear partida\n' +
+                            '`>triviamulti` - Crear partida gratis\n' +
+                            '`>jt` - Unirse a partida\n' +
+                            '`>st` - Iniciar (solo creador)\n' +
+                            '`>ct` - Cancelar (solo creador)',
+                        inline: false
+                    }
+                )
+                .setColor('#FF6B35')
+                .setFooter({ text: '¡Demuestra quién es el más rápido!' });
+            
+            await message.reply({ embeds: [embed] });
+            return;
+        }
+        
+        // Validar apuesta
+        let betAmount = 0;
+        if (args[1]) {
+            betAmount = parseInt(args[1]);
+            
+            if (isNaN(betAmount) || betAmount < this.config.trivia.competitive.minBet || betAmount > this.config.trivia.competitive.maxBet) {
+                return message.reply(`❌ La apuesta debe ser entre ${this.config.trivia.competitive.minBet} y ${this.formatNumber(this.config.trivia.competitive.maxBet)} π-b$`);
+            }
+            
+            // Verificar fondos del creador
+            const user = await this.economy.getUser(userId);
+            if (user.balance < betAmount) {
+                return message.reply(`❌ No tienes suficiente dinero. Tu balance: ${this.formatNumber(user.balance)} π-b$`);
+            }
+        }
+        
+        // Crear partida
+        const game = {
+            channelId,
+            creatorId: userId,
+            betAmount,
+            players: [{ id: userId, username: message.author.username, points: 0, bet: betAmount }],
+            phase: 'waiting',
+            createdAt: Date.now()
+        };
+        
+        this.activeGames.set(`trivia_comp_${channelId}`, game);
+        
+        // Descontar apuesta del creador
+        if (betAmount > 0) {
+            await this.economy.removeMoney(userId, betAmount);
+        }
+        
+        const embed = new EmbedBuilder()
+            .setTitle('⚔️ Partida Competitiva Creada')
+            .setDescription(
+                `**Creador:** <@${userId}>\n` +
+                `**Apuesta:** ${betAmount > 0 ? `${this.formatNumber(betAmount)} π-b$` : 'Gratis'}\n` +
+                `**Jugadores:** 1/${this.config.trivia.competitive.maxPlayers}\n\n` +
+                `Usa \`>jt\` para unirte\n` +
+                `El creador debe usar \`>st\` para iniciar`
+            )
+            .setColor('#FF6B35')
+            .setFooter({ text: 'La partida se cancelará automáticamente en 2 minutos si no inicia' });
+        
+        await message.reply({ embeds: [embed] });
+        
+        // Auto-cancelar después de 2 minutos
+        setTimeout(async () => {
+            const currentGame = this.activeGames.get(`trivia_comp_${channelId}`);
+            if (currentGame && currentGame.phase === 'waiting') {
+                await this.cancelTriviaCompetitive(message, true);
+            }
+        }, 120000);
+    }
+
+    async joinTriviaCompetitive(message) {
+        const userId = message.author.id;
+        const channelId = message.channel.id;
+        const game = this.activeGames.get(`trivia_comp_${channelId}`);
+        
+        if (!game) {
+            return message.reply('❌ No hay ninguna partida competitiva en este canal.');
+        }
+        
+        if (game.phase !== 'waiting') {
+            return message.reply('❌ Esta partida ya comenzó.');
+        }
+        
+        // Verificar si ya está en la partida
+        if (game.players.find(p => p.id === userId)) {
+            return message.reply('❌ Ya estás en esta partida.');
+        }
+        
+        // Verificar límite de jugadores
+        if (game.players.length >= this.config.trivia.competitive.maxPlayers) {
+            return message.reply('❌ La partida está llena.');
+        }
+        
+        // Verificar fondos
+        if (game.betAmount > 0) {
+            const user = await this.economy.getUser(userId);
+            if (user.balance < game.betAmount) {
+                return message.reply(`❌ No tienes suficiente dinero. Necesitas ${this.formatNumber(game.betAmount)} π-b$`);
+            }
+            
+            // Descontar apuesta
+            await this.economy.removeMoney(userId, game.betAmount);
+        }
+        
+        // Agregar jugador
+        game.players.push({
+            id: userId,
+            username: message.author.username,
+            points: 0,
+            bet: game.betAmount
+        });
+        
+        const embed = new EmbedBuilder()
+            .setTitle('✅ Te uniste a la partida')
+            .setDescription(
+                `**Jugadores:** ${game.players.length}/${this.config.trivia.competitive.maxPlayers}\n\n` +
+                game.players.map(p => `• <@${p.id}>`).join('\n')
+            )
+            .setColor('#00FF00');
+        
+        await message.reply({ embeds: [embed] });
+    }
+
+    async startTriviaCompetitive(message) {
+        const userId = message.author.id;
+        const channelId = message.channel.id;
+        const game = this.activeGames.get(`trivia_comp_${channelId}`);
+        
+        if (!game) {
+            return message.reply('❌ No hay ninguna partida competitiva en este canal.');
+        }
+        
+        if (game.creatorId !== userId) {
+            return message.reply('❌ Solo el creador puede iniciar la partida.');
+        }
+        
+        if (game.phase !== 'waiting') {
+            return message.reply('❌ Esta partida ya comenzó.');
+        }
+        
+        if (game.players.length < this.config.trivia.competitive.minPlayers) {
+            return message.reply(`❌ Se necesitan al menos ${this.config.trivia.competitive.minPlayers} jugadores para iniciar.`);
+        }
+        
+        game.phase = 'starting';
+        
+        await message.reply('🎮 Iniciando partida competitiva en 3 segundos...');
+        await new Promise(resolve => setTimeout(resolve, 3000));
+        
+        await this.runTriviaCompetitive(message, game);
+    }
+
+    async cancelTriviaCompetitive(message, auto = false) {
+        const userId = message.author.id;
+        const channelId = message.channel.id;
+        const game = this.activeGames.get(`trivia_comp_${channelId}`);
+        
+        if (!game) {
+            return message.reply('❌ No hay ninguna partida competitiva en este canal.');
+        }
+        
+        if (!auto && game.creatorId !== userId) {
+            return message.reply('❌ Solo el creador puede cancelar la partida.');
+        }
+        
+        if (game.phase !== 'waiting') {
+            return message.reply('❌ No se puede cancelar una partida en progreso.');
+        }
+        
+        // Devolver apuestas
+        for (const player of game.players) {
+            if (player.bet > 0) {
+                await this.economy.addMoney(player.id, player.bet);
+            }
+        }
+        
+        this.activeGames.delete(`trivia_comp_${channelId}`);
+        
+        await message.channel.send(auto ? '⏰ Partida cancelada automáticamente por inactividad. Apuestas devueltas.' : '❌ Partida cancelada. Apuestas devueltas.');
+    }
+
+    async runTriviaCompetitive(message, game) {
+        const channelId = message.channel.id;
+        
+        try {
+            game.phase = 'playing';
+            
+            // Obtener 5 preguntas
+            const apiUrl = `https://opentdb.com/api.php?amount=${this.config.trivia.competitive.questionsPerGame}&difficulty=medium&type=multiple`;
+            const response = await fetch(apiUrl);
+            const data = await response.json();
+            
+            if (data.response_code !== 0 || !data.results || data.results.length === 0) {
+                await message.channel.send('❌ Error obteniendo preguntas. Apuestas devueltas.');
+                await this.cancelTriviaCompetitive(message, true);
+                return;
+            }
+            
+            // Traducir preguntas
+            const questions = await Promise.all(data.results.map(async (q, index) => {
+                if (index > 0) await new Promise(resolve => setTimeout(resolve, 1000));
+                
+                const decodedQuestion = this.decodeHTML(q.question);
+                const decodedCorrect = this.decodeHTML(q.correct_answer);
+                const decodedIncorrect = q.incorrect_answers.map(ans => this.decodeHTML(ans));
+                const allAnswersOriginal = [decodedCorrect, ...decodedIncorrect];
+                
+                const contextTranslation = await this.translateTriviaQuestion(
+                    decodedQuestion,
+                    allAnswersOriginal,
+                    decodedCorrect
+                );
+                
+                if (contextTranslation) {
+                    const translatedCorrect = contextTranslation.answers[allAnswersOriginal.indexOf(decodedCorrect)];
+                    return {
+                        question: contextTranslation.question,
+                        correct: translatedCorrect,
+                        answers: contextTranslation.answers.sort(() => Math.random() - 0.5)
+                    };
+                } else {
+                    const translatedQuestion = await this.translateText(decodedQuestion);
+                    const translatedCorrect = await this.translateText(decodedCorrect);
+                    const translatedIncorrect = await Promise.all(
+                        decodedIncorrect.map(ans => this.translateText(ans))
+                    );
+                    return {
+                        question: translatedQuestion,
+                        correct: translatedCorrect,
+                        answers: [translatedCorrect, ...translatedIncorrect].sort(() => Math.random() - 0.5)
+                    };
+                }
+            }));
+            
+            // Jugar cada pregunta
+            for (let i = 0; i < questions.length; i++) {
+                await this.showCompetitiveQuestion(message, game, questions[i], i + 1);
+                await new Promise(resolve => setTimeout(resolve, 3000));
+            }
+            
+            // Terminar juego
+            await this.endCompetitiveGame(message, game);
+            
+        } catch (error) {
+            console.error('Error en trivia competitiva:', error);
+            await message.channel.send('❌ Error en la partida. Apuestas devueltas.');
+            await this.cancelTriviaCompetitive(message, true);
+        }
+    }
+
+    async showCompetitiveQuestion(message, game, question, questionNum) {
+        const letters = ['A', 'B', 'C', 'D'];
+        
+        let optionsText = '';
+        question.answers.forEach((answer, index) => {
+            const truncatedAnswer = answer.length > 100 ? answer.substring(0, 97) + '...' : answer;
+            optionsText += `**${letters[index]})**  ${truncatedAnswer}\n`;
+        });
+        
+        const embed = new EmbedBuilder()
+            .setTitle(`⚔️ Pregunta ${questionNum}/${this.config.trivia.competitive.questionsPerGame}`)
+            .setDescription(`**${question.question}**`)
+            .addFields(
+                { name: '📝 Opciones', value: optionsText, inline: false },
+                { name: '👥 Jugadores', value: game.players.map(p => `<@${p.id}>`).join(', '), inline: false }
+            )
+            .setColor('#FF6B35')
+            .setFooter({ text: '⏱️ Tienes 25 segundos para responder' });
+        
+        const buttons = new ActionRowBuilder();
+        letters.forEach((letter, index) => {
+            buttons.addComponents(
+                new ButtonBuilder()
+                    .setCustomId(`comp_${index}`)
+                    .setLabel(letter)
+                    .setStyle(ButtonStyle.Primary)
+            );
+        });
+        
+        const questionMessage = await message.channel.send({ embeds: [embed], components: [buttons] });
+        
+        const startTime = Date.now();
+        const responses = new Map(); // userId -> { answer, time }
+        
+        const collector = questionMessage.createMessageComponentCollector({
+            time: this.config.trivia.competitive.timePerQuestion
+        });
+        
+        collector.on('collect', async (interaction) => {
+            // Solo jugadores de la partida pueden responder
+            if (!game.players.find(p => p.id === interaction.user.id)) {
+                await interaction.reply({ content: '❌ No estás en esta partida', ephemeral: true });
+                return;
+            }
+            
+            // Solo una respuesta por jugador
+            if (responses.has(interaction.user.id)) {
+                await interaction.reply({ content: '⚠️ Ya respondiste esta pregunta', ephemeral: true });
+                return;
+            }
+            
+            const answerIndex = parseInt(interaction.customId.split('_')[1]);
+            const responseTime = Date.now() - startTime;
+            
+            responses.set(interaction.user.id, {
+                answer: question.answers[answerIndex],
+                time: responseTime
+            });
+            
+            await interaction.reply({ content: '✅ Respuesta registrada', ephemeral: true });
+        });
+        
+        await new Promise(resolve => setTimeout(resolve, this.config.trivia.competitive.timePerQuestion));
+        collector.stop();
+        
+        // Calcular puntos
+        for (const player of game.players) {
+            const response = responses.get(player.id);
+            
+            if (response && response.answer === question.correct) {
+                // Puntos base por respuesta correcta
+                let points = 100;
+                
+                // Bonus por velocidad (más rápido = más puntos)
+                const speedBonus = Math.floor(
+                    this.config.trivia.competitive.speedBonusMax * 
+                    (1 - (response.time / this.config.trivia.competitive.timePerQuestion))
+                );
+                
+                points += Math.max(0, speedBonus);
+                player.points += points;
+            }
+        }
+        
+        // Mostrar resultados de la pregunta
+        let resultsText = '';
+        const sortedPlayers = [...game.players].sort((a, b) => b.points - a.points);
+        
+        sortedPlayers.forEach((player, index) => {
+            const response = responses.get(player.id);
+            const emoji = response && response.answer === question.correct ? '✅' : '❌';
+            resultsText += `${index + 1}. ${emoji} <@${player.id}> - ${player.points} pts\n`;
+        });
+        
+        const resultEmbed = new EmbedBuilder()
+            .setTitle(`📊 Resultados - Pregunta ${questionNum}`)
+            .setDescription(`**Respuesta correcta:** ${question.correct}\n\n${resultsText}`)
+            .setColor('#9932CC');
+        
+        await questionMessage.edit({ embeds: [resultEmbed], components: [] });
+    }
+
+    async endCompetitiveGame(message, game) {
+        const channelId = message.channel.id;
+        
+        // Ordenar jugadores por puntos
+        const sortedPlayers = [...game.players].sort((a, b) => b.points - a.points);
+        const winner = sortedPlayers[0];
+        
+        // Calcular premio
+        const totalPot = game.players.reduce((sum, p) => sum + p.bet, 0);
+        const winnerPrize = Math.floor(totalPot * this.config.trivia.competitive.winnerMultiplier);
+        
+        // Dar premio al ganador
+        if (winnerPrize > 0) {
+            await this.economy.addMoney(winner.id, winnerPrize);
+        }
+        
+        // Crear tabla de resultados
+        let resultsText = '';
+        sortedPlayers.forEach((player, index) => {
+            const medal = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : `${index + 1}.`;
+            resultsText += `${medal} <@${player.id}> - **${player.points} puntos**\n`;
+        });
+        
+        const embed = new EmbedBuilder()
+            .setTitle('🏆 ¡Partida Terminada!')
+            .setDescription(
+                `**🥇 Ganador:** <@${winner.id}>\n` +
+                `**💎 Puntos:** ${winner.points}\n` +
+                (winnerPrize > 0 ? `**💰 Premio:** ${this.formatNumber(winnerPrize)} π-b$\n\n` : '\n') +
+                `**📊 Clasificación Final:**\n${resultsText}`
+            )
+            .setColor('#FFD700')
+            .setFooter({ text: 'Usa >triviamulti para crear otra partida' });
+        
+        await message.channel.send({ embeds: [embed] });
+        
+        // Limpiar juego
+        this.activeGames.delete(`trivia_comp_${channelId}`);
+    }
+
     async showTriviaLeaderboard(message, args) {
         try {
             const type = args[1]?.toLowerCase();
@@ -11468,6 +11907,23 @@ const userId = gameState.userId;
                 case '>triviasurv':
                 case '>survival':
                     await this.playTriviaSurvival(message, args);
+                    break;
+                case '>triviamultiplayer':
+                case '>triviamult':
+                case '>triviam':
+                    await this.handleTriviaCompetitive(message, args);
+                    break;
+                case '>jointrivia':
+                case '>jt':
+                    await this.joinTriviaCompetitive(message);
+                    break;
+                case '>starttrivia':
+                case '>st':
+                    await this.startTriviaCompetitive(message);
+                    break;
+                case '>canceltrivia':
+                case '>ct':
+                    await this.cancelTriviaCompetitive(message);
                     break;
                 case '>trivialb':
                     await this.showTriviaLeaderboard(message, args);
