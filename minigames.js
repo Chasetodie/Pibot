@@ -11909,7 +11909,7 @@ const userId = gameState.userId;
                     await this.playTriviaSurvival(message, args);
                     break;
                 case '>triviamultiplayer':
-                case '>triviamult':
+                case '>triviamulti':
                 case '>triviam':
                     await this.handleTriviaCompetitive(message, args);
                     break;
