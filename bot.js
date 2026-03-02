@@ -461,7 +461,7 @@ client.on('guildMemberAdd', async (member) => {
 client.on('guildCreate', async (guild) => {
     try {
         const embed = new EmbedBuilder()
-            .setTitle('¡Hola! Soy Pi-Bot 🤖')
+            .setTitle('¡Hola! Soy Pibot 🤖')
             .setDescription('Gracias por agregarme a tu servidor. Aquí te cuento qué puedo hacer:')
             .setColor('#00BFFF')
             .setThumbnail(guild.client.user.displayAvatarURL({ dynamic: true }))
@@ -1104,6 +1104,27 @@ client.on('messageCreate', async (message) => {
     }
 });
 
+async function sendCrashDM(error, type = 'CRASH') {
+    try {
+        const user = await client.users.fetch(OWNER_ID);
+        if (!user) return;
+
+        await user.send(`
+🚨 **${type}**
+🕒 ${new Date().toISOString()}
+
+📛 ${error?.message || error}
+
+\`\`\`
+${error?.stack?.slice(0, 1900) || 'No stack'}
+\`\`\`
+        `);
+
+    } catch (err) {
+        console.error('No se pudo enviar DM:', err.message);
+    }
+}
+
 // Manejo de errores
 client.on('error', (error) => {
     console.error('❌ Error del cliente:', error);
@@ -1148,19 +1169,21 @@ setInterval(() => {
     
 }, 30000); // Cada 30 segundos
 
-process.on('unhandledRejection', (error) => {
-    console.error('⚠️ Unhandled promise rejection:', error);
+process.on('unhandledRejection', async (error) => {
+    console.error(error);
+    await sendCrashDM(error, 'UNHANDLED_REJECTION');
 });
 
-process.on('uncaughtException', (error) => {
-    console.error('❌ Error crítico:', error.message);
-    
+process.on('uncaughtException', async (error) => {
+    console.error(error);
+    await sendCrashDM(error, 'UNCAUGHT_EXCEPTION');
+
     // Intentar limpiar antes de morir
     aggressiveCleanup();
     
     setTimeout(() => {
         process.exit(1);
-    }, 1000);
+    }, 2000);
 });
 
 // COMANDO DE EMERGENCIA PARA ADMINS
@@ -1184,7 +1207,6 @@ console.log(`📋 Configuración:
 // Proceso de cierre limpio
 process.on('SIGINT', () => {
     console.log('\n🔄 Cerrando bot...');
-    saveCounters(counters);
 
     if (economy.database) {
         economy.database.close();
