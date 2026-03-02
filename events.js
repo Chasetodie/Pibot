@@ -1,5 +1,4 @@
 const { EmbedBuilder } = require('discord.js');
-const EVENTOS_ROLE_ID = '1409356197722718228'; // ← Reemplazar con el ID real
 
 class EventsSystem {
     constructor(economySystem, client = null, guildConfig = null) {
@@ -424,10 +423,18 @@ class EventsSystem {
     async createEvent(eventType, customDuration = null, triggeredBy = null) {
         const eventData = this.eventTypes[eventType];
         if (!eventData) return false;
+
+        // Verificar si está habilitado en este servidor
+        if (this.guildConfig && this.guild) {
+            const enabled = await this.guildConfig.isEventEnabled(this.guild.id, eventType);
+            if (!enabled) {
+                console.log(`⚠️ Evento ${eventType} deshabilitado en este servidor`);
+                return false;
+            }
+        }
         
         // Verificar si ya hay un evento del mismo tipo activo
-        for (const [id, event] of Object.entries(this.activeEvents)) {
-            if (event.type === eventType && event.endTime > Date.now()) {
+        for (const [id, event] of Object.entries(this.activeEvents)) {            if (event.type === eventType && event.endTime > Date.now()) {
                 return false; // Ya hay uno activo
             }
         }
@@ -981,6 +988,11 @@ class EventsSystem {
             const channel = await targetGuild.channels.fetch(channelId);
             if (!channel) return;
             
+            // Obtener rol dinámico
+            let eventsRoleId = null;
+            if (this.guildConfig) {
+                eventsRoleId = await this.guildConfig.getEventsRole(targetGuild.id);
+            }
             let embed;
             let shouldPing = false;
             
@@ -1018,7 +1030,7 @@ class EventsSystem {
             }
                         
             await channel.send({
-                content: shouldPing ? `<@&${EVENTOS_ROLE_ID}>` : '',
+                content: shouldPing && eventsRoleId ? `<@&${eventsRoleId}>` : '',
                 embeds: [embed],
                 allowedMentions: shouldPing ? { parse: ['roles'] } : { parse: [] }
             });

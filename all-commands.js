@@ -1660,7 +1660,7 @@ class AllCommands {
     }
 
     async handleSetConfig(message, args) {
-        if (!message.member.permissions.has('ManageGuild')) {
+        if (!message.member?.permissions.has('Administrator')) {
             return message.reply('❌ Necesitas el permiso **Administrar Servidor** para usar este comando.');
         }
         if (!this.guildConfig) {
@@ -1678,15 +1678,15 @@ class AllCommands {
             const embed = new EmbedBuilder()
                 .setTitle('⚙️ Configuración del Servidor')
                 .setColor('#FFA500')
-                .setDescription('Usa `>setconfig <clave> #canal` para configurar cada función.\n\n**Claves disponibles:**')
+                .setDescription('Usa `>setchannel <clave> #canal` para configurar cada función.\n\n**Claves disponibles:**')
                 .addFields(Object.entries(validKeys).map(([k, v]) => ({ name: `\`${k}\``, value: v, inline: true })))
-                .addFields({ name: '📝 Ejemplo', value: '`>setconfig levelup_channel #niveles`', inline: false });
+                .addFields({ name: '📝 Ejemplo', value: '`>setchannel levelup_channel #niveles`', inline: false });
             return message.reply({ embeds: [embed] });
         }
 
         const channel = message.mentions.channels.first();
         if (!channel) {
-            return message.reply('❌ Debes mencionar un canal. Ejemplo: `>setconfig levelup_channel #canal`');
+            return message.reply('❌ Debes mencionar un canal. Ejemplo: `>setchannel levelup_channel #canal`');
         }
 
         await this.guildConfig.set(message.guild.id, subkey, channel.id);
@@ -1694,7 +1694,7 @@ class AllCommands {
     }
 
     async handleShowConfig(message) {
-        if (!message.member.permissions.has('ManageGuild')) {
+        if (!message.member?.permissions.has('Administrator')) {
             return message.reply('❌ Necesitas el permiso **Administrar Servidor** para usar este comando.');
         }
         if (!this.guildConfig) {
@@ -1713,7 +1713,7 @@ class AllCommands {
             .setColor('#00BFFF');
 
         if (Object.keys(config).length === 0) {
-            embed.setDescription('No hay nada configurado aún. Usa `>setconfig help` para ver cómo hacerlo.');
+            embed.setDescription('No hay nada configurado aún. Usa `>setchannel help` para ver cómo hacerlo.');
         } else {
             embed.addFields(Object.entries(config).map(([k, v]) => ({
                 name: labels[k] || k,
@@ -1722,6 +1722,69 @@ class AllCommands {
             })));
         }
 
+        return message.reply({ embeds: [embed] });
+    }
+
+    async handleSetEventsRole(message, args) {
+        if (!message.member.permissions.has('ManageGuild')) {
+            return message.reply('❌ Necesitas el permiso **Administrar Servidor** para usar este comando.');
+        }
+        const role = message.mentions.roles.first();
+        if (!role) {
+            return message.reply('❌ Debes mencionar un rol. Ejemplo: `>seteventsrole @Eventos`');
+        }
+        await this.guildConfig.setEventsRole(message.guild.id, role.id);
+        return message.reply(`✅ Rol de eventos configurado como ${role}. Se usará para pings en anuncios de eventos.`);
+    }
+
+    async handleToggleEvent(message, args) {
+        if (!message.member.permissions.has('ManageGuild')) {
+            return message.reply('❌ Necesitas el permiso **Administrar Servidor** para usar este comando.');
+        }
+        if (!this.guildConfig) return message.reply('❌ Sistema de configuración no disponible.');
+
+        const eventType = args[1];
+        const availableTypes = Object.keys(this.events.eventTypes);
+
+        if (!eventType || !availableTypes.includes(eventType)) {
+            const disabledEvents = await this.guildConfig.getDisabledEvents(message.guild.id);
+            const embed = new EmbedBuilder()
+                .setTitle('🔧 Habilitar/Deshabilitar Eventos')
+                .setColor('#FFA500')
+                .setDescription('Usa `>toggleevent <tipo>` para activar o desactivar un tipo de evento.')
+                .addFields(
+                    { name: '🎮 Eventos disponibles', value: availableTypes.map(t => {
+                        const ev = this.events.eventTypes[t];
+                        const disabled = disabledEvents.includes(t);
+                        return `${disabled ? '🔴' : '🟢'} \`${t}\` — ${ev.name}`;
+                    }).join('\n'), inline: false },
+                    { name: '💡 Ejemplo', value: '`>toggleevent market_crash` — Desactiva/activa la Crisis del Mercado', inline: false }
+                );
+            return message.reply({ embeds: [embed] });
+        }
+
+        const currentlyEnabled = await this.guildConfig.isEventEnabled(message.guild.id, eventType);
+        await this.guildConfig.setEventEnabled(message.guild.id, eventType, !currentlyEnabled);
+        const ev = this.events.eventTypes[eventType];
+        const status = currentlyEnabled ? '🔴 deshabilitado' : '🟢 habilitado';
+        return message.reply(`✅ Evento **${ev.emoji} ${ev.name}** ahora está **${status}** en este servidor.`);
+    }
+
+    async showAdminHelp(message) {
+        if (!message.member.permissions.has('ManageGuild')) {
+            return message.reply('❌ Solo administradores pueden ver esta sección.');
+        }
+        const embed = new EmbedBuilder()
+            .setTitle('🛡️ Panel de Administración')
+            .setColor('#FF4500')
+            .setDescription('Comandos exclusivos para administradores del servidor.')
+            .addFields(
+                { name: '⚙️ Configuración de Canales', value: '`>setconfig <clave> #canal` — Configurar canal\n`>config` — Ver configuración actual\n\n**Claves:** `levelup_channel`, `events_channel`, `welcome_channel`', inline: false },
+                { name: '🎉 Gestión de Eventos', value: '`>createevent <tipo> [minutos]` — Crear evento manual\n`>eventstats` — Ver estadísticas de eventos activos\n`>toggleevent [tipo]` — Habilitar/deshabilitar tipo de evento\n`>seteventsrole @rol` — Configurar rol para pings de eventos', inline: false },
+                { name: '🎁 Items', value: '`>giveitem @usuario <item_id> [cantidad]` — Dar item a usuario\n`>shopstats` — Ver estadísticas de la tienda', inline: false }
+            )
+            .setFooter({ text: 'Estos comandos requieren permiso "Administrar Servidor"' })
+            .setTimestamp();
         return message.reply({ embeds: [embed] });
     }
 
@@ -1755,12 +1818,21 @@ const commandName = command.replace('>', '');
 
         try {
             switch (command) {        
-                case '>setconfig':
+                case '>setchannel':
                     await this.handleSetConfig(message, args);
                     break;
-                case '>config':
+                case '>helpsetchannel':
                     await this.handleShowConfig(message);
-                    break;                
+                    break;
+                case '>seteventsrole':
+                    await this.handleSetEventsRole(message, args);
+                    break;
+                case '>toggleevent':
+                    await this.handleToggleEvent(message, args);
+                    break;
+                case '>adminhelp':
+                    await this.showAdminHelp(message);
+                    break;
                 case '>balance':
                 case '>bal':
                 case '>money':
@@ -1838,6 +1910,24 @@ const commandName = command.replace('>', '');
                     await this.events.showActiveEvents(message);
                     break;
                 case '>createevent':
+                    if (!args[1]) {
+                        const availableTypes = Object.keys(this.events.eventTypes);
+                        const embed = new EmbedBuilder()
+                            .setTitle('🎉 Crear Evento Manual')
+                            .setColor('#9932CC')
+                            .setDescription('Crea un evento manualmente en el servidor.')
+                            .addFields(
+                                { name: '📝 Uso', value: '`>createevent <tipo> [duración_en_minutos]`', inline: false },
+                                { name: '🎮 Tipos disponibles', value: availableTypes.map(t => {
+                                    const ev = this.events.eventTypes[t];
+                                    return `\`${t}\` — ${ev.emoji} ${ev.name}`;
+                                }).join('\n'), inline: false },
+                                { name: '💡 Ejemplo', value: '`>createevent double_xp 30` — Activa doble XP por 30 minutos', inline: false },
+                                { name: '⏰ Duración', value: 'Si no especificas duración, se usará la duración aleatoria del evento.', inline: false }
+                            )
+                            .setTimestamp();
+                        return message.reply({ embeds: [embed] });
+                    }
                     const eventType = args[1];
                     const duration = args[2] ? parseInt(args[2]) : null;
                     await this.events.createManualEvent(message, eventType, duration);
@@ -2109,6 +2199,12 @@ const commandName = command.replace('>', '');
                     new ButtonBuilder().setCustomId('help_events').setLabel('🎉 Eventos').setStyle(ButtonStyle.Primary),
                     new ButtonBuilder().setCustomId('help_chatIA').setLabel('🤖 Chat IA').setStyle(ButtonStyle.Primary),
                 ),
+                // Solo mostrar botón admin si tiene permisos
+                ...(message.member?.permissions.has('ManageGuild') ? [
+                    new ActionRowBuilder().addComponents(
+                        new ButtonBuilder().setCustomId('help_admin').setLabel('🛡️ Admin').setStyle(ButtonStyle.Danger)
+                    )
+                ] : []),
             ];
             
             await message.reply({ embeds: [embed], components: rows });
@@ -2118,12 +2214,16 @@ const commandName = command.replace('>', '');
         // CATEGORÍAS INDIVIDUALES (más cortas)
         const categories = {
             admin: {
-                title: '⚙️ Comandos de Administración',
+                title: '🛡️ Comandos de Administración',
                 fields: [
-                    { name: '>setconfig <clave> #canal', value: 'Configurar un canal del bot', inline: false },
-                    { name: '>setconfig help', value: 'Ver todas las claves disponibles', inline: false },
-                    { name: '>config', value: 'Ver la configuración actual del servidor', inline: false },
-                    { name: '📌 Claves disponibles', value: '`levelup_channel` - Niveles\n`events_channel` - Eventos\n`welcome_channel` - Bienvenida', inline: false }
+                    { name: '>setconfig <clave> #canal', value: 'Configurar canal del bot', inline: true },
+                    { name: '>config', value: 'Ver configuración actual', inline: true },
+                    { name: '>createevent <tipo> [min]', value: 'Crear evento manual', inline: true },
+                    { name: '>toggleevent [tipo]', value: 'Habilitar/deshabilitar evento', inline: true },
+                    { name: '>seteventsrole @rol', value: 'Rol para pings de eventos', inline: true },
+                    { name: '>eventstats', value: 'Estadísticas de eventos', inline: true },
+                    { name: '>giveitem @user item [cant]', value: 'Dar item a usuario', inline: true },
+                    { name: '>adminhelp', value: 'Ver este panel', inline: true }
                 ]
             },
             economy: {
@@ -2266,9 +2366,14 @@ const commandName = command.replace('>', '');
     // MANEJAR interacciones de botones
     async handleHelpInteraction(interaction) {
         const category = interaction.customId.replace('help_', '');
+
+        if (category === 'admin' && !interaction.member?.permissions.has('ManageGuild')) {
+            return interaction.reply({ content: '❌ Solo administradores pueden ver esta sección.', ephemeral: true });
+        }
         
         const fakeMessage = {
             author: interaction.user,
+            member: interaction.member,
             reply: async (options) => {
                 await interaction.update(options);
             }

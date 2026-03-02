@@ -58,6 +58,30 @@ class GuildConfig {
             return {};
         }
     }
+
+    async getEventsRole(guildId) {
+        return await this.get(guildId, 'events_role');
+    }
+
+    async setEventsRole(guildId, roleId) {
+        return await this.set(guildId, 'events_role', roleId);
+    }
+
+    async isEventEnabled(guildId, eventType) {
+        const val = await this.get(guildId, `event_disabled_${eventType}`);
+        return val !== 'true'; // Por defecto todos habilitados
+    }
+
+    async setEventEnabled(guildId, eventType, enabled) {
+        await this.set(guildId, `event_disabled_${eventType}`, enabled ? 'false' : 'true');
+    }
+
+    async getDisabledEvents(guildId) {
+        const all = await this.getAll(guildId);
+        return Object.entries(all)
+            .filter(([k, v]) => k.startsWith('event_disabled_') && v === 'true')
+            .map(([k]) => k.replace('event_disabled_', ''));
+    }
 }
 
 module.exports = GuildConfig;

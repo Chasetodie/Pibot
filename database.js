@@ -921,6 +921,7 @@ class LocalDatabase {
                     activeEffects,
                     passiveIncomeStats
                 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ON DUPLICATE KEY UPDATE id = id
             `, [
                 newUser.id,
                 newUser.balance,

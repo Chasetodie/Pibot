@@ -921,27 +921,27 @@ class EconomySystem {
                     'Te quedaste dormida y el cliente se fue sin pagar'
                 ]
             },
-'autoprostitucion': {
-    name: '💋 Prostituta',
-    cooldown: 2 * 60 * 60 * 1000, // 2 horas
-    codeName: 'autoprostitucion',
-    baseReward: 2150,
-    variation: 2400, // para que el pago vaya aprox. de 2150 a 2400
-    levelRequirement: 23,
-    failChance: 0.15, // 15% de fallar
-    messages: [
-        'Atendiste a un cliente muy generoso',
-        'La noche fue larga, pero valió la pena',
-        'Te recomendaron con nuevos clientes',
-        'Cobraste extra por un servicio especial',
-        'Saliste del motel con los bolsillos llenos'
-    ],
-    failMessages: [
-        'El cliente se negó a pagar',
-        'Hubo una redada policial',
-        'El cliente desapareció sin dejar rastro'
-    ]
-},
+            'damadecomp': {
+                name: '💋 Dama de Compañía',
+                cooldown: 2 * 60 * 60 * 1000, // 2 horas
+                codeName: 'damadecomp',
+                baseReward: 2150,
+                variation: 2400, // para que el pago vaya aprox. de 2150 a 2400
+                levelRequirement: 23,
+                failChance: 0.15, // 15% de fallar
+                messages: [
+                    'Atendiste a un cliente muy generoso',
+                    'La noche fue larga, pero valió la pena',
+                    'Te recomendaron con nuevos clientes',
+                    'Cobraste extra por un servicio especial',
+                    'Saliste del motel con los bolsillos llenos'
+                ],
+                failMessages: [
+                    'El cliente se negó a pagar',
+                    'Hubo una redada policial',
+                    'El cliente desapareció sin dejar rastro'
+                ]
+            },
             'paranormalinv': {
                 name: '👻 Investigador Paranormal',
                 cooldown: 4 * 60 * 60 * 1000, // 1 hora
