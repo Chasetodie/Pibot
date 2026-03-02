@@ -1,7 +1,7 @@
 const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 
 class AllCommands {
-    constructor(economySystem, shopSystem, tradeSystem, auctionSystem, craftingSystem,  eventsSystem, bettingSystem, achievementsSystem) {
+    constructor(economySystem, shopSystem, tradeSystem, auctionSystem, craftingSystem,  eventsSystem, bettingSystem, achievementsSystem, guildConfig = null) {
         this.economy = economySystem;
         this.shop = shopSystem;
         this.trades = tradeSystem;
@@ -10,6 +10,7 @@ class AllCommands {
         this.events = eventsSystem;
         this.betting = bettingSystem;
         this.achievements = achievementsSystem;
+        this.guildConfig = guildConfig;
     }
 
     // FUNCIÓN AUXILIAR: Obtener efectos VIP para mostrar en perfil
@@ -1658,6 +1659,72 @@ class AllCommands {
         await message.reply({ embeds: [embed] });
     }
 
+    async handleSetConfig(message, args) {
+        if (!message.member.permissions.has('ManageGuild')) {
+            return message.reply('❌ Necesitas el permiso **Administrar Servidor** para usar este comando.');
+        }
+        if (!this.guildConfig) {
+            return message.reply('❌ Sistema de configuración no disponible.');
+        }
+
+        const validKeys = {
+            'levelup_channel': '📈 Canal de subida de nivel',
+            'events_channel': '🎉 Canal de anuncios de eventos',
+            'welcome_channel': '👋 Canal de bienvenida'
+        };
+
+        const subkey = args[1];
+        if (!subkey || subkey === 'help' || !validKeys[subkey]) {
+            const embed = new EmbedBuilder()
+                .setTitle('⚙️ Configuración del Servidor')
+                .setColor('#FFA500')
+                .setDescription('Usa `>setconfig <clave> #canal` para configurar cada función.\n\n**Claves disponibles:**')
+                .addFields(Object.entries(validKeys).map(([k, v]) => ({ name: `\`${k}\``, value: v, inline: true })))
+                .addFields({ name: '📝 Ejemplo', value: '`>setconfig levelup_channel #niveles`', inline: false });
+            return message.reply({ embeds: [embed] });
+        }
+
+        const channel = message.mentions.channels.first();
+        if (!channel) {
+            return message.reply('❌ Debes mencionar un canal. Ejemplo: `>setconfig levelup_channel #canal`');
+        }
+
+        await this.guildConfig.set(message.guild.id, subkey, channel.id);
+        return message.reply(`✅ **${validKeys[subkey]}** configurado como ${channel}.`);
+    }
+
+    async handleShowConfig(message) {
+        if (!message.member.permissions.has('ManageGuild')) {
+            return message.reply('❌ Necesitas el permiso **Administrar Servidor** para usar este comando.');
+        }
+        if (!this.guildConfig) {
+            return message.reply('❌ Sistema de configuración no disponible.');
+        }
+
+        const config = await this.guildConfig.getAll(message.guild.id);
+        const labels = {
+            'levelup_channel': '📈 Canal de niveles',
+            'events_channel': '🎉 Canal de eventos',
+            'welcome_channel': '👋 Canal de bienvenida'
+        };
+
+        const embed = new EmbedBuilder()
+            .setTitle('⚙️ Configuración actual del servidor')
+            .setColor('#00BFFF');
+
+        if (Object.keys(config).length === 0) {
+            embed.setDescription('No hay nada configurado aún. Usa `>setconfig help` para ver cómo hacerlo.');
+        } else {
+            embed.addFields(Object.entries(config).map(([k, v]) => ({
+                name: labels[k] || k,
+                value: `<#${v}>`,
+                inline: true
+            })));
+        }
+
+        return message.reply({ embeds: [embed] });
+    }
+
     async processCommand(message) {
         // Verificar ingresos pasivos pendientes
         await this.economy.checkPendingPassiveIncome(message.author.id);
@@ -1687,7 +1754,13 @@ const commandName = command.replace('>', '');
         await this.economy.missions.updateMissionProgress(message.author.id, 'unique_commands_used', commandName);*/
 
         try {
-            switch (command) {                    
+            switch (command) {        
+                case '>setconfig':
+                    await this.handleSetConfig(message, args);
+                    break;
+                case '>config':
+                    await this.handleShowConfig(message);
+                    break;                
                 case '>balance':
                 case '>bal':
                 case '>money':
@@ -2002,6 +2075,7 @@ const commandName = command.replace('>', '');
             embed.setTitle('📖 Menú de Ayuda Principal')
                 .setDescription('Selecciona una categoría para ver sus comandos:')
                 .addFields(
+                    { name: '⚙️ Admin', value: 'Configuración del servidor', inline: true },
                     { name: '💰 Economía', value: 'Dinero, trabajo, daily', inline: true },
                     { name: '🛒 Tienda', value: 'Shop, items, efectos', inline: true },
                     { name: '🎮 Minijuegos', value: 'Gambling y juegos', inline: true },
@@ -2015,6 +2089,7 @@ const commandName = command.replace('>', '');
             // BOTONES para cada categoría
             const rows = [
                 new ActionRowBuilder().addComponents(
+                    new ButtonBuilder().setCustomId('help_admin').setLabel('⚙️ Admin').setStyle(ButtonStyle.Danger),
                     new ButtonBuilder().setCustomId('help_economy').setLabel('💰 Economía').setStyle(ButtonStyle.Primary),
                     new ButtonBuilder().setCustomId('help_shop').setLabel('🛒 Tienda').setStyle(ButtonStyle.Primary),
                     new ButtonBuilder().setCustomId('help_games').setLabel('🎮 Minijuegos').setStyle(ButtonStyle.Primary)
@@ -2042,6 +2117,15 @@ const commandName = command.replace('>', '');
         
         // CATEGORÍAS INDIVIDUALES (más cortas)
         const categories = {
+            admin: {
+                title: '⚙️ Comandos de Administración',
+                fields: [
+                    { name: '>setconfig <clave> #canal', value: 'Configurar un canal del bot', inline: false },
+                    { name: '>setconfig help', value: 'Ver todas las claves disponibles', inline: false },
+                    { name: '>config', value: 'Ver la configuración actual del servidor', inline: false },
+                    { name: '📌 Claves disponibles', value: '`levelup_channel` - Niveles\n`events_channel` - Eventos\n`welcome_channel` - Bienvenida', inline: false }
+                ]
+            },
             economy: {
                 title: '💰 Comandos de Economía',
                 fields: [

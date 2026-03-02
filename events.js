@@ -2,15 +2,15 @@ const { EmbedBuilder } = require('discord.js');
 const EVENTOS_ROLE_ID = '1409356197722718228'; // ← Reemplazar con el ID real
 
 class EventsSystem {
-    constructor(economySystem, client = null) {
+    constructor(economySystem, client = null, guildConfig = null) {
         this.economy = economySystem;
         this.client = client;
+        this.guildConfig = guildConfig;
 
         this.db = null;
         this.initializeDatabase();
         
         this.activeEvents = {};
-        this.announcementChannelId = '1404905496644685834'; // Cambia esto al ID de tu canal de anuncios
         this.guild = null;
 
         this.eventCache = new Map();
@@ -951,29 +951,34 @@ class EventsSystem {
     // Anunciar eventos en canal específico
     async announceEvent(event, action, passedGuild = null) {
         console.log(`📢 Intentando anunciar evento: ${event.name}, action: ${action}`);
-        if (!this.announcementChannelId) return;    
 
         let targetGuild = passedGuild || this.guild;
-        
-        // Si no hay guild disponible, intentar obtenerlo del cliente
+
+        // Si no hay guild, intentar obtenerlo del cliente usando todos los guilds
         if (!targetGuild && this.client) {
-            try {
-                const channel = await this.client.channels.fetch(this.announcementChannelId);
-                targetGuild = channel?.guild;
-                console.log(`🔍 Guild obtenido del cliente: ${targetGuild ? targetGuild.name : 'null'}`);
-            } catch (error) {
-                console.error('❌ Error obteniendo guild del canal:', error);
-                return;
-            }
+            targetGuild = this.client.guilds.cache.first();
         }
-        
+
         if (!targetGuild) {
             console.log('⚠️ No se pudo obtener el guild para anunciar evento');
             return;
         }
-        
+
+        // Obtener canal configurado dinámicamente, o el canal del sistema como fallback
+        let channelId = null;
+        if (this.guildConfig) {
+            channelId = await this.guildConfig.get(targetGuild.id, 'events_channel');
+        }
+        if (!channelId) {
+            channelId = this.announcementChannelId; // fallback al hardcodeado si existe
+        }
+        if (!channelId) {
+            console.log('⚠️ No hay canal de eventos configurado para este servidor');
+            return;
+        }
+
         try {
-            const channel = await targetGuild.channels.fetch(this.announcementChannelId);
+            const channel = await targetGuild.channels.fetch(channelId);
             if (!channel) return;
             
             let embed;

@@ -17,6 +17,7 @@ const AllCommands = require('./all-commands');
 const LocalDatabase = require('./database');
 const MusicSystem = require('./musicSystem.js');
 const ChatBotSystem = require('./chatBot.js');
+const GuildConfig = require('./guild-config');
 //require('./admin-panel')(app); // Pasar el servidor express existente
 const {
     AuctionSystem,
@@ -73,8 +74,10 @@ database.startCacheCleanup();
 
 const chatbot = new ChatBotSystem(database, economy);
 
+const guildConfig = new GuildConfig(database);
+
 //Crear instancia del sistema de Eventos
-const events = new EventsSystem(economy, client);
+const events = new EventsSystem(economy, client, guildConfig);
 shop.connectEventsSystem(events);
 missions.connectEventsSystem(events);
 achievements.connectEventsSystem(events);
@@ -99,7 +102,7 @@ const auctions = new AuctionSystem(shop);
 const crafting = new CraftingSystem(shop, client);
 
 // Instancia del sistema de comandos mejorados
-const allCommands = new AllCommands(economy, shop, trades, auctions, crafting, events, betting);
+const allCommands = new AllCommands(economy, shop, trades, auctions, crafting, events, betting, undefined, guildConfig);
 
 economy.achievements = achievements;
 minigames.achievements = achievements;
@@ -207,8 +210,8 @@ async function processMessageSafe({ message, userId, now }) {
         
         // Level up solo si es necesario
         if (xpResult?.levelUp) {
-            const channelId = '1402824824971067442';
-            const channel = message.guild.channels.cache.get(channelId);
+            const channelId = await guildConfig.get(message.guild.id, 'levelup_channel');
+            const channel = channelId ? message.guild.channels.cache.get(channelId) : null;
             if (channel) {
                 await sendLevelUpSafe(message, xpResult, channel);
             }
@@ -451,6 +454,35 @@ client.on('guildMemberAdd', async (member) => {
         }
     } catch (error) {
         console.error('❌ Error procesando nuevo miembro:', error);
+    }
+});
+
+client.on('guildCreate', async (guild) => {
+    try {
+        const embed = new EmbedBuilder()
+            .setTitle('¡Hola! Soy Pi-Bot 🤖')
+            .setDescription('Gracias por agregarme a tu servidor. Aquí te cuento qué puedo hacer:')
+            .setColor('#00BFFF')
+            .setThumbnail(guild.client.user.displayAvatarURL({ dynamic: true }))
+            .addFields(
+                { name: '💰 Economía', value: 'Sistema de monedas, niveles, XP y rankings', inline: true },
+                { name: '🎮 Minijuegos', value: 'Coinflip, dados, blackjack, ruleta y más', inline: true },
+                { name: '🛒 Tienda', value: 'Items, cosméticos, VIP y crafteo', inline: true },
+                { name: '🎯 Misiones y Logros', value: 'Sistema de progresión con recompensas', inline: true },
+                { name: '🎉 Eventos', value: 'Eventos automáticos con bonificaciones', inline: true },
+                { name: '🤖 Chat IA', value: 'Habla con Pibot respondiéndole mensajes', inline: true },
+                { name: '⚙️ Configuración inicial', value: 'Un admin debe usar `>setconfig` para configurar los canales del bot en este servidor.\nEjemplo: `>setconfig levelup_channel #canal-de-niveles`', inline: false },
+                { name: '📖 Comandos', value: 'Usa `>help` para ver todos los comandos disponibles.', inline: false }
+            )
+            .setFooter({ text: 'Pi-Bot • Usa >help para empezar' })
+            .setTimestamp();
+
+        const systemChannel = guild.systemChannel || guild.channels.cache.find(c => c.type === 0 && c.permissionsFor(guild.members.me).has('SendMessages'));
+        if (systemChannel) {
+            await systemChannel.send({ embeds: [embed] });
+        }
+    } catch (error) {
+        console.error('❌ Error enviando mensaje de bienvenida al servidor:', error);
     }
 });
 
