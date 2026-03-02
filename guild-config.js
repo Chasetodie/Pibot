@@ -2,43 +2,61 @@
 class GuildConfig {
     constructor(database) {
         this.db = database;
-        this.initTable();
     }
 
     async initTable() {
-        await this.db.run(`
-            CREATE TABLE IF NOT EXISTS guild_config (
-                guild_id TEXT NOT NULL,
-                key TEXT NOT NULL,
-                value TEXT,
-                PRIMARY KEY (guild_id, key)
-            )
-        `);
+        try {
+            await this.db.pool.execute(`
+                CREATE TABLE IF NOT EXISTS guild_config (
+                    guild_id VARCHAR(30) NOT NULL,
+                    \`key\` VARCHAR(50) NOT NULL,
+                    value TEXT,
+                    PRIMARY KEY (guild_id, \`key\`)
+                )
+            `);
+            console.log('✅ Tabla guild_config lista');
+        } catch (error) {
+            console.error('❌ Error creando tabla guild_config:', error.message);
+        }
     }
 
     async get(guildId, key) {
-        const row = await this.db.get(
-            'SELECT value FROM guild_config WHERE guild_id = ? AND key = ?',
-            [guildId, key]
-        );
-        return row ? row.value : null;
+        try {
+            const [rows] = await this.db.pool.execute(
+                'SELECT value FROM guild_config WHERE guild_id = ? AND `key` = ?',
+                [guildId, key]
+            );
+            return rows.length > 0 ? rows[0].value : null;
+        } catch (error) {
+            console.error('❌ Error en GuildConfig.get:', error.message);
+            return null;
+        }
     }
 
     async set(guildId, key, value) {
-        await this.db.run(
-            'INSERT OR REPLACE INTO guild_config (guild_id, key, value) VALUES (?, ?, ?)',
-            [guildId, key, value]
-        );
+        try {
+            await this.db.pool.execute(
+                'INSERT INTO guild_config (guild_id, `key`, value) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE value = ?',
+                [guildId, key, value, value]
+            );
+        } catch (error) {
+            console.error('❌ Error en GuildConfig.set:', error.message);
+        }
     }
 
     async getAll(guildId) {
-        const rows = await this.db.all(
-            'SELECT key, value FROM guild_config WHERE guild_id = ?',
-            [guildId]
-        );
-        const config = {};
-        rows.forEach(r => config[r.key] = r.value);
-        return config;
+        try {
+            const [rows] = await this.db.pool.execute(
+                'SELECT `key`, value FROM guild_config WHERE guild_id = ?',
+                [guildId]
+            );
+            const config = {};
+            rows.forEach(r => config[r.key] = r.value);
+            return config;
+        } catch (error) {
+            console.error('❌ Error en GuildConfig.getAll:', error.message);
+            return {};
+        }
     }
 }
 
