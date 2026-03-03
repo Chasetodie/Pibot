@@ -750,7 +750,7 @@ setCooldown(userId, gameType) {
 
     // En minigames.js, REEMPLAZAR getEffectiveCooldown():
 
-    async getEffectiveCooldown(baseCooldown) {
+    async getEffectiveCooldown(baseCooldown, message) {
         let effectiveCooldown = baseCooldown;
         
         // Verificar que events esté disponible
@@ -761,7 +761,7 @@ setCooldown(userId, gameType) {
         
         try {
             // Aplicar eventos
-            const guildId = messageOrInteraction?.guild?.id || messageOrInteraction?.guildId;
+            const guildId = message?.guild?.id || message?.guildId;
             const activeEvents = this.events.getActiveEvents(guildId);
             for (const event of activeEvents) {
                 if (event.multipliers?.cooldown) {
