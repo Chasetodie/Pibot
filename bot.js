@@ -347,9 +347,13 @@ client.once('ready', async () => {
     }, 60000); // Cada minuto
     
     // Establecer el guild para eventos
-    const guild = client.guilds.cache.get('1404905496644685834'); // ← Cambiar por tu ID real
-    if (guild) {
-        events.setGuild(guild); // Asumiendo que events es accesible aquí
+    const firstGuild = client.guilds.cache.first();
+    if (firstGuild) {
+        events.setGuild(firstGuild);
+    }
+    // Cargar eventos de todos los guilds
+    for (const [guildId, guild] of client.guilds.cache) {
+        events.getGuildEvents(guildId); // Inicializar el Map para cada guild
     }
 });
 

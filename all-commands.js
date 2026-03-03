@@ -1660,7 +1660,8 @@ class AllCommands {
     }
 
     async handleSetConfig(message, args) {
-        if (!message.member?.permissions.has('Administrator')) {
+        //Administrator
+        if (!message.member?.permissions.has('ManageGuild')) {
             return message.reply('❌ Necesitas el permiso **Administrar Servidor** para usar este comando.');
         }
         if (!this.guildConfig) {
@@ -1669,8 +1670,7 @@ class AllCommands {
 
         const validKeys = {
             'levelup_channel': '📈 Canal de subida de nivel',
-            'events_channel': '🎉 Canal de anuncios de eventos',
-            'welcome_channel': '👋 Canal de bienvenida'
+            'events_channel': '🎉 Canal de anuncios de eventos'
         };
 
         const subkey = args[1];
@@ -1689,12 +1689,14 @@ class AllCommands {
             return message.reply('❌ Debes mencionar un canal. Ejemplo: `>setchannel levelup_channel #canal`');
         }
 
+        const existing = await this.guildConfig.get(message.guild.id, subkey);
         await this.guildConfig.set(message.guild.id, subkey, channel.id);
-        return message.reply(`✅ **${validKeys[subkey]}** configurado como ${channel}.`);
+        const action = existing ? 'actualizado' : 'configurado';
+        return message.reply(`✅ **${validKeys[subkey]}** ${action} como ${channel}.`);
     }
 
     async handleShowConfig(message) {
-        if (!message.member?.permissions.has('Administrator')) {
+        if (!message.member?.permissions.has('ManageGuild')) {
             return message.reply('❌ Necesitas el permiso **Administrar Servidor** para usar este comando.');
         }
         if (!this.guildConfig) {
@@ -1704,8 +1706,7 @@ class AllCommands {
         const config = await this.guildConfig.getAll(message.guild.id);
         const labels = {
             'levelup_channel': '📈 Canal de niveles',
-            'events_channel': '🎉 Canal de eventos',
-            'welcome_channel': '👋 Canal de bienvenida'
+            'events_channel': '🎉 Canal de eventos'
         };
 
         const embed = new EmbedBuilder()
@@ -1726,19 +1727,21 @@ class AllCommands {
     }
 
     async handleSetEventsRole(message, args) {
-        if (!message.member.permissions.has('ManageGuild')) {
+        if (!message.member?.permissions.has('ManageGuild')) {
             return message.reply('❌ Necesitas el permiso **Administrar Servidor** para usar este comando.');
         }
         const role = message.mentions.roles.first();
         if (!role) {
             return message.reply('❌ Debes mencionar un rol. Ejemplo: `>seteventsrole @Eventos`');
         }
+        const existingRole = await this.guildConfig.getEventsRole(message.guild.id);
         await this.guildConfig.setEventsRole(message.guild.id, role.id);
-        return message.reply(`✅ Rol de eventos configurado como ${role}. Se usará para pings en anuncios de eventos.`);
+        const actionRole = existingRole ? 'actualizado' : 'configurado';
+        return message.reply(`✅ Rol de eventos ${actionRole} como ${role}. Se usará para pings en anuncios de eventos.`);
     }
 
     async handleToggleEvent(message, args) {
-        if (!message.member.permissions.has('ManageGuild')) {
+        if (!message.member?.permissions.has('ManageGuild')) {
             return message.reply('❌ Necesitas el permiso **Administrar Servidor** para usar este comando.');
         }
         if (!this.guildConfig) return message.reply('❌ Sistema de configuración no disponible.');
@@ -1770,22 +1773,20 @@ class AllCommands {
         return message.reply(`✅ Evento **${ev.emoji} ${ev.name}** ahora está **${status}** en este servidor.`);
     }
 
-    async showAdminHelp(message) {
+    async handleToggleAllEvents(message) {
         if (!message.member.permissions.has('ManageGuild')) {
-            return message.reply('❌ Solo administradores pueden ver esta sección.');
+            return message.reply('❌ Necesitas el permiso **Administrar Servidor** para usar este comando.');
         }
-        const embed = new EmbedBuilder()
-            .setTitle('🛡️ Panel de Administración')
-            .setColor('#FF4500')
-            .setDescription('Comandos exclusivos para administradores del servidor.')
-            .addFields(
-                { name: '⚙️ Configuración de Canales', value: '`>setconfig <clave> #canal` — Configurar canal\n`>config` — Ver configuración actual\n\n**Claves:** `levelup_channel`, `events_channel`, `welcome_channel`', inline: false },
-                { name: '🎉 Gestión de Eventos', value: '`>createevent <tipo> [minutos]` — Crear evento manual\n`>eventstats` — Ver estadísticas de eventos activos\n`>toggleevent [tipo]` — Habilitar/deshabilitar tipo de evento\n`>seteventsrole @rol` — Configurar rol para pings de eventos', inline: false },
-                { name: '🎁 Items', value: '`>giveitem @usuario <item_id> [cantidad]` — Dar item a usuario\n`>shopstats` — Ver estadísticas de la tienda', inline: false }
-            )
-            .setFooter({ text: 'Estos comandos requieren permiso "Administrar Servidor"' })
-            .setTimestamp();
-        return message.reply({ embeds: [embed] });
+        if (!this.guildConfig) return message.reply('❌ Sistema de configuración no disponible.');
+
+        const currentlyEnabled = await this.guildConfig.areEventsEnabled(message.guild.id);
+        const isFirst = await this.guildConfig.setEventsGloballyEnabled(message.guild.id, !currentlyEnabled);
+
+        if (!currentlyEnabled) {
+            return message.reply('✅ **Eventos habilitados** en este servidor. Los eventos automáticos y manuales ya están activos.');
+        } else {
+            return message.reply('🔴 **Eventos deshabilitados** en este servidor. No se crearán eventos automáticos ni manuales hasta que los reactives con `>toggleevents`.');
+        }
     }
 
     async processCommand(message) {
@@ -1821,7 +1822,7 @@ const commandName = command.replace('>', '');
                 case '>setchannel':
                     await this.handleSetConfig(message, args);
                     break;
-                case '>helpsetchannel':
+                case '>channels':
                     await this.handleShowConfig(message);
                     break;
                 case '>seteventsrole':
@@ -1830,8 +1831,8 @@ const commandName = command.replace('>', '');
                 case '>toggleevent':
                     await this.handleToggleEvent(message, args);
                     break;
-                case '>adminhelp':
-                    await this.showAdminHelp(message);
+                case '>toggleevents':
+                    await this.handleToggleAllEvents(message);
                     break;
                 case '>balance':
                 case '>bal':
@@ -1930,6 +1931,13 @@ const commandName = command.replace('>', '');
                     }
                     const eventType = args[1];
                     const duration = args[2] ? parseInt(args[2]) : null;
+                    // Verificar si eventos están habilitados en este server
+                    if (this.guildConfig) {
+                        const globallyEnabled = await this.guildConfig.areEventsEnabled(message.guild.id);
+                        if (!globallyEnabled) {
+                            return message.reply('❌ Los eventos están deshabilitados en este servidor. Usa `>toggleevents` para activarlos primero.');
+                        }
+                    }
                     await this.events.createManualEvent(message, eventType, duration);
                     break;
                 case '>eventstats':
@@ -2179,7 +2187,6 @@ const commandName = command.replace('>', '');
             // BOTONES para cada categoría
             const rows = [
                 new ActionRowBuilder().addComponents(
-                    new ButtonBuilder().setCustomId('help_admin').setLabel('⚙️ Admin').setStyle(ButtonStyle.Danger),
                     new ButtonBuilder().setCustomId('help_economy').setLabel('💰 Economía').setStyle(ButtonStyle.Primary),
                     new ButtonBuilder().setCustomId('help_shop').setLabel('🛒 Tienda').setStyle(ButtonStyle.Primary),
                     new ButtonBuilder().setCustomId('help_games').setLabel('🎮 Minijuegos').setStyle(ButtonStyle.Primary)
@@ -2197,16 +2204,20 @@ const commandName = command.replace('>', '');
                 new ActionRowBuilder().addComponents(
                     new ButtonBuilder().setCustomId('help_nsfw').setLabel('🔞 NSFW').setStyle(ButtonStyle.Primary),
                     new ButtonBuilder().setCustomId('help_events').setLabel('🎉 Eventos').setStyle(ButtonStyle.Primary),
-                    new ButtonBuilder().setCustomId('help_chatIA').setLabel('🤖 Chat IA').setStyle(ButtonStyle.Primary),
+                    new ButtonBuilder().setCustomId('help_chatIA').setLabel('🤖 Chat IA').setStyle(ButtonStyle.Primary)
                 ),
-                // Solo mostrar botón admin si tiene permisos
-                ...(message.member?.permissions.has('ManageGuild') ? [
+            ];
+
+            // Solo agregar botón admin si tiene permisos (evita duplicados)
+            const isAdmin = message.member?.permissions?.has('ManageGuild');
+            if (isAdmin) {
+                rows.push(
                     new ActionRowBuilder().addComponents(
                         new ButtonBuilder().setCustomId('help_admin').setLabel('🛡️ Admin').setStyle(ButtonStyle.Danger)
                     )
-                ] : []),
-            ];
-            
+                );
+            }
+
             await message.reply({ embeds: [embed], components: rows });
             return;
         }
@@ -2216,14 +2227,14 @@ const commandName = command.replace('>', '');
             admin: {
                 title: '🛡️ Comandos de Administración',
                 fields: [
-                    { name: '>setconfig <clave> #canal', value: 'Configurar canal del bot', inline: true },
-                    { name: '>config', value: 'Ver configuración actual', inline: true },
+                    { name: '>setchannel <clave> #canal', value: 'Configurar canal del bot', inline: true },
+                    { name: '>channels', value: 'Ver configuración actual', inline: true },
                     { name: '>createevent <tipo> [min]', value: 'Crear evento manual', inline: true },
                     { name: '>toggleevent [tipo]', value: 'Habilitar/deshabilitar evento', inline: true },
+                    { name: '>toggleevents', value: 'Habilitar/deshabilitar TODOS los eventos', inline: true},
                     { name: '>seteventsrole @rol', value: 'Rol para pings de eventos', inline: true },
                     { name: '>eventstats', value: 'Estadísticas de eventos', inline: true },
-                    { name: '>giveitem @user item [cant]', value: 'Dar item a usuario', inline: true },
-                    { name: '>adminhelp', value: 'Ver este panel', inline: true }
+                    { name: '>giveitem @user item [cant]', value: 'Dar item a usuario', inline: true }
                 ]
             },
             economy: {

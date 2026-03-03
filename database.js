@@ -155,7 +155,8 @@ class LocalDatabase {
                     is_rare BOOLEAN DEFAULT 0,
                     triggered_by TEXT,
                     participant_count INTEGER DEFAULT 0,
-                    stats TEXT
+                    stats TEXT,
+                    guild_id VARCHAR(30) DEFAULT NULL
                 )
             `);
 
@@ -1758,15 +1759,15 @@ class LocalDatabase {
                     id, type, name, description, emoji, color,
                     start_time, end_time, duration, multipliers,
                     is_special, is_negative, is_rare, triggered_by,
-                    participant_count, stats
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    participant_count, stats, guild_id
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             `, [
                 eventData.id, eventData.type, eventData.name,
                 eventData.description, eventData.emoji, eventData.color,
                 eventData.start_time, eventData.end_time, eventData.duration,
                 JSON.stringify(eventData.multipliers), eventData.is_special,
                 eventData.is_negative, eventData.is_rare, eventData.triggered_by,
-                eventData.participant_count, JSON.stringify(eventData.stats)
+                eventData.participant_count, JSON.stringify(eventData.stats), eventData.guild_id || null
             ]);
             
             return { id: eventData.id };

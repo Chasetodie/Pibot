@@ -82,6 +82,18 @@ class GuildConfig {
             .filter(([k, v]) => k.startsWith('event_disabled_') && v === 'true')
             .map(([k]) => k.replace('event_disabled_', ''));
     }
+
+    async areEventsEnabled(guildId) {
+        const val = await this.get(guildId, 'events_globally_enabled');
+        // Por defecto: deshabilitado (null = no configurado = deshabilitado)
+        return val === 'true';
+    }
+
+    async setEventsGloballyEnabled(guildId, enabled) {
+        const wasNull = !(await this.get(guildId, 'events_globally_enabled'));
+        await this.set(guildId, 'events_globally_enabled', enabled ? 'true' : 'false');
+        return wasNull; // Retorna true si era la primera vez
+    }
 }
 
 module.exports = GuildConfig;

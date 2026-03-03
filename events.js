@@ -9,7 +9,7 @@ class EventsSystem {
         this.db = null;
         this.initializeDatabase();
         
-        this.activeEvents = {};
+        this.activeEvents = new Map(); // Map<guildId, {eventId: event}>
         this.guild = null;
 
         this.eventCache = new Map();
@@ -147,6 +147,13 @@ class EventsSystem {
         }, 2000);
     }
 
+    getGuildEvents(guildId) {
+        if (!this.activeEvents.has(guildId)) {
+            this.activeEvents.set(guildId, {});
+        }
+        return this.activeEvents.get(guildId);
+    }
+
     // ✅ AGREGAR: Inicializar base de datos
     async initializeDatabase() {
         // Esperar a que economy esté listo
@@ -238,7 +245,10 @@ class EventsSystem {
             
             if (rows && rows.length > 0) {
                 rows.forEach(event => {
-                    this.activeEvents[event.id] = {
+                    const gId = event.guild_id || this.guild?.id;
+                    if (!gId) return;
+                    const guildEvents = this.getGuildEvents(gId);
+                    guildEvents[event.id] = {
                         ...event,
                         startTime: new Date(event.start_time).getTime(),
                         endTime: new Date(event.end_time).getTime(),
@@ -299,7 +309,8 @@ class EventsSystem {
                     is_rare: eventData.isRare || false,
                     triggered_by: eventData.triggeredBy || null,
                     participant_count: eventData.participantCount || 0,
-                    stats: eventData.stats || {}
+                    stats: eventData.stats || {},
+                    guild_id: this.guild?.id
                 };
                 
                 await this.db.createServerEvent(mappedData);
@@ -432,6 +443,15 @@ class EventsSystem {
                 return false;
             }
         }
+
+        // Verificar si los eventos están habilitados globalmente en este servidor
+        if (this.guildConfig && this.guild) {
+            const globallyEnabled = await this.guildConfig.areEventsEnabled(this.guild.id);
+            if (!globallyEnabled) {
+                console.log(`⚠️ Eventos deshabilitados globalmente en ${this.guild.name}`);
+                return false;
+            }
+        }
         
         // Verificar si ya hay un evento del mismo tipo activo
         for (const [id, event] of Object.entries(this.activeEvents)) {            if (event.type === eventType && event.endTime > Date.now()) {
@@ -470,8 +490,12 @@ class EventsSystem {
             }
         };
         
-        this.activeEvents[eventId] = event;
-        await this.saveEvent(eventId, event); // Ahora async
+        const targetGuildId = this.guild?.id;
+        if (targetGuildId) {
+            const guildEvents = this.getGuildEvents(targetGuildId);
+            guildEvents[eventId] = event;
+        }
+        await this.saveEvent(eventId, event);
         
         console.log(`🎉 Evento creado: ${eventData.name} (${this.formatTime(duration)})`);
         console.log(`triggeredBy: ${triggeredBy}, guild: ${this.guild ? 'disponible' : 'no disponible'}`); // ← Agregar esta línea
@@ -485,7 +509,7 @@ class EventsSystem {
 
     // Agregar este método en la clase EventsSystem
     setGuild(guild) {
-        this.guild = guild;
+        this.guild = guild; // Mantener referencia del guild "principal" para compatibilidad
         console.log(`🏠 Guild establecido para eventos: ${guild.name}`);
     }
 
@@ -497,8 +521,11 @@ class EventsSystem {
     }
 
     // Verificar si hay un evento activo de cierto tipo
-    hasActiveEvent(eventType) {
-        for (const event of Object.values(this.activeEvents)) {
+    hasActiveEvent(eventType, guildId = null) {
+        const targetId = guildId || this.guild?.id;
+        if (!targetId) return null;
+        const guildEvents = this.getGuildEvents(targetId);
+        for (const event of Object.values(guildEvents)) {
             if (event.type === eventType && event.endTime > Date.now()) {
                 return event;
             }
@@ -507,9 +534,12 @@ class EventsSystem {
     }
 
     // Obtener todos los eventos activos
-    getActiveEvents() {
+    getActiveEvents(guildId = null) {
         const now = Date.now();
-        return Object.values(this.activeEvents).filter(event => event.endTime > now);
+        const targetId = guildId || this.guild?.id;
+        if (!targetId) return [];
+        const guildEvents = this.getGuildEvents(targetId);
+        return Object.values(guildEvents).filter(event => event.endTime > now);
     }
 
     // ✅ OPTIMIZACIÓN: Rate limiting para aplicar modificadores
@@ -828,7 +858,8 @@ class EventsSystem {
             return;
         }
 
-        if (!this.guild) this.guild = message.guild;
+        const originalGuild = this.guild;
+        this.guild = message.guild; // Usar el guild donde se ejecutó el comando
         
         if (!this.eventTypes[eventType]) {
             const availableTypes = Object.keys(this.eventTypes).join(', ');
@@ -857,6 +888,8 @@ class EventsSystem {
         
         await message.reply({ embeds: [embed] });
         await this.announceEvent(event, 'created', message.guild);
+    
+        this.guild = originalGuild;
     }
 
     // Limpiar eventos expirados
@@ -864,13 +897,15 @@ class EventsSystem {
         const now = Date.now();
         let cleaned = 0;
         
-        for (const [eventId, event] of Object.entries(this.activeEvents)) {
-            if (event.endTime <= now) {
-                delete this.activeEvents[eventId];
-                await this.deleteEvent(eventId);
-                await this.announceEvent(event, 'expired');
-                cleaned++;
-                console.log(`🧹 Evento expirado limpiado: ${event.name}`);
+        for (const [guildId, guildEvents] of this.activeEvents.entries()) {
+            for (const [eventId, event] of Object.entries(guildEvents)) {
+                if (event.endTime <= now) {
+                    delete guildEvents[eventId];
+                    await this.deleteEvent(eventId);
+                    await this.announceEvent(event, 'expired');
+                    cleaned++;
+                    console.log(`🧹 Evento expirado limpiado: ${event.name} (guild: ${guildId})`);
+                }
             }
         }
     }
