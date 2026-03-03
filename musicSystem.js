@@ -44,7 +44,7 @@ class MusicSystem {
             console.error(`❌ Error en nodo ${name}:`, error);
         });
 
-        this.shoukaku.on("close", (name) => {
+        this.kazagumo.shoukaku.on("close", (name) => {
             console.log(`⚠️ Nodo ${name} murió.`);
 
             this.kazagumo.players.forEach(player => {
