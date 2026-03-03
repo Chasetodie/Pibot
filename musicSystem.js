@@ -15,8 +15,8 @@ class MusicSystem {
     initialize() {
         const nodes = [
             { name: 'TechByte', url: 'lavahatry4.techbyte.host:3000', auth: 'naig.is-a.dev', secure: false },
-//            { name: 'Serenetia-NoSSL', url: 'lavalink.serenetia.com:80', auth: 'https://dsc.gg/ajidevserver', secure: false },
-//            { name: 'Serenetia-SSL', url: 'lavalink.serenetia.com:443', auth: 'https://dsc.gg/ajidevserver', secure: true },
+            { name: 'Serenetia-NoSSL', url: 'lavalink.serenetia.com:80', auth: 'https://dsc.gg/ajidevserver', secure: false },
+            { name: 'Serenetia-SSL', url: 'lavalink.serenetia.com:443', auth: 'https://dsc.gg/ajidevserver', secure: true },
         ];
 
         this.nodeList = nodes; // Guardar para reconexión
@@ -24,7 +24,7 @@ class MusicSystem {
 
         this.kazagumo = new Kazagumo(
             {
-                defaultSearchEngine: 'youtube',
+                defaultSearchEngine: 'scsearch',
                 plugins: [new Plugins.PlayerMoved(this.client)],
                 send: (guildId, payload) => {
                     const guild = this.client.guilds.cache.get(guildId);
@@ -306,7 +306,7 @@ class MusicSystem {
 
             this.clearPlayerTimeout(guild.id); // Limpiar timeout si existe
 
-            const result = await this.kazagumo.search(query, { requester: author });
+            const result = await this.kazagumo.search(query, { requester: author, engine: 'scsearch' });
 
             if (!result.tracks.length) {
                 return message.reply('❌ No se encontraron resultados para tu búsqueda.');
