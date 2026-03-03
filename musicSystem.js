@@ -14,13 +14,13 @@ class MusicSystem {
 
     initialize() {
         const nodes = [
-/*            {
+            {
                 name: 'Node 4',
                 url: 'lavahatry4.techbyte.host:3000',
                 auth: 'naig.is-a.dev',
                 secure: false
-            },*/
-            {
+            },
+/*            {
                 name: 'Node 5',
                 url: 'lavalinkv4.serenetia.com:80',
                 auth: 'https://dsc.gg/ajidevserver',
