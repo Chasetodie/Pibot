@@ -487,7 +487,8 @@ class ShopSystem {
                     durabilityVariation: 20 // ±20 de variación aleatoria
                 },
                 stackable: false,
-                maxStack: 1
+                maxStack: 1,
+                guildExclusive: '1270508373732884522',
             },
             'pay_to_win': {
                 id: 'pay_to_win',
