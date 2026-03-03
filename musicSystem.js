@@ -14,7 +14,7 @@ class MusicSystem {
 
     initialize() {
         const nodes = [
-            {
+/*            {
                 name: 'Node 4',
                 url: 'lavahatry4.techbyte.host:3000',
                 auth: 'naig.is-a.dev',
@@ -25,7 +25,7 @@ class MusicSystem {
                 url: 'lavalinkv4.serenetia.com:80',
                 auth: 'https://dsc.gg/ajidevserver',
                 secure: false
-            },
+            },*/
             {
                 name: 'Node2',
                 url: 'lavalink.serenetia.com:443',
