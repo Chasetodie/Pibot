@@ -39,6 +39,12 @@ class MusicSystem {
                 secure: false
             },
             {
+                name: 'Node 7',
+                url: 'lava-v3.millohost.my.id:443',
+                auth: 'https://discord.gg/mjS5J2K3ep',
+                secure: true
+            },
+            {
                 name: 'Node2',
                 url: 'lavalink.serenetia.com:443',
                 auth: 'https://dsc.gg/ajidevserver',
