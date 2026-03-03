@@ -2292,6 +2292,10 @@ const commandName = command.replace('>', '');
                     { name: '👑 VIP', value: 'Comandos premium', inline: true }
                 );
             
+            const eventsEnabled = this.guildConfig 
+                ? await this.guildConfig.areEventsEnabled(message.guild?.id)
+                : true;
+
             // BOTONES para cada categoría
             const rows = [
                 new ActionRowBuilder().addComponents(
@@ -2315,10 +2319,6 @@ const commandName = command.replace('>', '');
                     new ButtonBuilder().setCustomId('help_chatIA').setLabel('🤖 Chat IA').setStyle(ButtonStyle.Primary)
                 ),
             ];
-
-            const eventsEnabled = this.guildConfig 
-                ? await this.guildConfig.areEventsEnabled(message.guild?.id)
-                : true;
 
             // Solo agregar botón admin si tiene permisos (evita duplicados)
             const isAdmin = message.member?.permissions?.has('ManageGuild');
