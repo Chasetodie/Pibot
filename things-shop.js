@@ -598,6 +598,7 @@ class CraftingSystem {
                 name: '🏷️✨ Token de Apodo', // Nombre más claro
                 description: 'Permite personalizar tu apodo con estilo. Usa >setnickname <nuevo_apodo>',
                 craftTime: 1800000, // 30 minutos
+                guildExclusive: '1270508373732884522',
                 ingredients: [
                     { id: 'rainbow_badge', quantity: 2 },
                     { id: 'golden_trophy', quantity: 2 },
@@ -966,7 +967,10 @@ class CraftingSystem {
                 fields: []
             };
             
-            Object.values(this.CRAFTING_RECIPES).forEach(recipe => {
+            const currentGuildId = message.guild?.id;
+            Object.values(this.CRAFTING_RECIPES)
+                .filter(recipe => !recipe.guildExclusive || recipe.guildExclusive === currentGuildId)
+                .forEach(recipe => {
                 let requirements = '';
                 recipe.ingredients.forEach(ingredient => {
                     const item = this.shop.shopItems[ingredient.id];
@@ -1028,7 +1032,11 @@ embed.fields.push({
             if (!recipe) {
                 return message.reply('❌ Receta no encontrada. Usa `>recipes` para ver las disponibles.');
             }
-            
+
+            if (recipe.guildExclusive && recipe.guildExclusive !== message.guild?.id) {
+                return message.reply('❌ Esta receta no está disponible en este servidor.');
+            }
+                        
             const userData = await this.shop.economy.getUser(message.author.id);
             if (!userData) {
                 return message.reply('❌ Usuario no registrado.');

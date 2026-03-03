@@ -274,7 +274,8 @@ class ShopSystem {
                     duration: null
                 },
                 stackable: true,
-                maxStack: 5
+                maxStack: 5,
+                guildExclusive: '1270508373732884522',
             },
             'role_token': {
                 id: 'role_token',
@@ -288,7 +289,8 @@ class ShopSystem {
                     uses: 1
                 },
                 stackable: true,
-                maxStack: 1
+                maxStack: 1,
+                guildExclusive: '1270508373732884522',
             },
 
             // === NUEVOS ITEMS PERMANENTES ===
@@ -370,7 +372,8 @@ class ShopSystem {
                 category: 'cosmetic',
                 rarity: 'rare',
                 stackable: true,
-                maxStack: 3 // Aumenté porque ahora es ingrediente
+                maxStack: 3, // Aumenté porque ahora es ingrediente
+                guildExclusive: '1270508373732884522',
             },
             'premium_mystery_box': {
                 id: 'premium_mystery_box',
@@ -465,7 +468,8 @@ class ShopSystem {
                     duration: 1800 // 30 minutos
                 },
                 stackable: true,
-                maxStack: 5
+                maxStack: 5,
+                guildExclusive: '1270508373732884522',
             },
             'bunny_suit_pibe12': {
                 id: 'bunny_suit_pibe12',
@@ -659,7 +663,8 @@ class ShopSystem {
                 },
                 chestOnly: true,
                 stackable: true,
-                maxStack: 3 // Reduje el stack ya que es más valioso
+                maxStack: 3, // Reduje el stack ya que es más valioso
+                guildExclusive: '1270508373732884522',
             },    
             'epic_chest': {
                 id: 'epic_chest',
@@ -1088,13 +1093,18 @@ class ShopSystem {
     
     // === TIENDA ===
     async showShop(message, category = 'all', page = 1) {
-        // Remover esta optimización y usar:
+        const currentGuildId = message.guild?.id || message.guildId;
+        
+        const guildFilter = (item) => {
+            if (item.guildExclusive && item.guildExclusive !== currentGuildId) return false;
+            return true;
+        };
+
         let items;
         if (category === 'all') {
-            items = Object.values(this.shopItems).filter(item => !item.chestOnly);
+            items = Object.values(this.shopItems).filter(item => !item.chestOnly && guildFilter(item));
         } else {
-            // Filtrar automáticamente por categoría
-            items = Object.values(this.shopItems).filter(item => item.category === category);
+            items = Object.values(this.shopItems).filter(item => item.category === category && guildFilter(item));
         }
         
         const itemsPerPage = 3;
@@ -1136,12 +1146,13 @@ class ShopSystem {
         }
         
         // Botones de navegación
+        const uid = message.author.id;
         const row = new ActionRowBuilder();
         
         if (page > 1) {
             row.addComponents(
                 new ButtonBuilder()
-                    .setCustomId(`shop_prev_${category}_${page - 1}`)
+                    .setCustomId(`shop_prev_${category}_${page - 1}_${uid}`)
                     .setLabel('◀️ Anterior')
                     .setStyle(ButtonStyle.Secondary)
             );
@@ -1150,7 +1161,7 @@ class ShopSystem {
         if (page < totalPages) {
             row.addComponents(
                 new ButtonBuilder()
-                    .setCustomId(`shop_next_${category}_${page + 1}`)
+                    .setCustomId(`shop_next_${category}_${page + 1}_${uid}`)
                     .setLabel('Siguiente ▶️')
                     .setStyle(ButtonStyle.Secondary)
             );
@@ -1160,7 +1171,7 @@ class ShopSystem {
         const categoryRow = new ActionRowBuilder()
             .addComponents(
                 new StringSelectMenuBuilder()
-                    .setCustomId('shop_category')
+                    .setCustomId(`shop_category_${uid}`)
                     .setPlaceholder('Selecciona una categoría')
                     .addOptions([
                         {
@@ -1246,6 +1257,12 @@ class ShopSystem {
         const item = this.shopItems[itemId];
         if (!item) {
             await message.reply('❌ Item no encontrado. Usa `>shop` para ver los items disponibles.');
+            return;
+        }
+
+        // Verificar exclusividad de servidor
+        if (item.guildExclusive && item.guildExclusive !== message.guild?.id) {
+            await message.reply('❌ Este item no está disponible en este servidor.');
             return;
         }
 

@@ -376,7 +376,8 @@ class MinigamesSystem {
         let cooldownMultiplier = 1;
         let luckBonus = 0;
         
-        for (const event of this.events.getActiveEvents()) {
+        const guildId = messageOrInteraction?.guild?.id || messageOrInteraction?.guildId;
+        for (const event of this.events.getActiveEvents(guildId)) {
             // 1. Multiplicadores de dinero (minigames, work, daily, rewards, transfer_bonus)
             const multiplier = event.multipliers?.[context];
             if (multiplier && context !== 'cooldown' && context !== 'luck') {
@@ -509,7 +510,8 @@ class MinigamesSystem {
     }
 
     async checkTreasureHunt(userId, message) {
-        for (const event of this.events.getActiveEvents()) {
+        const guildId = messageOrInteraction?.guild?.id || messageOrInteraction?.guildId;
+        for (const event of this.events.getActiveEvents(guildId)) {
             if (event.type === 'treasure_hunt' && Math.random() < 0.15) {
                 const treasureType = Math.random();
                 let treasureReward = 0;
@@ -759,7 +761,8 @@ setCooldown(userId, gameType) {
         
         try {
             // Aplicar eventos
-            const activeEvents = this.events.getActiveEvents();
+            const guildId = messageOrInteraction?.guild?.id || messageOrInteraction?.guildId;
+            const activeEvents = this.events.getActiveEvents(guildId);
             for (const event of activeEvents) {
                 if (event.multipliers?.cooldown) {
                     effectiveCooldown = Math.floor(baseCooldown * event.multipliers.cooldown);
@@ -2326,9 +2329,25 @@ const userId = gameState.userId;
         gameState.channelId = reply.channel.id;
     
         // Timeout automático
-        setTimeout(() => {
+        setTimeout(async () => {
             if (this.activeGames.has(`blackjack_${gameState.userId}`)) {
-                this.handleBlackjackAction(null, gameState.userId, 'stand');
+                try {
+                    // Crear un objeto fake que simula una interaction para el timeout
+                    const channel = await this.client.channels.fetch(gameState.channelId);
+                    const originalMessage = await channel.messages.fetch(gameState.messageId);
+                    
+                    const fakeInteraction = {
+                        deferUpdate: async () => {},
+                        editReply: async (options) => { await originalMessage.edit(options); },
+                        followUp: async (options) => { await channel.send(options); },
+                    };
+                    
+                    this.handleBlackjackAction(fakeInteraction, gameState.userId, 'stand');
+                } catch (e) {
+                    // Si falla, al menos limpiar el juego
+                    this.activeGames.delete(`blackjack_${gameState.userId}`);
+                    console.log(`⏰ Blackjack timeout para ${gameState.userId} - juego cancelado`);
+                }
             }
         }, 60000);
     }
@@ -2539,7 +2558,6 @@ const userId = gameState.userId;
     }
     
     async finishBlackjack(messageOrInteraction, gameState, result) {
-        console.log(`${messageOrInteraction}`);
         gameState.finished = true;
         this.activeGames.delete(`blackjack_${gameState.userId}`);
         
@@ -2838,10 +2856,12 @@ const userId = gameState.userId;
                 
                 // ✅ Aplicar protección o pérdida
                 if (hasProtected) {
-                    await messageOrInteraction.reply(protectionMessage);
+                    if (messageOrInteraction?.followUp) {
+                        await messageOrInteraction.followUp({ content: protectionMessage, ephemeral: false });
+                    }
                 } else {
-                    if (protectionMessage) {
-                        await messageOrInteraction.reply(protectionMessage); // Mostrar que falló
+                    if (protectionMessage && messageOrInteraction?.followUp) {
+                        await messageOrInteraction.followUp({ content: protectionMessage, ephemeral: false });
                     }
                     await this.economy.removeMoney(userId, finalBet, 'blackjack_loss');
                 }
@@ -2917,10 +2937,12 @@ const userId = gameState.userId;
                 
                 // ✅ Aplicar protección o pérdida
                 if (hasProtected) {
-                    await messageOrInteraction.reply(protectionMessage);
+                    if (messageOrInteraction?.followUp) {
+                        await messageOrInteraction.followUp({ content: protectionMessage, ephemeral: false });
+                    }
                 } else {
-                    if (protectionMessage) {
-                        await messageOrInteraction.reply(protectionMessage); // Mostrar que falló
+                    if (protectionMessage && messageOrInteraction?.followUp) {
+                        await messageOrInteraction.followUp({ content: protectionMessage, ephemeral: false });
                     }
                     await this.economy.removeMoney(userId, finalBet, 'blackjack_loss');
                 }
@@ -2990,9 +3012,16 @@ const userId = gameState.userId;
         embed.setTimestamp(); 
     
         // Enviar resultado
-        if (messageOrInteraction && messageOrInteraction.editReply) {
+        if (!messageOrInteraction) {
+            // Timeout automático - buscar el canal y editar el mensaje directamente
+            try {
+                const gameChannel = await this.economy.database.pool.execute
+                    ? null : null; // No tenemos referencia al canal aquí
+                // El timeout solo hace stand, el resultado igual se muestra vía editReply del mensaje guardado
+            } catch {}
+        } else if (messageOrInteraction.editReply) {
             await messageOrInteraction.editReply({ embeds: [embed], components: [] });
-        } else if (messageOrInteraction && messageOrInteraction.reply) {
+        } else if (messageOrInteraction.reply) {
             await messageOrInteraction.reply({ embeds: [embed] });
         }
 
@@ -3002,7 +3031,8 @@ const userId = gameState.userId;
         }
 
         // Verificar tesoros al final
-        for (const event of this.events.getActiveEvents()) {
+        const guildId = messageOrInteraction?.guild?.id || messageOrInteraction?.guildId;
+        for (const event of this.events.getActiveEvents(guildId)) {
             if (event.type === 'treasure_hunt') {
                 const treasures = await this.events.checkSpecialEvents(userId, 'general');
                     

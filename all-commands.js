@@ -570,6 +570,7 @@ class AllCommands {
             await message.reply('❌ No tienes permisos de administrador para usar este comando.');
             return;
         }
+        if (!await this.validateAdminCommand(message, targetUser, 'addmoney')) return;
 
         const args = message.content.split(' ');
         
@@ -779,6 +780,7 @@ class AllCommands {
             await message.reply('❌ No tienes permisos de administrador para usar este comando.');
             return;
         }
+        if (!await this.validateAdminCommand(message, targetUser, 'addxp')) return;
 
         const args = message.content.split(' ');
         
@@ -1510,32 +1512,39 @@ class AllCommands {
 
     async handleShopInteraction(interaction) {
         const parts = interaction.customId.split('_');
-        
+
         if (interaction.isStringSelectMenu()) {
-            if (parts[1] === 'category') {
-                const category = interaction.values[0];
-                
-                const fakeMessage = {
-                    author: interaction.user,
-                    reply: async (options) => {
-                        await interaction.update(options);
-                    }
-                };
-                
-                await this.shop.showShop(fakeMessage, category, 1);
+            // customId: shop_category_userId
+            const userId = parts[2];
+            if (interaction.user.id !== userId) {
+                return interaction.reply({ content: '❌ Esta tienda no es tuya. Usa `>shop` para abrir la tuya.', ephemeral: true });
             }
+
+            const category = interaction.values[0];
+            const fakeMessage = {
+                author: interaction.user,
+                guild: interaction.guild,
+                guildId: interaction.guildId,
+                reply: async (options) => await interaction.update(options)
+            };
+            await this.shop.showShop(fakeMessage, category, 1);
+
         } else if (interaction.isButton()) {
+            // customId: shop_prev_category_page_userId  o  shop_next_category_page_userId
+            const userId = parts[parts.length - 1];
+            if (interaction.user.id !== userId) {
+                return interaction.reply({ content: '❌ Esta tienda no es tuya. Usa `>shop` para abrir la tuya.', ephemeral: true });
+            }
+
             if (parts[1] === 'prev' || parts[1] === 'next') {
                 const category = parts[2];
                 const page = parseInt(parts[3]);
-                
                 const fakeMessage = {
                     author: interaction.user,
-                    reply: async (options) => {
-                        await interaction.update(options);
-                    }
+                    guild: interaction.guild,
+                    guildId: interaction.guildId,
+                    reply: async (options) => await interaction.update(options)
                 };
-                
                 await this.shop.showShop(fakeMessage, category, page);
             }
         }
@@ -1550,6 +1559,7 @@ class AllCommands {
             await message.reply('❌ No tienes permisos para usar este comando.');
             return;
         }
+        if (!await this.validateAdminCommand(message, targetUser, 'giveitem')) return;
         
         const targetUser = message.mentions.users.first();
         const itemId = args[2];
@@ -1672,6 +1682,109 @@ class AllCommands {
             console.error('Error verificando permisos:', e.message);
             return message.guild.ownerId === message.author.id;
         }
+    }
+
+    async validateAdminCommand(message, targetUser, commandType = 'generic') {
+        // No puede usarse sobre uno mismo
+        if (targetUser.id === message.author.id) {
+            await message.reply('❌ No puedes usar este comando sobre ti mismo.');
+            return false;
+        }
+
+        if (targetUser.bot) {
+            await message.reply('❌ No puedes usar este comando sobre bots.');
+            return false;
+        }
+
+        // Verificar que el target sea miembro del server
+        let targetMember;
+        try {
+            targetMember = await message.guild.members.fetch(targetUser.id);
+        } catch {
+            await message.reply('❌ El usuario no es miembro de este servidor.');
+            return false;
+        }
+
+        // Cuenta del target con menos de 30 días → bloqueado
+        const accountAge = Date.now() - targetUser.createdTimestamp;
+        const thirtyDays = 30 * 24 * 60 * 60 * 1000;
+        if (accountAge < thirtyDays) {
+            const daysOld = Math.floor(accountAge / (24 * 60 * 60 * 1000));
+            await message.reply(`❌ La cuenta destino tiene solo **${daysOld} días** de antigüedad (mínimo 30). Bloqueado por seguridad anti-multicuentas.`);
+            return false;
+        }
+
+        // Contar miembros reales del server (no bots)
+        let realMemberCount;
+        try {
+            const members = await message.guild.members.fetch();
+            realMemberCount = members.filter(m => !m.user.bot).size;
+        } catch {
+            realMemberCount = message.guild.memberCount; // fallback
+        }
+
+        const isSmallServer = realMemberCount < 10;
+
+        if (isSmallServer) {
+            const today = new Date().toDateString();
+            
+            // Leer de DB en lugar de memoria
+            const rateData = await this.guildConfig?.getRateLimit(
+                message.guild.id, message.author.id, commandType
+            );
+
+            let currentCount = 0;
+
+            if (rateData && rateData.date === today) {
+                currentCount = rateData.count;
+            }
+            // Si es un día diferente, currentCount queda en 0 (se resetea solo)
+
+            if (currentCount >= 3) {
+                await message.reply(
+                    `⚠️ Este servidor tiene menos de 10 miembros reales (${realMemberCount} actualmente).\n` +
+                    `Has alcanzado el límite de **3 usos diarios** de \`${commandType}\` en servidores pequeños.\n` +
+                    `El límite se reinicia mañana.`
+                );
+                return false;
+            }
+
+            // Guardar en DB
+            await this.guildConfig?.setRateLimit(
+                message.guild.id, message.author.id, commandType,
+                { date: today, count: currentCount + 1 }
+            );
+
+            const newCount = currentCount + 1;
+            await message.channel.send(
+                `ℹ️ Server pequeño detectado (${realMemberCount} miembros). Uso ${newCount}/3 de hoy para \`${commandType}\`.`
+            ).then(m => setTimeout(() => m.delete().catch(() => {}), 5000));
+        }
+
+        // Anti-spam: mismo admin → mismo target repetidamente (máx 5 veces en 10 min)
+        const spamKey = `spam_${message.author.id}_${targetUser.id}_${commandType}`;
+        if (!this._spamTracker) this._spamTracker = new Map();
+
+        const spamData = this._spamTracker.get(spamKey) || { count: 0, firstUse: Date.now() };
+        const tenMinutes = 10 * 60 * 1000;
+
+        if (Date.now() - spamData.firstUse > tenMinutes) {
+            // Resetear ventana
+            this._spamTracker.set(spamKey, { count: 1, firstUse: Date.now() });
+        } else {
+            spamData.count++;
+            this._spamTracker.set(spamKey, spamData);
+
+            if (spamData.count > 5) {
+                await message.reply(
+                    `🚨 Detectado uso excesivo: has usado \`${commandType}\` sobre ${targetUser} **${spamData.count} veces en 10 minutos**.\n` +
+                    `Espera un momento antes de continuar.`
+                );
+                return false;
+            }
+        }
+
+        return true;
     }
 
     async handleSetConfig(message, args) {
@@ -2334,6 +2447,8 @@ const commandName = command.replace('>', '');
                     { name: '>seteventsrole @rol', value: 'Rol para pings de eventos', inline: true },
                     { name: '>eventstats', value: 'Estadísticas de eventos', inline: true },
                     { name: '>giveitem @user item [cant]', value: 'Dar item a usuario', inline: true },
+                    { name: '>addmoney', value: '', inline: true },
+                    { name: '>addxp', value: '', inline: true },
                     { name: '>clear [cant]', value: 'Borra mensajes del canal', inline: true }
                 ]
             },

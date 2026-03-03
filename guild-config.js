@@ -97,6 +97,22 @@ class GuildConfig {
         await this.set(guildId, 'events_globally_enabled', enabled ? 'true' : 'false');
         return wasNull; // Retorna true si era la primera vez
     }
+
+    async getRateLimit(guildId, adminId, commandType) {
+        const key = `ratelimit_${adminId}_${commandType}`;
+        try {
+            const val = await this.get(guildId, key);
+            if (!val) return null;
+            return JSON.parse(val);
+        } catch {
+            return null;
+        }
+    }
+
+    async setRateLimit(guildId, adminId, commandType, data) {
+        const key = `ratelimit_${adminId}_${commandType}`;
+        await this.set(guildId, key, JSON.stringify(data));
+    }
 }
 
 module.exports = GuildConfig;
