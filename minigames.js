@@ -761,8 +761,8 @@ setCooldown(userId, gameType) {
         
         try {
             // Aplicar eventos
-            const guildId = message?.guild?.id || message?.guildId;
-            const activeEvents = this.events.getActiveEvents(guildId);
+            /*const guildId = message?.guild?.id || message?.guildId;*/
+            const activeEvents = this.events.getActiveEvents(/*guildId*/);
             for (const event of activeEvents) {
                 if (event.multipliers?.cooldown) {
                     effectiveCooldown = Math.floor(baseCooldown * event.multipliers.cooldown);
