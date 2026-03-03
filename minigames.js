@@ -510,8 +510,8 @@ class MinigamesSystem {
     }
 
     async checkTreasureHunt(userId, message) {
-        const guildId = messageOrInteraction?.guild?.id || messageOrInteraction?.guildId;
-        for (const event of this.events.getActiveEvents(guildId)) {
+        /*const guildId = messageOrInteraction?.guild?.id || messageOrInteraction?.guildId;*/
+        for (const event of this.events.getActiveEvents(/*guildId*/)) {
             if (event.type === 'treasure_hunt' && Math.random() < 0.15) {
                 const treasureType = Math.random();
                 let treasureReward = 0;
