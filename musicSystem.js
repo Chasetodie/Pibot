@@ -14,9 +14,24 @@ class MusicSystem {
 
     initialize() {
         const nodes = [
-            { name: 'TechByte', url: 'lavahatry4.techbyte.host:3000', auth: 'naig.is-a.dev', secure: false },
-            { name: 'Serenetia-NoSSL', url: 'lavalink.serenetia.com:80', auth: 'https://dsc.gg/ajidevserver', secure: false },
-            { name: 'Serenetia-SSL', url: 'lavalink.serenetia.com:443', auth: 'https://dsc.gg/ajidevserver', secure: true },
+            {
+                name: 'TechByte',
+                url: 'lavahatry4.techbyte.host:3000',
+                auth: 'NAIGLAVA-dash.techbyte.host',  // ← contraseña correcta
+                secure: false
+            },
+            {
+                name: 'Serenetia-NoSSL',
+                url: 'lavalink.serenetia.com:80',
+                auth: 'https://dsc.gg/ajidevserver',
+                secure: false
+            },
+            {
+                name: 'Jirayu',
+                url: 'lavalink.jirayu.net:13592',
+                auth: 'youshallnotpass',
+                secure: false
+            },
         ];
 
         this.nodeList = nodes; // Guardar para reconexión
@@ -24,7 +39,7 @@ class MusicSystem {
 
         this.kazagumo = new Kazagumo(
             {
-                defaultSearchEngine: 'scsearch',
+                defaultSearchEngine: 'youtube',
                 plugins: [new Plugins.PlayerMoved(this.client)],
                 send: (guildId, payload) => {
                     const guild = this.client.guilds.cache.get(guildId);
@@ -334,7 +349,7 @@ class MusicSystem {
 
             this.clearPlayerTimeout(guild.id); // Limpiar timeout si existe
 
-            const result = await this.kazagumo.search(query, { requester: author, engine: 'scsearch' });
+            const result = await this.kazagumo.search(query, { requester: author, engine: 'ytsearch' });
 
             if (!result.tracks.length) {
                 return message.reply('❌ No se encontraron resultados para tu búsqueda.');
