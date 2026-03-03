@@ -1,6 +1,7 @@
 const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 const { Connectors } = require('shoukaku');
 const { Kazagumo, Plugins } = require('kazagumo');
+const axios = require('axios');
 
 class MusicSystem {
     constructor(client) {
@@ -14,8 +15,10 @@ class MusicSystem {
 
     initialize() {
         const nodes = [
+            { name: 'Node2', url: 'lava-v4.ajieblogs.eu.org:443', auth: 'https://dsc.gg/ajidevserver', secure: true },
+            { name: 'Node3', url: 'lavalinkv4.serenetia.com', auth: 'https://dsc.gg/ajidevserver', secure: true },
+            { name: 'Node4', url: 'lavalink.serenetia.com', auth: 'https://dsc.gg/ajidevserver', secure: true},
             { name: 'Node1', url: 'lavalink.jirayu.net:13592', auth: 'youshallnotpass', secure: false },
-            { name: 'Node2', url: 'lava-v4.ajieblogs.eu.org:443', auth: 'https://dsc.gg/ajidevserver', secure: true},
         ];
 
         this.kazagumo = new Kazagumo(
@@ -41,8 +44,15 @@ class MusicSystem {
             console.error(`❌ Error en nodo ${name}:`, error);
         });
 
-        this.kazagumo.shoukaku.on('close', (name, code, reason) => {
-            console.warn(`⚠️ Nodo ${name} cerrado. Código: ${code}. Razón: ${reason}`);
+        this.shoukaku.on("close", (name) => {
+            console.log(`⚠️ Nodo ${name} murió.`);
+
+            this.kazagumo.players.forEach(player => {
+                if (player.shoukaku.name === name) {
+                    console.log(`Moviendo player ${player.guildId} a otro nodo...`);
+                    player.moveNode(this.kazagumo.nodes.filter(n => n.name !== name)[0].name);
+                }
+            });
         });
 
         this.kazagumo.shoukaku.on('disconnect', (name, count) => {
@@ -237,6 +247,113 @@ class MusicSystem {
         }
     }
 
+    async getSpotifyToken() {
+        console.log("ID:", process.env.SPOTIFY_CLIENT_ID);
+        console.log("SECRET:", process.env.SPOTIFY_CLIENT_SECRET);
+
+        if (this.spotifyToken && Date.now() < this.spotifyTokenExpires) {
+            return this.spotifyToken;
+        }
+
+        const response = await axios.post(
+            'https://accounts.spotify.com/api/token',
+            new URLSearchParams({ grant_type: 'client_credentials' }),
+            {
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    Authorization: 'Basic ' + Buffer.from(
+                        process.env.SPOTIFY_CLIENT_ID + ':' + process.env.SPOTIFY_CLIENT_SECRET
+                    ).toString('base64'),
+                },
+            }
+        );
+
+        this.spotifyToken = response.data.access_token;
+        this.spotifyTokenExpires = Date.now() + (response.data.expires_in * 1000);
+
+        return this.spotifyToken;
+    }
+
+    async getSpotifyTrack(url) {
+        const token = await this.getSpotifyToken();
+        const id = url.split('/track/')[1].split('?')[0];
+
+        const { data } = await axios.get(
+            `https://api.spotify.com/v1/tracks/${id}`,
+            { headers: { Authorization: `Bearer ${token}` } }
+        );
+
+        return [`${data.name} ${data.artists[0].name}`];
+    }
+
+    async getSpotifyAlbum(url) {
+        const token = await this.getSpotifyToken();
+        const id = url.split('/album/')[1].split('?')[0];
+
+        const { data } = await axios.get(
+            `https://api.spotify.com/v1/albums/${id}`,
+            { headers: { Authorization: `Bearer ${token}` } }
+        );
+
+        return data.tracks.items.map(
+            track => `${track.name} ${track.artists[0].name}`
+        );
+    }   
+    
+    async getSpotifyPlaylist(url) {
+        const token = await this.getSpotifyToken();
+        const id = url.split('/playlist/')[1].split('?')[0];
+
+        const { data } = await axios.get(
+            `https://api.spotify.com/v1/playlists/${id}`,
+            { headers: { Authorization: `Bearer ${token}` } }
+        );
+
+        return data.tracks.items.map(
+            item => `${item.track.name} ${item.track.artists[0].name}`
+        );
+    }
+
+    async resolveDeezerLink(shortUrl) {
+        try {
+            const response = await axios.get(shortUrl);
+            return response.request.res.responseUrl;
+        } catch (err) {
+            console.error("Error resolviendo link Deezer:", err);
+            return shortUrl;
+        }
+    }
+
+    async getDeezerTrack(url) {
+        try {
+            const trackId = url.match(/track\/(\d+)/)?.[1];
+            if (!trackId) return [];
+
+            const { data } = await axios.get(`https://api.deezer.com/track/${trackId}`);
+
+            return [`${data.title} ${data.artist.name}`];
+        } catch (err) {
+            console.error("Error obteniendo track Deezer:", err);
+            return [];
+        }
+    }
+
+    async getDeezerAlbum(url) {
+        try {
+            const albumId = url.match(/album\/(\d+)/)?.[1];
+            if (!albumId) return [];
+
+            const { data } = await axios.get(`https://api.deezer.com/album/${albumId}`);
+
+            return data.tracks.data.map(
+                track => `${track.title} ${track.artist.name}`
+            );
+        } catch (err) {
+            console.error("Error obteniendo álbum Deezer:", err);
+            return [];
+        }
+    }
+
     async playCommand(message, args, member, channel, guild, author) {
         // AGREGAR THROTTLE:
         const lastPlay = this.playThrottle.get(guild.id) || 0;
@@ -255,7 +372,60 @@ class MusicSystem {
             return message.reply('❌ Proporciona el nombre de la canción.\nEjemplo: `>music play despacito`');
         }
 
-        const query = args.slice(2).join(' ');
+        let query = args.slice(2).join(' ');
+
+        if (query.includes("open.spotify.com")) {
+            try {
+                let tracks = [];
+
+                if (query.includes("/track/")) {
+                    tracks = await this.getSpotifyTrack(query);
+                }
+                else if (query.includes("/album/")) {
+                    tracks = await this.getSpotifyAlbum(query);
+                }
+                else if (query.includes("/playlist/")) {
+                    tracks = await this.getSpotifyPlaylist(query);
+                }
+
+                for (const track of tracks) {
+                    await player.search(`ytsearch:${track}`, { requester: message.author });
+                }
+
+                return message.reply(`✅ Añadidas ${tracks.length} canciones desde Spotify.`);
+            }
+            catch (err) {
+                console.error(err);
+                return message.reply("❌ Error procesando Spotify.");
+            }
+        }
+
+        if (query.includes("deezer.com")) {
+
+            // Si es link corto, resolverlo
+            if (query.includes("link.deezer.com")) {
+                query = await this.resolveDeezerLink(query);
+            }
+
+            let tracks = [];
+
+            if (query.includes("/album/")) {
+                tracks = await this.getDeezerAlbum(query);
+            } 
+            else if (query.includes("/track/")) {
+                tracks = await this.getDeezerTrack(query);
+            }
+
+            if (tracks.length === 0) {
+                return message.reply("❌ No se encontraron canciones en Deezer.");
+            }
+
+            for (const track of tracks) {
+                await player.search(`ytsearch:${track}`, { requester: message.author });
+            }
+
+            return message.reply(`✅ Añadidas ${tracks.length} canciones desde Deezer.`);
+        }     
 
         await message.reply({
             content: `🔍 Buscando... \`${query}\``,
@@ -281,7 +451,8 @@ class MusicSystem {
             }
 
             // Antes de player.play():
-            if (result.tracks.length > this.maxSongDuration) {
+            const track = result.tracks[0];
+            if (track.length > this.maxSongDuration) {
                 return message.reply('❌ La canción es muy larga (máximo 2 horas).');
             }
 
