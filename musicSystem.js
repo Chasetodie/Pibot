@@ -1,6 +1,7 @@
 const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 const { Connectors } = require('shoukaku');
 const { Kazagumo, Plugins } = require('kazagumo');
+const axios = require('axios');
 
 class MusicSystem {
     constructor(client) {
@@ -15,7 +16,11 @@ class MusicSystem {
     initialize() {
         const nodes = [
             { name: 'Node1', url: 'lavalink.jirayu.net:13592', auth: 'youshallnotpass', secure: false },
-            { name: 'Node2', url: 'lava-v4.ajieblogs.eu.org:443', auth: 'https://dsc.gg/ajidevserver', secure: true},
+            { name: 'Node2', url: 'lava-v4.ajieblogs.eu.org:443', auth: 'https://dsc.gg/ajidevserver', secure: true },
+            { name: 'Node3', url: 'lavalinkv4.serenetia.com', auth: 'https://dsc.gg/ajidevserver', secure: true },
+            { name: 'Node4', url: 'lavalinkv3.serenetia.com', auth: 'https://dsc.gg/ajidevserver', secure: true},
+            { name: 'Node5', url: 'lavalink.serenetia.com', auth: 'https://dsc.gg/ajidevserver', secure: true},
+            { name: 'Node6', url: 'lava-v3.millohost.my.id', auth: 'https://discord.gg/mjS5J2K3ep', secure: true},
         ];
 
         this.kazagumo = new Kazagumo(
@@ -237,6 +242,84 @@ class MusicSystem {
         }
     }
 
+    async getSpotifyToken() {
+        if (this.spotifyToken && Date.now() < this.spotifyTokenExpires) {
+            return this.spotifyToken;
+        }
+
+        const response = await axios.post(
+            'https://accounts.spotify.com/api/token',
+            new URLSearchParams({ grant_type: 'client_credentials' }),
+            {
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    Authorization: 'Basic ' + Buffer.from(
+                        process.env.SPOTIFY_CLIENT_ID + ':' + process.env.SPOTIFY_CLIENT_SECRET
+                    ).toString('base64'),
+                },
+            }
+        );
+
+        this.spotifyToken = response.data.access_token;
+        this.spotifyTokenExpires = Date.now() + (response.data.expires_in * 1000);
+
+        return this.spotifyToken;
+    }
+
+    async getSpotifyTrack(url) {
+        const token = await this.getSpotifyToken();
+        const id = url.split('/track/')[1].split('?')[0];
+
+        const { data } = await axios.get(
+            `https://api.spotify.com/v1/tracks/${id}`,
+            { headers: { Authorization: `Bearer ${token}` } }
+        );
+
+        return [`${data.name} ${data.artists[0].name}`];
+    }
+
+    async getSpotifyAlbum(url) {
+        const token = await this.getSpotifyToken();
+        const id = url.split('/album/')[1].split('?')[0];
+
+        const { data } = await axios.get(
+            `https://api.spotify.com/v1/albums/${id}`,
+            { headers: { Authorization: `Bearer ${token}` } }
+        );
+
+        return data.tracks.items.map(
+            track => `${track.name} ${track.artists[0].name}`
+        );
+    }   
+    
+    async getSpotifyPlaylist(url) {
+        const token = await this.getSpotifyToken();
+        const id = url.split('/playlist/')[1].split('?')[0];
+
+        const { data } = await axios.get(
+            `https://api.spotify.com/v1/playlists/${id}`,
+            { headers: { Authorization: `Bearer ${token}` } }
+        );
+
+        return data.tracks.items.map(
+            item => `${item.track.name} ${item.track.artists[0].name}`
+        );
+    }
+
+    async getDeezerTrack(url) {
+        const id = url.split('/track/')[1];
+        const { data } = await axios.get(`https://api.deezer.com/track/${id}`);
+        return [`${data.title} ${data.artist.name}`];
+    }
+
+    async getDeezerAlbum(url) {
+        const id = url.split('/album/')[1];
+        const { data } = await axios.get(`https://api.deezer.com/album/${id}`);
+        return data.tracks.data.map(
+            track => `${track.title} ${track.artist.name}`
+        );
+    }
+
     async playCommand(message, args, member, channel, guild, author) {
         // AGREGAR THROTTLE:
         const lastPlay = this.playThrottle.get(guild.id) || 0;
@@ -255,7 +338,50 @@ class MusicSystem {
             return message.reply('❌ Proporciona el nombre de la canción.\nEjemplo: `>music play despacito`');
         }
 
-        const query = args.slice(2).join(' ');
+        let query = args.slice(2).join(' ');
+
+        if (query.includes("open.spotify.com")) {
+            try {
+                let tracks = [];
+
+                if (query.includes("/track/")) {
+                    tracks = await this.getSpotifyTrack(query);
+                }
+                else if (query.includes("/album/")) {
+                    tracks = await this.getSpotifyAlbum(query);
+                }
+                else if (query.includes("/playlist/")) {
+                    tracks = await this.getSpotifyPlaylist(query);
+                }
+
+                for (const track of tracks) {
+                    await player.search(`ytsearch:${track}`, { requester: message.author });
+                }
+
+                return message.reply(`✅ Añadidas ${tracks.length} canciones desde Spotify.`);
+            }
+            catch (err) {
+                console.error(err);
+                return message.reply("❌ Error procesando Spotify.");
+            }
+        }
+
+        if (query.includes("deezer.com")) {
+            let tracks = [];
+
+            if (query.includes("/track/")) {
+                tracks = await this.getDeezerTrack(query);
+            }
+            else if (query.includes("/album/")) {
+                tracks = await this.getDeezerAlbum(query);
+            }
+
+            for (const track of tracks) {
+                await player.search(`ytsearch:${track}`, { requester: message.author });
+            }
+
+            return message.reply(`✅ Añadidas ${tracks.length} canciones desde Deezer.`);
+        }        
 
         await message.reply({
             content: `🔍 Buscando... \`${query}\``,

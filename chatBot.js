@@ -176,11 +176,11 @@ class ChatBotSystem {
     🎮 Juegos: >minigames
     🏪 Tienda: >shop, >buy, >inventory
     💬 Chat IA: >chat, >clearchat, >chatstats
-    🎨 Imágenes IA: >generar, >generaranime, >generar3d, >generarrealista
     📊 Estado: >orstatus, >orcredits, >chatquota, >generarhelp
     📋 Info: >profile, >leaderboard, >help
     `.trim();
     }
+//    🎨 Imágenes IA: >generar, >generaranime, >generar3d, >generarrealista
 
     /**
      * Agregar mensaje al contexto en DB
@@ -1206,13 +1206,13 @@ class ChatBotSystem {
     🤗 Como una amiga real`,
                     inline: false
                 },
-{
+/*{
                 name: '🎨 Generación de Imágenes',
                 value: `\`>generar <descripción>\` - Generar imagen con IA
 \`>generarhelp\` - Ver guía completa de imágenes
 _Totalmente gratis, sin límites_`,
                 inline: false
-            }
+            }*/
         )
         .setColor('#00D9FF')
         .setFooter({ text: '🎭 OpenRouter Chat + 🎨 Pollinations Imágenes | 100% gratis' })
@@ -1490,7 +1490,7 @@ _Totalmente gratis, sin límites_`,
                     await message.reply('📝 No tienes historial de chat aún. ¡Usa `>chat` para empezar una conversación!');
                 }
                 break;
-            case '>generar':
+/*            case '>generar':
             case '>imagen':
             case '>generate':
             case '>img':
@@ -1837,7 +1837,7 @@ _Totalmente gratis, sin límites_`,
                 .setTimestamp();
             
             await message.reply({ embeds: [imgHelpEmbed] });
-            break;
+            break;*/
         }
     }
 
