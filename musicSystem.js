@@ -15,10 +15,10 @@ class MusicSystem {
 
     initialize() {
         const nodes = [
-            { name: 'Node1', url: 'lavalink.jirayu.net:13592', auth: 'youshallnotpass', secure: false },
             { name: 'Node2', url: 'lava-v4.ajieblogs.eu.org:443', auth: 'https://dsc.gg/ajidevserver', secure: true },
             { name: 'Node3', url: 'lavalinkv4.serenetia.com', auth: 'https://dsc.gg/ajidevserver', secure: true },
             { name: 'Node4', url: 'lavalink.serenetia.com', auth: 'https://dsc.gg/ajidevserver', secure: true},
+            { name: 'Node1', url: 'lavalink.jirayu.net:13592', auth: 'youshallnotpass', secure: false },
         ];
 
         this.kazagumo = new Kazagumo(
@@ -241,6 +241,9 @@ class MusicSystem {
     }
 
     async getSpotifyToken() {
+        console.log("ID:", process.env.SPOTIFY_CLIENT_ID);
+        console.log("SECRET:", process.env.SPOTIFY_CLIENT_SECRET);
+
         if (this.spotifyToken && Date.now() < this.spotifyTokenExpires) {
             return this.spotifyToken;
         }
