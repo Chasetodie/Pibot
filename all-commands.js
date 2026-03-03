@@ -1660,8 +1660,11 @@ class AllCommands {
     }
 
     async handleSetConfig(message, args) {
-        //Administrator
-        if (!message.member?.permissions.has('ManageGuild')) {
+        const memberPerms = message.member?.permissions ?? message.member?._roles;
+        const isAdmin = message.member?.permissions?.has?.('ManageGuild') || 
+                        message.member?.permissions?.has?.('Administrator') ||
+                        message.guild?.ownerId === message.author.id;
+        if (!isAdmin) {
             return message.reply('❌ Necesitas el permiso **Administrar Servidor** para usar este comando.');
         }
         if (!this.guildConfig) {
@@ -1696,7 +1699,11 @@ class AllCommands {
     }
 
     async handleShowConfig(message) {
-        if (!message.member?.permissions.has('ManageGuild')) {
+        const memberPerms = message.member?.permissions ?? message.member?._roles;
+        const isAdmin = message.member?.permissions?.has?.('ManageGuild') || 
+                        message.member?.permissions?.has?.('Administrator') ||
+                        message.guild?.ownerId === message.author.id;
+        if (!isAdmin) {
             return message.reply('❌ Necesitas el permiso **Administrar Servidor** para usar este comando.');
         }
         if (!this.guildConfig) {
@@ -1706,7 +1713,8 @@ class AllCommands {
         const config = await this.guildConfig.getAll(message.guild.id);
         const labels = {
             'levelup_channel': '📈 Canal de niveles',
-            'events_channel': '🎉 Canal de eventos'
+            'events_channel': '🎉 Canal de eventos',
+            'events_role': '🔔 Rol de eventos',
         };
 
         const embed = new EmbedBuilder()
@@ -1716,9 +1724,10 @@ class AllCommands {
         if (Object.keys(config).length === 0) {
             embed.setDescription('No hay nada configurado aún. Usa `>setchannel help` para ver cómo hacerlo.');
         } else {
+            const roleKeys = ['events_role'];
             embed.addFields(Object.entries(config).map(([k, v]) => ({
                 name: labels[k] || k,
-                value: `<#${v}>`,
+                value: roleKeys.includes(k) ? `<@&${v}>` : `<#${v}>`,
                 inline: true
             })));
         }
@@ -1727,7 +1736,11 @@ class AllCommands {
     }
 
     async handleSetEventsRole(message, args) {
-        if (!message.member?.permissions.has('ManageGuild')) {
+        const memberPerms = message.member?.permissions ?? message.member?._roles;
+        const isAdmin = message.member?.permissions?.has?.('ManageGuild') || 
+                        message.member?.permissions?.has?.('Administrator') ||
+                        message.guild?.ownerId === message.author.id;
+        if (!isAdmin) {
             return message.reply('❌ Necesitas el permiso **Administrar Servidor** para usar este comando.');
         }
         const role = message.mentions.roles.first();
@@ -1741,7 +1754,11 @@ class AllCommands {
     }
 
     async handleToggleEvent(message, args) {
-        if (!message.member?.permissions.has('ManageGuild')) {
+        const memberPerms = message.member?.permissions ?? message.member?._roles;
+        const isAdmin = message.member?.permissions?.has?.('ManageGuild') || 
+                        message.member?.permissions?.has?.('Administrator') ||
+                        message.guild?.ownerId === message.author.id;
+        if (!isAdmin) {
             return message.reply('❌ Necesitas el permiso **Administrar Servidor** para usar este comando.');
         }
         if (!this.guildConfig) return message.reply('❌ Sistema de configuración no disponible.');
@@ -1774,7 +1791,11 @@ class AllCommands {
     }
 
     async handleToggleAllEvents(message) {
-        if (!message.member.permissions.has('ManageGuild')) {
+        const memberPerms = message.member?.permissions ?? message.member?._roles;
+        const isAdmin = message.member?.permissions?.has?.('ManageGuild') || 
+                        message.member?.permissions?.has?.('Administrator') ||
+                        message.guild?.ownerId === message.author.id;
+        if (!isAdmin) {
             return message.reply('❌ Necesitas el permiso **Administrar Servidor** para usar este comando.');
         }
         if (!this.guildConfig) return message.reply('❌ Sistema de configuración no disponible.');

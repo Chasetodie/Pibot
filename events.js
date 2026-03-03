@@ -953,7 +953,7 @@ class EventsSystem {
             return;
         }
         
-        const activeEvents = this.getActiveEvents();
+        const activeEvents = this.getActiveEvents(message.guild?.id);
         
         if (activeEvents.length === 0) {
             await message.reply('❌ No hay eventos activos para mostrar estadísticas.');
