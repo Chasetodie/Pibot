@@ -1,6 +1,6 @@
 TÉRMINOS DE SERVICIO – PIBOT
 
-Última actualización: [pon la fecha aquí]
+Última actualización: 03/03/26
 
 Al usar Pibot en cualquier servidor de Discord, aceptas los siguientes términos:
 
