@@ -125,16 +125,6 @@ class MusicSystem {
                 setTimeout(() => {
                     if (player.queue.size > 0 && !player.playing) {
                         player.play();
-                        // Agregar temporalmente:
-                        setTimeout(() => {
-                            console.log('🎵 Estado player:', {
-                                playing: player.playing,
-                                paused: player.paused,
-                                position: player.position,
-                                ping: player.ping,
-                                node: player.node?.name
-                            });
-                        }, 2000);
                     }
                 }, 1000);
             } else {
@@ -377,6 +367,17 @@ class MusicSystem {
             if (!player.playing && !player.paused) {
                 await new Promise(resolve => setTimeout(resolve, 500));
                 player.play();
+                                        // Agregar temporalmente:
+                        setTimeout(() => {
+                            console.log('🎵 Estado player:', {
+                                playing: player.playing,
+                                paused: player.paused,
+                                position: player.position,
+                                ping: player.ping,
+                                node: player.node?.name
+                            });
+                        }, 2000);
+
             }
 
             await message.channel.send({ embeds: [embed] });
