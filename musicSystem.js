@@ -18,7 +18,6 @@ class MusicSystem {
             { name: 'Node2', url: 'lava-v4.ajieblogs.eu.org:443', auth: 'https://dsc.gg/ajidevserver', secure: true },
             { name: 'Node3', url: 'lavalinkv4.serenetia.com', auth: 'https://dsc.gg/ajidevserver', secure: true },
             { name: 'Node4', url: 'lavalink.serenetia.com', auth: 'https://dsc.gg/ajidevserver', secure: true},
-            { name: 'Node1', url: 'lavalink.jirayu.net:13592', auth: 'youshallnotpass', secure: false },
         ];
 
         this.kazagumo = new Kazagumo(
@@ -287,18 +286,30 @@ class MusicSystem {
     }
 
     async getSpotifyAlbum(url) {
-        const token = await this.getSpotifyToken();
-        const id = url.split('/album/')[1].split('?')[0];
+        try {
+            const token = await this.getSpotifyToken();
 
-        const { data } = await axios.get(
-            `https://api.spotify.com/v1/albums/${id}`,
-            { headers: { Authorization: `Bearer ${token}` } }
-        );
+            const match = url.match(/album\/([a-zA-Z0-9]+)/);
+            if (!match) return [];
 
-        return data.tracks.items.map(
-            track => `${track.name} ${track.artists[0].name}`
-        );
-    }   
+            const albumId = match[1];
+
+            const { data } = await axios.get(
+                `https://api.spotify.com/v1/albums/${albumId}`,
+                {
+                    headers: { Authorization: `Bearer ${token}` }
+                }
+            );
+
+            return data.tracks.items.map(
+                track => `${track.name} ${track.artists[0].name}`
+            );
+
+        } catch (err) {
+            console.error("Spotify album error:", err.response?.data || err);
+            return [];
+        }
+    }
     
     async getSpotifyPlaylist(url) {
         const token = await this.getSpotifyToken();
@@ -316,11 +327,18 @@ class MusicSystem {
 
     async resolveDeezerLink(shortUrl) {
         try {
-            const response = await axios.get(shortUrl);
+            const response = await axios.get(shortUrl, {
+                maxRedirects: 5,
+                headers: {
+                    "User-Agent": "Mozilla/5.0"
+                }
+            });
+
             return response.request.res.responseUrl;
+
         } catch (err) {
-            console.error("Error resolviendo link Deezer:", err);
-            return shortUrl;
+            console.error("Error resolviendo Deezer:", err.response?.status);
+            return null;
         }
     }
 
@@ -402,30 +420,42 @@ class MusicSystem {
 
         if (query.includes("deezer.com")) {
 
-            // Si es link corto, resolverlo
             if (query.includes("link.deezer.com")) {
-                query = await this.resolveDeezerLink(query);
+                const resolved = await this.resolveDeezerLink(query);
+                if (!resolved) {
+                    return message.reply("❌ No pude resolver el link de Deezer.");
+                }
+                query = resolved;
             }
+
+            const albumMatch = query.match(/album\/(\d+)/);
+            const trackMatch = query.match(/track\/(\d+)/);
 
             let tracks = [];
 
-            if (query.includes("/album/")) {
-                tracks = await this.getDeezerAlbum(query);
-            } 
-            else if (query.includes("/track/")) {
-                tracks = await this.getDeezerTrack(query);
+            if (albumMatch) {
+                const albumId = albumMatch[1];
+                const { data } = await axios.get(`https://api.deezer.com/album/${albumId}`);
+                tracks = data.tracks.data.map(
+                    t => `${t.title} ${t.artist.name}`
+                );
+            }
+            else if (trackMatch) {
+                const trackId = trackMatch[1];
+                const { data } = await axios.get(`https://api.deezer.com/track/${trackId}`);
+                tracks = [`${data.title} ${data.artist.name}`];
             }
 
             if (tracks.length === 0) {
-                return message.reply("❌ No se encontraron canciones en Deezer.");
+                return message.reply("❌ No se encontraron canciones.");
             }
 
-            for (const track of tracks) {
-                await player.search(`ytsearch:${track}`, { requester: message.author });
+            for (const t of tracks) {
+                await player.search(`ytsearch:${t}`, { requester: message.author });
             }
 
-            return message.reply(`✅ Añadidas ${tracks.length} canciones desde Deezer.`);
-        }     
+            return message.reply(`✅ Añadidas ${tracks.length} canciones.`);
+        }   
 
         await message.reply({
             content: `🔍 Buscando... \`${query}\``,
