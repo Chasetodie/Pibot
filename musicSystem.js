@@ -14,8 +14,9 @@ class MusicSystem {
 
     initialize() {
         const nodes = [
-//            { name: 'Node1', url: 'lavalink.jirayu.net:13592', auth: 'youshallnotpass', secure: false },
-            { name: 'Node2', url: 'lava-v4.ajieblogs.eu.org:443', auth: 'https://dsc.gg/ajidevserver', secure: true},
+            { name: 'Node1', url: 'lavalink.jirayu.net:13592', auth: 'youshallnotpass', secure: false },
+            { name: 'Node2', url: 'lavalink.devamop.in:443', auth: 'DevamOP', secure: true },
+            { name: 'Node3', url: 'lavalink.oops.wtf:443', auth: 'www.lavalink.oops.wtf', secure: true },
         ];
 
         this.kazagumo = new Kazagumo(
@@ -37,18 +38,17 @@ class MusicSystem {
         this.kazagumo.shoukaku.on('ready', (name) => {
             console.log(`✅ Nodo [${name}] conectado!`);
         });
-/*        this.kazagumo.shoukaku.on('error', (name, error) => {
-            console.error(`❌ Error en nodo ${name}:`, error);
+        this.kazagumo.shoukaku.on('error', (name, error) => {
+            console.error(`❌ Error en nodo ${name}:`, error.message);
         });
 
         this.kazagumo.shoukaku.on('close', (name, code, reason) => {
-            console.warn(`⚠️ Nodo ${name} cerrado. Código: ${code}. Razón: ${reason}`);
+            console.warn(`⚠️ Nodo ${name} cerrado. Código: ${code}. Razón: ${reason || 'desconocida'}`);
         });
 
         this.kazagumo.shoukaku.on('disconnect', (name, count) => {
-            console.warn(`⚠️ Nodo ${name} desconectado. Intento: ${count}`);
+            console.warn(`⚠️ Nodo ${name} desconectado. Players afectados: ${count}`);
         });
-*/
 
         // Event listeners
         this.setupEventListeners();
