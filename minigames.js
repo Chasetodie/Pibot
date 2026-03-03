@@ -376,8 +376,8 @@ class MinigamesSystem {
         let cooldownMultiplier = 1;
         let luckBonus = 0;
         
-        const guildId = messageOrInteraction?.guild?.id || messageOrInteraction?.guildId;
-        for (const event of this.events.getActiveEvents(guildId)) {
+        /*const guildId = messageOrInteraction?.guild?.id || messageOrInteraction?.guildId;*/
+        for (const event of this.events.getActiveEvents(/*guildId*/)) {
             // 1. Multiplicadores de dinero (minigames, work, daily, rewards, transfer_bonus)
             const multiplier = event.multipliers?.[context];
             if (multiplier && context !== 'cooldown' && context !== 'luck') {
