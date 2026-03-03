@@ -37,6 +37,18 @@ class MusicSystem {
         this.kazagumo.shoukaku.on('ready', (name) => {
             console.log(`✅ Nodo [${name}] conectado!`);
         });
+        this.kazagumo.shoukaku.on('error', (name, error) => {
+            console.error(`❌ Error en nodo ${name}:`, error);
+        });
+
+        this.kazagumo.shoukaku.on('close', (name, code, reason) => {
+            console.warn(`⚠️ Nodo ${name} cerrado. Código: ${code}. Razón: ${reason}`);
+        });
+
+        this.kazagumo.shoukaku.on('disconnect', (name, count) => {
+            console.warn(`⚠️ Nodo ${name} desconectado. Intento: ${count}`);
+        });
+
 
         // Event listeners
         this.setupEventListeners();
@@ -269,7 +281,8 @@ class MusicSystem {
             }
 
             // Antes de player.play():
-            if (result.tracks.length > this.maxSongDuration) {
+            const track = result.tracks[0];
+            if (track.length > this.maxSongDuration) {
                 return message.reply('❌ La canción es muy larga (máximo 2 horas).');
             }
 
