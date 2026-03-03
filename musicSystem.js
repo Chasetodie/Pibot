@@ -15,8 +15,8 @@ class MusicSystem {
     initialize() {
         const nodes = [
             { name: 'Node1', url: 'lavalink.jirayu.net:13592', auth: 'youshallnotpass', secure: false },
-            { name: 'Node2', url: 'lavalink.devamop.in:443', auth: 'DevamOP', secure: true },
-            { name: 'Node3', url: 'lavalink.oops.wtf:443', auth: 'www.lavalink.oops.wtf', secure: true },
+            { name: 'Node2', url: 'lavalink-v4.quantomhost.xyz:2333', auth: 'quantomhost', secure: false },
+            { name: 'Node3', url: 'lavalink.techpoint.africa:443', auth: 'youshallnotpass', secure: true },
         ];
 
         this.kazagumo = new Kazagumo(
