@@ -347,13 +347,12 @@ client.once('ready', async () => {
     }, 60000); // Cada minuto
     
     // Establecer el guild para eventos
-    const firstGuild = client.guilds.cache.first();
-    if (firstGuild) {
-        events.setGuild(firstGuild);
+    const guildsArray = [...client.guilds.cache.values()];
+    if (guildsArray.length > 0) {
+        events.setGuild(guildsArray[0]);
     }
-    // Cargar eventos de todos los guilds
-    for (const [guildId, guild] of client.guilds.cache) {
-        events.getGuildEvents(guildId); // Inicializar el Map para cada guild
+    for (const guild of guildsArray) {
+        events.getGuildEvents(guild.id);
     }
 });
 
@@ -1110,7 +1109,7 @@ client.on('messageCreate', async (message) => {
 
 async function sendCrashDM(error, type = 'CRASH') {
     try {
-        const user = await client.users.fetch(OWNER_ID);
+        const user = await client.users.fetch("488110147265232898");
         if (!user) return;
 
         await user.send(`

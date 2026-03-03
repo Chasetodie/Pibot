@@ -896,8 +896,14 @@ class EventsSystem {
     async cleanExpiredEvents() {
         const now = Date.now();
         let cleaned = 0;
-        
+
+        if (!(this.activeEvents instanceof Map)) {
+            this.activeEvents = new Map();
+            return;
+        }
+
         for (const [guildId, guildEvents] of this.activeEvents.entries()) {
+            if (!guildEvents || typeof guildEvents !== 'object') continue;
             for (const [eventId, event] of Object.entries(guildEvents)) {
                 if (event.endTime <= now) {
                     delete guildEvents[eventId];
