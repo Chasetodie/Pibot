@@ -32,6 +32,14 @@ Convierte tu servidor en una experiencia interactiva completa con sistemas avanz
 
 ---
 
+## Invitame a tu Server ❤️
+
+Usa el siguiente link para agregarme a tu server:
+
+- [Invitación](https://discord.com/oauth2/authorize?client_id=1402028858223362238)
+
+---
+
 ## 📜 Legal
 
 Pibot utiliza servicios externos para ciertas funciones:
