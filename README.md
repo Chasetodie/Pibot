@@ -36,8 +36,8 @@ Convierte tu servidor en una experiencia interactiva completa con sistemas avanz
 
 Usa el siguiente link para agregarme a tu server:
 
-- [Click Aquí para Invitarme!](https://discord.com/oauth2/authorize?client_id=1402028858223362238)
-
+- [Click Aquí para Invitarme!](https://discord.com/oauth2/authorize?client_id=1402028858223362238&permissions=8&integration_type=0&scope=applications.commands+bot)
+                               
 ---
 
 ## 📜 Legal
