@@ -16,22 +16,16 @@ class MusicSystem {
         const nodes = [
             { 
                 name: 'Node1', 
-                url: 'lavalinkv4.serenetia.com:443', 
-                auth: 'https://dsc.gg/ajidevserver', 
-                secure: true 
-            },
-            { 
-                name: 'Node2', 
-                url: 'lavalinkv4.serenetia.com:80', 
-                auth: 'https://dsc.gg/ajidevserver', 
-                secure: false 
-            },
-            { 
-                name: 'Node3', 
                 url: 'lavalink.jirayu.net:13592', 
                 auth: 'youshallnotpass', 
                 secure: false 
             },
+            {
+                name: 'Node2',
+                url: 'lavalink.serenetia.com:443',
+                auth: 'https://dsc.gg/ajidevserver',
+                secure: true
+            }
         ];
 
         this.kazagumo = new Kazagumo(
