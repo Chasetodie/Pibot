@@ -15,21 +15,9 @@ class MusicSystem {
     initialize() {
         const nodes = [
             {
-                name: 'TechByte',
-                url: 'lavahatry4.techbyte.host:3000',
-                auth: 'NAIGLAVA-dash.techbyte.host',  // ← contraseña correcta
-                secure: false
-            },
-            {
                 name: 'Serenetia-NoSSL',
                 url: 'lavalink.serenetia.com:80',
                 auth: 'https://dsc.gg/ajidevserver',
-                secure: false
-            },
-            {
-                name: 'Jirayu',
-                url: 'lavalink.jirayu.net:13592',
-                auth: 'youshallnotpass',
                 secure: false
             },
         ];
