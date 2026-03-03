@@ -14,10 +14,9 @@ class MusicSystem {
 
     initialize() {
         const nodes = [
-            { name: 'Serenetia-SSL', url: 'lavalink.serenetia.com:443', auth: 'https://dsc.gg/ajidevserver', secure: true },
-            { name: 'Serenetia-NoSSL', url: 'lavalink.serenetia.com:80', auth: 'https://dsc.gg/ajidevserver', secure: false },
-            { name: 'Jirayu', url: 'lavalink.jirayu.net:13592', auth: 'youshallnotpass', secure: false },
             { name: 'TechByte', url: 'lavahatry4.techbyte.host:3000', auth: 'naig.is-a.dev', secure: false },
+            { name: 'Serenetia-NoSSL', url: 'lavalink.serenetia.com:80', auth: 'https://dsc.gg/ajidevserver', secure: false },
+            { name: 'Serenetia-SSL', url: 'lavalink.serenetia.com:443', auth: 'https://dsc.gg/ajidevserver', secure: true },
         ];
 
         this.nodeList = nodes; // Guardar para reconexión
