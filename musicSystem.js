@@ -15,10 +15,10 @@ class MusicSystem {
     initialize() {
         const nodes = [
             {
-                name: 'Serenetia-NoSSL',
-                url: 'lavalink.serenetia.com:80',
-                auth: 'https://dsc.gg/ajidevserver',
-                secure: false
+                name: 'Salee-Plugin',
+                url: 'lavalink.jirayu.net:443',
+                auth: 'youshallnotpass',
+                secure: true
             },
         ];
 
