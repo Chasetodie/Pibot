@@ -1,4 +1,5 @@
 const { Client, GatewayIntentBits, ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder, SlashCommandBuilder, Events, REST, Routes, Collection } = require('discord.js');
+const { Options } = require('discord.js'); // agregar al inicio del archivo si no está
 const express = require('express');
 const fs = require('fs');
 const path = require('path');
@@ -44,7 +45,13 @@ const client = new Client({
         GatewayIntentBits.GuildVoiceStates,
         GatewayIntentBits.GuildMessageReactions
     ],
-    makeCache: () => new Map(), // Caché más pequeño
+    makeCache: Options.cacheWithLimits({
+        ...Options.DefaultMakeCacheSettings,
+        MessageManager: 50,      // Pocos mensajes en caché
+        UserManager: 200,        // Algunos usuarios
+        GuildMemberManager: 200, // Algunos miembros
+        // Roles y channels SÍ se cachean (necesario para permisos)
+    }),
 });
 
 // Crear instancia del manejador de comandos

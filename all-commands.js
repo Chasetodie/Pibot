@@ -1676,7 +1676,7 @@ class AllCommands {
 
     async handleSetConfig(message, args) {
         if (!await this.checkAdminPerms(message)) {
-            return message.reply('❌ Necesitas ser administrador para usar este comando.');
+            return message.reply('❌ Necesitas tener permisos de administrador para usar este comando.');
         }
         if (!this.guildConfig) {
             return message.reply('❌ Sistema de configuración no disponible.');
@@ -1711,7 +1711,7 @@ class AllCommands {
 
     async handleShowConfig(message) {
         if (!await this.checkAdminPerms(message)) {
-            return message.reply('❌ Necesitas ser administrador para usar este comando.');
+            return message.reply('❌ Necesitas tener permisos de administrador para usar este comando.');
         }
         if (!this.guildConfig) {
             return message.reply('❌ Sistema de configuración no disponible.');
@@ -1766,7 +1766,7 @@ class AllCommands {
 
     async handleSetEventsRole(message, args) {
         if (!await this.checkAdminPerms(message)) {
-            return message.reply('❌ Necesitas ser administrador para usar este comando.');
+            return message.reply('❌ Necesitas tener permisos de administrador para usar este comando.');
         }
         const role = message.mentions.roles.first();
         if (!role) {
@@ -1780,7 +1780,7 @@ class AllCommands {
 
     async handleToggleEvent(message, args) {
         if (!await this.checkAdminPerms(message)) {
-            return message.reply('❌ Necesitas ser administrador para usar este comando.');
+            return message.reply('❌ Necesitas tener permisos de administrador para usar este comando.');
         }
         if (!this.guildConfig) return message.reply('❌ Sistema de configuración no disponible.');
 
@@ -1813,7 +1813,7 @@ class AllCommands {
 
     async handleToggleAllEvents(message) {
         if (!await this.checkAdminPerms(message)) {
-            return message.reply('❌ Necesitas ser administrador para usar este comando.');
+            return message.reply('❌ Necesitas tener permisos de administrador para usar este comando.');
         }
         if (!this.guildConfig) return message.reply('❌ Sistema de configuración no disponible.');
 
@@ -1860,7 +1860,7 @@ const commandName = command.replace('>', '');
                 case '>setchannel':
                     await this.handleSetConfig(message, args);
                     break;
-                case '>channels':
+                case '>svconfig':
                     await this.handleShowConfig(message);
                     break;
                 case '>seteventsrole':
@@ -2186,6 +2186,9 @@ const commandName = command.replace('>', '');
                 case '>shopstats':
                     await this.shopStatsCommand(message);
                     break;
+                case '>clear':
+                    await this.handleClear(message);
+                    break;
                 case '>hola':
                         await message.reply('Hola, Como estás? \n\nRIP Pibe10 Bot 🥀');
                         break;
@@ -2201,6 +2204,73 @@ const commandName = command.replace('>', '');
             await message.reply('❌ Ocurrió un error al procesar el comando. Intenta de nuevo.');
         }
     }
+
+    async handleClear(message) {
+        if (!await this.checkAdminPerms(message)) {
+            await message.reply('❌ No tienes permisos de administrador para usar este comando.');
+            return;
+        }
+
+        const args = message.content.split(' ');
+        const amount = parseInt(args[1]);
+
+        if (isNaN(amount) || amount < 1 || amount > 1000) {
+            await message.reply('❌ Especifica un número válido entre 1 y 1000. Ejemplo: `>clear 50`');
+            return;
+        }
+
+        // Borrar el mensaje del comando
+        await message.delete().catch(() => {});
+
+        const statusMsg = await message.channel.send(`⏳ Borrando ${amount} mensajes...`);
+
+        try {
+            let totalDeleted = 0;
+            let remaining = amount;
+            const fourteenDaysAgo = Date.now() - 14 * 24 * 60 * 60 * 1000;
+
+            while (remaining > 0) {
+                const fetchLimit = Math.min(remaining, 100);
+                const fetched = await message.channel.messages.fetch({ limit: fetchLimit });
+                
+                if (fetched.size === 0) break;
+
+                // Separar mensajes nuevos (bulkDelete) y viejos (uno a uno)
+                const recent = fetched.filter(m => m.id !== statusMsg.id && m.createdTimestamp > fourteenDaysAgo);
+                const old = fetched.filter(m => m.id !== statusMsg.id && m.createdTimestamp <= fourteenDaysAgo);
+
+                // Borrar mensajes recientes en bulk
+                if (recent.size > 0) {
+                    const bulkChunks = [...recent.values()];
+                    // bulkDelete requiere mínimo 2 mensajes o exactamente 1
+                    if (bulkChunks.length === 1) {
+                        await bulkChunks[0].delete().catch(() => {});
+                        totalDeleted++;
+                    } else {
+                        await message.channel.bulkDelete(recent, true).catch(() => {});
+                        totalDeleted += recent.size;
+                    }
+                }
+
+                // Borrar mensajes viejos uno a uno
+                for (const oldMsg of old.values()) {
+                    await oldMsg.delete().catch(() => {});
+                    totalDeleted++;
+                    await new Promise(r => setTimeout(r, 500)); // Rate limit
+                }
+
+                remaining -= fetched.size;
+                if (fetched.size < fetchLimit) break; // No hay más mensajes
+            }
+
+            await statusMsg.edit(`✅ Se borraron **${totalDeleted}** mensajes.`);
+            setTimeout(() => statusMsg.delete().catch(() => {}), 4000);
+
+        } catch (error) {
+            console.error('Error en clear:', error);
+            await statusMsg.edit('❌ Ocurrió un error al borrar los mensajes.').catch(() => {});
+        }
+    } 
 
     async showHelp(message, category = 'main') {
         const embed = new EmbedBuilder()
@@ -2270,13 +2340,14 @@ const commandName = command.replace('>', '');
                 title: '🛡️ Comandos de Administración',
                 fields: [
                     { name: '>setchannel <clave> #canal', value: 'Configurar canal del bot', inline: true },
-                    { name: '>channels', value: 'Ver configuración actual', inline: true },
+                    { name: '>svconfig', value: 'Ver configuración actual', inline: true },
                     { name: '>createevent <tipo> [min]', value: 'Crear evento manual', inline: true },
                     { name: '>toggleevent [tipo]', value: 'Habilitar/deshabilitar evento', inline: true },
                     { name: '>toggleevents', value: 'Habilitar/deshabilitar TODOS los eventos', inline: true},
                     { name: '>seteventsrole @rol', value: 'Rol para pings de eventos', inline: true },
                     { name: '>eventstats', value: 'Estadísticas de eventos', inline: true },
-                    { name: '>giveitem @user item [cant]', value: 'Dar item a usuario', inline: true }
+                    { name: '>giveitem @user item [cant]', value: 'Dar item a usuario', inline: true },
+                    { name: '>clear [cant]', value: 'Borra mensajes del canal', inline: true }
                 ]
             },
             economy: {
