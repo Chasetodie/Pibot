@@ -94,27 +94,71 @@ class CommandHandler {
     }
 
     async handleClear(message) {
-        if (!message.member?.permissions.has('Administrator')) {
+        if (!await this.checkAdminPerms(message)) {
             await message.reply('❌ No tienes permisos de administrador para usar este comando.');
             return;
         }
 
         const args = message.content.split(' ');
-        const amount = parseInt(args[1]) + 1;
+        const amount = parseInt(args[1]);
 
-        if (isNaN(amount) || amount < 1 || amount > 100) {
-            await message.reply('❌ Especifica un número válido entre 1 y 100. Ejemplo: `>clear 10`');
+        if (isNaN(amount) || amount < 1 || amount > 1000) {
+            await message.reply('❌ Especifica un número válido entre 1 y 1000. Ejemplo: `>clear 50`');
             return;
         }
 
+        // Borrar el mensaje del comando
+        await message.delete().catch(() => {});
+
+        const statusMsg = await message.channel.send(`⏳ Borrando ${amount} mensajes...`);
+
         try {
-            await message.channel.bulkDelete(amount, true);
-            await message.channel.send(`✅ Se han borrado ${amount} mensajes.`)
-                .then(msg => setTimeout(() => msg.delete(), 3000));
+            let totalDeleted = 0;
+            let remaining = amount;
+            const fourteenDaysAgo = Date.now() - 14 * 24 * 60 * 60 * 1000;
+
+            while (remaining > 0) {
+                const fetchLimit = Math.min(remaining, 100);
+                const fetched = await message.channel.messages.fetch({ limit: fetchLimit });
+                
+                if (fetched.size === 0) break;
+
+                // Separar mensajes nuevos (bulkDelete) y viejos (uno a uno)
+                const recent = fetched.filter(m => m.id !== statusMsg.id && m.createdTimestamp > fourteenDaysAgo);
+                const old = fetched.filter(m => m.id !== statusMsg.id && m.createdTimestamp <= fourteenDaysAgo);
+
+                // Borrar mensajes recientes en bulk
+                if (recent.size > 0) {
+                    const bulkChunks = [...recent.values()];
+                    // bulkDelete requiere mínimo 2 mensajes o exactamente 1
+                    if (bulkChunks.length === 1) {
+                        await bulkChunks[0].delete().catch(() => {});
+                        totalDeleted++;
+                    } else {
+                        await message.channel.bulkDelete(recent, true).catch(() => {});
+                        totalDeleted += recent.size;
+                    }
+                }
+
+                // Borrar mensajes viejos uno a uno
+                for (const oldMsg of old.values()) {
+                    await oldMsg.delete().catch(() => {});
+                    totalDeleted++;
+                    await new Promise(r => setTimeout(r, 500)); // Rate limit
+                }
+
+                remaining -= fetched.size;
+                if (fetched.size < fetchLimit) break; // No hay más mensajes
+            }
+
+            await statusMsg.edit(`✅ Se borraron **${totalDeleted}** mensajes.`);
+            setTimeout(() => statusMsg.delete().catch(() => {}), 4000);
+
         } catch (error) {
-            await message.reply('❌ No se pudieron borrar los mensajes. Puede que sean muy antiguos.');
+            console.error('Error en clear:', error);
+            await statusMsg.edit('❌ Ocurrió un error al borrar los mensajes.').catch(() => {});
         }
-    }    
+    } 
 
     // Comando de ayuda
     async handleHelp(message) {

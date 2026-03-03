@@ -1659,19 +1659,23 @@ class AllCommands {
         await message.reply({ embeds: [embed] });
     }
 
-    checkAdminPerms(message) {
+    async checkAdminPerms(message) {
         if (!message.guild) return false;
         if (message.guild.ownerId === message.author.id) return true;
-        const member = message.member;
-        if (!member) return false;
-        // Usar bitfield directo, evita el bug del RoleManager
-        const perms = member.permissions;
-        if (!perms || typeof perms.has !== 'function') return false;
-        return perms.has(8n) || perms.has(32n); // 8n = ADMINISTRATOR, 32n = MANAGE_GUILD
+        
+        try {
+            // Fetchear el member fresco para asegurar que tenga el guild correcto
+            const member = await message.guild.members.fetch(message.author.id);
+            if (!member) return false;
+            return member.permissions.has(8n) || member.permissions.has(32n);
+        } catch (e) {
+            console.error('Error verificando permisos:', e.message);
+            return message.guild.ownerId === message.author.id;
+        }
     }
 
     async handleSetConfig(message, args) {
-        if (!this.checkAdminPerms(message)) {
+        if (!await this.checkAdminPerms(message)) {
             return message.reply('❌ Necesitas ser administrador para usar este comando.');
         }
         if (!this.guildConfig) {
@@ -1706,7 +1710,7 @@ class AllCommands {
     }
 
     async handleShowConfig(message) {
-        if (!this.checkAdminPerms(message)) {
+        if (!await this.checkAdminPerms(message)) {
             return message.reply('❌ Necesitas ser administrador para usar este comando.');
         }
         if (!this.guildConfig) {
@@ -1761,7 +1765,7 @@ class AllCommands {
     }
 
     async handleSetEventsRole(message, args) {
-        if (!this.checkAdminPerms(message)) {
+        if (!await this.checkAdminPerms(message)) {
             return message.reply('❌ Necesitas ser administrador para usar este comando.');
         }
         const role = message.mentions.roles.first();
@@ -1775,7 +1779,7 @@ class AllCommands {
     }
 
     async handleToggleEvent(message, args) {
-        if (!this.checkAdminPerms(message)) {
+        if (!await this.checkAdminPerms(message)) {
             return message.reply('❌ Necesitas ser administrador para usar este comando.');
         }
         if (!this.guildConfig) return message.reply('❌ Sistema de configuración no disponible.');
@@ -1808,7 +1812,7 @@ class AllCommands {
     }
 
     async handleToggleAllEvents(message) {
-        if (!this.checkAdminPerms(message)) {
+        if (!await this.checkAdminPerms(message)) {
             return message.reply('❌ Necesitas ser administrador para usar este comando.');
         }
         if (!this.guildConfig) return message.reply('❌ Sistema de configuración no disponible.');
