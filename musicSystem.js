@@ -15,9 +15,9 @@ class MusicSystem {
     initialize() {
         const nodes = [
 /*            { name: 'Node1', url: 'lavalink.jirayu.net:13592', auth: 'youshallnotpass', secure: false },*/
-//            { name: 'Node2', url: 'lava-v4.ajieblogs.eu.org:443', auth: 'https://dsc.gg/ajidevserver', secure: true },
+            { name: 'Node2', url: 'lava-v4.ajieblogs.eu.org:443', auth: 'https://dsc.gg/ajidevserver', secure: true },
 //            { name: 'Node3', url: 'lavalinkv4.serenetia.com', auth: 'https://dsc.gg/ajidevserver', secure: true },
-            { name: 'Node5', url: 'lavalink.serenetia.com', auth: 'https://dsc.gg/ajidevserver', secure: true},
+//            { name: 'Node5', url: 'lavalink.serenetia.com', auth: 'https://dsc.gg/ajidevserver', secure: true},
         ];
 
         this.kazagumo = new Kazagumo(
