@@ -70,14 +70,16 @@ class MusicSystem {
     }
 
     getBestNode() {
-        // Retorna el primer nodo activo que no esté en failedNodes
         const nodes = this.kazagumo.shoukaku.nodes;
         for (const [name, node] of nodes) {
-            if (!this.failedNodes.has(name) && node.state === 2) { // 2 = CONNECTED
+            if (!this.failedNodes.has(name)) {
                 return name;
             }
         }
-        return null;
+        // Si todos fallaron, limpiar la lista y reintentar con cualquiera
+        this.failedNodes.clear();
+        const first = [...nodes.keys()][0];
+        return first || null;
     }
 
     setupEventListeners() {
@@ -264,6 +266,11 @@ class MusicSystem {
     }
 
     async playCommand(message, args, member, channel, guild, author) {
+        // ANTES del if (!player)
+        console.log('🔍 Nodos disponibles:', [...this.kazagumo.shoukaku.nodes.keys()]);
+        console.log('❌ Nodos fallidos:', [...this.failedNodes]);
+        console.log('🎯 Mejor nodo:', this.getBestNode());
+
         // AGREGAR THROTTLE:
         const lastPlay = this.playThrottle.get(guild.id) || 0;
         if (Date.now() - lastPlay < 2000) { // 2 segundos entre plays
