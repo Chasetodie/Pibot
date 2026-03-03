@@ -19,19 +19,19 @@ class MusicSystem {
                 url: 'lavahatry4.techbyte.host:3000',
                 auth: 'naig.is-a.dev',
                 secure: false
-            },
+            },*/
             {
                 name: 'Node 5',
                 url: 'lavalinkv4.serenetia.com:80',
                 auth: 'https://dsc.gg/ajidevserver',
                 secure: false
-            },*/
-            {
+            },
+ /*           {
                 name: 'Node2',
                 url: 'lavalink.serenetia.com:443',
                 auth: 'https://dsc.gg/ajidevserver',
                 secure: true
-            },
+            },*/
         ];
 
         this.kazagumo = new Kazagumo(
