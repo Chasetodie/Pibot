@@ -1831,19 +1831,6 @@ class AllCommands {
         // Verificar ingresos pasivos pendientes
         await this.economy.checkPendingPassiveIncome(message.author.id);
         await this.economy.shop.checkAndNotifyExpiredItems(message.author.id, message);
-       
-        // Probabilidad 1% de recibir maldición aleatoria
-        if (Math.random() < 0.01) {
-            await this.economy.shop.applyRandomCurse(message.author.id);
-            
-            const curseNotif = new EmbedBuilder()
-                .setTitle('☠️ ¡MALDICIÓN!')
-                .setDescription('**La Mano del Muerto** apareció de la nada y te maldijo por 30 minutos.')
-                .setColor('#8B0000');
-            
-            await message.reply({ embeds: [curseNotif] });
-        }
-
         await this.shop.cleanupExpiredTokens(message.author.id);
         await this.trades.cleanupExpiredTrades();
         await this.economy.missions.updateMissionProgress(message.author.id, 'commands_used');

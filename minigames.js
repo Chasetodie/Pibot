@@ -881,6 +881,18 @@ setCooldown(userId, gameType) {
             return;
         }
 
+        // Probabilidad 1% de recibir maldición aleatoria
+        if (Math.random() < 0.01) {
+            await this.economy.shop.applyRandomCurse(message.author.id);
+            
+            const curseNotif = new EmbedBuilder()
+                .setTitle('☠️ ¡MALDICIÓN!')
+                .setDescription('**La Mano del Muerto** apareció de la nada y te maldijo por 30 minutos.')
+                .setColor('#8B0000');
+            
+            await message.reply({ embeds: [curseNotif] });
+        }
+        
         console.log('RANDOM:', Math.random());
         const randomRoll = Math.random();
         const result = randomRoll < 0.5 ? 'cara' : 'cruz';
@@ -1267,6 +1279,19 @@ setCooldown(userId, gameType) {
             await message.reply(`⏰ Debes esperar ${this.formatTime(canDiceResult.timeLeft)} antes de jugar otra vez`);
             return;
         }
+
+        // Probabilidad 1% de recibir maldición aleatoria
+        if (Math.random() < 0.01) {
+            await this.economy.shop.applyRandomCurse(message.author.id);
+            
+            const curseNotif = new EmbedBuilder()
+                .setTitle('☠️ ¡MALDICIÓN!')
+                .setDescription('**La Mano del Muerto** apareció de la nada y te maldijo por 30 minutos.')
+                .setColor('#8B0000');
+            
+            await message.reply({ embeds: [curseNotif] });
+        }
+
         
         // Tirar el dado
         const diceResult = Math.floor(Math.random() * 6) + 1;
@@ -1722,6 +1747,18 @@ setCooldown(userId, gameType) {
             return;
         }
         
+        // Probabilidad 1% de recibir maldición aleatoria
+        if (Math.random() < 0.01) {
+            await this.economy.shop.applyRandomCurse(message.author.id);
+            
+            const curseNotif = new EmbedBuilder()
+                .setTitle('☠️ ¡MALDICIÓN!')
+                .setDescription('**La Mano del Muerto** apareció de la nada y te maldijo por 30 minutos.')
+                .setColor('#8B0000');
+            
+            await message.reply({ embeds: [curseNotif] });
+        }
+
         const winningNumber = Math.floor(Math.random() * 100) + 1;
         const baseWon = winningNumber === predictedNumber;
         let won = baseWon;
@@ -3176,6 +3213,18 @@ const userId = gameState.userId;
             return;
         }
     
+        // Probabilidad 1% de recibir maldición aleatoria
+        if (Math.random() < 0.01) {
+            await this.economy.shop.applyRandomCurse(message.author.id);
+            
+            const curseNotif = new EmbedBuilder()
+                .setTitle('☠️ ¡MALDICIÓN!')
+                .setDescription('**La Mano del Muerto** apareció de la nada y te maldijo por 30 minutos.')
+                .setColor('#8B0000');
+            
+            await message.reply({ embeds: [curseNotif] });
+        }
+
         // GIRAR RULETA
         const spinResult = this.spinRoulette();
         const baseWon = this.checkRouletteWin(validBet, spinResult);
@@ -3906,6 +3955,18 @@ const userId = gameState.userId;
             }
         }
         
+        // Probabilidad 1% de recibir maldición aleatoria
+        if (Math.random() < 0.01) {
+            await this.economy.shop.applyRandomCurse(message.author.id);
+            
+            const curseNotif = new EmbedBuilder()
+                .setTitle('☠️ ¡MALDICIÓN!')
+                .setDescription('**La Mano del Muerto** apareció de la nada y te maldijo por 30 minutos.')
+                .setColor('#8B0000');
+            
+            await message.reply({ embeds: [curseNotif] });
+        }
+
         let won = false;
         let winAmount = 0;
         let resultText = '';
@@ -4912,6 +4973,18 @@ const userId = gameState.userId;
             return;
         }
         
+        // Probabilidad 1% de recibir maldición aleatoria
+        if (Math.random() < 0.01) {
+            await this.economy.shop.applyRandomCurse(message.author.id);
+            
+            const curseNotif = new EmbedBuilder()
+                .setTitle('☠️ ¡MALDICIÓN!')
+                .setDescription('**La Mano del Muerto** apareció de la nada y te maldijo por 30 minutos.')
+                .setColor('#8B0000');
+            
+            await message.reply({ embeds: [curseNotif] });
+        }
+
         // ✅ INICIAR LA CARRERA
         game.manualStart = true;
         
@@ -9538,6 +9611,18 @@ const userId = gameState.userId;
             );
         }
 
+        // Probabilidad 1% de recibir maldición aleatoria
+        if (Math.random() < 0.01) {
+            await this.economy.shop.applyRandomCurse(message.author.id);
+            
+            const curseNotif = new EmbedBuilder()
+                .setTitle('☠️ ¡MALDICIÓN!')
+                .setDescription('**La Mano del Muerto** apareció de la nada y te maldijo por 30 minutos.')
+                .setColor('#8B0000');
+            
+            await message.reply({ embeds: [curseNotif] });
+        }
+
         const isTrueFalse = ['tof', 'truefalse'].includes(gameMode);
 
         const difficultyMap = {
@@ -10267,6 +10352,18 @@ const userId = gameState.userId;
         // Verificar si ya está en un juego
         if (this.activeGames.has(`trivia_survival_${userId}`)) {
             return message.reply('❌ Ya estás en una partida de supervivencia.');
+        }
+
+        // Probabilidad 1% de recibir maldición aleatoria
+        if (Math.random() < 0.01) {
+            await this.economy.shop.applyRandomCurse(message.author.id);
+            
+            const curseNotif = new EmbedBuilder()
+                .setTitle('☠️ ¡MALDICIÓN!')
+                .setDescription('**La Mano del Muerto** apareció de la nada y te maldijo por 30 minutos.')
+                .setColor('#8B0000');
+            
+            await message.reply({ embeds: [curseNotif] });
         }
 
         try {
@@ -11620,18 +11717,6 @@ const userId = gameState.userId;
         // Verificar ingresos pasivos pendientes
         await this.economy.checkPendingPassiveIncome(message.author.id);
         await this.economy.shop.checkAndNotifyExpiredItems(message.author.id, message);
-
-        // Probabilidad 1% de recibir maldición aleatoria
-        if (Math.random() < 0.01) {
-            await this.economy.shop.applyRandomCurse(message.author.id);
-            
-            const curseNotif = new EmbedBuilder()
-                .setTitle('☠️ ¡MALDICIÓN!')
-                .setDescription('**La Mano del Muerto** apareció de la nada y te maldijo por 30 minutos.')
-                .setColor('#8B0000');
-            
-            await message.reply({ embeds: [curseNotif] });
-        }
 
         const args = message.content.toLowerCase().split(' ');
         const command = args[0];

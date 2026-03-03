@@ -346,7 +346,7 @@ class ShopSystem {
             'death_hand': {
                 id: 'death_hand',
                 name: '☠️ La Mano del Muerto',
-                description: 'Maldición lanzable que reduce suerte -50% y dinero -25%. Desactiva todos los efectos por 1 hora',
+                description: 'Maldición lanzable que reduce suerte -50% y dinero -25%. Desactiva todos los efectos por 30 minutos',
                 price: 10000,
                 category: 'consumable',
                 rarity: 'rare',
@@ -355,7 +355,7 @@ class ShopSystem {
                     luckPenalty: -0.5,
                     moneyPenalty: -0.25,
                     disablesEffects: true,
-                    duration: 3600, // 1 hora
+                    duration: 1800, // 1 hora
                     throwable: true
                 },
                 stackable: true,
@@ -4555,7 +4555,7 @@ class ShopSystem {
             moneyPenalty: -0.25,
             disablesEffects: true,
             appliedAt: Date.now(),
-            expiresAt: Date.now() + 3600000, // 1 hora
+            expiresAt: Date.now() + 1800000, // 1 hora
             appliedBy: message.author.id
         };
         
@@ -4571,7 +4571,7 @@ class ShopSystem {
             .setDescription(`<@${message.author.id}> lanzó **La Mano del Muerto** a <@${targetUserId}>!`)
             .addFields(
                 { name: '💀 Efectos', value: '• Suerte -50%\n• Dinero -25%\n• Efectos desactivados', inline: true },
-                { name: '⏰ Duración', value: '1 hora', inline: true }
+                { name: '⏰ Duración', value: '30 minutos', inline: true }
             )
             .setColor('#8B0000')
             .setTimestamp();
@@ -4589,7 +4589,7 @@ class ShopSystem {
             moneyPenalty: -0.25,
             disablesEffects: true,
             appliedAt: Date.now(),
-            expiresAt: Date.now() + 1800000, // 30 minutos
+            expiresAt: Date.now() + 900000, // 15 minutos
             appliedBy: 'random' // Identificar que fue aleatorio
         };
         
@@ -4608,18 +4608,6 @@ class ShopSystem {
         // Verificar ingresos pasivos pendientes
         await this.economy.checkPendingPassiveIncome(message.author.id);
         await this.checkAndNotifyExpiredItems(message.author.id, message);
-
-        // Probabilidad 1% de recibir maldición aleatoria
-        if (Math.random() < 0.01) {
-            await this.applyRandomCurse(message.author.id);
-            
-            const curseNotif = new EmbedBuilder()
-                .setTitle('☠️ ¡MALDICIÓN!')
-                .setDescription('**La Mano del Muerto** apareció de la nada y te maldijo por 30 minutos.')
-                .setColor('#8B0000');
-            
-            await message.reply({ embeds: [curseNotif] });
-        }
 
         const args = message.content.toLowerCase().split(' ');
         const command = args[0];
