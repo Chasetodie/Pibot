@@ -14,9 +14,24 @@ class MusicSystem {
 
     initialize() {
         const nodes = [
-            { name: 'Node1', url: 'lavalink.jirayu.net:13592', auth: 'youshallnotpass', secure: false },
-            { name: 'Node2', url: 'lavalink-v4.quantomhost.xyz:2333', auth: 'quantomhost', secure: false },
-            { name: 'Node3', url: 'lavalink.techpoint.africa:443', auth: 'youshallnotpass', secure: true },
+            { 
+                name: 'Node1', 
+                url: 'lavalinkv4.serenetia.com:443', 
+                auth: 'https://dsc.gg/ajidevserver', 
+                secure: true 
+            },
+            { 
+                name: 'Node2', 
+                url: 'lavalinkv4.serenetia.com:80', 
+                auth: 'https://dsc.gg/ajidevserver', 
+                secure: false 
+            },
+            { 
+                name: 'Node3', 
+                url: 'lavalink.jirayu.net:13592', 
+                auth: 'youshallnotpass', 
+                secure: false 
+            },
         ];
 
         this.kazagumo = new Kazagumo(

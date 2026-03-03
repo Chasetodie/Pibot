@@ -1459,7 +1459,13 @@ class ShopSystem {
             await message.reply('❌ Item no encontrado. Revisa tu inventario con `>bag`.');
             return;
         }
-        
+
+        // Bloquear uso de items exclusivos en otros servidores
+        if (item.guildExclusive && item.guildExclusive !== message.guild?.id) {
+            await message.reply(`❌ **${item.name}** no puede usarse en este servidor.`);
+            return;
+        }
+
         if (!userItems[itemId] || userItems[itemId].quantity <= 0) {
             await message.reply(`❌ No tienes **${item.name}** en tu inventario.`);
             return;
