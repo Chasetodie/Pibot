@@ -14,7 +14,7 @@ class MusicSystem {
 
     initialize() {
         const nodes = [
-            { name: 'Node1', url: 'lavalink.jirayu.net:13592', auth: 'youshallnotpass', secure: false },
+//            { name: 'Node1', url: 'lavalink.jirayu.net:13592', auth: 'youshallnotpass', secure: false },
             { name: 'Node2', url: 'lava-v4.ajieblogs.eu.org:443', auth: 'https://dsc.gg/ajidevserver', secure: true},
         ];
 
@@ -37,7 +37,7 @@ class MusicSystem {
         this.kazagumo.shoukaku.on('ready', (name) => {
             console.log(`✅ Nodo [${name}] conectado!`);
         });
-        this.kazagumo.shoukaku.on('error', (name, error) => {
+/*        this.kazagumo.shoukaku.on('error', (name, error) => {
             console.error(`❌ Error en nodo ${name}:`, error);
         });
 
@@ -48,7 +48,7 @@ class MusicSystem {
         this.kazagumo.shoukaku.on('disconnect', (name, count) => {
             console.warn(`⚠️ Nodo ${name} desconectado. Intento: ${count}`);
         });
-
+*/
 
         // Event listeners
         this.setupEventListeners();
