@@ -21,6 +21,7 @@ class GuildConfig {
     }
 
     async get(guildId, key) {
+        if (!guildId || !key) return null;
         try {
             const [rows] = await this.db.pool.execute(
                 'SELECT value FROM guild_config WHERE guild_id = ? AND `key` = ?',
@@ -34,6 +35,7 @@ class GuildConfig {
     }
 
     async set(guildId, key, value) {
+        if (!guildId || !key) return null;
         try {
             await this.db.pool.execute(
                 'INSERT INTO guild_config (guild_id, `key`, value) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE value = ?',
@@ -45,6 +47,7 @@ class GuildConfig {
     }
 
     async getAll(guildId) {
+        if (!guildId) return {};
         try {
             const [rows] = await this.db.pool.execute(
                 'SELECT `key`, value FROM guild_config WHERE guild_id = ?',

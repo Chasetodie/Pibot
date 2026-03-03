@@ -2296,38 +2296,38 @@ const commandName = command.replace('>', '');
                 ? await this.guildConfig.areEventsEnabled(message.guild?.id)
                 : true;
 
+            // Solo agregar botón admin si tiene permisos (evita duplicados)
+            const isAdmin = message.member?.permissions?.has('ManageGuild');
+
             // BOTONES para cada categoría
+            const uid = message.author.id;
             const rows = [
                 new ActionRowBuilder().addComponents(
-                    new ButtonBuilder().setCustomId('help_economy').setLabel('💰 Economía').setStyle(ButtonStyle.Primary),
-                    new ButtonBuilder().setCustomId('help_shop').setLabel('🛒 Tienda').setStyle(ButtonStyle.Primary),
-                    new ButtonBuilder().setCustomId('help_games').setLabel('🎮 Minijuegos').setStyle(ButtonStyle.Primary)
+                    new ButtonBuilder().setCustomId(`help_economy_${uid}`).setLabel('💰 Economía').setStyle(ButtonStyle.Primary),
+                    new ButtonBuilder().setCustomId(`help_shop_${uid}`).setLabel('🛒 Tienda').setStyle(ButtonStyle.Primary),
+                    new ButtonBuilder().setCustomId(`help_games_${uid}`).setLabel('🎮 Minijuegos').setStyle(ButtonStyle.Primary)
                 ),
                 new ActionRowBuilder().addComponents(
-                    new ButtonBuilder().setCustomId('help_betting').setLabel('🎲 Apuestas').setStyle(ButtonStyle.Primary),
-                    new ButtonBuilder().setCustomId('help_trading').setLabel('🔄 Trading').setStyle(ButtonStyle.Primary),
-                    new ButtonBuilder().setCustomId('help_craft').setLabel('⚒️ Crafteo').setStyle(ButtonStyle.Primary)
+                    new ButtonBuilder().setCustomId(`help_betting_${uid}`).setLabel('🎲 Apuestas').setStyle(ButtonStyle.Primary),
+                    new ButtonBuilder().setCustomId(`help_trading_${uid}`).setLabel('🔄 Trading').setStyle(ButtonStyle.Primary),
+                    new ButtonBuilder().setCustomId(`help_craft_${uid}`).setLabel('⚒️ Crafteo').setStyle(ButtonStyle.Primary)
                 ),
                 new ActionRowBuilder().addComponents(
-                    new ButtonBuilder().setCustomId('help_auctions').setLabel('🔨 Subastas').setStyle(ButtonStyle.Primary),
-                    new ButtonBuilder().setCustomId('help_progress').setLabel('🏆 Progreso').setStyle(ButtonStyle.Primary),
-                    new ButtonBuilder().setCustomId('help_vip').setLabel('👑 VIP').setStyle(ButtonStyle.Primary)
+                    new ButtonBuilder().setCustomId(`help_auctions_${uid}`).setLabel('🔨 Subastas').setStyle(ButtonStyle.Primary),
+                    new ButtonBuilder().setCustomId(`help_progress_${uid}`).setLabel('🏆 Progreso').setStyle(ButtonStyle.Primary),
+                    new ButtonBuilder().setCustomId(`help_vip_${uid}`).setLabel('👑 VIP').setStyle(ButtonStyle.Primary)
                 ),
                 new ActionRowBuilder().addComponents(
-                    new ButtonBuilder().setCustomId('help_nsfw').setLabel('🔞 NSFW').setStyle(ButtonStyle.Primary),
-                    new ButtonBuilder().setCustomId('help_events').setLabel(eventsEnabled ? '🎉 Eventos' : '🔴 Eventos').setStyle(eventsEnabled ? ButtonStyle.Primary : ButtonStyle.Secondary),
-                    new ButtonBuilder().setCustomId('help_chatIA').setLabel('🤖 Chat IA').setStyle(ButtonStyle.Primary)
+                    new ButtonBuilder().setCustomId(`help_nsfw_${uid}`).setLabel('🔞 NSFW').setStyle(ButtonStyle.Primary),
+                    new ButtonBuilder().setCustomId(`help_events_${uid}`).setLabel(eventsEnabled ? '🎉 Eventos' : '🔴 Eventos').setStyle(eventsEnabled ? ButtonStyle.Primary : ButtonStyle.Secondary),
+                    new ButtonBuilder().setCustomId(`help_chatIA_${uid}`).setLabel('🤖 Chat IA').setStyle(ButtonStyle.Primary)
                 ),
             ];
 
-            // Solo agregar botón admin si tiene permisos (evita duplicados)
-            const isAdmin = message.member?.permissions?.has('ManageGuild');
             if (isAdmin) {
-                rows.push(
-                    new ActionRowBuilder().addComponents(
-                        new ButtonBuilder().setCustomId('help_admin').setLabel('🛡️ Admin').setStyle(ButtonStyle.Danger)
-                    )
-                );
+                rows.push(new ActionRowBuilder().addComponents(
+                    new ButtonBuilder().setCustomId(`help_admin_${uid}`).setLabel('🛡️ Admin').setStyle(ButtonStyle.Danger)
+                ));
             }
 
             await message.reply({ embeds: [embed], components: rows });
@@ -2478,7 +2478,7 @@ const commandName = command.replace('>', '');
             
             const backButton = new ActionRowBuilder().addComponents(
                 new ButtonBuilder()
-                    .setCustomId('help_main')
+                    .setCustomId(`help_main_${message.author.id}`)
                     .setLabel('⬅️ Volver al Menú')
                     .setStyle(ButtonStyle.Secondary)
             );
@@ -2489,30 +2489,50 @@ const commandName = command.replace('>', '');
 
     // MANEJAR interacciones de botones
     async handleHelpInteraction(interaction) {
-        const category = interaction.customId.replace('help_', '');
+        // Extraer categoría y userId del customId (formato: help_categoria_userId)
+        const parts = interaction.customId.split('_');
+        // El userId es la última parte, la categoría puede tener _ (ej: help_chatIA_123)
+        const userId = parts[parts.length - 1];
+        const category = parts.slice(1, -1).join('_'); // todo entre "help_" y "_userId"
 
-        if (category === 'admin' && !interaction.member?.permissions.has('ManageGuild')) {
-            return interaction.reply({ content: '❌ Solo administradores pueden ver esta sección.', ephemeral: true });
+        // Verificar que es el usuario que invocó el help
+        if (interaction.user.id !== userId) {
+            return interaction.reply({
+                content: '❌ Este menú de ayuda no es tuyo. Usa `>help` para abrir el tuyo.',
+                ephemeral: true
+            });
+        }
+
+        if (category === 'admin' && !await this.checkAdminPerms({ 
+            guild: interaction.guild, 
+            author: interaction.user, 
+            member: interaction.member 
+        })) {
+            return interaction.reply({ 
+                content: '❌ Solo administradores pueden ver esta sección.', 
+                ephemeral: true 
+            });
         }
 
         if (category === 'events' && this.guildConfig) {
             const enabled = await this.guildConfig.areEventsEnabled(interaction.guild?.id);
             if (!enabled) {
                 return interaction.reply({ 
-                    content: '❌ Los eventos están deshabilitados en este servidor. Un admin puede activarlos con `>toggleevents`.',
+                    content: '❌ Los eventos están deshabilitados en este servidor.',
                     ephemeral: true 
                 });
             }
         }
-        
+
         const fakeMessage = {
             author: interaction.user,
             member: interaction.member,
+            guild: interaction.guild,
             reply: async (options) => {
                 await interaction.update(options);
             }
         };
-        
+
         await this.showHelp(fakeMessage, category);
     }
 }

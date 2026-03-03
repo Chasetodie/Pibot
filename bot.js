@@ -365,6 +365,8 @@ client.once('ready', async () => {
 
 client.on('guildMemberRemove', async (member) => {
     try {
+        if (member.guild.id !== '1270508373732884522') return;
+
         const nickname = member.nickname || member.user.username;
         console.log(`👋 Miembro salió: ${member.user.tag} (Apodo: ${nickname})`);
         
@@ -398,8 +400,10 @@ client.on('guildMemberRemove', async (member) => {
 
 client.on('guildMemberAdd', async (member) => {
     try {
+        if (member.guild.id !== '1270508373732884522') return;
+
         console.log(`🎉 Nuevo miembro: ${member.user.tag}`);
-        
+
         // Crear el embed para el mensaje directo
         const embed = new EmbedBuilder()
             .setTitle('¡Bienvenido/a a Los Pibes del Átomo!')
