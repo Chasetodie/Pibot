@@ -35,6 +35,13 @@ class MusicSystem {
             nodes
         );
 
+        // Dentro de initialize(), después de crear kazagumo:
+        this.client.on('raw', (packet) => {
+            if (packet.t === 'VOICE_SERVER_UPDATE' || packet.t === 'VOICE_STATE_UPDATE') {
+                console.log(`🎤 Voice packet recibido: ${packet.t}`, JSON.stringify(packet.d).slice(0, 100));
+            }
+        });
+
         this.client.kazagumo = this.kazagumo;
 
         this.kazagumo.shoukaku.on('ready', (name) => {
@@ -118,6 +125,16 @@ class MusicSystem {
                 setTimeout(() => {
                     if (player.queue.size > 0 && !player.playing) {
                         player.play();
+                        // Agregar temporalmente:
+                        setTimeout(() => {
+                            console.log('🎵 Estado player:', {
+                                playing: player.playing,
+                                paused: player.paused,
+                                position: player.position,
+                                ping: player.ping,
+                                node: player.node?.name
+                            });
+                        }, 2000);
                     }
                 }, 1000);
             } else {
