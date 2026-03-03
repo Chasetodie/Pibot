@@ -14,15 +14,39 @@ class MusicSystem {
 
     initialize() {
         const nodes = [
-            { 
-                name: 'Node1', 
-                url: 'lavalink.jirayu.net:13592', 
-                auth: 'youshallnotpass', 
-                secure: false 
+            {
+                name: 'Node 3',
+                url: 'lavalink.jirayu.net:13592',
+                auth: 'youshallnotpass',
+                secure: false
+            },
+            {
+                name: 'Node 4',
+                url: 'lavahatry4.techbyte.host:3000',
+                auth: 'naig.is-a.dev',
+                secure: false
+            },
+            {
+                name: 'Node 5',
+                url: 'lavalinkv4.serenetia.com:80',
+                auth: 'https://dsc.gg/ajidevserver',
+                secure: false
+            },
+            {
+                name: 'Node 6',
+                url: 'lavalink.aiko-project.xyz:2333',
+                auth: 'Rikka',
+                secure: false
             },
             {
                 name: 'Node2',
                 url: 'lavalink.serenetia.com:443',
+                auth: 'https://dsc.gg/ajidevserver',
+                secure: true
+            },
+            {
+                name: 'Node1',
+                url: 'lavalinkv3.serenetia.com:443',
                 auth: 'https://dsc.gg/ajidevserver',
                 secure: true
             }
