@@ -14,25 +14,14 @@ class MusicSystem {
 
     initialize() {
         const nodes = [
-            {
-                name: 'Node 4',
-                url: 'lavahatry4.techbyte.host:3000',
-                auth: 'naig.is-a.dev',
-                secure: false
-            },
-/*            {
-                name: 'Node 5',
-                url: 'lavalinkv4.serenetia.com:80',
-                auth: 'https://dsc.gg/ajidevserver',
-                secure: false
-            },
- /*           {
-                name: 'Node2',
-                url: 'lavalink.serenetia.com:443',
-                auth: 'https://dsc.gg/ajidevserver',
-                secure: true
-            },*/
+            { name: 'Serenetia-SSL', url: 'lavalink.serenetia.com:443', auth: 'https://dsc.gg/ajidevserver', secure: true },
+            { name: 'Serenetia-NoSSL', url: 'lavalink.serenetia.com:80', auth: 'https://dsc.gg/ajidevserver', secure: false },
+            { name: 'Jirayu', url: 'lavalink.jirayu.net:13592', auth: 'youshallnotpass', secure: false },
+            { name: 'TechByte', url: 'lavahatry4.techbyte.host:3000', auth: 'naig.is-a.dev', secure: false },
         ];
+
+        this.nodeList = nodes; // Guardar para reconexión
+        this.failedNodes = new Set(); // Nodos que fallaron
 
         this.kazagumo = new Kazagumo(
             {
@@ -47,26 +36,49 @@ class MusicSystem {
             nodes
         );
 
-        // Asignar kazagumo al cliente para acceso global
         this.client.kazagumo = this.kazagumo;
 
         this.kazagumo.shoukaku.on('ready', (name) => {
             console.log(`✅ Nodo [${name}] conectado!`);
+            this.failedNodes.delete(name); // Si reconecta, quitarlo de fallidos
         });
+
         this.kazagumo.shoukaku.on('error', (name, error) => {
-            console.error(`❌ Error en nodo ${name}:`, error.message);
+            console.error(`❌ Error en nodo ${name}: ${error.message}`);
+            this.failedNodes.add(name);
+            this.logNodeStatus();
         });
 
         this.kazagumo.shoukaku.on('close', (name, code, reason) => {
-            console.warn(`⚠️ Nodo ${name} cerrado. Código: ${code}. Razón: ${reason || 'desconocida'}`);
+            console.warn(`⚠️ Nodo ${name} cerrado. Código: ${code}`);
+            this.failedNodes.add(name);
+            this.logNodeStatus();
         });
 
         this.kazagumo.shoukaku.on('disconnect', (name, count) => {
             console.warn(`⚠️ Nodo ${name} desconectado. Players afectados: ${count}`);
+            this.failedNodes.add(name);
         });
 
-        // Event listeners
         this.setupEventListeners();
+    }
+
+    logNodeStatus() {
+        const total = this.nodeList.length;
+        const failed = this.failedNodes.size;
+        const active = total - failed;
+        console.log(`📊 Estado nodos: ${active}/${total} activos | Fallidos: ${[...this.failedNodes].join(', ') || 'ninguno'}`);
+    }
+
+    getBestNode() {
+        // Retorna el primer nodo activo que no esté en failedNodes
+        const nodes = this.kazagumo.shoukaku.nodes;
+        for (const [name, node] of nodes) {
+            if (!this.failedNodes.has(name) && node.state === 2) { // 2 = CONNECTED
+                return name;
+            }
+        }
+        return null;
     }
 
     setupEventListeners() {
@@ -280,10 +292,16 @@ class MusicSystem {
             let player = this.kazagumo.getPlayer(guild.id);
 
             if (!player) {
+                const bestNode = this.getBestNode();
+                if (!bestNode) {
+                    return message.reply('❌ No hay nodos de música disponibles en este momento. Intenta más tarde.');
+                }
+                
                 player = await this.kazagumo.createPlayer({
-                    guildId: guild.id, // Corregido: era guild.icon
+                    guildId: guild.id,
                     textId: channel.id,
                     voiceId: voiceChannel.id,
+                    shardId: guild.shardId || 0,
                 });
             }
 
