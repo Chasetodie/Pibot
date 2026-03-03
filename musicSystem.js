@@ -70,16 +70,30 @@ class MusicSystem {
     }
 
     getBestNode() {
+        // Acceder a shoukaku.nodes directamente como Map
         const nodes = this.kazagumo.shoukaku.nodes;
+        if (!nodes || nodes.size === 0) return null;
+
         for (const [name, node] of nodes) {
-            if (!this.failedNodes.has(name)) {
+            // En Shoukaku 4.x el estado conectado es el string 'CONNECTED' o valor 1
+            const state = node.state;
+            const isConnected = state === 1 || state === 'CONNECTED' || 
+                            node.ws?.readyState === 1;
+            if (isConnected && !this.failedNodes.has(name)) {
                 return name;
             }
         }
-        // Si todos fallaron, limpiar la lista y reintentar con cualquiera
-        this.failedNodes.clear();
-        const first = [...nodes.keys()][0];
-        return first || null;
+        return null;
+    }
+
+    async waitForNode(timeoutMs = 10000) {
+        // Esperar hasta que haya al menos un nodo conectado
+        const start = Date.now();
+        while (Date.now() - start < timeoutMs) {
+            if (this.getBestNode()) return true;
+            await new Promise(r => setTimeout(r, 500));
+        }
+        return false;
     }
 
     setupEventListeners() {
@@ -266,11 +280,6 @@ class MusicSystem {
     }
 
     async playCommand(message, args, member, channel, guild, author) {
-        // ANTES del if (!player)
-        console.log('🔍 Nodos disponibles:', [...this.kazagumo.shoukaku.nodes.keys()]);
-        console.log('❌ Nodos fallidos:', [...this.failedNodes]);
-        console.log('🎯 Mejor nodo:', this.getBestNode());
-
         // AGREGAR THROTTLE:
         const lastPlay = this.playThrottle.get(guild.id) || 0;
         if (Date.now() - lastPlay < 2000) { // 2 segundos entre plays
@@ -298,9 +307,14 @@ class MusicSystem {
             let player = this.kazagumo.getPlayer(guild.id);
 
             if (!player) {
-                const bestNode = this.getBestNode();
+                let bestNode = this.getBestNode();
                 if (!bestNode) {
-                    return message.reply('❌ No hay nodos de música disponibles en este momento. Intenta más tarde.');
+                    await message.reply('⏳ Conectando al servidor de música, espera un momento...');
+                    const connected = await this.waitForNode(10000);
+                    if (!connected) {
+                        return message.channel.send('❌ No se pudo conectar a ningún servidor de música. Intenta más tarde.');
+                    }
+                    bestNode = this.getBestNode();
                 }
                 
                 player = await this.kazagumo.createPlayer({
