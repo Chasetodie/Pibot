@@ -1659,13 +1659,20 @@ class AllCommands {
         await message.reply({ embeds: [embed] });
     }
 
+    checkAdminPerms(message) {
+        if (!message.guild) return false;
+        if (message.guild.ownerId === message.author.id) return true;
+        const member = message.member;
+        if (!member) return false;
+        // Usar bitfield directo, evita el bug del RoleManager
+        const perms = member.permissions;
+        if (!perms || typeof perms.has !== 'function') return false;
+        return perms.has(8n) || perms.has(32n); // 8n = ADMINISTRATOR, 32n = MANAGE_GUILD
+    }
+
     async handleSetConfig(message, args) {
-        const memberPerms = message.member?.permissions ?? message.member?._roles;
-        const isAdmin = message.member?.permissions?.has?.('ManageGuild') || 
-                        message.member?.permissions?.has?.('Administrator') ||
-                        message.guild?.ownerId === message.author.id;
-        if (!isAdmin) {
-            return message.reply('❌ Necesitas el permiso **Administrar Servidor** para usar este comando.');
+        if (!this.checkAdminPerms(message)) {
+            return message.reply('❌ Necesitas ser administrador para usar este comando.');
         }
         if (!this.guildConfig) {
             return message.reply('❌ Sistema de configuración no disponible.');
@@ -1699,12 +1706,8 @@ class AllCommands {
     }
 
     async handleShowConfig(message) {
-        const memberPerms = message.member?.permissions ?? message.member?._roles;
-        const isAdmin = message.member?.permissions?.has?.('ManageGuild') || 
-                        message.member?.permissions?.has?.('Administrator') ||
-                        message.guild?.ownerId === message.author.id;
-        if (!isAdmin) {
-            return message.reply('❌ Necesitas el permiso **Administrar Servidor** para usar este comando.');
+        if (!this.checkAdminPerms(message)) {
+            return message.reply('❌ Necesitas ser administrador para usar este comando.');
         }
         if (!this.guildConfig) {
             return message.reply('❌ Sistema de configuración no disponible.');
@@ -1724,24 +1727,42 @@ class AllCommands {
         if (Object.keys(config).length === 0) {
             embed.setDescription('No hay nada configurado aún. Usa `>setchannel help` para ver cómo hacerlo.');
         } else {
+            // Claves que son canales
+            const channelKeys = ['levelup_channel', 'events_channel', 'welcome_channel'];
+            // Claves que son roles  
             const roleKeys = ['events_role'];
-            embed.addFields(Object.entries(config).map(([k, v]) => ({
-                name: labels[k] || k,
-                value: roleKeys.includes(k) ? `<@&${v}>` : `<#${v}>`,
-                inline: true
-            })));
+            // Claves internas que NO mostrar
+            const hiddenKeys = ['events_globally_enabled'];
+
+            const visibleConfig = Object.entries(config).filter(([k]) => 
+                !k.startsWith('event_disabled_') && !hiddenKeys.includes(k)
+            );
+
+            if (visibleConfig.length === 0) {
+                embed.setDescription('No hay nada configurado aún. Usa `>setconfig help` para ver cómo hacerlo.');
+            } else {
+                embed.addFields(visibleConfig.map(([k, v]) => ({
+                    name: labels[k] || k,
+                    value: roleKeys.includes(k) ? `<@&${v}>` : channelKeys.includes(k) ? `<#${v}>` : v,
+                    inline: true
+                })));
+            }
+
+            // Agregar estado de eventos al final
+            const globallyEnabled = await this.guildConfig.areEventsEnabled(message.guild.id);
+            embed.addFields({
+                name: '🎉 Eventos',
+                value: globallyEnabled ? '🟢 Habilitados (`>toggleevents` para cambiar)' : '🔴 Deshabilitados (`>toggleevents` para activar)',
+                inline: false
+            });
         }
 
         return message.reply({ embeds: [embed] });
     }
 
     async handleSetEventsRole(message, args) {
-        const memberPerms = message.member?.permissions ?? message.member?._roles;
-        const isAdmin = message.member?.permissions?.has?.('ManageGuild') || 
-                        message.member?.permissions?.has?.('Administrator') ||
-                        message.guild?.ownerId === message.author.id;
-        if (!isAdmin) {
-            return message.reply('❌ Necesitas el permiso **Administrar Servidor** para usar este comando.');
+        if (!this.checkAdminPerms(message)) {
+            return message.reply('❌ Necesitas ser administrador para usar este comando.');
         }
         const role = message.mentions.roles.first();
         if (!role) {
@@ -1754,12 +1775,8 @@ class AllCommands {
     }
 
     async handleToggleEvent(message, args) {
-        const memberPerms = message.member?.permissions ?? message.member?._roles;
-        const isAdmin = message.member?.permissions?.has?.('ManageGuild') || 
-                        message.member?.permissions?.has?.('Administrator') ||
-                        message.guild?.ownerId === message.author.id;
-        if (!isAdmin) {
-            return message.reply('❌ Necesitas el permiso **Administrar Servidor** para usar este comando.');
+        if (!this.checkAdminPerms(message)) {
+            return message.reply('❌ Necesitas ser administrador para usar este comando.');
         }
         if (!this.guildConfig) return message.reply('❌ Sistema de configuración no disponible.');
 
@@ -1791,12 +1808,8 @@ class AllCommands {
     }
 
     async handleToggleAllEvents(message) {
-        const memberPerms = message.member?.permissions ?? message.member?._roles;
-        const isAdmin = message.member?.permissions?.has?.('ManageGuild') || 
-                        message.member?.permissions?.has?.('Administrator') ||
-                        message.guild?.ownerId === message.author.id;
-        if (!isAdmin) {
-            return message.reply('❌ Necesitas el permiso **Administrar Servidor** para usar este comando.');
+        if (!this.checkAdminPerms(message)) {
+            return message.reply('❌ Necesitas ser administrador para usar este comando.');
         }
         if (!this.guildConfig) return message.reply('❌ Sistema de configuración no disponible.');
 
@@ -2224,10 +2237,14 @@ const commandName = command.replace('>', '');
                 ),
                 new ActionRowBuilder().addComponents(
                     new ButtonBuilder().setCustomId('help_nsfw').setLabel('🔞 NSFW').setStyle(ButtonStyle.Primary),
-                    new ButtonBuilder().setCustomId('help_events').setLabel('🎉 Eventos').setStyle(ButtonStyle.Primary),
+                    new ButtonBuilder().setCustomId('help_events').setLabel(eventsEnabled ? '🎉 Eventos' : '🔴 Eventos').setStyle(eventsEnabled ? ButtonStyle.Primary : ButtonStyle.Secondary),
                     new ButtonBuilder().setCustomId('help_chatIA').setLabel('🤖 Chat IA').setStyle(ButtonStyle.Primary)
                 ),
             ];
+
+            const eventsEnabled = this.guildConfig 
+                ? await this.guildConfig.areEventsEnabled(message.guild?.id)
+                : true;
 
             // Solo agregar botón admin si tiene permisos (evita duplicados)
             const isAdmin = message.member?.permissions?.has('ManageGuild');
@@ -2401,6 +2418,16 @@ const commandName = command.replace('>', '');
 
         if (category === 'admin' && !interaction.member?.permissions.has('ManageGuild')) {
             return interaction.reply({ content: '❌ Solo administradores pueden ver esta sección.', ephemeral: true });
+        }
+
+        if (category === 'events' && this.guildConfig) {
+            const enabled = await this.guildConfig.areEventsEnabled(interaction.guild?.id);
+            if (!enabled) {
+                return interaction.reply({ 
+                    content: '❌ Los eventos están deshabilitados en este servidor. Un admin puede activarlos con `>toggleevents`.',
+                    ephemeral: true 
+                });
+            }
         }
         
         const fakeMessage = {

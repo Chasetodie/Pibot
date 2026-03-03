@@ -543,7 +543,7 @@ class EventsSystem {
     }
 
     // ✅ OPTIMIZACIÓN: Rate limiting para aplicar modificadores
-    async applyXpModifiers(userId, baseXp, context = 'message') {
+    async applyXpModifiers(userId, baseXp, context = 'message', guildId = null) {
         // Caché para evitar recálculos constantes
         const cacheKey = `xp_${context}_${baseXp}`;
         const cached = this.getCachedEventData(cacheKey);
@@ -571,7 +571,8 @@ class EventsSystem {
         let finalXp = baseXp;
         let appliedEvents = [];
         
-        for (const event of this.getActiveEvents()) {
+        const targetGuildId = guildId || this.guild?.id;
+        for (const event of this.getActiveEvents(targetGuildId)) {
             if (event.multipliers.xp) {
                 switch (event.type) {
                     case 'double_xp':
@@ -625,7 +626,7 @@ class EventsSystem {
     }
 
     // Aplicar modificadores de eventos a dinero (trabajo/daily)
-    async applyMoneyModifiers(userId, baseAmount, context = 'work') {
+    async applyMoneyModifiers(userId, baseAmount, context = 'work', guildId = null) {
         let finalAmount = baseAmount;
         let appliedEvents = [];
         let eventMessage = '';
@@ -633,7 +634,8 @@ class EventsSystem {
         let bonus = 0;
         let loss = 0;     
         
-        for (const event of this.getActiveEvents()) {
+        const targetGuildId = guildId || this.guild?.id;
+        for (const event of this.getActiveEvents(targetGuildId)) {
             if (event.multipliers.work || event.multipliers.daily || event.multipliers.minigames)  // Verificar si hay modificadores de dinero
             {
                 if(event.multipliers.work && context === 'work') {
@@ -724,7 +726,7 @@ class EventsSystem {
         let finalCooldown = baseCooldown;
         let appliedEvents = [];
         
-        for (const event of this.getActiveEvents()) {
+        for (const event of this.getActiveEvents(message.guild?.id)) {
             if (event.multipliers.cooldown) {
                 finalCooldown = Math.floor(finalCooldown * event.multipliers.cooldown);
                 appliedEvents.push(event);
@@ -743,7 +745,7 @@ class EventsSystem {
         let rewards = [];
         let appliedEvents = [];
         
-        for (const event of this.getActiveEvents()) {
+        for (const event of this.getActiveEvents(message.guild?.id)) {
             if (event.type === 'treasure_hunt' && Math.random() < 0.05) { // 15% chance
                 // DIFERENTES TIPOS DE TESORO
                 const treasureType = Math.random();
@@ -807,7 +809,18 @@ class EventsSystem {
 
     // Mostrar eventos activos
     async showActiveEvents(message) {
-        const activeEvents = this.getActiveEvents();
+        if (this.guildConfig) {
+            const enabled = await this.guildConfig.areEventsEnabled(message.guild?.id);
+            if (!enabled) {
+                const embed = new EmbedBuilder()
+                    .setTitle('🔴 Eventos Deshabilitados')
+                    .setDescription('Los eventos no están habilitados en este servidor.\n\nUn administrador puede activarlos con `>toggleevents`.')
+                    .setColor('#FF0000');
+                return message.reply({ embeds: [embed] });
+            }
+        }
+
+        const activeEvents = this.getActiveEvents(message.guild?.id);
         
         if (activeEvents.length === 0) {
             const embed = new EmbedBuilder()
@@ -856,6 +869,17 @@ class EventsSystem {
         if (!message.member?.permissions.has('Administrator')) {
             await message.reply('❌ Solo administradores pueden crear eventos manuales.');
             return;
+        }
+
+        if (this.guildConfig) {
+            const enabled = await this.guildConfig.areEventsEnabled(message.guild?.id);
+            if (!enabled) {
+                const embed = new EmbedBuilder()
+                    .setTitle('🔴 Eventos Deshabilitados')
+                    .setDescription('Los eventos no están habilitados en este servidor.\n\nUn administrador puede activarlos con `>toggleevents`.')
+                    .setColor('#FF0000');
+                return message.reply({ embeds: [embed] });
+            }
         }
 
         const originalGuild = this.guild;
