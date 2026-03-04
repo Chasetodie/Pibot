@@ -70,6 +70,19 @@ class MusicSystem {
         });
 
         this.setupEventListeners();
+
+        // Al final de initialize(), después de setupEventListeners():
+        setTimeout(() => {
+            console.log('🔍 Nodos en shoukaku:', [...this.kazagumo.shoukaku.nodes.keys()]);
+            console.log('🔍 Nodos size:', this.kazagumo.shoukaku.nodes.size);
+            for (const [name, node] of this.kazagumo.shoukaku.nodes) {
+                console.log(`   Nodo ${name}:`, {
+                    state: node.state,
+                    wsState: node.ws?.readyState,
+                    url: node.url
+                });
+            }
+        }, 5000); // Esperar 5 segundos al arranque
     }
 
     logNodeStatus() {
