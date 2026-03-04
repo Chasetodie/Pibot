@@ -204,8 +204,8 @@ class MusicSystem {
     async processCommand(message) {
         if (message.author.bot) return;
 
-        const args = message.content.toLowerCase().split(' ');
-        const command = args[0];
+        const args = message.content.split(' ');
+        const command = args[0].toLowerCase();
 
         // Comandos de música
         if (['>', '>m', '>musica', '>music'].includes(command)) {
