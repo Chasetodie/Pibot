@@ -771,6 +771,28 @@ class EconomySystem {
                     'El cliente no estaba en casa'
                 ]
             },
+            'barista_casino': {
+                name: '🎰☕ Barista del Casino',
+                cooldown: 2 * 60 * 60 * 1000, // 2 horas
+                codeName: 'barista_casino',
+                baseReward: 400,
+                variation: 300,
+                levelRequirement: 4,
+                failChance: 0.18, // 18% de fallar
+                messages: [
+                    'Preparaste cafés VIP para jugadores de alto nivel',
+                    'Un millonario dejó una enorme propina tras ganar el jackpot',
+                    'Hiciste cócteles energéticos para toda la mesa de póker',
+                    'Atendiste la barra durante una racha de suerte',
+                    'Serviste café premium con oro comestible'
+                ],
+                failMessages: [
+                    'Derramaste café sobre la mesa de blackjack',
+                    'Un cliente perdió todo y se desquitó contigo',
+                    'Te equivocaste en un pedido VIP y te descontaron del sueldo',
+                    'Confundiste sal con azúcar en el café'
+                ]
+            },
             'pizzero': {
                 name: '🍕 Pizzero',
                 cooldown: 1.5 * 60 * 60 * 1000, // 1 hora y media
@@ -1029,7 +1051,9 @@ class EconomySystem {
 
         if (now - lastWork < effectiveCooldown) {
             const timeLeft = effectiveCooldown - (now - lastWork);
-            return { canWork: false, reason: 'cooldown', timeLeft: timeLeft, name: job.name };
+            // Usar el nombre del último trabajo hecho, no el que se intenta usar
+            const lastJobName = user.last_name_work || job.name;
+            return { canWork: false, reason: 'cooldown', timeLeft: timeLeft, name: lastJobName };
         }
         
         return { canWork: true };
