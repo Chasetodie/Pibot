@@ -383,6 +383,12 @@ class MusicSystem {
                 return message.reply('❌ La canción es muy larga (máximo 2 horas).');
             }
 
+if (result.type === 'PLAYLIST') {
+    console.log('🎨 result keys:', Object.keys(result));
+    console.log('🎨 result.thumbnail:', result.thumbnail);
+    console.log('🎨 result.playlistInfo:', result.playlistInfo);
+    console.log('🎨 result.tracks[0].thumbnail:', result.tracks[0]?.thumbnail);
+}
 
             const embed = new EmbedBuilder()
                 .setColor('#00FF00')
