@@ -129,41 +129,34 @@ class MusicSystem {
         });
 
         this.kazagumo.on('playerEnd', (player) => {
-            console.log(`🎵 Canción terminada en ${player.guildId}`);
-            
-            if (player.queue.size > 0) {
+            console.log(`🎵 Canción terminada en ${player.guildId} | Cola restante: ${player.queue.size}`);
+
+            // Kazagumo maneja la cola automáticamente — solo actuar cuando no hay más canciones
+            if (player.queue.size === 0) {
                 setTimeout(() => {
-                    if (player.queue.size > 0 && !player.playing) {
-                        player.play();
-                    }
-                }, 1000);
-            } else {
-                // AGREGAR MENSAJE AQUÍ:
-                if (player.textId) {
-                    const channel = this.client.channels.cache.get(player.textId);
-                    if (channel) {
-                        const embed = new EmbedBuilder()
-                            .setTitle('✅ Cola Terminada')
-                            .setDescription('Se han reproducido todas las canciones de la cola.')
-                            .setColor('#00FF00')
-                            .setFooter({ text: 'El bot se desconectará en 5 minutos si no hay más música.' });
-                        
-                        channel.send({ embeds: [embed] });
-                    }
-                }
-                
-                // Auto-disconnect después de 5 minutos
-                this.setPlayerTimeout(player.guildId, () => {
-                    if (player.queue.size === 0) {
-                        player.destroy();
+                    // Doble check — por si se agregó algo mientras esperábamos
+                    if (player.queue.size === 0 && !player.playing) {
                         if (player.textId) {
                             const channel = this.client.channels.cache.get(player.textId);
                             if (channel) {
-                                channel.send('⏹️ Desconectado por inactividad.');
+                                const embed = new EmbedBuilder()
+                                    .setTitle('✅ Cola Terminada')
+                                    .setDescription('Se han reproducido todas las canciones.')
+                                    .setColor('#00FF00')
+                                    .setFooter({ text: 'El bot se desconectará en 5 minutos si no hay más música.' });
+                                channel.send({ embeds: [embed] });
                             }
                         }
+
+                        this.setPlayerTimeout(player.guildId, () => {
+                            if (player.queue.size === 0 && !player.playing) {
+                                player.destroy();
+                                const channel = this.client.channels.cache.get(player.textId);
+                                if (channel) channel.send('⏹️ Desconectado por inactividad.');
+                            }
+                        }, 300000);
                     }
-                }, 300000);
+                }, 1500);
             }
         });
 
@@ -553,48 +546,17 @@ class MusicSystem {
         // ── Genius ──
         if (!lyrics && process.env.GENIUS_TOKEN) {
             try {
-                const searchRes = await fetch(
-                    `https://api.genius.com/search?q=${encodeURIComponent(query)}`,
-                    {
-                        headers: { 'Authorization': `Bearer ${process.env.GENIUS_TOKEN}` },
-                        signal: AbortSignal.timeout(8000)
-                    }
-                );
-                if (searchRes.ok) {
-                    const searchData = await searchRes.json();
-                    const hit = searchData.response?.hits?.[0]?.result;
-                    if (hit) {
-                        // Scrapear la letra de la página de Genius
-                        const pageRes = await fetch(hit.url, {
-                            headers: { 'User-Agent': 'Mozilla/5.0' },
-                            signal: AbortSignal.timeout(10000)
-                        });
-                        if (pageRes.ok) {
-                            const html = await pageRes.text();
-                            const cheerio = require('cheerio');
-                            const $ = cheerio.load(html);
-                            
-                            // Genius guarda la letra en divs con data-lyrics-container
-                            const lyricsContainers = $('[data-lyrics-container="true"]');
-                            if (lyricsContainers.length > 0) {
-                                let rawLyrics = '';
-                                lyricsContainers.each((_, el) => {
-                                    // Reemplazar <br> con saltos de línea
-                                    $(el).find('br').replaceWith('\n');
-                                    rawLyrics += $(el).text() + '\n\n';
-                                });
-                                if (rawLyrics.trim().length > 50) {
-                                    lyrics = rawLyrics.trim();
-                                    source = 'Genius';
-                                }
-                            }
-                        }
-                        // Si no pudo scrapear, al menos dar el link
-                        if (!lyrics) {
-                            lyrics = `No pude extraer la letra automáticamente.\nPuedes verla aquí: ${hit.url}`;
-                            source = 'Genius';
-                        }
-                    }
+                const geniusApi = require('genius-lyrics-api');
+                const options = {
+                    apiKey: process.env.GENIUS_TOKEN,
+                    title: query,
+                    artist: '',
+                    optimizeQuery: true
+                };
+                const geniusLyrics = await geniusApi.getLyrics(options);
+                if (geniusLyrics && geniusLyrics.length > 50) {
+                    lyrics = geniusLyrics;
+                    source = 'Genius';
                 }
             } catch (e) {
                 console.warn('Genius falló:', e.message);
@@ -1400,6 +1362,21 @@ class MusicSystem {
                     inline: true
                 },
                 {
+                    name: '🎬 Buscar YouTube',
+                    value: '`>m ytsearch <canción>` — Ver resultados y reproducir\n`>m ys <canción>`',
+                    inline: true
+                },
+                {
+                    name: '🟢 Buscar Spotify',
+                    value: '`>m spsearch <canción>` — Ver resultados y reproducir\n`>m ss <canción>`',
+                    inline: true
+                },
+                {
+                    name: '🎵 Letra',
+                    value: '`>m lyrics <canción>` — Ver letra\n`>m letra artista - canción`',
+                    inline: true
+                },
+                {
                     name: '📱 Plataformas soportadas',
                     value: '🎵 YouTube\n🟢 Spotify',
                     inline: false
@@ -1412,7 +1389,9 @@ class MusicSystem {
                         '`>m play ` - Link Album Spotify',
                         '`>m play ` - Link Playlist Spotify (La Playlist debe ser Pública)',
                         '`>m play https://youtube.com/watch?v=...` — Link YouTube',
-                        '`>m play ` - Link Playlist YouTube'
+                        '`>m play ` - Link Playlist YouTube',
+                        '`>m ytsearch la lagartija` — Buscar en YouTube con selección',
+                        '`>m lyrics Gorillaz - Clint Eastwood` — Ver letra de canción',
                     ].join('\n'),
                     inline: false
                 }
