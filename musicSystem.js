@@ -53,9 +53,36 @@ class MusicSystem {
             this.failedNodes.add(name);
         });
 
-        this.kazagumo.shoukaku.on('close', (name, code, reason) => {
-            console.warn(`⚠️ Nodo ${name} cerrado. Código: ${code}`);
+        this.kazagumo.shoukaku.on('close', async (name, code, reason) => {
+            console.warn(`⚠️ Nodo ${name} cerrado. Reconectando en 5 segundos...`);
             this.failedNodes.add(name);
+            
+            setTimeout(async () => {
+                try {
+                    console.log(`🔄 Intentando reconectar nodo ${name}...`);
+                    const nodeConfig = this.nodeList.find(n => n.name === name);
+                    if (nodeConfig) {
+                        this.kazagumo.shoukaku.addNode(nodeConfig);
+                        console.log(`✅ Nodo ${name} reconectado!`);
+                        this.failedNodes.delete(name);
+                    }
+                } catch (e) {
+                    console.error(`❌ Falló reconexión de ${name}:`, e.message);
+                    // Reintentar en 30 segundos
+                    setTimeout(async () => {
+                        try {
+                            const nodeConfig = this.nodeList.find(n => n.name === name);
+                            if (nodeConfig) {
+                                this.kazagumo.shoukaku.addNode(nodeConfig);
+                                console.log(`✅ Nodo ${name} reconectado en segundo intento!`);
+                                this.failedNodes.delete(name);
+                            }
+                        } catch (e2) {
+                            console.error(`❌ Segundo intento fallido para ${name}:`, e2.message);
+                        }
+                    }, 30000);
+                }
+            }, 5000);
         });
 
         this.kazagumo.shoukaku.on('disconnect', (name, count) => {
@@ -184,8 +211,8 @@ class MusicSystem {
     async processCommand(message) {
         if (message.author.bot) return;
 
-        const args = message.content.toLowerCase().split(' ');
-        const command = args[0];
+        const args = message.content.split(' ');
+        const command = args[0].toLowerCase(); // Solo el comando en minúsculas
 
         // Comandos de música
         if (['>', '>m', '>musica', '>music'].includes(command)) {
