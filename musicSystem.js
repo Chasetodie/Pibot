@@ -128,36 +128,32 @@ class MusicSystem {
             }
         });
 
+        this.kazagumo.on('playerEmpty', (player) => {
+            console.log(`🎵 Cola vacía en ${player.guildId}`);
+            
+            if (player.textId) {
+                const channel = this.client.channels.cache.get(player.textId);
+                if (channel) {
+                    const embed = new EmbedBuilder()
+                        .setTitle('✅ Cola Terminada')
+                        .setDescription('Se han reproducido todas las canciones.')
+                        .setColor('#00FF00')
+                        .setFooter({ text: 'El bot se desconectará en 5 minutos si no hay más música.' });
+                    channel.send({ embeds: [embed] });
+                }
+            }
+
+            this.setPlayerTimeout(player.guildId, () => {
+                if (player.queue.size === 0 && !player.playing) {
+                    player.destroy();
+                    const channel = this.client.channels.cache.get(player.textId);
+                    if (channel) channel.send('⏹️ Desconectado por inactividad.');
+                }
+            }, 300000);
+        });
+
         this.kazagumo.on('playerEnd', (player) => {
             console.log(`🎵 Canción terminada en ${player.guildId} | Cola restante: ${player.queue.size}`);
-
-            // Kazagumo maneja la cola automáticamente — solo actuar cuando no hay más canciones
-            if (player.queue.size === 0) {
-                setTimeout(() => {
-                    // Doble check — por si se agregó algo mientras esperábamos
-                    if (player.queue.size === 0 && !player.playing) {
-                        if (player.textId) {
-                            const channel = this.client.channels.cache.get(player.textId);
-                            if (channel) {
-                                const embed = new EmbedBuilder()
-                                    .setTitle('✅ Cola Terminada')
-                                    .setDescription('Se han reproducido todas las canciones.')
-                                    .setColor('#00FF00')
-                                    .setFooter({ text: 'El bot se desconectará en 5 minutos si no hay más música.' });
-                                channel.send({ embeds: [embed] });
-                            }
-                        }
-
-                        this.setPlayerTimeout(player.guildId, () => {
-                            if (player.queue.size === 0 && !player.playing) {
-                                player.destroy();
-                                const channel = this.client.channels.cache.get(player.textId);
-                                if (channel) channel.send('⏹️ Desconectado por inactividad.');
-                            }
-                        }, 300000);
-                    }
-                }, 1500);
-            }
         });
 
         this.kazagumo.on('playerDestroy', (player) => {
@@ -367,9 +363,18 @@ class MusicSystem {
                 channel,
                 guild,
                 author,
-                engine
+                engine,
+                message: searchMsg
             });
 
+            // Auto-limpiar sesión después de 60 segundos
+            setTimeout(() => {
+                if (this.searchSessions?.has(`${message.author.id}_${guild.id}`)) {
+                    this.searchSessions.delete(`${message.author.id}_${guild.id}`);
+                    searchMsg.edit({ components: [] }).catch(() => {});
+                }
+            }, 60000);
+            
             // Collector de botones — 60 segundos
             const collector = searchMsg.createMessageComponentCollector({
                 filter: i => i.user.id === message.author.id,
@@ -546,17 +551,81 @@ class MusicSystem {
         // ── Genius ──
         if (!lyrics && process.env.GENIUS_TOKEN) {
             try {
-                const geniusApi = require('genius-lyrics-api');
-                const options = {
-                    apiKey: process.env.GENIUS_TOKEN,
-                    title: query,
-                    artist: '',
-                    optimizeQuery: true
-                };
-                const geniusLyrics = await geniusApi.getLyrics(options);
-                if (geniusLyrics && geniusLyrics.length > 50) {
-                    lyrics = geniusLyrics;
-                    source = 'Genius';
+                // Buscar la canción en Genius
+                const searchRes = await fetch(
+                    `https://api.genius.com/search?q=${encodeURIComponent(query)}`,
+                    {
+                        headers: { 
+                            'Authorization': `Bearer ${process.env.GENIUS_TOKEN}`,
+                            'User-Agent': 'Mozilla/5.0'
+                        },
+                        signal: AbortSignal.timeout(8000)
+                    }
+                );
+
+                if (searchRes.ok) {
+                    const searchData = await searchRes.json();
+                    const hit = searchData.response?.hits?.[0]?.result;
+                    
+                    if (hit) {
+                        // Scrapear con headers correctos
+                        const pageRes = await fetch(hit.url, {
+                            headers: {
+                                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                                'Accept': 'text/html,application/xhtml+xml',
+                                'Accept-Language': 'es-ES,es;q=0.9,en;q=0.8'
+                            },
+                            signal: AbortSignal.timeout(10000)
+                        });
+
+                        if (pageRes.ok) {
+                            const html = await pageRes.text();
+                            
+                            // Genius guarda la letra en JSON dentro del HTML
+                            const match = html.match(/window\.__PRELOADED_STATE__ = JSON\.parse\('(.+?)'\);/s);
+                            if (match) {
+                                try {
+                                    const decoded = match[1].replace(/\\'/g, "'").replace(/\\\\/g, '\\');
+                                    const state = JSON.parse(decoded);
+                                    const lyricsData = state?.entities?.songs;
+                                    if (lyricsData) {
+                                        const songKey = Object.keys(lyricsData)[0];
+                                        const rawLyrics = lyricsData[songKey]?.lyrics?.body?.plain;
+                                        if (rawLyrics && rawLyrics.length > 50) {
+                                            lyrics = rawLyrics;
+                                            source = 'Genius';
+                                        }
+                                    }
+                                } catch (parseErr) {
+                                    console.warn('Genius parse falló:', parseErr.message);
+                                }
+                            }
+
+                            // Fallback: regex directo sobre el HTML
+                            if (!lyrics) {
+                                const lyricsDivs = html.match(/data-lyrics-container="true"[^>]*>([\s\S]*?)<\/div>/g);
+                                if (lyricsDivs) {
+                                    const raw = lyricsDivs
+                                        .join('\n')
+                                        .replace(/<br\s*\/?>/gi, '\n')
+                                        .replace(/<[^>]+>/g, '')
+                                        .replace(/&amp;/g, '&')
+                                        .replace(/&quot;/g, '"')
+                                        .replace(/&#x27;/g, "'")
+                                        .trim();
+                                    if (raw.length > 50) {
+                                        lyrics = raw;
+                                        source = 'Genius';
+                                    }
+                                }
+                            }
+
+                            if (!lyrics) {
+                                lyrics = `No pude extraer la letra.\nVer en Genius: ${hit.url}`;
+                                source = 'Genius';
+                            }
+                        }
+                    }
                 }
             } catch (e) {
                 console.warn('Genius falló:', e.message);
