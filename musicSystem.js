@@ -296,6 +296,35 @@ class MusicSystem {
         }
     }
 
+    async getSpotifyPlaylistThumbnail(spotifyUrl) {
+        try {
+            // Extraer playlist ID de la URL
+            const match = spotifyUrl.match(/playlist\/([a-zA-Z0-9]+)/);
+            if (!match) return null;
+            const playlistId = match[1];
+
+            // Obtener token de Spotify
+            const tokenRes = await fetch('https://accounts.spotify.com/api/token', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'Authorization': 'Basic ' + Buffer.from(`${process.env.SPOTIFY_CLIENT_ID}:${process.env.SPOTIFY_CLIENT_SECRET}`).toString('base64')
+                },
+                body: 'grant_type=client_credentials'
+            });
+            const tokenData = await tokenRes.json();
+
+            // Obtener info de la playlist
+            const res = await fetch(`https://api.spotify.com/v1/playlists/${playlistId}?fields=images`, {
+                headers: { 'Authorization': `Bearer ${tokenData.access_token}` }
+            });
+            const data = await res.json();
+            return data.images?.[0]?.url || null;
+        } catch (e) {
+            return null;
+        }
+    }
+
     async playCommand(message, args, member, channel, guild, author) {
         // AGREGAR THROTTLE:
         const lastPlay = this.playThrottle.get(guild.id) || 0;
@@ -344,7 +373,6 @@ class MusicSystem {
 
             this.clearPlayerTimeout(guild.id); // Limpiar timeout si existe
 
-//            const result = await this.kazagumo.search(query, { requester: author, engine: 'ytsearch' });
             // Limpiar URLs de Spotify
             if (query.includes('spotify.com')) {
                 query = query
@@ -383,23 +411,23 @@ class MusicSystem {
                 return message.reply('❌ La canción es muy larga (máximo 2 horas).');
             }
 
-if (result.type === 'PLAYLIST') {
-    console.log('🎨 result keys:', Object.keys(result));
-    console.log('🎨 result.thumbnail:', result.thumbnail);
-    console.log('🎨 result.playlistInfo:', result.playlistInfo);
-    console.log('🎨 result.tracks[0].thumbnail:', result.tracks[0]?.thumbnail);
-}
-
             const embed = new EmbedBuilder()
                 .setColor('#00FF00')
                 .setTimestamp();
 
-            if (result.type === 'PLAYLIST') {
-                player.queue.add(result.tracks);
-                embed.setTitle('📂 Playlist Agregada')
-                    .setDescription(`**${result.playlistName}**\n${result.tracks.length} canciones agregadas`)
-                    .setThumbnail(result.tracks.find(t => t.thumbnail)?.thumbnail || null);
-            } else {
+                if (result.type === 'PLAYLIST') {
+                    player.queue.add(result.tracks);
+                    
+                    // Intentar obtener thumbnail real de Spotify
+                    let playlistThumb = result.tracks.find(t => t.thumbnail)?.thumbnail || null;
+                    if (searchQuery.includes('spotify.com/playlist')) {
+                        playlistThumb = await this.getSpotifyPlaylistThumbnail(searchQuery) || playlistThumb;
+                    }
+
+                    embed.setTitle('📂 Playlist Agregada')
+                        .setDescription(`**${result.playlistName}**\n${result.tracks.length} canciones agregadas`)
+                        .setThumbnail(playlistThumb);
+                } else {
                 const track = result.tracks[0];
                 player.queue.add(track);
                 embed.setTitle('🎵 Canción Agregada a la Cola')
