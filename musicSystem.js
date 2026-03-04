@@ -53,13 +53,17 @@ class MusicSystem {
             this.failedNodes.add(name);
         });
 
-        this.kazagumo.shoukaku.on('close', async (name, code, reason) => {
-            console.warn(`⚠️ Nodo ${name} cerrado. Reconectando en 5 segundos...`);
+        this.kazagumo.shoukaku.on('disconnect', async (name, count) => {
+            console.warn(`⚠️ Nodo ${name} desconectado. Reconectando en 10 segundos...`);
             this.failedNodes.add(name);
             
+            // Evitar múltiples intentos simultáneos
+            if (this.reconnecting?.has(name)) return;
+            if (!this.reconnecting) this.reconnecting = new Set();
+            this.reconnecting.add(name);
+
             setTimeout(async () => {
                 try {
-                    console.log(`🔄 Intentando reconectar nodo ${name}...`);
                     const nodeConfig = this.nodeList.find(n => n.name === name);
                     if (nodeConfig) {
                         this.kazagumo.shoukaku.addNode(nodeConfig);
@@ -67,27 +71,11 @@ class MusicSystem {
                         this.failedNodes.delete(name);
                     }
                 } catch (e) {
-                    console.error(`❌ Falló reconexión de ${name}:`, e.message);
-                    // Reintentar en 30 segundos
-                    setTimeout(async () => {
-                        try {
-                            const nodeConfig = this.nodeList.find(n => n.name === name);
-                            if (nodeConfig) {
-                                this.kazagumo.shoukaku.addNode(nodeConfig);
-                                console.log(`✅ Nodo ${name} reconectado en segundo intento!`);
-                                this.failedNodes.delete(name);
-                            }
-                        } catch (e2) {
-                            console.error(`❌ Segundo intento fallido para ${name}:`, e2.message);
-                        }
-                    }, 30000);
+                    console.error(`❌ Reconexión fallida para ${name}:`, e.message);
+                } finally {
+                    this.reconnecting.delete(name);
                 }
-            }, 5000);
-        });
-
-        this.kazagumo.shoukaku.on('disconnect', (name, count) => {
-            console.warn(`⚠️ Nodo ${name} desconectado.`);
-            this.failedNodes.add(name);
+            }, 10000);
         });
 
         this.setupEventListeners();
