@@ -708,7 +708,7 @@ class ChatBotSystem {
                             'qwen/qwen3-32b',
                             'llama-3.1-8b-instant'
                         ],
-                timeout: isStory ? 25000 : 15000
+                timeout: isStory ? 45000 : 15000
             },
             {
                 name: 'Cerebras',
@@ -717,7 +717,7 @@ class ChatBotSystem {
                 models: isStory
                     ? ['llama-3.3-70b']
                     : ['llama-3.3-70b', 'llama3.1-8b'],
-                timeout: isStory ? 25000 : 15000
+                timeout: isStory ? 45000 : 15000
             }
         ];
 
@@ -750,7 +750,7 @@ class ChatBotSystem {
                                 { role: 'user', content: contextString }
                             ],
                             temperature: isNSFW ? 1.1 : isStory ? 0.9 : 0.8,
-                            max_tokens: isNSFW ? 1200 : isStory ? 2000 : 600,
+                            max_tokens: isNSFW ? 1200 : isStory ? 3000 : 600,
                             top_p: 0.95,
                             frequency_penalty: isStory ? 0.2 : 0.4,
                             presence_penalty: isNSFW ? 0.5 : isStory ? 0.4 : 0.2,
@@ -807,6 +807,43 @@ class ChatBotSystem {
                     if (botResponse.length < 10) {
                         console.log(`❌ ${provider.name} respuesta muy corta`);
                         continue;
+                    }
+
+                    // Si la historia fue cortada (termina sin puntuación final)
+                    if (isStory && data.choices?.[0]?.finish_reason === 'length') {
+                        console.log('📖 Historia cortada por límite de tokens — pidiendo continuación...');
+                        try {
+                            const contRes = await fetch(provider.endpoint, {
+                                method: 'POST',
+                                headers: {
+                                    'Authorization': `Bearer ${provider.apiKey}`,
+                                    'Content-Type': 'application/json'
+                                },
+                                body: JSON.stringify({
+                                    model: model,
+                                    messages: [
+                                        { role: 'system', content: systemPrompt },
+                                        { role: 'user', content: contextString },
+                                        { role: 'assistant', content: botResponse },
+                                        { role: 'user', content: 'Continúa exactamente desde donde te quedaste, sin repetir nada.' }
+                                    ],
+                                    temperature: 0.9,
+                                    max_tokens: 1500,
+                                    stream: false
+                                }),
+                                signal: AbortSignal.timeout(30000)
+                            });
+                            if (contRes.ok) {
+                                const contData = await contRes.json();
+                                const continuation = contData.choices?.[0]?.message?.content?.trim();
+                                if (continuation && continuation.length > 20) {
+                                    botResponse = botResponse + '\n\n' + continuation;
+                                }
+                            }
+                        } catch (e) {
+                            console.warn('Continuación falló:', e.message);
+                            // No importa, devolver lo que tenemos
+                        }
                     }
 
                     this.requestsToday++;

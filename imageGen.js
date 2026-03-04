@@ -16,7 +16,7 @@ class ImageGenSystem {
     }
 
     // ─── PIXAZO ───────────────────────────────────────────────────────────────
-    // Modelo: Flux Schnell (gratis, rápido, buena calidad)
+    // Usar Flux Schnell — endpoint correcto según documentación oficial
     async generatePixazo(prompt) {
         const key = process.env.PIXAZO;
         if (!key) throw new Error('No PIXAZO key');
@@ -38,16 +38,18 @@ class ImageGenSystem {
             signal: AbortSignal.timeout(30000)
         });
 
-        if (!res.ok) throw new Error(`Pixazo HTTP ${res.status}`);
-        const data = await res.json();
+        // Log para debug
+        const text = await res.text();
+        console.log(`Pixazo status: ${res.status} | body: ${text.slice(0, 200)}`);
+        if (!res.ok) throw new Error(`Pixazo HTTP ${res.status}: ${text.slice(0, 100)}`);
 
+        const data = JSON.parse(text);
         const url = data?.images?.[0]?.url;
-        if (!url) throw new Error('Pixazo: no image URL en respuesta');
+        if (!url) throw new Error(`Pixazo: no URL. Respuesta: ${text.slice(0, 200)}`);
         return { url, type: 'url' };
     }
 
     // ─── IMAGEGPT ─────────────────────────────────────────────────────────────
-    // Modelo: Flux Schnell (100 créditos gratis)
     async generateImageGPT(prompt) {
         const key = process.env.IMAGEGPT;
         if (!key) throw new Error('No IMAGEGPT key');
@@ -68,30 +70,32 @@ class ImageGenSystem {
             signal: AbortSignal.timeout(30000)
         });
 
-        if (!res.ok) throw new Error(`ImageGPT HTTP ${res.status}`);
-        const data = await res.json();
+        const text = await res.text();
+        console.log(`ImageGPT status: ${res.status} | body: ${text.slice(0, 200)}`);
+        if (!res.ok) throw new Error(`ImageGPT HTTP ${res.status}: ${text.slice(0, 100)}`);
 
-        const url = data?.url || data?.image_url || data?.output;
-        if (!url) throw new Error('ImageGPT: no image URL en respuesta');
+        const data = JSON.parse(text);
+        const url = data?.url || data?.image_url || data?.output || data?.data?.url;
+        if (!url) throw new Error(`ImageGPT: no URL. Respuesta: ${text.slice(0, 200)}`);
         return { url, type: 'url' };
     }
 
-    // ─── MODELSLAB ────────────────────────────────────────────────────────────
-    // Modelo: Flux (tier gratuito disponible)
     async generateModelsLab(prompt) {
         const key = process.env.MODELSLAB;
         if (!key) throw new Error('No MODELSLAB key');
 
-        const res = await fetch('https://modelslab.com/api/v6/realtime/text2img', {
+        const res = await fetch('https://modelslab.com/api/v7/images/text-to-image', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 key,
                 prompt,
                 negative_prompt: 'blurry, bad quality, distorted, ugly, deformed',
+                model_id: 'flux',
                 width: '512',
                 height: '512',
                 samples: '1',
+                num_inference_steps: '20',
                 safety_checker: false,
                 enhance_prompt: 'yes',
                 seed: null,
@@ -102,10 +106,11 @@ class ImageGenSystem {
             signal: AbortSignal.timeout(45000)
         });
 
+        const text = await res.text();
+        console.log(`ModelsLab status: ${res.status} | body: ${text.slice(0, 300)}`);
         if (!res.ok) throw new Error(`ModelsLab HTTP ${res.status}`);
-        const data = await res.json();
 
-        // ModelsLab puede responder con status "processing" y un fetch_result URL
+        const data = JSON.parse(text);
         if (data.status === 'processing' && data.fetch_result) {
             return await this.pollModelsLab(data.fetch_result, key);
         }
