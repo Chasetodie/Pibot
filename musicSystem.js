@@ -294,7 +294,7 @@ class MusicSystem {
             return message.reply('❌ Proporciona el nombre de la canción.\nEjemplo: `>music play despacito`');
         }
 
-        const query = args.slice(2).join(' ');
+        let query = args.slice(2).join(' ');
 
         await message.reply({
             content: `🔍 Buscando... \`${query}\``,
@@ -325,29 +325,23 @@ class MusicSystem {
             this.clearPlayerTimeout(guild.id); // Limpiar timeout si existe
 
 //            const result = await this.kazagumo.search(query, { requester: author, engine: 'ytsearch' });
-            let engine = 'ytsearch';
-            const isUrl = query.startsWith('http');
+            let searchQuery = query;
+            let searchEngine = 'ytsearch';
 
-            if (isUrl) {
-                // Links directos — Kazagumo los detecta automáticamente
-                engine = null;
-            } else if (query.startsWith('scsearch:')) {
-                engine = 'scsearch';
-                query = query.replace('scsearch:', '');
+            if (query.startsWith('http')) {
+                // Link directo — no usar engine, Kazagumo lo detecta solo
+                searchEngine = null;
             } else if (query.startsWith('spsearch:')) {
-                engine = 'spsearch';
-                query = query.replace('spsearch:', '');
-            } else {
-                // Búsqueda de texto — YouTube por defecto
-                engine = 'ytsearch';
+                searchEngine = 'spsearch';
+                searchQuery = query.slice(9); // quitar "spsearch:"
             }
 
-            const searchOptions = engine 
-                ? { requester: author, engine } 
-                : { requester: author };
-
-            const result = await this.kazagumo.search(query, searchOptions);
-
+            const result = await this.kazagumo.search(
+                searchQuery,
+                searchEngine 
+                    ? { requester: author, engine: searchEngine }
+                    : { requester: author }
+            );
 
             if (!result.tracks.length) {
                 return message.reply('❌ No se encontraron resultados para tu búsqueda.');
@@ -738,7 +732,7 @@ class MusicSystem {
         const embed = new EmbedBuilder()
             .setTitle('🎵 Sistema de Música')
             .setColor('#9932CC')
-            .setDescription('Reproduce música de YouTube, Spotify y SoundCloud')
+            .setDescription('Reproduce música de YouTube y Spotify')
             .addFields(
                 {
                     name: '▶️ Reproducir',
@@ -797,16 +791,14 @@ class MusicSystem {
                 },
                 {
                     name: '📱 Plataformas soportadas',
-                    value: '🎵 YouTube\n🟢 Spotify\n🔶 SoundCloud',
+                    value: '🎵 YouTube\n🟢 Spotify',
                     inline: false
                 },
                 {
                     name: '💡 Ejemplos',
                     value: [
                         '`>m play bad guy` — Busca en YouTube',
-                        '`>m play scsearch:bad guy` — Busca en SoundCloud',
                         '`>m play https://open.spotify.com/track/...` — Link Spotify',
-                        '`>m play https://soundcloud.com/...` — Link SoundCloud',
                         '`>m play https://youtube.com/watch?v=...` — Link YouTube',
                     ].join('\n'),
                     inline: false
