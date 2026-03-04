@@ -235,7 +235,7 @@ class MusicSystem {
                     
                     case 'skip':
                     case 's':
-                        await this.skipCommand(message, guild);
+                        await this.skipCommand(message, args, guild);
                         break;
                     
                     case 'pause':
@@ -249,7 +249,7 @@ class MusicSystem {
                     
                     case 'queue':
                     case 'q':
-                        await this.queueCommand(message, guild);
+                        await this.queueCommand(message, args, guild);
                         break;
                     
                     case 'nowplaying':
@@ -409,23 +409,31 @@ class MusicSystem {
         await message.reply({ embeds: [embed] });
     }
 
-    async skipCommand(message, guild) {
+    async skipCommand(message, args, guild) {
         const player = this.kazagumo.getPlayer(guild.id);
+        if (!player) return message.reply('❌ No hay música reproduciéndose.');
 
-        if (!player) {
-            return message.reply('❌ No hay música reproduciéndose.');
-        }
+        const amount = parseInt(args[2]) || 1;
+        if (amount < 1) return message.reply('❌ La cantidad debe ser mayor a 0.');
 
-        if (player.queue.size === 0) {
-            return message.reply('❌ No hay más canciones en la cola.');
+        const totalDisponible = player.queue.size + 1;
+        if (amount > totalDisponible) {
+            return message.reply(`❌ Solo hay ${totalDisponible} canciones disponibles para saltar.`);
         }
 
         const currentTrack = player.queue.current;
+
+        // Eliminar canciones extra de la cola antes de skipear
+        for (let i = 0; i < amount - 1; i++) {
+            player.queue.splice(0, 1);
+        }
         player.skip();
 
         const embed = new EmbedBuilder()
-            .setTitle('⏭️ Canción Saltada')
-            .setDescription(`**${currentTrack.title}** ha sido saltada.`)
+            .setTitle('⏭️ Canciones Saltadas')
+            .setDescription(amount === 1
+                ? `**${currentTrack.title}** ha sido saltada.`
+                : `Se saltaron **${amount}** canciones.`)
             .setColor('#FFA500');
 
         await message.reply({ embeds: [embed] });
@@ -474,39 +482,43 @@ class MusicSystem {
         await message.reply({ embeds: [embed] });
     }
 
-    async queueCommand(message, guild) {
+    async queueCommand(message, args, guild) {
         const player = this.kazagumo.getPlayer(guild.id);
-
         if (!player || !player.queue.current) {
             return message.reply('❌ No hay música en la cola.');
         }
 
         const current = player.queue.current;
-        const queue = player.queue;
+        const songs = player.queue.slice(0, player.queue.size);
+        const totalSongs = songs.length;
+        const songsPerPage = 10;
+        const totalPages = Math.max(1, Math.ceil(totalSongs / songsPerPage));
+
+        let page = parseInt(args[2]) || 1;
+        if (page < 1) page = 1;
+        if (page > totalPages) page = totalPages;
+
+        const start = (page - 1) * songsPerPage;
+        const pageSongs = songs.slice(start, start + songsPerPage);
+
+        let description = `**🎵 Reproduciendo Ahora:**\n${current.title} (${this.formatTime(current.length)})\n\n`;
+
+        if (totalSongs === 0) {
+            description += '**📋 En Cola:** Vacía';
+        } else {
+            description += `**📋 En Cola — ${totalSongs} canciones:**\n`;
+            pageSongs.forEach((track, i) => {
+                description += `\`${start + i + 1}.\` ${track.title} (${this.formatTime(track.length)})\n`;
+            });
+        }
 
         const embed = new EmbedBuilder()
             .setTitle('📋 Cola de Reproducción')
+            .setDescription(description)
             .setColor('#0099FF')
+            .setFooter({ text: `Página ${page}/${totalPages} • >m queue <página> para navegar` })
             .setTimestamp();
 
-        let description = `**🎵 Reproduciendo Ahora:**\n${current.title}\n\n`;
-
-        if (queue.size > 0) {
-            description += '**📋 En Cola:**\n';
-            const upcoming = queue.slice(0, 10); // Mostrar solo las primeras 10
-            
-            upcoming.forEach((track, index) => {
-                description += `${index + 1}. ${track.title}\n`;
-            });
-
-            if (queue.size > 10) {
-                description += `\n... y ${queue.size - 10} más`;
-            }
-        } else {
-            description += '**📋 En Cola:** Vacía';
-        }
-
-        embed.setDescription(description);
         await message.reply({ embeds: [embed] });
     }
 
@@ -733,17 +745,84 @@ class MusicSystem {
 
     async showMusicHelp(message) {
         const embed = new EmbedBuilder()
-            .setTitle('🎵 Comandos de Música')
-            .setDescription('Lista completa de comandos de música disponibles')
+            .setTitle('🎵 Sistema de Música')
+            .setColor('#9932CC')
+            .setDescription('Reproduce música de YouTube y Spotify')
             .addFields(
-                { name: '▶️ Reproducción', value: '`>music play <canción>` - Reproduce una canción\n`>music pause` - Pausa la música\n`>music resume` - Reanuda la música\n`>music stop` - Detiene y desconecta', inline: false },
-                { name: '⏭️ Control de Cola', value: '`>music skip` - Salta la canción actual\n`>music queue` - Muestra la cola\n`>music shuffle` - Mezcla la cola\n`>music clear` - Limpia la cola', inline: false },
-                { name: '🔧 Configuración', value: '`>music volume <1-100>` - Cambia el volumen\n`>music loop [track/queue/off]` - Configura el loop\n`>music nowplaying` - Canción actual', inline: false },
-                { name: '📝 Aliases', value: '`>m`, `>musica`, `>music`\n`p` = play, `s` = skip, `q` = queue, `np` = nowplaying', inline: false },
-                { name: '⏩ Navegación', value: '`>music seek <tiempo>` - Adelantar/retroceder\nEjemplos: `>m seek 1:30`, `>m seek +30`, `>m seek -15`', inline: false },
+                {
+                    name: '▶️ Reproducir',
+                    value: '`>m play <canción/URL>`\n`>m p <canción>`',
+                    inline: true
+                },
+                {
+                    name: '⏭️ Saltar',
+                    value: '`>m skip`\n`>m s`',
+                    inline: true
+                },
+                {
+                    name: '⏸️ Pausar/Reanudar',
+                    value: '`>m pause`\n`>m resume`',
+                    inline: true
+                },
+                {
+                    name: '⏹️ Detener',
+                    value: '`>m stop`\n`>m leave`',
+                    inline: true
+                },
+                {
+                    name: '📋 Cola',
+                    value: '`>m queue`\n`>m q`',
+                    inline: true
+                },
+                {
+                    name: '🎵 Reproduciendo',
+                    value: '`>m nowplaying`\n`>m np`',
+                    inline: true
+                },
+                {
+                    name: '🔊 Volumen',
+                    value: '`>m volume <1-100>`\n`>m vol <1-100>`',
+                    inline: true
+                },
+                {
+                    name: '🔁 Loop',
+                    value: '`>m loop song` — Repite canción\n`>m loop queue` — Repite cola\n`>m loop off` — Sin loop',
+                    inline: true
+                },
+                {
+                    name: '🔀 Shuffle',
+                    value: '`>m shuffle` — Mezclar cola',
+                    inline: true
+                },
+                {
+                    name: '🗑️ Limpiar cola',
+                    value: '`>m clear` — Vaciar cola',
+                    inline: true
+                },
+                {
+                    name: '🔧 Arreglar',
+                    value: '`>m fix` — Reiniciar player',
+                    inline: true
+                },
+                {
+                    name: '📱 Plataformas soportadas',
+                    value: '🎵 YouTube\n🟢 Spotify',
+                    inline: false
+                },
+                {
+                    name: '💡 Ejemplos',
+                    value: [
+                        '`>m play bad guy` — Busca en YouTube',
+                        '`>m play https://open.spotify.com/track/...` — Link Spotify',
+                        '`>m play ` - Link Album Spotify',
+                        '`>m play ` - Link Playlist Spotify (La Playlist debe ser Pública)',
+                        '`>m play https://youtube.com/watch?v=...` — Link YouTube',
+                        '`>m play ` - Link Playlist YouTube'
+                    ].join('\n'),
+                    inline: false
+                }
             )
-            .setColor('#0099FF')
-            .setFooter({ text: 'Ejemplo: >music play despacito' })
+            .setFooter({ text: 'Debes estar en un canal de voz para usar estos comandos' })
             .setTimestamp();
 
         await message.reply({ embeds: [embed] });
