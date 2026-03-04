@@ -344,7 +344,34 @@ class MusicSystem {
 
             this.clearPlayerTimeout(guild.id); // Limpiar timeout si existe
 
-            const result = await this.kazagumo.search(query, { requester: author, engine: 'ytsearch' });
+//            const result = await this.kazagumo.search(query, { requester: author, engine: 'ytsearch' });
+            // Limpiar URLs de Spotify
+            if (query.includes('spotify.com')) {
+                query = query
+                    .replace('/intl-es/', '/')
+                    .split('?')[0];
+            }
+
+            let searchQuery = query;
+            let searchEngine = 'ytsearch';
+
+            if (searchQuery.startsWith('http')) {
+                searchEngine = null; // URLs directas — LavaSrc y plugin de YT detectan automáticamente
+            } else if (searchQuery.startsWith('spsearch:')) {
+                searchEngine = 'spsearch';
+                searchQuery = searchQuery.slice(9);
+            } else if (searchQuery.startsWith('scsearch:')) {
+                searchEngine = 'scsearch';
+                searchQuery = searchQuery.slice(9);
+            }
+
+            const result = await this.kazagumo.search(
+                searchQuery,
+                searchEngine
+                    ? { requester: author, engine: searchEngine }
+                    : { requester: author }
+            );
+
 
             if (!result.tracks.length) {
                 return message.reply('❌ No se encontraron resultados para tu búsqueda.');
@@ -364,8 +391,8 @@ class MusicSystem {
             if (result.type === 'PLAYLIST') {
                 player.queue.add(result.tracks);
                 embed.setTitle('📂 Playlist Agregada')
-                    .setDescription(`**${result.playlistName}**\n${result.tracks.length} canciones agregadas a la cola`)
-                    .setThumbnail(result.tracks[0].thumbnail || null);
+                    .setDescription(`**${result.playlistName}**\n${result.tracks.length} canciones agregadas`)
+                    .setThumbnail(result.tracks.find(t => t.thumbnail)?.thumbnail || null);
             } else {
                 const track = result.tracks[0];
                 player.queue.add(track);
