@@ -72,6 +72,9 @@ const shop = new ShopSystem(economy);
 //Crear instancia del sistema de Minijuegos
 const minigames = new MinigamesSystem(economy, shop, client);
 
+const music = new MusicSystem(client);
+client.musicSystem = music;
+
 const nsfw = new NSFWSystem();
 
 const database = new LocalDatabase();
@@ -351,10 +354,6 @@ client.once('ready', async () => {
         }
     }, 60000); // Cada minuto
     
-    const music = new MusicSystem(client);
-    client.musicSystem = music;
-    console.log('🎵 Sistema de música inicializando...');
-
     // Establecer el guild para eventos
     const guildsArray = [...client.guilds.cache.values()];
     if (guildsArray.length > 0) {

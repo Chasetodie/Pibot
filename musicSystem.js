@@ -7,9 +7,11 @@ class MusicSystem {
         this.client = client;
         this.kazagumo = null;
         this.playerTimeouts = new Map();
-        this.maxSongDuration = 7200000; // 2 horas en ms
+        this.maxSongDuration = 7200000;
         this.playThrottle = new Map();
-        this.initialize();
+        this.nodeList = [];
+        this.failedNodes = new Set();
+        this.initialize(); // ← volver a activar esto
     }
 
     initialize() {
