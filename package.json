@@ -10,9 +10,13 @@
     "node": "20.x"
   },
   "dependencies": {
+    "@discordjs/opus": "^0.10.0",
+    "@discordjs/voice": "^0.18.0",
+    "@distube/yt-dlp": "^2.0.1",
     "@supabase/supabase-js": "^2.55.0",
     "axios": "^1.13.4",
     "discord.js": "^14.14.1",
+    "distube": "^5.1.2",
     "dotenv": "^16.3.1",
     "emoji-regex": "^10.5.0",
     "express": "^4.21.2",
