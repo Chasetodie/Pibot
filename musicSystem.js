@@ -38,6 +38,10 @@ class MusicSystem {
             nodes
         );
 
+        console.log('🔍 Shoukaku instance:', !!this.kazagumo.shoukaku);
+        console.log('🔍 Shoukaku nodes type:', typeof this.kazagumo.shoukaku?.nodes);
+        console.log('🔍 Shoukaku nodes:', this.kazagumo.shoukaku?.nodes);
+
         this.client.kazagumo = this.kazagumo;
 
         // Acceder a shoukaku DESPUÉS de que kazagumo lo inicialice
@@ -65,10 +69,11 @@ class MusicSystem {
         setTimeout(() => {
             const nodes = this.kazagumo.shoukaku.nodes;
             console.log('🔍 Nodos registrados:', [...nodes.keys()]);
+            console.log('🔍 Nodos Map completo:', nodes);
             for (const [name, node] of nodes) {
-                console.log(`   ${name}: state=${node.state}, ws=${node.ws?.readyState}`);
+                console.log(`   ${name}:`, node);
             }
-        }, 5000);
+        }, 15000);
 
         this.setupEventListeners();
     }
