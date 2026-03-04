@@ -326,15 +326,27 @@ class MusicSystem {
 
 //            const result = await this.kazagumo.search(query, { requester: author, engine: 'ytsearch' });
             let engine = 'ytsearch';
-            if (query.includes('spotify.com')) engine = 'spsearch';
-            else if (query.includes('apple.com/music') || query.includes('music.apple')) engine = 'amsearch';
-            else if (query.includes('deezer.com')) engine = 'dzsearch';
-            else if (query.includes('soundcloud.com')) engine = 'scsearch';
+            const isUrl = query.startsWith('http');
 
-            const result = await this.kazagumo.search(query, { 
-                requester: author,
-                engine
-            });
+            if (isUrl) {
+                // Links directos — Kazagumo los detecta automáticamente
+                engine = null;
+            } else if (query.startsWith('scsearch:')) {
+                engine = 'scsearch';
+                query = query.replace('scsearch:', '');
+            } else if (query.startsWith('spsearch:')) {
+                engine = 'spsearch';
+                query = query.replace('spsearch:', '');
+            } else {
+                // Búsqueda de texto — YouTube por defecto
+                engine = 'ytsearch';
+            }
+
+            const searchOptions = engine 
+                ? { requester: author, engine } 
+                : { requester: author };
+
+            const result = await this.kazagumo.search(query, searchOptions);
 
 
             if (!result.tracks.length) {
