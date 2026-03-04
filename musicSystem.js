@@ -29,7 +29,7 @@ class MusicSystem {
 
         this.kazagumo = new Kazagumo(
             {
-                defaultSearchEngine: /*'ytsearch'*/'spsearch',
+                defaultSearchEngine: 'ytsearch',
                 plugins: [new Plugins.PlayerMoved(this.client)],
                 send: (guildId, payload) => {
                     const guild = this.client.guilds.cache.get(guildId);
@@ -53,6 +53,11 @@ class MusicSystem {
             this.failedNodes.add(name);
         });
 
+/*        this.kazagumo.shoukaku.on('close', (name, code, reason) => {
+            console.warn(`⚠️ Nodo ${name} cerrado. Código: ${code}`);
+            this.failedNodes.add(name);
+        });*/
+
         this.kazagumo.shoukaku.on('disconnect', async (name, count) => {
             console.warn(`⚠️ Nodo ${name} desconectado. Reconectando en 10 segundos...`);
             this.failedNodes.add(name);
@@ -66,7 +71,7 @@ class MusicSystem {
                 try {
                     const nodeConfig = this.nodeList.find(n => n.name === name);
                     if (nodeConfig) {
-                        this.kazagumo.shoukaku.addNode(nodeConfig);
+                        await this.kazagumo.shoukaku.addNode(nodeConfig);
                         console.log(`✅ Nodo ${name} reconectado!`);
                         this.failedNodes.delete(name);
                     }
@@ -199,8 +204,8 @@ class MusicSystem {
     async processCommand(message) {
         if (message.author.bot) return;
 
-        const args = message.content.split(' ');
-        const command = args[0].toLowerCase(); // Solo el comando en minúsculas
+        const args = message.content.toLowerCase().split(' ');
+        const command = args[0];
 
         // Comandos de música
         if (['>', '>m', '>musica', '>music'].includes(command)) {
@@ -309,7 +314,7 @@ class MusicSystem {
             return message.reply('❌ Proporciona el nombre de la canción.\nEjemplo: `>music play despacito`');
         }
 
-        let query = args.slice(2).join(' ');
+        const query = args.slice(2).join(' ');
 
         await message.reply({
             content: `🔍 Buscando... \`${query}\``,
@@ -339,49 +344,7 @@ class MusicSystem {
 
             this.clearPlayerTimeout(guild.id); // Limpiar timeout si existe
 
-//            const result = await this.kazagumo.search(query, { requester: author, engine: 'ytsearch' });
-            let searchQuery = query;
-            let searchEngine = 'ytsearch';
-
-            // Limpiar URLs de Spotify
-            if (searchQuery.includes('spotify.com')) {
-                searchQuery = searchQuery
-                    .replace('/intl-es/', '/')
-                    .split('?')[0];
-            }
-
-            if (searchQuery.startsWith('http')) {
-                if (searchQuery.includes('youtube.com') || searchQuery.includes('youtu.be')) {
-                    // Forzar el plugin de YouTube para links directos
-                    searchEngine = 'ytsearch';
-                    // NO cambiar el query, pasarlo directo con engine null
-                    searchEngine = null;
-                } else if (searchQuery.includes('spotify.com')) {
-                    searchEngine = null; // LavaSrc lo detecta automáticamente
-                } else {
-                    searchEngine = null;
-                }
-            } else if (searchQuery.startsWith('scsearch:')) {
-                searchEngine = 'scsearch';
-                searchQuery = searchQuery.slice(9);
-            } else if (searchQuery.startsWith('spsearch:')) {
-                searchEngine = 'spsearch';
-                searchQuery = searchQuery.slice(9);
-            }
-
-            const result = await this.kazagumo.search(
-                searchQuery,
-                searchEngine
-                    ? { requester: author, engine: searchEngine }
-                    : { requester: author }
-            );
-
-            // Limpiar URLs de Spotify
-            if (searchQuery.includes('spotify.com')) {
-                searchQuery = searchQuery
-                    .replace('/intl-es/', '/')  // quitar región
-                    .split('?')[0];             // quitar parámetros ?si=xxx
-            }
+            const result = await this.kazagumo.search(query, { requester: author, engine: 'ytsearch' });
 
             if (!result.tracks.length) {
                 return message.reply('❌ No se encontraron resultados para tu búsqueda.');
@@ -446,42 +409,25 @@ class MusicSystem {
         await message.reply({ embeds: [embed] });
     }
 
-    async skipCommand(message, args) {
-        const player = this.kazagumo.getPlayer(message.guild.id);
-        if (!player) return message.reply('❌ No hay música reproduciéndose.');
+    async skipCommand(message, guild) {
+        const player = this.kazagumo.getPlayer(guild.id);
 
-        const amount = parseInt(args[2]) || 1;
-        
-        if (amount < 1) {
-            return message.reply('❌ La cantidad debe ser mayor a 0.');
+        if (!player) {
+            return message.reply('❌ No hay música reproduciéndose.');
         }
 
-        const queueSize = [...player.queue].length;
-        if (amount > queueSize + 1) {
-            return message.reply(`❌ Solo hay ${queueSize + 1} canciones disponibles para saltar.`);
+        if (player.queue.size === 0) {
+            return message.reply('❌ No hay más canciones en la cola.');
         }
 
         const currentTrack = player.queue.current;
-
-        if (amount === 1) {
-            player.skip();
-            const embed = new EmbedBuilder()
-                .setTitle('⏭️ Canción Saltada')
-                .setDescription(`**${currentTrack.title}** ha sido saltada.`)
-                .setColor('#FFA500');
-            return message.reply({ embeds: [embed] });
-        }
-
-        // Saltar múltiples — eliminar N-1 canciones de la cola y luego skip
-        for (let i = 0; i < amount - 1; i++) {
-            player.queue.shift();
-        }
         player.skip();
 
         const embed = new EmbedBuilder()
-            .setTitle('⏭️ Canciones Saltadas')
-            .setDescription(`Se saltaron **${amount}** canciones.`)
+            .setTitle('⏭️ Canción Saltada')
+            .setDescription(`**${currentTrack.title}** ha sido saltada.`)
             .setColor('#FFA500');
+
         await message.reply({ embeds: [embed] });
     }
 
@@ -528,61 +474,40 @@ class MusicSystem {
         await message.reply({ embeds: [embed] });
     }
 
-    async queueCommand(message, args) {
-        const player = this.kazagumo.getPlayer(message.guild.id);
+    async queueCommand(message, guild) {
+        const player = this.kazagumo.getPlayer(guild.id);
+
         if (!player || !player.queue.current) {
             return message.reply('❌ No hay música en la cola.');
         }
 
         const current = player.queue.current;
-        const songs = [...player.queue];
-        const totalSongs = songs.length;
-        const songsPerPage = 10;
-        const totalPages = Math.max(1, Math.ceil(totalSongs / songsPerPage));
-        
-        // Obtener página solicitada
-        let page = parseInt(args[2]) || 1;
-        if (page < 1) page = 1;
-        if (page > totalPages) page = totalPages;
+        const queue = player.queue;
 
-        const buildEmbed = (currentPage) => {
-            const start = (currentPage - 1) * songsPerPage;
-            const end = start + songsPerPage;
-            const pageSongs = songs.slice(start, end);
+        const embed = new EmbedBuilder()
+            .setTitle('📋 Cola de Reproducción')
+            .setColor('#0099FF')
+            .setTimestamp();
 
-            const embed = new EmbedBuilder()
-                .setTitle('📋 Cola de Reproducción')
-                .setColor('#0099FF')
-                .addFields({
-                    name: '🎵 Reproduciendo ahora',
-                    value: `**${current.title}** (${this.formatTime(current.length)})`,
-                    inline: false
-                });
+        let description = `**🎵 Reproduciendo Ahora:**\n${current.title}\n\n`;
 
-            if (totalSongs === 0) {
-                embed.addFields({
-                    name: '📃 Cola',
-                    value: 'No hay canciones en la cola.',
-                    inline: false
-                });
-            } else {
-                embed.addFields({
-                    name: `📃 Cola — ${totalSongs} canciones en total`,
-                    value: pageSongs.map((s, i) => 
-                        `\`${start + i + 1}.\` **${s.title}** (${this.formatTime(s.length)})`
-                    ).join('\n'),
-                    inline: false
-                });
-            }
-
-            embed.setFooter({ 
-                text: `Página ${currentPage}/${totalPages} • Usa >m queue <página> para navegar`
+        if (queue.size > 0) {
+            description += '**📋 En Cola:**\n';
+            const upcoming = queue.slice(0, 10); // Mostrar solo las primeras 10
+            
+            upcoming.forEach((track, index) => {
+                description += `${index + 1}. ${track.title}\n`;
             });
 
-            return embed;
-        };
+            if (queue.size > 10) {
+                description += `\n... y ${queue.size - 10} más`;
+            }
+        } else {
+            description += '**📋 En Cola:** Vacía';
+        }
 
-        await message.reply({ embeds: [buildEmbed(page)] });
+        embed.setDescription(description);
+        await message.reply({ embeds: [embed] });
     }
 
     async nowPlayingCommand(message, guild) {
@@ -808,84 +733,17 @@ class MusicSystem {
 
     async showMusicHelp(message) {
         const embed = new EmbedBuilder()
-            .setTitle('🎵 Sistema de Música')
-            .setColor('#9932CC')
-            .setDescription('Reproduce música de YouTube y Spotify')
+            .setTitle('🎵 Comandos de Música')
+            .setDescription('Lista completa de comandos de música disponibles')
             .addFields(
-                {
-                    name: '▶️ Reproducir',
-                    value: '`>m play <canción/URL>`\n`>m p <canción>`',
-                    inline: true
-                },
-                {
-                    name: '⏭️ Saltar',
-                    value: '`>m skip`\n`>m s`',
-                    inline: true
-                },
-                {
-                    name: '⏸️ Pausar/Reanudar',
-                    value: '`>m pause`\n`>m resume`',
-                    inline: true
-                },
-                {
-                    name: '⏹️ Detener',
-                    value: '`>m stop`\n`>m leave`',
-                    inline: true
-                },
-                {
-                    name: '📋 Cola',
-                    value: '`>m queue`\n`>m q`',
-                    inline: true
-                },
-                {
-                    name: '🎵 Reproduciendo',
-                    value: '`>m nowplaying`\n`>m np`',
-                    inline: true
-                },
-                {
-                    name: '🔊 Volumen',
-                    value: '`>m volume <1-100>`\n`>m vol <1-100>`',
-                    inline: true
-                },
-                {
-                    name: '🔁 Loop',
-                    value: '`>m loop song` — Repite canción\n`>m loop queue` — Repite cola\n`>m loop off` — Sin loop',
-                    inline: true
-                },
-                {
-                    name: '🔀 Shuffle',
-                    value: '`>m shuffle` — Mezclar cola',
-                    inline: true
-                },
-                {
-                    name: '🗑️ Limpiar cola',
-                    value: '`>m clear` — Vaciar cola',
-                    inline: true
-                },
-                {
-                    name: '🔧 Arreglar',
-                    value: '`>m fix` — Reiniciar player',
-                    inline: true
-                },
-                {
-                    name: '📱 Plataformas soportadas',
-                    value: '🎵 YouTube\n🟢 Spotify',
-                    inline: false
-                },
-                {
-                    name: '💡 Ejemplos',
-                    value: [
-                        '`>m play bad guy` — Busca en YouTube',
-                        '`>m play https://open.spotify.com/track/...` — Link Spotify',
-                        '`>m play ` - Link Album Spotify',
-                        '`>m play ` - Link Playlist Spotify (La Playlist debe ser Pública)',
-                        '`>m play https://youtube.com/watch?v=...` — Link YouTube',
-                        '`>m play ` - Link Playlist YouTube'
-                    ].join('\n'),
-                    inline: false
-                }
+                { name: '▶️ Reproducción', value: '`>music play <canción>` - Reproduce una canción\n`>music pause` - Pausa la música\n`>music resume` - Reanuda la música\n`>music stop` - Detiene y desconecta', inline: false },
+                { name: '⏭️ Control de Cola', value: '`>music skip` - Salta la canción actual\n`>music queue` - Muestra la cola\n`>music shuffle` - Mezcla la cola\n`>music clear` - Limpia la cola', inline: false },
+                { name: '🔧 Configuración', value: '`>music volume <1-100>` - Cambia el volumen\n`>music loop [track/queue/off]` - Configura el loop\n`>music nowplaying` - Canción actual', inline: false },
+                { name: '📝 Aliases', value: '`>m`, `>musica`, `>music`\n`p` = play, `s` = skip, `q` = queue, `np` = nowplaying', inline: false },
+                { name: '⏩ Navegación', value: '`>music seek <tiempo>` - Adelantar/retroceder\nEjemplos: `>m seek 1:30`, `>m seek +30`, `>m seek -15`', inline: false },
             )
-            .setFooter({ text: 'Debes estar en un canal de voz para usar estos comandos' })
+            .setColor('#0099FF')
+            .setFooter({ text: 'Ejemplo: >music play despacito' })
             .setTimestamp();
 
         await message.reply({ embeds: [embed] });
