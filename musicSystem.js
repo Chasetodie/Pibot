@@ -368,46 +368,17 @@ class MusicSystem {
 
             // Procesar query
             let searchQuery = query;
-            let searchEngine = 'ytsearch';
+            let searchEngine = 'ytsearch'; // default para texto
 
             if (searchQuery.startsWith('http')) {
-                // Limpiar URLs de Spotify
+                // Limpiar Spotify
                 if (searchQuery.includes('spotify.com')) {
                     searchQuery = searchQuery
                         .replace('/intl-es/', '/')
                         .split('?')[0];
-                    searchEngine = null; // LavaSrc detecta Spotify automáticamente
-
-                // YouTube video directo
-                } else if (searchQuery.includes('youtube.com/watch') || searchQuery.includes('youtu.be/')) {
-                    try {
-                        let videoId = null;
-                        if (searchQuery.includes('youtube.com/watch')) {
-                            videoId = new URL(searchQuery).searchParams.get('v');
-                        } else {
-                            videoId = searchQuery.split('youtu.be/')[1]?.split('?')[0];
-                        }
-                        if (videoId) {
-                            searchQuery = `https://www.youtube.com/watch?v=${videoId}`;
-                            searchEngine = 'youtube';
-                        }
-                    } catch(e) {
-                        searchEngine = 'ytsearch';
-                    }
-
-                // YouTube playlist
-                } else if (searchQuery.includes('youtube.com/playlist')) {
-                    try {
-                        const listId = new URL(searchQuery).searchParams.get('list');
-                        if (listId) {
-                            searchQuery = `https://www.youtube.com/playlist?list=${listId}`;
-                            searchEngine = 'youtube';
-                        }
-                    } catch(e) {}
-
-                } else {
-                    searchEngine = null;
                 }
+                // Cualquier URL — dejar que Lavalink/plugins lo detecten solos
+                searchEngine = null;
 
             } else if (searchQuery.startsWith('spsearch:')) {
                 searchEngine = 'spsearch';
@@ -416,7 +387,7 @@ class MusicSystem {
                 searchEngine = 'scsearch';
                 searchQuery = searchQuery.slice(9);
             }
-            // else: texto normal → ytsearch por defecto
+            // texto normal → ytsearch por defecto ✅
 
             const result = await this.kazagumo.search(
                 searchQuery,
@@ -434,32 +405,15 @@ class MusicSystem {
                 return message.channel.send('❌ La canción es muy larga (máximo 2 horas).');
             }
 
-            if (result.type === 'PLAYLIST') {
-                console.log('🎨 Playlist info:', JSON.stringify({
-                    playlistName: result.playlistName,
-                    thumbnail: result.thumbnail,
-                    playlistInfo: result.playlistInfo,
-                    playlist: result.playlist,
-                    firstTrackThumb: result.tracks[0]?.thumbnail
-                }));
-            }
-
             // Agregar a la cola
             const embed = new EmbedBuilder().setColor('#00FF00').setTimestamp();
 
             if (result.type === 'PLAYLIST') {
                 player.queue.add(result.tracks);
 
-                // LavaSrc guarda el thumbnail en result.playlist o en el primer track
-                const playlistThumb = 
-                    result.playlistInfo?.thumbnail ||
-                    result.playlist?.thumbnail ||
-                    result.tracks.find(t => t.thumbnail)?.thumbnail ||
-                    null;
-
                 embed.setTitle('📂 Playlist Agregada')
                     .setDescription(`**${result.playlistName}**\n${result.tracks.length} canciones agregadas`)
-                    .setThumbnail(playlistThumb);
+                    .setThumbnail(result.tracks.find(t => t.thumbnail)?.thumbnail || null);
             } else {
                 const track = result.tracks[0];
                 player.queue.add(track);
