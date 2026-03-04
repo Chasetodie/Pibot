@@ -15,19 +15,19 @@ class MusicSystem {
     initialize() {
         const nodes = [
             {
-                name: 'Lavalink95',
+                name: 'MiLavalink',
                 url: '160.191.77.60:7555',
-                auth: 'someoneneedtousethisshit',  // ← la que pusiste en application.yml
+                auth: 'someoneneedtousethisshit',
                 secure: false
-            },
+            }
         ];
 
-        this.nodeList = nodes; // Guardar para reconexión
-        this.failedNodes = new Set(); // Nodos que fallaron
+        this.nodeList = nodes;
+        this.failedNodes = new Set();
 
         this.kazagumo = new Kazagumo(
             {
-                defaultSearchEngine: 'youtube',
+                defaultSearchEngine: 'ytsearch',
                 plugins: [new Plugins.PlayerMoved(this.client)],
                 send: (guildId, payload) => {
                     const guild = this.client.guilds.cache.get(guildId);
@@ -38,51 +38,39 @@ class MusicSystem {
             nodes
         );
 
-        // Dentro de initialize(), después de crear kazagumo:
-        this.client.on('raw', (packet) => {
-            if (packet.t === 'VOICE_SERVER_UPDATE' || packet.t === 'VOICE_STATE_UPDATE') {
-                console.log(`🎤 Voice packet recibido: ${packet.t}`, JSON.stringify(packet.d).slice(0, 100));
-            }
-        });
-
         this.client.kazagumo = this.kazagumo;
 
+        // Acceder a shoukaku DESPUÉS de que kazagumo lo inicialice
         this.kazagumo.shoukaku.on('ready', (name) => {
             console.log(`✅ Nodo [${name}] conectado!`);
-            this.failedNodes.delete(name); // Si reconecta, quitarlo de fallidos
+            this.failedNodes.delete(name);
         });
 
         this.kazagumo.shoukaku.on('error', (name, error) => {
             console.error(`❌ Error en nodo ${name}: ${error.message}`);
             this.failedNodes.add(name);
-            this.logNodeStatus();
         });
 
         this.kazagumo.shoukaku.on('close', (name, code, reason) => {
             console.warn(`⚠️ Nodo ${name} cerrado. Código: ${code}`);
             this.failedNodes.add(name);
-            this.logNodeStatus();
         });
 
         this.kazagumo.shoukaku.on('disconnect', (name, count) => {
-            console.warn(`⚠️ Nodo ${name} desconectado. Players afectados: ${count}`);
+            console.warn(`⚠️ Nodo ${name} desconectado.`);
             this.failedNodes.add(name);
         });
 
-        this.setupEventListeners();
-
-        // Al final de initialize(), después de setupEventListeners():
+        // Verificar nodos después de 5 segundos
         setTimeout(() => {
-            console.log('🔍 Nodos en shoukaku:', [...this.kazagumo.shoukaku.nodes.keys()]);
-            console.log('🔍 Nodos size:', this.kazagumo.shoukaku.nodes.size);
-            for (const [name, node] of this.kazagumo.shoukaku.nodes) {
-                console.log(`   Nodo ${name}:`, {
-                    state: node.state,
-                    wsState: node.ws?.readyState,
-                    url: node.url
-                });
+            const nodes = this.kazagumo.shoukaku.nodes;
+            console.log('🔍 Nodos registrados:', [...nodes.keys()]);
+            for (const [name, node] of nodes) {
+                console.log(`   ${name}: state=${node.state}, ws=${node.ws?.readyState}`);
             }
-        }, 5000); // Esperar 5 segundos al arranque
+        }, 5000);
+
+        this.setupEventListeners();
     }
 
     logNodeStatus() {

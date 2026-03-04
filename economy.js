@@ -1024,9 +1024,12 @@ class EconomySystem {
         const modifiers = await this.shop.getActiveMultipliers(userId, 'work');
         const lastWork = user.last_work || 0;
         const now = Date.now();
-        
-        // Aplicar reducción de cooldown por eventos
-        let effectiveCooldown = job.cooldown * (1 - modifiers.reduction);
+
+        // Usar el cooldown del trabajo que realmente hizo, no el que intenta usar
+        const lastJobType = user.last_job_type || jobType;
+        const lastJob = jobs[lastJobType] || job;
+
+        let effectiveCooldown = lastJob.cooldown * (1 - modifiers.reduction);
 
         for (const event of this.events.getActiveEvents()) {
             if (event.type === 'fever_time') {
@@ -1102,6 +1105,7 @@ class EconomySystem {
 
         const updateData = {
             last_work: Date.now(),
+            last_job_type: jobType,
             last_name_work: job.name, // Para mostrar en el embed el nombre del trabajo hecho
             stats: {
                 ...user.stats,
