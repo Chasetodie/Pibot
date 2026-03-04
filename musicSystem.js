@@ -154,10 +154,18 @@ class MusicSystem {
             if (channel) channel.send(`❌ Error reproduciendo **${track?.title || 'canción'}**. Saltando...`);
         });
 
+        this.kazagumo.on('playerError', (player, track, error) => {
+            console.error(`❌ playerError:`, JSON.stringify(error));
+            console.error(`   Track:`, JSON.stringify(track));
+        });
+
         this.kazagumo.on('playerException', (player, track, error) => {
             console.error(`💥 Excepción en player (${player.guildId}):`, error);
             const channel = this.client.channels.cache.get(player.textId);
-            if (channel) channel.send(`💥 Error con **${track?.title || 'canción'}**: ${error?.cause || error?.message || 'Error desconocido'}`);
+            this.kazagumo.on('playerException', (player, track, error) => {
+                console.error(`💥 Excepción en player (${player.guildId}):`, JSON.stringify(error));
+                // No enviar mensaje, kazagumo salta automáticamente a la siguiente
+            });
         });
 
         this.kazagumo.on('playerStuck', (player, track) => {
@@ -426,19 +434,31 @@ class MusicSystem {
                 return message.channel.send('❌ La canción es muy larga (máximo 2 horas).');
             }
 
+            if (result.type === 'PLAYLIST') {
+                console.log('🎨 Playlist info:', JSON.stringify({
+                    playlistName: result.playlistName,
+                    thumbnail: result.thumbnail,
+                    playlistInfo: result.playlistInfo,
+                    playlist: result.playlist,
+                    firstTrackThumb: result.tracks[0]?.thumbnail
+                }));
+            }
+
             // Agregar a la cola
             const embed = new EmbedBuilder().setColor('#00FF00').setTimestamp();
 
             if (result.type === 'PLAYLIST') {
                 player.queue.add(result.tracks);
-                
-                // Intentar obtener thumbnail de la playlist
-                const playlistThumb = result.thumbnail      // LavaSrc a veces da esto
-                    || result.tracks[0]?.thumbnail          // fallback primera canción
-                    || null;
+
+                // LavaSrc guarda el thumbnail en result.playlist o en el primer track
+                const playlistThumb = 
+                    result.playlistInfo?.thumbnail ||
+                    result.playlist?.thumbnail ||
+                    result.tracks.find(t => t.thumbnail)?.thumbnail ||
+                    null;
 
                 embed.setTitle('📂 Playlist Agregada')
-                    .setDescription(`**${result.playlistName}**\n${result.tracks.length} canciones agregadas a la cola`)
+                    .setDescription(`**${result.playlistName}**\n${result.tracks.length} canciones agregadas`)
                     .setThumbnail(playlistThumb);
             } else {
                 const track = result.tracks[0];
