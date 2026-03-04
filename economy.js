@@ -771,6 +771,27 @@ class EconomySystem {
                     'El cliente no estaba en casa'
                 ]
             },
+            'pizzero': {
+                name: '🍕 Pizzero',
+                cooldown: 1.5 * 60 * 60 * 1000, // 1 hora y media
+                codeName: 'pizzero',
+                baseReward: 250,
+                variation: 150,
+                levelRequirement: 2,
+                failChance: 0.08, // 8% de fallar
+                messages: [
+                    'Preparaste pizzas familiares sin quemarlas',
+                    'Amasaste la masa perfectamente',
+                    'Inventaste una nueva pizza especial del chef',
+                    'Trabajaste en hora pico sin errores',
+                    'Atendiste a clientes exigentes con éxito'
+                ],
+                failMessages: [
+                    'Se te quemó la pizza en el horno',
+                    'Olvidaste ponerle queso',
+                    'Confundiste un pedido vegetariano con uno de pepperoni'
+                ]
+            },
             'programmer': {
                 name: '💻 Programador',
                 cooldown: 2 * 60 * 60 * 1000, // 1 hora
