@@ -314,7 +314,7 @@ class MusicSystem {
             return message.reply('❌ Proporciona el nombre de la canción.\nEjemplo: `>music play despacito`');
         }
 
-        const query = args.slice(2).join(' ');
+        let query = args.slice(2).join(' ');
 
         await message.reply({
             content: `🔍 Buscando... \`${query}\``,
