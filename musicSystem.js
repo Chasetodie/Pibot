@@ -29,7 +29,7 @@ class MusicSystem {
 
         this.kazagumo = new Kazagumo(
             {
-                defaultSearchEngine: 'ytsearch',
+                defaultSearchEngine: /*'ytsearch'*/'spsearch',
                 plugins: [new Plugins.PlayerMoved(this.client)],
                 send: (guildId, payload) => {
                     const guild = this.client.guilds.cache.get(guildId);
@@ -324,7 +324,18 @@ class MusicSystem {
 
             this.clearPlayerTimeout(guild.id); // Limpiar timeout si existe
 
-            const result = await this.kazagumo.search(query, { requester: author, engine: 'ytsearch' });
+//            const result = await this.kazagumo.search(query, { requester: author, engine: 'ytsearch' });
+            let engine = 'ytsearch';
+            if (query.includes('spotify.com')) engine = 'spsearch';
+            else if (query.includes('apple.com/music') || query.includes('music.apple')) engine = 'amsearch';
+            else if (query.includes('deezer.com')) engine = 'dzsearch';
+            else if (query.includes('soundcloud.com')) engine = 'scsearch';
+
+            const result = await this.kazagumo.search(query, { 
+                requester: author,
+                engine
+            });
+
 
             if (!result.tracks.length) {
                 return message.reply('❌ No se encontraron resultados para tu búsqueda.');
