@@ -519,26 +519,35 @@ class MusicSystem {
 
         // ── lyrics.ovh ──
         try {
-            // Intentar directo con el query completo primero
-            const parts = query.split(' - ');
+            // Intentar con formato "artista - cancion" si tiene guión
+            const hasDash = query.includes(' - ');
             let artist, title;
-            
-            if (parts.length >= 2) {
-                // Formato "artista - cancion"
-                artist = parts[0].trim();
-                title = parts.slice(1).join(' - ').trim();
+
+            if (hasDash) {
+                [artist, ...rest] = query.split(' - ');
+                title = rest.join(' - ');
             } else {
-                // Sin guión — buscar en genius primero para obtener artista/título correctos
+                // Sin guión: pasar query completo como título, artista vacío
                 artist = query;
                 title = query;
             }
 
-            const res = await fetch(
+            // Intentar con artista - titulo
+            let lyricsRes = await fetch(
                 `https://api.lyrics.ovh/v1/${encodeURIComponent(artist)}/${encodeURIComponent(title)}`,
                 { signal: AbortSignal.timeout(8000) }
             );
-            if (res.ok) {
-                const data = await res.json();
+
+            // Si falla y no tenía guión, intentar solo con el query como titulo
+            if (!lyricsRes.ok && !hasDash) {
+                lyricsRes = await fetch(
+                    `https://api.lyrics.ovh/v1/ /${encodeURIComponent(query)}`,
+                    { signal: AbortSignal.timeout(8000) }
+                );
+            }
+
+            if (lyricsRes.ok) {
+                const data = await lyricsRes.json();
                 if (data.lyrics && data.lyrics.length > 50) {
                     lyrics = data.lyrics;
                     source = 'lyrics.ovh';
@@ -711,6 +720,8 @@ class MusicSystem {
 
     async handleSearchInteraction(interaction) {
         try {
+            await interaction.deferUpdate();
+
             const customId = interaction.customId;
             const parts = customId.split('_');
             const userId = parts[2];
@@ -720,8 +731,6 @@ class MusicSystem {
             if (interaction.user.id !== userId) {
                 return interaction.reply({ content: '❌ Este menú no es tuyo.', ephemeral: true });
             }
-
-            await interaction.deferUpdate();
 
             const session = this.searchSessions?.get(`${userId}_${guildId}`);
             if (!session) {

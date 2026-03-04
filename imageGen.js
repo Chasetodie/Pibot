@@ -15,12 +15,11 @@ class ImageGenSystem {
         this.COOLDOWN_MS = 15000;
     }
 
-    // ─── PIXAZO ───────────────────────────────────────────────────────────────
-    // Usar Flux Schnell — endpoint correcto según documentación oficial
     async generatePixazo(prompt) {
         const key = process.env.PIXAZO;
         if (!key) throw new Error('No PIXAZO key');
 
+        // Paso 1: Enviar request
         const res = await fetch('https://gateway.pixazo.ai/flux-schnell/v1/schnell/textToImage', {
             method: 'POST',
             headers: {
@@ -38,18 +37,39 @@ class ImageGenSystem {
             signal: AbortSignal.timeout(30000)
         });
 
-        // Log para debug
         const text = await res.text();
-        console.log(`Pixazo status: ${res.status} | body: ${text.slice(0, 200)}`);
-        if (!res.ok) throw new Error(`Pixazo HTTP ${res.status}: ${text.slice(0, 100)}`);
+        console.log(`Pixazo status: ${res.status} | body: ${text.slice(0, 300)}`);
+        if (!res.ok) throw new Error(`Pixazo HTTP ${res.status}`);
 
         const data = JSON.parse(text);
-        const url = data?.images?.[0]?.url;
-        if (!url) throw new Error(`Pixazo: no URL. Respuesta: ${text.slice(0, 200)}`);
-        return { url, type: 'url' };
+
+        // Respuesta directa con URL
+        if (data?.images?.[0]?.url) return { url: data.images[0].url, type: 'url' };
+
+        // Respuesta con request_id — hacer polling
+        if (data?.request_id) {
+            for (let i = 0; i < 15; i++) {
+                await new Promise(r => setTimeout(r, 3000));
+                const pollRes = await fetch('https://gateway.pixazo.ai/flux-schnell-polling/schnell/getFluxSchnellStatus', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Cache-Control': 'no-cache',
+                        'Ocp-Apim-Subscription-Key': key
+                    },
+                    body: JSON.stringify({ request_id: data.request_id })
+                });
+                const pollData = await pollRes.json();
+                console.log(`Pixazo poll ${i + 1}:`, JSON.stringify(pollData).slice(0, 200));
+                if (pollData?.images?.[0]?.url) return { url: pollData.images[0].url, type: 'url' };
+                if (pollData?.status === 'failed') throw new Error('Pixazo: generación fallida');
+            }
+            throw new Error('Pixazo: timeout en polling');
+        }
+
+        throw new Error(`Pixazo: respuesta inesperada: ${text.slice(0, 200)}`);
     }
 
-    // ─── IMAGEGPT ─────────────────────────────────────────────────────────────
     async generateImageGPT(prompt) {
         const key = process.env.IMAGEGPT;
         if (!key) throw new Error('No IMAGEGPT key');
@@ -64,15 +84,15 @@ class ImageGenSystem {
                 prompt,
                 width: 512,
                 height: 512,
-                model: 'flux-schnell',
+                model: 'flux',  // ← corregido
                 outputType: 'url'
             }),
             signal: AbortSignal.timeout(30000)
         });
 
         const text = await res.text();
-        console.log(`ImageGPT status: ${res.status} | body: ${text.slice(0, 200)}`);
-        if (!res.ok) throw new Error(`ImageGPT HTTP ${res.status}: ${text.slice(0, 100)}`);
+        console.log(`ImageGPT status: ${res.status} | body: ${text.slice(0, 300)}`);
+        if (!res.ok) throw new Error(`ImageGPT HTTP ${res.status}`);
 
         const data = JSON.parse(text);
         const url = data?.url || data?.image_url || data?.output || data?.data?.url;
