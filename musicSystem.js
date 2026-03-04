@@ -15,15 +15,9 @@ class MusicSystem {
     initialize() {
         const nodes = [
             {
-                name: 'SSL',
-                url: "lavalink.serenetia.com:443",
-                auth: "https://dsc.gg/ajidevserver",
-                secure: true
-            },
-            {
-                name: 'Non SSL',
-                url: "lavalink.serenetia.com:80",
-                auth: "https://dsc.gg/ajidevserver",
+                name: 'Lavalink95',
+                url: '160.191.77.60:7555',
+                auth: 'someoneneedtousethisshit',  // ← la que pusiste en application.yml
                 secure: false
             },
         ];
