@@ -53,13 +53,17 @@ class MusicSystem {
             this.failedNodes.add(name);
         });
 
-        this.kazagumo.shoukaku.on('close', async (name, code, reason) => {
-            console.warn(`⚠️ Nodo ${name} cerrado. Reconectando en 5 segundos...`);
+        this.kazagumo.shoukaku.on('disconnect', async (name, count) => {
+            console.warn(`⚠️ Nodo ${name} desconectado. Reconectando en 10 segundos...`);
             this.failedNodes.add(name);
             
+            // Evitar múltiples intentos simultáneos
+            if (this.reconnecting?.has(name)) return;
+            if (!this.reconnecting) this.reconnecting = new Set();
+            this.reconnecting.add(name);
+
             setTimeout(async () => {
                 try {
-                    console.log(`🔄 Intentando reconectar nodo ${name}...`);
                     const nodeConfig = this.nodeList.find(n => n.name === name);
                     if (nodeConfig) {
                         this.kazagumo.shoukaku.addNode(nodeConfig);
@@ -67,22 +71,11 @@ class MusicSystem {
                         this.failedNodes.delete(name);
                     }
                 } catch (e) {
-                    console.error(`❌ Falló reconexión de ${name}:`, e.message);
-                    // Reintentar en 30 segundos
-                    setTimeout(async () => {
-                        try {
-                            const nodeConfig = this.nodeList.find(n => n.name === name);
-                            if (nodeConfig) {
-                                this.kazagumo.shoukaku.addNode(nodeConfig);
-                                console.log(`✅ Nodo ${name} reconectado en segundo intento!`);
-                                this.failedNodes.delete(name);
-                            }
-                        } catch (e2) {
-                            console.error(`❌ Segundo intento fallido para ${name}:`, e2.message);
-                        }
-                    }, 30000);
+                    console.error(`❌ Reconexión fallida para ${name}:`, e.message);
+                } finally {
+                    this.reconnecting.delete(name);
                 }
-            }, 5000);
+            }, 10000);
         });
 
         this.kazagumo.shoukaku.on('disconnect', (name, count) => {
@@ -174,6 +167,19 @@ class MusicSystem {
             }
         });
 
+        this.kazagumo.on('addList', (queue, playlist) => {
+            const embed = new EmbedBuilder()
+                .setTitle('📂 Playlist/Album Agregado')
+                .setDescription(`**${playlist.name}**\n${playlist.songs.length} canciones agregadas`)
+                .setThumbnail(
+                    playlist.thumbnail ||           // thumbnail de la playlist
+                    playlist.songs[0]?.thumbnail || // fallback primera canción
+                    null
+                )
+                .setColor('#00FF00');
+            queue.channel?.send({ embeds: [embed] });
+        })
+
         this.kazagumo.on('playerDestroy', (player) => {
             this.clearPlayerTimeout(player.guildId);
         });
@@ -256,7 +262,7 @@ class MusicSystem {
                     
                     case 'queue':
                     case 'q':
-                        await this.queueCommand(message, guild);
+                        await this.queueCommand(message, args);
                         break;
                     
                     case 'nowplaying':
@@ -363,13 +369,26 @@ class MusicSystem {
             }
 
             if (searchQuery.startsWith('http')) {
-                if (searchQuery.includes('youtube.com') || searchQuery.includes('youtu.be')) {
-                    // Forzar el plugin de YouTube para links directos
-                    searchEngine = 'ytsearch';
-                    // NO cambiar el query, pasarlo directo con engine null
-                    searchEngine = null;
-                } else if (searchQuery.includes('spotify.com')) {
-                    searchEngine = null; // LavaSrc lo detecta automáticamente
+                if (searchQuery.includes('youtube.com/watch') || searchQuery.includes('youtu.be/')) {
+                    // Extraer video ID y pasarlo directamente al plugin
+                    let videoId = null;
+                    if (searchQuery.includes('youtube.com/watch')) {
+                        videoId = new URL(searchQuery).searchParams.get('v');
+                    } else if (searchQuery.includes('youtu.be/')) {
+                        videoId = searchQuery.split('youtu.be/')[1]?.split('?')[0];
+                    }
+                    
+                    if (videoId) {
+                        searchQuery = videoId; // El plugin de YT acepta IDs directos
+                        searchEngine = null;
+                    }
+                } else if (searchQuery.includes('youtube.com/playlist')) {
+                    // Extraer playlist ID
+                    const listId = new URL(searchQuery).searchParams.get('list');
+                    if (listId) {
+                        searchQuery = listId;
+                        searchEngine = null;
+                    }
                 } else {
                     searchEngine = null;
                 }
@@ -484,9 +503,10 @@ class MusicSystem {
             return message.reply({ embeds: [embed] });
         }
 
-        // Saltar múltiples — eliminar N-1 canciones de la cola y luego skip
+        // Saltar múltiples
+        const queue = player.queue;
         for (let i = 0; i < amount - 1; i++) {
-            player.queue.shift();
+            if (queue.size > 0) queue.shift();
         }
         player.skip();
 
