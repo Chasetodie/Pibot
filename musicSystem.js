@@ -15,12 +15,6 @@ class MusicSystem {
     initialize() {
         const nodes = [
             {
-                name: 'Reddit',
-                url: '57.128.136.143:30411',
-                auth: 'maybeiwasboring',
-                secure: false
-            },
-            {
                 name: 'SSL',
                 url: "lavalink.serenetia.com:443",
                 auth: "https://dsc.gg/ajidevserver",
