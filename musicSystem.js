@@ -17,9 +17,9 @@ class MusicSystem {
     initialize() {
         const nodes = [
             {
-                name: 'MiLavalink',
+                name: 'Lavalink95',
                 url: '160.191.77.60:7555',
-                auth: 'someoneneedtousethisshit',
+                auth: process.env.LAVAPASS,
                 secure: false
             }
         ];
@@ -39,10 +39,6 @@ class MusicSystem {
             new Connectors.DiscordJS(this.client),
             nodes
         );
-
-        console.log('🔍 Shoukaku instance:', !!this.kazagumo.shoukaku);
-        console.log('🔍 Shoukaku nodes type:', typeof this.kazagumo.shoukaku?.nodes);
-        console.log('🔍 Shoukaku nodes:', this.kazagumo.shoukaku?.nodes);
 
         this.client.kazagumo = this.kazagumo;
 
@@ -378,17 +374,6 @@ class MusicSystem {
             if (!player.playing && !player.paused) {
                 await new Promise(resolve => setTimeout(resolve, 500));
                 player.play();
-                                        // Agregar temporalmente:
-                        setTimeout(() => {
-                            console.log('🎵 Estado player:', {
-                                playing: player.playing,
-                                paused: player.paused,
-                                position: player.position,
-                                ping: player.ping,
-                                node: player.node?.name
-                            });
-                        }, 2000);
-
             }
 
             await message.channel.send({ embeds: [embed] });
