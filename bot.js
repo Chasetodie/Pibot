@@ -640,6 +640,12 @@ client.on('interactionCreate', async (interaction) => {
             }
         }
 
+        // Botones de búsqueda de música
+        if (customId.startsWith('msearch_') || customId.startsWith('mplay_') || customId.startsWith('mback_')) {
+            await client.musicSystem.handleSearchInteraction(interaction);
+            return;
+        }
+
         if (interaction.customId?.startsWith('help_')) {
             await allCommands.handleHelpInteraction(interaction);
         }

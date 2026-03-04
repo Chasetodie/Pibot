@@ -2407,25 +2407,21 @@ const commandName = command.replace('>', '');
                 new ActionRowBuilder().addComponents(
                     new ButtonBuilder().setCustomId(`help_economy_${uid}`).setLabel('💰 Economía').setStyle(ButtonStyle.Primary),
                     new ButtonBuilder().setCustomId(`help_shop_${uid}`).setLabel('🛒 Tienda').setStyle(ButtonStyle.Primary),
-                    new ButtonBuilder().setCustomId(`help_games_${uid}`).setLabel('🎮 Minijuegos').setStyle(ButtonStyle.Primary)
-                ),
-                new ActionRowBuilder().addComponents(
+                    new ButtonBuilder().setCustomId(`help_games_${uid}`).setLabel('🎮 Minijuegos').setStyle(ButtonStyle.Primary),
                     new ButtonBuilder().setCustomId(`help_betting_${uid}`).setLabel('🎲 Apuestas').setStyle(ButtonStyle.Primary),
-                    new ButtonBuilder().setCustomId(`help_trading_${uid}`).setLabel('🔄 Trading').setStyle(ButtonStyle.Primary),
-                    new ButtonBuilder().setCustomId(`help_craft_${uid}`).setLabel('⚒️ Crafteo').setStyle(ButtonStyle.Primary)
+                    new ButtonBuilder().setCustomId(`help_trading_${uid}`).setLabel('🔄 Trading').setStyle(ButtonStyle.Primary)
                 ),
                 new ActionRowBuilder().addComponents(
+                    new ButtonBuilder().setCustomId(`help_craft_${uid}`).setLabel('⚒️ Crafteo').setStyle(ButtonStyle.Primary),
                     new ButtonBuilder().setCustomId(`help_auctions_${uid}`).setLabel('🔨 Subastas').setStyle(ButtonStyle.Primary),
                     new ButtonBuilder().setCustomId(`help_progress_${uid}`).setLabel('🏆 Progreso').setStyle(ButtonStyle.Primary),
-                    new ButtonBuilder().setCustomId(`help_vip_${uid}`).setLabel('👑 VIP').setStyle(ButtonStyle.Primary)
+                    new ButtonBuilder().setCustomId(`help_vip_${uid}`).setLabel('👑 VIP').setStyle(ButtonStyle.Primary),
+                    new ButtonBuilder().setCustomId(`help_music_${uid}`).setLabel('🎵 Música').setStyle(ButtonStyle.Primary)
                 ),
                 new ActionRowBuilder().addComponents(
                     new ButtonBuilder().setCustomId(`help_nsfw_${uid}`).setLabel('🔞 NSFW').setStyle(ButtonStyle.Primary),
                     new ButtonBuilder().setCustomId(`help_events_${uid}`).setLabel(eventsEnabled ? '🎉 Eventos' : '🔴 Eventos').setStyle(eventsEnabled ? ButtonStyle.Primary : ButtonStyle.Secondary),
-                    new ButtonBuilder().setCustomId(`help_chatIA_${uid}`).setLabel('🤖 Chat IA').setStyle(ButtonStyle.Primary)
-                ),
-                new ActionRowBuilder().addComponents(
-                    new ButtonBuilder().setCustomId(`help_music_${uid}`).setLabel('🎵 Música').setStyle(ButtonStyle.Primary),
+                    new ButtonBuilder().setCustomId(`help_chatIA_${uid}`).setLabel('🤖 Chat IA').setStyle(ButtonStyle.Primary),
                     new ButtonBuilder().setCustomId(`help_imagine_${uid}`).setLabel('🎨 Imágenes IA').setStyle(ButtonStyle.Primary)
                 ),
             ];
@@ -2452,9 +2448,6 @@ const commandName = command.replace('>', '');
                     { name: '>toggleevents', value: 'Habilitar/deshabilitar TODOS los eventos', inline: true},
                     { name: '>seteventsrole @rol', value: 'Rol para pings de eventos', inline: true },
                     { name: '>eventstats', value: 'Estadísticas de eventos', inline: true },
-                    { name: '>giveitem @user item [cant]', value: 'Dar item a usuario', inline: true },
-                    { name: '>addmoney', value: '', inline: true },
-                    { name: '>addxp', value: '', inline: true },
                     { name: '>clear [cant]', value: 'Borra mensajes del canal', inline: true }
                 ]
             },
