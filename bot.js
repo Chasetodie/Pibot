@@ -19,6 +19,7 @@ const LocalDatabase = require('./database');
 const MusicSystem = require('./musicSystem.js');
 const ChatBotSystem = require('./chatBot.js');
 const GuildConfig = require('./guild-config');
+const ImageGenSystem = require('./imageGen');
 //require('./admin-panel')(app); // Pasar el servidor express existente
 const {
     AuctionSystem,
@@ -74,6 +75,8 @@ const minigames = new MinigamesSystem(economy, shop, client);
 
 const music = new MusicSystem(client);
 client.musicSystem = music;
+
+const imageGen = new ImageGenSystem();
 
 const nsfw = new NSFWSystem();
 
@@ -968,7 +971,8 @@ client.on('messageCreate', async (message) => {
                 music.processCommand(message),
                 commandHandler.processCommand(message),
                 chatbot.processCommand(message),
-                nsfw.processCommand(message)
+                nsfw.processCommand(message),
+                imageGen.processCommand(message)
             ]);
         } catch (error) {
             console.error('❌ Error comando:', error.message);

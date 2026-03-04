@@ -2389,7 +2389,9 @@ const commandName = command.replace('>', '');
                     { name: '🔄 Trading', value: 'Intercambios y subastas', inline: true },
                     { name: '⚒️ Crafteo', value: 'Recetas y fabricación', inline: true },
                     { name: '🏆 Progreso', value: 'Logros y misiones', inline: true },
-                    { name: '👑 VIP', value: 'Comandos premium', inline: true }
+                    { name: '👑 VIP', value: 'Comandos premium', inline: true },
+                    { name: '🎵 Música', value: 'Reproductor de música', inline: true },
+                    { name: '🎨 Imágenes IA', value: 'Genera imágenes con IA', inline: true },
                 );
             
             const eventsEnabled = this.guildConfig 
@@ -2421,6 +2423,10 @@ const commandName = command.replace('>', '');
                     new ButtonBuilder().setCustomId(`help_nsfw_${uid}`).setLabel('🔞 NSFW').setStyle(ButtonStyle.Primary),
                     new ButtonBuilder().setCustomId(`help_events_${uid}`).setLabel(eventsEnabled ? '🎉 Eventos' : '🔴 Eventos').setStyle(eventsEnabled ? ButtonStyle.Primary : ButtonStyle.Secondary),
                     new ButtonBuilder().setCustomId(`help_chatIA_${uid}`).setLabel('🤖 Chat IA').setStyle(ButtonStyle.Primary)
+                ),
+                new ActionRowBuilder().addComponents(
+                    new ButtonBuilder().setCustomId(`help_music_${uid}`).setLabel('🎵 Música').setStyle(ButtonStyle.Primary),
+                    new ButtonBuilder().setCustomId(`help_imagine_${uid}`).setLabel('🎨 Imágenes IA').setStyle(ButtonStyle.Primary)
                 ),
             ];
 
@@ -2571,7 +2577,23 @@ const commandName = command.replace('>', '');
                     { name: '>gifs <categoría> <cantidad>', value: 'Solo GIFs animados', inline: false },
                     { name: '>videos <categoría> <cantidad>', value: 'Solo videos MP4/WEBM', inline: false },
                 ]
-            }
+            },
+            music: {
+                title: '🎵 Sistema de Música',
+                fields: [
+                    { name: 'Ver todos los comandos', value: 'Escribe `>m help` para ver la lista completa de comandos de música', inline: false }
+                ]
+            },
+            imagine: {
+                title: '🎨 Generación de Imágenes IA',
+                fields: [
+                    { name: '>imagine <prompt>', value: 'Genera una imagen con IA a partir de tu descripción', inline: false },
+                    { name: '>img <prompt>', value: 'Alias corto de imagine', inline: false },
+                    { name: '💡 Ejemplo', value: '`>imagine un gato astronauta en la luna al estilo anime`', inline: false },
+                    { name: '⏳ Cooldown', value: '15 segundos entre imágenes', inline: false },
+                    { name: '📡 Proveedores', value: 'Pixazo → ImageGPT → ModelsLab → Cloudflare (fallback automático)', inline: false }
+                ]
+            },
         };
         
         const cat = categories[category];

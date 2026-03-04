@@ -257,6 +257,19 @@ class MusicSystem {
                         await this.nowPlayingCommand(message, guild);
                         break;
 
+                    case 'ytsearch':
+                    case 'ys':
+                        await this.searchCommand(message, args, member, channel, guild, author, 'ytsearch');
+                        break;
+                    case 'spsearch':
+                    case 'ss':
+                        await this.searchCommand(message, args, member, channel, guild, author, 'spsearch');
+                        break;
+                    case 'lyrics':
+                    case 'letra':
+                        await this.lyricsCommand(message, args);
+                        break;
+
                     case 'fix':
                     case 'restart':
                         await this.fixPlayerCommand(message, guild);
@@ -294,6 +307,338 @@ class MusicSystem {
                 await message.reply('❌ Ocurrió un error ejecutando el comando de música.');
             }
         }
+    }
+
+    // ─── SEARCH COMMAND ───────────────────────────────────────────────────────────
+    async searchCommand(message, args, member, channel, guild, author, engine) {
+        const query = args.slice(2).join(' ').trim();
+        if (!query) {
+            const prefix = engine === 'ytsearch' ? 'ytsearch' : 'spsearch';
+            return message.reply(`❌ Escribe algo para buscar.\nEjemplo: \`>m ${prefix} la lagartija\``);
+        }
+
+        const loadingMsg = await message.reply(`🔍 Buscando **${query}**...`);
+
+        try {
+            const result = await this.kazagumo.search(query, { requester: author, engine });
+
+            if (!result || !result.tracks.length) {
+                return loadingMsg.edit('❌ No se encontraron resultados.');
+            }
+
+            const tracks = result.tracks.slice(0, 7);
+            const platform = engine === 'ytsearch' ? '🎬 YouTube' : '🟢 Spotify';
+
+            const embed = new EmbedBuilder()
+                .setTitle(`${platform} — Resultados para "${query}"`)
+                .setColor(engine === 'ytsearch' ? '#FF0000' : '#1DB954')
+                .setDescription(
+                    tracks.map((t, i) =>
+                        `\`${i + 1}.\` **${t.title}**\n└ ${this.formatTime(t.length)} • ${t.author || 'Desconocido'}`
+                    ).join('\n\n')
+                )
+                .setFooter({ text: 'Selecciona una canción para ver detalles o reproducir' })
+                .setTimestamp();
+
+            // Botones de selección — máx 5 por row, así que 2 rows
+            const row1 = new ActionRowBuilder().addComponents(
+                tracks.slice(0, 4).map((_, i) =>
+                    new ButtonBuilder()
+                        .setCustomId(`msearch_${i}_${message.author.id}_${guild.id}`)
+                        .setLabel(`${i + 1}`)
+                        .setStyle(ButtonStyle.Primary)
+                )
+            );
+            const row2 = new ActionRowBuilder().addComponents(
+                tracks.slice(4).map((_, i) =>
+                    new ButtonBuilder()
+                        .setCustomId(`msearch_${i + 4}_${message.author.id}_${guild.id}`)
+                        .setLabel(`${i + 5}`)
+                        .setStyle(ButtonStyle.Primary)
+                )
+            );
+            row2.components.push(
+                new ButtonBuilder()
+                    .setCustomId(`msearch_cancel_${message.author.id}`)
+                    .setLabel('❌ Cancelar')
+                    .setStyle(ButtonStyle.Danger)
+            );
+
+            const searchMsg = await loadingMsg.edit({ content: '', embeds: [embed], components: [row1, row2] });
+
+            // Guardar tracks temporalmente para el collector
+            if (!this.searchSessions) this.searchSessions = new Map();
+            this.searchSessions.set(`${message.author.id}_${guild.id}`, {
+                tracks,
+                member,
+                channel,
+                guild,
+                author,
+                engine
+            });
+
+            // Collector de botones — 60 segundos
+            const collector = searchMsg.createMessageComponentCollector({
+                filter: i => i.user.id === message.author.id,
+                time: 60000
+            });
+
+            collector.on('collect', async interaction => {
+                await interaction.deferUpdate();
+                collector.stop();
+
+                const customId = interaction.customId;
+                if (customId.includes('cancel')) {
+                    return searchMsg.edit({ content: '❌ Búsqueda cancelada.', embeds: [], components: [] });
+                }
+
+                const index = parseInt(customId.split('_')[1]);
+                const selected = tracks[index];
+                const session = this.searchSessions.get(`${message.author.id}_${guild.id}`);
+                if (!session) return;
+
+                // Mostrar detalles de la canción con botón Reproducir
+                const detailEmbed = new EmbedBuilder()
+                    .setTitle('🎵 Detalles de la Canción')
+                    .setColor('#9932CC')
+                    .setThumbnail(selected.thumbnail || null)
+                    .addFields(
+                        { name: '🎵 Título', value: selected.title, inline: false },
+                        { name: '👤 Artista', value: selected.author || 'Desconocido', inline: true },
+                        { name: '⏱️ Duración', value: this.formatTime(selected.length), inline: true },
+                        { name: '📡 Plataforma', value: engine === 'ytsearch' ? 'YouTube' : 'Spotify', inline: true },
+                        { name: '🔗 URL', value: selected.uri || 'No disponible', inline: false }
+                    )
+                    .setTimestamp();
+
+                const playRow = new ActionRowBuilder().addComponents(
+                    new ButtonBuilder()
+                        .setCustomId(`mplay_${index}_${message.author.id}_${guild.id}`)
+                        .setLabel('▶️ Reproducir')
+                        .setStyle(ButtonStyle.Success),
+                    new ButtonBuilder()
+                        .setCustomId(`mback_${message.author.id}_${guild.id}`)
+                        .setLabel('⬅️ Volver')
+                        .setStyle(ButtonStyle.Secondary),
+                    new ButtonBuilder()
+                        .setCustomId(`msearch_cancel_${message.author.id}`)
+                        .setLabel('❌ Cerrar')
+                        .setStyle(ButtonStyle.Danger)
+                );
+
+                await searchMsg.edit({ embeds: [detailEmbed], components: [playRow] });
+
+                // Collector para botones de detalle
+                const detailCollector = searchMsg.createMessageComponentCollector({
+                    filter: i => i.user.id === message.author.id,
+                    time: 60000
+                });
+
+                detailCollector.on('collect', async interaction2 => {
+                    await interaction2.deferUpdate();
+                    detailCollector.stop();
+
+                    if (interaction2.customId.includes('cancel')) {
+                        return searchMsg.edit({ content: '❌ Cerrado.', embeds: [], components: [] });
+                    }
+
+                    if (interaction2.customId.startsWith('mback_')) {
+                        return searchMsg.edit({ content: '', embeds: [embed], components: [row1, row2] });
+                    }
+
+                    if (interaction2.customId.startsWith('mplay_')) {
+                        // Verificar que está en VC
+                        const voiceChannel = session.member.voice.channel;
+                        if (!voiceChannel) {
+                            return searchMsg.edit({
+                                content: '❌ Debes estar en un canal de voz para reproducir.',
+                                embeds: [],
+                                components: []
+                            });
+                        }
+
+                        await searchMsg.edit({ content: '▶️ Agregando a la cola...', embeds: [], components: [] });
+
+                        try {
+                            let player = this.kazagumo.getPlayer(session.guild.id);
+                            if (!player) {
+                                player = await this.kazagumo.createPlayer({
+                                    guildId: session.guild.id,
+                                    textId: session.channel.id,
+                                    voiceId: voiceChannel.id,
+                                    shardId: session.guild.shardId || 0,
+                                });
+                            }
+                            this.clearPlayerTimeout(session.guild.id);
+
+                            player.queue.add(selected);
+                            if (!player.playing && !player.paused) {
+                                await new Promise(r => setTimeout(r, 500));
+                                player.play();
+                            }
+
+                            const addedEmbed = new EmbedBuilder()
+                                .setTitle('✅ Canción Agregada')
+                                .setDescription(`**${selected.title}**\nDuración: ${this.formatTime(selected.length)}`)
+                                .setThumbnail(selected.thumbnail || null)
+                                .setColor('#00FF00');
+
+                            await searchMsg.edit({ content: '', embeds: [addedEmbed], components: [] });
+                        } catch (e) {
+                            await searchMsg.edit({ content: `❌ Error al reproducir: ${e.message}`, embeds: [], components: [] });
+                        }
+                    }
+                });
+
+                detailCollector.on('end', (_, reason) => {
+                    if (reason === 'time') searchMsg.edit({ components: [] }).catch(() => {});
+                });
+            });
+
+            collector.on('end', (_, reason) => {
+                if (reason === 'time') searchMsg.edit({ components: [] }).catch(() => {});
+                this.searchSessions?.delete(`${message.author.id}_${guild.id}`);
+            });
+
+        } catch (error) {
+            console.error('Error en searchCommand:', error);
+            await loadingMsg.edit('❌ Error al buscar. Intenta más tarde.');
+        }
+    }
+
+    // ─── LYRICS COMMAND ───────────────────────────────────────────────────────────
+    async lyricsCommand(message, args) {
+        const query = args.slice(2).join(' ').trim();
+        if (!query) {
+            return message.reply('❌ Escribe el nombre de la canción.\nEjemplo: `>m lyrics la lagartija`');
+        }
+
+        const loadingMsg = await message.reply(`🔍 Buscando letra de **${query}**...`);
+
+        // Intentar lyrics.ovh primero, luego Genius
+        let lyrics = null;
+        let source = null;
+
+        // ── lyrics.ovh ──
+        try {
+            const parts = query.split(' ');
+            const artist = parts.slice(0, Math.ceil(parts.length / 2)).join(' ');
+            const title = parts.slice(Math.ceil(parts.length / 2)).join(' ') || query;
+
+            const res = await fetch(
+                `https://api.lyrics.ovh/v1/${encodeURIComponent(artist)}/${encodeURIComponent(title)}`,
+                { signal: AbortSignal.timeout(8000) }
+            );
+            if (res.ok) {
+                const data = await res.json();
+                if (data.lyrics) {
+                    lyrics = data.lyrics;
+                    source = 'lyrics.ovh';
+                }
+            }
+        } catch (e) {
+            console.warn('lyrics.ovh falló:', e.message);
+        }
+
+        // ── Genius ──
+        if (!lyrics && process.env.GENIUS_TOKEN) {
+            try {
+                const searchRes = await fetch(
+                    `https://api.genius.com/search?q=${encodeURIComponent(query)}`,
+                    {
+                        headers: { 'Authorization': `Bearer ${process.env.GENIUS_TOKEN}` },
+                        signal: AbortSignal.timeout(8000)
+                    }
+                );
+                if (searchRes.ok) {
+                    const searchData = await searchRes.json();
+                    const hit = searchData.response?.hits?.[0]?.result;
+                    if (hit) {
+                        // Genius no da lyrics directamente por API — da la URL
+                        lyrics = `No puedo mostrar la letra completa, pero puedes verla aquí:\n${hit.url}`;
+                        source = 'Genius';
+                    }
+                }
+            } catch (e) {
+                console.warn('Genius falló:', e.message);
+            }
+        }
+
+        if (!lyrics) {
+            return loadingMsg.edit(`❌ No se encontró la letra de **${query}**.\nIntenta con el formato: \`>m lyrics artista canción\``);
+        }
+
+        // Dividir letra en chunks de 4000 chars (límite de Discord embed)
+        const chunks = [];
+        let remaining = lyrics;
+        while (remaining.length > 0) {
+            chunks.push(remaining.slice(0, 1900));
+            remaining = remaining.slice(1900);
+        }
+
+        const embed = new EmbedBuilder()
+            .setTitle(`🎵 Letra — ${query}`)
+            .setDescription(chunks[0])
+            .setColor('#9932CC')
+            .setFooter({ text: `Fuente: ${source}${chunks.length > 1 ? ` • Página 1/${chunks.length}` : ''}` })
+            .setTimestamp();
+
+        if (chunks.length === 1) {
+            return loadingMsg.edit({ content: '', embeds: [embed] });
+        }
+
+        // Paginación si la letra es larga
+        let currentPage = 0;
+        const navRow = new ActionRowBuilder().addComponents(
+            new ButtonBuilder()
+                .setCustomId(`lyrics_prev_${message.author.id}`)
+                .setLabel('⬅️')
+                .setStyle(ButtonStyle.Secondary)
+                .setDisabled(true),
+            new ButtonBuilder()
+                .setCustomId(`lyrics_next_${message.author.id}`)
+                .setLabel('➡️')
+                .setStyle(ButtonStyle.Secondary)
+                .setDisabled(chunks.length <= 1)
+        );
+
+        const lyricsMsg = await loadingMsg.edit({ content: '', embeds: [embed], components: [navRow] });
+
+        const collector = lyricsMsg.createMessageComponentCollector({
+            filter: i => i.user.id === message.author.id,
+            time: 120000
+        });
+
+        collector.on('collect', async interaction => {
+            await interaction.deferUpdate();
+            if (interaction.customId.startsWith('lyrics_next')) currentPage++;
+            if (interaction.customId.startsWith('lyrics_prev')) currentPage--;
+
+            const pageEmbed = new EmbedBuilder()
+                .setTitle(`🎵 Letra — ${query}`)
+                .setDescription(chunks[currentPage])
+                .setColor('#9932CC')
+                .setFooter({ text: `Fuente: ${source} • Página ${currentPage + 1}/${chunks.length}` });
+
+            const updatedRow = new ActionRowBuilder().addComponents(
+                new ButtonBuilder()
+                    .setCustomId(`lyrics_prev_${message.author.id}`)
+                    .setLabel('⬅️')
+                    .setStyle(ButtonStyle.Secondary)
+                    .setDisabled(currentPage === 0),
+                new ButtonBuilder()
+                    .setCustomId(`lyrics_next_${message.author.id}`)
+                    .setLabel('➡️')
+                    .setStyle(ButtonStyle.Secondary)
+                    .setDisabled(currentPage === chunks.length - 1)
+            );
+
+            await lyricsMsg.edit({ embeds: [pageEmbed], components: [updatedRow] });
+        });
+
+        collector.on('end', () => {
+            lyricsMsg.edit({ components: [] }).catch(() => {});
+        });
     }
 
     async getSpotifyPlaylistThumbnail(spotifyUrl) {
