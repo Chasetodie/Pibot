@@ -27,12 +27,6 @@ class MusicSystem {
                 secure: false
             },
             {
-                name: 'V3 (SSL)',
-                url: "lavalinkv3.serenetia.com:443",
-                auth: "https://dsc.gg/ajidevserver",
-                secure: true
-            },
-            {
                 name: 'V3 (Non SSL)',
                 url: "lavalinkv3.serenetia.com:80",
                 auth: "https://dsc.gg/ajidevserver",
@@ -56,36 +50,6 @@ class MusicSystem {
                 auth: 'maybeiwasboring',
                 secure: false
             },
-            {
-                name: 'Riffy',
-                url: "lava1.horizxon.studio:80",        
-                auth: "horizxon.studio",
-                secure: false
-            },
-            {
-                name: 'Asia Pacific (Singapore)',
-                url: "lava2.horizxon.studio:80",        
-                auth: "horizxon.studio",
-                secure: false
-            },
-            {
-                name: 'US West (N. California)',
-                url: "lava3.horizxon.studio:80",        
-                auth: "horizxon.studio",
-                secure: false
-            },
-            {
-                name: 'Europa (Frankfurt)',
-                url: "lava4.horizxon.studio:80",        
-                auth: "horizxon.studio",
-                secure: false
-            },
-            {
-                name: 'Asia Pacific (Mumbai)',
-                url: "lava4.horizxon.studio:80",        
-                auth: "horizxon.studio",
-                secure: false
-            }
         ];
 
         this.nodeList = nodes; // Guardar para reconexión
