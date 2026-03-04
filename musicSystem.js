@@ -63,24 +63,7 @@ class MusicSystem {
             this.failedNodes.add(name);
         });
 
-        // Verificar nodos después de 5 segundos
-        setTimeout(() => {
-            const nodes = this.kazagumo.shoukaku.nodes;
-            console.log('🔍 Nodos registrados:', [...nodes.keys()]);
-            console.log('🔍 Nodos Map completo:', nodes);
-            for (const [name, node] of nodes) {
-                console.log(`   ${name}:`, node);
-            }
-        }, 15000);
-
         this.setupEventListeners();
-    }
-
-    logNodeStatus() {
-        const total = this.nodeList.length;
-        const failed = this.failedNodes.size;
-        const active = total - failed;
-        console.log(`📊 Estado nodos: ${active}/${total} activos | Fallidos: ${[...this.failedNodes].join(', ') || 'ninguno'}`);
     }
 
     getBestNode() {
