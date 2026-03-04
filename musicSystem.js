@@ -15,17 +15,77 @@ class MusicSystem {
     initialize() {
         const nodes = [
             {
-                name: 'Serenetia-NoSSL',
-                url: 'lavalink.serenetia.com:80',
-                auth: 'https://dsc.gg/ajidevserver',
+                name: 'V4 (SSL)',
+                url: "lavalinkv4.serenetia.com:443",
+                auth: "https://dsc.gg/ajidevserver",
+                secure: true
+            },
+            {
+                name: 'V4 (Non SSL)',
+                url: "lavalinkv4.serenetia.com:80",
+                auth: "https://dsc.gg/ajidevserver",
                 secure: false
             },
             {
-                name: 'Salee-Plugin',
-                url: 'lavalink.jirayu.net:443',
-                auth: 'youshallnotpass',
+                name: 'V3 (SSL)',
+                url: "lavalinkv3.serenetia.com:443",
+                auth: "https://dsc.gg/ajidevserver",
                 secure: true
             },
+            {
+                name: 'V3 (Non SSL)',
+                url: "lavalinkv3.serenetia.com:80",
+                auth: "https://dsc.gg/ajidevserver",
+                secure: false
+            },
+            {
+                name: 'SSL',
+                url: "lavalink.serenetia.com:443",
+                auth: "https://dsc.gg/ajidevserver",
+                secure: true
+            },
+            {
+                name: 'Non SSL',
+                url: "lavalink.serenetia.com:80",
+                auth: "https://dsc.gg/ajidevserver",
+                secure: false
+            },
+            {
+                name: 'Reddit',
+                url: '57.128.136.143:30411',
+                auth: 'maybeiwasboring',
+                secure: false
+            },
+            {
+                name: 'Riffy',
+                url: "lava1.horizxon.studio:80",        
+                auth: "horizxon.studio",
+                secure: false
+            },
+            {
+                name: 'Asia Pacific (Singapore)',
+                url: "lava2.horizxon.studio:80",        
+                auth: "horizxon.studio",
+                secure: false
+            },
+            {
+                name: 'US West (N. California)',
+                url: "lava3.horizxon.studio:80",        
+                auth: "horizxon.studio",
+                secure: false
+            },
+            {
+                name: 'Europa (Frankfurt)',
+                url: "lava4.horizxon.studio:80",        
+                auth: "horizxon.studio",
+                secure: false
+            },
+            {
+                name: 'Asia Pacific (Mumbai)',
+                url: "lava4.horizxon.studio:80",        
+                auth: "horizxon.studio",
+                secure: false
+            }
         ];
 
         this.nodeList = nodes; // Guardar para reconexión
