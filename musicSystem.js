@@ -326,7 +326,6 @@ class MusicSystem {
     }
 
     async playCommand(message, args, member, channel, guild, author) {
-        // Throttle
         const lastPlay = this.playThrottle.get(guild.id) || 0;
         if (Date.now() - lastPlay < 2000) {
             return message.reply('⏳ Espera un momento antes de agregar más canciones.');
@@ -346,7 +345,6 @@ class MusicSystem {
         await message.reply({ content: `🔍 Buscando... \`${query}\`` });
 
         try {
-            // Crear player si no existe
             let player = this.kazagumo.getPlayer(guild.id);
             if (!player) {
                 let bestNode = this.getBestNode();
@@ -366,19 +364,18 @@ class MusicSystem {
             }
             this.clearPlayerTimeout(guild.id);
 
-            // Procesar query
+            // Detectar tipo de búsqueda
             let searchQuery = query;
-            let searchEngine = 'ytsearch'; // default para texto
+            let searchEngine = 'ytsearch';
 
             if (searchQuery.startsWith('http')) {
-                // Limpiar Spotify
+                // Limpiar URLs de Spotify
                 if (searchQuery.includes('spotify.com')) {
                     searchQuery = searchQuery
                         .replace('/intl-es/', '/')
                         .split('?')[0];
                 }
-                // Cualquier URL — dejar que Lavalink/plugins lo detecten solos
-                searchEngine = null;
+                searchEngine = null; // URLs directas, dejar que Lavalink detecte
 
             } else if (searchQuery.startsWith('spsearch:')) {
                 searchEngine = 'spsearch';
@@ -387,7 +384,6 @@ class MusicSystem {
                 searchEngine = 'scsearch';
                 searchQuery = searchQuery.slice(9);
             }
-            // texto normal → ytsearch por defecto ✅
 
             const result = await this.kazagumo.search(
                 searchQuery,
@@ -400,17 +396,14 @@ class MusicSystem {
                 return message.channel.send('❌ No se encontraron resultados.');
             }
 
-            // Verificar duración solo para canciones individuales
             if (result.type !== 'PLAYLIST' && result.tracks[0].length > this.maxSongDuration) {
                 return message.channel.send('❌ La canción es muy larga (máximo 2 horas).');
             }
 
-            // Agregar a la cola
             const embed = new EmbedBuilder().setColor('#00FF00').setTimestamp();
 
             if (result.type === 'PLAYLIST') {
                 player.queue.add(result.tracks);
-
                 embed.setTitle('📂 Playlist Agregada')
                     .setDescription(`**${result.playlistName}**\n${result.tracks.length} canciones agregadas`)
                     .setThumbnail(result.tracks.find(t => t.thumbnail)?.thumbnail || null);
