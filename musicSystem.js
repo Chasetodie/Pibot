@@ -53,17 +53,13 @@ class MusicSystem {
             this.failedNodes.add(name);
         });
 
-        this.kazagumo.shoukaku.on('disconnect', async (name, count) => {
-            console.warn(`⚠️ Nodo ${name} desconectado. Reconectando en 10 segundos...`);
+        this.kazagumo.shoukaku.on('close', async (name, code, reason) => {
+            console.warn(`⚠️ Nodo ${name} cerrado. Reconectando en 5 segundos...`);
             this.failedNodes.add(name);
             
-            // Evitar múltiples intentos simultáneos
-            if (this.reconnecting?.has(name)) return;
-            if (!this.reconnecting) this.reconnecting = new Set();
-            this.reconnecting.add(name);
-
             setTimeout(async () => {
                 try {
+                    console.log(`🔄 Intentando reconectar nodo ${name}...`);
                     const nodeConfig = this.nodeList.find(n => n.name === name);
                     if (nodeConfig) {
                         this.kazagumo.shoukaku.addNode(nodeConfig);
@@ -71,11 +67,22 @@ class MusicSystem {
                         this.failedNodes.delete(name);
                     }
                 } catch (e) {
-                    console.error(`❌ Reconexión fallida para ${name}:`, e.message);
-                } finally {
-                    this.reconnecting.delete(name);
+                    console.error(`❌ Falló reconexión de ${name}:`, e.message);
+                    // Reintentar en 30 segundos
+                    setTimeout(async () => {
+                        try {
+                            const nodeConfig = this.nodeList.find(n => n.name === name);
+                            if (nodeConfig) {
+                                this.kazagumo.shoukaku.addNode(nodeConfig);
+                                console.log(`✅ Nodo ${name} reconectado en segundo intento!`);
+                                this.failedNodes.delete(name);
+                            }
+                        } catch (e2) {
+                            console.error(`❌ Segundo intento fallido para ${name}:`, e2.message);
+                        }
+                    }, 30000);
                 }
-            }, 10000);
+            }, 5000);
         });
 
         this.kazagumo.shoukaku.on('disconnect', (name, count) => {
@@ -122,92 +129,63 @@ class MusicSystem {
                 .setColor('#00FF00')
                 .setTimestamp();
 
-            const channel = this.client.channels.cache.get(player.textId);
-            if (channel) channel.send({ embeds: [embed] });
-        });
-
-        this.kazagumo.on('playerEnd', (player) => {
-            if (player.queue.size === 0) {
+            if (player.textId) {
                 const channel = this.client.channels.cache.get(player.textId);
-                if (channel) {
-                    const embed = new EmbedBuilder()
-                        .setTitle('✅ Cola Terminada')
-                        .setDescription('Se han reproducido todas las canciones.')
-                        .setColor('#00FF00')
-                        .setFooter({ text: 'El bot se desconectará en 5 minutos si no hay más música.' });
-                    channel.send({ embeds: [embed] });
-                }
-
-                this.setPlayerTimeout(player.guildId, () => {
-                    if (player.queue.size === 0) {
-                        player.destroy();
-                        const channel = this.client.channels.cache.get(player.textId);
-                        if (channel) channel.send('⏹️ Desconectado por inactividad.');
-                    }
-                }, 300000);
+                if (channel) channel.send({ embeds: [embed] });
             }
         });
 
-        this.kazagumo.on('playerError', (player, track, error) => {
-            console.error(`❌ Error en player (${player.guildId}): ${error?.message || error}`);
-            const channel = this.client.channels.cache.get(player.textId);
-            if (channel) channel.send(`❌ Error reproduciendo **${track?.title || 'canción'}**. Saltando...`);
-        });
-
-        this.kazagumo.on('playerError', (player, track, error) => {
-            console.error(`❌ playerError:`, JSON.stringify(error));
-            console.error(`   Track:`, JSON.stringify(track));
-        });
-
-        this.kazagumo.on('playerException', (player, track, error) => {
-            console.error(`💥 Excepción en player (${player.guildId}):`, error);
-            const channel = this.client.channels.cache.get(player.textId);
-            this.kazagumo.on('playerException', (player, track, error) => {
-                console.error(`💥 Excepción en player (${player.guildId}):`, JSON.stringify(error));
-                // No enviar mensaje, kazagumo salta automáticamente a la siguiente
-            });
-        });
-
-        this.kazagumo.on('playerStuck', (player, track) => {
-            console.warn(`⚠️ Player atascado: ${track?.title}`);
-            player.skip();
+        this.kazagumo.on('playerEnd', (player) => {
+            console.log(`🎵 Canción terminada en ${player.guildId}`);
+            
+            if (player.queue.size > 0) {
+                setTimeout(() => {
+                    if (player.queue.size > 0 && !player.playing) {
+                        player.play();
+                    }
+                }, 1000);
+            } else {
+                // AGREGAR MENSAJE AQUÍ:
+                if (player.textId) {
+                    const channel = this.client.channels.cache.get(player.textId);
+                    if (channel) {
+                        const embed = new EmbedBuilder()
+                            .setTitle('✅ Cola Terminada')
+                            .setDescription('Se han reproducido todas las canciones de la cola.')
+                            .setColor('#00FF00')
+                            .setFooter({ text: 'El bot se desconectará en 5 minutos si no hay más música.' });
+                        
+                        channel.send({ embeds: [embed] });
+                    }
+                }
+                
+                // Auto-disconnect después de 5 minutos
+                this.setPlayerTimeout(player.guildId, () => {
+                    if (player.queue.size === 0) {
+                        player.destroy();
+                        if (player.textId) {
+                            const channel = this.client.channels.cache.get(player.textId);
+                            if (channel) {
+                                channel.send('⏹️ Desconectado por inactividad.');
+                            }
+                        }
+                    }
+                }, 300000);
+            }
         });
 
         this.kazagumo.on('playerDestroy', (player) => {
             this.clearPlayerTimeout(player.guildId);
         });
 
-        this.kazagumo.on('playerMoved', (player, oldChannel, newChannel) => {
-            if (!newChannel) {
-                player.destroy();
-            } else {
-                player.pause(false);
-            }
+        // AGREGAR ESTO:
+        this.kazagumo.on('playerResumed', (player) => {
+            console.log(`🔄 Player resumido en ${player.guildId}`);
         });
-
-        // Reconexión automática
-        this.kazagumo.shoukaku.on('disconnect', async (name) => {
-            console.warn(`⚠️ Nodo ${name} desconectado. Reconectando en 10s...`);
-            this.failedNodes.add(name);
-
-            if (!this.reconnecting) this.reconnecting = new Set();
-            if (this.reconnecting.has(name)) return;
-            this.reconnecting.add(name);
-
-            setTimeout(async () => {
-                try {
-                    const nodeConfig = this.nodeList.find(n => n.name === name);
-                    if (nodeConfig) {
-                        this.kazagumo.shoukaku.addNode(nodeConfig);
-                        console.log(`✅ Nodo ${name} reconectado!`);
-                        this.failedNodes.delete(name);
-                    }
-                } catch (e) {
-                    console.error(`❌ Reconexión fallida: ${e.message}`);
-                } finally {
-                    this.reconnecting.delete(name);
-                }
-            }, 10000);
+        
+        this.kazagumo.on('playerMoved', (player, oldChannel, newChannel) => {
+            console.log(`🔄 Bot movido de canal`);
+            player.pause(false); // Forzar resume
         });
     }
 
@@ -278,7 +256,7 @@ class MusicSystem {
                     
                     case 'queue':
                     case 'q':
-                        await this.queueCommand(message, args);
+                        await this.queueCommand(message, guild);
                         break;
                     
                     case 'nowplaying':
@@ -326,35 +304,43 @@ class MusicSystem {
     }
 
     async playCommand(message, args, member, channel, guild, author) {
+        // AGREGAR THROTTLE:
         const lastPlay = this.playThrottle.get(guild.id) || 0;
-        if (Date.now() - lastPlay < 2000) {
+        if (Date.now() - lastPlay < 2000) { // 2 segundos entre plays
             return message.reply('⏳ Espera un momento antes de agregar más canciones.');
         }
         this.playThrottle.set(guild.id, Date.now());
 
         const voiceChannel = member.voice.channel;
+
         if (!voiceChannel) {
-            return message.reply('❌ Debes estar en un canal de voz.');
+            return message.reply('❌ Debes estar en un canal de voz para usar este comando.');
         }
 
         if (!args[2]) {
-            return message.reply('❌ Proporciona el nombre o URL.\nEjemplo: `>m play despacito`');
+            return message.reply('❌ Proporciona el nombre de la canción.\nEjemplo: `>music play despacito`');
         }
 
         let query = args.slice(2).join(' ');
-        await message.reply({ content: `🔍 Buscando... \`${query}\`` });
+
+        await message.reply({
+            content: `🔍 Buscando... \`${query}\``,
+        });
 
         try {
             let player = this.kazagumo.getPlayer(guild.id);
+
             if (!player) {
                 let bestNode = this.getBestNode();
                 if (!bestNode) {
-                    await message.channel.send('⏳ Conectando al servidor de música...');
+                    await message.reply('⏳ Conectando al servidor de música, espera un momento...');
                     const connected = await this.waitForNode(10000);
                     if (!connected) {
-                        return message.channel.send('❌ No se pudo conectar. Intenta más tarde.');
+                        return message.channel.send('❌ No se pudo conectar a ningún servidor de música. Intenta más tarde.');
                     }
+                    bestNode = this.getBestNode();
                 }
+                
                 player = await this.kazagumo.createPlayer({
                     guildId: guild.id,
                     textId: channel.id,
@@ -362,26 +348,36 @@ class MusicSystem {
                     shardId: guild.shardId || 0,
                 });
             }
-            this.clearPlayerTimeout(guild.id);
 
-            // Detectar tipo de búsqueda
+            this.clearPlayerTimeout(guild.id); // Limpiar timeout si existe
+
+//            const result = await this.kazagumo.search(query, { requester: author, engine: 'ytsearch' });
             let searchQuery = query;
             let searchEngine = 'ytsearch';
 
-            if (searchQuery.startsWith('http')) {
-                // Limpiar URLs de Spotify
-                if (searchQuery.includes('spotify.com')) {
-                    searchQuery = searchQuery
-                        .replace('/intl-es/', '/')
-                        .split('?')[0];
-                }
-                searchEngine = null; // URLs directas, dejar que Lavalink detecte
+            // Limpiar URLs de Spotify
+            if (searchQuery.includes('spotify.com')) {
+                searchQuery = searchQuery
+                    .replace('/intl-es/', '/')
+                    .split('?')[0];
+            }
 
-            } else if (searchQuery.startsWith('spsearch:')) {
-                searchEngine = 'spsearch';
-                searchQuery = searchQuery.slice(9);
+            if (searchQuery.startsWith('http')) {
+                if (searchQuery.includes('youtube.com') || searchQuery.includes('youtu.be')) {
+                    // Forzar el plugin de YouTube para links directos
+                    searchEngine = 'ytsearch';
+                    // NO cambiar el query, pasarlo directo con engine null
+                    searchEngine = null;
+                } else if (searchQuery.includes('spotify.com')) {
+                    searchEngine = null; // LavaSrc lo detecta automáticamente
+                } else {
+                    searchEngine = null;
+                }
             } else if (searchQuery.startsWith('scsearch:')) {
                 searchEngine = 'scsearch';
+                searchQuery = searchQuery.slice(9);
+            } else if (searchQuery.startsWith('spsearch:')) {
+                searchEngine = 'spsearch';
                 searchQuery = searchQuery.slice(9);
             }
 
@@ -392,25 +388,37 @@ class MusicSystem {
                     : { requester: author }
             );
 
-            if (!result || !result.tracks.length) {
-                return message.channel.send('❌ No se encontraron resultados.');
+            // Limpiar URLs de Spotify
+            if (searchQuery.includes('spotify.com')) {
+                searchQuery = searchQuery
+                    .replace('/intl-es/', '/')  // quitar región
+                    .split('?')[0];             // quitar parámetros ?si=xxx
             }
 
-            if (result.type !== 'PLAYLIST' && result.tracks[0].length > this.maxSongDuration) {
-                return message.channel.send('❌ La canción es muy larga (máximo 2 horas).');
+            if (!result.tracks.length) {
+                return message.reply('❌ No se encontraron resultados para tu búsqueda.');
             }
 
-            const embed = new EmbedBuilder().setColor('#00FF00').setTimestamp();
+            // Antes de player.play():
+            const track = result.tracks[0];
+            if (track.length > this.maxSongDuration) {
+                return message.reply('❌ La canción es muy larga (máximo 2 horas).');
+            }
+
+
+            const embed = new EmbedBuilder()
+                .setColor('#00FF00')
+                .setTimestamp();
 
             if (result.type === 'PLAYLIST') {
                 player.queue.add(result.tracks);
                 embed.setTitle('📂 Playlist Agregada')
-                    .setDescription(`**${result.playlistName}**\n${result.tracks.length} canciones agregadas`)
-                    .setThumbnail(result.tracks.find(t => t.thumbnail)?.thumbnail || null);
+                    .setDescription(`**${result.playlistName}**\n${result.tracks.length} canciones agregadas a la cola`)
+                    .setThumbnail(result.tracks[0].thumbnail || null);
             } else {
                 const track = result.tracks[0];
                 player.queue.add(track);
-                embed.setTitle('🎵 Canción Agregada')
+                embed.setTitle('🎵 Canción Agregada a la Cola')
                     .setDescription(`**${track.title}**\nDuración: ${this.formatTime(track.length)}`)
                     .setThumbnail(track.thumbnail || null);
             }
@@ -421,13 +429,14 @@ class MusicSystem {
             }
 
             await message.channel.send({ embeds: [embed] });
-
         } catch (error) {
             console.error('Error en play command:', error);
+            
             if (error.status === 429) {
-                return message.channel.send('⏳ Servidor sobrecargado. Intenta en unos segundos.');
+                return message.reply('⏳ El servidor de música está sobrecargado. Intenta en unos segundos o usa `>m fix` para cambiar de nodo.');
             }
-            await message.channel.send('❌ Ocurrió un error al reproducir.');
+            
+            await message.reply('❌ Ocurrió un error al reproducir la música.');
         }
     }
 
@@ -475,13 +484,9 @@ class MusicSystem {
             return message.reply({ embeds: [embed] });
         }
 
-        // Saltar múltiples
-        const queue = player.queue;
-        console.log('Queue methods:', Object.getOwnPropertyNames(Object.getPrototypeOf(queue)));
-        console.log('Queue size:', queue.size);
-        
+        // Saltar múltiples — eliminar N-1 canciones de la cola y luego skip
         for (let i = 0; i < amount - 1; i++) {
-            if (queue.size > 0) queue.shift();
+            player.queue.shift();
         }
         player.skip();
 
