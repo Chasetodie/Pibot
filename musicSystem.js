@@ -29,7 +29,7 @@ class MusicSystem {
 
         this.kazagumo = new Kazagumo(
             {
-                defaultSearchEngine: /*'ytsearch'*/'spsearch',
+                defaultSearchEngine: 'ytsearch',
                 plugins: [new Plugins.PlayerMoved(this.client)],
                 send: (guildId, payload) => {
                     const guild = this.client.guilds.cache.get(guildId);
@@ -136,39 +136,25 @@ class MusicSystem {
         });
 
         this.kazagumo.on('playerEnd', (player) => {
-            console.log(`🎵 Canción terminada en ${player.guildId}`);
-            
-            if (player.queue.size > 0) {
-                setTimeout(() => {
-                    if (player.queue.size > 0 && !player.playing) {
-                        player.play();
-                    }
-                }, 1000);
-            } else {
-                // AGREGAR MENSAJE AQUÍ:
+            // Kazagumo maneja la cola automáticamente, solo manejar cuando termina todo
+            if (player.queue.size === 0 && !player.queue.current) {
                 if (player.textId) {
                     const channel = this.client.channels.cache.get(player.textId);
                     if (channel) {
                         const embed = new EmbedBuilder()
                             .setTitle('✅ Cola Terminada')
-                            .setDescription('Se han reproducido todas las canciones de la cola.')
+                            .setDescription('Se han reproducido todas las canciones.')
                             .setColor('#00FF00')
                             .setFooter({ text: 'El bot se desconectará en 5 minutos si no hay más música.' });
-                        
                         channel.send({ embeds: [embed] });
                     }
                 }
-                
-                // Auto-disconnect después de 5 minutos
+
                 this.setPlayerTimeout(player.guildId, () => {
                     if (player.queue.size === 0) {
                         player.destroy();
-                        if (player.textId) {
-                            const channel = this.client.channels.cache.get(player.textId);
-                            if (channel) {
-                                channel.send('⏹️ Desconectado por inactividad.');
-                            }
-                        }
+                        const channel = this.client.channels.cache.get(player.textId);
+                        if (channel) channel.send('⏹️ Desconectado por inactividad.');
                     }
                 }, 300000);
             }
