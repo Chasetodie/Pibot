@@ -355,20 +355,45 @@ class MusicSystem {
             let searchQuery = query;
             let searchEngine = 'ytsearch';
 
-            if (query.startsWith('http')) {
-                // Link directo — no usar engine, Kazagumo lo detecta solo
-                searchEngine = null;
-            } else if (query.startsWith('spsearch:')) {
+            // Limpiar URLs de Spotify
+            if (searchQuery.includes('spotify.com')) {
+                searchQuery = searchQuery
+                    .replace('/intl-es/', '/')
+                    .split('?')[0];
+            }
+
+            if (searchQuery.startsWith('http')) {
+                if (searchQuery.includes('youtube.com') || searchQuery.includes('youtu.be')) {
+                    // Forzar el plugin de YouTube para links directos
+                    searchEngine = 'ytsearch';
+                    // NO cambiar el query, pasarlo directo con engine null
+                    searchEngine = null;
+                } else if (searchQuery.includes('spotify.com')) {
+                    searchEngine = null; // LavaSrc lo detecta automáticamente
+                } else {
+                    searchEngine = null;
+                }
+            } else if (searchQuery.startsWith('scsearch:')) {
+                searchEngine = 'scsearch';
+                searchQuery = searchQuery.slice(9);
+            } else if (searchQuery.startsWith('spsearch:')) {
                 searchEngine = 'spsearch';
-                searchQuery = query.slice(9); // quitar "spsearch:"
+                searchQuery = searchQuery.slice(9);
             }
 
             const result = await this.kazagumo.search(
                 searchQuery,
-                searchEngine 
+                searchEngine
                     ? { requester: author, engine: searchEngine }
                     : { requester: author }
             );
+
+            // Limpiar URLs de Spotify
+            if (searchQuery.includes('spotify.com')) {
+                searchQuery = searchQuery
+                    .replace('/intl-es/', '/')  // quitar región
+                    .split('?')[0];             // quitar parámetros ?si=xxx
+            }
 
             if (!result.tracks.length) {
                 return message.reply('❌ No se encontraron resultados para tu búsqueda.');
@@ -433,25 +458,42 @@ class MusicSystem {
         await message.reply({ embeds: [embed] });
     }
 
-    async skipCommand(message, guild) {
-        const player = this.kazagumo.getPlayer(guild.id);
+    async skipCommand(message, args) {
+        const player = this.kazagumo.getPlayer(message.guild.id);
+        if (!player) return message.reply('❌ No hay música reproduciéndose.');
 
-        if (!player) {
-            return message.reply('❌ No hay música reproduciéndose.');
+        const amount = parseInt(args[2]) || 1;
+        
+        if (amount < 1) {
+            return message.reply('❌ La cantidad debe ser mayor a 0.');
         }
 
-        if (player.queue.size === 0) {
-            return message.reply('❌ No hay más canciones en la cola.');
+        const queueSize = [...player.queue].length;
+        if (amount > queueSize + 1) {
+            return message.reply(`❌ Solo hay ${queueSize + 1} canciones disponibles para saltar.`);
         }
 
         const currentTrack = player.queue.current;
+
+        if (amount === 1) {
+            player.skip();
+            const embed = new EmbedBuilder()
+                .setTitle('⏭️ Canción Saltada')
+                .setDescription(`**${currentTrack.title}** ha sido saltada.`)
+                .setColor('#FFA500');
+            return message.reply({ embeds: [embed] });
+        }
+
+        // Saltar múltiples — eliminar N-1 canciones de la cola y luego skip
+        for (let i = 0; i < amount - 1; i++) {
+            player.queue.shift();
+        }
         player.skip();
 
         const embed = new EmbedBuilder()
-            .setTitle('⏭️ Canción Saltada')
-            .setDescription(`**${currentTrack.title}** ha sido saltada.`)
+            .setTitle('⏭️ Canciones Saltadas')
+            .setDescription(`Se saltaron **${amount}** canciones.`)
             .setColor('#FFA500');
-
         await message.reply({ embeds: [embed] });
     }
 
@@ -498,40 +540,61 @@ class MusicSystem {
         await message.reply({ embeds: [embed] });
     }
 
-    async queueCommand(message, guild) {
-        const player = this.kazagumo.getPlayer(guild.id);
-
+    async queueCommand(message, args) {
+        const player = this.kazagumo.getPlayer(message.guild.id);
         if (!player || !player.queue.current) {
             return message.reply('❌ No hay música en la cola.');
         }
 
         const current = player.queue.current;
-        const queue = player.queue;
+        const songs = [...player.queue];
+        const totalSongs = songs.length;
+        const songsPerPage = 10;
+        const totalPages = Math.max(1, Math.ceil(totalSongs / songsPerPage));
+        
+        // Obtener página solicitada
+        let page = parseInt(args[2]) || 1;
+        if (page < 1) page = 1;
+        if (page > totalPages) page = totalPages;
 
-        const embed = new EmbedBuilder()
-            .setTitle('📋 Cola de Reproducción')
-            .setColor('#0099FF')
-            .setTimestamp();
+        const buildEmbed = (currentPage) => {
+            const start = (currentPage - 1) * songsPerPage;
+            const end = start + songsPerPage;
+            const pageSongs = songs.slice(start, end);
 
-        let description = `**🎵 Reproduciendo Ahora:**\n${current.title}\n\n`;
+            const embed = new EmbedBuilder()
+                .setTitle('📋 Cola de Reproducción')
+                .setColor('#0099FF')
+                .addFields({
+                    name: '🎵 Reproduciendo ahora',
+                    value: `**${current.title}** (${this.formatTime(current.length)})`,
+                    inline: false
+                });
 
-        if (queue.size > 0) {
-            description += '**📋 En Cola:**\n';
-            const upcoming = queue.slice(0, 10); // Mostrar solo las primeras 10
-            
-            upcoming.forEach((track, index) => {
-                description += `${index + 1}. ${track.title}\n`;
+            if (totalSongs === 0) {
+                embed.addFields({
+                    name: '📃 Cola',
+                    value: 'No hay canciones en la cola.',
+                    inline: false
+                });
+            } else {
+                embed.addFields({
+                    name: `📃 Cola — ${totalSongs} canciones en total`,
+                    value: pageSongs.map((s, i) => 
+                        `\`${start + i + 1}.\` **${s.title}** (${this.formatTime(s.length)})`
+                    ).join('\n'),
+                    inline: false
+                });
+            }
+
+            embed.setFooter({ 
+                text: `Página ${currentPage}/${totalPages} • Usa >m queue <página> para navegar`
             });
 
-            if (queue.size > 10) {
-                description += `\n... y ${queue.size - 10} más`;
-            }
-        } else {
-            description += '**📋 En Cola:** Vacía';
-        }
+            return embed;
+        };
 
-        embed.setDescription(description);
-        await message.reply({ embeds: [embed] });
+        await message.reply({ embeds: [buildEmbed(page)] });
     }
 
     async nowPlayingCommand(message, guild) {
@@ -826,7 +889,10 @@ class MusicSystem {
                     value: [
                         '`>m play bad guy` — Busca en YouTube',
                         '`>m play https://open.spotify.com/track/...` — Link Spotify',
+                        '`>m play ` - Link Album Spotify',
+                        '`>m play ` - Link Playlist Spotify (La Playlist debe ser Pública)',
                         '`>m play https://youtube.com/watch?v=...` — Link YouTube',
+                        '`>m play ` - Link Playlist YouTube'
                     ].join('\n'),
                     inline: false
                 }
