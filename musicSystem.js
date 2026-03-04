@@ -1,291 +1,197 @@
 const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
-const { DisTube } = require('distube');
-const { YtDlpPlugin } = require('@distube/yt-dlp');
+const { Connectors } = require('shoukaku');
+const { Kazagumo, Plugins } = require('kazagumo');
 
 class MusicSystem {
     constructor(client) {
         this.client = client;
-        this.distube = new DisTube(client, {
-            plugins: [new YtDlpPlugin({ update: false })],
-            emitNewSongOnly: true,
-            joinNewVoiceChannel: true,
+        this.kazagumo = null;
+        this.playerTimeouts = new Map();
+        this.maxSongDuration = 7200000; // 2 horas en ms
+        this.playThrottle = new Map();
+        this.initialize();
+    }
+
+    initialize() {
+        const nodes = [
+            {
+                name: 'SSL',
+                url: "lavalink.serenetia.com:443",
+                auth: "https://dsc.gg/ajidevserver",
+                secure: true
+            },
+            {
+                name: 'Non SSL',
+                url: "lavalink.serenetia.com:80",
+                auth: "https://dsc.gg/ajidevserver",
+                secure: false
+            },
+        ];
+
+        this.nodeList = nodes; // Guardar para reconexión
+        this.failedNodes = new Set(); // Nodos que fallaron
+
+        this.kazagumo = new Kazagumo(
+            {
+                defaultSearchEngine: 'youtube',
+                plugins: [new Plugins.PlayerMoved(this.client)],
+                send: (guildId, payload) => {
+                    const guild = this.client.guilds.cache.get(guildId);
+                    if (guild) guild.shard.send(payload);
+                },
+            },
+            new Connectors.DiscordJS(this.client),
+            nodes
+        );
+
+        // Dentro de initialize(), después de crear kazagumo:
+        this.client.on('raw', (packet) => {
+            if (packet.t === 'VOICE_SERVER_UPDATE' || packet.t === 'VOICE_STATE_UPDATE') {
+                console.log(`🎤 Voice packet recibido: ${packet.t}`, JSON.stringify(packet.d).slice(0, 100));
+            }
+        });
+
+        this.client.kazagumo = this.kazagumo;
+
+        this.kazagumo.shoukaku.on('ready', (name) => {
+            console.log(`✅ Nodo [${name}] conectado!`);
+            this.failedNodes.delete(name); // Si reconecta, quitarlo de fallidos
+        });
+
+        this.kazagumo.shoukaku.on('error', (name, error) => {
+            console.error(`❌ Error en nodo ${name}: ${error.message}`);
+            this.failedNodes.add(name);
+            this.logNodeStatus();
+        });
+
+        this.kazagumo.shoukaku.on('close', (name, code, reason) => {
+            console.warn(`⚠️ Nodo ${name} cerrado. Código: ${code}`);
+            this.failedNodes.add(name);
+            this.logNodeStatus();
+        });
+
+        this.kazagumo.shoukaku.on('disconnect', (name, count) => {
+            console.warn(`⚠️ Nodo ${name} desconectado. Players afectados: ${count}`);
+            this.failedNodes.add(name);
         });
 
         this.setupEventListeners();
     }
 
-    setupEventListeners() {
-        this.distube
-            .on('playSong', (queue, song) => {
-                const embed = new EmbedBuilder()
-                    .setTitle('🎵 Reproduciendo Ahora')
-                    .setDescription(`**${song.name}**\nDuración: ${song.formattedDuration}`)
-                    .setThumbnail(song.thumbnail || null)
-                    .setColor('#00FF00')
-                    .setTimestamp();
-                queue.textChannel?.send({ embeds: [embed] });
-            })
-            .on('addSong', (queue, song) => {
-                const embed = new EmbedBuilder()
-                    .setTitle('🎵 Canción Agregada a la Cola')
-                    .setDescription(`**${song.name}**\nDuración: ${song.formattedDuration}`)
-                    .setThumbnail(song.thumbnail || null)
-                    .setColor('#00FF00');
-                queue.textChannel?.send({ embeds: [embed] });
-            })
-            .on('addList', (queue, playlist) => {
-                const embed = new EmbedBuilder()
-                    .setTitle('📂 Playlist Agregada')
-                    .setDescription(`**${playlist.name}**\n${playlist.songs.length} canciones agregadas`)
-                    .setColor('#00FF00');
-                queue.textChannel?.send({ embeds: [embed] });
-            })
-            .on('finish', queue => {
-                const embed = new EmbedBuilder()
-                    .setTitle('✅ Cola Terminada')
-                    .setDescription('Se han reproducido todas las canciones.')
-                    .setColor('#00FF00')
-                    .setFooter({ text: 'El bot se desconectará automáticamente.' });
-                queue.textChannel?.send({ embeds: [embed] });
-            })
-            .on('disconnect', queue => {
-                queue.textChannel?.send('⏹️ Desconectado del canal de voz.');
-            })
-            .on('empty', queue => {
-                queue.textChannel?.send('⚠️ El canal de voz está vacío. Desconectando...');
-            })
-            .on('error', (textChannel, error) => {
-                console.error('❌ DisTube error:', error);
-                textChannel?.send(`❌ Error: ${error.message.slice(0, 200)}`);
-            });
+    logNodeStatus() {
+        const total = this.nodeList.length;
+        const failed = this.failedNodes.size;
+        const active = total - failed;
+        console.log(`📊 Estado nodos: ${active}/${total} activos | Fallidos: ${[...this.failedNodes].join(', ') || 'ninguno'}`);
     }
 
-    async processCommand(message) {
-        if (message.author.bot) return;
+    getBestNode() {
+        // Acceder a shoukaku.nodes directamente como Map
+        const nodes = this.kazagumo.shoukaku.nodes;
+        if (!nodes || nodes.size === 0) return null;
 
-        const args = message.content.toLowerCase().split(' ');
-        const command = args[0];
-
-        if (!['>', '>m', '>musica', '>music'].includes(command)) return;
-
-        if (!args[1]) {
-            await this.showMusicHelp(message);
-            return;
-        }
-
-        const subcommand = args[1];
-
-        try {
-            switch (subcommand) {
-                case 'play':
-                case 'p':
-                    await this.playCommand(message, args);
-                    break;
-                case 'stop':
-                case 'leave':
-                case 'disconnect':
-                    await this.stopCommand(message);
-                    break;
-                case 'skip':
-                case 's':
-                    await this.skipCommand(message);
-                    break;
-                case 'pause':
-                    await this.pauseCommand(message);
-                    break;
-                case 'resume':
-                case 'unpause':
-                    await this.resumeCommand(message);
-                    break;
-                case 'queue':
-                case 'q':
-                    await this.queueCommand(message);
-                    break;
-                case 'nowplaying':
-                case 'np':
-                    await this.nowPlayingCommand(message);
-                    break;
-                case 'volume':
-                case 'vol':
-                    await this.volumeCommand(message, args);
-                    break;
-                case 'loop':
-                case 'repeat':
-                    await this.loopCommand(message, args);
-                    break;
-                case 'shuffle':
-                    await this.shuffleCommand(message);
-                    break;
-                case 'clear':
-                    await this.clearQueueCommand(message);
-                    break;
-                default:
-                    await this.showMusicHelp(message);
-                    break;
+        for (const [name, node] of nodes) {
+            // En Shoukaku 4.x el estado conectado es el string 'CONNECTED' o valor 1
+            const state = node.state;
+            const isConnected = state === 1 || state === 'CONNECTED' || 
+                            node.ws?.readyState === 1;
+            if (isConnected && !this.failedNodes.has(name)) {
+                return name;
             }
-        } catch (error) {
-            console.error('Error en comando de música:', error);
-            await message.reply('❌ Ocurrió un error ejecutando el comando de música.');
         }
+        return null;
     }
 
-    async playCommand(message, args) {
-        const voiceChannel = message.member.voice.channel;
-        if (!voiceChannel) {
-            return message.reply('❌ Debes estar en un canal de voz.');
+    async waitForNode(timeoutMs = 10000) {
+        // Esperar hasta que haya al menos un nodo conectado
+        const start = Date.now();
+        while (Date.now() - start < timeoutMs) {
+            if (this.getBestNode()) return true;
+            await new Promise(r => setTimeout(r, 500));
         }
+        return false;
+    }
 
-        if (!args[2]) {
-            return message.reply('❌ Proporciona el nombre de la canción.\nEjemplo: `>m play despacito`');
+    setupEventListeners() {
+        this.kazagumo.on('playerStart', (player, track) => {
+            const embed = new EmbedBuilder()
+                .setTitle('🎵 Reproduciendo Ahora')
+                .setDescription(`**${track.title}**\nDuración: ${this.formatTime(track.length)}`)
+                .setThumbnail(track.thumbnail || null)
+                .setColor('#00FF00')
+                .setTimestamp();
+
+            if (player.textId) {
+                const channel = this.client.channels.cache.get(player.textId);
+                if (channel) channel.send({ embeds: [embed] });
+            }
+        });
+
+        this.kazagumo.on('playerEnd', (player) => {
+            console.log(`🎵 Canción terminada en ${player.guildId}`);
+            
+            if (player.queue.size > 0) {
+                setTimeout(() => {
+                    if (player.queue.size > 0 && !player.playing) {
+                        player.play();
+                    }
+                }, 1000);
+            } else {
+                // AGREGAR MENSAJE AQUÍ:
+                if (player.textId) {
+                    const channel = this.client.channels.cache.get(player.textId);
+                    if (channel) {
+                        const embed = new EmbedBuilder()
+                            .setTitle('✅ Cola Terminada')
+                            .setDescription('Se han reproducido todas las canciones de la cola.')
+                            .setColor('#00FF00')
+                            .setFooter({ text: 'El bot se desconectará en 5 minutos si no hay más música.' });
+                        
+                        channel.send({ embeds: [embed] });
+                    }
+                }
+                
+                // Auto-disconnect después de 5 minutos
+                this.setPlayerTimeout(player.guildId, () => {
+                    if (player.queue.size === 0) {
+                        player.destroy();
+                        if (player.textId) {
+                            const channel = this.client.channels.cache.get(player.textId);
+                            if (channel) {
+                                channel.send('⏹️ Desconectado por inactividad.');
+                            }
+                        }
+                    }
+                }, 300000);
+            }
+        });
+
+        this.kazagumo.on('playerDestroy', (player) => {
+            this.clearPlayerTimeout(player.guildId);
+        });
+
+        // AGREGAR ESTO:
+        this.kazagumo.on('playerResumed', (player) => {
+            console.log(`🔄 Player resumido en ${player.guildId}`);
+        });
+        
+        this.kazagumo.on('playerMoved', (player, oldChannel, newChannel) => {
+            console.log(`🔄 Bot movido de canal`);
+            player.pause(false); // Forzar resume
+        });
+    }
+
+    setPlayerTimeout(guildId, callback, delay) {
+        this.clearPlayerTimeout(guildId);
+        this.playerTimeouts.set(guildId, setTimeout(callback, delay));
+    }
+
+    clearPlayerTimeout(guildId) {
+        const timeout = this.playerTimeouts.get(guildId);
+        if (timeout) {
+            clearTimeout(timeout);
+            this.playerTimeouts.delete(guildId);
         }
-
-        const query = args.slice(2).join(' ');
-        await message.reply(`🔍 Buscando... \`${query}\``);
-
-        try {
-            await this.distube.play(voiceChannel, query, {
-                message,
-                textChannel: message.channel,
-                member: message.member,
-            });
-        } catch (error) {
-            console.error('Error en play:', error);
-            await message.channel.send(`❌ Error al reproducir: ${error.message.slice(0, 200)}`);
-        }
-    }
-
-    async stopCommand(message) {
-        const queue = this.distube.getQueue(message);
-        if (!queue) return message.reply('❌ No hay música reproduciéndose.');
-
-        await this.distube.stop(message);
-        const embed = new EmbedBuilder()
-            .setTitle('⏹️ Música Detenida')
-            .setColor('#FF0000');
-        await message.reply({ embeds: [embed] });
-    }
-
-    async skipCommand(message) {
-        const queue = this.distube.getQueue(message);
-        if (!queue) return message.reply('❌ No hay música reproduciéndose.');
-
-        const current = queue.songs[0];
-        await this.distube.skip(message);
-
-        const embed = new EmbedBuilder()
-            .setTitle('⏭️ Canción Saltada')
-            .setDescription(`**${current.name}** ha sido saltada.`)
-            .setColor('#FFA500');
-        await message.reply({ embeds: [embed] });
-    }
-
-    async pauseCommand(message) {
-        const queue = this.distube.getQueue(message);
-        if (!queue) return message.reply('❌ No hay música reproduciéndose.');
-        if (queue.paused) return message.reply('❌ La música ya está pausada.');
-
-        this.distube.pause(message);
-        await message.reply('⏸️ Música pausada.');
-    }
-
-    async resumeCommand(message) {
-        const queue = this.distube.getQueue(message);
-        if (!queue) return message.reply('❌ No hay música reproduciéndose.');
-        if (!queue.paused) return message.reply('❌ La música no está pausada.');
-
-        this.distube.resume(message);
-        await message.reply('▶️ Música reanudada.');
-    }
-
-    async queueCommand(message) {
-        const queue = this.distube.getQueue(message);
-        if (!queue) return message.reply('❌ No hay música en la cola.');
-
-        const songs = queue.songs;
-        const current = songs[0];
-        const upcoming = songs.slice(1, 11); // Máx 10 siguientes
-
-        const embed = new EmbedBuilder()
-            .setTitle('📋 Cola de Reproducción')
-            .setColor('#0099FF')
-            .addFields({
-                name: '🎵 Reproduciendo',
-                value: `**${current.name}** (${current.formattedDuration})`,
-                inline: false
-            });
-
-        if (upcoming.length > 0) {
-            embed.addFields({
-                name: `📃 Siguiente (${songs.length - 1} canciones)`,
-                value: upcoming.map((s, i) => `${i + 1}. **${s.name}** (${s.formattedDuration})`).join('\n'),
-                inline: false
-            });
-        }
-
-        await message.reply({ embeds: [embed] });
-    }
-
-    async nowPlayingCommand(message) {
-        const queue = this.distube.getQueue(message);
-        if (!queue || !queue.songs[0]) return message.reply('❌ No hay música reproduciéndose.');
-
-        const song = queue.songs[0];
-        const embed = new EmbedBuilder()
-            .setTitle('🎵 Reproduciendo Ahora')
-            .setDescription(`**${song.name}**`)
-            .addFields(
-                { name: '⏱️ Duración', value: song.formattedDuration, inline: true },
-                { name: '🔊 Volumen', value: `${queue.volume}%`, inline: true },
-                { name: '🔁 Loop', value: queue.repeatMode === 1 ? 'Canción' : queue.repeatMode === 2 ? 'Cola' : 'Off', inline: true }
-            )
-            .setThumbnail(song.thumbnail || null)
-            .setColor('#00FF00');
-
-        await message.reply({ embeds: [embed] });
-    }
-
-    async volumeCommand(message, args) {
-        const queue = this.distube.getQueue(message);
-        if (!queue) return message.reply('❌ No hay música reproduciéndose.');
-
-        const vol = parseInt(args[2]);
-        if (isNaN(vol) || vol < 1 || vol > 100) {
-            return message.reply('❌ El volumen debe ser entre 1 y 100.\nEjemplo: `>m volume 80`');
-        }
-
-        this.distube.setVolume(message, vol);
-        await message.reply(`🔊 Volumen ajustado a **${vol}%**`);
-    }
-
-    async loopCommand(message, args) {
-        const queue = this.distube.getQueue(message);
-        if (!queue) return message.reply('❌ No hay música reproduciéndose.');
-
-        const mode = args[2];
-        let repeatMode;
-        if (mode === 'song' || mode === 'cancion') repeatMode = 1;
-        else if (mode === 'queue' || mode === 'cola') repeatMode = 2;
-        else repeatMode = 0;
-
-        this.distube.setRepeatMode(message, repeatMode);
-        const modeText = repeatMode === 1 ? '🔂 Canción' : repeatMode === 2 ? '🔁 Cola' : '➡️ Off';
-        await message.reply(`Loop: **${modeText}**`);
-    }
-
-    async shuffleCommand(message) {
-        const queue = this.distube.getQueue(message);
-        if (!queue) return message.reply('❌ No hay música reproduciéndose.');
-
-        await this.distube.shuffle(message);
-        await message.reply('🔀 Cola mezclada aleatoriamente.');
-    }
-
-    async clearQueueCommand(message) {
-        const queue = this.distube.getQueue(message);
-        if (!queue) return message.reply('❌ No hay música reproduciéndose.');
-
-        queue.songs.splice(1);
-        await message.reply('🗑️ Cola limpiada. Solo queda la canción actual.');
     }
 
     formatTime(ms) {
@@ -294,24 +200,561 @@ class MusicSystem {
         return `${minutes}:${seconds.toString().padStart(2, '0')}`;
     }
 
+    async processCommand(message) {
+        if (message.author.bot) return;
+
+        const args = message.content.toLowerCase().split(' ');
+        const command = args[0];
+
+        // Comandos de música
+        if (['>', '>m', '>musica', '>music'].includes(command)) {
+            if (!args[1]) {
+                await this.showMusicHelp(message);
+                return;
+            }
+
+/*const commandName = command.replace('>', '');
+        await this.economy.missions.updateMissionProgress(message.author.id, 'unique_commands_used', commandName);*/
+
+            const subcommand = args[1];
+            const { member, channel, guild, author } = message;
+
+            try {
+                switch (subcommand) {
+                    case 'play':
+                    case 'p':
+                        await this.playCommand(message, args, member, channel, guild, author);
+                        break;
+                    
+                    case 'stop':
+                    case 'leave':
+                    case 'disconnect':
+                        await this.stopCommand(message, guild);
+                        break;
+                    
+                    case 'skip':
+                    case 's':
+                        await this.skipCommand(message, guild);
+                        break;
+                    
+                    case 'pause':
+                        await this.pauseCommand(message, guild);
+                        break;
+                    
+                    case 'resume':
+                    case 'unpause':
+                        await this.resumeCommand(message, guild);
+                        break;
+                    
+                    case 'queue':
+                    case 'q':
+                        await this.queueCommand(message, guild);
+                        break;
+                    
+                    case 'nowplaying':
+                    case 'np':
+                        await this.nowPlayingCommand(message, guild);
+                        break;
+
+                    case 'fix':
+                    case 'restart':
+                        await this.fixPlayerCommand(message, guild);
+                        break;
+                    case 'seek':
+                    case 'adelantar':
+                    case 'forward':
+                        await this.seekCommand(message, args, guild);
+                        break;
+                    
+                    case 'volume':
+                    case 'vol':
+                        await this.volumeCommand(message, args, guild);
+                        break;
+                    
+                    case 'loop':
+                    case 'repeat':
+                        await this.loopCommand(message, args, guild);
+                        break;
+                    
+                    case 'shuffle':
+                        await this.shuffleCommand(message, guild);
+                        break;
+                    
+                    case 'clear':
+                        await this.clearQueueCommand(message, guild);
+                        break;
+                    
+                    default:
+                        await this.showMusicHelp(message);
+                        break;
+                }
+            } catch (error) {
+                console.error('Error en comando de música:', error);
+                await message.reply('❌ Ocurrió un error ejecutando el comando de música.');
+            }
+        }
+    }
+
+    async playCommand(message, args, member, channel, guild, author) {
+        // AGREGAR THROTTLE:
+        const lastPlay = this.playThrottle.get(guild.id) || 0;
+        if (Date.now() - lastPlay < 2000) { // 2 segundos entre plays
+            return message.reply('⏳ Espera un momento antes de agregar más canciones.');
+        }
+        this.playThrottle.set(guild.id, Date.now());
+
+        const voiceChannel = member.voice.channel;
+
+        if (!voiceChannel) {
+            return message.reply('❌ Debes estar en un canal de voz para usar este comando.');
+        }
+
+        if (!args[2]) {
+            return message.reply('❌ Proporciona el nombre de la canción.\nEjemplo: `>music play despacito`');
+        }
+
+        const query = args.slice(2).join(' ');
+
+        await message.reply({
+            content: `🔍 Buscando... \`${query}\``,
+        });
+
+        try {
+            let player = this.kazagumo.getPlayer(guild.id);
+
+            if (!player) {
+                let bestNode = this.getBestNode();
+                if (!bestNode) {
+                    await message.reply('⏳ Conectando al servidor de música, espera un momento...');
+                    const connected = await this.waitForNode(10000);
+                    if (!connected) {
+                        return message.channel.send('❌ No se pudo conectar a ningún servidor de música. Intenta más tarde.');
+                    }
+                    bestNode = this.getBestNode();
+                }
+                
+                player = await this.kazagumo.createPlayer({
+                    guildId: guild.id,
+                    textId: channel.id,
+                    voiceId: voiceChannel.id,
+                    shardId: guild.shardId || 0,
+                });
+            }
+
+            this.clearPlayerTimeout(guild.id); // Limpiar timeout si existe
+
+            const result = await this.kazagumo.search(query, { requester: author, engine: 'ytsearch' });
+
+            if (!result.tracks.length) {
+                return message.reply('❌ No se encontraron resultados para tu búsqueda.');
+            }
+
+            // Antes de player.play():
+            const track = result.tracks[0];
+            if (track.length > this.maxSongDuration) {
+                return message.reply('❌ La canción es muy larga (máximo 2 horas).');
+            }
+
+
+            const embed = new EmbedBuilder()
+                .setColor('#00FF00')
+                .setTimestamp();
+
+            if (result.type === 'PLAYLIST') {
+                player.queue.add(result.tracks);
+                embed.setTitle('📂 Playlist Agregada')
+                    .setDescription(`**${result.playlistName}**\n${result.tracks.length} canciones agregadas a la cola`)
+                    .setThumbnail(result.tracks[0].thumbnail || null);
+            } else {
+                const track = result.tracks[0];
+                player.queue.add(track);
+                embed.setTitle('🎵 Canción Agregada a la Cola')
+                    .setDescription(`**${track.title}**\nDuración: ${this.formatTime(track.length)}`)
+                    .setThumbnail(track.thumbnail || null);
+            }
+
+            if (!player.playing && !player.paused) {
+                await new Promise(resolve => setTimeout(resolve, 500));
+                player.play();
+                                        // Agregar temporalmente:
+                        setTimeout(() => {
+                            console.log('🎵 Estado player:', {
+                                playing: player.playing,
+                                paused: player.paused,
+                                position: player.position,
+                                ping: player.ping,
+                                node: player.node?.name
+                            });
+                        }, 2000);
+
+            }
+
+            await message.channel.send({ embeds: [embed] });
+        } catch (error) {
+            console.error('Error en play command:', error);
+            
+            if (error.status === 429) {
+                return message.reply('⏳ El servidor de música está sobrecargado. Intenta en unos segundos o usa `>m fix` para cambiar de nodo.');
+            }
+            
+            await message.reply('❌ Ocurrió un error al reproducir la música.');
+        }
+    }
+
+    async stopCommand(message, guild) {
+        const player = this.kazagumo.getPlayer(guild.id);
+
+        if (!player) {
+            return message.reply('❌ No hay música reproduciéndose.');
+        }
+
+        await player.destroy();
+        this.clearPlayerTimeout(guild.id);
+
+        const embed = new EmbedBuilder()
+            .setTitle('⏹️ Música Detenida')
+            .setDescription('La música se ha detenido y el bot se ha desconectado del canal de voz.')
+            .setColor('#FF0000');
+
+        await message.reply({ embeds: [embed] });
+    }
+
+    async skipCommand(message, guild) {
+        const player = this.kazagumo.getPlayer(guild.id);
+
+        if (!player) {
+            return message.reply('❌ No hay música reproduciéndose.');
+        }
+
+        if (player.queue.size === 0) {
+            return message.reply('❌ No hay más canciones en la cola.');
+        }
+
+        const currentTrack = player.queue.current;
+        player.skip();
+
+        const embed = new EmbedBuilder()
+            .setTitle('⏭️ Canción Saltada')
+            .setDescription(`**${currentTrack.title}** ha sido saltada.`)
+            .setColor('#FFA500');
+
+        await message.reply({ embeds: [embed] });
+    }
+
+    async pauseCommand(message, guild) {
+        const player = this.kazagumo.getPlayer(guild.id);
+
+        if (!player) {
+            return message.reply('❌ No hay música reproduciéndose.');
+        }
+
+        if (player.paused) {
+            return message.reply('❌ La música ya está pausada.');
+        }
+
+        player.pause(true);
+
+        const embed = new EmbedBuilder()
+            .setTitle('⏸️ Música Pausada')
+            .setDescription('La música ha sido pausada.')
+            .setColor('#FFA500');
+
+        await message.reply({ embeds: [embed] });
+    }
+
+    async resumeCommand(message, guild) {
+        const player = this.kazagumo.getPlayer(guild.id);
+        
+        if (!player) {
+            return message.reply('❌ No hay música reproduciéndose.');
+        }
+        
+        if (!player.paused) {
+            return message.reply('❌ La música no está pausada.');
+        }
+        
+        player.pause(false);
+        player.setVolume(player.volume); // "Kick" al player
+        
+        const embed = new EmbedBuilder()
+            .setTitle('▶️ Música Reanudada')
+            .setDescription('La música ha sido reanudada.')
+            .setColor('#00FF00');
+        
+        await message.reply({ embeds: [embed] });
+    }
+
+    async queueCommand(message, guild) {
+        const player = this.kazagumo.getPlayer(guild.id);
+
+        if (!player || !player.queue.current) {
+            return message.reply('❌ No hay música en la cola.');
+        }
+
+        const current = player.queue.current;
+        const queue = player.queue;
+
+        const embed = new EmbedBuilder()
+            .setTitle('📋 Cola de Reproducción')
+            .setColor('#0099FF')
+            .setTimestamp();
+
+        let description = `**🎵 Reproduciendo Ahora:**\n${current.title}\n\n`;
+
+        if (queue.size > 0) {
+            description += '**📋 En Cola:**\n';
+            const upcoming = queue.slice(0, 10); // Mostrar solo las primeras 10
+            
+            upcoming.forEach((track, index) => {
+                description += `${index + 1}. ${track.title}\n`;
+            });
+
+            if (queue.size > 10) {
+                description += `\n... y ${queue.size - 10} más`;
+            }
+        } else {
+            description += '**📋 En Cola:** Vacía';
+        }
+
+        embed.setDescription(description);
+        await message.reply({ embeds: [embed] });
+    }
+
+    async nowPlayingCommand(message, guild) {
+        const player = this.kazagumo.getPlayer(guild.id);
+
+        if (!player || !player.queue.current) {
+            return message.reply('❌ No hay música reproduciéndose.');
+        }
+
+        const track = player.queue.current;
+        const position = player.position;
+        const duration = track.length;
+
+        const embed = new EmbedBuilder()
+            .setTitle('🎵 Reproduciendo Ahora')
+            .setDescription(`**${track.title}**`)
+            .setThumbnail(track.thumbnail || null)
+            .addFields(
+                { name: '⏱️ Duración', value: this.formatTime(duration), inline: true },
+                { name: '📍 Posición', value: this.formatTime(position), inline: true },
+                { name: '🔊 Volumen', value: `${player.volume}%`, inline: true },
+                { name: '🔄 Loop', value: player.loop || 'Desactivado', inline: true },
+                { name: '👤 Solicitado por', value: track.requester.tag, inline: true }
+            )
+            .setColor('#00FF00')
+            .setTimestamp();
+
+        await message.reply({ embeds: [embed] });
+    }
+
+    async volumeCommand(message, args, guild) {
+        const player = this.kazagumo.getPlayer(guild.id);
+
+        if (!player) {
+            return message.reply('❌ No hay música reproduciéndose.');
+        }
+
+        if (!args[2]) {
+            return message.reply(`🔊 Volumen actual: **${player.volume}%**\nUsa \`>music volume <1-100>\` para cambiar el volumen.`);
+        }
+
+        const volume = parseInt(args[2]);
+
+        if (isNaN(volume) || volume < 1 || volume > 100) {
+            return message.reply('❌ El volumen debe ser un número entre 1 y 100.');
+        }
+
+        player.setVolume(volume);
+
+        const embed = new EmbedBuilder()
+            .setTitle('🔊 Volumen Cambiado')
+            .setDescription(`Volumen establecido a **${volume}%**`)
+            .setColor('#0099FF');
+
+        await message.reply({ embeds: [embed] });
+    }
+
+    async fixPlayerCommand(message, guild) {
+        const player = this.kazagumo.getPlayer(guild.id);
+        
+        if (!player) {
+            return message.reply('❌ No hay música reproduciéndose.');
+        }
+        
+        const queue = [...player.queue];
+        const current = player.queue.current;
+        
+        await player.destroy();
+        
+        // Recrear player
+        const newPlayer = await this.kazagumo.createPlayer({
+            guildId: guild.id,
+            textId: message.channel.id,
+            voiceId: message.member.voice.channel.id
+        });
+        
+        if (current) newPlayer.queue.add(current);
+        newPlayer.queue.add(queue);
+        newPlayer.play();
+        
+        await message.reply('✅ Player reiniciado correctamente.');
+    }
+
+    async seekCommand(message, args, guild) {
+        const player = this.kazagumo.getPlayer(guild.id);
+        
+        if (!player || !player.queue.current) {
+            return message.reply('❌ No hay música reproduciéndose.');
+        }
+        
+        if (!args[2]) {
+            return message.reply('❌ Especifica el tiempo.\nEjemplos:\n• `>m seek 1:30` (1 min 30 seg)\n• `>m seek 30` (30 segundos)\n• `>m seek +30` (adelantar 30 seg)\n• `>m seek -15` (retroceder 15 seg)');
+        }
+        
+        const input = args[2];
+        const currentPosition = player.position;
+        const duration = player.queue.current.length;
+        let targetPosition;
+        
+        // Formato: +30 o -30 (relativo)
+        if (input.startsWith('+') || input.startsWith('-')) {
+            const seconds = parseInt(input) * 1000;
+            targetPosition = currentPosition + seconds;
+        }
+        // Formato: 1:30 (minutos:segundos)
+        else if (input.includes(':')) {
+            const [min, sec] = input.split(':').map(Number);
+            targetPosition = (min * 60 + sec) * 1000;
+        }
+        // Formato: 30 (segundos absolutos)
+        else {
+            targetPosition = parseInt(input) * 1000;
+        }
+        
+        // Validar límites
+        if (targetPosition < 0) {
+            return message.reply('❌ No puedes retroceder antes del inicio.');
+        }
+
+        if (targetPosition > duration) {
+            return message.reply('❌ El tiempo especificado excede la duración de la canción.');
+        }
+
+        // CAMBIAR AQUÍ:
+        player.seek(targetPosition);
+
+        const embed = new EmbedBuilder()
+            .setTitle('⏩ Posición Cambiada')
+            .setDescription(`Posición: **${this.formatTime(targetPosition)}** / ${this.formatTime(duration)}`)
+            .setColor('#0099FF');
+        
+        await message.reply({ embeds: [embed] });
+    }
+
+    async loopCommand(message, args, guild) {
+        const player = this.kazagumo.getPlayer(guild.id);
+
+        if (!player) {
+            return message.reply('❌ No hay música reproduciéndose.');
+        }
+
+        const loopMode = args[2] ? args[2].toLowerCase() : null;
+        let newLoop;
+
+        switch (loopMode) {
+            case 'track':
+            case 'cancion':
+                newLoop = 'track';
+                break;
+            case 'queue':
+            case 'cola':
+                newLoop = 'queue';
+                break;
+            case 'off':
+            case 'disable':
+            case 'desactivar':
+                newLoop = 'none';
+                break;
+            default:
+                // Toggle entre none y track
+                newLoop = player.loop === 'none' ? 'track' : 'none';
+                break;
+        }
+
+        player.setLoop(newLoop);
+
+        const loopText = {
+            'none': 'Desactivado',
+            'track': 'Canción Actual',
+            'queue': 'Cola Completa'
+        };
+
+        const embed = new EmbedBuilder()
+            .setTitle('🔄 Modo Loop Cambiado')
+            .setDescription(`Loop establecido a: **${loopText[newLoop]}**`)
+            .setColor('#0099FF');
+
+        await message.reply({ embeds: [embed] });
+    }
+
+    async shuffleCommand(message, guild) {
+        const player = this.kazagumo.getPlayer(guild.id);
+
+        if (!player) {
+            return message.reply('❌ No hay música reproduciéndose.');
+        }
+
+        if (player.queue.size < 2) {
+            return message.reply('❌ Necesitas al menos 2 canciones en la cola para mezclar.');
+        }
+
+        player.queue.shuffle();
+
+        const embed = new EmbedBuilder()
+            .setTitle('🔀 Cola Mezclada')
+            .setDescription(`Se han mezclado **${player.queue.size}** canciones en la cola.`)
+            .setColor('#0099FF');
+
+        await message.reply({ embeds: [embed] });
+    }
+
+    async clearQueueCommand(message, guild) {
+        const player = this.kazagumo.getPlayer(guild.id);
+
+        if (!player) {
+            return message.reply('❌ No hay música reproduciéndose.');
+        }
+
+        if (player.queue.size === 0) {
+            return message.reply('❌ La cola ya está vacía.');
+        }
+
+        const clearedCount = player.queue.size;
+        player.queue.clear();
+
+        const embed = new EmbedBuilder()
+            .setTitle('🗑️ Cola Limpiada')
+            .setDescription(`Se han eliminado **${clearedCount}** canciones de la cola.`)
+            .setColor('#FF0000');
+
+        await message.reply({ embeds: [embed] });
+    }
+
     async showMusicHelp(message) {
         const embed = new EmbedBuilder()
             .setTitle('🎵 Comandos de Música')
-            .setColor('#9932CC')
+            .setDescription('Lista completa de comandos de música disponibles')
             .addFields(
-                { name: '▶️ Reproducir', value: '`>m play <canción/URL>`', inline: true },
-                { name: '⏭️ Saltar', value: '`>m skip`', inline: true },
-                { name: '⏸️ Pausar', value: '`>m pause`', inline: true },
-                { name: '▶️ Reanudar', value: '`>m resume`', inline: true },
-                { name: '⏹️ Detener', value: '`>m stop`', inline: true },
-                { name: '📋 Cola', value: '`>m queue`', inline: true },
-                { name: '🎵 Actual', value: '`>m np`', inline: true },
-                { name: '🔊 Volumen', value: '`>m volume <1-100>`', inline: true },
-                { name: '🔁 Loop', value: '`>m loop [song/queue]`', inline: true },
-                { name: '🔀 Shuffle', value: '`>m shuffle`', inline: true },
-                { name: '🗑️ Limpiar cola', value: '`>m clear`', inline: true },
+                { name: '▶️ Reproducción', value: '`>music play <canción>` - Reproduce una canción\n`>music pause` - Pausa la música\n`>music resume` - Reanuda la música\n`>music stop` - Detiene y desconecta', inline: false },
+                { name: '⏭️ Control de Cola', value: '`>music skip` - Salta la canción actual\n`>music queue` - Muestra la cola\n`>music shuffle` - Mezcla la cola\n`>music clear` - Limpia la cola', inline: false },
+                { name: '🔧 Configuración', value: '`>music volume <1-100>` - Cambia el volumen\n`>music loop [track/queue/off]` - Configura el loop\n`>music nowplaying` - Canción actual', inline: false },
+                { name: '📝 Aliases', value: '`>m`, `>musica`, `>music`\n`p` = play, `s` = skip, `q` = queue, `np` = nowplaying', inline: false },
+                { name: '⏩ Navegación', value: '`>music seek <tiempo>` - Adelantar/retroceder\nEjemplos: `>m seek 1:30`, `>m seek +30`, `>m seek -15`', inline: false },
             )
-            .setFooter({ text: 'Soporta YouTube, SoundCloud y más' });
+            .setColor('#0099FF')
+            .setFooter({ text: 'Ejemplo: >music play despacito' })
+            .setTimestamp();
 
         await message.reply({ embeds: [embed] });
     }
