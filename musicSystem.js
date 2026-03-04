@@ -27,12 +27,6 @@ class MusicSystem {
                 secure: false
             },
             {
-                name: 'V3 (Non SSL)',
-                url: "lavalinkv3.serenetia.com:80",
-                auth: "https://dsc.gg/ajidevserver",
-                secure: false
-            },
-            {
                 name: 'SSL',
                 url: "lavalink.serenetia.com:443",
                 auth: "https://dsc.gg/ajidevserver",
