@@ -648,7 +648,6 @@ class MusicSystem {
             }
 
             const customId = interaction.customId;
-            console.log('🔘 handleSearchInteraction customId:', customId);
             const parts = customId.split('_');
             const userId = parts[2];
             const guildId = parts[3];
