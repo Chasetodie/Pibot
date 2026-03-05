@@ -763,7 +763,7 @@ setCooldown(userId, gameType) {
     const cachedCooldown = this.cooldownCache.get(cacheKey);
     const now = Date.now();
     
-    let effectiveCooldown = await this.geteffectivecooldown(this.config.coinflip.cooldown, null);
+    let effectiveCooldown = await this.getEffectiveCooldown(this.config.coinflip.cooldown, null);
 
     if (this.shop) {
         const cooldownReduction = await this.shop.getCooldownReduction(userId, 'games');

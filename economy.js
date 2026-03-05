@@ -627,11 +627,17 @@ class EconomySystem {
     async getBalanceLeaderboardByGuild(limit = 10, guildId, client) {
         try {
             const allUsers = await this.database.getBalanceLeaderboard(limit * 5);
-            const guild = await client.guilds.fetch(guildId);
-            const members = await guild.members.fetch();
-            return allUsers
-                .filter(u => members.has(u.userId))
-                .slice(0, limit);
+            const guild = client.guilds.cache.get(guildId);
+            if (!guild) return allUsers.slice(0, limit);
+            
+            const filtered = [];
+            for (const user of allUsers) {
+                const member = guild.members.cache.get(user.userId) || 
+                            await guild.members.fetch(user.userId).catch(() => null);
+                if (member) filtered.push(user);
+                if (filtered.length >= limit) break;
+            }
+            return filtered;
         } catch (error) {
             console.error('❌ Error en leaderboard por servidor:', error);
             return [];
@@ -641,11 +647,57 @@ class EconomySystem {
     async getLevelLeaderboardByGuild(limit = 10, guildId, client) {
         try {
             const allUsers = await this.database.getLevelLeaderboard(limit * 5);
-            const guild = await client.guilds.fetch(guildId);
-            const members = await guild.members.fetch();
-            return allUsers
-                .filter(u => members.has(u.userId))
-                .slice(0, limit);
+            const guild = client.guilds.cache.get(guildId);
+            if (!guild) return allUsers.slice(0, limit);
+            
+            const filtered = [];
+            for (const user of allUsers) {
+                const member = guild.members.cache.get(user.userId) || 
+                            await guild.members.fetch(user.userId).catch(() => null);
+                if (member) filtered.push(user);
+                if (filtered.length >= limit) break;
+            }
+            return filtered;
+        } catch (error) {
+            console.error('❌ Error en leaderboard por servidor:', error);
+            return [];
+        }
+    }
+
+    async getTriviaLeaderboardByGuild(limit = 10, guildId, client) {
+        try {
+            const allUsers = await this.database.getTriviaLeaderboard(limit * 5);
+            const guild = client.guilds.cache.get(guildId);
+            if (!guild) return allUsers.slice(0, limit);
+            
+            const filtered = [];
+            for (const user of allUsers) {
+                const member = guild.members.cache.get(user.userId) || 
+                            await guild.members.fetch(user.userId).catch(() => null);
+                if (member) filtered.push(user);
+                if (filtered.length >= limit) break;
+            }
+            return filtered;
+        } catch (error) {
+            console.error('❌ Error en leaderboard por servidor:', error);
+            return [];
+        }
+    }
+
+    async getTriviaAccuracyLeaderboardByGuild(limit = 10, guildId, client) {
+        try {
+            const allUsers = await this.database.getTriviaAccuracyLeaderboard(limit * 5);
+            const guild = client.guilds.cache.get(guildId);
+            if (!guild) return allUsers.slice(0, limit);
+            
+            const filtered = [];
+            for (const user of allUsers) {
+                const member = guild.members.cache.get(user.userId) || 
+                            await guild.members.fetch(user.userId).catch(() => null);
+                if (member) filtered.push(user);
+                if (filtered.length >= limit) break;
+            }
+            return filtered;
         } catch (error) {
             console.error('❌ Error en leaderboard por servidor:', error);
             return [];
@@ -666,30 +718,6 @@ class EconomySystem {
             return await this.database.getTriviaAccuracyLeaderboard(limit);
         } catch (error) {
             console.error('❌ Error obteniendo ranking de accuracy:', error);
-            return [];
-        }
-    }
-
-    async getTriviaLeaderboardByGuild(limit = 10, guildId, client) {
-        try {
-            const allUsers = await this.database.getTriviaLeaderboard(limit * 5);
-            const guild = await client.guilds.fetch(guildId);
-            const members = await guild.members.fetch();
-            return allUsers.filter(u => members.has(u.userId)).slice(0, limit);
-        } catch (error) {
-            console.error('❌ Error en trivia leaderboard por servidor:', error);
-            return [];
-        }
-    }
-
-    async getTriviaAccuracyLeaderboardByGuild(limit = 10, guildId, client) {
-        try {
-            const allUsers = await this.database.getTriviaAccuracyLeaderboard(limit * 5);
-            const guild = await client.guilds.fetch(guildId);
-            const members = await guild.members.fetch();
-            return allUsers.filter(u => members.has(u.userId)).slice(0, limit);
-        } catch (error) {
-            console.error('❌ Error en trivia accuracy leaderboard por servidor:', error);
             return [];
         }
     }
