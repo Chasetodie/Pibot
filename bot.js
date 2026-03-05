@@ -1008,6 +1008,9 @@ client.on('messageCreate', async (message) => {
         }
         return;
     }
+    
+    // Ignorar @everyone y @here
+    if (message.mentions.everyone) return;
 
     // CHATBOT - Solo cuando mencionen al bot
     if (message.mentions.has(message.client.user)) {

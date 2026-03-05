@@ -648,12 +648,26 @@ class MusicSystem {
             }
 
             const customId = interaction.customId;
+            console.log('🔘 handleSearchInteraction customId:', customId);
             const parts = customId.split('_');
-            const userId = parts[2];
-            const guildId = parts[3];
+
+            // Detectar posición correcta de userId según el tipo de botón
+            let userId, guildId;
+            if (customId.startsWith('mback_') || customId.startsWith('mspback_')) {
+                // mback_userId_guildId
+                userId = parts[1];
+                guildId = parts[2];
+            } else {
+                // msearch_0_userId_guildId / mplay_0_userId_guildId / msp_0_userId_guildId
+                userId = parts[2];
+                guildId = parts[3];
+            }
 
             if (interaction.user.id !== userId) {
-                return interaction.editReply({ content: '❌ Este menú no es tuyo.', embeds: [], components: [] });
+                return interaction.followUp({ 
+                    content: '❌ Este menú no es tuyo.', 
+                    ephemeral: true 
+                });
             }
 
             // ─── SPOTIFY SEARCH ───────────────────────────────

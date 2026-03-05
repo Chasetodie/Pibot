@@ -325,7 +325,7 @@ class EconomySystem {
         let finalFrom = 0;
         let eventMessage = '';
         
-        for (const event of this.events.getActiveEvents()) {
+        for (const event of (this.events?.getActiveEvents() || [])) {
             const transferBonus = event.multipliers?.transfer_bonus || 0;
             
             if (transferBonus > 0) {
@@ -527,7 +527,7 @@ class EconomySystem {
             let finalXp = this.config.xpPerMessage;
             let eventMessage = '';
                 
-            for (const event of this.events.getActiveEvents()) {
+            for (const event of (this.events?.getActiveEvents() || [])) {
                 const xpMultiplier = event.multipliers?.xp || 1.0;
                 
                 if (xpMultiplier > 1.0) {
@@ -624,6 +624,34 @@ class EconomySystem {
         }
     }
 
+    async getBalanceLeaderboardByGuild(limit = 10, guildId, client) {
+        try {
+            const allUsers = await this.database.getBalanceLeaderboard(limit * 5);
+            const guild = await client.guilds.fetch(guildId);
+            const members = await guild.members.fetch();
+            return allUsers
+                .filter(u => members.has(u.userId))
+                .slice(0, limit);
+        } catch (error) {
+            console.error('❌ Error en leaderboard por servidor:', error);
+            return [];
+        }
+    }
+
+    async getLevelLeaderboardByGuild(limit = 10, guildId, client) {
+        try {
+            const allUsers = await this.database.getLevelLeaderboard(limit * 5);
+            const guild = await client.guilds.fetch(guildId);
+            const members = await guild.members.fetch();
+            return allUsers
+                .filter(u => members.has(u.userId))
+                .slice(0, limit);
+        } catch (error) {
+            console.error('❌ Error en leaderboard por servidor:', error);
+            return [];
+        }
+    }
+
     async getTriviaLeaderboard(limit = 10) {
         try {
             return await this.database.getTriviaLeaderboard(limit);
@@ -638,6 +666,30 @@ class EconomySystem {
             return await this.database.getTriviaAccuracyLeaderboard(limit);
         } catch (error) {
             console.error('❌ Error obteniendo ranking de accuracy:', error);
+            return [];
+        }
+    }
+
+    async getTriviaLeaderboardByGuild(limit = 10, guildId, client) {
+        try {
+            const allUsers = await this.database.getTriviaLeaderboard(limit * 5);
+            const guild = await client.guilds.fetch(guildId);
+            const members = await guild.members.fetch();
+            return allUsers.filter(u => members.has(u.userId)).slice(0, limit);
+        } catch (error) {
+            console.error('❌ Error en trivia leaderboard por servidor:', error);
+            return [];
+        }
+    }
+
+    async getTriviaAccuracyLeaderboardByGuild(limit = 10, guildId, client) {
+        try {
+            const allUsers = await this.database.getTriviaAccuracyLeaderboard(limit * 5);
+            const guild = await client.guilds.fetch(guildId);
+            const members = await guild.members.fetch();
+            return allUsers.filter(u => members.has(u.userId)).slice(0, limit);
+        } catch (error) {
+            console.error('❌ Error en trivia accuracy leaderboard por servidor:', error);
             return [];
         }
     }
@@ -667,7 +719,7 @@ class EconomySystem {
         let dayInMs = 24 * 60 * 60 * 1000;
 
         // Aplicar reducción de cooldown por eventos
-        for (const event of this.events.getActiveEvents()) {
+        for (const event of (this.events?.getActiveEvents() || [])) {
             if (event.type === 'fever_time') {
                 dayInMs = Math.floor(dayInMs * 0.5); // 🔥 -50% tiempo
                 break;
@@ -702,7 +754,7 @@ class EconomySystem {
         let eventMessage = '';
         let finalEarnings = amount;
 
-        for (const event of this.events.getActiveEvents()) {
+        for (const event of (this.events?.getActiveEvents() || [])) {
             const dailyMultiplier = event.multipliers?.daily || 1.0;
             
             if (dailyMultiplier !== 1.0) {
@@ -1031,7 +1083,7 @@ class EconomySystem {
 
         let effectiveCooldown = lastJob.cooldown * (1 - modifiers.reduction);
 
-        for (const event of this.events.getActiveEvents()) {
+        for (const event of (this.events?.getActiveEvents() || [])) {
             if (event.type === 'fever_time') {
                 effectiveCooldown = Math.floor(job.cooldown * 0.5); // 🔥 -50% tiempo
                 break;
@@ -1156,7 +1208,7 @@ class EconomySystem {
         let eventMessage = '';
         let finalEarnings = amount;
 
-        for (const event of this.events.getActiveEvents()) {
+        for (const event of (this.events?.getActiveEvents() || [])) {
             const workMultiplier = event.multipliers?.work || 1.0;
             
             if (workMultiplier !== 1.0) {

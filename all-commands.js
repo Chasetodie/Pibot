@@ -505,63 +505,69 @@ class AllCommands {
     }
 
     // Comando !top - Leaderboards
-    async handleTop(message) {
+    async handleTop(message, client) {
         const args = message.content.split(' ');
         const type = args[1]?.toLowerCase() || 'money';
-        
-        let leaderboard, title, emoji;
-        
-        if (type === 'level' || type === 'levels' || type === 'lvl') {
-            leaderboard = await this.economy.getLevelLeaderboard(10);
-            title = '🏆 Top 10 - Niveles';
-            emoji = '📊';
+        const scope = args[2]?.toLowerCase(); // 'global' o nada = servidor
+
+        const isGlobal = scope === 'global';
+        const isLevel = type === 'level' || type === 'levels' || type === 'lvl';
+
+        let leaderboard;
+        if (isGlobal) {
+            leaderboard = isLevel
+                ? await this.economy.getLevelLeaderboard(10)
+                : await this.economy.getBalanceLeaderboard(10);
         } else {
-            leaderboard = await this.economy.getBalanceLeaderboard(10);
-            title = '🏆 Top 10 - π-b Coin';
-            emoji = '💰';
+            leaderboard = isLevel
+                ? await this.economy.getLevelLeaderboardByGuild(10, message.guild.id, client)
+                : await this.economy.getBalanceLeaderboardByGuild(10, message.guild.id, client);
         }
-        
-        if (leaderboard.length === 0) {
+
+        if (!leaderboard || leaderboard.length === 0) {
             await message.reply('❌ No hay usuarios en el leaderboard todavía.');
             return;
         }
-        
+
+        const scopeLabel = isGlobal ? '🌍 Global' : `🏠 ${message.guild.name}`;
+        const title = isLevel
+            ? `🏆 Top 10 Niveles — ${scopeLabel}`
+            : `🏆 Top 10 π-b Coin — ${scopeLabel}`;
+        const emoji = isLevel ? '📊' : '💰';
+
         const embed = new EmbedBuilder()
             .setTitle(title)
             .setColor('#FFD700')
             .setTimestamp();
-        
+
         let description = '';
-        
         for (let i = 0; i < leaderboard.length; i++) {
             const user = leaderboard[i];
-            let medal = '';
-            
+            let medal;
             switch (i) {
                 case 0: medal = '🥇'; break;
                 case 1: medal = '🥈'; break;
                 case 2: medal = '🥉'; break;
                 default: medal = `**${i + 1}.**`; break;
             }
-            
-            let value;
-            if (type === 'level' || type === 'levels' || type === 'lvl') {
-                value = `Nivel ${user.level} (${this.formatNumber(user.totalXp)} XP)`;
-            } else {
-                value = `${this.formatNumber(user.balance)} ${this.economy.config.currencySymbol}`;
-            }
-            
+
+            const value = isLevel
+                ? `Nivel ${user.level} (${this.formatNumber(user.totalXp)} XP)`
+                : `${this.formatNumber(user.balance)} ${this.economy.config.currencySymbol}`;
+
             description += `${medal} <@${user.userId}>\n${emoji} ${value}\n\n`;
         }
-        
+
         embed.setDescription(description);
-        
-        if (type === 'level' || type === 'levels' || type === 'lvl') {
-            embed.setFooter({ text: 'Usa >top money para ver el ranking de dinero' });
-        } else {
-            embed.setFooter({ text: 'Usa >top level para ver el ranking de niveles' });
-        }
-        
+
+        const footerParts = [];
+        if (isLevel) footerParts.push('Usa >top money para ver dinero');
+        else footerParts.push('Usa >top level para ver niveles');
+        if (isGlobal) footerParts.push('Usa >top money para ver solo este servidor');
+        else footerParts.push('Usa >top money global para ver el ranking global');
+
+        embed.setFooter({ text: footerParts.join(' • ') });
+
         await message.reply({ embeds: [embed] });
     }
 
@@ -1994,7 +2000,7 @@ const commandName = command.replace('>', '');
                 case '>top':
                 case '>leaderboard':
                 case '>lb':
-                    await this.handleTop(message);
+                    await this.handleTop(message, client);
                     break;
                 case '>work':
                 case '>job':
@@ -2488,11 +2494,17 @@ const commandName = command.replace('>', '');
                 title: '🎮 Minijuegos',
                 fields: [
                     { name: '>games', value: 'Lista de minijuegos disponibles', inline: true },
-                    { name: '>coinflip <cara/cruz> <cantidad>', value: 'Lanzar moneda', inline: true },
-                    { name: '>dice <predicción> <cantidad>', value: 'Juego de dados', inline: true },
-                    { name: '>lottery <número> <cantidad>', value: 'Lotería', inline: true },
-                    { name: '>blackjack <cantidad>', value: 'Blackjack', inline: true },
-                    { name: '>roulette <tipo> <cantidad>', value: 'Ruleta', inline: true }
+                    { name: '>coinflip <cara/cruz> <cantidad>', value: 'Lanzar moneda (100-5,000)', inline: true },
+                    { name: '>dice <1-6/alto/bajo> <cantidad>', value: 'Juego de dados (100-5,000)', inline: true },
+                    { name: '>lottery <número> <cantidad>', value: 'Lotería (500-3,000)', inline: true },
+                    { name: '>blackjack <cantidad>', value: 'Blackjack (100-10,000)', inline: true },
+                    { name: '>roulette <tipo> <cantidad>', value: 'Ruleta (100-15,000)', inline: true },
+                    { name: '>slots <cantidad>', value: 'Tragaperras (100-8,000)', inline: true },
+                    { name: '>trivia [dificultad] [modo] [categoría]', value: 'Trivia clásica', inline: true },
+                    { name: '>triviasurvival [dificultad] [categoría]', value: 'Trivia survival — ¡Sobrevive!', inline: true },
+                    { name: '>triviacomp [dificultad] [apuesta]', value: 'Trivia competitiva multiplayer', inline: true },
+                    { name: '>trivialb [perfect/accuracy/played]', value: 'Rankings de trivia', inline: true },
+                    { name: '>minigames', value: 'Ver todos los juegos', inline: true},
                 ]
             },
             betting: {

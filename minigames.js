@@ -370,50 +370,31 @@ class MinigamesSystem {
     }
 
     // Método unificado para aplicar CUALQUIER tipo de evento
-    async applyEventEffects(userId, baseAmount, context = 'minigames') {
+    async applyEventEffects(userId, baseAmount, context = 'minigames', guildId = null) {
         let finalAmount = baseAmount;
         let eventMessage = '';
         let cooldownMultiplier = 1;
         let luckBonus = 0;
         
-        /*const guildId = messageOrInteraction?.guild?.id || messageOrInteraction?.guildId;*/
-        for (const event of this.events.getActiveEvents(/*guildId*/)) {
-            // 1. Multiplicadores de dinero (minigames, work, daily, rewards, transfer_bonus)
+        if (!this.events) return { finalAmount, eventMessage, cooldownMultiplier, luckBonus };
+
+        for (const event of (this.events.getActiveEvents(guildId) || [])) {
             const multiplier = event.multipliers?.[context];
             if (multiplier && context !== 'cooldown' && context !== 'luck') {
                 const bonus = Math.floor(baseAmount * multiplier) - baseAmount;
                 finalAmount = Math.floor(baseAmount * multiplier);
-                
-                if (bonus > 0) {
-                    eventMessage = `${event.emoji} **${event.name}** (+${this.formatNumber(bonus)} π-b$)`;
-                } else if (bonus < 0) {
-                    eventMessage = `${event.emoji} **${event.name}** (${this.formatNumber(bonus)} π-b$)`;
-                }
+                if (bonus > 0) eventMessage = `${event.emoji} **${event.name}** (+${this.formatNumber(bonus)} π-b$)`;
+                else if (bonus < 0) eventMessage = `${event.emoji} **${event.name}** (${this.formatNumber(bonus)} π-b$)`;
             }
-            
-            // 2. Cooldowns (para reducción de tiempos)
-            if (context === 'cooldown' && event.multipliers?.cooldown) {
-                cooldownMultiplier = event.multipliers.cooldown;
-            }
-            
-            // 3. Suerte (para eventos lucky_hour)
+            if (context === 'cooldown' && event.multipliers?.cooldown) cooldownMultiplier = event.multipliers.cooldown;
             if (context === 'luck' && event.type === 'lucky_hour') {
-                luckBonus = 0.10; // +10% fijo
+                luckBonus = 0.10;
                 eventMessage = `${event.emoji} **${event.name}**`;
             }
-            
-            // Solo aplicar el primer evento que coincida
-            if (eventMessage || cooldownMultiplier !== 1 || luckBonus > 0) {
-                break;
-            }
+            if (eventMessage || cooldownMultiplier !== 1 || luckBonus > 0) break;
         }
         
-        return { 
-            finalAmount, 
-            eventMessage, 
-            cooldownMultiplier, 
-            luckBonus 
-        };
+        return { finalAmount, eventMessage, cooldownMultiplier, luckBonus };
     }
 
     async calculateLuck(userId) {
@@ -444,7 +425,7 @@ class MinigamesSystem {
         }
         
         // 2. Eventos de suerte (+10%)
-        const eventLuck = await this.applyEventEffects(userId, 0, 'luck');
+        const eventLuck = await this.applyEventEffects(userId, 0, 'luck', message.guild?.id);
         if (eventLuck.luckBonus > 0) {
             totalLuckBonus += eventLuck.luckBonus;
             luckMessages.push(`${eventLuck.eventMessage} (+10%)`);
@@ -511,7 +492,7 @@ class MinigamesSystem {
 
     async checkTreasureHunt(userId, message) {
         /*const guildId = messageOrInteraction?.guild?.id || messageOrInteraction?.guildId;*/
-        for (const event of this.events.getActiveEvents(/*guildId*/)) {
+        for (const event of (this.events?.getActiveEvents() || [])) {
             if (event.type === 'treasure_hunt' && Math.random() < 0.15) {
                 const treasureType = Math.random();
                 let treasureReward = 0;
@@ -762,7 +743,7 @@ setCooldown(userId, gameType) {
         try {
             // Aplicar eventos
             /*const guildId = message?.guild?.id || message?.guildId;*/
-            const activeEvents = this.events.getActiveEvents(/*guildId*/);
+            const activeEvents = this.events?.getActiveEvents(message.guild?.id) || [];
             for (const event of activeEvents) {
                 if (event.multipliers?.cooldown) {
                     effectiveCooldown = Math.floor(baseCooldown * event.multipliers.cooldown);
@@ -953,7 +934,7 @@ setCooldown(userId, gameType) {
             await this.economy.missions.updateMissionProgress(userId, 'game_won');
 
             // APLICAR EVENTOS DE DINERO
-            const eventBonus = await this.applyEventEffects(userId, profit, 'minigames');
+            const eventBonus = await this.applyEventEffects(userId, profit, 'minigames', message.guild?.id);
             let finalEarnings = eventBonus.finalAmount;
             
             // APLICAR ITEMS
@@ -1403,7 +1384,7 @@ setCooldown(userId, gameType) {
             await this.economy.missions.updateMissionProgress(userId, 'game_won');
 
             // APLICAR EVENTOS DE DINERO
-            const eventBonus = await this.applyEventEffects(userId, profit, 'minigames');
+            const eventBonus = await this.applyEventEffects(userId, profit, 'minigames', message.guild?.id);
             let finalEarnings = eventBonus.finalAmount;
             
             // APLICAR ITEMS
@@ -1687,7 +1668,7 @@ setCooldown(userId, gameType) {
         if (args.length < 3) {
             const embed = new EmbedBuilder()
                 .setTitle('🎰 Lotería - Juego de la Suerte')
-                .setDescription('¡Predice el número ganador y multiplica tu dinero x100!')
+                .setDescription('¡Predice el número ganador y multiplica tu dinero x75!')
                 .addFields(
                     { name: '📝 Uso', value: '`>lottery <número> <cantidad>`', inline: false },
                     { name: '💡 Ejemplos', value: '`>lottery 50 1000`\n`>lottery 25 2500`', inline: false },
@@ -1839,7 +1820,7 @@ setCooldown(userId, gameType) {
             await this.economy.missions.updateMissionProgress(userId, 'game_won');
 
             // APLICAR EVENTOS DE DINERO
-            const eventBonus = await this.applyEventEffects(userId, profit, 'minigames');
+            const eventBonus = await this.applyEventEffects(userId, profit, 'minigames', message.guild?.id);
             let finalEarnings = eventBonus.finalAmount;
             
             // APLICAR ITEMS
@@ -2604,7 +2585,7 @@ const userId = gameState.userId;
                 color = '#00FF00';
 
                 // APLICAR EVENTOS DE DINERO
-                const eventBonus = await this.applyEventEffects(userId, profit, 'minigames');
+                const eventBonus = await this.applyEventEffects(userId, profit, 'minigames', message.guild?.id);
                 finalEarnings = eventBonus.finalAmount;
                 
                 // APLICAR ITEMS
@@ -2698,7 +2679,7 @@ const userId = gameState.userId;
                 color = '#00FF00';
 
                 // APLICAR EVENTOS DE DINERO
-                const eventBonuss = await this.applyEventEffects(userId, profit, 'minigames');
+                const eventBonuss = await this.applyEventEffects(userId, profit, 'minigames', message.guild?.id);
                 finalEarnings = eventBonuss.finalAmount;
                 
                 // APLICAR ITEMS
@@ -3336,7 +3317,7 @@ const userId = gameState.userId;
             await this.economy.missions.updateMissionProgress(userId, 'game_won');
 
             // APLICAR EVENTOS DE DINERO
-            const eventBonus = await this.applyEventEffects(userId, profit, 'minigames');
+            const eventBonus = await this.applyEventEffects(userId, profit, 'minigames', message.guild?.id);
             let finalEarnings = eventBonus.finalAmount;
             
             // APLICAR ITEMS
@@ -4049,7 +4030,7 @@ const userId = gameState.userId;
             await this.economy.database.incrementGameLimit(userId, gameType);
             
             // APLICAR EVENTOS
-            const eventBonus = await this.applyEventEffects(userId, winAmount - betAmount, 'minigames');
+            const eventBonus = await this.applyEventEffects(userId, winAmount - betAmount, 'minigames', message.guild?.id);
             let finalEarnings = eventBonus.finalAmount;
             
             // APLICAR ITEMS
@@ -6183,7 +6164,7 @@ const userId = gameState.userId;
             // Un ganador
             const winner = survivors[0];
 
-            const eventBonus = await this.applyEventEffects(userId, profit, 'minigames');
+            const eventBonus = await this.applyEventEffects(userId, profit, 'minigames', message.guild?.id);
             finalEarnings = eventBonus.finalAmount;  
 
             const userData = await this.economy.getUser(winner.id);
@@ -8536,7 +8517,7 @@ const userId = gameState.userId;
         let finalEarnings = winnings;
         let eventMessage = '';
 
-        const eventBonus = await this.applyEventEffects(userId, profit, 'minigames');
+        const eventBonus = await this.applyEventEffects(userId, profit, 'minigames', message.guild?.id);
         finalEarnings = eventBonus.finalAmount;    
 
         const userData = await this.economy.getUser(winnerId);
@@ -9280,7 +9261,7 @@ const userId = gameState.userId;
             let finalEarnings = this.config.vendingMachine.winAmount;
             
             // Aplicar eventos
-            const eventBonus = await this.applyEventEffects(userId, finalEarnings, 'minigames');
+            const eventBonus = await this.applyEventEffects(userId, finalEarnings, 'minigames', message.guild?.id);
             finalEarnings = eventBonus.finalAmount;
             
             // Aplicar items
@@ -11312,111 +11293,67 @@ const userId = gameState.userId;
         this.activeGames.delete(`trivia_comp_${channelId}`);
     }
 
-    async showTriviaLeaderboard(message, args) {
-        try {
-            const type = args[1]?.toLowerCase();
-            
-            let leaderboard, title, emoji, valueFormatter;
-            
-            switch (type) {
-                case 'perfect':
-                case 'perfectas':
-                    leaderboard = await this.economy.getTriviaLeaderboard(10);
-                    title = '🏆 Top 10 - Trivias Perfectas';
-                    emoji = '🎯';
-                    valueFormatter = (user) => `${user.trivia_perfect} perfectas`;
-                    break;
-                    
-                case 'accuracy':
-                case 'precision':
-                    leaderboard = await this.economy.getTriviaAccuracyLeaderboard(10);
-                    title = '🎯 Top 10 - Precisión';
-                    emoji = '📊';
-                    valueFormatter = (user) => `${user.accuracy}% (${user.correct}/${user.total})`;
-                    break;
-                    
-                case 'played':
-                case 'partidas':
-                    leaderboard = await this.economy.getTriviaPlayedLeaderboard(10);
-                    title = '🎮 Top 10 - Más Partidas';
-                    emoji = '🎲';
-                    valueFormatter = (user) => `${user.trivia_played} partidas`;
-                    break;
-                               
-                case 'survival':
-                case 'supervivencia':
-                    leaderboard = await this.economy.getTriviaSurvivalLeaderboard(10);
-                    title = '🏃 Top 10 - Récord Supervivencia';
-                    emoji = '🔥';
-                    valueFormatter = (user) => `${user.trivia_survival_record} preguntas`;
-                    break;
+    async handleTriviaLeaderboard(message, client) {
+        const args = message.content.split(' ');
+        const type = args[1]?.toLowerCase() || 'score';
+        const scope = args[2]?.toLowerCase();
+        const isGlobal = scope === 'global';
 
-                default:
-                    // Mostrar ayuda
-                    const helpEmbed = new EmbedBuilder()
-                        .setTitle('📊 Rankings de Trivia')
-                        .setDescription('Consulta los mejores jugadores de trivia')
-                        .addFields(
-                            { 
-                                name: '🎮 Tipos de Ranking', 
-                                value: 
-                                    '`>trivialb perfect` - Trivias perfectas\n' +
-                                    '`>trivialb accuracy` - Mejor precisión\n' +
-                                    '`>trivialb played` - Más partidas jugadas\n' +
-                                    '`>trivialb survival` - Récord Supervivencia',
-                                inline: false 
-                            }
-                        )
-                        .setColor('#9932CC');
-                    
-                    await message.reply({ embeds: [helpEmbed] });
-                    return;
-            }
-            
-            if (leaderboard.length === 0) {
-                await message.reply('❌ No hay usuarios en este ranking todavía.');
-                return;
-            }
-            
-            const embed = new EmbedBuilder()
-                .setTitle(title)
-                .setColor('#FFD700')
-                .setTimestamp();
-            
-            let description = '';
-            
-            for (let i = 0; i < leaderboard.length; i++) {
-                const user = leaderboard[i];
-                let medal = '';
-                
-                switch (i) {
-                    case 0: medal = '🥇'; break;
-                    case 1: medal = '🥈'; break;
-                    case 2: medal = '🥉'; break;
-                    default: medal = `**${i + 1}.**`; break;
-                }
-                
-                description += `${medal} <@${user.userId}>\n${emoji} ${valueFormatter(user)}\n\n`;
-            }
-            
-            embed.setDescription(description);
-            
-            // Footer con otros rankings disponibles
-            const footerTexts = {
-                'perfect': 'Usa >trivialb accuracy para ver precisión',
-                'accuracy': 'Usa >trivialb played para ver partidas jugadas',
-                'played': 'Usa >trivialb tof para ver T/F perfectas',
-                'tof': 'Usa >trivialb perfect para ver trivias perfectas'
-            };
-            
-            embed.setFooter({ text: footerTexts[type] || 'Usa >trivialb para ver rankings' });
-            
-            await message.reply({ embeds: [embed] });
-            
-        } catch (error) {
-            console.error('❌ Error mostrando ranking de trivia:', error);
-            await message.reply('❌ Ocurrió un error al cargar el ranking. Intenta de nuevo.');
+        let leaderboard, title;
+        if (type === 'perfect') {
+            leaderboard = isGlobal
+                ? await this.economy.database.getTriviaLeaderboard(10)
+                : await this.economy.getTriviaLeaderboardByGuild(10, message.guild.id, client);
+            title = isGlobal ? '🏆 Trivia Global — Mejores puntuaciones' : `🏆 Trivia — ${message.guild.name}`;
+        } else if (type === 'accuracy') {
+            leaderboard = isGlobal
+                ? await this.economy.getTriviaAccuracyLeaderboard(10)
+                : await this.economy.getTriviaAccuracyLeaderboardByGuild(10, message.guild.id, client);
+            title = isGlobal ? '🎯 Trivia Global — Mejor precisión' : `🎯 Trivia Precisión — ${message.guild.name}`;
+        } else if (type === 'played') {
+            leaderboard = isGlobal
+                ? await this.economy.getTriviaPlayedLeaderboard(10)
+                : await this.economy.getTriviaLeaderboardByGuild(10, message.guild.id, client);
+            title = isGlobal ? '🎮 Trivia Global — Más partidas' : `🎮 Trivia Partidas — ${message.guild.name}`;
+        } else {
+            leaderboard = isGlobal
+                ? await this.economy.getTriviaLeaderboard(10)
+                : await this.economy.getTriviaLeaderboardByGuild(10, message.guild.id, client);
+            title = isGlobal ? '🧠 Trivia Global — Top puntuaciones' : `🧠 Trivia — ${message.guild.name}`;
         }
+
+        if (!leaderboard || leaderboard.length === 0) {
+            return message.reply('❌ No hay datos de trivia todavía.');
+        }
+
+        const scopeLabel = isGlobal ? '🌍 Global' : `🏠 Servidor`;
+        const embed = new EmbedBuilder()
+            .setTitle(`${title} — ${scopeLabel}`)
+            .setColor('#9932CC')
+            .setTimestamp();
+
+        let description = '';
+        for (let i = 0; i < leaderboard.length; i++) {
+            const user = leaderboard[i];
+            let medal;
+            switch (i) {
+                case 0: medal = '🥇'; break;
+                case 1: medal = '🥈'; break;
+                case 2: medal = '🥉'; break;
+                default: medal = `**${i + 1}.**`; break;
+            }
+            const value = type === 'accuracy'
+                ? `${user.accuracy?.toFixed(1) || 0}% precisión`
+                : type === 'played'
+                    ? `${user.gamesPlayed || 0} partidas`
+                    : `${user.triviaScore || user.score || 0} pts`;
+            description += `${medal} <@${user.userId}>\n📊 ${value}\n\n`;
+        }
+
+        embed.setDescription(description);
+        embed.setFooter({ text: isGlobal ? 'Usa >trivialb para ver solo este servidor' : 'Usa >trivialb score global para ver ranking global' });
+
+        await message.reply({ embeds: [embed] });
     }
 
     async showTriviaCategories(message) {
@@ -12168,7 +12105,7 @@ const userId = gameState.userId;
                     await this.cancelTriviaCompetitive(message);
                     break;
                 case '>trivialb':
-                    await this.showTriviaLeaderboard(message, args);
+                    await this.handleTriviaLeaderboard(message, client);
                     break;
                 case '>triviacategorias':
                 case '>triviacategories':
@@ -12193,89 +12130,178 @@ const userId = gameState.userId;
     // Mostrar lista de juegos disponibles
     async showGamesList(message) {
         const embed = new EmbedBuilder()
-            .setTitle('🎮 Minijuegos Disponibles')
-            .setDescription('¡Diviértete y gana π-b Coins!')
+            .setTitle('🎮 Minijuegos — π-b Bot')
+            .setDescription([
+                '> Usa los comandos para jugar y ganar **π-b Coins**.',
+                '> Los cooldowns pueden reducirse con items VIP y eventos.',
+                '',
+                '─────────────────────────────'
+            ].join('\n'))
             .setColor('#9932CC')
             .addFields(
-                { 
-                    name: '🪙 Coinflip', 
-                    value: '`>coinflip <cara/cruz> <cantidad>`\nApuesta: 50-10,000 π-b$\nGanancia: x1.95\nCooldown: 15 segundos', 
-                    inline: false 
+                {
+                    name: '🪙 Coinflip',
+                    value: [
+                        '`>coinflip <cara/cruz> <apuesta>`',
+                        '💰 Apuesta: **100 – 5,000** π-b$',
+                        '🏆 Ganancia: **x1.85**',
+                        '⏱️ Cooldown: **30s**'
+                    ].join('\n'),
+                    inline: true
                 },
-                { 
-                    name: '🎲 Dados', 
-                    value: '`>dice <1-6/alto/bajo> <cantidad>`\nApuesta: 50-10,000 π-b$\nGanancia: x1.9 - x5.8\nCooldown: 30 segundos', 
-                    inline: false 
+                {
+                    name: '🎲 Dados',
+                    value: [
+                        '`>dice <1-6 / alto / bajo> <apuesta>`',
+                        '💰 Apuesta: **100 – 5,000** π-b$',
+                        '🏆 Ganancia: **x1.85** (alto/bajo) · **x4.0** (exacto)',
+                        '⏱️ Cooldown: **45s**'
+                    ].join('\n'),
+                    inline: true
                 },
-                { 
-                    name: '🎰 Lotería', 
-                    value: '`>lottery <número> <cantidad>`\nApuesta: 500-5,000 π-b$\nGanancia: x100 (¡Si aciertas!)\nCooldown: 30 minutos', 
-                    inline: false 
+                { name: '\u200b', value: '\u200b', inline: false },
+                {
+                    name: '🎰 Lotería',
+                    value: [
+                        '`>lottery <número 1-100> <apuesta>`',
+                        '💰 Apuesta: **500 – 3,000** π-b$',
+                        '🏆 Ganancia: **x75** si aciertas el número',
+                        '⏱️ Cooldown: **5 min**'
+                    ].join('\n'),
+                    inline: true
                 },
-                { 
-                    name: '♠️ Blackjack', 
-                    value: '`>blackjack <cantidad>`\nApuesta: 100-15,000 π-b$\nGanancia: x2 (x2.5 con Blackjack natural)\nCooldown: 3 minutos', 
-                    inline: false 
+                {
+                    name: '♠️ Blackjack',
+                    value: [
+                        '`>blackjack <apuesta>`',
+                        '💰 Apuesta: **100 – 10,000** π-b$',
+                        '🏆 Ganancia: **x1.9** · **x2.3** con Blackjack natural',
+                        '⏱️ Cooldown: **30s**'
+                    ].join('\n'),
+                    inline: true
                 },
-                { 
-                    name: '🎡 Ruleta', 
-                    value: '`>roulette <tipo> <cantidad>`\nApuesta: 100-20,000 π-b$\nGanancia: x1.95 - x35\nCooldown: 45 segundos', 
-                    inline: false 
+                { name: '\u200b', value: '\u200b', inline: false },
+                {
+                    name: '🎡 Ruleta',
+                    value: [
+                        '`>roulette <tipo> <apuesta>`',
+                        '💰 Apuesta: **100 – 15,000** π-b$',
+                        '🏆 Ganancia: **x1.85** (color) hasta **x32** (número)',
+                        '⏱️ Cooldown: **20s**'
+                    ].join('\n'),
+                    inline: true
                 },
-                { 
-                    name: '🎰 Tragaperras', 
-                    value: '`>slots <cantidad>`\nApuesta: 100-8,000 π-b$\nGanancia: x2.5 - x50\nCooldown: 1 minuto', 
-                    inline: false 
+                {
+                    name: '🎰 Tragaperras',
+                    value: [
+                        '`>slots <apuesta>`',
+                        '💰 Apuesta: **100 – 8,000** π-b$',
+                        '🏆 Ganancia: **x2.5** hasta **x50** 💎',
+                        '⏱️ Cooldown: **1 min**'
+                    ].join('\n'),
+                    inline: true
                 },
-                { 
-                    name: '🔫 Ruleta Rusa (Multiplayer)', 
-                    value: '`>russian <cantidad>` - Crear partida\n`>startrussian` - Iniciar (creador)\n`>shoot` - Disparar en tu turno\nApuesta: 200-5,000 π-b$\nJugadores: 2-6\nGanador se lleva 85% del pot', 
-                    inline: false 
+                { name: '\u200b', value: '\u200b', inline: false },
+                {
+                    name: '🥤 Máquina Expendedora',
+                    value: [
+                        '`>vending`',
+                        '💰 Costo fijo: **10** π-b$',
+                        '🏆 Premio: **40** π-b$ · Probabilidad: **45%**',
+                        '⏱️ Cooldown: **15 min**'
+                    ].join('\n'),
+                    inline: true
                 },
+                {
+                    name: '🔫 Ruleta Rusa',
+                    value: [
+                        '`>russian <apuesta>` · `>startrussian` · `>shoot`',
+                        '💰 Apuesta: **300 – 4,000** π-b$',
+                        '👥 Jugadores: **2-6** · Ganador lleva **80%** del pot',
+                        '⏱️ Cooldown: según ronda'
+                    ].join('\n'),
+                    inline: true
+                },
+                { name: '\u200b', value: '\u200b', inline: false },
                 {
                     name: '🐎 Carrera de Caballos',
-                    value: '**Bot:** `>horses bot <cantidad>`\n' +
-                        '**Multi:** `>horses multi <cantidad>`\n' +
-                        '`>joinrace` - Unirse a carrera\n' +
-                        '`>startrace` - Iniciar (creador)\n' +
-                        'Apuesta: 200-10,000 π-b$\n' +
-                        'Premios: 🥇x3.0 🥈x1.8 🥉x1.2\n' +
-                        '⚡ Dobla apuesta hasta 75% de carrera\n' +
-                        '👥 Varios pueden elegir el mismo caballo',
-                    inline: false
-                },
-                { 
-                    name: '🥤 Máquina Expendedora', 
-                    value: '`>vending`\nCosto: 10 π-b$\nPremio: 40 π-b$\nProbabilidad: 45%\nCooldown: 15 minutos', 
-                    inline: false 
+                    value: [
+                        '`>horses bot <apuesta>` — vs Bot',
+                        '`>horses multi <apuesta>` · `>joinrace` · `>startrace`',
+                        '💰 Apuesta: **200 – 10,000** π-b$',
+                        '🏆 Premios: 🥇**x3.0** 🥈**x1.8** 🥉**x1.2**',
+                        '⚡ Puedes doblar tu apuesta hasta el 75% de la carrera'
+                    ].join('\n'),
+                    inline: true
                 },
                 {
-                    name: '🎴 UNO (Multiplayer)',
-                    value: '`>ujoin <cantidad>` - Crear partida\n`>ustart` - Iniciar (creador)\n`>uplay <color> <numero>` - Lanzar una carta\n`>upickup` - Agarra una carta\n`>uhand` - Muestra tu mano\n`>sayuno` - Usalo cuando tengas una carta\n`>ucallout` - El jugador no dijo Uno\n`>utable` - Muestra la mesa\n`>uleave` - Abandona el juego\nApuesta: 100-10,000 π-b$\nJugadores: 2-8\nGanador se lleva 85% del pot',
-                    inline: false,
+                    name: '🎴 UNO Multiplayer',
+                    value: [
+                        '`>ujoin <apuesta>` · `>ustart` · `>uplay <color> <número>`',
+                        '`>upickup` robar · `>uhand` ver mano · `>sayuno` ¡UNO!',
+                        '💰 Apuesta: **150 – 8,000** π-b$',
+                        '👥 Jugadores: **2-8** · Ganador lleva **90%** del pot'
+                    ].join('\n'),
+                    inline: true
                 },
+                { name: '\u200b', value: '\u200b', inline: false },
                 {
                     name: '🕳️ Pozo Semanal',
-                    value: '`>potcontribute money/item <valor>` - Contribuir\n`>holethings` - Ver contenido del pozo\nRango: 100-50k π-b$ | Max 3 items/usuario\nDistribución aleatoria semanal entre participantes',
-                    inline: false,
+                    value: [
+                        '`>potcontribute money/item <valor>` · `>holethings`',
+                        '💰 Rango: **100 – 50,000** π-b$ · Máx **3 items/usuario**',
+                        '🎁 Distribución aleatoria entre participantes cada semana'
+                    ].join('\n'),
+                    inline: true
                 },
+                { name: '\u200b', value: '\u200b', inline: false },
                 {
-                    name: '🧠 Trivia',
-                    value: '`>trivia [easy/medium/hard]`\nGratis\nRecompensa: hasta 2,000 π-b$ + 500 XP\n5 preguntas por partida\nCooldown: 2 minutos',
+                    name: '─── 🧠 Trivia ───────────────',
+                    value: '\u200b',
                     inline: false
                 },
-                { 
-                    name: '📊 Rankings - Trivia', 
-                    value: '`>trivialb` - Ver rankings de trivia\n`>trivialb [perfect/accuracy/played]`', 
-                    inline: false 
+                {
+                    name: '📖 Trivia Clásica',
+                    value: [
+                        '`>trivia [easy/medium/hard] [modo] [categoría]`',
+                        '🎁 **Gratis** · 5 preguntas por partida',
+                        '🏆 Recompensa: hasta **1,000** π-b$ + **80** XP',
+                        '⏱️ Cooldown: **1 min**'
+                    ].join('\n'),
+                    inline: true
                 },
-                { 
-                    name: '🔮 Próximamente', 
-                    value: '• Poker\n• Memory Game', 
-                    inline: false 
+                {
+                    name: '💀 Trivia Survival',
+                    value: [
+                        '`>triviasurvival [easy/medium/hard] [categoría]`',
+                        '🎁 **Gratis** · Sobrevive el mayor número de preguntas',
+                        '🏆 **100** π-b$ + **10** XP por pregunta · dificultad sube cada 5',
+                        '⏱️ Cooldown: **5 min**'
+                    ].join('\n'),
+                    inline: true
+                },
+                {
+                    name: '🏆 Trivia Competitiva',
+                    value: [
+                        '`>triviacomp [dificultad] [apuesta]` · `>jointrivia` · `>starttrivia`',
+                        '💰 Apuesta: **0 – 5,000** π-b$ · Jugadores: **2-6**',
+                        '🏆 Ganador lleva **85%** del pot',
+                        '⏱️ Cooldown: **3 min**'
+                    ].join('\n'),
+                    inline: false
+                },
+                {
+                    name: '📊 Rankings de Trivia',
+                    value: '`>trivialb` · `>trivialb perfect` · `>trivialb accuracy` · `>trivialb played`\n`>trivialb <tipo> global` — Ver ranking global',
+                    inline: false
+                },
+                {
+                    name: '🔮 Próximamente',
+                    value: '• Poker\n• Memory Game\n• Wordle Musical\n• Cine Quiz\n• Anagramas',
+                    inline: false
                 },
             )
-            .setFooter({ text: 'Juega responsablemente - La casa siempre tiene ventaja' })
+            .setFooter({ text: 'Juega responsablemente — La casa siempre tiene ventaja 🎰' })
             .setTimestamp();
 
         await message.reply({ embeds: [embed] });
