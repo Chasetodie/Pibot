@@ -516,16 +516,26 @@ class MusicSystem {
             );
         }
 
-        // Dividir letra en chunks de 4000 chars (límite de Discord embed)
+        // Dividir por líneas para no cortar palabras
+        const lines = lyrics.split('\n');
         const chunks = [];
-        let remaining = lyrics;
-        while (remaining.length > 0) {
-            chunks.push(remaining.slice(0, 1900));
-            remaining = remaining.slice(1900);
-        }
+        let currentChunk = '';
 
-        // Buscar imagen de la canción en Spotify
+        for (const line of lines) {
+            if ((currentChunk + '\n' + line).length > 1900) {
+                if (currentChunk) chunks.push(currentChunk.trim());
+                currentChunk = line;
+            } else {
+                currentChunk += (currentChunk ? '\n' : '') + line;
+            }
+        }
+        if (currentChunk) chunks.push(currentChunk.trim());
+
+        // Buscar imagen Y metadata de la canción en Spotify
         let songThumbnail = null;
+        let songTitle = query; // fallback
+        let songArtist = null;
+
         if (process.env.SPOTIFY_CLIENT_ID && process.env.SPOTIFY_CLIENT_SECRET) {
             try {
                 const tokenRes = await fetch('https://accounts.spotify.com/api/token', {
@@ -543,19 +553,27 @@ class MusicSystem {
                     { headers: { 'Authorization': `Bearer ${tokenData.access_token}` } }
                 );
                 const searchData = await searchRes.json();
-                songThumbnail = searchData.tracks?.items?.[0]?.album?.images?.[0]?.url || null;
+                const track = searchData.tracks?.items?.[0];
+                if (track) {
+                    songThumbnail = track.album?.images?.[0]?.url || null;
+                    songTitle = track.name;
+                    songArtist = track.artists.map(a => a.name).join(', ');
+                }
             } catch (e) {
-                console.warn('Spotify thumbnail falló:', e.message);
+                console.warn('Spotify metadata falló:', e.message);
             }
         }
 
         const embed = new EmbedBuilder()
-            .setTitle(`🎵 Letra — ${query}`)
+            .setTitle(`🎵 ${songTitle}`)
             .setDescription(chunks[0])
             .setColor('#9932CC')
             .setThumbnail(songThumbnail)
-            .setFooter({ text: `Fuente: ${source}${chunks.length > 1 ? ` • Página 1/${chunks.length}` : ''}` })
             .setTimestamp();
+
+        if (songArtist) embed.addFields({ name: '👤 Artista', value: songArtist, inline: true });
+        embed.addFields({ name: '📖 Fuente', value: source, inline: true });
+        if (chunks.length > 1) embed.setFooter({ text: `Página 1/${chunks.length}` });
 
         if (chunks.length === 1) {
             return loadingMsg.edit({ content: '', embeds: [embed] });

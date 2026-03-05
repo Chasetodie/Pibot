@@ -641,9 +641,9 @@ client.on('interactionCreate', async (interaction) => {
         }
 
         // Botones de búsqueda de música
-        if (customId.startsWith('msearch_') || customId.startsWith('mplay_') || 
-            customId.startsWith('mback_') || customId.startsWith('msp_') || 
-            customId.startsWith('mspplay_') || customId.startsWith('mspback_')) {
+        if (interaction.customId?.startsWith('msearch_') || interaction.customId?.startsWith('mplay_') || 
+            interaction.customId?.startsWith('mback_') || interaction.customId?.startsWith('msp_') || 
+            interaction.customId?.startsWith('mspplay_') || interaction.customId?.startsWith('mspback_')) {
             client.musicSystem.handleSearchInteraction(interaction).catch(e => {
                 console.error('handleSearchInteraction error:', e.message);
             });
