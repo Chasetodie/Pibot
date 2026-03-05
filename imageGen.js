@@ -78,15 +78,15 @@ class ImageGenSystem {
                     continue;
                 }
 
-                const buffer = await res.arrayBuffer();
-                if (!buffer || buffer.byteLength < 100) {
-                    console.warn(`☁️ Cloudflare [${model}]: buffer vacío`);
-                    continue;
-                }
-
-                console.log(`✅ Cloudflare éxito con ${model}`);
-                return { buffer: Buffer.from(buffer), type: 'buffer' };
-
+const arrayBuffer = await res.arrayBuffer();
+if (!arrayBuffer || arrayBuffer.byteLength < 100) {
+    console.warn(`☁️ Cloudflare [${model}]: buffer vacío`);
+    continue;
+}
+// Convertir correctamente a Buffer de Node.js
+const buffer = Buffer.from(new Uint8Array(arrayBuffer));
+console.log(`✅ Cloudflare éxito con ${model} | tamaño: ${buffer.length} bytes`);
+return { buffer, type: 'buffer' };
             } catch (e) {
                 console.warn(`☁️ Cloudflare [${model}] error: ${e.message}`);
             }
@@ -140,10 +140,10 @@ class ImageGenSystem {
                 if (result.type === 'url') {
                     embed.setImage(result.url);
                     await loadingMsg.edit({ content: '', embeds: [embed] });
-                } else if (result.type === 'buffer') {
-                    const attachment = new AttachmentBuilder(result.buffer, { name: 'imagen.png' });
-                    embed.setImage('attachment://imagen.png');
-                    await loadingMsg.edit({ content: '', embeds: [embed], files: [attachment] });
+} else if (result.type === 'buffer') {
+    const attachment = new AttachmentBuilder(result.buffer, { name: 'imagen.png' });
+    embed.setImage('attachment://imagen.png');
+    await loadingMsg.edit({ content: '', embeds: [embed], files: [attachment] });
                 }
 
                 return;
