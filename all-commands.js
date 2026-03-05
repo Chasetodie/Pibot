@@ -2000,7 +2000,7 @@ const commandName = command.replace('>', '');
                 case '>top':
                 case '>leaderboard':
                 case '>lb':
-                    await this.handleTop(message, client);
+                    await this.handleTop(message, message.client);
                     break;
                 case '>work':
                 case '>job':

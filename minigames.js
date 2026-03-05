@@ -425,7 +425,7 @@ class MinigamesSystem {
         }
         
         // 2. Eventos de suerte (+10%)
-        const eventLuck = await this.applyEventEffects(userId, 0, 'luck', message.guild?.id);
+        const eventLuck = await this.applyEventEffects(userId, 0, 'luck', null);
         if (eventLuck.luckBonus > 0) {
             totalLuckBonus += eventLuck.luckBonus;
             luckMessages.push(`${eventLuck.eventMessage} (+10%)`);
@@ -731,30 +731,20 @@ setCooldown(userId, gameType) {
 
     // En minigames.js, REEMPLAZAR getEffectiveCooldown():
 
-    async getEffectiveCooldown(baseCooldown, message) {
+    async getEffectiveCooldown(baseCooldown, guildId = null) {
         let effectiveCooldown = baseCooldown;
-        
-        // Verificar que events esté disponible
-        if (!this.events) {
-            console.log('⚠️ Events no disponible en cooldown');
-            return effectiveCooldown;
-        }
-        
+        if (!this.events) return effectiveCooldown;
         try {
-            // Aplicar eventos
-            /*const guildId = message?.guild?.id || message?.guildId;*/
-            const activeEvents = this.events?.getActiveEvents(message.guild?.id) || [];
+            const activeEvents = this.events?.getActiveEvents(guildId) || [];
             for (const event of activeEvents) {
                 if (event.multipliers?.cooldown) {
                     effectiveCooldown = Math.floor(baseCooldown * event.multipliers.cooldown);
-                    console.log(`⏰ Cooldown modificado por ${event.name}: ${baseCooldown}ms → ${effectiveCooldown}ms`);
                     break;
                 }
             }
         } catch (error) {
             console.error('Error aplicando eventos a cooldown:', error);
         }
-        
         return effectiveCooldown;
     }
 
@@ -773,7 +763,7 @@ setCooldown(userId, gameType) {
     const cachedCooldown = this.cooldownCache.get(cacheKey);
     const now = Date.now();
     
-    let effectiveCooldown = await this.getEffectiveCooldown(this.config.coinflip.cooldown);
+    let effectiveCooldown = await this.geteffectivecooldown(this.config.coinflip.cooldown, null);
 
     if (this.shop) {
         const cooldownReduction = await this.shop.getCooldownReduction(userId, 'games');
@@ -866,7 +856,7 @@ setCooldown(userId, gameType) {
         }
 
         // Probabilidad 1% de recibir maldición aleatoria
-        if (Math.random() < 0.01) {
+        if (Math.random() < 0.05) {
             await this.economy.shop.applyRandomCurse(message.author.id);
             
             const curseNotif = new EmbedBuilder()
@@ -1189,7 +1179,7 @@ setCooldown(userId, gameType) {
         const cachedCooldown = this.cooldownCache.get(cacheKey);
         const now = Date.now();
         
-        let effectiveCooldown = await this.getEffectiveCooldown(this.config.dice.cooldown);
+        let effectiveCooldown = await this.getEffectiveCooldown(this.config.dice.cooldown, null);
 
         if (this.shop) {
             const cooldownReduction = await this.shop.getCooldownReduction(userId, 'games');
@@ -1265,7 +1255,7 @@ setCooldown(userId, gameType) {
         }
 
         // Probabilidad 1% de recibir maldición aleatoria
-        if (Math.random() < 0.01) {
+        if (Math.random() < 0.05) {
             await this.economy.shop.applyRandomCurse(message.author.id);
             
             const curseNotif = new EmbedBuilder()
@@ -1632,7 +1622,7 @@ setCooldown(userId, gameType) {
     const cachedCooldown = this.cooldownCache.get(cacheKey);
     const now = Date.now();
     
-    let effectiveCooldown = await this.getEffectiveCooldown(this.config.lottery.cooldown);
+    let effectiveCooldown = await this.getEffectiveCooldown(this.config.lottery.cooldown, null);
 
     if (this.shop) {
         const cooldownReduction = await this.shop.getCooldownReduction(userId, 'games');
@@ -1732,7 +1722,7 @@ setCooldown(userId, gameType) {
         }
         
         // Probabilidad 1% de recibir maldición aleatoria
-        if (Math.random() < 0.01) {
+        if (Math.random() < 0.05) {
             await this.economy.shop.applyRandomCurse(message.author.id);
             
             const curseNotif = new EmbedBuilder()
@@ -2097,7 +2087,7 @@ setCooldown(userId, gameType) {
     const cachedCooldown = this.cooldownCache.get(cacheKey);
     const now = Date.now();
     
-    let effectiveCooldown = await this.getEffectiveCooldown(this.config.blackjack.cooldown);
+    let effectiveCooldown = await this.getEffectiveCooldown(this.config.blackjack.cooldown, null);
 
     if (this.shop) {
         const cooldownReduction = await this.shop.getCooldownReduction(userId, 'games');
@@ -3110,7 +3100,7 @@ const userId = gameState.userId;
     const cachedCooldown = this.cooldownCache.get(cacheKey);
     const now = Date.now();
     
-    let effectiveCooldown = await this.getEffectiveCooldown(this.config.roulette.cooldown);
+    let effectiveCooldown = await this.getEffectiveCooldown(this.config.roulette.cooldown, null);
 
     if (this.shop) {
         const cooldownReduction = await this.shop.getCooldownReduction(userId, 'games');
@@ -3225,7 +3215,7 @@ const userId = gameState.userId;
         }
     
         // Probabilidad 1% de recibir maldición aleatoria
-        if (Math.random() < 0.01) {
+        if (Math.random() < 0.05) {
             await this.economy.shop.applyRandomCurse(message.author.id);
             
             const curseNotif = new EmbedBuilder()
@@ -3710,7 +3700,7 @@ const userId = gameState.userId;
 
         const lastSlots = user.last_slots || 0;
         const now = Date.now();
-        let effectiveCooldown = await this.getEffectiveCooldown(this.config.slots.cooldown);
+        let effectiveCooldown = await this.getEffectiveCooldown(this.config.slots.cooldown, null);
 
         if (now - lastSlots < effectiveCooldown) {
             const timeLeft = effectiveCooldown - (now - lastSlots);
@@ -3967,7 +3957,7 @@ const userId = gameState.userId;
         }
         
         // Probabilidad 1% de recibir maldición aleatoria
-        if (Math.random() < 0.01) {
+        if (Math.random() < 0.05) {
             await this.economy.shop.applyRandomCurse(message.author.id);
             
             const curseNotif = new EmbedBuilder()
@@ -4985,7 +4975,7 @@ const userId = gameState.userId;
         }
         
         // Probabilidad 1% de recibir maldición aleatoria
-        if (Math.random() < 0.01) {
+        if (Math.random() < 0.05) {
             await this.economy.shop.applyRandomCurse(message.author.id);
             
             const curseNotif = new EmbedBuilder()
@@ -9164,7 +9154,7 @@ const userId = gameState.userId;
         const cachedCooldown = this.cooldownCache.get(cacheKey);
         const now = Date.now();
         
-        let effectiveCooldown = await this.getEffectiveCooldown(this.config.vendingMachine.cooldown);
+        let effectiveCooldown = await this.getEffectiveCooldown(this.config.vendingMachine.cooldown, null);
 
         if (this.shop) {
             const cooldownReduction = await this.shop.getCooldownReduction(userId, 'games');
@@ -9468,7 +9458,7 @@ const userId = gameState.userId;
         const cachedCooldown = this.cooldownCache.get(cacheKey);
         const now = Date.now();
         
-        let effectiveCooldown = await this.getEffectiveCooldown(this.config.trivia.cooldown);
+        let effectiveCooldown = await this.getEffectiveCooldown(this.config.trivia.cooldown, null);
 
         if (this.shop) {
             const cooldownReduction = await this.shop.getCooldownReduction(userId, 'games');
@@ -9623,7 +9613,7 @@ const userId = gameState.userId;
         }
 
         // Probabilidad 1% de recibir maldición aleatoria
-        if (Math.random() < 0.01) {
+        if (Math.random() < 0.05) {
             await this.economy.shop.applyRandomCurse(message.author.id);
             
             const curseNotif = new EmbedBuilder()
@@ -10296,7 +10286,7 @@ const userId = gameState.userId;
         const cachedCooldown = this.cooldownCache.get(cacheKey);
         const now = Date.now();
         
-        let effectiveCooldown = await this.getEffectiveCooldown(this.config.trivia.survival.cooldown);
+        let effectiveCooldown = await this.getEffectiveCooldown(this.config.trivia.survival.cooldown, null);
 
         if (this.shop) {
             const cooldownReduction = await this.shop.getCooldownReduction(userId, 'games');
@@ -10366,7 +10356,7 @@ const userId = gameState.userId;
         }
 
         // Probabilidad 1% de recibir maldición aleatoria
-        if (Math.random() < 0.01) {
+        if (Math.random() < 0.05) {
             await this.economy.shop.applyRandomCurse(message.author.id);
             
             const curseNotif = new EmbedBuilder()
@@ -11293,7 +11283,7 @@ const userId = gameState.userId;
         this.activeGames.delete(`trivia_comp_${channelId}`);
     }
 
-    async handleTriviaLeaderboard(message, client) {
+    async handleTriviaLeaderboard(message, args, client) {
         const args = message.content.split(' ');
         const type = args[1]?.toLowerCase() || 'score';
         const scope = args[2]?.toLowerCase();
@@ -12105,7 +12095,7 @@ const userId = gameState.userId;
                     await this.cancelTriviaCompetitive(message);
                     break;
                 case '>trivialb':
-                    await this.handleTriviaLeaderboard(message, client);
+                    await this.handleTriviaLeaderboard(message, args, message.client);
                     break;
                 case '>triviacategorias':
                 case '>triviacategories':
