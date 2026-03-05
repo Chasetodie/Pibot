@@ -648,10 +648,11 @@ class MusicSystem {
             }
 
             const customId = interaction.customId;
+            console.log('🔘 handleSearchInteraction customId:', customId); // ← AGREGAR ESTO
             const parts = customId.split('_');
             const userId = parts[2];
             const guildId = parts[3];
-
+            
             // Verificar que es el usuario correcto
             if (interaction.user.id !== userId) {
                 return interaction.reply({ content: '❌ Este menú no es tuyo.', ephemeral: true });
