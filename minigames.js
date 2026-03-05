@@ -695,18 +695,18 @@ class MinigamesSystem {
     }
 
     // Establecer cooldown
-setCooldown(userId, gameType) {
-    const key = `${userId}-${gameType}`;
-    const now = Date.now();
-    
-    // Guardar en memoria inmediatamente
-    this.cooldownCache.set(key, now);
-    
-    // Limpiar cache después de 5 minutos (por si acaso)
-    setTimeout(() => {
-        this.cooldownCache.delete(key);
-    }, 5 * 60 * 1000);
-}
+    setCooldown(userId, gameType) {
+        const key = `${userId}-${gameType}`;
+        const now = Date.now();
+        
+        // Guardar en memoria inmediatamente
+        this.cooldownCache.set(key, now);
+        
+        // Limpiar cache después de 5 minutos (por si acaso)
+        setTimeout(() => {
+            this.cooldownCache.delete(key);
+        }, 5 * 60 * 1000);
+    }
 
     // Formatear tiempo
     formatTime(ms) {
@@ -749,48 +749,48 @@ setCooldown(userId, gameType) {
     }
 
     async canCoinflip(userId) {
-    const user = await this.economy.getUser(userId);
+        const user = await this.economy.getUser(userId);
 
-    if (this.shop) {
-        const vipMultipliers = await this.shop.getVipMultipliers(userId, 'games');
-        if (vipMultipliers.noCooldown) {
-            return { canCoinPlay: true };
+        if (this.shop) {
+            const vipMultipliers = await this.shop.getVipMultipliers(userId, 'games');
+            if (vipMultipliers.noCooldown) {
+                return { canCoinPlay: true };
+            }
         }
-    }
 
-    // ✅ AGREGAR VERIFICACIÓN DE CACHE PRIMERO:
-    const cacheKey = `${userId}-coinflip`;
-    const cachedCooldown = this.cooldownCache.get(cacheKey);
-    const now = Date.now();
-    
-    let effectiveCooldown = await this.getEffectiveCooldown(this.config.coinflip.cooldown, null);
+        // ✅ AGREGAR VERIFICACIÓN DE CACHE PRIMERO:
+        const cacheKey = `${userId}-coinflip`;
+        const cachedCooldown = this.cooldownCache.get(cacheKey);
+        const now = Date.now();
+        
+        let effectiveCooldown = await this.getEffectiveCooldown(this.config.coinflip.cooldown, null);
 
-    if (this.shop) {
-        const cooldownReduction = await this.shop.getCooldownReduction(userId, 'games');
-        effectiveCooldown = Math.floor(effectiveCooldown * (1 - cooldownReduction));
-    }
-    
-    // Verificar cache primero (más rápido)
-    if (cachedCooldown && (now - cachedCooldown < effectiveCooldown)) {
-        const timeLeft = effectiveCooldown - (now - cachedCooldown);
-        return {
-            canCoinPlay: false,
-            timeLeft: timeLeft
-        };
-    }
-    
-    // Luego verificar base de datos
-    const lastCoin = user.last_coinflip || 0;
-    if (now - lastCoin < effectiveCooldown) {
-        const timeLeft = effectiveCooldown - (now - lastCoin);
-        return {
-            canCoinPlay: false,
-            timeLeft: timeLeft
-        };
-    }
+        if (this.shop) {
+            const cooldownReduction = await this.shop.getCooldownReduction(userId, 'games');
+            effectiveCooldown = Math.floor(effectiveCooldown * (1 - cooldownReduction));
+        }
+        
+        // Verificar cache primero (más rápido)
+        if (cachedCooldown && (now - cachedCooldown < effectiveCooldown)) {
+            const timeLeft = effectiveCooldown - (now - cachedCooldown);
+            return {
+                canCoinPlay: false,
+                timeLeft: timeLeft
+            };
+        }
+        
+        // Luego verificar base de datos
+        const lastCoin = user.last_coinflip || 0;
+        if (now - lastCoin < effectiveCooldown) {
+            const timeLeft = effectiveCooldown - (now - lastCoin);
+            return {
+                canCoinPlay: false,
+                timeLeft: timeLeft
+            };
+        }
 
-    return { canCoinPlay: true };
-}
+        return { canCoinPlay: true };
+    }
 
     formatGameBonuses(eventMessage, luckMessage, itemMessage, equipmentMessage, vipMessage) {
         let bonuses = [];
@@ -811,18 +811,18 @@ setCooldown(userId, gameType) {
         // Verificar argumentos
         if (args.length < 3) {
             const embed = new EmbedBuilder()
-                .setTitle('🪙 Coinflip - Cara o Cruz')
-                .setDescription('Apuesta a cara o cruz y duplica tu dinero!')
+                .setTitle('🪙 Coinflip — Cara o Cruz')
+                .setDescription('> Elige cara o cruz, apuesta y duplica tu dinero. Simple y rápido.')
                 .addFields(
                     { name: '📝 Uso', value: '`>coinflip <cara/cruz> <cantidad>`', inline: false },
-                    { name: '💡 Ejemplos', value: '`>coinflip cara 500`\n`,>coinflip cruz 1000`', inline: false },
-                    { name: '💰 Apuesta', value: `Min: ${this.formatNumber(this.config.coinflip.minBet)} π-b$\nMax: ${this.formatNumber(this.config.coinflip.maxBet)} π-b$`, inline: false },
-                    { name: '🎯 Probabilidad', value: '50% de ganar\nGanancia: x1.95', inline: false }
+                    { name: '💡 Ejemplos', value: '`>coinflip cara 500`\n`>coinflip cruz 1000`', inline: false },
+                    { name: '💰 Apuesta', value: `**Mín:** ${this.formatNumber(this.config.coinflip.minBet)} π-b$\n**Máx:** ${this.formatNumber(this.config.coinflip.maxBet)} π-b$`, inline: true },
+                    { name: '🏆 Ganancia', value: '**x1.85** tu apuesta\n50% de probabilidad', inline: true },
+                    { name: '⏱️ Cooldown', value: '**30 segundos**', inline: true }
                 )
-                .setColor('#FFD700');
-            
-            await message.reply({ embeds: [embed] });
-            return;
+                .setColor('#FFD700')
+                .setFooter({ text: '¿Cara o Cruz? La suerte decide.' });
+            return message.reply({ embeds: [embed] });
         }
 
         const choice = args[1].toLowerCase();
@@ -1213,17 +1213,26 @@ setCooldown(userId, gameType) {
         // Si no hay argumentos, mostrar ayuda
         if (args.length < 3) {
             const embed = new EmbedBuilder()
-                .setTitle('🎲 Dados - Juego de Predicción')
-                .setDescription('Predice el resultado del dado y gana!')
+                .setTitle('🎲 Dados — Juego de Predicción')
+                .setDescription('> Predice el resultado del dado antes de tirarlo. Más riesgo, más ganancia.')
                 .addFields(
-                    { name: '📝 Opciones de Apuesta', value: '• `1-6`: Número exacto (x5.8)\n• `alto`: 4, 5 o 6 (x1.9)\n• `bajo`: 1, 2 o 3 (x1.9)', inline: false },
-                    { name: '💡 Ejemplos', value: '`>dice 6 500` - Apostar al 6\n`>dice alto 1000` - Apostar alto\n`>dice bajo 750` - Apostar bajo', inline: false },
-                    { name: '💰 Límites', value: `Min: ${this.formatNumber(this.config.dice.minBet)} π-b$\nMax: ${this.formatNumber(this.config.dice.maxBet)} π-b$`, inline: false }
+                    { name: '📝 Uso', value: '`>dice <predicción> <cantidad>`', inline: false },
+                    {
+                        name: '🎯 Tipos de Apuesta',
+                        value: [
+                            '`alto` — Sale 4, 5 o 6 → **x1.85**',
+                            '`bajo` — Sale 1, 2 o 3 → **x1.85**',
+                            '`1` a `6` — Número exacto → **x4.0**'
+                        ].join('\n'),
+                        inline: false
+                    },
+                    { name: '💡 Ejemplos', value: '`>dice alto 1000`\n`>dice bajo 500`\n`>dice 6 750`', inline: false },
+                    { name: '💰 Apuesta', value: `**Mín:** ${this.formatNumber(this.config.dice.minBet)} π-b$\n**Máx:** ${this.formatNumber(this.config.dice.maxBet)} π-b$`, inline: true },
+                    { name: '⏱️ Cooldown', value: '**45 segundos**', inline: true }
                 )
-                .setColor('#FF6B6B');
-            
-            await message.reply({ embeds: [embed] });
-            return;
+                .setColor('#FF6B6B')
+                .setFooter({ text: 'Mayor riesgo = mayor recompensa.' });
+            return message.reply({ embeds: [embed] });
         }
 
         const prediction = args[1].toLowerCase();
@@ -1657,21 +1666,20 @@ setCooldown(userId, gameType) {
         // Si no hay argumentos suficientes, mostrar ayuda
         if (args.length < 3) {
             const embed = new EmbedBuilder()
-                .setTitle('🎰 Lotería - Juego de la Suerte')
-                .setDescription('¡Predice el número ganador y multiplica tu dinero x75!')
+                .setTitle('🎰 Lotería — Adivina el Número')
+                .setDescription('> Elige un número del 1 al 100. Si aciertas, ganas **x75** tu apuesta.')
                 .addFields(
                     { name: '📝 Uso', value: '`>lottery <número> <cantidad>`', inline: false },
-                    { name: '💡 Ejemplos', value: '`>lottery 50 1000`\n`>lottery 25 2500`', inline: false },
-                    { name: '🎯 Rango de Números', value: `${this.config.lottery.minNumber} - ${this.config.lottery.maxNumber}`, inline: true },
-                    { name: '💰 Apuesta', value: `Min: ${this.formatNumber(this.config.lottery.minBet)} π-b$\nMax: ${this.formatNumber(this.config.lottery.maxBet)} π-b$`, inline: true },
-                    { name: '🏆 Ganancia', value: `x${this.config.lottery.winMultiplier} si aciertas\n(Probabilidad: 1%)`, inline: true },
-                    { name: '⏰ Cooldown', value: '15 minutos', inline: false }
+                    { name: '💡 Ejemplos', value: '`>lottery 50 1000`\n`>lottery 7 2500`', inline: false },
+                    { name: '🎯 Rango', value: `**${this.config.lottery.minNumber}** al **${this.config.lottery.maxNumber}**`, inline: true },
+                    { name: '🏆 Ganancia', value: `**x${this.config.lottery.winMultiplier}** si aciertas`, inline: true },
+                    { name: '📊 Probabilidad', value: '**1%** de ganar', inline: true },
+                    { name: '💰 Apuesta', value: `**Mín:** ${this.formatNumber(this.config.lottery.minBet)} π-b$\n**Máx:** ${this.formatNumber(this.config.lottery.maxBet)} π-b$`, inline: true },
+                    { name: '⏱️ Cooldown', value: '**5 minutos**', inline: true }
                 )
                 .setColor('#FF1493')
-                .setFooter({ text: '¡Un juego de pura suerte! ¿Te sientes con suerte?' });
-            
-            await message.reply({ embeds: [embed] });
-            return;
+                .setFooter({ text: '1% de probabilidad, 7500% de ganancia. ¿Te sientes con suerte?' });
+            return message.reply({ embeds: [embed] });
         }
     
         // VERIFICAR LÍMITES
@@ -2142,20 +2150,37 @@ setCooldown(userId, gameType) {
         // Si no hay argumentos suficientes, mostrar ayuda
         if (args.length < 2) {
             const embed = new EmbedBuilder()
-                .setTitle('♠️ Blackjack - Vence al Dealer')
-                .setDescription('¡Llega lo más cerca posible a 21 sin pasarte!')
+                .setTitle('♠️ Blackjack — Vence al Dealer')
+                .setDescription('> Llega lo más cerca posible a **21** sin pasarte. El clásico juego de cartas.')
                 .addFields(
                     { name: '📝 Uso', value: '`>blackjack <cantidad>`', inline: false },
-                    { name: '💡 Ejemplos', value: '`>blackjack 500`\n`>blackjack 2000`', inline: false },
-                    { name: '💰 Apuesta', value: `Min: ${this.formatNumber(this.config.blackjack.minBet)} π-b$\nMax: ${this.formatNumber(this.config.blackjack.maxBet)} π-b$`, inline: false },
-                    { name: '🎯 Reglas', value: '• Llega a 21 o cerca sin pasarte\n• As vale 1 u 11\n• Figuras valen 10\n• Blackjack natural: x2.5\n• Victoria normal: x2', inline: false },
-                    { name: '🎮 Controles', value: '🎯 **Hit** - Pedir carta\n🛑 **Stand** - Plantarse\n🔄 **Double** - Doblar apuesta', inline: false }
+                    { name: '💡 Ejemplos', value: '`>blackjack 500`\n`>blackjack 5000`', inline: false },
+                    {
+                        name: '📋 Reglas',
+                        value: [
+                            '• As vale **1** u **11** (lo que convenga)',
+                            '• Figuras (J, Q, K) valen **10**',
+                            '• Superar 21 = **pierde automáticamente**',
+                            '• Empate = **devuelve la apuesta**'
+                        ].join('\n'),
+                        inline: false
+                    },
+                    {
+                        name: '🏆 Ganancias',
+                        value: '**Victoria normal:** x1.9\n**Blackjack natural (21 en 2 cartas):** x2.3',
+                        inline: false
+                    },
+                    {
+                        name: '🎮 Controles',
+                        value: '🎯 **Hit** — Pedir otra carta\n🛑 **Stand** — Plantarse\n🔄 **Double** — Doblar apuesta y recibir 1 carta',
+                        inline: false
+                    },
+                    { name: '💰 Apuesta', value: `**Mín:** ${this.formatNumber(this.config.blackjack.minBet)} π-b$\n**Máx:** ${this.formatNumber(this.config.blackjack.maxBet)} π-b$`, inline: true },
+                    { name: '⏱️ Cooldown', value: '**30 segundos**', inline: true }
                 )
-                .setColor('#000000')
-                .setFooter({ text: 'Cooldown: 3 minutos. En este juego no se aplican items de suerte.' });
-            
-            await message.reply({ embeds: [embed] });
-            return;
+                .setColor('#2C2C2C')
+                .setFooter({ text: 'Los items de suerte no aplican en este juego.' });
+            return message.reply({ embeds: [embed] });
         }
     
         const betAmount = parseInt(args[1]);
@@ -3154,36 +3179,34 @@ const userId = gameState.userId;
         // Si no hay argumentos suficientes, mostrar ayuda
         if (args.length < 3) {
             const embed = new EmbedBuilder()
-                .setTitle('🎡 Ruleta - Casino Européo')
-                .setDescription('¡Apuesta en la ruleta y gana grandes premios!')
+                .setTitle('🎡 Ruleta — Casino Europeo')
+                .setDescription('> Apuesta a un número, color o rango. A mayor riesgo, mayor ganancia.')
                 .addFields(
                     { name: '📝 Uso', value: '`>roulette <tipo> <cantidad>`', inline: false },
-                    { 
-                        name: '🎯 Tipos de Apuesta', 
-                        value: '**Números:** `0-36` (x35)\n**Colores:** `rojo`, `negro` (x1.95)\n**Verde:** `verde` (x37)\n**Paridad:** `par`, `impar` (x1.95)\n**Rango:** `bajo` (1-18), `alto` (19-36) (x1.95)\n**Docenas:** `1era`, `2da`, `3era` (x2.9)\n**Columnas:** `col1`, `col2`, `col3` (x2.9)', 
-                        inline: false 
+                    {
+                        name: '🎯 Tipos de Apuesta',
+                        value: [
+                            '**Número exacto** `0-36` → **x32**',
+                            '**Verde** `verde` → **x34**',
+                            '**Color** `rojo` / `negro` → **x1.85**',
+                            '**Paridad** `par` / `impar` → **x1.85**',
+                            '**Rango** `alto` (19-36) / `bajo` (1-18) → **x1.85**',
+                            '**Docena** `1era` / `2da` / `3era` → **x2.7**',
+                            '**Columna** `col1` / `col2` / `col3` → **x2.7**'
+                        ].join('\n'),
+                        inline: false
                     },
-                    { 
-                        name: '💡 Ejemplos', 
-                        value: '`>roulette 7 1000` - Apostar al 7\n`>roulette rojo 500` - Apostar al rojo\n`>roulette par 750` - Apostar a números pares\n`>roulette 1era 2000` - Apostar 1era docena', 
-                        inline: false 
+                    {
+                        name: '💡 Ejemplos',
+                        value: '`>roulette 7 1000` — Al número 7\n`>roulette rojo 500` — Al rojo\n`>roulette 1era 2000` — A la 1era docena',
+                        inline: false
                     },
-                    { 
-                        name: '💰 Límites', 
-                        value: `Min: ${this.formatNumber(this.config.roulette.minBet)} π-b$\nMax: ${this.formatNumber(this.config.roulette.maxBet)} π-b$`, 
-                        inline: true 
-                    },
-                    { 
-                        name: '⏰ Cooldown', 
-                        value: '45 segundos', 
-                        inline: true 
-                    }
+                    { name: '💰 Apuesta', value: `**Mín:** ${this.formatNumber(this.config.roulette.minBet)} π-b$\n**Máx:** ${this.formatNumber(this.config.roulette.maxBet)} π-b$`, inline: true },
+                    { name: '⏱️ Cooldown', value: '**20 segundos**', inline: true }
                 )
                 .setColor('#8B0000')
-                .setFooter({ text: '🍀 La suerte está en tus manos' });
-            
-            await message.reply({ embeds: [embed] });
-            return;
+                .setFooter({ text: 'La bola decide. ¿Dónde apostás?' });
+            return message.reply({ embeds: [embed] });
         }
     
         const betType = args[1].toLowerCase();
@@ -3718,28 +3741,30 @@ const userId = gameState.userId;
         const user = await this.economy.getUser(userId);
         
         if (args.length < 2) {
-            const symbolsList = Object.entries(this.config.slots.symbols)
-                .sort((a, b) => a[1].payout - b[1].payout)
-                .reverse()
-                .map(([emoji, data]) => `${emoji} x${data.payout}`)
-                .join(' | ');
-            
             const embed = new EmbedBuilder()
-                .setTitle('🎰 Tragaperras - Máquina de la Suerte')
-                .setDescription('¡Gira la máquina y consigue 3 símbolos iguales!')
+                .setTitle('🎰 Tragaperras — Máquina de la Suerte')
+                .setDescription('> Gira la máquina y consigue **3 símbolos iguales** para ganar.')
                 .addFields(
                     { name: '📝 Uso', value: '`>slots <cantidad>`', inline: false },
-                    { name: '💡 Ejemplo', value: '`>slots 500`', inline: false },
-                    { name: '💰 Apuesta', value: `Min: ${this.formatNumber(this.config.slots.minBet)} π-b$\nMax: ${this.formatNumber(this.config.slots.maxBet)} π-b$`, inline: true },
-                    { name: '🎯 Símbolos', value: symbolsList, inline: false },
-                    { name: '🏆 Premios', value: '**3 iguales:** Pago del símbolo\n**2 iguales:** 50% de la apuesta\n**💎 Jackpot:** x50 tu apuesta', inline: false },
-                    { name: '⏰ Cooldown', value: '20 segundos', inline: true }
+                    {
+                        name: '💎 Tabla de Premios',
+                        value: [
+                            '💎 💎 💎 — **x50** (Jackpot)',
+                            '🍒 🍒 🍒 — **x20**',
+                            '🔔 🔔 🔔 — **x10**',
+                            '🍋 🍋 🍋 — **x5**',
+                            '⭐ ⭐ ⭐ — **x3**',
+                            '7️⃣ 7️⃣ 7️⃣ — **x2.5**',
+                            '2 iguales — **50%** de la apuesta'
+                        ].join('\n'),
+                        inline: false
+                    },
+                    { name: '💰 Apuesta', value: `**Mín:** ${this.formatNumber(this.config.slots.minBet)} π-b$\n**Máx:** ${this.formatNumber(this.config.slots.maxBet)} π-b$`, inline: true },
+                    { name: '⏱️ Cooldown', value: '**1 minuto**', inline: true }
                 )
                 .setColor('#FFD700')
-                .setFooter({ text: '🍀 La suerte está de tu lado' });
-            
-            await message.reply({ embeds: [embed] });
-            return;
+                .setFooter({ text: '💎 El Jackpot es ultra raro. ¿Tenés suerte hoy?' });
+            return message.reply({ embeds: [embed] });
         }
 
         const betAmount = parseInt(args[1]);
@@ -4259,17 +4284,34 @@ const userId = gameState.userId;
         if (args.length < 2) {
             const embed = new EmbedBuilder()
                 .setTitle('🐎 Carrera de Caballos')
-                .setDescription('¡Apuesta por tu caballo y gana!')
+                .setDescription('> Elige un caballo y apuesta. Hay dos modos: contra el bot o contra otros jugadores.')
                 .addFields(
-                    { name: '🎮 Modos de Juego', value: '**Bot:** `>horses bot <cantidad>`\n**Multijugador:** `>horses multi <cantidad>`', inline: false },
-                    { name: '🏆 Premios', value: '🥇 1er lugar: x3.0\n🥈 2do lugar: x1.8\n🥉 3er lugar: x1.2', inline: true },
-                    { name: '💰 Apuestas - Bot', value: `Min: ${this.formatNumber(this.config.horseRace.minBet)} π-b$\nMax: ${this.formatNumber(this.config.horseRace.maxBet)} π-b$`, inline: true },
-                    { name: '🎯 Características', value: '• 12 caballos compiten\n• Dobla tu apuesta (1 vez)\n• Solo antes del 75% de carrera\n• Velocidad aleatoria realista', inline: false }
+                    {
+                        name: '🎮 Modos',
+                        value: '`>horses bot <cantidad>` — vs Bot (solo)\n`>horses multi <cantidad>` — Multijugador',
+                        inline: false
+                    },
+                    {
+                        name: '👥 Multijugador',
+                        value: '`>joinrace` — Unirse a carrera activa\n`>startrace` — Iniciar (solo el creador)',
+                        inline: false
+                    },
+                    {
+                        name: '🏆 Premios',
+                        value: '🥇 **1er lugar** — x3.0\n🥈 **2do lugar** — x1.8\n🥉 **3er lugar** — x1.2',
+                        inline: true
+                    },
+                    {
+                        name: '⚡ Extra',
+                        value: 'Puedes **doblar tu apuesta** una vez\n(solo antes del **75%** de la carrera)',
+                        inline: true
+                    },
+                    { name: '💰 Apuesta', value: `**Mín:** ${this.formatNumber(this.config.horseRace.minBet)} π-b$\n**Máx:** ${this.formatNumber(this.config.horseRace.maxBet)} π-b$`, inline: true },
+                    { name: '⏱️ Cooldown', value: '**2 minutos**', inline: true }
                 )
-                .setColor('#8B4513');
-            
-            await message.reply({ embeds: [embed] });
-            return;
+                .setColor('#8B4513')
+                .setFooter({ text: '12 caballos compiten. Solo uno gana.' });
+            return message.reply({ embeds: [embed] });
         }
         
         const mode = args[1].toLowerCase();
@@ -5558,41 +5600,27 @@ const userId = gameState.userId;
         // Si no hay argumentos suficientes, mostrar ayuda
         if (args.length < 2) {
             const embed = new EmbedBuilder()
-                .setTitle('🔫 Ruleta Rusa - Juego Multiplayer')
-                .setDescription('¡El último jugador en pie se lleva todo el dinero!')
+                .setTitle('🔫 Ruleta Rusa — Multijugador')
+                .setDescription('> El último jugador en pie se lleva el **80%** del pot. Solo para valientes.')
                 .addFields(
-                    { name: '📝 Uso', value: '`>russian <cantidad>` - Crear/Unirse a partida', inline: false },
-                    { 
-                        name: '🎯 Cómo Funciona', 
-                        value: '• Cada jugador apuesta la misma cantidad\n• Se carga 1 bala en un revólver de 6 cámaras\n• Los jugadores se turnan para disparar\n• El último vivo gana 85% del pot total\n• La casa se queda con el 15%', 
-                        inline: false 
+                    { name: '📝 Uso', value: '`>russian <cantidad>` — Crear o unirse a partida\n`>startrussian` — Iniciar (creador)\n`>shoot` — Disparar en tu turno', inline: false },
+                    {
+                        name: '⚙️ Cómo funciona',
+                        value: [
+                            '• Todos apuestan la misma cantidad',
+                            '• El revólver tiene **6 cámaras**, **1 bala**',
+                            '• Los jugadores se turnan para disparar',
+                            '• El último vivo gana **80%** del pot total'
+                        ].join('\n'),
+                        inline: false
                     },
-                    { 
-                        name: '👥 Jugadores', 
-                        value: `Mínimo: ${this.config.russianRoulette.minPlayers}\nMáximo: ${this.config.russianRoulette.maxPlayers}`, 
-                        inline: true 
-                    },
-                    { 
-                        name: '💰 Apuesta', 
-                        value: `Min: ${this.formatNumber(this.config.russianRoulette.minBet)} π-b$\nMax: ${this.formatNumber(this.config.russianRoulette.maxBet)} π-b$`, 
-                        inline: true 
-                    },
-                    { 
-                        name: '⏰ Tiempos', 
-                        value: '30s para unirse\n20s por turno\nCooldown: 5 min', 
-                        inline: true 
-                    },
-                    { 
-                        name: '💡 Ejemplo', 
-                        value: '`>russian 1000` - Apostar 1000 π-b$', 
-                        inline: false 
-                    }
+                    { name: '👥 Jugadores', value: `**Mín:** ${this.config.russianRoulette.minPlayers}\n**Máx:** ${this.config.russianRoulette.maxPlayers}`, inline: true },
+                    { name: '💰 Apuesta', value: `**Mín:** ${this.formatNumber(this.config.russianRoulette.minBet)} π-b$\n**Máx:** ${this.formatNumber(this.config.russianRoulette.maxBet)} π-b$`, inline: true },
+                    { name: '⏱️ Tiempos', value: '**60s** para unirse\n**20s** por turno', inline: true }
                 )
                 .setColor('#8B0000')
-                .setFooter({ text: '⚠️ Juego de alto riesgo - Solo para valientes. En este minijuego no se aplica el efecto de ningun item.' });
-            
-            await message.reply({ embeds: [embed] });
-            return;
+                .setFooter({ text: '⚠️ Items y efectos no aplican en este juego.' });
+            return message.reply({ embeds: [embed] });
         }
     
         const betAmount = parseInt(args[1]);
@@ -6325,52 +6353,22 @@ const userId = gameState.userId;
         // Si no hay argumentos suficientes, mostrar ayuda
         if (args.length < 2) {
             const variantsList = Object.entries(this.config.uno.variants)
-                .map(([key, variant]) => `${variant.emoji} **${variant.name}** - ${variant.description}`)
+                .map(([key, v]) => `${v.emoji} **${v.name}** — ${v.description}`)
                 .join('\n');
-
             const embed = new EmbedBuilder()
-                .setTitle('🎴 UNO - Juego de Cartas')
-                .setDescription('¡El primer jugador en quedarse sin cartas se lleva todo!')
+                .setTitle('🎴 UNO — Juego de Cartas')
+                .setDescription('> El primero en quedarse sin cartas gana el **90%** del pot. Estrategia y suerte.')
                 .addFields(
-                    { name: '📝 Uso', value: '`>ujoin <cantidad>` - Crear/Unirse a partida', inline: false },
-                    { name: '🎯 Variantes Disponibles', value: variantsList, inline: false },
-                    { name: '💡 Ejemplos', value: '`>ujoin 500` - UNO clásico\n`>ujoin 500 flip` - UNO Flip\n`>ujoin 500 noMercy` - No Mercy', inline: false },
-                    { 
-                        name: '🎯 Cómo Funciona', 
-                        value: '• Cada jugador apuesta la misma cantidad\n• Cada uno recibe 7 cartas iniciales\n• Juega cartas que coincidan en color o número\n• Usa cartas especiales para cambiar el juego\n• El primero sin cartas gana 95% del pot\n• La casa se queda con el 5%', 
-                        inline: false 
-                    },
-                    { 
-                        name: '👥 Jugadores', 
-                        value: `Mínimo: ${this.config.uno.minPlayers}\nMáximo: ${this.config.uno.maxPlayers}`, 
-                        inline: true 
-                    },
-                    { 
-                        name: '💰 Apuesta', 
-                        value: `Min: ${this.formatNumber(this.config.uno.minBet)} π-b$\nMax: ${this.formatNumber(this.config.uno.maxBet)} π-b$`, 
-                        inline: true 
-                    },
-                    { 
-                        name: '⏰ Tiempos', 
-                        value: '\n10m por turno, si no juega sera expulsado', 
-                        inline: true 
-                    },
-                    { 
-                        name: '🎮 Comandos en Juego', 
-                        value: '`>uplay <color> <numero>` - Jugar carta\n`>upickup` - Robar carta\n`>uhand` - Ver tu mano', 
-                        inline: false 
-                    },
-                    { 
-                        name: '💡 Ejemplo', 
-                        value: '`>ujoin 500` - Apostar 500 π-b$', 
-                        inline: false 
-                    }
+                    { name: '📝 Uso', value: '`>ujoin <cantidad>` — Crear o unirse\n`>ustart` — Iniciar (creador)\n`>uleave` — Abandonar', inline: false },
+                    { name: '🎮 Durante el juego', value: '`>uplay <color> <número>` — Jugar carta\n`>upickup` — Robar carta\n`>uhand` — Ver tu mano\n`>sayuno` — ¡UNO! (al tener 1 carta)\n`>ucallout` — Acusar a alguien de no decir UNO', inline: false },
+                    { name: '🃏 Variantes', value: variantsList, inline: false },
+                    { name: '👥 Jugadores', value: `**Mín:** ${this.config.uno.minPlayers}\n**Máx:** ${this.config.uno.maxPlayers}`, inline: true },
+                    { name: '💰 Apuesta', value: `**Mín:** ${this.formatNumber(this.config.uno.minBet)} π-b$\n**Máx:** ${this.formatNumber(this.config.uno.maxBet)} π-b$`, inline: true },
+                    { name: '⏱️ Turno', value: '**10 minutos** — si no jugás, sos expulsado', inline: true }
                 )
                 .setColor('#FF0000')
-                .setFooter({ text: '🎴 ¡Que gane el mejor estratega!. En este minijuego no se aplica el efecto de ningun item' });
-            
-            await message.reply({ embeds: [embed] });
-            return;
+                .setFooter({ text: '⚠️ Items y efectos no aplican en este juego.' });
+            return message.reply({ embeds: [embed] });
         }
 
         const betAmount = parseInt(args[1]);
@@ -8923,18 +8921,22 @@ const userId = gameState.userId;
     async handlePotContribute(message, args) {
         if (args.length < 3) {
             const embed = new EmbedBuilder()
-                .setTitle('🕳️ Contribuir al Pozo Semanal')
-                .setDescription('Contribuye dinero o items al pozo semanal y participa en la distribución')
+                .setTitle('🕳️ Pozo Semanal — Contribuir')
+                .setDescription('> Mete dinero o items al pozo. Cada semana se distribuye entre los participantes.')
                 .addFields(
-                    { name: '💰 Contribuir Dinero', value: '`>potcontribute money <cantidad>`', inline: false },
-                    { name: '📦 Contribuir Item', value: '`>potcontribute item <item_id>`', inline: false },
-                    { name: '💡 Ejemplos', value: '`>potcontribute money 5000`\n`>potcontribute item lucky_charm`', inline: false },
-                    { name: '📋 Límites', value: `• Dinero: ${this.formatNumber(this.potConfig.minMoney)} - ${this.formatNumber(this.potConfig.maxMoney)} π-b$\n• Items: Máximo ${this.potConfig.maxItemsPerUser} por usuario por semana`, inline: false }
+                    { name: '💰 Dinero', value: '`>potcontribute money <cantidad>`', inline: true },
+                    { name: '📦 Item', value: '`>potcontribute item <item_id>`', inline: true },
+                    { name: '👁️ Ver pozo', value: '`>holethings`', inline: true },
+                    {
+                        name: '📋 Límites',
+                        value: `**Dinero:** ${this.formatNumber(this.potConfig.minMoney)} – ${this.formatNumber(this.potConfig.maxMoney)} π-b$\n**Items:** Máx ${this.potConfig.maxItemsPerUser} por usuario por semana`,
+                        inline: false
+                    },
+                    { name: '💡 Ejemplo', value: '`>potcontribute money 5000`\n`>potcontribute item lucky_charm`', inline: false }
                 )
-                .setColor('#8B4513');
-            
-            await message.reply({ embeds: [embed] });
-            return;
+                .setColor('#8B4513')
+                .setFooter({ text: 'La distribución es aleatoria entre todos los que contribuyeron.' });
+            return message.reply({ embeds: [embed] });
         }
 
         const userId = message.author.id;
@@ -9183,18 +9185,17 @@ const userId = gameState.userId;
         if (args.length < 1) {
             const embed = new EmbedBuilder()
                 .setTitle('🥤 Máquina Expendedora')
-                .setDescription('¡Inserta 10 π-b$ y cruza los dedos!')
+                .setDescription('> Mete **10 π-b$** y cruza los dedos. Si sale algo bueno, ganas **40 π-b$**.')
                 .addFields(
-                    { name: '💰 Costo', value: '10 π-b$', inline: true },
-                    { name: '🎁 Premio', value: '40 π-b$', inline: true },
-                    { name: '📊 Probabilidad', value: '45% de ganar', inline: true },
-                    { name: '⏰ Cooldown', value: '15 minutos', inline: true },
-                    { name: '🎮 Uso', value: '`>vending`', inline: false }
+                    { name: '🎮 Uso', value: '`>vending`', inline: false },
+                    { name: '💰 Costo', value: '**10** π-b$ fijo', inline: true },
+                    { name: '🏆 Premio', value: '**40** π-b$', inline: true },
+                    { name: '📊 Probabilidad', value: '**45%** de ganar', inline: true },
+                    { name: '⏱️ Cooldown', value: '**15 minutos**', inline: true }
                 )
-                .setColor('#FF6B6B');
-            
-            await message.reply({ embeds: [embed] });
-            return;
+                .setColor('#FF6B6B')
+                .setFooter({ text: 'Simple y rápido. Solo cuesta 10.' });
+            return message.reply({ embeds: [embed] });
         }
 
         const betAmount = this.config.vendingMachine.minBet;
@@ -9497,41 +9498,49 @@ const userId = gameState.userId;
         // Si no hay argumentos, mostrar ayuda
         if (args.length < 2) {
             const embed = new EmbedBuilder()
-                .setTitle('🧠 Trivia - Pon a prueba tus conocimientos')
-                .setDescription('Responde 5 preguntas de cultura general traducidas al español')
+                .setTitle('🧠 Trivia — Pon a prueba tus conocimientos')
+                .setDescription('> Responde **5 preguntas** de cultura general. Cuanto más difícil, mayor recompensa.')
                 .addFields(
-                    { name: '💰 Costo', value: 'Gratis', inline: true },
-                    { name: '⏰ Cooldown', value: '1 minutos', inline: true },
-                    { name: '❓ Preguntas', value: 'Multiple: 5 | T/F: 10', inline: true },
-                    { name: '⏱️ Tiempo', value: '15 seg/pregunta', inline: true },
-                    { name: '📊 Sin límites', value: 'Diviertete!', inline: true },
-                    { name: '🎯 Dificultades', value: 'Easy • Medium • Hard', inline: true },
-                    { 
-                        name: '💎 Recompensas (Medium)', 
-                        value: '**5/5**: 1,000 π-b$ + 50 XP\n**4/5**: 600 π-b$ + 30 XP\n**3/5**: 300 π-b$ + 15 XP\n**< 3**: 50 π-b$ + 5 XP', 
-                        inline: false 
+                    { name: '📝 Uso', value: '`>trivia <dificultad> [modo] [categoría]`', inline: false },
+                    {
+                        name: '🎯 Dificultades',
+                        value: '`easy` — x1.0 recompensa\n`medium` — x1.5 recompensa\n`hard` — x2.0 recompensa',
+                        inline: true
                     },
-                    { 
-                        name: '🔥 Multiplicadores', 
-                        value: '**Easy**: x1.0\n**Medium**: x1.5\n**Hard**: x2.0', 
-                        inline: false 
+                    {
+                        name: '🎮 Modos',
+                        value: '`multiple` — 4 opciones\n`tof` — Verdadero o Falso (10 preguntas)',
+                        inline: true
                     },
-                    { 
-                        name: '💡 Pistas', 
-                        value: '**2 pistas** por partida\n**Solo en:** Multiple - Medium y Hard\n**Penalización:** -60% recompensa\n**Efecto:** Elimina 1 respuesta incorrecta', 
-                        inline: false 
+                    {
+                        name: '💎 Recompensas (Medium)',
+                        value: '**5/5** — 1,000 π-b$ + 50 XP\n**4/5** — 600 π-b$ + 30 XP\n**3/5** — 300 π-b$ + 15 XP\n**< 3** — 50 π-b$ + 5 XP',
+                        inline: false
                     },
-                    { 
-                        name: '🎮 Uso', 
-                        value: '`>trivia <dificultad> [modo] [categoría]`\n\n**Dificultades:** easy, medium, hard\n**Modos:** multiple, tof\n**Categorías:** peliculas, musica, deportes, historia, ciencia, videojuegos, anime, geografia, etc.\n\n**Ejemplos:**\n`>trivia easy` - Fácil mixto\n`>trivia hard tof deportes` - Difícil T/F de deportes\n`>trivia medium peliculas` - Normal de películas', 
-                        inline: false 
+                    {
+                        name: '💡 Pistas',
+                        value: '**3 pistas** disponibles (Medium y Hard)\nElimina una respuesta incorrecta\n⚠️ Penalización: **-40%** recompensa',
+                        inline: true
+                    },
+                    {
+                        name: '⏱️ Tiempo y Cooldown',
+                        value: '**15s** por pregunta\nCooldown: **1 minuto**',
+                        inline: true
+                    },
+                    {
+                        name: '📚 Categorías',
+                        value: '`peliculas` `musica` `deportes` `historia`\n`ciencia` `videojuegos` `anime` `geografia`\nUsa `>triviacat` para ver todas',
+                        inline: false
+                    },
+                    {
+                        name: '💡 Ejemplos',
+                        value: '`>trivia easy` — Fácil mixto\n`>trivia medium peliculas` — Películas normal\n`>trivia hard tof deportes` — Deportes difícil T/F',
+                        inline: false
                     }
                 )
                 .setColor('#9932CC')
-                .setFooter({ text: '¡Demuestra cuánto sabes y gana recompensas!' });
-            
-            await message.reply({ embeds: [embed] });
-            return;
+                .setFooter({ text: 'Gratis · ¡Demuestra cuánto sabés!' });
+            return message.reply({ embeds: [embed] });
         }
         
         const canTrivia = await this.canTrivia(userId);
@@ -10313,35 +10322,23 @@ const userId = gameState.userId;
         // Mostrar ayuda si piden
         if (!args[1] || args[1] !== 'start') {
             const embed = new EmbedBuilder()
-                .setTitle('🏃 Modo Supervivencia - Trivia')
-                .setDescription('¡Responde preguntas hasta que falles! La dificultad aumenta cada 5 correctas.')
+                .setTitle('💀 Trivia Survival — Modo Supervivencia')
+                .setDescription('> Responde preguntas seguidas sin parar. Un fallo y **terminó todo**. La dificultad sube cada 5 correctas.')
                 .addFields(
-                    { name: '⏱️ Tiempo', value: '15 segundos por pregunta', inline: true },
-                    { name: '💰 Recompensa', value: 'Acumulativa (+50% cada nivel)', inline: true },
-                    { name: '📈 Dificultad', value: 'Progresiva cada 5 preguntas', inline: true },
-                    { name: '🚫 Pistas', value: 'No disponibles', inline: true },
-                    { name: '⏰ Cooldown', value: '5 minutos', inline: true },
-                    { name: '🎯 Objetivo', value: 'Sobrevivir el mayor tiempo posible', inline: true },
-                    { 
-                        name: '💎 Sistema de Recompensas', 
-                        value: 
-                            '**Nivel 1 (1-5):** 100 π-b$ + 10 XP por pregunta\n' +
-                            '**Nivel 2 (6-10):** 150 π-b$ + 15 XP por pregunta\n' +
-                            '**Nivel 3 (11-15):** 225 π-b$ + 22 XP por pregunta\n' +
-                            '**Y así sucesivamente...**',
-                        inline: false 
+                    { name: '📝 Uso', value: '`>triviasurvival start` — Iniciar', inline: false },
+                    {
+                        name: '📈 Sistema de Dificultad',
+                        value: '**Nivel 1** (1-5): 100 π-b$ + 10 XP / pregunta\n**Nivel 2** (6-10): 150 π-b$ + 15 XP / pregunta\n**Nivel 3** (11-15): 225 π-b$ + 22 XP / pregunta\n**Nivel 4+**: sigue subiendo x1.5',
+                        inline: false
                     },
-                    { 
-                        name: '🎮 Uso', 
-                        value: '`>triviasurv start` - Iniciar modo supervivencia (categorías mixtas)', 
-                        inline: false 
-                    }
+                    { name: '⏱️ Tiempo', value: '**15s** por pregunta', inline: true },
+                    { name: '⏰ Cooldown', value: '**5 minutos**', inline: true },
+                    { name: '🚫 Pistas', value: 'No disponibles', inline: true },
+                    { name: '🏆 Objetivo', value: 'Sobrevivir la mayor cantidad de preguntas posible y batir el récord del servidor', inline: false }
                 )
                 .setColor('#FF4500')
                 .setFooter({ text: '¡Compite por el récord más alto!' });
-            
-            await message.reply({ embeds: [embed] });
-            return;
+            return message.reply({ embeds: [embed] });
         }
         
         const canTrivia = await this.canTriviaSurvival(userId);
@@ -10743,39 +10740,29 @@ const userId = gameState.userId;
         // Mostrar ayuda
         if (!args[1] || args[1] === 'help' || args[1] === 'info') {
             const embed = new EmbedBuilder()
-                .setTitle('⚔️ Modo Competitivo - Trivia')
-                .setDescription('¡Compite contra otros jugadores con las mismas preguntas!')
+                .setTitle('⚔️ Trivia Competitiva — Multijugador')
+                .setDescription('> Todos reciben las **mismas preguntas**. El que más puntos acumule gana el pot.')
                 .addFields(
-                    { name: '👥 Jugadores', value: '2-6 jugadores', inline: true },
-                    { name: '❓ Preguntas', value: '5 preguntas', inline: true },
-                    { name: '⏱️ Tiempo', value: '15 seg/pregunta', inline: true },
-                    { name: '💰 Apuesta', value: 'Opcional (0-5,000 π-b$)', inline: true },
-                    { name: '⏰ Tiempo de espera', value: '45 segundos', inline: true },
-                    { name: '🏆 Premio', value: 'Ganador: 85% del pot', inline: true },
                     {
-                        name: '📊 Sistema de Puntos',
-                        value:
-                            '• **Respuesta correcta:** 100 puntos base\n' +
-                            '• **Velocidad:** Hasta +50 puntos\n' +
-                            '• El más rápido gana más puntos',
+                        name: '📝 Comandos',
+                        value: '`>triviacomp <apuesta>` — Crear partida\n`>jointrivia` — Unirse a partida activa\n`>starttrivia` — Iniciar (solo creador)\n`>canceltrivia` — Cancelar (solo creador)',
                         inline: false
                     },
                     {
-                        name: '🎮 Comandos',
-                        value:
-                            '`>triviamulti <apuesta>` - Crear partida\n' +
-                            '`>triviamulti 0` - Crear partida gratis\n' +
-                            '`>jt` - Unirse a partida\n' +
-                            '`>st` - Iniciar (solo creador)\n' +
-                            '`>ct` - Cancelar (solo creador)',
+                        name: '📊 Sistema de Puntos',
+                        value: '**Respuesta correcta:** 100 pts base\n**Bonus velocidad:** hasta +50 pts\n⚡ Responder más rápido = más puntos',
                         inline: false
-                    }
+                    },
+                    { name: '👥 Jugadores', value: '**Mín:** 2 · **Máx:** 6', inline: true },
+                    { name: '❓ Preguntas', value: '**5** por partida — **15s** cada una', inline: true },
+                    { name: '⏳ Espera', value: '**45s** para unirse', inline: true },
+                    { name: '💰 Apuesta', value: '**0 – 5,000** π-b$ (0 = gratis)', inline: true },
+                    { name: '🏆 Premio', value: '**85%** del pot al ganador', inline: true },
+                    { name: '⏱️ Cooldown', value: '**3 minutos**', inline: true }
                 )
                 .setColor('#FF6B35')
-                .setFooter({ text: '¡Demuestra quién es el más rápido!' });
-            
-            await message.reply({ embeds: [embed] });
-            return;
+                .setFooter({ text: '¡Demuestra quién sabe más y quién responde más rápido!' });
+            return message.reply({ embeds: [embed] });
         }
         
         // Validar apuesta
@@ -11311,11 +11298,22 @@ const userId = gameState.userId;
                 : await this.economy.getTriviaLeaderboardByGuild(10, message.guild.id, client);
             title = isGlobal ? '💀 Trivia Global — Survival Record' : `💀 Trivia Survival — ${message.guild.name}`;
         } else {
-            // default = perfect
-            leaderboard = isGlobal
-                ? await this.economy.database.getTriviaLeaderboard(10)
-                : await this.economy.getTriviaLeaderboardByGuild(10, message.guild.id, client);
-            title = isGlobal ? '🏆 Trivia Global — Partidas Perfectas' : `🏆 Trivia Perfectas — ${message.guild.name}`;
+            // Tipo desconocido — mostrar ayuda
+            const embed = new EmbedBuilder()
+                .setTitle('📊 Trivia Rankings — Tipos disponibles')
+                .setDescription('> Usa `>trivialb <tipo>` para ver el ranking. Agrega `global` al final para el ranking global.')
+                .addFields(
+                    { name: '🏆 Perfect', value: '`>trivialb perfect`\nTop de partidas perfectas (5/5)', inline: true },
+                    { name: '🎯 Accuracy', value: '`>trivialb accuracy`\nTop de mayor precisión general', inline: true },
+                    { name: '🎮 Played', value: '`>trivialb played`\nTop de más partidas jugadas', inline: true },
+                    { name: '💀 Survival', value: '`>trivialb survival`\nTop de récords en modo supervivencia', inline: true },
+                    { name: '\u200b', value: '\u200b', inline: true },
+                    { name: '\u200b', value: '\u200b', inline: true },
+                    { name: '🌍 Global', value: 'Agrega `global` al final de cualquier comando:\n`>trivialb perfect global`\n`>trivialb played global`', inline: false }
+                )
+                .setColor('#9932CC')
+                .setFooter({ text: 'Sin argumentos muestra el top de partidas perfectas del servidor.' });
+            return message.reply({ embeds: [embed] });
         }
 
         if (!leaderboard || leaderboard.length === 0) {
