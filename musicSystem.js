@@ -643,45 +643,75 @@ class MusicSystem {
             try {
                 await interaction.deferUpdate();
             } catch (deferErr) {
-                console.warn('deferUpdate falló (interacción expirada?):', deferErr.message);
-                return; // Si ya expiró no podemos hacer nada
+                console.warn('deferUpdate falló:', deferErr.message);
+                return;
             }
 
             const customId = interaction.customId;
-            console.log('🔘 handleSearchInteraction customId:', customId); // ← AGREGAR ESTO
+            console.log('🔘 handleSearchInteraction customId:', customId);
             const parts = customId.split('_');
             const userId = parts[2];
             const guildId = parts[3];
-            
-            // Verificar que es el usuario correcto
+
             if (interaction.user.id !== userId) {
-                return interaction.reply({ content: '❌ Este menú no es tuyo.', ephemeral: true });
+                return interaction.editReply({ content: '❌ Este menú no es tuyo.', embeds: [], components: [] });
             }
 
-            const session = this.searchSessions?.get(`${userId}_${guildId}`);
-            if (!session) {
-                return interaction.editReply({ content: '❌ La sesión expiró. Busca de nuevo.', embeds: [], components: [] });
-            }
-
-            if (customId.startsWith('msearch_cancel')) {
-                this.searchSessions.delete(`${userId}_${guildId}`);
-                return interaction.editReply({ content: '❌ Búsqueda cancelada.', embeds: [], components: [] });
-            }
-
-            // Botones de Spotify search
-            if (customId.startsWith('msp_')) {
-                console.log('msp parts:', parts);
-                console.log('userId:', userId, '| guildId:', guildId);
-                console.log('sessions keys:', [...(this.spotifySearchSessions?.keys() || [])]);
+            // ─── SPOTIFY SEARCH ───────────────────────────────
+            if (customId.startsWith('msp_') || customId.startsWith('mspplay_') || customId.startsWith('mspback_')) {
                 const session = this.spotifySearchSessions?.get(`${userId}_${guildId}`);
-                console.log('session encontrada:', !!session);
                 if (!session) return interaction.editReply({ content: '❌ Sesión expirada.', embeds: [], components: [] });
 
-                if (customId.includes('cancel')) {
+                if (customId.startsWith('msp_') && customId.includes('cancel')) {
                     this.spotifySearchSessions.delete(`${userId}_${guildId}`);
                     return interaction.editReply({ content: '❌ Búsqueda cancelada.', embeds: [], components: [] });
                 }
 
+                if (customId.startsWith('mspback_')) {
+                    return interaction.editReply({ embeds: [session.embed], components: [session.row1, session.row2] });
+                }
+
+                if (customId.startsWith('mspplay_')) {
+                    const index = parseInt(parts[1]);
+                    const track = session.tracks[index];
+                    const voiceChannel = interaction.member.voice.channel;
+                    if (!voiceChannel) return interaction.editReply({ content: '❌ Debes estar en un canal de voz.', embeds: [], components: [] });
+
+                    try {
+                        const spotifyUrl = track.external_urls.spotify;
+                        const result = await this.kazagumo.search(spotifyUrl, { requester: session.author });
+                        if (!result || !result.tracks.length) return interaction.editReply({ content: '❌ No se pudo cargar la canción.', embeds: [], components: [] });
+
+                        let player = this.kazagumo.getPlayer(guildId);
+                        if (!player) {
+                            player = await this.kazagumo.createPlayer({
+                                guildId,
+                                textId: interaction.channelId,
+                                voiceId: voiceChannel.id,
+                                shardId: interaction.guild.shardId || 0,
+                            });
+                        }
+                        this.clearPlayerTimeout(guildId);
+                        player.queue.add(result.tracks[0]);
+                        if (!player.playing && !player.paused) {
+                            await new Promise(r => setTimeout(r, 500));
+                            player.play();
+                        }
+
+                        const addedEmbed = new EmbedBuilder()
+                            .setTitle('✅ Canción Agregada')
+                            .setDescription(`**${track.name}**\nDuración: ${this.formatTime(track.duration_ms)}`)
+                            .setThumbnail(track.album?.images?.[0]?.url || null)
+                            .setColor('#1DB954');
+
+                        this.spotifySearchSessions.delete(`${userId}_${guildId}`);
+                        return interaction.editReply({ content: '', embeds: [addedEmbed], components: [] });
+                    } catch (e) {
+                        return interaction.editReply({ content: `❌ Error al reproducir: ${e.message}`, embeds: [], components: [] });
+                    }
+                }
+
+                // msp_ con número — mostrar detalles
                 const index = parseInt(parts[1]);
                 const track = session.tracks[index];
                 const artists = track.artists.map(a => a.name).join(', ');
@@ -718,64 +748,13 @@ class MusicSystem {
                 return interaction.editReply({ embeds: [detailEmbed], components: [playRow] });
             }
 
-            // Reproducir desde Spotify search
-            if (customId.startsWith('mspplay_')) {
-                const session = this.spotifySearchSessions?.get(`${userId}_${guildId}`);
-                if (!session) return interaction.editReply({ content: '❌ Sesión expirada.', embeds: [], components: [] });
+            // ─── YOUTUBE SEARCH ───────────────────────────────
+            const session = this.searchSessions?.get(`${userId}_${guildId}`);
+            if (!session) return interaction.editReply({ content: '❌ La sesión expiró. Busca de nuevo.', embeds: [], components: [] });
 
-                const index = parseInt(parts[1]);
-                const track = session.tracks[index];
-                const voiceChannel = interaction.member.voice.channel;
-
-                if (!voiceChannel) {
-                    return interaction.editReply({ content: '❌ Debes estar en un canal de voz.', embeds: [], components: [] });
-                }
-
-                try {
-                    // Buscar en LavaSrc con URL de Spotify
-                    const spotifyUrl = track.external_urls.spotify;
-                    const result = await this.kazagumo.search(spotifyUrl, { requester: session.author });
-
-                    if (!result || !result.tracks.length) {
-                        return interaction.editReply({ content: '❌ No se pudo cargar la canción.', embeds: [], components: [] });
-                    }
-
-                    let player = this.kazagumo.getPlayer(guildId);
-                    if (!player) {
-                        player = await this.kazagumo.createPlayer({
-                            guildId,
-                            textId: interaction.channelId,
-                            voiceId: voiceChannel.id,
-                            shardId: interaction.guild.shardId || 0,
-                        });
-                    }
-                    this.clearPlayerTimeout(guildId);
-                    player.queue.add(result.tracks[0]);
-
-                    if (!player.playing && !player.paused) {
-                        await new Promise(r => setTimeout(r, 500));
-                        player.play();
-                    }
-
-                    const addedEmbed = new EmbedBuilder()
-                        .setTitle('✅ Canción Agregada')
-                        .setDescription(`**${track.name}**\nDuración: ${this.formatTime(track.duration_ms)}`)
-                        .setThumbnail(track.album?.images?.[0]?.url || null)
-                        .setColor('#1DB954');
-
-                    this.spotifySearchSessions.delete(`${userId}_${guildId}`);
-                    return interaction.editReply({ content: '', embeds: [addedEmbed], components: [] });
-
-                } catch (e) {
-                    return interaction.editReply({ content: `❌ Error al reproducir: ${e.message}`, embeds: [], components: [] });
-                }
-            }
-
-            // Volver al listado de Spotify
-            if (customId.startsWith('mspback_')) {
-                const session = this.spotifySearchSessions?.get(`${userId}_${guildId}`);
-                if (!session) return interaction.editReply({ content: '❌ Sesión expirada.', embeds: [], components: [] });
-                return interaction.editReply({ embeds: [session.embed], components: [session.row1, session.row2] });
+            if (customId.startsWith('msearch_cancel')) {
+                this.searchSessions.delete(`${userId}_${guildId}`);
+                return interaction.editReply({ content: '❌ Búsqueda cancelada.', embeds: [], components: [] });
             }
 
             if (customId.startsWith('msearch_')) {
@@ -818,12 +797,7 @@ class MusicSystem {
                 const selected = session.tracks[index];
                 const voiceChannel = interaction.member.voice.channel;
 
-                if (!voiceChannel) {
-                    return interaction.editReply({
-                        content: '❌ Debes estar en un canal de voz para reproducir.',
-                        embeds: [], components: []
-                    });
-                }
+                if (!voiceChannel) return interaction.editReply({ content: '❌ Debes estar en un canal de voz.', embeds: [], components: [] });
 
                 try {
                     let player = this.kazagumo.getPlayer(guildId);
@@ -837,7 +811,6 @@ class MusicSystem {
                     }
                     this.clearPlayerTimeout(guildId);
                     player.queue.add(selected);
-
                     if (!player.playing && !player.paused) {
                         await new Promise(r => setTimeout(r, 500));
                         player.play();
@@ -851,14 +824,12 @@ class MusicSystem {
 
                     this.searchSessions.delete(`${userId}_${guildId}`);
                     return interaction.editReply({ content: '', embeds: [addedEmbed], components: [] });
-
                 } catch (e) {
                     return interaction.editReply({ content: `❌ Error al reproducir: ${e.message}`, embeds: [], components: [] });
                 }
             }
 
             if (customId.startsWith('mback_')) {
-                // Reconstruir la lista original
                 const tracks = session.tracks;
                 const platform = session.engine === 'ytsearch' ? '🎬 YouTube' : '🟢 Spotify';
 
@@ -880,20 +851,18 @@ class MusicSystem {
                             .setStyle(ButtonStyle.Primary)
                     )
                 );
-                const row2 = new ActionRowBuilder().addComponents(
-                    [
-                        ...tracks.slice(4).map((_, i) =>
-                            new ButtonBuilder()
-                                .setCustomId(`msearch_${i + 4}_${userId}_${guildId}`)
-                                .setLabel(`${i + 5}`)
-                                .setStyle(ButtonStyle.Primary)
-                        ),
+                const row2 = new ActionRowBuilder().addComponents([
+                    ...tracks.slice(4).map((_, i) =>
                         new ButtonBuilder()
-                            .setCustomId(`msearch_cancel_${userId}_${guildId}`)
-                            .setLabel('❌ Cancelar')
-                            .setStyle(ButtonStyle.Danger)
-                    ]
-                );
+                            .setCustomId(`msearch_${i + 4}_${userId}_${guildId}`)
+                            .setLabel(`${i + 5}`)
+                            .setStyle(ButtonStyle.Primary)
+                    ),
+                    new ButtonBuilder()
+                        .setCustomId(`msearch_cancel_${userId}_${guildId}`)
+                        .setLabel('❌ Cancelar')
+                        .setStyle(ButtonStyle.Danger)
+                ]);
 
                 return interaction.editReply({ embeds: [embed], components: [row1, row2] });
             }
