@@ -51,9 +51,9 @@ class ImageGenSystem {
         if (!token || !accountId) throw new Error('No CLOUDFARE key o CLOUDFARE_ACCOUNT_ID');
 
         const cfModels = [
-            /*'@cf/black-forest-labs/flux-1-schnell',         // FLUX clásico rápido
+            /*'@cf/black-forest-labs/flux-1-schnell',  */       // FLUX clásico rápido
             '@cf/stabilityai/stable-diffusion-xl-base-1.0', // SDXL estable*/
-            '@cf/runwayml/stable-diffusion-v1-5',           // SD 1.5 fallback
+            //'@cf/runwayml/stable-diffusion-v1-5',           // SD 1.5 fallback
         ];
 
         for (const model of cfModels) {
