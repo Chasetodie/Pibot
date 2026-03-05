@@ -50,25 +50,50 @@ class ImageGenSystem {
         const accountId = process.env.CLOUDFARE_ACCOUNT_ID;
         if (!token || !accountId) throw new Error('No CLOUDFARE key o CLOUDFARE_ACCOUNT_ID');
 
-        const res = await fetch(
-            `https://api.cloudflare.com/client/v4/accounts/${accountId}/ai/run/@cf/stabilityai/stable-diffusion-xl-base-1.0`,
-            {
-                method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${token}`,
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ prompt }),
-                signal: AbortSignal.timeout(60000)
+        const cfModels = [
+            '@cf/black-forest-labs/flux-2-klein',          // FLUX más rápido y moderno
+            '@cf/black-forest-labs/flux-1-schnell',         // FLUX clásico rápido
+            '@cf/stabilityai/stable-diffusion-xl-base-1.0', // SDXL estable
+            '@cf/runwayml/stable-diffusion-v1-5',           // SD 1.5 fallback
+        ];
+
+        for (const model of cfModels) {
+            try {
+                console.log(`☁️ Cloudflare probando: ${model}`);
+                const res = await fetch(
+                    `https://api.cloudflare.com/client/v4/accounts/${accountId}/ai/run/${model}`,
+                    {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': `Bearer ${token}`,
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ prompt }),
+                        signal: AbortSignal.timeout(60000)
+                    }
+                );
+
+                if (!res.ok) {
+                    const err = await res.text();
+                    console.warn(`☁️ Cloudflare [${model}] HTTP ${res.status}: ${err.slice(0, 100)}`);
+                    continue;
+                }
+
+                const buffer = await res.arrayBuffer();
+                if (!buffer || buffer.byteLength < 100) {
+                    console.warn(`☁️ Cloudflare [${model}]: buffer vacío`);
+                    continue;
+                }
+
+                console.log(`✅ Cloudflare éxito con ${model}`);
+                return { buffer: Buffer.from(buffer), type: 'buffer' };
+
+            } catch (e) {
+                console.warn(`☁️ Cloudflare [${model}] error: ${e.message}`);
             }
-        );
+        }
 
-        if (!res.ok) throw new Error(`Cloudflare HTTP ${res.status}`);
-
-        // Cloudflare devuelve la imagen como binario directo
-        const buffer = await res.arrayBuffer();
-        if (!buffer || buffer.byteLength === 0) throw new Error('Cloudflare: respuesta vacía');
-        return { buffer: Buffer.from(buffer), type: 'buffer' };
+        throw new Error('Cloudflare: todos los modelos fallaron');
     }
 
     // ─── COMANDO PRINCIPAL ────────────────────────────────────────────────────

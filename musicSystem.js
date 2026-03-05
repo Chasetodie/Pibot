@@ -321,9 +321,13 @@ class MusicSystem {
                 .setTitle(`${platform} — Resultados para "${query}"`)
                 .setColor(engine === 'ytsearch' ? '#FF0000' : '#1DB954')
                 .setDescription(
-                    tracks.map((t, i) =>
-                        `\`${i + 1}.\` **${t.title}**\n└ ${this.formatTime(t.length)} • ${t.author || 'Desconocido'}`
-                    ).join('\n\n')
+                    tracks.map((t, i) => {
+                        const duration = this.formatTime(t.length);
+                        const source = engine === 'spsearch' 
+                            ? `🟢 ${t.author || 'Desconocido'}`
+                            : `🎬 ${t.author || 'Desconocido'}`;
+                        return `\`${i + 1}.\` **${t.title}**\n└ ${duration} • ${source}`;
+                    }).join('\n\n')
                 )
                 .setFooter({ text: 'Selecciona una canción para ver detalles o reproducir' })
                 .setTimestamp();
@@ -421,7 +425,6 @@ class MusicSystem {
         if (!lyrics && process.env.GENIUS_TOKEN) {
             console.log('🎵 Entrando a Genius con query:', query);
             try {
-                // Buscar la canción en Genius
                 const searchRes = await fetch(
                     `https://api.genius.com/search?q=${encodeURIComponent(query)}`,
                     {
@@ -433,14 +436,17 @@ class MusicSystem {
                     }
                 );
 
+                console.log('Genius search status:', searchRes.status);
+
                 if (searchRes.ok) {
                     const searchData = await searchRes.json();
                     console.log('Genius hits:', searchData.response?.hits?.length);
+                    console.log('Genius error:', searchData.error);
+
                     const hit = searchData.response?.hits?.[0]?.result;
-                    console.log('Genius hit:', hit?.title, hit?.url);
-                    
+                    console.log('Genius hit título:', hit?.title, '| URL:', hit?.url);
+
                     if (hit) {
-                        // Scrapear con headers correctos
                         const pageRes = await fetch(hit.url, {
                             headers: {
                                 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
@@ -450,19 +456,25 @@ class MusicSystem {
                             signal: AbortSignal.timeout(10000)
                         });
 
+                        console.log('Genius page status:', pageRes.status);
+
                         if (pageRes.ok) {
                             const html = await pageRes.text();
-                            
-                            // Genius guarda la letra en JSON dentro del HTML
+                            console.log('Genius HTML length:', html.length);
+
                             const match = html.match(/window\.__PRELOADED_STATE__ = JSON\.parse\('(.+?)'\);/s);
+                            console.log('Genius PRELOADED_STATE match:', !!match);
+
                             if (match) {
                                 try {
                                     const decoded = match[1].replace(/\\'/g, "'").replace(/\\\\/g, '\\');
                                     const state = JSON.parse(decoded);
                                     const lyricsData = state?.entities?.songs;
+                                    console.log('Genius lyricsData keys:', lyricsData ? Object.keys(lyricsData) : 'null');
                                     if (lyricsData) {
                                         const songKey = Object.keys(lyricsData)[0];
                                         const rawLyrics = lyricsData[songKey]?.lyrics?.body?.plain;
+                                        console.log('Genius rawLyrics length:', rawLyrics?.length);
                                         if (rawLyrics && rawLyrics.length > 50) {
                                             lyrics = rawLyrics;
                                             source = 'Genius';
@@ -473,9 +485,9 @@ class MusicSystem {
                                 }
                             }
 
-                            // Fallback: regex directo sobre el HTML
                             if (!lyrics) {
                                 const lyricsDivs = html.match(/data-lyrics-container="true"[^>]*>([\s\S]*?)<\/div>/g);
+                                console.log('Genius lyricsDivs encontrados:', lyricsDivs?.length);
                                 if (lyricsDivs) {
                                     const raw = lyricsDivs
                                         .join('\n')
@@ -485,6 +497,7 @@ class MusicSystem {
                                         .replace(/&quot;/g, '"')
                                         .replace(/&#x27;/g, "'")
                                         .trim();
+                                    console.log('Genius raw lyrics length:', raw.length);
                                     if (raw.length > 50) {
                                         lyrics = raw;
                                         source = 'Genius';
@@ -498,9 +511,13 @@ class MusicSystem {
                             }
                         }
                     }
+                } else {
+                    const errText = await searchRes.text();
+                    console.warn('Genius search falló:', searchRes.status, errText.slice(0, 200));
                 }
             } catch (e) {
                 console.warn('Genius falló:', e.message);
+                console.warn('Genius stack:', e.stack?.slice(0, 300));
             }
         }
 
