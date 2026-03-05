@@ -252,7 +252,7 @@ class MusicSystem {
                         break;
                     case 'spsearch':
                     case 'ss':
-                        await this.searchCommand(message, args, member, channel, guild, author, 'spsearch');
+                        await this.spotifySearchCommand(message, args, member, channel, guild, author);
                         break;
                     case 'lyrics':
                     case 'letra':
@@ -375,6 +375,92 @@ class MusicSystem {
         }
     }
 
+    async spotifySearchCommand(message, args, member, channel, guild, author) {
+        const query = args.slice(2).join(' ').trim();
+        if (!query) return message.reply('❌ Escribe algo para buscar.\nEjemplo: `>m spsearch la lagartija`');
+
+        const loadingMsg = await message.reply(`🔍 Buscando en Spotify **${query}**...`);
+
+        try {
+            // Obtener token de Spotify
+            const tokenRes = await fetch('https://accounts.spotify.com/api/token', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'Authorization': 'Basic ' + Buffer.from(`${process.env.SPOTIFY_CLIENT_ID}:${process.env.SPOTIFY_CLIENT_SECRET}`).toString('base64')
+                },
+                body: 'grant_type=client_credentials'
+            });
+            const tokenData = await tokenRes.json();
+            if (!tokenData.access_token) throw new Error('No se pudo obtener token de Spotify');
+
+            // Buscar en Spotify
+            const searchRes = await fetch(
+                `https://api.spotify.com/v1/search?q=${encodeURIComponent(query)}&type=track&limit=7`,
+                { headers: { 'Authorization': `Bearer ${tokenData.access_token}` } }
+            );
+            const searchData = await searchRes.json();
+            const tracks = searchData.tracks?.items;
+
+            if (!tracks || tracks.length === 0) {
+                return loadingMsg.edit('❌ No se encontraron resultados en Spotify.');
+            }
+
+            const embed = new EmbedBuilder()
+                .setTitle(`🟢 Spotify — Resultados para "${query}"`)
+                .setColor('#1DB954')
+                .setDescription(
+                    tracks.map((t, i) => {
+                        const duration = this.formatTime(t.duration_ms);
+                        const artists = t.artists.map(a => a.name).join(', ');
+                        return `\`${i + 1}.\` **${t.name}**\n└ ${duration} • ${artists} • ${t.album.name}`;
+                    }).join('\n\n')
+                )
+                .setThumbnail(tracks[0]?.album?.images?.[0]?.url || null)
+                .setFooter({ text: 'Selecciona una canción para ver detalles o reproducir' })
+                .setTimestamp();
+
+            const row1 = new ActionRowBuilder().addComponents(
+                tracks.slice(0, 4).map((_, i) =>
+                    new ButtonBuilder()
+                        .setCustomId(`msp_${i}_${message.author.id}_${guild.id}`)
+                        .setLabel(`${i + 1}`)
+                        .setStyle(ButtonStyle.Success)
+                )
+            );
+            const row2 = new ActionRowBuilder().addComponents([
+                ...tracks.slice(4).map((_, i) =>
+                    new ButtonBuilder()
+                        .setCustomId(`msp_${i + 4}_${message.author.id}_${guild.id}`)
+                        .setLabel(`${i + 5}`)
+                        .setStyle(ButtonStyle.Success)
+                ),
+                new ButtonBuilder()
+                    .setCustomId(`msp_cancel_${message.author.id}_${guild.id}`)
+                    .setLabel('❌ Cancelar')
+                    .setStyle(ButtonStyle.Danger)
+            ]);
+
+            const searchMsg = await loadingMsg.edit({ content: '', embeds: [embed], components: [row1, row2] });
+
+            if (!this.spotifySearchSessions) this.spotifySearchSessions = new Map();
+            this.spotifySearchSessions.set(`${message.author.id}_${guild.id}`, {
+                tracks, member, channel, guild, author, embed, row1, row2
+            });
+
+            setTimeout(() => {
+                if (this.spotifySearchSessions?.has(`${message.author.id}_${guild.id}`)) {
+                    this.spotifySearchSessions.delete(`${message.author.id}_${guild.id}`);
+                    searchMsg.edit({ components: [] }).catch(() => {});
+                }
+            }, 60000);
+
+        } catch (error) {
+            console.error('Error en spotifySearchCommand:', error);
+            await loadingMsg.edit('❌ Error al buscar en Spotify.');
+        }
+    }
+
     // ─── LYRICS COMMAND ───────────────────────────────────────────────────────────
     async lyricsCommand(message, args) {
         const query = args.slice(2).join(' ').trim();
@@ -387,36 +473,6 @@ class MusicSystem {
         // Intentar lyrics.ovh primero, luego Genius
         let lyrics = null;
         let source = null;
-
-        // ── lyrics.ovh ──
-        try {
-            const hasDash = query.includes(' - ');
-            let artist, title;
-
-            if (hasDash) {
-                const dashParts = query.split(' - ');
-                artist = dashParts[0].trim();
-                title = dashParts.slice(1).join(' - ').trim();
-            } else {
-                artist = query;
-                title = query;
-            }
-
-            const lyricsRes = await fetch(
-                `https://api.lyrics.ovh/v1/${encodeURIComponent(artist)}/${encodeURIComponent(title)}`,
-                { signal: AbortSignal.timeout(8000) }
-            );
-
-            if (lyricsRes.ok) {
-                const data = await lyricsRes.json();
-                if (data.lyrics && data.lyrics.length > 50) {
-                    lyrics = data.lyrics;
-                    source = 'lyrics.ovh';
-                }
-            }
-        } catch (e) {
-            console.warn('lyrics.ovh falló:', e.message);
-        }
 
         // ── lrclib (reemplaza Genius) ──
         if (!lyrics) {
@@ -468,10 +524,36 @@ class MusicSystem {
             remaining = remaining.slice(1900);
         }
 
+        // Buscar imagen de la canción en Spotify
+        let songThumbnail = null;
+        if (process.env.SPOTIFY_CLIENT_ID && process.env.SPOTIFY_CLIENT_SECRET) {
+            try {
+                const tokenRes = await fetch('https://accounts.spotify.com/api/token', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                        'Authorization': 'Basic ' + Buffer.from(`${process.env.SPOTIFY_CLIENT_ID}:${process.env.SPOTIFY_CLIENT_SECRET}`).toString('base64')
+                    },
+                    body: 'grant_type=client_credentials'
+                });
+                const tokenData = await tokenRes.json();
+
+                const searchRes = await fetch(
+                    `https://api.spotify.com/v1/search?q=${encodeURIComponent(query)}&type=track&limit=1`,
+                    { headers: { 'Authorization': `Bearer ${tokenData.access_token}` } }
+                );
+                const searchData = await searchRes.json();
+                songThumbnail = searchData.tracks?.items?.[0]?.album?.images?.[0]?.url || null;
+            } catch (e) {
+                console.warn('Spotify thumbnail falló:', e.message);
+            }
+        }
+
         const embed = new EmbedBuilder()
             .setTitle(`🎵 Letra — ${query}`)
             .setDescription(chunks[0])
             .setColor('#9932CC')
+            .setThumbnail(songThumbnail)
             .setFooter({ text: `Fuente: ${source}${chunks.length > 1 ? ` • Página 1/${chunks.length}` : ''}` })
             .setTimestamp();
 
@@ -506,11 +588,12 @@ class MusicSystem {
             if (interaction.customId.startsWith('lyrics_next')) currentPage++;
             if (interaction.customId.startsWith('lyrics_prev')) currentPage--;
 
-            const pageEmbed = new EmbedBuilder()
-                .setTitle(`🎵 Letra — ${query}`)
-                .setDescription(chunks[currentPage])
-                .setColor('#9932CC')
-                .setFooter({ text: `Fuente: ${source} • Página ${currentPage + 1}/${chunks.length}` });
+        const pageEmbed = new EmbedBuilder()
+            .setTitle(`🎵 Letra — ${query}`)
+            .setDescription(chunks[currentPage])
+            .setColor('#9932CC')
+            .setThumbnail(songThumbnail)
+            .setFooter({ text: `Fuente: ${source} • Página ${currentPage + 1}/${chunks.length}` });
 
             const updatedRow = new ActionRowBuilder().addComponents(
                 new ButtonBuilder()
@@ -560,6 +643,112 @@ class MusicSystem {
             if (customId.startsWith('msearch_cancel')) {
                 this.searchSessions.delete(`${userId}_${guildId}`);
                 return interaction.editReply({ content: '❌ Búsqueda cancelada.', embeds: [], components: [] });
+            }
+
+            // Botones de Spotify search
+            if (customId.startsWith('msp_')) {
+                const session = this.spotifySearchSessions?.get(`${userId}_${guildId}`);
+                if (!session) return interaction.editReply({ content: '❌ Sesión expirada.', embeds: [], components: [] });
+
+                if (customId.includes('cancel')) {
+                    this.spotifySearchSessions.delete(`${userId}_${guildId}`);
+                    return interaction.editReply({ content: '❌ Búsqueda cancelada.', embeds: [], components: [] });
+                }
+
+                const index = parseInt(parts[1]);
+                const track = session.tracks[index];
+                const artists = track.artists.map(a => a.name).join(', ');
+
+                const detailEmbed = new EmbedBuilder()
+                    .setTitle('🟢 Canción de Spotify')
+                    .setColor('#1DB954')
+                    .setThumbnail(track.album?.images?.[0]?.url || null)
+                    .addFields(
+                        { name: '🎵 Título', value: track.name, inline: false },
+                        { name: '👤 Artista', value: artists, inline: true },
+                        { name: '💿 Álbum', value: track.album.name, inline: true },
+                        { name: '⏱️ Duración', value: this.formatTime(track.duration_ms), inline: true },
+                        { name: '📅 Lanzamiento', value: track.album.release_date || 'Desconocido', inline: true },
+                        { name: '🔗 URL', value: track.external_urls.spotify, inline: false }
+                    )
+                    .setTimestamp();
+
+                const playRow = new ActionRowBuilder().addComponents(
+                    new ButtonBuilder()
+                        .setCustomId(`mspplay_${index}_${userId}_${guildId}`)
+                        .setLabel('▶️ Reproducir')
+                        .setStyle(ButtonStyle.Success),
+                    new ButtonBuilder()
+                        .setCustomId(`mspback_${userId}_${guildId}`)
+                        .setLabel('⬅️ Volver')
+                        .setStyle(ButtonStyle.Secondary),
+                    new ButtonBuilder()
+                        .setCustomId(`msp_cancel_${userId}_${guildId}`)
+                        .setLabel('❌ Cerrar')
+                        .setStyle(ButtonStyle.Danger)
+                );
+
+                return interaction.editReply({ embeds: [detailEmbed], components: [playRow] });
+            }
+
+            // Reproducir desde Spotify search
+            if (customId.startsWith('mspplay_')) {
+                const session = this.spotifySearchSessions?.get(`${userId}_${guildId}`);
+                if (!session) return interaction.editReply({ content: '❌ Sesión expirada.', embeds: [], components: [] });
+
+                const index = parseInt(parts[1]);
+                const track = session.tracks[index];
+                const voiceChannel = interaction.member.voice.channel;
+
+                if (!voiceChannel) {
+                    return interaction.editReply({ content: '❌ Debes estar en un canal de voz.', embeds: [], components: [] });
+                }
+
+                try {
+                    // Buscar en LavaSrc con URL de Spotify
+                    const spotifyUrl = track.external_urls.spotify;
+                    const result = await this.kazagumo.search(spotifyUrl, { requester: session.author });
+
+                    if (!result || !result.tracks.length) {
+                        return interaction.editReply({ content: '❌ No se pudo cargar la canción.', embeds: [], components: [] });
+                    }
+
+                    let player = this.kazagumo.getPlayer(guildId);
+                    if (!player) {
+                        player = await this.kazagumo.createPlayer({
+                            guildId,
+                            textId: interaction.channelId,
+                            voiceId: voiceChannel.id,
+                            shardId: interaction.guild.shardId || 0,
+                        });
+                    }
+                    this.clearPlayerTimeout(guildId);
+                    player.queue.add(result.tracks[0]);
+
+                    if (!player.playing && !player.paused) {
+                        await new Promise(r => setTimeout(r, 500));
+                        player.play();
+                    }
+
+                    const addedEmbed = new EmbedBuilder()
+                        .setTitle('✅ Canción Agregada')
+                        .setDescription(`**${track.name}**\nDuración: ${this.formatTime(track.duration_ms)}`)
+                        .setThumbnail(track.album?.images?.[0]?.url || null)
+                        .setColor('#1DB954');
+
+                    this.spotifySearchSessions.delete(`${userId}_${guildId}`);
+                    return interaction.editReply({ content: '', embeds: [addedEmbed], components: [] });
+
+                } catch (e) {
+                    return interaction.editReply({ content: `❌ Error al reproducir: ${e.message}`, embeds: [], components: [] });
+                }
+            }
+
+            // Volver al listado de Spotify
+            if (customId.startsWith('mspback_')) {
+                const session = this.spotifySearchSessions?.get(`${userId}_${guildId}`);
+                if (!session) return interaction.editReply({ content: '❌ Sesión expirada.', embeds: [], components: [] });
+                return interaction.editReply({ embeds: [session.embed], components: [session.row1, session.row2] });
             }
 
             if (customId.startsWith('msearch_')) {
