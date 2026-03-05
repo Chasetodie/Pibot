@@ -20,6 +20,7 @@ const MusicSystem = require('./musicSystem.js');
 const ChatBotSystem = require('./chatBot.js');
 const GuildConfig = require('./guild-config');
 const ImageGenSystem = require('./imageGen');
+const GuildLevels = require('./guild-levels');
 //require('./admin-panel')(app); // Pasar el servidor express existente
 const {
     AuctionSystem,
@@ -86,6 +87,8 @@ database.startCacheCleanup();
 const chatbot = new ChatBotSystem(database, economy);
 
 const guildConfig = new GuildConfig(database);
+
+const guildLevels = new GuildLevels(database, guildConfig);
 
 //Crear instancia del sistema de Eventos
 const events = new EventsSystem(economy, client, guildConfig);
@@ -211,23 +214,37 @@ async function processBatch() {
 // PROCESAMIENTO SEGURO DE MENSAJES
 async function processMessageSafe({ message, userId, now }) {
     try {
-        // Solo XP, nada más
-        const xpResult = await Promise.race([
-            economy.processMessageXp(userId),
-            new Promise((_, reject) => 
-                setTimeout(() => reject(new Error('Timeout')), 3000)
-            )
+        const [xpResult, guildXpResult] = await Promise.allSettled([
+            Promise.race([
+                economy.processMessageXp(userId),
+                new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 3000))
+            ]),
+            guildLevels.processMessage(userId, message.guild?.id)
         ]);
-        
-        // Level up solo si es necesario
-        if (xpResult?.levelUp) {
+
+        // Level up global (igual que antes)
+        if (xpResult.status === 'fulfilled' && xpResult.value?.levelUp) {
             const channelId = await guildConfig.get(message.guild.id, 'levelup_channel');
             const channel = channelId ? message.guild.channels.cache.get(channelId) : null;
+            if (channel) await sendLevelUpSafe(message, xpResult.value, channel);
+        }
+
+        // Level up del servidor
+        if (guildXpResult.status === 'fulfilled' && guildXpResult.value?.levelUp) {
+            const channelId = await guildConfig.get(message.guild.id, 'guild_levelup_channel');
+            const channel = channelId ? message.guild.channels.cache.get(channelId) : message.channel;
             if (channel) {
-                await sendLevelUpSafe(message, xpResult, channel);
+                const { EmbedBuilder } = require('discord.js');
+                const embed = new EmbedBuilder()
+                    .setTitle('⬆️ ¡Subiste de nivel en el servidor!')
+                    .setThumbnail(message.author.displayAvatarURL({ dynamic: true }))
+                    .setDescription(`${message.author} alcanzó el **Nivel ${guildXpResult.value.newLevel}** en **${message.guild.name}**`)
+                    .setColor('#5865F2')
+                    .setTimestamp();
+                channel.send({ embeds: [embed] }).catch(() => {});
             }
         }
-        
+
     } catch (error) {
         console.error('❌ Error procesando mensaje:', error.message);
     }
@@ -331,6 +348,7 @@ const rest = new REST({ version: '10' }).setToken(process.env.TOKEN);
 client.once('ready', async () => {
     console.log(`✅ Bot conectado como ${client.user.tag}`);
     await guildConfig.initTable();
+    await guildLevels.initTable();
     await minigames.loadActiveRussianGames(client);
     await minigames.loadActiveUnoGames(client);
     await trades.loadActiveTrades(client);
@@ -982,7 +1000,8 @@ client.on('messageCreate', async (message) => {
                 commandHandler.processCommand(message),
                 chatbot.processCommand(message),
                 nsfw.processCommand(message),
-                imageGen.processCommand(message)
+                imageGen.processCommand(message),
+                guildLevels.processCommand(message, client),
             ]);
         } catch (error) {
             console.error('❌ Error comando:', error.message);
@@ -1168,6 +1187,8 @@ setInterval(() => {
         processBatch();
     }
 }, CONFIG.PROCESSING_INTERVAL);
+
+setInterval(() => guildLevels.cleanCooldowns(), 300000); // cada 5 min
 
 // MONITOR DE SISTEMA MÁS FRECUENTE
 setInterval(() => {

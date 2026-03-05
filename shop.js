@@ -162,7 +162,7 @@ class ShopSystem {
                 name: '⏳ Ampolleta de Tiempo',
                 description: 'Añade 10 segundos extra por pregunta en tu próxima partida de trivia',
                 price: 15000,
-                category: 'consumable',
+                category: 'trivia',
                 rarity: 'uncommon',
                 emoji: '⏳',
                 effect: {
@@ -180,7 +180,7 @@ class ShopSystem {
                 name: '⏭️ Token de Salto',
                 description: 'Permite saltar una pregunta sin penalización en trivia. No cuenta como fallo.',
                 price: 20000,
-                category: 'consumable',
+                category: 'trivia',
                 rarity: 'uncommon',
                 emoji: '⏭️',
                 effect: {
@@ -197,7 +197,7 @@ class ShopSystem {
                 name: '👥 Ayuda del Público',
                 description: 'Elimina 2 respuestas incorrectas en una pregunta de trivia (múltiple opción)',
                 price: 25000,
-                category: 'consumable',
+                category: 'trivia',
                 rarity: 'rare',
                 emoji: '👥',
                 effect: {
@@ -215,7 +215,7 @@ class ShopSystem {
                 name: '💰 Voucher de Trivia',
                 description: 'Duplica las recompensas de tu próxima partida de trivia completada',
                 price: 40000,
-                category: 'consumable',
+                category: 'trivia',
                 rarity: 'rare',
                 emoji: '💰',
                 effect: {
@@ -233,7 +233,7 @@ class ShopSystem {
                 name: '🛡️ Escudo de Trivia',
                 description: 'Absorbe 1 respuesta incorrecta sin penalización de recompensa en trivia',
                 price: 30000,
-                category: 'consumable',
+                category: 'trivia',
                 rarity: 'rare',
                 emoji: '🛡️',
                 effect: {

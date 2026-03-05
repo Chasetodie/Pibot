@@ -648,7 +648,6 @@ class MusicSystem {
             }
 
             const customId = interaction.customId;
-            console.log('🔘 handleSearchInteraction customId:', customId);
             const parts = customId.split('_');
 
             // Detectar posición correcta de userId según el tipo de botón
@@ -692,18 +691,41 @@ class MusicSystem {
 
                     try {
                         const spotifyUrl = track.external_urls.spotify;
-                        const result = await this.kazagumo.search(spotifyUrl, { requester: session.author });
+
+                        // Retry hasta 3 veces si hay AbortError
+                        let result = null;
+                        for (let attempt = 1; attempt <= 3; attempt++) {
+                            try {
+                                result = await this.kazagumo.search(spotifyUrl, { requester: session.author });
+                                break;
+                            } catch (searchErr) {
+                                if (attempt === 3) throw searchErr;
+                                console.log(`⚠️ spsearch intento ${attempt} fallido, reintentando...`);
+                                await new Promise(r => setTimeout(r, 1000 * attempt));
+                            }
+                        }
+
                         if (!result || !result.tracks.length) return interaction.editReply({ content: '❌ No se pudo cargar la canción.', embeds: [], components: [] });
 
                         let player = this.kazagumo.getPlayer(guildId);
                         if (!player) {
-                            player = await this.kazagumo.createPlayer({
-                                guildId,
-                                textId: interaction.channelId,
-                                voiceId: voiceChannel.id,
-                                shardId: interaction.guild.shardId || 0,
-                            });
+                            for (let attempt = 1; attempt <= 3; attempt++) {
+                                try {
+                                    player = await this.kazagumo.createPlayer({
+                                        guildId,
+                                        textId: interaction.channelId,
+                                        voiceId: voiceChannel.id,
+                                        shardId: interaction.guild.shardId || 0,
+                                    });
+                                    break;
+                                } catch (playerErr) {
+                                    if (attempt === 3) throw playerErr;
+                                    console.log(`⚠️ createPlayer intento ${attempt} fallido, reintentando...`);
+                                    await new Promise(r => setTimeout(r, 1000 * attempt));
+                                }
+                            }
                         }
+
                         this.clearPlayerTimeout(guildId);
                         player.queue.add(result.tracks[0]);
                         if (!player.playing && !player.paused) {
@@ -720,7 +742,11 @@ class MusicSystem {
                         this.spotifySearchSessions.delete(`${userId}_${guildId}`);
                         return interaction.editReply({ content: '', embeds: [addedEmbed], components: [] });
                     } catch (e) {
-                        return interaction.editReply({ content: `❌ Error al reproducir: ${e.message}`, embeds: [], components: [] });
+                        console.error('Error en spsearch play:', e.message);
+                        const errMsg = e.name === 'AbortError' 
+                            ? '❌ El servidor de música tardó demasiado. Intenta de nuevo.' 
+                            : `❌ Error al reproducir: ${e.message}`;
+                        return interaction.editReply({ content: errMsg, embeds: [], components: [] });
                     }
                 }
 
@@ -809,19 +835,28 @@ class MusicSystem {
                 const index = parseInt(parts[1]);
                 const selected = session.tracks[index];
                 const voiceChannel = interaction.member.voice.channel;
-
                 if (!voiceChannel) return interaction.editReply({ content: '❌ Debes estar en un canal de voz.', embeds: [], components: [] });
 
                 try {
                     let player = this.kazagumo.getPlayer(guildId);
                     if (!player) {
-                        player = await this.kazagumo.createPlayer({
-                            guildId,
-                            textId: interaction.channelId,
-                            voiceId: voiceChannel.id,
-                            shardId: interaction.guild.shardId || 0,
-                        });
+                        for (let attempt = 1; attempt <= 3; attempt++) {
+                            try {
+                                player = await this.kazagumo.createPlayer({
+                                    guildId,
+                                    textId: interaction.channelId,
+                                    voiceId: voiceChannel.id,
+                                    shardId: interaction.guild.shardId || 0,
+                                });
+                                break;
+                            } catch (playerErr) {
+                                if (attempt === 3) throw playerErr;
+                                console.log(`⚠️ createPlayer intento ${attempt} fallido, reintentando...`);
+                                await new Promise(r => setTimeout(r, 1000 * attempt));
+                            }
+                        }
                     }
+
                     this.clearPlayerTimeout(guildId);
                     player.queue.add(selected);
                     if (!player.playing && !player.paused) {
@@ -838,7 +873,11 @@ class MusicSystem {
                     this.searchSessions.delete(`${userId}_${guildId}`);
                     return interaction.editReply({ content: '', embeds: [addedEmbed], components: [] });
                 } catch (e) {
-                    return interaction.editReply({ content: `❌ Error al reproducir: ${e.message}`, embeds: [], components: [] });
+                    console.error('Error en mplay:', e.message);
+                    const errMsg = e.name === 'AbortError'
+                        ? '❌ El servidor de música tardó demasiado. Intenta de nuevo.'
+                        : `❌ Error al reproducir: ${e.message}`;
+                    return interaction.editReply({ content: errMsg, embeds: [], components: [] });
                 }
             }
 
