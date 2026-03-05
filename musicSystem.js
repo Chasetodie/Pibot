@@ -434,7 +434,9 @@ class MusicSystem {
                 if (searches.length > 0) {
                     const song = searches[0];
                     console.log('Genius canción:', song.title, '-', song.artist.name);
-                    const songLyrics = await song.lyrics();
+                    
+                    // Pasar true para usar modo optimizado que evita el bloqueo
+                    const songLyrics = await song.lyrics(true);
                     
                     if (songLyrics && songLyrics.length > 50) {
                         lyrics = songLyrics;
@@ -443,6 +445,16 @@ class MusicSystem {
                 }
             } catch (e) {
                 console.warn('Genius falló:', e.message);
+                // Si falla, dar el link directo
+                try {
+                    const Genius = require('genius-lyrics');
+                    const geniusClient = new Genius.Client(process.env.GENIUS_TOKEN);
+                    const searches = await geniusClient.songs.search(query);
+                    if (searches.length > 0) {
+                        lyrics = `No pude extraer la letra automáticamente.\nVer en Genius: ${searches[0].url}`;
+                        source = 'Genius';
+                    }
+                } catch (_) {}
             }
         }
 
