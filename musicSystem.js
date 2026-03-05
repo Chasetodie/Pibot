@@ -547,6 +547,9 @@ class MusicSystem {
             console.warn('lyrics.ovh falló:', e.message);
         }
 
+        console.log('lyrics después de ovh:', lyrics ? 'ENCONTRADA' : 'NO encontrada');
+        console.log('GENIUS_TOKEN existe:', !!process.env.GENIUS_TOKEN);
+
         // ── Genius ──
         if (!lyrics && process.env.GENIUS_TOKEN) {
             try {
@@ -634,7 +637,11 @@ class MusicSystem {
         }
 
         if (!lyrics) {
-            return loadingMsg.edit(`❌ No se encontró la letra de **${query}**.\nIntenta con el formato: \`>m lyrics artista canción\``);
+            return loadingMsg.edit(
+                `❌ No se encontró la letra.\n` +
+                `Intenta con el formato: \`>m lyrics Artista - Canción\`\n` +
+                `Ejemplo: \`>m lyrics Gorillaz - Clint Eastwood\``
+            );
         }
 
         // Dividir letra en chunks de 4000 chars (límite de Discord embed)

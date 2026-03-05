@@ -2,125 +2,14 @@ const { EmbedBuilder, AttachmentBuilder } = require('discord.js');
 
 class ImageGenSystem {
     constructor() {
-        // Orden de fallback: Pixazo → ImageGPT → ModelsLab → Cloudflare
         this.providers = [
-            { name: 'Pixazo',     fn: this.generatePixazo.bind(this)     },
-            { name: 'ImageGPT',   fn: this.generateImageGPT.bind(this)   },
             { name: 'Cloudflare', fn: this.generateCloudflare.bind(this) },
+            { name: 'ImageGPT',   fn: this.generateImageGPT.bind(this)   },
         ];
 
         // Cooldown por usuario: 15 segundos
         this.cooldowns = new Map();
         this.COOLDOWN_MS = 15000;
-    }
-
-    async generatePixazo(prompt) {
-        const key = process.env.PIXAZO;
-        if (!key) throw new Error('No PIXAZO key');
-
-        const pixazoModels = [
-            {
-                name: 'Flux Schnell (FREE)',
-                url: 'https://gateway.pixazo.ai/flux-schnell/v1/schnell/textToImage',
-                body: {
-                    prompt,
-                    image_size: 'square_hd',
-                    num_inference_steps: 4,
-                    num_images: 1,
-                    enable_safety_checker: true
-                }
-            },
-            {
-                name: 'Nano Banana 2',
-                url: 'https://gateway.pixazo.ai/nano-banana-2/v1/nano-banana-2/generate',
-                body: {
-                    prompt,
-                    aspect_ratio: '1:1'
-                }
-            },
-            {
-                name: 'Studio Ghibli',
-                url: 'https://gateway.pixazo.ai/studio-ghibli/v1/studio-ghibli/generate',
-                body: { prompt }
-            },
-            {
-                name: 'Hunyuan',
-                url: 'https://gateway.pixazo.ai/hunyuan-image/v1/hunyuan-image/generateRequest',
-                body: {
-                    prompt,
-                    negative_prompt: 'blurry, cartoon, low quality, watermark',
-                    image_size: 'square',
-                    num_images: 1,
-                    num_inference_steps: 28,
-                    guidance_scale: 7.5,
-                    enable_safety_checker: true,
-                    output_format: 'png',
-                    enable_prompt_expansion: true
-                }
-            },
-            {
-                name: 'Recraft v4 Pro',
-                url: 'https://gateway.pixazo.ai/recraft-v4-pro/v1/recraft-v4-pro-request',
-                body: {
-                    prompt,
-                    image_size: 'square_hd',
-                    colors: [],
-                    enable_safety_checker: true
-                }
-            },
-            {
-                name: 'P-Video (imagen)',
-                url: 'https://gateway.pixazo.ai/p-video/v1/p-video/generate',
-                body: { prompt }
-            }
-        ];
-
-        for (const model of pixazoModels) {
-            try {
-                console.log(`🎨 Pixazo probando: ${model.name}`);
-                const res = await fetch(model.url, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Cache-Control': 'no-cache',
-                        'Ocp-Apim-Subscription-Key': key
-                    },
-                    body: JSON.stringify(model.body),
-                    signal: AbortSignal.timeout(30000)
-                });
-
-                const text = await res.text();
-                console.log(`Pixazo [${model.name}] status: ${res.status} | body: ${text.slice(0, 200)}`);
-                if (!res.ok) {
-                    console.warn(`Pixazo [${model.name}] falló HTTP ${res.status}, probando siguiente...`);
-                    continue;
-                }
-
-                const data = JSON.parse(text);
-
-                // Intentar extraer URL de distintas estructuras de respuesta
-                const url = data?.images?.[0]?.url
-                    || data?.url
-                    || data?.image_url
-                    || data?.output
-                    || data?.output_url
-                    || data?.result?.url
-                    || data?.data?.url;
-
-                if (!url) {
-                    console.warn(`Pixazo [${model.name}]: no URL en respuesta, probando siguiente...`);
-                    continue;
-                }
-
-                console.log(`✅ Pixazo éxito con ${model.name}`);
-                return { url, type: 'url' };
-
-            } catch (e) {
-                console.warn(`Pixazo [${model.name}] error: ${e.message}, probando siguiente...`);
-            }
-        }
-
-        throw new Error('Pixazo: todos los modelos fallaron');
     }
 
     async generateImageGPT(prompt) {
