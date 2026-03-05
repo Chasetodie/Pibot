@@ -423,101 +423,26 @@ class MusicSystem {
 
         // ── Genius ──
         if (!lyrics && process.env.GENIUS_TOKEN) {
-            console.log('🎵 Entrando a Genius con query:', query);
+            console.log('🎵 Entrando a Genius...');
             try {
-                const searchRes = await fetch(
-                    `https://api.genius.com/search?q=${encodeURIComponent(query)}`,
-                    {
-                        headers: { 
-                            'Authorization': `Bearer ${process.env.GENIUS_TOKEN}`,
-                            'User-Agent': 'Mozilla/5.0'
-                        },
-                        signal: AbortSignal.timeout(8000)
+                const Genius = require('genius-lyrics');
+                const geniusClient = new Genius.Client(process.env.GENIUS_TOKEN);
+                
+                const searches = await geniusClient.songs.search(query);
+                console.log('Genius resultados:', searches.length);
+                
+                if (searches.length > 0) {
+                    const song = searches[0];
+                    console.log('Genius canción:', song.title, '-', song.artist.name);
+                    const songLyrics = await song.lyrics();
+                    
+                    if (songLyrics && songLyrics.length > 50) {
+                        lyrics = songLyrics;
+                        source = `Genius — ${song.title} (${song.artist.name})`;
                     }
-                );
-
-                console.log('Genius search status:', searchRes.status);
-
-                if (searchRes.ok) {
-                    const searchData = await searchRes.json();
-                    console.log('Genius hits:', searchData.response?.hits?.length);
-                    console.log('Genius error:', searchData.error);
-
-                    const hit = searchData.response?.hits?.[0]?.result;
-                    console.log('Genius hit título:', hit?.title, '| URL:', hit?.url);
-
-                    if (hit) {
-                        const pageRes = await fetch(hit.url, {
-                            headers: {
-                                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-                                'Accept': 'text/html,application/xhtml+xml',
-                                'Accept-Language': 'es-ES,es;q=0.9,en;q=0.8'
-                            },
-                            signal: AbortSignal.timeout(10000)
-                        });
-
-                        console.log('Genius page status:', pageRes.status);
-
-                        if (pageRes.ok) {
-                            const html = await pageRes.text();
-                            console.log('Genius HTML length:', html.length);
-
-                            const match = html.match(/window\.__PRELOADED_STATE__ = JSON\.parse\('(.+?)'\);/s);
-                            console.log('Genius PRELOADED_STATE match:', !!match);
-
-                            if (match) {
-                                try {
-                                    const decoded = match[1].replace(/\\'/g, "'").replace(/\\\\/g, '\\');
-                                    const state = JSON.parse(decoded);
-                                    const lyricsData = state?.entities?.songs;
-                                    console.log('Genius lyricsData keys:', lyricsData ? Object.keys(lyricsData) : 'null');
-                                    if (lyricsData) {
-                                        const songKey = Object.keys(lyricsData)[0];
-                                        const rawLyrics = lyricsData[songKey]?.lyrics?.body?.plain;
-                                        console.log('Genius rawLyrics length:', rawLyrics?.length);
-                                        if (rawLyrics && rawLyrics.length > 50) {
-                                            lyrics = rawLyrics;
-                                            source = 'Genius';
-                                        }
-                                    }
-                                } catch (parseErr) {
-                                    console.warn('Genius parse falló:', parseErr.message);
-                                }
-                            }
-
-                            if (!lyrics) {
-                                const lyricsDivs = html.match(/data-lyrics-container="true"[^>]*>([\s\S]*?)<\/div>/g);
-                                console.log('Genius lyricsDivs encontrados:', lyricsDivs?.length);
-                                if (lyricsDivs) {
-                                    const raw = lyricsDivs
-                                        .join('\n')
-                                        .replace(/<br\s*\/?>/gi, '\n')
-                                        .replace(/<[^>]+>/g, '')
-                                        .replace(/&amp;/g, '&')
-                                        .replace(/&quot;/g, '"')
-                                        .replace(/&#x27;/g, "'")
-                                        .trim();
-                                    console.log('Genius raw lyrics length:', raw.length);
-                                    if (raw.length > 50) {
-                                        lyrics = raw;
-                                        source = 'Genius';
-                                    }
-                                }
-                            }
-
-                            if (!lyrics) {
-                                lyrics = `No pude extraer la letra.\nVer en Genius: ${hit.url}`;
-                                source = 'Genius';
-                            }
-                        }
-                    }
-                } else {
-                    const errText = await searchRes.text();
-                    console.warn('Genius search falló:', searchRes.status, errText.slice(0, 200));
                 }
             } catch (e) {
                 console.warn('Genius falló:', e.message);
-                console.warn('Genius stack:', e.stack?.slice(0, 300));
             }
         }
 

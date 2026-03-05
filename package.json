@@ -17,6 +17,7 @@
     "dotenv": "^16.3.1",
     "emoji-regex": "^10.5.0",
     "express": "^4.21.2",
+    "genius-lyrics": "^4.4.7",
     "genius-lyrics-api": "^3.2.1",
     "kazagumo": "^3.2.0",
     "mysql2": "^3.14.3",
