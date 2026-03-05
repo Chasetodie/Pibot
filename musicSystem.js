@@ -519,32 +519,22 @@ class MusicSystem {
 
         // ── lyrics.ovh ──
         try {
-            // Intentar con formato "artista - cancion" si tiene guión
             const hasDash = query.includes(' - ');
             let artist, title;
 
             if (hasDash) {
-                [artist, ...rest] = query.split(' - ');
-                title = rest.join(' - ');
+                const dashParts = query.split(' - ');
+                artist = dashParts[0].trim();
+                title = dashParts.slice(1).join(' - ').trim();
             } else {
-                // Sin guión: pasar query completo como título, artista vacío
                 artist = query;
                 title = query;
             }
 
-            // Intentar con artista - titulo
-            let lyricsRes = await fetch(
+            const lyricsRes = await fetch(
                 `https://api.lyrics.ovh/v1/${encodeURIComponent(artist)}/${encodeURIComponent(title)}`,
                 { signal: AbortSignal.timeout(8000) }
             );
-
-            // Si falla y no tenía guión, intentar solo con el query como titulo
-            if (!lyricsRes.ok && !hasDash) {
-                lyricsRes = await fetch(
-                    `https://api.lyrics.ovh/v1/ /${encodeURIComponent(query)}`,
-                    { signal: AbortSignal.timeout(8000) }
-                );
-            }
 
             if (lyricsRes.ok) {
                 const data = await lyricsRes.json();
@@ -574,7 +564,9 @@ class MusicSystem {
 
                 if (searchRes.ok) {
                     const searchData = await searchRes.json();
+                    console.log('Genius hits:', searchData.response?.hits?.length);
                     const hit = searchData.response?.hits?.[0]?.result;
+                    console.log('Genius hit:', hit?.title, hit?.url);
                     
                     if (hit) {
                         // Scrapear con headers correctos
@@ -720,7 +712,12 @@ class MusicSystem {
 
     async handleSearchInteraction(interaction) {
         try {
-            await interaction.deferUpdate();
+            try {
+                await interaction.deferUpdate();
+            } catch (deferErr) {
+                console.warn('deferUpdate falló (interacción expirada?):', deferErr.message);
+                return; // Si ya expiró no podemos hacer nada
+            }
 
             const customId = interaction.customId;
             const parts = customId.split('_');
