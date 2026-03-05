@@ -298,7 +298,6 @@ class MusicSystem {
         }
     }
 
-    // ─── SEARCH COMMAND ───────────────────────────────────────────────────────────
     async searchCommand(message, args, member, channel, guild, author, engine) {
         const query = args.slice(2).join(' ').trim();
         if (!query) {
@@ -329,7 +328,6 @@ class MusicSystem {
                 .setFooter({ text: 'Selecciona una canción para ver detalles o reproducir' })
                 .setTimestamp();
 
-            // Botones de selección — máx 5 por row, así que 2 rows
             const row1 = new ActionRowBuilder().addComponents(
                 tracks.slice(0, 4).map((_, i) =>
                     new ButtonBuilder()
@@ -338,165 +336,34 @@ class MusicSystem {
                         .setStyle(ButtonStyle.Primary)
                 )
             );
-            const row2 = new ActionRowBuilder().addComponents(
-                tracks.slice(4).map((_, i) =>
+            const row2 = new ActionRowBuilder().addComponents([
+                ...tracks.slice(4).map((_, i) =>
                     new ButtonBuilder()
                         .setCustomId(`msearch_${i + 4}_${message.author.id}_${guild.id}`)
                         .setLabel(`${i + 5}`)
                         .setStyle(ButtonStyle.Primary)
-                )
-            );
-            row2.components.push(
+                ),
                 new ButtonBuilder()
-                    .setCustomId(`msearch_cancel_${message.author.id}`)
+                    .setCustomId(`msearch_cancel_${message.author.id}_${guild.id}`)
                     .setLabel('❌ Cancelar')
                     .setStyle(ButtonStyle.Danger)
-            );
+            ]);
 
             const searchMsg = await loadingMsg.edit({ content: '', embeds: [embed], components: [row1, row2] });
 
-            // Guardar tracks temporalmente para el collector
+            // Solo guardar sesión — handleSearchInteraction maneja TODO
             if (!this.searchSessions) this.searchSessions = new Map();
             this.searchSessions.set(`${message.author.id}_${guild.id}`, {
-                tracks,
-                member,
-                channel,
-                guild,
-                author,
-                engine,
-                message: searchMsg
+                tracks, member, channel, guild, author, engine, embed, row1, row2
             });
 
-            // Auto-limpiar sesión después de 60 segundos
+            // Auto-limpiar después de 60s
             setTimeout(() => {
                 if (this.searchSessions?.has(`${message.author.id}_${guild.id}`)) {
                     this.searchSessions.delete(`${message.author.id}_${guild.id}`);
                     searchMsg.edit({ components: [] }).catch(() => {});
                 }
             }, 60000);
-            
-            // Collector de botones — 60 segundos
-            const collector = searchMsg.createMessageComponentCollector({
-                filter: i => i.user.id === message.author.id,
-                time: 60000
-            });
-
-            collector.on('collect', async interaction => {
-                await interaction.deferUpdate();
-                collector.stop();
-
-                const customId = interaction.customId;
-                if (customId.includes('cancel')) {
-                    return searchMsg.edit({ content: '❌ Búsqueda cancelada.', embeds: [], components: [] });
-                }
-
-                const index = parseInt(customId.split('_')[1]);
-                const selected = tracks[index];
-                const session = this.searchSessions.get(`${message.author.id}_${guild.id}`);
-                if (!session) return;
-
-                // Mostrar detalles de la canción con botón Reproducir
-                const detailEmbed = new EmbedBuilder()
-                    .setTitle('🎵 Detalles de la Canción')
-                    .setColor('#9932CC')
-                    .setThumbnail(selected.thumbnail || null)
-                    .addFields(
-                        { name: '🎵 Título', value: selected.title, inline: false },
-                        { name: '👤 Artista', value: selected.author || 'Desconocido', inline: true },
-                        { name: '⏱️ Duración', value: this.formatTime(selected.length), inline: true },
-                        { name: '📡 Plataforma', value: engine === 'ytsearch' ? 'YouTube' : 'Spotify', inline: true },
-                        { name: '🔗 URL', value: selected.uri || 'No disponible', inline: false }
-                    )
-                    .setTimestamp();
-
-                const playRow = new ActionRowBuilder().addComponents(
-                    new ButtonBuilder()
-                        .setCustomId(`mplay_${index}_${message.author.id}_${guild.id}`)
-                        .setLabel('▶️ Reproducir')
-                        .setStyle(ButtonStyle.Success),
-                    new ButtonBuilder()
-                        .setCustomId(`mback_${message.author.id}_${guild.id}`)
-                        .setLabel('⬅️ Volver')
-                        .setStyle(ButtonStyle.Secondary),
-                    new ButtonBuilder()
-                        .setCustomId(`msearch_cancel_${message.author.id}`)
-                        .setLabel('❌ Cerrar')
-                        .setStyle(ButtonStyle.Danger)
-                );
-
-                await searchMsg.edit({ embeds: [detailEmbed], components: [playRow] });
-
-                // Collector para botones de detalle
-                const detailCollector = searchMsg.createMessageComponentCollector({
-                    filter: i => i.user.id === message.author.id,
-                    time: 60000
-                });
-
-                detailCollector.on('collect', async interaction2 => {
-                    await interaction2.deferUpdate();
-                    detailCollector.stop();
-
-                    if (interaction2.customId.includes('cancel')) {
-                        return searchMsg.edit({ content: '❌ Cerrado.', embeds: [], components: [] });
-                    }
-
-                    if (interaction2.customId.startsWith('mback_')) {
-                        return searchMsg.edit({ content: '', embeds: [embed], components: [row1, row2] });
-                    }
-
-                    if (interaction2.customId.startsWith('mplay_')) {
-                        // Verificar que está en VC
-                        const voiceChannel = session.member.voice.channel;
-                        if (!voiceChannel) {
-                            return searchMsg.edit({
-                                content: '❌ Debes estar en un canal de voz para reproducir.',
-                                embeds: [],
-                                components: []
-                            });
-                        }
-
-                        await searchMsg.edit({ content: '▶️ Agregando a la cola...', embeds: [], components: [] });
-
-                        try {
-                            let player = this.kazagumo.getPlayer(session.guild.id);
-                            if (!player) {
-                                player = await this.kazagumo.createPlayer({
-                                    guildId: session.guild.id,
-                                    textId: session.channel.id,
-                                    voiceId: voiceChannel.id,
-                                    shardId: session.guild.shardId || 0,
-                                });
-                            }
-                            this.clearPlayerTimeout(session.guild.id);
-
-                            player.queue.add(selected);
-                            if (!player.playing && !player.paused) {
-                                await new Promise(r => setTimeout(r, 500));
-                                player.play();
-                            }
-
-                            const addedEmbed = new EmbedBuilder()
-                                .setTitle('✅ Canción Agregada')
-                                .setDescription(`**${selected.title}**\nDuración: ${this.formatTime(selected.length)}`)
-                                .setThumbnail(selected.thumbnail || null)
-                                .setColor('#00FF00');
-
-                            await searchMsg.edit({ content: '', embeds: [addedEmbed], components: [] });
-                        } catch (e) {
-                            await searchMsg.edit({ content: `❌ Error al reproducir: ${e.message}`, embeds: [], components: [] });
-                        }
-                    }
-                });
-
-                detailCollector.on('end', (_, reason) => {
-                    if (reason === 'time') searchMsg.edit({ components: [] }).catch(() => {});
-                });
-            });
-
-            collector.on('end', (_, reason) => {
-                if (reason === 'time') searchMsg.edit({ components: [] }).catch(() => {});
-                this.searchSessions?.delete(`${message.author.id}_${guild.id}`);
-            });
 
         } catch (error) {
             console.error('Error en searchCommand:', error);
@@ -552,6 +419,7 @@ class MusicSystem {
 
         // ── Genius ──
         if (!lyrics && process.env.GENIUS_TOKEN) {
+            console.log('🎵 Entrando a Genius con query:', query);
             try {
                 // Buscar la canción en Genius
                 const searchRes = await fetch(
