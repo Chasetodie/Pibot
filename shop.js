@@ -156,6 +156,95 @@ class ShopSystem {
                 maxStack: 2
             },
 
+            // === ITEMS DE TRIVIA ===
+            'trivia_time_boost': {
+                id: 'trivia_time_boost',
+                name: '⏳ Ampolleta de Tiempo',
+                description: 'Añade 10 segundos extra por pregunta en tu próxima partida de trivia',
+                price: 15000,
+                category: 'consumable',
+                rarity: 'uncommon',
+                emoji: '⏳',
+                effect: {
+                    type: 'trivia_boost',
+                    subtype: 'extra_time',
+                    bonus: 10000, // 10 segundos extra en ms
+                    uses: 1
+                },
+                stackable: true,
+                maxStack: 5
+            },
+
+            'trivia_skip_token': {
+                id: 'trivia_skip_token',
+                name: '⏭️ Token de Salto',
+                description: 'Permite saltar una pregunta sin penalización en trivia. No cuenta como fallo.',
+                price: 20000,
+                category: 'consumable',
+                rarity: 'uncommon',
+                emoji: '⏭️',
+                effect: {
+                    type: 'trivia_boost',
+                    subtype: 'skip_question',
+                    uses: 1
+                },
+                stackable: true,
+                maxStack: 3
+            },
+
+            'trivia_audience': {
+                id: 'trivia_audience',
+                name: '👥 Ayuda del Público',
+                description: 'Elimina 2 respuestas incorrectas en una pregunta de trivia (múltiple opción)',
+                price: 25000,
+                category: 'consumable',
+                rarity: 'rare',
+                emoji: '👥',
+                effect: {
+                    type: 'trivia_boost',
+                    subtype: 'eliminate_wrong',
+                    eliminates: 2,
+                    uses: 1
+                },
+                stackable: true,
+                maxStack: 3
+            },
+
+            'trivia_double_reward': {
+                id: 'trivia_double_reward',
+                name: '💰 Voucher de Trivia',
+                description: 'Duplica las recompensas de tu próxima partida de trivia completada',
+                price: 40000,
+                category: 'consumable',
+                rarity: 'rare',
+                emoji: '💰',
+                effect: {
+                    type: 'trivia_boost',
+                    subtype: 'double_reward',
+                    multiplier: 2.0,
+                    uses: 1
+                },
+                stackable: true,
+                maxStack: 3
+            },
+
+            'trivia_shield': {
+                id: 'trivia_shield',
+                name: '🛡️ Escudo de Trivia',
+                description: 'Absorbe 1 respuesta incorrecta sin penalización de recompensa en trivia',
+                price: 30000,
+                category: 'consumable',
+                rarity: 'rare',
+                emoji: '🛡️',
+                effect: {
+                    type: 'trivia_boost',
+                    subtype: 'wrong_shield',
+                    uses: 1
+                },
+                stackable: true,
+                maxStack: 2
+            },
+
             // === DECORATIVOS ===
             'golden_trophy': {
                 id: 'golden_trophy',
@@ -1209,7 +1298,12 @@ class ShopSystem {
                             label: 'Cofres',
                             value: 'mystery',
                             emoji: '🗝️'
-                        }
+                        },
+                        {
+                            label: 'Trivia',
+                            value: 'trivia',
+                            emoji: '🧠'
+                        },
                     ])
             );
         

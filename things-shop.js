@@ -569,6 +569,56 @@ class CraftingSystem {
                 }
             },
 
+            'trivia_kit_craft': {
+                id: 'trivia_kit_craft',
+                name: '🧠 Kit de Trivia',
+                description: 'Combina ayudas de trivia en un kit completo: tiempo extra + salto + ayuda del público',
+                craftTime: 1800000, // 30 minutos
+                ingredients: [
+                    { id: 'trivia_time_boost', quantity: 2 },
+                    { id: 'trivia_skip_token', quantity: 1 },
+                    { id: 'trivia_audience', quantity: 1 }
+                ],
+                result: {
+                    id: 'trivia_kit',
+                    category: 'consumable',
+                    rarity: 'epic',
+                    effect: {
+                        type: 'trivia_boost',
+                        subtype: 'kit',
+                        includes: ['extra_time', 'skip_question', 'eliminate_wrong', 'wrong_shield'],
+                        uses: 1
+                    },
+                    stackable: true,
+                    maxStack: 2
+                }
+            },
+
+            'trivia_master_pass': {
+                id: 'trivia_master_pass',
+                name: '👑 Pase Maestro de Trivia',
+                description: 'El item definitivo de trivia: doble recompensa + escudo + ayuda del público para 3 partidas',
+                craftTime: 7200000, // 2 horas
+                ingredients: [
+                    { id: 'trivia_double_reward', quantity: 2 },
+                    { id: 'trivia_shield', quantity: 2 },
+                    { id: 'trivia_kit', quantity: 1 }
+                ],
+                result: {
+                    id: 'trivia_master_pass',
+                    category: 'consumable',
+                    rarity: 'legendary',
+                    effect: {
+                        type: 'trivia_boost',
+                        subtype: 'master_pass',
+                        includes: ['double_reward', 'wrong_shield', 'eliminate_wrong'],
+                        uses: 3
+                    },
+                    stackable: false,
+                    maxStack: 1
+                }
+            },
+
             'mega_luck_craft': {
                 id: 'mega_luck_craft',
                 name: '🍀✨ Mega Poción de Suerte',
@@ -960,49 +1010,97 @@ class CraftingSystem {
     
     async showCraftingRecipes(message) {
         try {
-            const embed = {
-                color: 0x9932cc,
-                title: '🔨 **RECETAS DE CRAFTEO**',
-                description: 'Usa `>craft <recipe_id>` para craftear un item',
-                fields: []
-            };
-            
             const currentGuildId = message.guild?.id;
-            Object.values(this.CRAFTING_RECIPES)
-                .filter(recipe => !recipe.guildExclusive || recipe.guildExclusive === currentGuildId)
-                .forEach(recipe => {
-                let requirements = '';
-                recipe.ingredients.forEach(ingredient => {
-                    const item = this.shop.shopItems[ingredient.id];
-                    if (item) {
-                        requirements += `${item.emoji || '📦'} ${ingredient.quantity}x ${item.name}\n`;
-                    } else {
-                        requirements += `📦 ${ingredient.quantity}x ${ingredient.id}\n`;
-                    }
+            const recipes = Object.values(this.CRAFTING_RECIPES)
+                .filter(r => !r.guildExclusive || r.guildExclusive === currentGuildId);
+
+            // Agrupar por categoría del resultado
+            const groups = {
+                '🍀 Amuletos & Suerte': [],
+                '⛏️ Herramientas': [],
+                '🧠 Trivia': [],
+                '💀 Robo': [],
+                '📦 Cofres & Especiales': [],
+                '🏷️ Cosméticos': [],
+                '🔮 Otros': []
+            };
+
+            for (const recipe of recipes) {
+                const id = recipe.id;
+                if (id.includes('charm') || id.includes('luck')) groups['🍀 Amuletos & Suerte'].push(recipe);
+                else if (id.includes('pickaxe')) groups['⛏️ Herramientas'].push(recipe);
+                else if (id.includes('trivia')) groups['🧠 Trivia'].push(recipe);
+                else if (id.includes('glove') || id.includes('robbery') || id.includes('phantom')) groups['💀 Robo'].push(recipe);
+                else if (id.includes('chest') || id.includes('box')) groups['📦 Cofres & Especiales'].push(recipe);
+                else if (id.includes('nickname') || id.includes('token') || id.includes('toolkit')) groups['🔮 Otros'].push(recipe);
+                else groups['🔮 Otros'].push(recipe);
+            }
+
+            const rarityEmojis = { common: '⚪', uncommon: '🟢', rare: '🔵', epic: '🟣', legendary: '🟡', mythic: '🔴' };
+
+            const formatTime = (ms) => {
+                const m = Math.floor(ms / 60000);
+                const h = Math.floor(m / 60);
+                const rem = m % 60;
+                if (h > 0) return rem > 0 ? `${h}h ${rem}m` : `${h}h`;
+                return `${m}m`;
+            };
+
+            const embeds = [];
+            let currentFields = [];
+            let currentGroup = '';
+
+            for (const [groupName, groupRecipes] of Object.entries(groups)) {
+                if (groupRecipes.length === 0) continue;
+
+                // Separador de grupo
+                currentFields.push({
+                    name: `${groupName}`,
+                    value: '─────────────────────',
+                    inline: false
                 });
-                
-                const rarityEmoji = this.getRarityEmoji(recipe.result.rarity);
-                
-// Calcular tiempo de crafteo
-const craftTimeMinutes = Math.floor(recipe.craftTime / 60000);
-const craftTimeHours = Math.floor(craftTimeMinutes / 60);
-let timeString;
 
-if (craftTimeHours > 0) {
-    const remainingMinutes = craftTimeMinutes % 60;
-    timeString = remainingMinutes > 0 ? `${craftTimeHours}h ${remainingMinutes}m` : `${craftTimeHours}h`;
-} else {
-    timeString = `${craftTimeMinutes}m`;
-}
+                for (const recipe of groupRecipes) {
+                    const rEmoji = rarityEmojis[recipe.result.rarity] || '⚪';
+                    const ingredients = recipe.ingredients.map(ing => {
+                        const item = this.shop.shopItems[ing.id];
+                        return `${item?.emoji || '📦'} **${ing.quantity}x** ${item?.name || ing.id}`;
+                    }).join('\n');
 
-embed.fields.push({
-    name: `\n${rarityEmoji} ${recipe.name} (ID: ${recipe.id})`,
-    value: `${recipe.description}\n**Materiales:**\n${requirements}**⏱️ Tiempo de Crafteo:** ${timeString}\n\n`,
-    inline: false
-});
-            });
-            
-            await message.channel.send({ embeds: [embed] });
+                    currentFields.push({
+                        name: `${rEmoji} ${recipe.name}`,
+                        value: [
+                            `*${recipe.description}*`,
+                            `**ID:** \`${recipe.id}\``,
+                            `**Materiales:**\n${ingredients}`,
+                            `**⏱️ Tiempo:** ${formatTime(recipe.craftTime)}`
+                        ].join('\n'),
+                        inline: true
+                    });
+
+                    // Discord permite máx 25 fields por embed
+                    if (currentFields.length >= 24) {
+                        embeds.push(currentFields);
+                        currentFields = [];
+                    }
+                }
+            }
+
+            if (currentFields.length > 0) embeds.push(currentFields);
+
+            // Enviar embeds (máx 10 por mensaje, pero con recipes normalmente 1-2 bastan)
+            for (let i = 0; i < embeds.length; i++) {
+                const embed = new EmbedBuilder()
+                    .setTitle(i === 0 ? '⚒️ Recetas de Crafteo' : '⚒️ Recetas de Crafteo (cont.)')
+                    .setDescription(i === 0 ? '> Usa `>craft <recipe_id>` para craftear.\n> Necesitas tener los materiales en tu inventario (`>bag`).' : null)
+                    .setColor('#9932CC')
+                    .addFields(embeds[i])
+                    .setFooter({ text: `${recipes.length} recetas disponibles · >craft <id> para craftear` })
+                    .setTimestamp();
+
+                await message.channel.send({ embeds: [embed] });
+            }
+
         } catch (error) {
             console.error('Error mostrando recetas:', error);
             message.reply('❌ Error al mostrar las recetas.');

@@ -855,8 +855,8 @@ class MinigamesSystem {
             return;
         }
 
-        // Probabilidad 1% de recibir maldición aleatoria
-        if (Math.random() < 0.05) {
+        // Probabilidad 3% de recibir maldición aleatoria
+        if (Math.random() < 0.03) {
             await this.economy.shop.applyRandomCurse(message.author.id);
             
             const curseNotif = new EmbedBuilder()
@@ -1263,8 +1263,8 @@ class MinigamesSystem {
             return;
         }
 
-        // Probabilidad 1% de recibir maldición aleatoria
-        if (Math.random() < 0.05) {
+        // Probabilidad 3% de recibir maldición aleatoria
+        if (Math.random() < 0.03) {
             await this.economy.shop.applyRandomCurse(message.author.id);
             
             const curseNotif = new EmbedBuilder()
@@ -1729,8 +1729,8 @@ class MinigamesSystem {
             return;
         }
         
-        // Probabilidad 1% de recibir maldición aleatoria
-        if (Math.random() < 0.05) {
+        // Probabilidad 3% de recibir maldición aleatoria
+        if (Math.random() < 0.03) {
             await this.economy.shop.applyRandomCurse(message.author.id);
             
             const curseNotif = new EmbedBuilder()
@@ -3237,8 +3237,8 @@ const userId = gameState.userId;
             return;
         }
     
-        // Probabilidad 1% de recibir maldición aleatoria
-        if (Math.random() < 0.05) {
+        // Probabilidad 3% de recibir maldición aleatoria
+        if (Math.random() < 0.03) {
             await this.economy.shop.applyRandomCurse(message.author.id);
             
             const curseNotif = new EmbedBuilder()
@@ -3981,8 +3981,8 @@ const userId = gameState.userId;
             }
         }
         
-        // Probabilidad 1% de recibir maldición aleatoria
-        if (Math.random() < 0.05) {
+        // Probabilidad 3% de recibir maldición aleatoria
+        if (Math.random() < 0.03) {
             await this.economy.shop.applyRandomCurse(message.author.id);
             
             const curseNotif = new EmbedBuilder()
@@ -5016,8 +5016,8 @@ const userId = gameState.userId;
             return;
         }
         
-        // Probabilidad 1% de recibir maldición aleatoria
-        if (Math.random() < 0.05) {
+        // Probabilidad 3% de recibir maldición aleatoria
+        if (Math.random() < 0.03) {
             await this.economy.shop.applyRandomCurse(message.author.id);
             
             const curseNotif = new EmbedBuilder()
@@ -9621,8 +9621,8 @@ const userId = gameState.userId;
             );
         }
 
-        // Probabilidad 1% de recibir maldición aleatoria
-        if (Math.random() < 0.05) {
+        // Probabilidad 3% de recibir maldición aleatoria
+        if (Math.random() < 0.03) {
             await this.economy.shop.applyRandomCurse(message.author.id);
             
             const curseNotif = new EmbedBuilder()
@@ -9634,6 +9634,45 @@ const userId = gameState.userId;
         }
 
         const isTrueFalse = ['tof', 'truefalse'].includes(gameMode);
+
+        // === ITEMS DE TRIVIA ACTIVOS ===
+        const triviaUserData = await this.economy.getUser(userId);
+        const triviaActiveEffects = this.shop.parseActiveEffects(triviaUserData.activeEffects);
+
+        let triviaExtraTime = 0;
+        let triviaSkipsLeft = 0;
+        let triviaEliminatesLeft = 0;
+        let triviaDoubleReward = false;
+        let triviaWrongShield = false;
+
+        const triviaItemChecks = {
+            'trivia_time_boost':    (fx) => { triviaExtraTime += fx.bonus || 10000; },
+            'trivia_skip_token':    (fx) => { triviaSkipsLeft += 1; },
+            'trivia_audience':      (fx) => { triviaEliminatesLeft += fx.eliminates || 2; },
+            'trivia_double_reward': (fx) => { triviaDoubleReward = true; },
+            'trivia_shield':        (fx) => { triviaWrongShield = true; },
+            'trivia_kit': (fx) => {
+                triviaExtraTime += 10000;
+                triviaSkipsLeft += 1;
+                triviaEliminatesLeft += 2;
+                triviaWrongShield = true;
+            },
+            'trivia_master_pass': (fx) => {
+                triviaDoubleReward = true;
+                triviaWrongShield = true;
+                triviaEliminatesLeft += 2;
+            }
+        };
+
+        for (const [itemId, applyFn] of Object.entries(triviaItemChecks)) {
+            const effects = triviaActiveEffects[itemId];
+            if (effects && effects.length > 0) {
+                applyFn(effects[0]);
+                await this.shop.consumeItemUse(userId, itemId);
+            }
+        }
+
+        const effectiveTriviaTime = this.config.trivia.timePerQuestion + triviaExtraTime;
 
         const difficultyMap = {
             'easy': 'easy',
@@ -9819,7 +9858,7 @@ const userId = gameState.userId;
                     `**Modo:** ${modeText}\n` +
                     `**Dificultad:** ${difficulty.toUpperCase()}\n` +
                     `**Preguntas:** ${questions.length}\n` +
-                    `**Tiempo:** ${this.config.trivia.timePerQuestion / 1000} segundos por pregunta`
+                    `**Tiempo:** ${effectiveTriviaTime / 1000} segundos por pregunta`
                 )
                 .setColor('#9932CC')
                 .setFooter({ text: 'El juego comenzará en 3 segundos...' });
@@ -9872,7 +9911,7 @@ const userId = gameState.userId;
                         { name: '✅ Correctas', value: `${correctAnswers}`, inline: true }
                     )
                     .setColor('#9932CC')
-                    .setFooter({ text: `⏱️ Tienes ${this.config.trivia.timePerQuestion / 1000} segundos para responder` });
+                    .setFooter({ text: `⏱️ Tienes ${effectiveTriviaTime / 1000} segundos para responder` });
 
                 const buttons = new ActionRowBuilder();
             
@@ -9914,11 +9953,29 @@ const userId = gameState.userId;
                     );
                 }
 
+                if (triviaSkipsLeft > 0 && !isTrueFalse) {
+                    buttons.addComponents(
+                        new ButtonBuilder()
+                            .setCustomId('trivia_skip')
+                            .setLabel(`⏭️ Saltar (${triviaSkipsLeft})`)
+                            .setStyle(ButtonStyle.Secondary)
+                    );
+                }
+
+                if (triviaEliminatesLeft > 0 && !isTrueFalse) {
+                    buttons.addComponents(
+                        new ButtonBuilder()
+                            .setCustomId('trivia_eliminate')
+                            .setLabel(`👥 Público (${triviaEliminatesLeft})`)
+                            .setStyle(ButtonStyle.Primary)
+                    );
+                }
+
                 await gameMessage.edit({ embeds: [questionEmbed], components: [buttons] });
 
                 // Timeout para esta pregunta
                 const timeoutPromise = new Promise((resolve) => {
-                    setTimeout(() => resolve('timeout'), this.config.trivia.timePerQuestion);
+                    setTimeout(() => resolve('timeout'), effectiveTriviaTime);
                 });
 
                 // Esperar respuesta del usuario
@@ -9928,7 +9985,7 @@ const userId = gameState.userId;
                 while (!answered) {
                     const collectorPromise = gameMessage.awaitMessageComponent({ 
                         filter, 
-                        time: this.config.trivia.timePerQuestion + 5000 // +5 segundos de gracia
+                        time: effectiveTriviaTime + 5000 // +5 segundos de gracia
                     }).catch((error) => {
                         console.log('⚠️ Collector error:', error.message);
                         return null;
@@ -10046,6 +10103,83 @@ const userId = gameState.userId;
                         continue; // Volver a esperar respuesta
                     }
 
+                    if (interaction.customId === 'trivia_skip') {
+                        if (triviaSkipsLeft <= 0) {
+                            await interaction.reply({ content: '❌ No tienes saltos disponibles', ephemeral: true });
+                            continue;
+                        }
+                        triviaSkipsLeft--;
+
+                        const skipEmbed = new EmbedBuilder()
+                            .setTitle('⏭️ Pregunta saltada')
+                            .setDescription(`Saltaste esta pregunta.\n\n✅ **Respuesta correcta era:** ${q.correct}`)
+                            .setColor('#FFA500');
+
+                        await interaction.update({ embeds: [skipEmbed], components: [] });
+                        await new Promise(resolve => setTimeout(resolve, 3000));
+
+                        // No contar como correcta ni incorrecta, simplemente avanzar
+                        questionResults.push({
+                            question: q.question.length > 100 ? q.question.substring(0, 97) + '...' : q.question,
+                            userAnswer: '⏭️ Saltada',
+                            correctAnswer: q.correct,
+                            correct: false,
+                            skipped: true
+                        });
+
+                        try { await gameMessage.delete(); } catch {}
+                        currentQuestion++;
+                        usedHintThisQuestion = false;
+                        if (currentQuestion < questions.length) {
+                            const loadingEmbed = new EmbedBuilder().setDescription('⏳ Preparando siguiente pregunta...').setColor('#9932CC');
+                            gameMessage = await message.channel.send({ embeds: [loadingEmbed] });
+                            await showQuestion();
+                        } else {
+                            await endGame();
+                        }
+                        return;
+                    }
+
+                    if (interaction.customId === 'trivia_eliminate') {
+                        if (triviaEliminatesLeft <= 0) {
+                            await interaction.reply({ content: '❌ No tienes ayudas del público disponibles', ephemeral: true });
+                            continue;
+                        }
+                        triviaEliminatesLeft--;
+
+                        // Eliminar 2 respuestas incorrectas
+                        const wrongOpts = q.answers.filter(a => a !== q.correct);
+                        const toRemove = wrongOpts.sort(() => Math.random() - 0.5).slice(0, 2);
+                        q.answers = q.answers.filter(a => !toRemove.includes(a));
+
+                        // Recrear embed con 2 opciones
+                        const newLetters = ['A', 'B'];
+                        let newOpts = '';
+                        q.answers.forEach((ans, i) => {
+                            newOpts += `**${newLetters[i]})** ${ans.length > 100 ? ans.substring(0, 97) + '...' : ans}\n`;
+                        });
+
+                        const elimEmbed = new EmbedBuilder()
+                            .setTitle(`🧠 Pregunta ${currentQuestion + 1}/${questions.length}`)
+                            .setDescription(`<@${userId}>, responde esta pregunta:\n\n**${q.question}**`)
+                            .addFields(
+                                { name: '👥 Ayuda del Público — 2 opciones eliminadas', value: newOpts, inline: false },
+                                { name: '📊 Dificultad', value: difficulty.toUpperCase(), inline: true },
+                                { name: '📚 Categoría', value: q.category, inline: true },
+                                { name: '✅ Correctas', value: `${correctAnswers}`, inline: true }
+                            )
+                            .setColor('#00BFFF')
+                            .setFooter({ text: `⏱️ Tienes ${effectiveTriviaTime / 1000} segundos` });
+
+                        const newBtns = new ActionRowBuilder();
+                        newLetters.forEach((letter, i) => {
+                            newBtns.addComponents(new ButtonBuilder().setCustomId(`trivia_${i}`).setLabel(letter).setStyle(ButtonStyle.Primary));
+                        });
+
+                        await interaction.update({ embeds: [elimEmbed], components: [newBtns] });
+                        continue;
+                    }
+
                     // Si es una respuesta normal
                     answered = true;
                     const answerIndex = parseInt(interaction.customId.split('_')[interaction.customId.split('_').length - 1]);
@@ -10161,12 +10295,40 @@ const userId = gameState.userId;
                     reward.money -= penaltyAmount;
                 }
                 
+                // Escudo: absorbe 1 fallo (si tienes 4/5 con escudo = se cuenta como 5/5)
+                let effectiveCorrect = correctAnswers;
+                if (triviaWrongShield && correctAnswers < questions.length) {
+                    effectiveCorrect = Math.min(correctAnswers + 1, questions.length);
+                    console.log(`🛡️ Escudo de trivia activado: ${correctAnswers} → ${effectiveCorrect}`);
+                }
+
+                // Recalcular reward con effectiveCorrect en lugar de correctAnswers
+                if (effectiveCorrect === totalQuestions) {
+                    reward = this.config.trivia.rewards.perfect;
+                } else if (isTrueFalse) {
+                    if (effectiveCorrect >= 8) reward = this.config.trivia.rewards.good;
+                    else if (effectiveCorrect >= 6) reward = this.config.trivia.rewards.decent;
+                    else reward = this.config.trivia.rewards.participation;
+                } else {
+                    if (effectiveCorrect === 4) reward = this.config.trivia.rewards.good;
+                    else if (effectiveCorrect === 3) reward = this.config.trivia.rewards.decent;
+                    else reward = this.config.trivia.rewards.participation;
+                }
+
                 const finalMoney = Math.floor(reward.money * diffMultiplier * hintMultiplier);
                 const finalXP = Math.floor(reward.xp * diffMultiplier * hintMultiplier);
 
+                // Doble recompensa
+                let finalMoneyWithBonus = finalMoney;
+                let finalXPWithBonus = finalXP;
+                if (triviaDoubleReward) {
+                    finalMoneyWithBonus = finalMoney * 2;
+                    finalXPWithBonus = finalXP * 2;
+                }
+
                 // Otorgar recompensas
-                await this.economy.addMoney(userId, finalMoney);
-                await this.economy.addXp(userId, finalXP);
+                await this.economy.addMoney(userId, finalMoneyWithBonus);
+                await this.economy.addXp(userId, finalXPWithBonus);
                 await this.economy.updateUser(userId, updateData);
 
                 // *** NUEVO: ACTUALIZAR ESTADÍSTICAS DE ACHIEVEMENTS ***
@@ -10206,7 +10368,7 @@ const userId = gameState.userId;
                     .setTitle('🎯 ¡Trivia Completada!')
                     .setDescription(
                         `Respondiste **${correctAnswers}/${questions.length}** preguntas correctamente\n` +
-                        `${hintsUsed > 0 ? `💡 Pistas usadas: ${hintsUsed} (Recompensa -60%)\n` : ''}`
+                        `${hintsUsedd > 0 ? `💡 Pistas usadas: ${hintsUsedd} (Recompensa -60%)\n` : ''}`
                     )
                     .addFields(
                         { name: '💰 Dinero ganado', value: `${finalMoney} π-b$`, inline: true },
@@ -10217,6 +10379,19 @@ const userId = gameState.userId;
                     )
                     .setColor(correctAnswers >= 3 ? '#00FF00' : '#FF0000')
                     .setFooter({ text: 'Usa >trivia [easy/medium/hard] [multiple/tof] para jugar de nuevo' });
+
+                const activeItemsList = [];
+                if (triviaExtraTime > 0) activeItemsList.push(`⏳ +${triviaExtraTime/1000}s por pregunta`);
+                if (triviaDoubleReward) activeItemsList.push('💰 Recompensa x2');
+                if (triviaWrongShield && effectiveCorrect > correctAnswers) activeItemsList.push('🛡️ Escudo absorbió 1 fallo');
+
+                if (activeItemsList.length > 0) {
+                    resultEmbed.addFields({
+                        name: '🎒 Items activos usados',
+                        value: activeItemsList.join('\n'),
+                        inline: false
+                    });
+                }
 
                 // Si el resumen es muy largo, dividirlo en múltiples embeds
                 if (questionsReview.length > 1024) {
@@ -10352,8 +10527,8 @@ const userId = gameState.userId;
             return message.reply('❌ Ya estás en una partida de supervivencia.');
         }
 
-        // Probabilidad 1% de recibir maldición aleatoria
-        if (Math.random() < 0.05) {
+        // Probabilidad 3% de recibir maldición aleatoria
+        if (Math.random() < 0.03) {
             await this.economy.shop.applyRandomCurse(message.author.id);
             
             const curseNotif = new EmbedBuilder()
