@@ -566,7 +566,7 @@ class MusicSystem {
 
         const embed = new EmbedBuilder()
             .setTitle(`🎵 ${songTitle}`)
-            .setDescription(chunks[0])
+            .setDescription(chunks[0] + '\n\u200b')
             .setColor('#9932CC')
             .setThumbnail(songThumbnail)
             .setTimestamp();
@@ -607,11 +607,15 @@ class MusicSystem {
             if (interaction.customId.startsWith('lyrics_prev')) currentPage--;
 
         const pageEmbed = new EmbedBuilder()
-            .setTitle(`🎵 Letra — ${query}`)
-            .setDescription(chunks[currentPage])
+            .setTitle(`🎵 ${songTitle}`)
+            .setDescription(chunks[currentPage] + '\n\u200b')
             .setColor('#9932CC')
             .setThumbnail(songThumbnail)
-            .setFooter({ text: `Fuente: ${source} • Página ${currentPage + 1}/${chunks.length}` });
+            .setTimestamp();
+
+        if (songArtist) pageEmbed.addFields({ name: '👤 Artista', value: songArtist, inline: true });
+        pageEmbed.addFields({ name: '📖 Fuente', value: source, inline: true });
+        pageEmbed.setFooter({ text: `Página ${currentPage + 1}/${chunks.length}` });
 
             const updatedRow = new ActionRowBuilder().addComponents(
                 new ButtonBuilder()
@@ -665,7 +669,11 @@ class MusicSystem {
 
             // Botones de Spotify search
             if (customId.startsWith('msp_')) {
+                console.log('msp parts:', parts);
+                console.log('userId:', userId, '| guildId:', guildId);
+                console.log('sessions keys:', [...(this.spotifySearchSessions?.keys() || [])]);
                 const session = this.spotifySearchSessions?.get(`${userId}_${guildId}`);
+                console.log('session encontrada:', !!session);
                 if (!session) return interaction.editReply({ content: '❌ Sesión expirada.', embeds: [], components: [] });
 
                 if (customId.includes('cancel')) {
