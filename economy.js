@@ -704,6 +704,25 @@ class EconomySystem {
         }
     }
 
+    async getTriviaPlayedLeaderboardByGuild(limit = 10, guildId, client) {
+        try {
+            const allUsers = await this.database.getTriviaPlayedLeaderboard(limit * 5);
+            const guild = client.guilds.cache.get(guildId);
+            if (!guild) return allUsers.slice(0, limit);
+            const filtered = [];
+            for (const user of allUsers) {
+                const member = guild.members.cache.get(user.userId) ||
+                            await guild.members.fetch(user.userId).catch(() => null);
+                if (member) filtered.push(user);
+                if (filtered.length >= limit) break;
+            }
+            return filtered;
+        } catch (error) {
+            console.error('❌ Error en trivia played leaderboard por servidor:', error);
+            return [];
+        }
+    }
+
     async getTriviaLeaderboard(limit = 10) {
         try {
             return await this.database.getTriviaLeaderboard(limit);

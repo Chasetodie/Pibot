@@ -513,6 +513,12 @@ class AllCommands {
         const isGlobal = scope === 'global';
         const isLevel = type === 'level' || type === 'levels' || type === 'lvl';
 
+        // Mensaje de espera solo para servidor (puede tardar)
+        let loadingMsg = null;
+        if (!isGlobal) {
+            loadingMsg = await message.reply('🔍 Buscando miembros del servidor...');
+        }
+
         let leaderboard;
         if (isGlobal) {
             leaderboard = isLevel
@@ -568,7 +574,11 @@ class AllCommands {
 
         embed.setFooter({ text: footerParts.join(' • ') });
 
-        await message.reply({ embeds: [embed] });
+        if (loadingMsg) {
+            await loadingMsg.edit({ content: '', embeds: [embed] });
+        } else {
+            await message.reply({ embeds: [embed] });
+        }
     }
 
     async handleAddMoney(message, client) {        

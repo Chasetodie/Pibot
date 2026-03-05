@@ -11284,38 +11284,45 @@ const userId = gameState.userId;
     }
 
     async handleTriviaLeaderboard(message, args, client) {
-        const type = args[1]?.toLowerCase() || 'score';
+        const type = args[1]?.toLowerCase() || 'perfect';
         const scope = args[2]?.toLowerCase();
         const isGlobal = scope === 'global';
 
         let leaderboard, title;
+
         if (type === 'perfect') {
             leaderboard = isGlobal
                 ? await this.economy.database.getTriviaLeaderboard(10)
                 : await this.economy.getTriviaLeaderboardByGuild(10, message.guild.id, client);
-            title = isGlobal ? '🏆 Trivia Global — Mejores puntuaciones' : `🏆 Trivia — ${message.guild.name}`;
+            title = isGlobal ? '🏆 Trivia Global — Partidas Perfectas' : `🏆 Trivia Perfectas — ${message.guild.name}`;
         } else if (type === 'accuracy') {
             leaderboard = isGlobal
                 ? await this.economy.getTriviaAccuracyLeaderboard(10)
                 : await this.economy.getTriviaAccuracyLeaderboardByGuild(10, message.guild.id, client);
-            title = isGlobal ? '🎯 Trivia Global — Mejor precisión' : `🎯 Trivia Precisión — ${message.guild.name}`;
+            title = isGlobal ? '🎯 Trivia Global — Mejor Precisión' : `🎯 Trivia Precisión — ${message.guild.name}`;
         } else if (type === 'played') {
             leaderboard = isGlobal
                 ? await this.economy.getTriviaPlayedLeaderboard(10)
-                : await this.economy.getTriviaLeaderboardByGuild(10, message.guild.id, client);
-            title = isGlobal ? '🎮 Trivia Global — Más partidas' : `🎮 Trivia Partidas — ${message.guild.name}`;
-        } else {
+                : await this.economy.getTriviaPlayedLeaderboardByGuild(10, message.guild.id, client);
+            title = isGlobal ? '🎮 Trivia Global — Más Partidas' : `🎮 Trivia Partidas — ${message.guild.name}`;
+        } else if (type === 'survival') {
             leaderboard = isGlobal
-                ? await this.economy.getTriviaLeaderboard(10)
+                ? await this.economy.database.getTriviaSurvivalLeaderboard(10)
                 : await this.economy.getTriviaLeaderboardByGuild(10, message.guild.id, client);
-            title = isGlobal ? '🧠 Trivia Global — Top puntuaciones' : `🧠 Trivia — ${message.guild.name}`;
+            title = isGlobal ? '💀 Trivia Global — Survival Record' : `💀 Trivia Survival — ${message.guild.name}`;
+        } else {
+            // default = perfect
+            leaderboard = isGlobal
+                ? await this.economy.database.getTriviaLeaderboard(10)
+                : await this.economy.getTriviaLeaderboardByGuild(10, message.guild.id, client);
+            title = isGlobal ? '🏆 Trivia Global — Partidas Perfectas' : `🏆 Trivia Perfectas — ${message.guild.name}`;
         }
 
         if (!leaderboard || leaderboard.length === 0) {
             return message.reply('❌ No hay datos de trivia todavía.');
         }
 
-        const scopeLabel = isGlobal ? '🌍 Global' : `🏠 Servidor`;
+        const scopeLabel = isGlobal ? '🌍 Global' : '🏠 Servidor';
         const embed = new EmbedBuilder()
             .setTitle(`${title} — ${scopeLabel}`)
             .setColor('#9932CC')
@@ -11331,16 +11338,27 @@ const userId = gameState.userId;
                 case 2: medal = '🥉'; break;
                 default: medal = `**${i + 1}.**`; break;
             }
-            const value = type === 'accuracy'
-                ? `${user.accuracy?.toFixed(1) || 0}% precisión`
-                : type === 'played'
-                    ? `${user.gamesPlayed || 0} partidas`
-                    : `${user.triviaScore || user.score || 0} pts`;
+
+            let value;
+            if (type === 'accuracy') {
+                value = `${user.accuracy?.toFixed(1) || 0}% precisión (${user.correct || 0}/${user.total || 0} correctas)`;
+            } else if (type === 'played') {
+                value = `${user.trivia_played || 0} partidas jugadas`;
+            } else if (type === 'survival') {
+                value = `${user.trivia_survival_record || 0} preguntas sobrevividas`;
+            } else {
+                value = `${user.trivia_perfect || 0} partidas perfectas`;
+            }
+
             description += `${medal} <@${user.userId}>\n📊 ${value}\n\n`;
         }
 
         embed.setDescription(description);
-        embed.setFooter({ text: isGlobal ? 'Usa >trivialb para ver solo este servidor' : 'Usa >trivialb score global para ver ranking global' });
+        embed.setFooter({ 
+            text: isGlobal 
+                ? 'Usa >trivialb para ver solo este servidor' 
+                : 'Agrega "global" para ver el ranking global — ej: >trivialb played global' 
+        });
 
         await message.reply({ embeds: [embed] });
     }
