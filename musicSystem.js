@@ -418,43 +418,37 @@ class MusicSystem {
             console.warn('lyrics.ovh falló:', e.message);
         }
 
-        console.log('lyrics después de ovh:', lyrics ? 'ENCONTRADA' : 'NO encontrada');
-        console.log('GENIUS_TOKEN existe:', !!process.env.GENIUS_TOKEN);
-
-        // ── Genius ──
-        if (!lyrics && process.env.GENIUS_TOKEN) {
-            console.log('🎵 Entrando a Genius...');
+        // ── lrclib (reemplaza Genius) ──
+        if (!lyrics) {
             try {
-                const Genius = require('genius-lyrics');
-                const geniusClient = new Genius.Client(process.env.GENIUS_TOKEN);
+                console.log('🎵 Buscando en lrclib...');
                 
-                const searches = await geniusClient.songs.search(query);
-                console.log('Genius resultados:', searches.length);
-                
-                if (searches.length > 0) {
-                    const song = searches[0];
-                    console.log('Genius canción:', song.title, '-', song.artist.name);
-                    
-                    // Pasar true para usar modo optimizado que evita el bloqueo
-                    const songLyrics = await song.lyrics(true);
-                    
-                    if (songLyrics && songLyrics.length > 50) {
-                        lyrics = songLyrics;
-                        source = `Genius — ${song.title} (${song.artist.name})`;
+                const lrclibRes = await fetch(
+                    `https://lrclib.net/api/search?q=${encodeURIComponent(query)}`,
+                    { signal: AbortSignal.timeout(8000) }
+                );
+
+                console.log('lrclib status:', lrclibRes.status);
+
+                if (lrclibRes.ok) {
+                    const results = await lrclibRes.json();
+                    console.log('lrclib resultados:', results.length);
+
+                    if (results.length > 0) {
+                        const song = results[0];
+                        console.log('lrclib canción:', song.trackName, '-', song.artistName);
+
+                        // Preferir letra sincronizada, si no letra plana
+                        const rawLyrics = song.plainLyrics || song.syncedLyrics;
+                        if (rawLyrics && rawLyrics.length > 50) {
+                            // Limpiar timestamps si hay letra sincronizada
+                            lyrics = rawLyrics.replace(/\[\d+:\d+\.\d+\]/g, '').trim();
+                            source = `lrclib — ${song.trackName} (${song.artistName})`;
+                        }
                     }
                 }
             } catch (e) {
-                console.warn('Genius falló:', e.message);
-                // Si falla, dar el link directo
-                try {
-                    const Genius = require('genius-lyrics');
-                    const geniusClient = new Genius.Client(process.env.GENIUS_TOKEN);
-                    const searches = await geniusClient.songs.search(query);
-                    if (searches.length > 0) {
-                        lyrics = `No pude extraer la letra automáticamente.\nVer en Genius: ${searches[0].url}`;
-                        source = 'Genius';
-                    }
-                } catch (_) {}
+                console.warn('lrclib falló:', e.message);
             }
         }
 
