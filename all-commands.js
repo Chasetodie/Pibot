@@ -582,116 +582,91 @@ class AllCommands {
         }
     }
 
-    async handleAddMoney(message, client) {        
-        if (!message.member?.permissions.has('Administrator')) {
-            await message.reply('❌ No tienes permisos de administrador para usar este comando.');
-            return;
-        }
-        if (!await this.validateAdminCommand(message, targetUser, 'addmoney')) return;
+async handleAddMoney(message, client) {
+    const YOUR_ID = '488110147265232898';
+    const isOwner = message.author.id === YOUR_ID;
+    const isAdmin = message.member?.permissions.has('Administrator');
 
-        const args = message.content.split(' ');
-        
-        if (args.length < 3) {
-            const embed = new EmbedBuilder()
-                .setTitle('💸 Comando Add')
-                .setDescription('Da π-b Coins a otro usuario')
-                .addFields({
-                    name: '📝 Uso',
-                    value: '`>addmoney @usuario <cantidad> <razon>`',
-                    inline: false
-                }, {
-                    name: '💡 Ejemplo',
-                    value: '`>addmoney @usuario 500 "Por ganar el concurso"`',
-                    inline: false
-                })
-                .setColor('#17a2b8');
-            
-            await message.reply({ embeds: [embed] });
-            return;
-        }
-        
-        // Obtener usuario mencionado
-        const targetUser = message.mentions.users.first();
-        if (!targetUser) {
-            await message.reply('❌ Debes mencionar a un usuario válido.');
-            return;
-        }
-            
-        if (targetUser.bot) {
-            await message.reply('❌ No puedes dar dinero a bots.');
-            return;
-        }
-        
-        // Obtener cantidad
-        const amount = parseInt(args[2]);
-        if (isNaN(amount) || amount <= 0) {
-            await message.reply('❌ La cantidad debe ser un número positivo.');
-            return;
-        }
+    if (!isOwner && !isAdmin) {
+        await message.reply('❌ No tienes permisos para usar este comando.');
+        return;
+    }
 
-        const targetUserData = await this.economy.getUser(targetUser.id);
-        if (targetUserData.balance + amount > this.economy.config.maxBalance) {
-            const spaceLeft = this.economy.config.maxBalance - targetUserData.balance;
-            await message.reply(`❌ El usuario alcanzaría el límite máximo. Solo puedes agregar ${this.formatNumber(spaceLeft)} π-b$ más.`);
-            return;
-        }
+    const args = message.content.split(' ');
 
-        const reason = message.content.split(' ').slice(3).join(' ') || 'No Especificada';
-
-        // Realizar transferencia
-        const result = await this.economy.addMoney(targetUser.id, amount, reason);
-        
+    if (args.length < 3) {
         const embed = new EmbedBuilder()
-            .setTitle('✅ Se ha Entregado Exitosamente el Dinero')
-            .setDescription(`Has dado **${this.formatNumber(amount)}** ${this.economy.config.currencySymbol} a ${targetUser}\nRazón: ${reason}`)
+            .setTitle('💸 Comando Add')
+            .setDescription('Da π-b Coins a otro usuario')
             .addFields(
-                { name: '💰 Balance de Destino', value: `${this.formatNumber(result.newBalance - amount)} ${this.economy.config.currencySymbol}`, inline: true }
+                { name: '📝 Uso', value: '`>addmoney @usuario <cantidad> [razon]`', inline: false },
+                { name: '💡 Ejemplo', value: '`>addmoney @usuario 500 Por ganar el concurso`', inline: false }
             )
-            .setColor('#00FF00')
-            .setTimestamp();
-        
-        await message.reply({ embeds: [embed] });
+            .setColor('#17a2b8');
+        return message.reply({ embeds: [embed] });
+    }
 
-        // ENVIAR LOG POR DM AL PROPIETARIO
+    const targetUser = message.mentions.users.first();
+    if (!targetUser) return message.reply('❌ Debes mencionar a un usuario válido.');
+    if (targetUser.bot) return message.reply('❌ No puedes dar dinero a bots.');
+
+    // Validar rate limit solo para admins (no para ti)
+    if (!isOwner) {
+        if (!await this.validateAdminCommand(message, targetUser, 'addmoney')) return;
+    }
+
+    const amount = parseInt(args[2]);
+    if (isNaN(amount) || amount <= 0) return message.reply('❌ La cantidad debe ser un número positivo.');
+
+    const targetUserData = await this.economy.getUser(targetUser.id);
+    const targetLimit = this.economy.shop ? await this.economy.shop.getVipLimit(targetUser.id) : this.economy.config.maxBalance;
+    if (targetUserData.balance + amount > targetLimit) {
+        const spaceLeft = targetLimit - targetUserData.balance;
+        return message.reply(`❌ El usuario alcanzaría su límite. Solo puedes agregar ${this.formatNumber(spaceLeft)} π-b$ más.`);
+    }
+
+    const reason = args.slice(3).join(' ') || 'No especificada';
+    const result = await this.economy.addMoney(targetUser.id, amount, reason);
+
+    const embed = new EmbedBuilder()
+        .setTitle('✅ Dinero Entregado')
+        .setDescription(`**+${this.formatNumber(amount)}** ${this.economy.config.currencySymbol} → ${targetUser}\nRazón: ${reason}`)
+        .addFields(
+            { name: '💰 Balance Anterior', value: `${this.formatNumber(result.newBalance - amount)} π-b$`, inline: true },
+            { name: '💳 Balance Actual', value: `${this.formatNumber(result.newBalance)} π-b$`, inline: true },
+            { name: '👤 Dado por', value: `${message.author}${isOwner ? ' 👑' : ''}`, inline: true }
+        )
+        .setColor('#00FF00')
+        .setTimestamp();
+
+    await message.reply({ embeds: [embed] });
+
+    // Log por DM al owner (solo si no eres tú quien lo usó)
+    if (!isOwner) {
         try {
-            const ownerId = '488110147265232898'; // Cambia por tu ID de Discord
-            
-            // Intentar múltiples métodos para obtener el usuario
-            let owner;
-            try {
-                owner = await client.users.fetch(ownerId, { force: true });
-            } catch (fetchError) {
-                // Si fetch falla, buscar en caché
-                owner = client.users.cache.get(ownerId);
+            const owner = await client.users.fetch(YOUR_ID, { force: true }).catch(() => client.users.cache.get(YOUR_ID));
+            if (owner) {
+                const logEmbed = new EmbedBuilder()
+                    .setTitle('🚨 Log Admin — AddMoney')
+                    .setDescription(`Comando usado en **${message.guild.name}**`)
+                    .addFields(
+                        { name: '👤 Admin', value: `${message.author} (${message.author.tag})`, inline: true },
+                        { name: '🎯 Destino', value: `${targetUser} (${targetUser.tag})`, inline: true },
+                        { name: '💰 Cantidad', value: `${this.formatNumber(amount)} π-b$`, inline: true },
+                        { name: '📝 Razón', value: reason, inline: false }
+                    )
+                    .setColor('#FF9900')
+                    .setTimestamp();
+
+                const dm = await owner.createDM();
+                await dm.send({ embeds: [logEmbed] });
             }
-            
-            if (!owner) {
-                console.log('❌ No se pudo encontrar al propietario');
-                return;
-            }
-
-            const logEmbed = new EmbedBuilder()
-                .setTitle('🚨 Log de Comando Admin - AddMoney')
-                .setDescription(`Se ha usado el comando \`>addmoney\` en el servidor **${message.guild.name}**`)
-                .addFields(
-                    { name: '👤 Administrador', value: `${message.author} (${message.author.tag})`, inline: true },
-                    { name: '🎯 Usuario Destino', value: `${targetUser} (${targetUser.tag})`, inline: true },
-                    { name: '💰 Cantidad', value: `${this.formatNumber(amount)} π-b$`, inline: true },
-                    { name: '📝 Razón', value: reason, inline: false }
-                )
-                .setColor('#FF9900')
-                .setTimestamp();
-
-            const dmChannel = await owner.createDM();
-            await dmChannel.send({ embeds: [logEmbed] });
-            console.log('📨 Log enviado correctamente');
-
         } catch (error) {
-            console.error('❌ Error completo enviando log:', error.stack);
-            // Log alternativo en consola si falla el DM
-            console.log(`📋 LOG: ${message.author.tag} usó addmoney en ${targetUser.tag} por ${amount} π-b$`);
+            console.error('❌ Error enviando log DM:', error.message);
+            console.log(`📋 LOG: ${message.author.tag} → ${targetUser.tag} +${amount} π-b$ | ${reason}`);
         }
     }
+}
 
     async handleRemoveMoney(message) {
         if (!message.member?.permissions.has('Administrator')) {
