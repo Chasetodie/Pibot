@@ -1663,7 +1663,7 @@ class ShopSystem {
             case 'equipment':
                 return await this.applyEquipmentEffect(userId, itemId, item);          
             case 'trivia':
-                return await this.applyTriviaBoost(message?.author?.id || userId, itemId, item);
+                return await this.applyTriviaBoost(userId, itemId, item);
             case 'special':
                 // Casos especiales existentes
                 if (item.id === 'vip_pass') {
