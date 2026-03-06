@@ -223,7 +223,8 @@ class EventsSystem {
             weekendEvent.endTime = Date.now(); // Forzar fin inmediato
             await this.deleteEvent(weekendEvent.id);
             delete this.activeEvents[weekendEvent.id];
-            await this.announceEvent(weekendEvent, 'expired');
+            const guild = this.client?.guilds.cache.get(weekendEvent.guild_id) || this.guild;
+            await this.announceEvent(weekendEvent, 'expired', guild);
             console.log('🏁 Evento de fin de semana terminado automáticamente');
         }
     }
@@ -945,17 +946,20 @@ class EventsSystem {
         }
 
         for (const [guildId, guildEvents] of this.activeEvents.entries()) {
-            if (!guildEvents || typeof guildEvents !== 'object') continue;
-            for (const [eventId, event] of Object.entries(guildEvents)) {
-                if (event.endTime <= now) {
-                    delete guildEvents[eventId];
-                    await this.deleteEvent(eventId);
-                    await this.announceEvent(event, 'expired');
-                    cleaned++;
-                    console.log(`🧹 Evento expirado limpiado: ${event.name} (guild: ${guildId})`);
-                }
-            }
+    if (!guildEvents || typeof guildEvents !== 'object') continue;
+    for (const [eventId, event] of Object.entries(guildEvents)) {
+        if (event.endTime <= now) {
+            delete guildEvents[eventId];
+            await this.deleteEvent(eventId);
+            // Obtener el guild del cliente y pasarlo
+            const guild = this.client?.guilds.cache.get(guildId) || this.guild;
+            await this.announceEvent(event, 'expired', guild);
+            cleaned++;
+            console.log(`🧹 Evento expirado limpiado: ${event.name} (guild: ${guildId})`);
         }
+    }
+        }
+
     }
 
     // Obtener nombre legible del multiplicador
