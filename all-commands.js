@@ -1814,7 +1814,8 @@ class AllCommands {
 
         const validKeys = {
             'levelup_channel': '📈 Canal de subida de nivel',
-            'events_channel': '🎉 Canal de anuncios de eventos'
+            'events_channel': '🎉 Canal de anuncios de eventos',
+            'guild_levelup_channel': '📊 Niveles del servidor — anuncios de level up local'
         };
 
         const subkey = args[1];
@@ -2470,174 +2471,275 @@ const commandName = command.replace('>', '');
             admin: {
                 title: '🛡️ Administración',
                 fields: [
-                    // Configuración general
                     { name: '⚙️ Configuración', value: '─────────────────', inline: false },
                     { name: '>svconfig', value: 'Ver configuración actual del servidor', inline: true },
-                    { name: '>setchannel <clave> #canal', value: 'Configurar un canal\n`levelup` `events` `welcome`', inline: true },
+                    { name: '>setchannel <clave> #canal', value: 'Configurar un canal\n`levelup_channel` `events_channel` `guild_levelup_channel`', inline: true },
                     { name: '\u200b', value: '\u200b', inline: true },
 
-                    // Niveles del servidor
-                    { name: '📊 Niveles del Servidor', value: '─────────────────', inline: false },
+                    { name: '📊 Niveles del Servidor (Son diferentes a los niveles de Economía)', value: '─────────────────', inline: false },
                     { name: '>enablelevels', value: 'Activar sistema de niveles', inline: true },
                     { name: '>disablelevels', value: 'Desactivar sistema de niveles', inline: true },
-                    { name: '>ssetlevelchannel #canal', value: 'Canal para anunciar level ups', inline: true },
+                    { name: '\u200b', value: '\u200b', inline: true },
 
-                    // Eventos
                     { name: '🎉 Eventos', value: '─────────────────', inline: false },
                     { name: '>toggleevents', value: 'Activar/desactivar todos los eventos', inline: true },
-                    { name: '>toggleevent [tipo]', value: 'Activar/desactivar un evento específico', inline: true },
+                    { name: '>toggleevent [tipo]', value: 'Activar/desactivar un tipo específico', inline: true },
                     { name: '>seteventsrole @rol', value: 'Rol para pings de eventos', inline: true },
                     { name: '>createevent <tipo> [min]', value: 'Crear evento manual', inline: true },
                     { name: '>eventstats', value: 'Estadísticas de eventos', inline: true },
                     { name: '\u200b', value: '\u200b', inline: true },
 
-                    // Moderación
                     { name: '🔨 Moderación', value: '─────────────────', inline: false },
                     { name: '>clear [cantidad]', value: 'Borrar mensajes del canal', inline: true },
                 ]
             },
             economy: {
-                title: '💰 Comandos de Economía',
+                title: '💰 Economía',
                 fields: [
-                    { name: '>balance', value: 'Ver tu dinero y nivel', inline: true },
+                    { name: '💳 Dinero', value: '─────────────────', inline: false },
+                    { name: '>balance', value: 'Ver tu saldo y nivel', inline: true },
                     { name: '>daily', value: 'Recompensa diaria', inline: true },
-                    { name: '>work [tipo]', value: 'Trabajar por dinero', inline: true },
-                    { name: '>pay @user <$>', value: 'Transferir dinero', inline: true },
-                    { name: '>top', value: 'Ver rankings', inline: true },
-                    { name: '>robar @user', value: 'Robar dinero', inline: true }
+                    { name: '>pay @user <cantidad>', value: 'Transferir dinero a alguien', inline: true },
+
+                    { name: '💼 Trabajo', value: '─────────────────', inline: false },
+                    { name: '>work [tipo]', value: 'Trabajar para ganar dinero', inline: true },
+                    { name: '>robar @user', value: 'Intentar robar dinero', inline: true },
+                    { name: '\u200b', value: '\u200b', inline: true },
+
+                    { name: '🏆 Rankings', value: '─────────────────', inline: false },
+                    { name: '>top', value: 'Top dinero del servidor', inline: true },
+                    { name: '>top level', value: 'Top niveles del servidor', inline: true },
+                    { name: '>top global', value: 'Rankings globales', inline: true },
                 ]
             },
             shop: {
-                title: '🛒 Comandos de Tienda',
+                title: '🛒 Tienda',
                 fields: [
-                    { name: '>shop', value: 'Ver tienda', inline: true },
-                    { name: '>buy <item>', value: 'Comprar item', inline: true },
-                    { name: '>bag', value: 'Ver inventario', inline: true },
-                    { name: '>useitem <item>', value: 'Usar item', inline: true },
+                    { name: '🏪 Comprar', value: '─────────────────', inline: false },
+                    { name: '>shop', value: 'Ver la tienda completa', inline: true },
+                    { name: '>shop <categoría>', value: 'Filtrar por categoría\n`consumable` `permanent` `trivia` `mystery`', inline: true },
+                    { name: '>buy <item_id> [cantidad]', value: 'Comprar un item', inline: true },
+
+                    { name: '🎒 Inventario', value: '─────────────────', inline: false },
+                    { name: '>bag', value: 'Ver tu inventario', inline: true },
+                    { name: '>useitem <item_id>', value: 'Usar un item consumible', inline: true },
                     { name: '>effects', value: 'Ver efectos activos', inline: true },
-                    { name: '>cosmeticos', value: 'Ver cosmétcos', inline: true }
+                    { name: '>cosmeticos', value: 'Ver cosméticos equipados', inline: true },
+                    { name: '\u200b', value: '\u200b', inline: true },
+                    { name: '\u200b', value: '\u200b', inline: true },
                 ]
-            },              
+            },
             vip: {
-                title: '👑 Comandos VIP',
+                title: '👑 VIP',
                 fields: [
-                    { name: '>vip', value: 'Ver estado VIP', inline: true },
-                    { name: '>vipwork', value: 'Trabajo VIP', inline: true },
+                    { name: '📋 Info', value: '─────────────────', inline: false },
+                    { name: '>vip', value: 'Ver tu estado VIP y beneficios', inline: true },
+                    { name: '>viphelp', value: 'Guía completa de VIP', inline: true },
+                    { name: '\u200b', value: '\u200b', inline: true },
+
+                    { name: '⚡ Comandos VIP', value: '─────────────────', inline: false },
+                    { name: '>vipwork', value: 'Trabajo exclusivo VIP', inline: true },
+                    { name: '>vipdaily', value: 'Daily mejorado VIP', inline: true },
                     { name: '>vipgamble', value: 'Apuestas VIP', inline: true },
-                    { name: '>vipboost', value: 'Boost VIP', inline: true },
-                    { name: '>vipdaily', value: 'Daily VIP', inline: true },
-                    { name: '>viphelp', value: 'Ayuda VIP completa', inline: true }
+                    { name: '>vipboost', value: 'Activar boost VIP', inline: true },
+                    { name: '\u200b', value: '\u200b', inline: true },
+                    { name: '\u200b', value: '\u200b', inline: true },
                 ]
             },
             games: {
                 title: '🎮 Minijuegos',
                 fields: [
-                    { name: '>games', value: 'Lista de minijuegos disponibles', inline: true },
-                    { name: '>coinflip <cara/cruz> <cantidad>', value: 'Lanzar moneda (100-5,000)', inline: true },
-                    { name: '>dice <1-6/alto/bajo> <cantidad>', value: 'Juego de dados (100-5,000)', inline: true },
-                    { name: '>lottery <número> <cantidad>', value: 'Lotería (500-3,000)', inline: true },
-                    { name: '>blackjack <cantidad>', value: 'Blackjack (100-10,000)', inline: true },
-                    { name: '>roulette <tipo> <cantidad>', value: 'Ruleta (100-15,000)', inline: true },
-                    { name: '>slots <cantidad>', value: 'Tragaperras (100-8,000)', inline: true },
-                    { name: '>trivia [dificultad] [modo] [categoría]', value: 'Trivia clásica', inline: true },
-                    { name: '>triviasurvival [dificultad] [categoría]', value: 'Trivia survival — ¡Sobrevive!', inline: true },
-                    { name: '>triviacomp [dificultad] [apuesta]', value: 'Trivia competitiva multiplayer', inline: true },
-                    { name: '>trivialb [perfect/accuracy/played]', value: 'Rankings de trivia', inline: true },
-                    { name: '>minigames', value: 'Ver todos los juegos', inline: true},
+                    { name: '📋 Ver Juegos', value: '─────────────────', inline: false },
+                    { name: '>games', value: 'Lista completa con límites y premios', inline: true },
+                    { name: '\u200b', value: '\u200b', inline: true },
+                    { name: '\u200b', value: '\u200b', inline: true },
+
+                    { name: '🎰 Azar', value: '─────────────────', inline: false },
+                    { name: '>coinflip <cara/cruz> <apuesta>', value: '100 – 5,000 π-b$', inline: true },
+                    { name: '>dice <tipo> <apuesta>', value: '100 – 5,000 π-b$', inline: true },
+                    { name: '>lottery <número> <apuesta>', value: '500 – 3,000 π-b$', inline: true },
+                    { name: '>slots <apuesta>', value: '100 – 8,000 π-b$', inline: true },
+                    { name: '>roulette <tipo> <apuesta>', value: '100 – 15,000 π-b$', inline: true },
+                    { name: '>vending', value: 'Máquina expendedora (10 π-b$)', inline: true },
+
+                    { name: '🃏 Cartas & Multijugador', value: '─────────────────', inline: false },
+                    { name: '>blackjack <apuesta>', value: '100 – 10,000 π-b$', inline: true },
+                    { name: '>ujoin <apuesta>', value: 'UNO — 2 a 8 jugadores', inline: true },
+                    { name: '>russian <apuesta>', value: 'Ruleta Rusa — 2 a 6 jugadores', inline: true },
+                    { name: '>horses <bot/multi> <apuesta>', value: 'Carrera de Caballos', inline: true },
+                    { name: '\u200b', value: '\u200b', inline: true },
+                    { name: '\u200b', value: '\u200b', inline: true },
+
+                    { name: '🧠 Trivia', value: '─────────────────', inline: false },
+                    { name: '>trivia [dificultad] [modo] [cat]', value: 'Trivia clásica — Gratis', inline: true },
+                    { name: '>triviasurvival start', value: 'Modo supervivencia', inline: true },
+                    { name: '>triviacomp <apuesta>', value: 'Competitiva multijugador', inline: true },
+                    { name: '>trivialb [tipo]', value: 'Rankings de trivia', inline: true },
+                    { name: '\u200b', value: '\u200b', inline: true },
+                    { name: '\u200b', value: '\u200b', inline: true },
                 ]
             },
             betting: {
-                title: '🎲 Sistema de Apuestas',
+                title: '🎲 Apuestas',
                 fields: [
-                    { name: '>bet @usuario <cantidad> <descripción>', value: 'Crear apuesta', inline: true },
-                    { name: '>acceptbet <bet_id>', value: 'Aceptar apuesta', inline: true },
-                    { name: '>declinebet <bet_id>', value: 'Declinar apuesta', inline: true },
-                    { name: '>resolvebet <bet_id> <resultado>', value: 'Resolver apuesta', inline: true },
-                    { name: '>cancelbet <bet_id>', value: 'Cancelar apuesta', inline: true },
-                    { name: '>mybets', value: 'Ver tus apuestas', inline: true },
-                    { name: '>betstats [@usuario]', value: 'Estadísticas de apuestas', inline: true }
+                    { name: '➕ Crear', value: '─────────────────', inline: false },
+                    { name: '>bet @usuario <cantidad> <descripción>', value: 'Crear una apuesta directa', inline: true },
+                    { name: '>acceptbet <id>', value: 'Aceptar apuesta pendiente', inline: true },
+                    { name: '>declinebet <id>', value: 'Rechazar apuesta', inline: true },
+
+                    { name: '⚙️ Gestionar', value: '─────────────────', inline: false },
+                    { name: '>resolvebet <id> @ganador', value: 'Resolver apuesta (declarar ganador)', inline: true },
+                    { name: '>cancelbet <id>', value: 'Cancelar y devolver apuestas', inline: true },
+                    { name: '>mybets', value: 'Ver tus apuestas activas', inline: true },
+                    { name: '>betstats [@usuario]', value: 'Estadísticas de victorias/derrotas', inline: true },
+                    { name: '\u200b', value: '\u200b', inline: true },
+                    { name: '\u200b', value: '\u200b', inline: true },
                 ]
             },
             trading: {
                 title: '🔄 Intercambios',
                 fields: [
-                    { name: '>trade @usuario', value: 'Iniciar intercambio', inline: true },
-                    { name: '>tradeadd <item_id> [cantidad]', value: 'Agregar item', inline: true },
-                    { name: '>trademoney <cantidad>', value: 'Agregar dinero', inline: true },
-                    { name: '>tradeaccept', value: 'Aceptar intercambio', inline: true },
-                    { name: '>tradecancel', value: 'Cancelar intercambio', inline: true },
-                    { name: '>tradeshow', value: 'Ver intercambios activos', inline: true }
+                    { name: '🤝 Iniciar', value: '─────────────────', inline: false },
+                    { name: '>trade @usuario', value: 'Iniciar intercambio con alguien', inline: true },
+                    { name: '>tradeshow', value: 'Ver intercambios activos', inline: true },
+                    { name: '\u200b', value: '\u200b', inline: true },
+
+                    { name: '➕ Ofrecer', value: '─────────────────', inline: false },
+                    { name: '>tradeadd <item_id> [cantidad]', value: 'Agregar item a tu oferta', inline: true },
+                    { name: '>trademoney <cantidad>', value: 'Agregar dinero a tu oferta', inline: true },
+                    { name: '\u200b', value: '\u200b', inline: true },
+
+                    { name: '✅ Confirmar', value: '─────────────────', inline: false },
+                    { name: '>tradeaccept', value: 'Confirmar y ejecutar intercambio', inline: true },
+                    { name: '>tradecancel', value: 'Cancelar intercambio activo', inline: true },
+                    { name: '\u200b', value: '\u200b', inline: true },
                 ]
             },
             auctions: {
                 title: '🔨 Subastas',
                 fields: [
-                    { name: '>auction <item_id> <precio_inicial> [minutos]', value: 'Crear subasta', inline: true },
-                    { name: '>bid <auction_id> <cantidad>', value: 'Pujar', inline: true },
-                    { name: '>auctions', value: 'Ver subastas activas', inline: true }
+                    { name: '📦 Subastar', value: '─────────────────', inline: false },
+                    { name: '>auction <item_id> <precio> [minutos]', value: 'Poner un item en subasta', inline: true },
+                    { name: '>auctions', value: 'Ver subastas activas ahora', inline: true },
+                    { name: '\u200b', value: '\u200b', inline: true },
+
+                    { name: '💰 Pujar', value: '─────────────────', inline: false },
+                    { name: '>bid <auction_id> <cantidad>', value: 'Hacer una puja', inline: true },
+                    { name: '\u200b', value: '\u200b', inline: true },
+                    { name: '\u200b', value: '\u200b', inline: true },
                 ]
             },
             craft: {
                 title: '⚒️ Crafteo',
                 fields: [
-                    { name: '>recipes', value: 'Ver recetas disponibles', inline: true },
-                    { name: '>craft <recipe_id>', value: 'Craftear item', inline: true },
-                    { name: '>craftqueue', value: 'Ver cola de crafteo', inline: true },
-                    { name: '>cancelcraft <craft_id>', value: 'Cancelar crafteo', inline: true }
+                    { name: '📖 Recetas', value: '─────────────────', inline: false },
+                    { name: '>recipes', value: 'Ver todas las recetas disponibles', inline: true },
+                    { name: '\u200b', value: '\u200b', inline: true },
+                    { name: '\u200b', value: '\u200b', inline: true },
+
+                    { name: '🔨 Craftear', value: '─────────────────', inline: false },
+                    { name: '>craft <recipe_id>', value: 'Iniciar crafteo de un item', inline: true },
+                    { name: '>craftqueue', value: 'Ver tu cola de crafteo', inline: true },
+                    { name: '>cancelcraft <craft_id>', value: 'Cancelar un crafteo en progreso', inline: true },
                 ]
             },
             progress: {
-                title: '🎯 Misiones y Logros',
+                title: '🎯 Progreso',
                 fields: [
-                    { name: '>missions', value: 'Ver misiones diarias', inline: true },
-                    { name: '>blockmissions', value: 'Bloquear notificaciones de las misiones', inline: true },
-                    { name: '>unblockmissions', value: 'Desbloquear notificaciones de las misiones', inline: true },
+                    { name: '📋 Misiones', value: '─────────────────', inline: false },
+                    { name: '>missions', value: 'Ver misiones diarias activas', inline: true },
+                    { name: '>blockmissions', value: 'Silenciar notificaciones', inline: true },
+                    { name: '>unblockmissions', value: 'Activar notificaciones', inline: true },
+
+                    { name: '🏆 Logros', value: '─────────────────', inline: false },
                     { name: '>achievements [@usuario]', value: 'Ver logros desbloqueados', inline: true },
-                    { name: '>progress', value: 'Ver progreso de tus logros', inline: true },
-                    { name: '>allachievements', value: 'Ver todos los logros', inline: true },
-                    { name: '>detectachievements', value: 'Detectar logros', inline: true },
-                    { name: '>slevel', value: 'Ver tu nivel en el servidor', inline: true },
-                    { name: '>stop', value: 'Top 10 de niveles del servidor', inline: true },
-                ]
-            },
-            chatIA: {
-                title: '🤖 Chat IA',
-                fields: [
-                    { name: '>chathelp', value: 'Ver comandos de chat con Pibot', inline: false },
-                    { name: 'Respuesta directa', value: 'Responde un mensaje del bot para chatear', inline: false }
+                    { name: '>allachievements', value: 'Ver todos los logros posibles', inline: true },
+                    { name: '>progress', value: 'Ver progreso de cada logro', inline: true },
+                    { name: '>detectachievements', value: 'Revisar logros pendientes', inline: true },
+                    { name: '\u200b', value: '\u200b', inline: true },
+                    { name: '\u200b', value: '\u200b', inline: true },
+
+                    { name: '📊 Niveles', value: '─────────────────', inline: false },
+                    { name: '>level [@usuario]', value: 'Ver nivel global', inline: true },
+                    { name: '>slevel', value: 'Ver tu nivel en este servidor', inline: true },
+                    { name: '>stop', value: 'Top 10 niveles del servidor', inline: true },
                 ]
             },
             events: {
                 title: '🎉 Eventos',
                 fields: [
-                    { name: '>events', value: 'Ver eventos activos del servidor', inline: false }
+                    { name: '📅 Ver Eventos', value: '─────────────────', inline: false },
+                    { name: '>events', value: 'Ver eventos activos en este servidor', inline: true },
+                    { name: '\u200b', value: '\u200b', inline: true },
+                    { name: '\u200b', value: '\u200b', inline: true },
+                ]
+            },
+            chatIA: {
+                title: '🤖 Chat IA',
+                fields: [
+                    { name: '💬 Cómo chatear', value: '─────────────────', inline: false },
+                    { name: 'Mencionar al bot', value: 'Escríbele directamente con @Pibot', inline: true },
+                    { name: 'Responder un mensaje', value: 'Haz reply a cualquier mensaje del bot', inline: true },
+                    { name: '\u200b', value: '\u200b', inline: true },
+                    { name: '>chathelp', value: 'Ver todos los comandos de chat', inline: true },
+                    { name: '\u200b', value: '\u200b', inline: true },
+                    { name: '\u200b', value: '\u200b', inline: true },
                 ]
             },
             nsfw: {
                 title: '🔞 NSFW',
                 fields: [
-                    { name: '>nsfw <categoría> <cantidad>', value: 'Buscar contenido', inline: false },
-                    { name: '>fuck', value: 'Mención/reply requerido', inline: false },
-                    { name: '>fuckdetect o >fd', value: 'FuckDetect con mención/reply', inline: false },
-                    { name: '>r34 <tags> <cantidad>', value: 'Buscar por tags (ej: `!r34 pokemon 5`)', inline: false },
-                    { name: '>gifs <categoría> <cantidad>', value: 'Solo GIFs animados', inline: false },
-                    { name: '>videos <categoría> <cantidad>', value: 'Solo videos MP4/WEBM', inline: false },
+                    { name: '🔍 Buscar', value: '─────────────────', inline: false },
+                    { name: '>nsfw <categoría> <cantidad>', value: 'Buscar contenido por categoría', inline: true },
+                    { name: '>r34 <tags> <cantidad>', value: 'Buscar por tags\n`>r34 pokemon 5`', inline: true },
+                    { name: '\u200b', value: '\u200b', inline: true },
+
+                    { name: '🎞️ Formato', value: '─────────────────', inline: false },
+                    { name: '>gifs <categoría> <cantidad>', value: 'Solo GIFs animados', inline: true },
+                    { name: '>videos <categoría> <cantidad>', value: 'Solo videos MP4/WEBM', inline: true },
+                    { name: '\u200b', value: '\u200b', inline: true },
+
+                    { name: '🎲 Especiales', value: '─────────────────', inline: false },
+                    { name: '>fuck [@usuario]', value: 'Requiere mención o reply', inline: true },
+                    { name: '>fuckdetect / >fd', value: 'FuckDetect con mención o reply', inline: true },
+                    { name: '\u200b', value: '\u200b', inline: true },
                 ]
             },
             music: {
-                title: '🎵 Sistema de Música',
+                title: '🎵 Música',
                 fields: [
-                    { name: 'Ver todos los comandos', value: 'Escribe `>m help` para ver la lista completa de comandos de música', inline: false }
+                    { name: '🎧 Reproducir', value: '─────────────────', inline: false },
+                    { name: '>m play <canción/URL>', value: 'Reproducir canción o playlist', inline: true },
+                    { name: '>m search <canción>', value: 'Buscar y elegir canción', inline: true },
+                    { name: '>spsearch <canción>', value: 'Buscar en Spotify', inline: true },
+
+                    { name: '⏯️ Controles', value: '─────────────────', inline: false },
+                    { name: '>m pause / >m resume', value: 'Pausar / Reanudar', inline: true },
+                    { name: '>m skip', value: 'Saltar canción actual', inline: true },
+                    { name: '>m stop', value: 'Detener y vaciar cola', inline: true },
+                    { name: '>m queue', value: 'Ver cola de reproducción', inline: true },
+                    { name: '>m volume <0-100>', value: 'Ajustar volumen', inline: true },
+                    { name: '\u200b', value: '\u200b', inline: true },
+
+                    { name: '📋 Más comandos', value: '─────────────────', inline: false },
+                    { name: '>m help', value: 'Ver lista completa de comandos de música', inline: true },
+                    { name: '\u200b', value: '\u200b', inline: true },
+                    { name: '\u200b', value: '\u200b', inline: true },
                 ]
             },
             imagine: {
                 title: '🎨 Generación de Imágenes IA',
                 fields: [
-                    { name: '>imagine <prompt>', value: 'Genera una imagen con IA a partir de tu descripción', inline: false },
-                    { name: '>img <prompt>', value: 'Alias corto de imagine', inline: false },
-                    { name: '💡 Ejemplo', value: '`>imagine un gato astronauta en la luna al estilo anime`', inline: false },
-                    { name: '⏳ Cooldown', value: '15 segundos entre imágenes', inline: false },
-                    { name: '📡 Proveedores', value: 'Pixazo → ImageGPT → ModelsLab → Cloudflare (fallback automático)', inline: false }
+                    { name: '🖼️ Generar', value: '─────────────────', inline: false },
+                    { name: '>imagine <descripción>', value: 'Generar imagen con IA', inline: true },
+                    { name: '>img <descripción>', value: 'Alias corto de imagine', inline: true },
+                    { name: '\u200b', value: '\u200b', inline: true },
+
+                    { name: '💡 Consejos', value: '─────────────────', inline: false },
+                    { name: 'Ejemplo', value: '`>imagine un gato astronauta en la luna al estilo anime`', inline: false },
+                    { name: '⏳ Cooldown', value: '15 segundos entre imágenes', inline: true },
+                    { name: '📡 Proveedores', value: 'Pixazo → ImageGPT → ModelsLab → Cloudflare', inline: true },
+                    { name: '\u200b', value: '\u200b', inline: true },
                 ]
             },
         };

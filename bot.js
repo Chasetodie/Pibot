@@ -344,7 +344,6 @@ const rest = new REST({ version: '10' }).setToken(process.env.TOKEN);
 client.once('ready', async () => {
     console.log(`✅ Bot conectado como ${client.user.tag}`);
     await guildConfig.initTable();
-    await guildLevels.initTable();
     await minigames.loadActiveRussianGames(client);
     await minigames.loadActiveUnoGames(client);
     await trades.loadActiveTrades(client);
