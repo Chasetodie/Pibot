@@ -70,6 +70,8 @@ class LocalDatabase {
                     missions_reset_today BOOLEAN DEFAULT 0,
                     missions_notifications_blocked BOOLEAN DEFAULT 0,
                     cosmetics TEXT,
+                    cosmetic_nickname VARCHAR(100) DEFAULT NULL,
+                    cosmetic_role TEXT DEFAULT NULL,
                     permanentEffects TEXT,
                     activeEffects TEXT,
                     passiveIncomeStats TEXT,
@@ -77,10 +79,6 @@ class LocalDatabase {
                     lastPassivePayout BIGINT DEFAULT 0
                 )
             `);
-
-            // Agregar columnas cosmetic si no existen
-            await this.pool.execute(`ALTER TABLE users ADD COLUMN IF NOT EXISTS cosmetic_nickname VARCHAR(100) DEFAULT NULL`);
-            await this.pool.execute(`ALTER TABLE users ADD COLUMN IF NOT EXISTS cosmetic_role TEXT DEFAULT NULL`);
 
             // Tabla para trades
             await this.pool.execute(`
