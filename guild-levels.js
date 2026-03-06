@@ -5,8 +5,8 @@ class GuildLevels {
         this.guildConfig = guildConfig;
         this.cooldowns = new Map(); // userId_guildId -> timestamp
         this.cache = new Map();     // guildId -> { data, lastSaved }
-        this.COOLDOWN = 10000;
-        this.XP_PER_MESSAGE = 20;
+        this.COOLDOWN = 15000;
+        this.XP_PER_MESSAGE = 15;
         this.XP_VARIATION = 5;
         this.SAVE_INTERVAL = 30000; // Guardar en DB cada 30s máximo
     }
@@ -23,7 +23,7 @@ class GuildLevels {
     }
 
     getXpForLevel(level) {
-        return Math.floor(20 * Math.pow(level, 1.4));
+        return Math.floor(30 * Math.pow(level, 1.4));
     }
 
     // Leer datos del servidor (con caché en memoria)
