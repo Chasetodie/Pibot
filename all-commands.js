@@ -198,7 +198,7 @@ class AllCommands {
     // Comando !daily - Reclamar dinero diario
     async handleDaily(message) {
         const userId = message.author.id;
-        const result = await this.economy.useDaily(userId);
+        const result = await this.economy.useDaily(userId, message.guild?.id);
         
         if (!result.success) {
             const timeLeft = this.formatTimeLeft(result.timeLeft);
@@ -276,7 +276,7 @@ class AllCommands {
         }
 
         // Verificar tesoros al final
-        for (const event of this.events.getActiveEvents()) {
+        for (const event of this.events.getActiveEvents(message.guild?.id)) {
             if (event.type === 'treasure_hunt') {
                 const treasures = await this.events.checkSpecialEvents(userId, 'general');
                     
@@ -426,7 +426,7 @@ class AllCommands {
         // Realizar transferencia
         const userBalance = await this.economy.getUser(message.author.id);
         const otherUserBalance = await this.economy.getUser(targetUser.id);
-        const result = await this.economy.transferMoney(message.author.id, targetUser.id, amount);
+        const result = await this.economy.transferMoney(message.author.id, targetUser.id, amount, message.guild?.id);
         
         if (!result.success) {
             if (result.reason === 'being_robbed') {
@@ -977,7 +977,7 @@ class AllCommands {
         }
         
         // Intentar trabajar
-        const result = await this.economy.doWork(userId, jobType);
+        const result = await this.economy.doWork(userId, jobType, message.guild?.id);
 
         if (!result.canWork) {
             if (result.reason === 'level_too_low') {
@@ -1129,7 +1129,7 @@ class AllCommands {
         }
 
             // Verificar tesoros al final
-            for (const event of this.events.getActiveEvents()) {
+            for (const event of this.events.getActiveEvents(message.guild?.id)) {
                 if (event.type === 'treasure_hunt') {
                     const treasures = await this.events.checkSpecialEvents(userId, 'general');
                     

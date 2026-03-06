@@ -283,7 +283,7 @@ class EconomySystem {
     }
 
     // Transferir dinero entre usuarios
-    async transferMoney(fromUserId, toUserId, amount) {
+    async transferMoney(fromUserId, toUserId, amount, guildId = null) {
         const robberyCheck = this.isBeingRobbed(fromUserId);
         if (robberyCheck.beingRobbed) {
             return { 
@@ -325,7 +325,7 @@ class EconomySystem {
         let finalFrom = 0;
         let eventMessage = '';
         
-        for (const event of (this.events?.getActiveEvents() || [])) {
+        for (const event of (this.events?.getActiveEvents(guildId) || [])) {
             const transferBonus = event.multipliers?.transfer_bonus || 0;
             
             if (transferBonus > 0) {
@@ -488,7 +488,7 @@ class EconomySystem {
     }
 
     // Procesar XP por mensaje (con cooldown)
-    async processMessageXp(userId) {      
+    async processMessageXp(userId, guildId = null) {      
         // LOGGING TEMPORAL - añadir al inicio
         const startMemory = process.memoryUsage().heapUsed;
         const startTime = Date.now();
@@ -527,7 +527,7 @@ class EconomySystem {
             let finalXp = this.config.xpPerMessage;
             let eventMessage = '';
                 
-            for (const event of (this.events?.getActiveEvents() || [])) {
+            for (const event of (this.events?.getActiveEvents(guildId) || [])) {
                 const xpMultiplier = event.multipliers?.xp || 1.0;
                 
                 if (xpMultiplier > 1.0) {
@@ -760,13 +760,13 @@ class EconomySystem {
     }
 
     // Verificar si puede usar daily
-    async canUseDaily(userId) {
+    async canUseDaily(userId, guildId = null) {
         const user = await this.getUser(userId);
         const now = Date.now();
         let dayInMs = 24 * 60 * 60 * 1000;
 
         // Aplicar reducción de cooldown por eventos
-        for (const event of (this.events?.getActiveEvents() || [])) {
+        for (const event of (this.events?.getActiveEvents(guildId) || [])) {
             if (event.type === 'fever_time') {
                 dayInMs = Math.floor(dayInMs * 0.5); // 🔥 -50% tiempo
                 break;
@@ -785,8 +785,8 @@ class EconomySystem {
     }
 
     // Usar comando daily
-    async useDaily(userId) {
-        if (!await this.canUseDaily(userId)) {
+    async useDaily(userId, guildId = null) {
+        if (!await this.canUseDaily(userId, guildId)) {
             const user = await this.getUser(userId);
             const timeLeft = 24 * 60 * 60 * 1000 - (Date.now() - user.last_daily);
             return {
@@ -801,7 +801,7 @@ class EconomySystem {
         let eventMessage = '';
         let finalEarnings = amount;
 
-        for (const event of (this.events?.getActiveEvents() || [])) {
+        for (const event of (this.events?.getActiveEvents(guildId) || [])) {
             const dailyMultiplier = event.multipliers?.daily || 1.0;
             
             if (dailyMultiplier !== 1.0) {
@@ -1109,7 +1109,7 @@ class EconomySystem {
     }
 
     // Verificar si puede trabajar
-    async canWork(userId, jobType) {
+    async canWork(userId, jobType, guildId = null) {
         const user = await this.getUser(userId);
         const jobs = await this.getWorkJobs();
         const job = jobs[jobType];
@@ -1130,7 +1130,7 @@ class EconomySystem {
 
         let effectiveCooldown = lastJob.cooldown * (1 - modifiers.reduction);
 
-        for (const event of (this.events?.getActiveEvents() || [])) {
+        for (const event of (this.events?.getActiveEvents(guildId) || [])) {
             if (event.type === 'fever_time') {
                 effectiveCooldown = Math.floor(job.cooldown * 0.5); // 🔥 -50% tiempo
                 break;
@@ -1182,8 +1182,8 @@ class EconomySystem {
         return { amount: finalAmount, cooldown: finalCooldown };
     }
 
-    async doWork(userId, jobType) {
-        const canWorkResult = await this.canWork(userId, jobType);
+    async doWork(userId, jobType, guildId = null) {
+        const canWorkResult = await this.canWork(userId, jobType, guildId);
         if (!canWorkResult.canWork) 
         {
             return{
@@ -1255,7 +1255,7 @@ class EconomySystem {
         let eventMessage = '';
         let finalEarnings = amount;
 
-        for (const event of (this.events?.getActiveEvents() || [])) {
+        for (const event of (this.events?.getActiveEvents(guildId) || [])) {
             const workMultiplier = event.multipliers?.work || 1.0;
             
             if (workMultiplier !== 1.0) {

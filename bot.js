@@ -212,7 +212,7 @@ async function processMessageSafe({ message, userId, now }) {
     try {
         const [xpResult, guildXpResult] = await Promise.allSettled([
             Promise.race([
-                economy.processMessageXp(userId),
+                economy.processMessageXp(userId, message.guild?.id),
                 new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 3000))
             ]),
             guildLevels.processMessage(userId, message.guild?.id)

@@ -1383,7 +1383,8 @@ class MinigamesSystem {
 
             // APLICAR EVENTOS DE DINERO
             const eventBonus = await this.applyEventEffects(userId, profit, 'minigames', message.guild?.id);
-            let finalEarnings = eventBonus.finalAmount;
+            let finalEarnings = eventBonus.finalAmount; // sin let — usa la variable del scope exterior
+            eventMessage = eventBonus.eventMessage; // asignar el mensaje
             
             // APLICAR ITEMS
             if (this.shop) {
@@ -1818,7 +1819,8 @@ class MinigamesSystem {
 
             // APLICAR EVENTOS DE DINERO
             const eventBonus = await this.applyEventEffects(userId, profit, 'minigames', message.guild?.id);
-            let finalEarnings = eventBonus.finalAmount;
+            finalEarnings = eventBonus.finalAmount; // sin let — usa la variable del scope exterior
+            eventMessage = eventBonus.eventMessage; // asignar el mensaje
             
             // APLICAR ITEMS
             if (this.shop) {
@@ -2600,7 +2602,8 @@ const userId = gameState.userId;
 
                 // APLICAR EVENTOS DE DINERO
                 const eventBonus = await this.applyEventEffects(userId, profit, 'minigames', messageOrInteraction.guild?.id);
-                finalEarnings = eventBonus.finalAmount;
+                finalEarnings = eventBonus.finalAmount; // sin let — usa la variable del scope exterior
+                eventMessage = eventBonus.eventMessage; // asignar el mensaje
                 
                 // APLICAR ITEMS
                 if (this.shop) {
@@ -3330,7 +3333,8 @@ const userId = gameState.userId;
 
             // APLICAR EVENTOS DE DINERO
             const eventBonus = await this.applyEventEffects(userId, profit, 'minigames', message.guild?.id);
-            let finalEarnings = eventBonus.finalAmount;
+            finalEarnings = eventBonus.finalAmount; // sin let — usa la variable del scope exterior
+            eventMessage = eventBonus.eventMessage; // asignar el mensaje
             
             // APLICAR ITEMS
             if (this.shop) {
@@ -6183,8 +6187,9 @@ const userId = gameState.userId;
             // Un ganador
             const winner = survivors[0];
 
-            const eventBonus = await this.applyEventEffects(userId, profit, 'minigames', game.message.guild?.id);
-            finalEarnings = eventBonus.finalAmount;  
+            const eventBonus = await this.applyEventEffects(userId, profit, 'minigames', message.guild?.id);
+            finalEarnings = eventBonus.finalAmount; // sin let — usa la variable del scope exterior
+            eventMessage = eventBonus.eventMessage; // asignar el mensaje
 
             const userData = await this.economy.getUser(winner.id);
             const userLimit = this.economy.shop ? await this.economy.shop.getVipLimit(winner.id) : this.economy.config.maxBalance;
@@ -8506,8 +8511,9 @@ const userId = gameState.userId;
         let finalEarnings = winnings;
         let eventMessage = '';
 
-        const eventBonus = await this.applyEventEffects(userId, profit, 'minigames', message.guild?.id);
-        finalEarnings = eventBonus.finalAmount;    
+        const eventBonus = await this.applyEventEffects(userId, winnings, 'minigames', message.guild?.id);
+        finalEarnings = eventBonus.finalAmount; // sin let — usa la variable del scope exterior
+        eventMessage = eventBonus.eventMessage; // asignar el mensaje
 
         const userData = await this.economy.getUser(winnerId);
         const userLimit = this.economy.shop ? await this.economy.shop.getVipLimit(winnerId) : this.economy.config.maxBalance;
@@ -9253,8 +9259,9 @@ const userId = gameState.userId;
             let finalEarnings = this.config.vendingMachine.winAmount;
             
             // Aplicar eventos
-            const eventBonus = await this.applyEventEffects(userId, finalEarnings, 'minigames', message.guild?.id);
-            finalEarnings = eventBonus.finalAmount;
+            const eventBonus = await this.applyEventEffects(userId, this.config.vendingMachine.winAmount, 'minigames', message.guild?.id);
+            finalEarnings = eventBonus.finalAmount; // sin let — usa la variable del scope exterior
+            eventMessage = eventBonus.eventMessage; // asignar el mensaje
             
             // Aplicar items
             if (this.shop) {
