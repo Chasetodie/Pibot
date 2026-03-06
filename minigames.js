@@ -9264,7 +9264,7 @@ const userId = gameState.userId;
             // Aplicar eventos
             const eventBonus = await this.applyEventEffects(userId, this.config.vendingMachine.winAmount, 'minigames', message.guild?.id);
             finalEarnings = eventBonus.finalAmount; // sin let — usa la variable del scope exterior
-            eventMessage = eventBonus.eventMessage; // asignar el mensaje
+            let eventMessage = eventBonus.eventMessage; // asignar el mensaje
             
             // Aplicar items
             if (this.shop) {
@@ -9355,7 +9355,7 @@ const userId = gameState.userId;
                 .addFields(
                     { name: '💰 Ganancia', value: `+${this.formatNumber(finalEarnings)} π-b$`, inline: true },
                     { name: '💳 Balance Actual', value: `${this.formatNumber(userData.balance)} π-b$`, inline: true },
-                    { name: '🎉 Bonificaciones', value: this.formatGameBonuses(eventBonus.eventMessage, '', itemMessage, equipmentMessage), inline: false }
+                    { name: '🎉 Bonificaciones', value: this.formatGameBonuses(eventMessage, '', itemMessage, equipmentMessage), inline: false }
                 );
 
             if (curseMoneyPenalty > 0) {
