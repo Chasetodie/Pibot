@@ -241,8 +241,8 @@ class EventsSystem {
                 [new Date().toISOString()]
             );
             
-            this.activeEvents = {};
-            
+            this.activeEvents = new Map(); // ← Mantener como Map
+
             if (rows && rows.length > 0) {
                 rows.forEach(event => {
                     const gId = event.guild_id || this.guild?.id;
@@ -257,8 +257,11 @@ class EventsSystem {
                     };
                 });
             }
+
+            let totalEvents = 0;
+            for (const events of this.activeEvents.values()) totalEvents += Object.keys(events).length;
+            console.log(`📅 ${totalEvents} eventos cargados desde MySQL`);
             
-            console.log(`📅 ${Object.keys(this.activeEvents).length} eventos cargados desde MySQL`);
             this.cleanExpiredEvents();
         } catch (error) {
             console.error('❌ Error cargando eventos desde MySQL:', error);
