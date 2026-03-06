@@ -449,8 +449,8 @@ class MinigamesSystem {
         };
     }
 
-    async applyLuckToGame(baseChance, userId, gameType) {
-        const luck = await this.calculateLuck(userId, message.guild?.id);
+    async applyLuckToGame(baseChance, userId, gameType, guildId = null) {
+        const luck = await this.calculateLuck(userId, guildId);
         
         // Límites de bonus según juego
         const maxBonusByGame = {
@@ -870,7 +870,7 @@ class MinigamesSystem {
         const randomRoll = Math.random();
         const result = randomRoll < 0.5 ? 'cara' : 'cruz';
 
-        const luckCalc = await this.applyLuckToGame(0.5, userId, 'coinflip');
+        const luckCalc = await this.applyLuckToGame(0.5, userId, 'coinflip', message.guild?.id);
         const baseWon = result === normalizedChoice;
         
         let won = baseWon;
@@ -1294,7 +1294,7 @@ class MinigamesSystem {
                 won = true;
             } else {
                 // Aplicar suerte solo si perdió
-                const luckCalc = await this.applyLuckToGame(0, userId, gameType);
+                const luckCalc = await this.applyLuckToGame(0, userId, gameType, message.guild?.id);
                 won = Math.random() < luckCalc.winChance;
                 if (won) {
                     luckMessage = luckCalc.luckMessage + '\n🎲 ¡La suerte cambió el resultado!';
@@ -1310,7 +1310,7 @@ class MinigamesSystem {
             if (baseWon) {
                 won = true;
             } else {
-                const luckCalc = await this.applyLuckToGame(0, userId, gameType);
+                const luckCalc = await this.applyLuckToGame(0, userId, gameType, message.guild?.id);
                 won = Math.random() < luckCalc.winChance;
                 if (won) {
                     luckMessage = luckCalc.luckMessage + '\n🎲 ¡La suerte te salvó!';
@@ -1326,7 +1326,7 @@ class MinigamesSystem {
             if (baseWon) {
                 won = true;
             } else {
-                const luckCalc = await this.applyLuckToGame(0, userId, gameType);
+                const luckCalc = await this.applyLuckToGame(0, userId, gameType, message.guild?.id);
                 won = Math.random() < luckCalc.winChance;
                 if (won) {
                     luckMessage = luckCalc.luckMessage + '\n🎲 ¡La suerte te salvó!';
@@ -1336,7 +1336,7 @@ class MinigamesSystem {
         
         // Si no usamos suerte pero ganamos naturalmente, mostrar mensaje de suerte disponible
         if (won && !luckMessage) {
-            const luckCalc = await this.applyLuckToGame(0.5, userId, gameType);
+            const luckCalc = await this.applyLuckToGame(0.5, userId, gameType, message.guild?.id);
             luckMessage = luckCalc.luckMessage;
         }
 
@@ -1747,14 +1747,14 @@ class MinigamesSystem {
         
         if (!baseWon) {
             // Solo aplicar suerte si perdió
-            const luckCalc = await this.applyLuckToGame(0, userId, 'lottery');
+            const luckCalc = await this.applyLuckToGame(0, userId, 'lottery', message.guild?.id);
             won = Math.random() < luckCalc.winChance;
             if (won) {
                 luckMessage = luckCalc.luckMessage + '\n🎰 ¡Un milagro de la suerte!';
             }
         } else {
             // Si ganó naturalmente, mostrar suerte disponible
-            const luckCalc = await this.applyLuckToGame(0.01, userId, 'lottery');
+            const luckCalc = await this.applyLuckToGame(0.01, userId, 'lottery', message.guild?.id);
             luckMessage = luckCalc.luckMessage;
         }
         
@@ -3258,14 +3258,14 @@ const userId = gameState.userId;
         const luckGameType = validBet.type === 'straight' ? 'roulette_straight' : 'roulette_color';
         
         if (!baseWon) {
-            const luckCalc = await this.applyLuckToGame(0, userId, luckGameType);
+            const luckCalc = await this.applyLuckToGame(0, userId, luckGameType, message.guild?.id);
             won = Math.random() < luckCalc.winChance;
             if (won) {
                 luckMessage = luckCalc.luckMessage + '\n🎰 ¡La suerte cambió tu destino!';
             }
         } else {
             const baseChance = validBet.type === 'straight' ? (1/37) : (18/37);
-            const luckCalc = await this.applyLuckToGame(baseChance, userId, luckGameType);
+            const luckCalc = await this.applyLuckToGame(baseChance, userId, luckGameType, message.guild?.id);
             luckMessage = luckCalc.luckMessage;
         }
 
@@ -3854,7 +3854,7 @@ const userId = gameState.userId;
         }
         
         // APLICAR SUERTE 🍀
-        const luckCalc = await this.applyLuckToGame(baseWinChance, userId, 'slots');
+        const luckCalc = await this.applyLuckToGame(baseWinChance, userId, 'slots', message.guild?.id);
         const wonByLuck = Math.random() < luckCalc.winChance;
         
         let finalResult;
