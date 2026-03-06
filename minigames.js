@@ -371,12 +371,12 @@ class MinigamesSystem {
 
     // Método unificado para aplicar CUALQUIER tipo de evento
     async applyEventEffects(userId, baseAmount, context = 'minigames', guildId = null) {
+        if (!this.events) return { finalAmount: baseAmount, eventMessage: '', cooldownMultiplier: 1, luckBonus: 0 };
+
         let finalAmount = baseAmount;
         let eventMessage = '';
         let cooldownMultiplier = 1;
         let luckBonus = 0;
-        
-        if (!this.events) return { finalAmount, eventMessage, cooldownMultiplier, luckBonus };
 
         for (const event of (this.events.getActiveEvents(guildId) || [])) {
             const multiplier = event.multipliers?.[context];
@@ -386,18 +386,20 @@ class MinigamesSystem {
                 if (bonus > 0) eventMessage = `${event.emoji} **${event.name}** (+${this.formatNumber(bonus)} π-b$)`;
                 else if (bonus < 0) eventMessage = `${event.emoji} **${event.name}** (${this.formatNumber(bonus)} π-b$)`;
             }
-            if (context === 'cooldown' && event.multipliers?.cooldown) cooldownMultiplier = event.multipliers.cooldown;
+            if (context === 'cooldown' && event.multipliers?.cooldown) {
+                cooldownMultiplier = event.multipliers.cooldown;
+            }
             if (context === 'luck' && event.type === 'lucky_hour') {
                 luckBonus = 0.10;
                 eventMessage = `${event.emoji} **${event.name}**`;
             }
             if (eventMessage || cooldownMultiplier !== 1 || luckBonus > 0) break;
         }
-        
+
         return { finalAmount, eventMessage, cooldownMultiplier, luckBonus };
     }
 
-    async calculateLuck(userId) {
+    async calculateLuck(userId, guildId = null) {
         // ✅ Verificar si está maldito antes de mostrar boosts
         const user = await this.economy.getUser(userId);
         const activeEffects = this.shop.parseActiveEffects(user.activeEffects);
@@ -425,7 +427,7 @@ class MinigamesSystem {
         }
         
         // 2. Eventos de suerte (+10%)
-        const eventLuck = await this.applyEventEffects(userId, 0, 'luck', null);
+        const eventLuck = await this.applyEventEffects(userId, 0, 'luck', guildId);
         if (eventLuck.luckBonus > 0) {
             totalLuckBonus += eventLuck.luckBonus;
             luckMessages.push(`${eventLuck.eventMessage} (+10%)`);
@@ -448,7 +450,7 @@ class MinigamesSystem {
     }
 
     async applyLuckToGame(baseChance, userId, gameType) {
-        const luck = await this.calculateLuck(userId);
+        const luck = await this.calculateLuck(userId, message.guild?.id);
         
         // Límites de bonus según juego
         const maxBonusByGame = {
@@ -729,26 +731,23 @@ class MinigamesSystem {
         return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
     }
 
-    // En minigames.js, REEMPLAZAR getEffectiveCooldown():
-
     async getEffectiveCooldown(baseCooldown, guildId = null) {
-        let effectiveCooldown = baseCooldown;
-        if (!this.events) return effectiveCooldown;
+        if (!this.events) return baseCooldown;
         try {
-            const activeEvents = this.events?.getActiveEvents(guildId) || [];
-            for (const event of activeEvents) {
+            for (const event of (this.events.getActiveEvents(guildId) || [])) {
                 if (event.multipliers?.cooldown) {
-                    effectiveCooldown = Math.floor(baseCooldown * event.multipliers.cooldown);
-                    break;
+                    const effective = Math.floor(baseCooldown * event.multipliers.cooldown);
+                    console.log(`⏰ Cooldown modificado por ${event.name}: ${baseCooldown}ms → ${effective}ms`);
+                    return effective;
                 }
             }
         } catch (error) {
             console.error('Error aplicando eventos a cooldown:', error);
         }
-        return effectiveCooldown;
+        return baseCooldown;
     }
 
-    async canCoinflip(userId) {
+    async canCoinflip(userId, guildId = null) {
         const user = await this.economy.getUser(userId);
 
         if (this.shop) {
@@ -763,7 +762,7 @@ class MinigamesSystem {
         const cachedCooldown = this.cooldownCache.get(cacheKey);
         const now = Date.now();
         
-        let effectiveCooldown = await this.getEffectiveCooldown(this.config.coinflip.cooldown, null);
+        let effectiveCooldown = await this.getEffectiveCooldown(this.config.coinflip.cooldown, guildId);
 
         if (this.shop) {
             const cooldownReduction = await this.shop.getCooldownReduction(userId, 'games');
@@ -849,7 +848,7 @@ class MinigamesSystem {
             return;
         }
 
-        const canCoinResult = await this.canCoinflip(userId);
+        const canCoinResult = await this.canCoinflip(userId, message.guild?.id);
         if (!canCoinResult.canCoinPlay) {
             await message.reply(`⏰ Debes esperar ${this.formatTime(canCoinResult.timeLeft)} antes de jugar otra vez`);
             return;
@@ -1164,7 +1163,7 @@ class MinigamesSystem {
         await message.reply({ embeds: [embed] });
     }
 
-    async canDice(userId) {
+    async canDice(userId, guildId = null) {
         const user = await this.economy.getUser(userId);
 
         if (this.shop) {
@@ -1179,7 +1178,7 @@ class MinigamesSystem {
         const cachedCooldown = this.cooldownCache.get(cacheKey);
         const now = Date.now();
         
-        let effectiveCooldown = await this.getEffectiveCooldown(this.config.dice.cooldown, null);
+        let effectiveCooldown = await this.getEffectiveCooldown(this.config.dice.cooldown, guildId);
 
         if (this.shop) {
             const cooldownReduction = await this.shop.getCooldownReduction(userId, 'games');
@@ -1257,7 +1256,7 @@ class MinigamesSystem {
             return;
         }
 
-        const canDiceResult = await this.canDice(userId);
+        const canDiceResult = await this.canDice(userId, message.guild?.id);
         if (!canDiceResult.canDicePlay) {
             await message.reply(`⏰ Debes esperar ${this.formatTime(canDiceResult.timeLeft)} antes de jugar otra vez`);
             return;
@@ -1617,7 +1616,7 @@ class MinigamesSystem {
         await message.reply({ embeds: [embed] });
     }
 
-    async canLottery(userId) {
+    async canLottery(userId, guildId = null) {
     const user = await this.economy.getUser(userId);
 
     if (this.shop) {
@@ -1631,7 +1630,7 @@ class MinigamesSystem {
     const cachedCooldown = this.cooldownCache.get(cacheKey);
     const now = Date.now();
     
-    let effectiveCooldown = await this.getEffectiveCooldown(this.config.lottery.cooldown, null);
+    let effectiveCooldown = await this.getEffectiveCooldown(this.config.lottery.cooldown, guildId);
 
     if (this.shop) {
         const cooldownReduction = await this.shop.getCooldownReduction(userId, 'games');
@@ -1723,7 +1722,7 @@ class MinigamesSystem {
             return;
         }
     
-        const canLotteryResult = await this.canLottery(userId);
+        const canLotteryResult = await this.canLottery(userId, message.guild?.id);
         if (!canLotteryResult.canLottery) {
             await message.reply(`⏰ Debes esperar ${this.formatTime(canLotteryResult.timeLeft)} antes de jugar otra vez`);  
             return;
@@ -2081,7 +2080,7 @@ class MinigamesSystem {
         await reply.edit({ embeds: [resultEmbed] });
     }
 
-    async canBlackJack(userId) {
+    async canBlackJack(userId, guildId = null) {
     const user = await this.economy.getUser(userId);
 
     if (this.shop) {
@@ -2095,7 +2094,7 @@ class MinigamesSystem {
     const cachedCooldown = this.cooldownCache.get(cacheKey);
     const now = Date.now();
     
-    let effectiveCooldown = await this.getEffectiveCooldown(this.config.blackjack.cooldown, null);
+    let effectiveCooldown = await this.getEffectiveCooldown(this.config.blackjack.cooldown, guildId);
 
     if (this.shop) {
         const cooldownReduction = await this.shop.getCooldownReduction(userId, 'games');
@@ -2198,7 +2197,7 @@ class MinigamesSystem {
             return;
         }
     
-        const canBlackJackResult = await this.canBlackJack(userId);
+        const canBlackJackResult = await this.canBlackJack(userId, message.guild?.id);
         if (!canBlackJackResult.canBlackJack) {
             await message.reply(`⏰ Debes esperar ${this.formatTime(canBlackJackResult.timeLeft)} antes de jugar otra vez`);
             return;
@@ -2600,7 +2599,7 @@ const userId = gameState.userId;
                 color = '#00FF00';
 
                 // APLICAR EVENTOS DE DINERO
-                const eventBonus = await this.applyEventEffects(userId, profit, 'minigames', message.guild?.id);
+                const eventBonus = await this.applyEventEffects(userId, profit, 'minigames', messageOrInteraction.guild?.id);
                 finalEarnings = eventBonus.finalAmount;
                 
                 // APLICAR ITEMS
@@ -2694,7 +2693,7 @@ const userId = gameState.userId;
                 color = '#00FF00';
 
                 // APLICAR EVENTOS DE DINERO
-                const eventBonuss = await this.applyEventEffects(userId, profit, 'minigames', message.guild?.id);
+                const eventBonuss = await this.applyEventEffects(userId, profit, 'minigames', messageOrInteraction.guild?.id);
                 finalEarnings = eventBonuss.finalAmount;
                 
                 // APLICAR ITEMS
@@ -3111,7 +3110,7 @@ const userId = gameState.userId;
         await this.handleBlackjackAction(interaction, userId, action);
     }    
 
-    async canRoulette(userId) {
+    async canRoulette(userId, guildId = null) {
     const user = await this.economy.getUser(userId);
 
     if (this.shop) {
@@ -3125,7 +3124,7 @@ const userId = gameState.userId;
     const cachedCooldown = this.cooldownCache.get(cacheKey);
     const now = Date.now();
     
-    let effectiveCooldown = await this.getEffectiveCooldown(this.config.roulette.cooldown, null);
+    let effectiveCooldown = await this.getEffectiveCooldown(this.config.roulette.cooldown, guildId);
 
     if (this.shop) {
         const cooldownReduction = await this.shop.getCooldownReduction(userId, 'games');
@@ -3224,7 +3223,7 @@ const userId = gameState.userId;
             return;
         }
     
-        const canRouletteResult = await this.canRoulette(userId);
+        const canRouletteResult = await this.canRoulette(userId, message.guild?.id);
         if (!canRouletteResult.canRoulette) {
             await message.reply(`⏰ Debes esperar ${this.formatTime(canRouletteResult.timeLeft)} antes de jugar otra vez`);
             return;
@@ -3711,7 +3710,7 @@ const userId = gameState.userId;
         return `${colorEmoji} **${number}** (${colorName})`;
     }
 
-    async canSlots(userId) {
+    async canSlots(userId, guildId = null) {
         const user = await this.economy.getUser(userId);
 
         if (this.shop) {
@@ -3723,7 +3722,7 @@ const userId = gameState.userId;
 
         const lastSlots = user.last_slots || 0;
         const now = Date.now();
-        let effectiveCooldown = await this.getEffectiveCooldown(this.config.slots.cooldown, null);
+        let effectiveCooldown = await this.getEffectiveCooldown(this.config.slots.cooldown, guildId);
 
         if (now - lastSlots < effectiveCooldown) {
             const timeLeft = effectiveCooldown - (now - lastSlots);
@@ -3798,7 +3797,7 @@ const userId = gameState.userId;
             return;
         }
 
-        const canSlotsResult = await this.canSlots(userId);
+        const canSlotsResult = await this.canSlots(userId, message.guild?.id);
         if (!canSlotsResult.canSlots) {
             await message.reply(`⏰ Debes esperar ${this.formatTime(canSlotsResult.timeLeft)} antes de jugar otra vez`);
             return;
@@ -4391,6 +4390,7 @@ const userId = gameState.userId;
             id: gameKey,
             mode: 'bot',
             channelId: message.channel.id,
+            guildId: message.guild?.id,
             phase: 'selecting', // selecting -> racing -> finished
             betAmount: betAmount,
             horses: this.initializeHorses(),
@@ -4869,6 +4869,7 @@ const userId = gameState.userId;
             id: gameKey,
             mode: 'multi',
             channelId: channelId,
+            guildId: message.guild?.id,
             phase: 'waiting',
             betAmount: betAmount,
             horses: this.initializeHorses(),
@@ -5456,41 +5457,40 @@ const userId = gameState.userId;
             // ✅ REPARTIR EQUITATIVAMENTE ENTRE LOS JUGADORES
             for (const { playerId, player } of horsePlayers) {
                 const finalBet = player.hasDoubled ? player.bet * 2 : player.bet;
-                
-                // Proporción de este jugador del premio total
                 const playerShare = finalBet / totalHorseBet;
                 let winnings = Math.floor(totalHorsePrize * playerShare);
                 
-                if (game.mode === 'bot'){
-                    // ✅ Aplicar penalización de maldición (-25% dinero)
+                // Maldición (-25%)
+                if (game.mode === 'bot') {
                     const activeEffects = this.shop.parseActiveEffects(player.activeEffects);
                     const curse = activeEffects['death_hand_curse'];
-                    let curseMoneyPenalty = 0;
-
                     if (curse && curse.length > 0 && curse[0].expiresAt > Date.now()) {
-                        const penaltyAmount = Math.floor(winnings * Math.abs(curse[0].moneyPenalty)); // 0.25 = 25%
-                        curseMoneyPenalty = penaltyAmount;
-                        winnings -= penaltyAmount;
+                        winnings -= Math.floor(winnings * Math.abs(curse[0].moneyPenalty));
                     }
                 }
-                
+
+                // Evento de dinero
+                let eventMessage = '';
+                if (playerId !== 'bot' && winnings > 0) {
+                    const eventBonus = await this.applyEventEffects(playerId, winnings, 'minigames', game.guildId);
+                    winnings = eventBonus.finalAmount;
+                    eventMessage = eventBonus.eventMessage;
+                    await this.economy.addMoney(playerId, winnings, 'horserace_win');
+                }
+
                 const doubledText = player.hasDoubled ? ' (x2 🎲)' : '';
                 const sharedText = playersCount > 1 ? ` [${playersCount} jugadores]` : '';
                 
                 results.set(playerId, { 
-                    winnings, 
+                    winnings,
                     position: position + sharedText,
                     horse: horse.emoji, 
                     finalBet,
                     doubled: player.hasDoubled,
                     doubledText,
-                    playersOnHorse: playersCount
+                    playersOnHorse: playersCount,
+                    eventMessage
                 });
-                
-                // Dar dinero (excepto al bot)
-                if (playerId !== 'bot' && winnings > 0) {
-                    await this.economy.addMoney(playerId, winnings, 'horserace_win');
-                }
             }
         }
         
@@ -5548,7 +5548,8 @@ const userId = gameState.userId;
                 const profitText = profit > 0 ? `+${this.formatNumber(profit)}` : this.formatNumber(profit);
                 const doubleEmoji = player.hasDoubled ? '💰' : '';
                 
-                resultsText += `${posEmoji} ${horse.emoji} ${playerName}${doubleEmoji} → ${profitEmoji} ${profitText}\n`;
+                const eventMsg = resultData?.eventMessage ? ` ${resultData.eventMessage}` : '';
+                resultsText += `${posEmoji} ${horse.emoji} ${playerName}${doubleEmoji} → ${profitEmoji} ${profitText}${eventMsg}\n`;
             }
         }
         
@@ -6182,7 +6183,7 @@ const userId = gameState.userId;
             // Un ganador
             const winner = survivors[0];
 
-            const eventBonus = await this.applyEventEffects(userId, profit, 'minigames', message.guild?.id);
+            const eventBonus = await this.applyEventEffects(userId, profit, 'minigames', game.message.guild?.id);
             finalEarnings = eventBonus.finalAmount;  
 
             const userData = await this.economy.getUser(winner.id);
@@ -9142,7 +9143,7 @@ const userId = gameState.userId;
         }
     }
 
-    async canVendingMachine(userId) {
+    async canVendingMachine(userId, guildId = null) {
         const user = await this.economy.getUser(userId);
 
         if (this.shop) {
@@ -9156,7 +9157,7 @@ const userId = gameState.userId;
         const cachedCooldown = this.cooldownCache.get(cacheKey);
         const now = Date.now();
         
-        let effectiveCooldown = await this.getEffectiveCooldown(this.config.vendingMachine.cooldown, null);
+        let effectiveCooldown = await this.getEffectiveCooldown(this.config.vendingMachine.cooldown, guildId);
 
         if (this.shop) {
             const cooldownReduction = await this.shop.getCooldownReduction(userId, 'games');
@@ -9207,7 +9208,7 @@ const userId = gameState.userId;
         }
 
         // Verificar cooldown
-        const canPlay = await this.canVendingMachine(userId);
+        const canPlay = await this.canVendingMachine(userId, message.guild?.id);
         if (!canPlay.canPlay) {
             await message.reply(`⏰ Debes esperar ${this.formatTime(canPlay.timeLeft)} antes de usar la máquina otra vez`);
             return;
@@ -9445,7 +9446,7 @@ const userId = gameState.userId;
         await message.reply({ embeds: [embed] });
     }
 
-    async canTrivia(userId) {
+    async canTrivia(userId, guildId = null) {
         const user = await this.economy.getUser(userId);
 
         if (this.shop) {
@@ -9459,7 +9460,7 @@ const userId = gameState.userId;
         const cachedCooldown = this.cooldownCache.get(cacheKey);
         const now = Date.now();
         
-        let effectiveCooldown = await this.getEffectiveCooldown(this.config.trivia.cooldown, null);
+        let effectiveCooldown = await this.getEffectiveCooldown(this.config.trivia.cooldown, guildId);
 
         if (this.shop) {
             const cooldownReduction = await this.shop.getCooldownReduction(userId, 'games');
@@ -9543,7 +9544,7 @@ const userId = gameState.userId;
             return message.reply({ embeds: [embed] });
         }
         
-        const canTrivia = await this.canTrivia(userId);
+        const canTrivia = await this.canTrivia(userId, message.guild?.id);
         if (!canTrivia.canPlay) {
             await message.reply(`⏰ Debes esperar ${this.formatTime(canTrivia.timeLeft)} antes de jugar otra vez`);
             return;
@@ -10318,12 +10319,17 @@ const userId = gameState.userId;
                 const finalMoney = Math.floor(reward.money * diffMultiplier * hintMultiplier);
                 const finalXP = Math.floor(reward.xp * diffMultiplier * hintMultiplier);
 
+                const triviaEventBonus = await this.applyEventEffects(userId, finalMoney, 'minigames', message.guild?.id);
+                const triviaXpBonus = await this.events?.applyXpModifiers(userId, finalXP, 'games', message.guild?.id);
+                const finalMoneyWithEvent = triviaEventBonus.finalAmount;
+                const finalXPWithEvent = triviaXpBonus?.finalXp || finalXP;
+
                 // Doble recompensa
-                let finalMoneyWithBonus = finalMoney;
-                let finalXPWithBonus = finalXP;
+                let finalMoneyWithBonus = finalMoneyWithEvent;
+                let finalXPWithBonus = finalXPWithEvent;
                 if (triviaDoubleReward) {
-                    finalMoneyWithBonus = finalMoney * 2;
-                    finalXPWithBonus = finalXP * 2;
+                    finalMoneyWithBonus = finalMoneyWithEvent * 2;
+                    finalXPWithBonus = finalXPWithEvent * 2;
                 }
 
                 // Otorgar recompensas
@@ -10335,7 +10341,7 @@ const userId = gameState.userId;
                 if (this.achievements) {
                     await this.achievements.updateStats(userId, 'game_played');
                     await this.achievements.updateStats(userId, 'game_won');
-                    await this.achievements.updateStats(userId, 'bet_win', finalMoney);
+                    await this.achievements.updateStats(userId, 'bet_win', finalMoneyWithBonus);
                 }        
                                
                 const updateDataTrivia = {
@@ -10371,8 +10377,8 @@ const userId = gameState.userId;
                         `${hintsUsedd > 0 ? `💡 Pistas usadas: ${hintsUsedd} (Recompensa -60%)\n` : ''}`
                     )
                     .addFields(
-                        { name: '💰 Dinero ganado', value: `${finalMoney} π-b$`, inline: true },
-                        { name: '⭐ XP ganada', value: `${finalXP} XP`, inline: true },
+                        { name: '💰 Dinero ganado', value: `${finalMoneyWithBonus} π-b$${triviaEventBonus.eventMessage ? `\n${triviaEventBonus.eventMessage}` : ''}`, inline: true },
+                        { name: '⭐ XP ganada', value: `${finalXPWithBonus} XP`, inline: true },
                         { name: '📊 Dificultad', value: difficulty.toUpperCase(), inline: true },
                         { name: '🎮 Modo', value: modeText, inline: true },
                         { name: '📚 Categoría', value: categoryName, inline: true }
@@ -10456,7 +10462,7 @@ const userId = gameState.userId;
         }
     }
 
-    async canTriviaSurvival(userId) {
+    async canTriviaSurvival(userId, guildId = null) {
         const user = await this.economy.getUser(userId);
 
         if (this.shop) {
@@ -10470,7 +10476,7 @@ const userId = gameState.userId;
         const cachedCooldown = this.cooldownCache.get(cacheKey);
         const now = Date.now();
         
-        let effectiveCooldown = await this.getEffectiveCooldown(this.config.trivia.survival.cooldown, null);
+        let effectiveCooldown = await this.getEffectiveCooldown(this.config.trivia.survival.cooldown, guildId);
 
         if (this.shop) {
             const cooldownReduction = await this.shop.getCooldownReduction(userId, 'games');
@@ -10516,7 +10522,7 @@ const userId = gameState.userId;
             return message.reply({ embeds: [embed] });
         }
         
-        const canTrivia = await this.canTriviaSurvival(userId);
+        const canTrivia = await this.canTriviaSurvival(userId, message.guild?.id);
         if (!canTrivia.canPlay) {
             await message.reply(`⏰ Debes esperar ${this.formatTime(canTrivia.timeLeft)} antes de jugar otra vez`);
             return;

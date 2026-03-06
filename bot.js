@@ -381,15 +381,6 @@ client.once('ready', async () => {
 
     // Iniciar loop de eventos automáticos (faltaba llamarlo)
     events.startEventLoop();
-
-    // Disparar una vez al inicio por si llevaba horas apagado
-    setTimeout(async () => {
-        for (const guild of guildsArray) {
-            events.guild = guild;
-            await events.tryCreateRandomEvent();
-        }
-        events.setGuild(guildsArray[0]); // Restaurar guild principal
-    }, 5000);
 });
 
 client.on('guildMemberRemove', async (member) => {
