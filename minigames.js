@@ -6185,7 +6185,7 @@ const userId = gameState.userId;
     
         if (survivors.length === 1) {
             // Un ganador
-            const winner = survivors;
+            const winner = survivors[0];
 			
             const eventBonus = await this.applyEventEffects(winner.id, winnerPrize, 'minigames', guildId);
             finalEarnings = eventBonus.finalAmount; // sin let — usa la variable del scope exterior
@@ -6208,7 +6208,7 @@ const userId = gameState.userId;
             // Actualizar estadísticas del ganador
             const updateData = {   
                 stats: {
-                    ...winner.id.stats,
+                    ...userData.stats,
                     games_played: ((await this.economy.getUser(winner.id)).stats.games_played || 0) + 1
                 }
             };
@@ -6229,9 +6229,9 @@ const userId = gameState.userId;
                     
                 allCompleted = [...allCompleted, ...winMissions, ...betWonMissions, ...moneyMissions];
                 
-                if (allCompleted.length > 0) {
+                /*if (allCompleted.length > 0) {
                     await this.missions.notifyCompletedMissions(message, allCompleted);
-                }
+                }*/
             }
  
             embed.setTitle('🏆 ¡TENEMOS UN GANADOR! 🏆')
@@ -6252,8 +6252,11 @@ const userId = gameState.userId;
 
             if (addResult.hitLimit) {
                 const limitText = userLimit === 20000000 ? '20M π-b$ (VIP)' : '10M π-b$';
-                await message.reply(`⚠️ **Límite alcanzado para ${winner.id}:** No pudiste recibir todo el dinero porque tienes el máximo permitido (${this.formatNumber(userLimit)} π-b$).`);
-            }
+                try {
+    const channel = await client.channels.fetch(game.channel_id);
+    await channel.send(`⚠️ **Límite alcanzado para <@${winner.id}>:** No pudiste recibir todo el dinero (${this.formatNumber(userLimit)} π-b$).`);
+} catch {}
+			}
         } else {
             // Todos murieron (teóricamente imposible, pero por seguridad)
             embed.setTitle('💀 ¡TODOS ELIMINADOS!')
