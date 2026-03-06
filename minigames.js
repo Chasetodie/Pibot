@@ -120,7 +120,7 @@ class MinigamesSystem {
                 minBet: 500,
                 maxBet: 3000,           // Cambiar de 5000 a 3000
                 cooldown: 300000,      // Cambiar de 900000 a 1800000 (30 minutos)
-                winMultiplier: 75,      // Cambiar de 100 a 75
+                winMultiplier: 100,      // Cambiar de 100 a 75
                 minNumber: 1,
                 maxNumber: 100
             },
@@ -1678,7 +1678,7 @@ class MinigamesSystem {
                     { name: '⏱️ Cooldown', value: '**5 minutos**', inline: true }
                 )
                 .setColor('#FF1493')
-                .setFooter({ text: '1% de probabilidad, 7500% de ganancia. ¿Te sientes con suerte?' });
+                .setFooter({ text: '1% de probabilidad, 100% de ganancia. ¿Te sientes con suerte?' });
             return message.reply({ embeds: [embed] });
         }
     
@@ -12345,7 +12345,7 @@ const userId = gameState.userId;
                     value: [
                         '`>lottery <número 1-100> <apuesta>`',
                         '💰 Apuesta: **500 – 3,000** π-b$',
-                        '🏆 Ganancia: **x75** si aciertas el número',
+                        '🏆 Ganancia: **x100** si aciertas el número',
                         '⏱️ Cooldown: **5 min**'
                     ].join('\n'),
                     inline: true

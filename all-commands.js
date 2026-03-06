@@ -1,7 +1,7 @@
 const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 
 class AllCommands {
-    constructor(economySystem, shopSystem, tradeSystem, auctionSystem, craftingSystem,  eventsSystem, bettingSystem, achievementsSystem, guildConfig = null) {
+    constructor(economySystem, shopSystem, tradeSystem, auctionSystem, craftingSystem,  eventsSystem, bettingSystem, achievementsSystem, guildLevels, guildConfig) {
         this.economy = economySystem;
         this.shop = shopSystem;
         this.trades = tradeSystem;
@@ -10,6 +10,7 @@ class AllCommands {
         this.events = eventsSystem;
         this.betting = bettingSystem;
         this.achievements = achievementsSystem;
+        this.guildLevels = guildLevels;
         this.guildConfig = guildConfig;
     }
 
@@ -1851,6 +1852,7 @@ class AllCommands {
             'levelup_channel': '📈 Canal de niveles',
             'events_channel': '🎉 Canal de eventos',
             'events_role': '🔔 Rol de eventos',
+            'guild_levelup_channel': '📊 Canal de niveles del servidor',
         };
 
         const embed = new EmbedBuilder()
@@ -1865,7 +1867,7 @@ class AllCommands {
             // Claves que son roles  
             const roleKeys = ['events_role'];
             // Claves internas que NO mostrar
-            const hiddenKeys = ['events_globally_enabled'];
+            const hiddenKeys = ['events_globally_enabled', 'guild_levels_enabled', 'guild_levelup_channel'];
 
             const visibleConfig = Object.entries(config).filter(([k]) => 
                 !k.startsWith('event_disabled_') && !hiddenKeys.includes(k)
@@ -1886,6 +1888,17 @@ class AllCommands {
             embed.addFields({
                 name: '🎉 Eventos',
                 value: globallyEnabled ? '🟢 Habilitados (`>toggleevents` para cambiar)' : '🔴 Deshabilitados (`>toggleevents` para activar)',
+                inline: false
+            });
+
+            const levelsEnabled = this.guildLevels ? await this.guildLevels.isEnabled(message.guild.id) : false;
+            const levelChannel = await this.guildConfig.get(message.guild.id, 'guild_levelup_channel');
+            embed.addFields({
+                name: '📊 Niveles del Servidor',
+                value: [
+                    levelsEnabled ? '🟢 Activos (`>disablelevels` para desactivar)' : '🔴 Inactivos (`>enablelevels` para activar)',
+                    levelChannel ? `📣 Canal de anuncios: <#${levelChannel}>` : '📣 Sin canal configurado (`>ssetlevelchannel #canal`)'
+                ].join('\n'),
                 inline: false
             });
         }

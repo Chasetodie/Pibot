@@ -8,7 +8,7 @@ class ChatBotSystem {
 
         this.requestsToday = 0;
 
-        this.MAX_CONTEXT_MESSAGES = 50;
+        this.MAX_CONTEXT_MESSAGES = 35;
         this.conversationCache = new Map();
         this.nsfwSessions = new Map();
         this.CACHE_CLEANUP_INTERVAL = 30 * 60 * 1000;

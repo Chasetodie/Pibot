@@ -116,7 +116,7 @@ const auctions = new AuctionSystem(shop);
 const crafting = new CraftingSystem(shop, client);
 
 // Instancia del sistema de comandos mejorados
-const allCommands = new AllCommands(economy, shop, trades, auctions, crafting, events, betting, undefined, guildConfig);
+const allCommands = new AllCommands(economy, shop, trades, auctions, crafting, events, betting, achievements, guildLevels, guildConfig);
 
 economy.achievements = achievements;
 minigames.achievements = achievements;
