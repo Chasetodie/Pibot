@@ -5993,10 +5993,10 @@ const userId = gameState.userId;
             game.turn_timeout = null;
         }
 
-        await this.executeShot(game, message.author.id, message.client);
+        await this.executeShot(game, message.author.id, message.client, message.guild?.id);
     }
     
-    async executeShot(game, playerId, client) {
+    async executeShot(game, playerId, client, guildId) {
         console.log(game.players.find(p => p.id === playerId));
         const currentPlayer = game.players.find(p => p.id === playerId);
         if (!currentPlayer) return;
@@ -6092,7 +6092,7 @@ const userId = gameState.userId;
         // Si solo queda 1 jugador vivo, terminar
         if (alivePlayers.length <= 1) {
             setTimeout(async () => {
-                await this.endRussianRoulette(game, client);
+                await this.endRussianRoulette(game, client, guildId);
             }, 4000);
             return;
         }
@@ -6100,7 +6100,7 @@ const userId = gameState.userId;
         // Si llegamos al 6to disparo y hay 2+ jugadores, recargar revólver
         if (game.current_shot === 6 && alivePlayers.length > 1 || !currentPlayer.alive) {
             setTimeout(async () => {
-                await this.reloadRevolver(game, client);
+                await this.reloadRevolver(game, client, guildId);
             }, 4000);
             return;
         }
@@ -6169,7 +6169,7 @@ const userId = gameState.userId;
         setTimeout(() => this.executeShot(game, playerId, client), 2000);
     }
     
-    async endRussianRoulette(game, client) {
+    async endRussianRoulette(game, client, guildId) {
         game.phase = 'finished';
         this.activeGames.delete(`russian_${game.channel_id}`);
     
@@ -6187,7 +6187,7 @@ const userId = gameState.userId;
             // Un ganador
             const winner = survivors;
 			
-            const eventBonus = await this.applyEventEffects(winner.id, winnerPrize, 'minigames', game.message.guild?.id);
+            const eventBonus = await this.applyEventEffects(winner.id, winnerPrize, 'minigames', guildId);
             finalEarnings = eventBonus.finalAmount; // sin let — usa la variable del scope exterior
             eventMessage = eventBonus.eventMessage; // asignar el mensaje
 
