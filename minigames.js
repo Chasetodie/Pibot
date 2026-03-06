@@ -6187,7 +6187,7 @@ const userId = gameState.userId;
             // Un ganador
             const winner = survivors[0];
 
-            const eventBonus = await this.applyEventEffects(userId, profit, 'minigames', message.guild?.id);
+            const eventBonus = await this.applyEventEffects(winner.id, profit, 'minigames', message.guild?.id);
             finalEarnings = eventBonus.finalAmount; // sin let — usa la variable del scope exterior
             eventMessage = eventBonus.eventMessage; // asignar el mensaje
 
