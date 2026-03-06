@@ -5,7 +5,6 @@ const fs = require('fs');
 const path = require('path');
 const app = express();
 const PORT = process.env.PORT || 3000;
-const CommandHandler = require('./commands'); // Importar el manejador de comandos
 const EconomySystem = require('./economy'); // Importar el sistema de economia
 const EventsSystem = require('./events');
 const TradeSystem = require('./trade');
@@ -55,9 +54,6 @@ const client = new Client({
         // Roles y channels SÍ se cachean (necesario para permisos)
     }),
 });
-
-// Crear instancia del manejador de comandos
-const commandHandler = new CommandHandler();
 
 //Crear instancia del sistema de economia
 const economy = new EconomySystem(client);
@@ -375,7 +371,7 @@ client.once('ready', async () => {
         }
     }, 60000); // Cada minuto
     
-    // Establecer el guild para eventos
+    // Establecer guilds y arrancar eventos automáticos
     const guildsArray = [...client.guilds.cache.values()];
     if (guildsArray.length > 0) {
         events.setGuild(guildsArray[0]);
@@ -383,6 +379,18 @@ client.once('ready', async () => {
     for (const guild of guildsArray) {
         events.getGuildEvents(guild.id);
     }
+
+    // Iniciar loop de eventos automáticos (faltaba llamarlo)
+    events.startEventLoop();
+
+    // Disparar una vez al inicio por si llevaba horas apagado
+    setTimeout(async () => {
+        for (const guild of guildsArray) {
+            events.guild = guild;
+            await events.tryCreateRandomEvent();
+        }
+        events.setGuild(guildsArray[0]); // Restaurar guild principal
+    }, 5000);
 });
 
 client.on('guildMemberRemove', async (member) => {
@@ -997,7 +1005,6 @@ client.on('messageCreate', async (message) => {
                 shop.processCommand(message),
                 minigames.processCommand(message),
                 music.processCommand(message),
-                commandHandler.processCommand(message),
                 chatbot.processCommand(message),
                 nsfw.processCommand(message),
                 imageGen.processCommand(message),

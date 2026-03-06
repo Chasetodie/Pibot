@@ -11446,7 +11446,7 @@ const userId = gameState.userId;
     }
 
     async handleTriviaLeaderboard(message, args, client) {
-        const type = args[1]?.toLowerCase() || 'perfect';
+        const type = args[1]?.toLowerCase();
         const scope = args[2]?.toLowerCase();
         const isGlobal = scope === 'global';
 

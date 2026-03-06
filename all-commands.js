@@ -2468,16 +2468,32 @@ const commandName = command.replace('>', '');
         // CATEGORÍAS INDIVIDUALES (más cortas)
         const categories = {
             admin: {
-                title: '🛡️ Comandos de Administración',
+                title: '🛡️ Administración',
                 fields: [
-                    { name: '>setchannel <clave> #canal', value: 'Configurar canal del bot', inline: true },
-                    { name: '>svconfig', value: 'Ver configuración actual', inline: true },
-                    { name: '>createevent <tipo> [min]', value: 'Crear evento manual', inline: true },
-                    { name: '>toggleevent [tipo]', value: 'Habilitar/deshabilitar evento', inline: true },
-                    { name: '>toggleevents', value: 'Habilitar/deshabilitar TODOS los eventos', inline: true},
+                    // Configuración general
+                    { name: '⚙️ Configuración', value: '─────────────────', inline: false },
+                    { name: '>svconfig', value: 'Ver configuración actual del servidor', inline: true },
+                    { name: '>setchannel <clave> #canal', value: 'Configurar un canal\n`levelup` `events` `welcome`', inline: true },
+                    { name: '\u200b', value: '\u200b', inline: true },
+
+                    // Niveles del servidor
+                    { name: '📊 Niveles del Servidor', value: '─────────────────', inline: false },
+                    { name: '>enablelevels', value: 'Activar sistema de niveles', inline: true },
+                    { name: '>disablelevels', value: 'Desactivar sistema de niveles', inline: true },
+                    { name: '>ssetlevelchannel #canal', value: 'Canal para anunciar level ups', inline: true },
+
+                    // Eventos
+                    { name: '🎉 Eventos', value: '─────────────────', inline: false },
+                    { name: '>toggleevents', value: 'Activar/desactivar todos los eventos', inline: true },
+                    { name: '>toggleevent [tipo]', value: 'Activar/desactivar un evento específico', inline: true },
                     { name: '>seteventsrole @rol', value: 'Rol para pings de eventos', inline: true },
+                    { name: '>createevent <tipo> [min]', value: 'Crear evento manual', inline: true },
                     { name: '>eventstats', value: 'Estadísticas de eventos', inline: true },
-                    { name: '>clear [cant]', value: 'Borra mensajes del canal', inline: true }
+                    { name: '\u200b', value: '\u200b', inline: true },
+
+                    // Moderación
+                    { name: '🔨 Moderación', value: '─────────────────', inline: false },
+                    { name: '>clear [cantidad]', value: 'Borrar mensajes del canal', inline: true },
                 ]
             },
             economy: {
@@ -2580,6 +2596,8 @@ const commandName = command.replace('>', '');
                     { name: '>progress', value: 'Ver progreso de tus logros', inline: true },
                     { name: '>allachievements', value: 'Ver todos los logros', inline: true },
                     { name: '>detectachievements', value: 'Detectar logros', inline: true },
+                    { name: '>slevel', value: 'Ver tu nivel en el servidor', inline: true },
+                    { name: '>stop', value: 'Top 10 de niveles del servidor', inline: true },
                 ]
             },
             chatIA: {

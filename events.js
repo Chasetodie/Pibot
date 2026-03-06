@@ -403,30 +403,45 @@ class EventsSystem {
     
     // Intentar crear un evento aleatorio
     async tryCreateRandomEvent() {
-        // No crear eventos si ya hay muchos activos
-        const activeCount = Object.keys(this.activeEvents).length;
-        if (activeCount >= 3) return;
-        
-        // Calcular si crear evento
-        const totalProbability = Object.values(this.eventProbabilities).reduce((sum, prob) => sum + prob, 0);
-        const randomValue = Math.random();
-        
-        if (randomValue > totalProbability) return; // No crear evento
-        
-        // Seleccionar tipo de evento
-        let cumulativeProbability = 0;
-        let selectedEventType = null;
-        
-        for (const [eventType, probability] of Object.entries(this.eventProbabilities)) {
-            cumulativeProbability += probability;
-            if (randomValue <= cumulativeProbability) {
-                selectedEventType = eventType;
-                break;
+        // Si el bot está en varios servidores, iterar por cada uno
+        const guildsToCheck = this.client?.guilds?.cache?.values 
+            ? [...this.client.guilds.cache.values()]
+            : (this.guild ? [this.guild] : []);
+
+        for (const guild of guildsToCheck) {
+            // Verificar que eventos estén habilitados en este servidor
+            if (this.guildConfig) {
+                const enabled = await this.guildConfig.areEventsEnabled(guild.id);
+                if (!enabled) continue;
             }
-        }
-        
-        if (selectedEventType) {
-            await this.createEvent(selectedEventType);
+
+            // No crear si ya hay 3 activos en este guild
+            const guildEvents = this.getGuildEvents(guild.id);
+            const activeCount = Object.values(guildEvents).filter(e => e.endTime > Date.now()).length;
+            if (activeCount >= 3) continue;
+
+            const totalProbability = Object.values(this.eventProbabilities).reduce((sum, p) => sum + p, 0);
+            const randomValue = Math.random();
+            if (randomValue > totalProbability) continue;
+
+            let cumulativeProbability = 0;
+            let selectedEventType = null;
+            for (const [eventType, probability] of Object.entries(this.eventProbabilities)) {
+                cumulativeProbability += probability;
+                if (randomValue <= cumulativeProbability) {
+                    selectedEventType = eventType;
+                    break;
+                }
+            }
+
+            if (selectedEventType) {
+                // Setear guild temporalmente para que createEvent funcione bien
+                const originalGuild = this.guild;
+                this.guild = guild;
+                await this.createEvent(selectedEventType);
+                this.guild = originalGuild;
+                console.log(`🎲 Evento automático intentado en ${guild.name}`);
+            }
         }
     }
 
