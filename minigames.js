@@ -924,8 +924,9 @@ class MinigamesSystem {
 
             // APLICAR EVENTOS DE DINERO
             const eventBonus = await this.applyEventEffects(userId, profit, 'minigames', message.guild?.id);
-            let finalEarnings = eventBonus.finalAmount;
-            
+            finalEarnings = eventBonus.finalAmount;
+            eventMessage = eventBonus.eventMessage;
+
             // APLICAR ITEMS
             if (this.shop) {
                 const modifiers = await this.shop.getActiveMultipliers(userId, 'games');
@@ -1375,6 +1376,7 @@ class MinigamesSystem {
 
         const winAmount = Math.floor(betAmount * multiplier);
         const profit = winAmount - betAmount;
+        let finalEarnings = profit;
         let eventMessage = '';
         
         if (won) {
@@ -1383,7 +1385,7 @@ class MinigamesSystem {
 
             // APLICAR EVENTOS DE DINERO
             const eventBonus = await this.applyEventEffects(userId, profit, 'minigames', message.guild?.id);
-            let finalEarnings = eventBonus.finalAmount; // sin let — usa la variable del scope exterior
+            finalEarnings = eventBonus.finalAmount; // sin let — usa la variable del scope exterior
             eventMessage = eventBonus.eventMessage; // asignar el mensaje
             
             // APLICAR ITEMS
@@ -3999,7 +4001,8 @@ const userId = gameState.userId;
         let won = false;
         let winAmount = 0;
         let resultText = '';
-        // VERIFICAR LÍMITES (igual que lottery)
+        let eventMessage = '';
+        let finalEarnings = 0;
         const gameType = 'slots';
         
         if (result.isJackpot) {
@@ -4049,8 +4052,9 @@ const userId = gameState.userId;
             
             // APLICAR EVENTOS
             const eventBonus = await this.applyEventEffects(userId, winAmount - betAmount, 'minigames', message.guild?.id);
-            let finalEarnings = eventBonus.finalAmount;
-            
+            finalEarnings = eventBonus.finalAmount;
+            eventMessage = eventBonus.eventMessage;
+
             // APLICAR ITEMS
             if (this.shop) {
                 const modifiers = await this.shop.getActiveMultipliers(userId, 'games');

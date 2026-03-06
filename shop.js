@@ -790,6 +790,38 @@ class ShopSystem {
                 stackable: true,
                 maxStack: 2
             },      
+            'trivia_kit': {
+                id: 'trivia_kit',
+                name: '🧠 Kit de Trivia',
+                description: 'Combina ayudas de trivia en un kit completo: tiempo extra + salto + ayuda del público',
+                category: 'consumable',
+                rarity: 'epic',
+                effect: {
+                    type: 'trivia_boost',
+                    subtype: 'kit',
+                    includes: ['extra_time', 'skip_question', 'eliminate_wrong', 'wrong_shield'],
+                    uses: 1
+                },
+                stackable: true,
+                maxStack: 2,
+                chestOnly: true,
+            },
+            'trivia_master_pass': {
+                id: 'trivia_master_pass',
+                name: '👑 Pase Maestro de Trivia',
+                description: 'El item definitivo de trivia: doble recompensa + escudo + ayuda del público para 3 partidas',
+                category: 'consumable',
+                rarity: 'legendary',
+                effect: {
+                    type: 'trivia_boost',
+                    subtype: 'master_pass',
+                    includes: ['double_reward', 'wrong_shield', 'eliminate_wrong'],
+                    uses: 3
+                },
+                stackable: false,
+                maxStack: 1,
+                chestOnly: true,
+            },
             'cosmic_charm': {
                 id: 'cosmic_charm',
                 name: '🔮✨ Amuleto Cósmico',
