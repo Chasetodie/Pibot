@@ -11,7 +11,7 @@ class ShopSystem {
                 id: 'lucky_charm',
                 name: '🍀 Amuleto de Suerte',
                 description: 'Aumenta tus ganancias en trabajos y juegos por 2 horas',
-                price: 25000,
+                price: 15000,
                 category: 'consumable',
                 rarity: 'uncommon',
                 effect: {
@@ -27,7 +27,7 @@ class ShopSystem {
                 id: 'energy_drink',
                 name: '⚡ Bebida Energética',
                 description: 'Reduce el cooldown de trabajos a la mitad por 1 hora',
-                price: 20000,
+                price: 12000,
                 category: 'consumable',
                 rarity: 'common',
                 effect: {
@@ -43,7 +43,7 @@ class ShopSystem {
                 id: 'double_xp_potion',
                 name: '📚 Poción de Doble XP',
                 description: 'Duplica toda la experiencia ganada por 30 minutos',
-                price: 50000,
+                price: 30000,
                 category: 'consumable',
                 rarity: 'rare',
                 effect: {
@@ -59,7 +59,7 @@ class ShopSystem {
                 id: 'robbery_kit',
                 name: '🔧 Kit de Robo',
                 description: 'Aumenta 20% probabilidad de éxito en robos por 1 uso',
-                price: 30000,
+                price: 18000,
                 category: 'consumable',
                 rarity: 'uncommon',
                 effect: {
@@ -79,7 +79,7 @@ class ShopSystem {
                 description: 'Reduce todos los cooldowns en 50% durante 30 minutos',
                 category: 'consumable',
                 rarity: 'rare',
-                price: 35000,
+                price: 20000,
                 effect: {
                     type: 'cooldown_reduction',
                     targets: ['all'],
@@ -97,7 +97,7 @@ class ShopSystem {
                 description: 'Reduce el riesgo contra pérdidas y fallos en un 80% durante 30 minutos',
                 category: 'consumable',
                 rarity: 'epic',
-                price: 80000,
+                price: 60000,
                 effect: {
                     type: 'protection',
                     prevents: ['robbery_fail', 'money_loss'],
@@ -114,7 +114,7 @@ class ShopSystem {
                 description: 'Incrementa la experiencia ganada en 50% durante 1 hora',
                 category: 'consumable',
                 rarity: 'rare',
-                price: 30000,
+                price: 18000,
                 effect: {
                     type: 'xp_multiplier',
                     multiplier: 1.3,
@@ -144,7 +144,7 @@ class ShopSystem {
                 id: 'work_boots',
                 name: '👢 Botas de Trabajo',
                 description: 'Reduce permanentemente el cooldown de trabajo en 20%',
-                price: 150000,
+                price: 110000,
                 category: 'permanent',
                 rarity: 'uncommon',
                 effect: {
@@ -161,7 +161,7 @@ class ShopSystem {
                 id: 'trivia_time_boost',
                 name: '⏳ Ampolleta de Tiempo',
                 description: 'Añade 10 segundos extra por pregunta en tu próxima partida de trivia',
-                price: 15000,
+                price: 8000,
                 category: 'trivia',
                 rarity: 'uncommon',
                 emoji: '⏳',
@@ -179,7 +179,7 @@ class ShopSystem {
                 id: 'trivia_skip_token',
                 name: '⏭️ Token de Salto',
                 description: 'Permite saltar una pregunta sin penalización en trivia. No cuenta como fallo.',
-                price: 20000,
+                price: 10000,
                 category: 'trivia',
                 rarity: 'uncommon',
                 emoji: '⏭️',
@@ -196,7 +196,7 @@ class ShopSystem {
                 id: 'trivia_audience',
                 name: '👥 Ayuda del Público',
                 description: 'Elimina 2 respuestas incorrectas en una pregunta de trivia (múltiple opción)',
-                price: 25000,
+                price: 12000,
                 category: 'trivia',
                 rarity: 'rare',
                 emoji: '👥',
@@ -214,7 +214,7 @@ class ShopSystem {
                 id: 'trivia_double_reward',
                 name: '💰 Voucher de Trivia',
                 description: 'Duplica las recompensas de tu próxima partida de trivia completada',
-                price: 40000,
+                price: 20000,
                 category: 'trivia',
                 rarity: 'rare',
                 emoji: '💰',
@@ -232,7 +232,7 @@ class ShopSystem {
                 id: 'trivia_shield',
                 name: '🛡️ Escudo de Trivia',
                 description: 'Absorbe 1 respuesta incorrecta sin penalización de recompensa en trivia',
-                price: 30000,
+                price: 15000,
                 category: 'trivia',
                 rarity: 'rare',
                 emoji: '🛡️',
@@ -250,7 +250,7 @@ class ShopSystem {
                 id: 'golden_trophy',
                 name: '🏆 Trofeo Dorado',
                 description: 'Muestra tu estatus de campeón en tu perfil',
-                price: 40000,
+                price: 28000,
                 category: 'cosmetic',
                 rarity: 'uncommon',
                 effect: { type: 'cosmetic', display: 'profile_trophy' },
@@ -261,7 +261,7 @@ class ShopSystem {
                 id: 'rainbow_badge',
                 name: '🌈 Insignia Arcoíris',
                 description: 'Una hermosa insignia que aparece en tu perfil',
-                price: 35000,
+                price: 25000,
                 category: 'cosmetic',
                 rarity: 'common',
                 effect: { type: 'cosmetic', display: 'profile_badge' },
@@ -274,7 +274,7 @@ class ShopSystem {
                 id: 'mystery_box',
                 name: '📦 Caja Misteriosa',
                 description: 'Contiene un item aleatorio del valor de 100K-500K π-b$',
-                price: 80000,
+                price: 70000,
                 category: 'mystery',
                 rarity: 'rare',
                 effect: { type: 'mystery', min: 50000, max: 150000 },
@@ -285,7 +285,7 @@ class ShopSystem {
                 id: 'anti_theft_shield',
                 name: '🛡️ Escudo Antirrobo',
                 description: 'Te protege de robos por 3 horas',
-                price: 90000,
+                price: 65000,
                 category: 'consumable',
                 rarity: 'epic',
                 effect: {
@@ -316,7 +316,7 @@ class ShopSystem {
                 id: 'speed_boots',
                 name: '👟 Botas de Velocidad',
                 description: 'Reduce un 70% el cooldown por 30 minutos',
-                price: 85000,
+                price: 60000,
                 category: 'consumable',
                 rarity: 'rare',
                 effect: { type: 'cooldown_reduction', targets: ['all'], reduction: 0.7, duration: 1800 },
@@ -327,7 +327,7 @@ class ShopSystem {
                 id: 'xp_tornado',
                 name: '🌪️ Tornado de XP',
                 description: 'x2 XP de todos los mensajes por 15 minutos',
-                price: 75000,
+                price: 50000,
                 category: 'consumable',
                 rarity: 'epic',
                 effect: { type: 'xp_multiplier', targets: ['all'], multiplier: 1.5, duration: 900 },
@@ -338,7 +338,7 @@ class ShopSystem {
                 id: 'golden_pickaxe',
                 name: '⛏️ Pico Dorado',
                 description: 'Duplica las ganancias de trabajo por 3 usos',
-                price: 60000,
+                price: 45000,
                 category: 'consumable',
                 rarity: 'rare',
                 effect: { 
@@ -457,7 +457,7 @@ class ShopSystem {
                 id: 'custom_nickname_token',
                 name: '🎫 Token de Apodo Básico', // Nombre más claro
                 description: 'Componente básico para craftear el Token de Apodo VIP',
-                price: 70000,
+                price: 50000,
                 category: 'cosmetic',
                 rarity: 'rare',
                 stackable: true,
@@ -481,7 +481,7 @@ class ShopSystem {
                 id: 'diamond_crown',
                 name: '👑 Corona de Diamante',
                 description: 'Una corona brillante que muestra tu estatus real',
-                price: 120000,
+                price: 90000,
                 category: 'cosmetic',
                 rarity: 'legendary',
                 effect: { type: 'cosmetic', display: 'profile_crown', prestige: 10 },
@@ -492,7 +492,7 @@ class ShopSystem {
                 id: 'fire_badge',
                 name: '🔥 Insignia de Fuego',
                 description: 'Una insignia ardiente para los más activos',
-                price: 50000,
+                price: 35000,
                 category: 'cosmetic',
                 rarity: 'epic',
                 effect: { type: 'cosmetic', display: 'profile_badge', prestige: 5 },
@@ -503,7 +503,7 @@ class ShopSystem {
                 id: 'vip_frame',
                 name: '🖼️ Marco VIP',
                 description: 'Un marco dorado para tu perfil que demuestra tu estatus VIP',
-                price: 80000,
+                price: 55000,
                 category: 'cosmetic',
                 rarity: 'epic',
                 effect: { type: 'cosmetic', display: 'profile_frame' },
@@ -515,7 +515,7 @@ class ShopSystem {
                 id: 'health_potion',
                 name: '💊 Poción de Salud',
                 description: 'Reduce penalizaciones de juegos fallidos en un 40% por 10 minutos',
-                price: 100000,
+                price: 70000,
                 category: 'consumable',
                 rarity: 'uncommon',
                 effect: {
@@ -531,7 +531,7 @@ class ShopSystem {
                 id: 'experience_multiplier',
                 name: '📈 Multiplicador de EXP',
                 description: 'x2 EXP en todos los comandos por 45 minutos',
-                price: 55000,
+                price: 35000,
                 category: 'consumable',
                 rarity: 'rare',
                 effect: {
@@ -598,7 +598,7 @@ class ShopSystem {
             // 💰 Bolsa Misteriosa
             'mystery_bag': {
                 id: 'mystery_bag',
-                price: 20000,
+                price: 12000,
                 category: 'mystery',
                 name: '💰 Bolsa Misteriosa',
                 description: 'Contiene una cantidad aleatoria de dinero',
@@ -1435,7 +1435,8 @@ class ShopSystem {
             newItems[itemId] = {
                 id: itemId,
                 quantity: quantity,
-                purchaseDate: new Date().toISOString()
+                purchaseDate: new Date().toISOString(),
+                paidPrice: item.price
             };
         }
         
@@ -1661,6 +1662,8 @@ class ShopSystem {
                 return await this.applyToolEffect(userId, itemId, item);  
             case 'equipment':
                 return await this.applyEquipmentEffect(userId, itemId, item);          
+            case 'trivia':
+                return await this.applyTriviaBoost(message?.author?.id || userId, itemId, item);
             case 'special':
                 // Casos especiales existentes
                 if (item.id === 'vip_pass') {
@@ -1688,6 +1691,33 @@ class ShopSystem {
             default:
                 return { success: false, message: 'Este item no se puede usar.' };
         }
+    }
+
+    async applyTriviaBoost(userId, itemId, item) {
+        const user = await this.economy.getUser(userId);
+        const activeEffects = this.parseActiveEffects(user.activeEffects);
+
+        // Verificar si ya tiene un boost activo
+        if (activeEffects['trivia_boost']) {
+            return { success: false, message: 'Ya tienes un boost de trivia activo.' };
+        }
+
+        activeEffects['trivia_boost'] = [{
+            itemId: itemId,
+            subtype: item.effect.subtype || itemId,
+            includes: item.effect.includes || [item.effect.type],
+            uses: item.effect.uses || 1,
+            appliedAt: Date.now()
+        }];
+
+        await this.economy.updateUser(userId, {
+            activeEffects: JSON.stringify(activeEffects)
+        });
+
+        return {
+            success: true,
+            message: `✅ Boost de trivia activado. Se aplicará en tu próxima partida de trivia.\n**Incluye:** ${(item.effect.includes || [item.effect.type]).join(', ')}`
+        };
     }
 
     // 2. NUEVA FUNCIÓN: Abrir bolsa misteriosa
@@ -3605,7 +3635,8 @@ class ShopSystem {
             newItems[itemId] = {
                 id: itemId,
                 quantity: 1,
-                purchaseDate: new Date().toISOString()
+                purchaseDate: new Date().toISOString(),
+                paidPrice: this.shopItems[itemId]?.price || 0
             };
         }
         
@@ -4278,37 +4309,41 @@ class ShopSystem {
                 
                 // Crear el rol en Discord usando REST API
                 const guild = interaction.guild;
-                let newRole;
+                const HOME_GUILD_ID = '1270508373732884522';
+                const isHomeGuild = guild.id === HOME_GUILD_ID;
+                let newRole = null;
                 let member;
 
-                try {
-                    // Crear rol
-                    newRole = await guild.roles.create({
-                        name: `${roleData.roleName}`,
-                        color: roleData.colorInt,
-                        reason: `Rol personalizado creado por ${interaction.user.tag}`
-                    });
-                    
-                    // Obtener miembro y asignar rol usando REST
-                    member = await guild.members.fetch(userId);
-                    await interaction.guild.members.edit(userId, {
-                        roles: [...member.roles.cache.map(r => r.id), newRole.id]
-                    });
-                    
-                } catch (error) {
-                    console.log('Error con método principal, intentando alternativo:', error);
-                    
-                    // Método alternativo: usar REST client directamente
+                if (isHomeGuild) {
                     try {
-                        const { REST } = require('@discordjs/rest');
-                        const rest = new REST({ version: '10' }).setToken(interaction.client.token);
+                        // Crear rol
+                        newRole = await guild.roles.create({
+                            name: `${roleData.roleName}`,
+                            color: roleData.colorInt,
+                            reason: `Rol personalizado creado por ${interaction.user.tag}`
+                        });
                         
-                        await rest.put(
-                            `/guilds/${guild.id}/members/${userId}/roles/${newRole.id}`,
-                            { reason: 'Token de rol personalizado' }
-                        );
-                    } catch (restError) {
-                        throw new Error('No se pudo asignar el rol: ' + restError.message);
+                        // Obtener miembro y asignar rol usando REST
+                        member = await guild.members.fetch(userId);
+                        await interaction.guild.members.edit(userId, {
+                            roles: [...member.roles.cache.map(r => r.id), newRole.id]
+                        });
+                        
+                    } catch (error) {
+                        console.log('Error con método principal, intentando alternativo:', error);
+                        
+                        // Método alternativo: usar REST client directamente
+                        try {
+                            const { REST } = require('@discordjs/rest');
+                            const rest = new REST({ version: '10' }).setToken(interaction.client.token);
+                            
+                            await rest.put(
+                                `/guilds/${guild.id}/members/${userId}/roles/${newRole.id}`,
+                                { reason: 'Token de rol personalizado' }
+                            );
+                        } catch (restError) {
+                            throw new Error('No se pudo asignar el rol: ' + restError.message);
+                        }
                     }
                 }
                 
@@ -4319,17 +4354,28 @@ class ShopSystem {
                     delete newItems['role_token'];
                 }
                 
-                await this.economy.updateUser(userId, { items: newItems });
+                await this.economy.updateUser(userId, { 
+                    items: newItems, 
+                    cosmetic_role: JSON.stringify({
+                        name: roleData.roleName,
+                        color: roleData.colorHex,
+                        roleId: newRole.id || null,
+                        guildId: isHomeGuild ? guild.id : null
+                    })
+                });
                 
                 // Confirmar éxito
                 const successEmbed = new EmbedBuilder()
                     .setTitle('✅ Rol Creado Exitosamente')
-                    .setDescription(`Tu rol personalizado ha sido creado y asignado.`)
+                    .setDescription(isHomeGuild
+                        ? `Tu rol personalizado ha sido creado y asignado.`
+                        : `Tu rol cosmético ha sido guardado. Puedes verlo usando >bal`)
                     .addFields(
-                        { name: '🎭 Rol Creado', value: `<@&${newRole.id}>`, inline: true },
+                        { name: '🎭 Nombre del Rol', value: `**${roleData.roleName}**`, inline: true },
                         { name: '🎨 Color', value: `\`${roleData.colorHex}\``, inline: true },
+                        ...(isHomeGuild && newRole ? [{ name: '🏷️ Rol en Discord', value: `<@&${newRole.id}>`, inline: true }] : []),
                         { name: '💎 Token Consumido', value: '1x 🎭 Token de Rol Personalizado', inline: false },
-                        { name: '📋 Información', value: '• Este rol es exclusivamente tuyo\n• Aparecerá en la lista de miembros\n• Contacta un admin si necesitas modificaciones', inline: false }
+                        { name: '✨ Cosmético', value: 'Tu rol aparecerá en `>bal` en cualquier servidor', inline: false }
                     )
                     .setColor(roleData.colorInt)
                     .setThumbnail(interaction.user.displayAvatarURL({ dynamic: true }));
@@ -4354,6 +4400,171 @@ class ShopSystem {
                     components: []
                 });
             }
+        }
+    }
+
+    async processUserRefund(userId, channel = null) {
+        try {
+            const user = await this.economy.getUser(userId);
+            const items = user.items || {};
+            
+            let userRefundTotal = 0;
+            let refundedItems = [];
+            const updatedItems = { ...items };
+
+            for (const [itemId, itemData] of Object.entries(items)) {
+                const currentItem = this.shopItems[itemId];
+                if (!currentItem || !itemData.paidPrice) continue;
+
+                const diff = itemData.paidPrice - currentItem.price;
+                if (diff <= 0) continue; // No bajó
+
+                const refundAmount = diff * itemData.quantity;
+                userRefundTotal += refundAmount;
+                refundedItems.push({
+                    name: currentItem.name,
+                    quantity: itemData.quantity,
+                    paidPrice: itemData.paidPrice,
+                    currentPrice: currentItem.price,
+                    refundAmount
+                });
+
+                updatedItems[itemId] = { ...itemData, paidPrice: currentItem.price };
+            }
+
+            if (userRefundTotal <= 0) return; // Nada que reembolsar
+
+            await this.economy.addMoney(userId, userRefundTotal, 'price_refund');
+            await this.economy.updateUser(userId, { items: updatedItems });
+
+            // Notificar en el canal donde escribió
+            if (channel) {
+                const lines = refundedItems.map(i =>
+                    `• **${i.name}** x${i.quantity}: ~~${i.paidPrice.toLocaleString()}~~ → ${i.currentPrice.toLocaleString()} π-b$ (**+${i.refundAmount.toLocaleString()}**)`
+                ).join('\n');
+
+                const embed = new EmbedBuilder()
+                    .setTitle('💸 ¡Reembolso Automático!')
+                    .setDescription(`<@${userId}>, bajaron los precios de algunos de tus items y recibiste la diferencia.`)
+                    .addFields(
+                        { name: '📦 Items Reembolsados', value: lines, inline: false },
+                        { name: '💰 Total Recibido', value: `**+${userRefundTotal.toLocaleString()} π-b$**`, inline: false }
+                    )
+                    .setColor('#00FF00')
+                    .setTimestamp();
+
+                await channel.send({ embeds: [embed] });
+            }
+
+        } catch (error) {
+            console.error(`❌ Error en reembolso para ${userId}:`, error.message);
+        }
+    }
+
+    async processItemRefunds(notifyChannel = null) {
+        console.log('💸 Iniciando proceso de reembolsos...');
+        let totalRefunded = 0;
+        let usersRefunded = 0;
+        const results = [];
+
+        try {
+            // Obtener todos los usuarios con items
+            const [rows] = await this.economy.database.pool.execute(
+                'SELECT id, items FROM users WHERE items IS NOT NULL AND items != "{}"'
+            );
+
+            for (const row of rows) {
+                let items;
+                try {
+                    items = typeof row.items === 'string' ? JSON.parse(row.items) : row.items;
+                } catch { continue; }
+
+                if (!items || Object.keys(items).length === 0) continue;
+
+                let userRefundTotal = 0;
+                let refundedItems = [];
+                const updatedItems = { ...items };
+
+                for (const [itemId, itemData] of Object.entries(items)) {
+                    const currentItem = this.shopItems[itemId];
+                    if (!currentItem) continue;
+
+                    // Solo si tiene paidPrice guardado
+                    const paidPrice = itemData.paidPrice;
+                    if (!paidPrice) continue;
+
+                    const currentPrice = currentItem.price;
+                    // Solo reembolsar si bajó de precio
+                    if (currentPrice >= paidPrice) continue;
+
+                    const diff = paidPrice - currentPrice;
+                    const refundAmount = diff * itemData.quantity;
+
+                    userRefundTotal += refundAmount;
+                    refundedItems.push({
+                        name: currentItem.name,
+                        quantity: itemData.quantity,
+                        paidPrice,
+                        currentPrice,
+                        refundAmount
+                    });
+
+                    // Actualizar paidPrice al nuevo precio
+                    updatedItems[itemId] = { ...itemData, paidPrice: currentPrice };
+                }
+
+                if (userRefundTotal > 0) {
+                    await this.economy.addMoney(row.id, userRefundTotal, 'price_refund');
+                    await this.economy.updateUser(row.id, { items: updatedItems });
+
+                    totalRefunded += userRefundTotal;
+                    usersRefunded++;
+                    results.push({ userId: row.id, refundAmount: userRefundTotal, items: refundedItems });
+
+                    // Notificar al usuario por DM
+                    try {
+                        const discordUser = await this.economy.client?.users?.fetch(row.id);
+                        if (discordUser) {
+                            const lines = refundedItems.map(i =>
+                                `• **${i.name}** x${i.quantity}: ${i.paidPrice.toLocaleString()} → ${i.currentPrice.toLocaleString()} π-b$ (+${i.refundAmount.toLocaleString()})`
+                            ).join('\n');
+
+                            const dmEmbed = new EmbedBuilder()
+                                .setTitle('💸 Reembolso por Bajada de Precio')
+                                .setDescription('¡Los precios de algunos items bajaron y recibiste la diferencia!')
+                                .addFields(
+                                    { name: '📦 Items Reembolsados', value: lines, inline: false },
+                                    { name: '💰 Total Recibido', value: `+${userRefundTotal.toLocaleString()} π-b$`, inline: false }
+                                )
+                                .setColor('#00FF00')
+                                .setTimestamp();
+
+                            const dm = await discordUser.createDM();
+                            await dm.send({ embeds: [dmEmbed] });
+                        }
+                    } catch {} // Si no se puede DM, no importa
+                }
+            }
+
+            console.log(`✅ Reembolsos completados: ${usersRefunded} usuarios, ${totalRefunded.toLocaleString()} π-b$ total`);
+
+            if (notifyChannel) {
+                const summaryEmbed = new EmbedBuilder()
+                    .setTitle('✅ Proceso de Reembolsos Completado')
+                    .addFields(
+                        { name: '👥 Usuarios Reembolsados', value: `${usersRefunded}`, inline: true },
+                        { name: '💰 Total Devuelto', value: `${totalRefunded.toLocaleString()} π-b$`, inline: true }
+                    )
+                    .setColor('#00FF00')
+                    .setTimestamp();
+                await notifyChannel.send({ embeds: [summaryEmbed] });
+            }
+
+            return { usersRefunded, totalRefunded, results };
+
+        } catch (error) {
+            console.error('❌ Error procesando reembolsos:', error);
+            return { usersRefunded: 0, totalRefunded: 0, error: error.message };
         }
     }
 
@@ -4545,8 +4756,11 @@ class ShopSystem {
                 }
                 
                 // Cambiar el apodo en Discord
-                const member = interaction.guild.members.cache.get(userId);
-                await member.setNickname(nicknameData.finalNickname);
+                const HOME_GUILD_ID = '1270508373732884522'; // ID de tu server
+                if (interaction.guild.id === HOME_GUILD_ID) {
+                    const member = interaction.guild.members.cache.get(userId);
+                    await member.setNickname(nicknameData.finalNickname);
+                }
                 
                 // Consumir el token
                 const newItems = { ...userItems };
@@ -4555,12 +4769,19 @@ class ShopSystem {
                     delete newItems['nickname_token'];
                 }
                 
-                await this.economy.updateUser(userId, { items: newItems });
+                await this.economy.updateUser(userId, { 
+                    items: newItems,
+                    cosmetic_nickname: nicknameData.newNickname
+                });
                 
                 // Confirmar éxito
+                const isHomeGuild = interaction.guild.id === HOME_GUILD_ID;
+
                 const successEmbed = new EmbedBuilder()
-                    .setTitle('✅ Apodo Cambiado Exitosamente')
-                    .setDescription(`Tu apodo ha sido actualizado correctamente.`)
+                    .setTitle('✅ Apodo Guardado Exitosamente')
+                    .setDescription(isHomeGuild
+                        ? `Tu apodo ha sido actualizado correctamente.`
+                        : `Tu apodo cosmético fue guardado. Puedes verlo usando >bal`)
                     .addFields(
                         { name: '✨ Nuevo Apodo', value: `**${nicknameData.finalNickname}**`, inline: true },
                         { name: '💎 Token Consumido', value: '1x 🏷️✨ Token de Apodo', inline: true },

@@ -86,11 +86,10 @@ class AllCommands {
         // Avatar
         const avatarUrl = targetUser ? targetUser.displayAvatarURL({ dynamic: true }) : message.author.displayAvatarURL({ dynamic: true });
 
-        // ✅ ARREGLO: Obtener cosméticos correctamente
         const equippedCosmetics = await this.shop.getEquippedCosmetics(userId);
         const vipStatus = await this.getVipStatus(userId);
 
-        // Crear badges string
+        // Badges de cosméticos
         let badgesString = '';
         if (equippedCosmetics.length > 0) {
             let badges = [];
@@ -98,62 +97,47 @@ class AllCommands {
                 const item = this.shop.shopItems[cosmetic.id];
                 if (item) {
                     const emojiMatch = item.name.match(/[\u{1F600}-\u{1F64F}]|[\u{1F300}-\u{1F5FF}]|[\u{1F680}-\u{1F6FF}]|[\u{1F1E0}-\u{1F1FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]/u);
-                    const emoji = emojiMatch ? emojiMatch[0] : '✨';
-                    badges.push(emoji);
+                    badges.push(emojiMatch ? emojiMatch[0] : '✨');
                 }
             }
             badgesString = badges.length > 0 ? ` ${badges.join('')}` : '';
         }
-        
-        // ✅ ARREGLO: Crear título más simple
-        let decoratedTitle = `💰 ${displayName}${badgesString}`;
-        
-        // Agregar VIP al título si tiene
-        if (vipStatus.hasVip) {
-            decoratedTitle = `👑 ${decoratedTitle}`;
-        }
+
+        // Apodo cosmético
+        const cosmeticNickname = user.cosmetic_nickname;
+        let decoratedTitle = cosmeticNickname
+            ? `💰 ${displayName} ✦ ${cosmeticNickname}${badgesString}`
+            : `💰 ${displayName}${badgesString}`;
+
+        if (vipStatus.hasVip) decoratedTitle = `👑 ${decoratedTitle}`;
+
+        // Color y rol cosmético
+        const cosmeticRole = user.cosmetic_role;
+        let embedColor = vipStatus.hasVip ? '#FFD700' : '#0099FF';
+        if (cosmeticRole?.color) embedColor = cosmeticRole.color;
 
         const embed = new EmbedBuilder()
             .setTitle(decoratedTitle)
-            .setColor(vipStatus.hasVip ? '#FFD700' : '#0099FF')
+            .setColor(embedColor)
             .setThumbnail(avatarUrl)
             .addFields(
-                { 
-                    name: `π-b Coins`, 
-                    value: `**${this.formatNumber(user.balance)}**`, 
-                    inline: true 
-                },
-                { 
-                    name: '📊 Nivel', 
-                    value: `**${user.level}**`, 
-                    inline: true 
-                },
-                { 
-                    name: '⭐ XP Total', 
-                    value: `**${this.formatNumber(user.total_xp)}**`, 
-                    inline: true 
-                },
-                { 
-                    name: '📈 Progreso al Siguiente Nivel', 
-                    value: `\`${progressBar}\` ${progressPercentage}%\n**${this.formatNumber(xpProgress)}** / **${this.formatNumber(xpForNextLevel)}** XP\n*Faltan ${this.formatNumber(xpNeeded)} XP*`, 
-                    inline: false 
-                },
-                { 
-                    name: '💬 Mensajes Enviados', 
-                    value: `${this.formatNumber(user.messages_count)}`, 
-                    inline: true 
-                },
-                { 
-                    name: '📥 Total Ganado', 
-                    value: `${this.formatNumber(user.stats.totalEarned)} ${this.economy.config.currencySymbol}`, 
-                    inline: true 
-                },
-                { 
-                    name: '📤 Total Gastado', 
-                    value: `${this.formatNumber(user.stats.totalSpent)} ${this.economy.config.currencySymbol}`, 
-                    inline: true 
-                }
+                { name: `π-b Coins`, value: `**${this.formatNumber(user.balance)}**`, inline: true },
+                { name: '📊 Nivel', value: `**${user.level}**`, inline: true },
+                { name: '⭐ XP Total', value: `**${this.formatNumber(user.total_xp)}**`, inline: true },
+                { name: '📈 Progreso al Siguiente Nivel', value: `\`${progressBar}\` ${progressPercentage}%\n**${this.formatNumber(xpProgress)}** / **${this.formatNumber(xpForNextLevel)}** XP\n*Faltan ${this.formatNumber(xpNeeded)} XP*`, inline: false },
+                { name: '💬 Mensajes Enviados', value: `${this.formatNumber(user.messages_count)}`, inline: true },
+                { name: '📥 Total Ganado', value: `${this.formatNumber(user.stats.totalEarned)} ${this.economy.config.currencySymbol}`, inline: true },
+                { name: '📤 Total Gastado', value: `${this.formatNumber(user.stats.totalSpent)} ${this.economy.config.currencySymbol}`, inline: true }
             );
+
+        // Mostrar rol cosmético si tiene
+        if (cosmeticRole?.name) {
+            embed.addFields({
+                name: '🎭 Rol Personalizado',
+                value: `**${cosmeticRole.name}**` + (cosmeticRole.color ? ` \`${cosmeticRole.color}\`` : ''),
+                inline: true
+            });
+        }
         
         // ✅ ARREGLO: Mostrar VIP
         if (vipStatus.hasVip) {
@@ -2080,6 +2064,15 @@ const commandName = command.replace('>', '');
                     }
                     await this.events.createManualEvent(message, eventType, duration);
                     break;
+                case '>processrefunds': {
+                    const YOUR_ID = '488110147265232898';
+                    if (message.author.id !== YOUR_ID && !message.member?.permissions.has('Administrator')) {
+                        return message.reply('❌ Sin permisos.');
+                    }
+                    await message.reply('⏳ Procesando reembolsos...');
+                    await this.shop.processItemRefunds(message.channel);
+                    break;
+                }
                 case '>eventstats':
                     await this.events.showEventStats(message);
                     break;

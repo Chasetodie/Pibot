@@ -1014,14 +1014,23 @@ class CraftingSystem {
             const recipes = Object.values(this.CRAFTING_RECIPES)
                 .filter(r => !r.guildExclusive || r.guildExclusive === currentGuildId);
 
-            // Agrupar por categoría del resultado
+            const rarityEmojis = { common: '⚪', uncommon: '🟢', rare: '🔵', epic: '🟣', legendary: '🟡', mythic: '🔴' };
+            const rarityNames = { common: 'Común', uncommon: 'Poco Común', rare: 'Raro', epic: 'Épico', legendary: 'Legendario', mythic: 'Mítico' };
+
+            const formatTime = (ms) => {
+                const m = Math.floor(ms / 60000);
+                const h = Math.floor(m / 60);
+                const rem = m % 60;
+                if (h > 0) return rem > 0 ? `${h}h ${rem}m` : `${h}h`;
+                return `${m}m`;
+            };
+
             const groups = {
                 '🍀 Amuletos & Suerte': [],
                 '⛏️ Herramientas': [],
                 '🧠 Trivia': [],
                 '💀 Robo': [],
                 '📦 Cofres & Especiales': [],
-                '🏷️ Cosméticos': [],
                 '🔮 Otros': []
             };
 
@@ -1032,69 +1041,53 @@ class CraftingSystem {
                 else if (id.includes('trivia')) groups['🧠 Trivia'].push(recipe);
                 else if (id.includes('glove') || id.includes('robbery') || id.includes('phantom')) groups['💀 Robo'].push(recipe);
                 else if (id.includes('chest') || id.includes('box')) groups['📦 Cofres & Especiales'].push(recipe);
-                else if (id.includes('nickname') || id.includes('token') || id.includes('toolkit')) groups['🔮 Otros'].push(recipe);
                 else groups['🔮 Otros'].push(recipe);
             }
 
-            const rarityEmojis = { common: '⚪', uncommon: '🟢', rare: '🔵', epic: '🟣', legendary: '🟡', mythic: '🔴' };
-
-            const formatTime = (ms) => {
-                const m = Math.floor(ms / 60000);
-                const h = Math.floor(m / 60);
-                const rem = m % 60;
-                if (h > 0) return rem > 0 ? `${h}h ${rem}m` : `${h}h`;
-                return `${m}m`;
-            };
-
-            const embeds = [];
-            let currentFields = [];
-            let currentGroup = '';
+            const lines = [];
 
             for (const [groupName, groupRecipes] of Object.entries(groups)) {
                 if (groupRecipes.length === 0) continue;
-
-                // Separador de grupo
-                currentFields.push({
-                    name: `${groupName}`,
-                    value: '─────────────────────',
-                    inline: false
-                });
+                lines.push(`\n**${groupName}**`);
 
                 for (const recipe of groupRecipes) {
                     const rEmoji = rarityEmojis[recipe.result.rarity] || '⚪';
-                    const ingredients = recipe.ingredients.map(ing => {
-                        const item = this.shop.shopItems[ing.id];
-                        return `${item?.emoji || '📦'} **${ing.quantity}x** ${item?.name || ing.id}`;
-                    }).join('\n');
+                    const rName = rarityNames[recipe.result.rarity] || '';
+                    const ingredients = recipe.ingredients
+                        .map(ing => {
+                            const item = this.shop.shopItems[ing.id];
+                            return `${item?.emoji || '📦'} ${ing.quantity}x ${item?.name || ing.id}`;
+                        }).join('  •  ');
 
-                    currentFields.push({
-                        name: `${rEmoji} ${recipe.name}`,
-                        value: [
-                            `*${recipe.description}*`,
-                            `**ID:** \`${recipe.id}\``,
-                            `**Materiales:**\n${ingredients}`,
-                            `**⏱️ Tiempo:** ${formatTime(recipe.craftTime)}`
-                        ].join('\n'),
-                        inline: true
-                    });
-
-                    // Discord permite máx 25 fields por embed
-                    if (currentFields.length >= 24) {
-                        embeds.push(currentFields);
-                        currentFields = [];
-                    }
+                    lines.push([
+                        `${rEmoji} **${recipe.name}** — \`>craft ${recipe.id}\``,
+                        `┣ ${recipe.description}`,
+                        `┣ 📦 **Materiales:** ${ingredients}`,
+                        `┗ ⏱️ **Tiempo:** ${formatTime(recipe.craftTime)}  |  ✨ **Rareza:** ${rName}`
+                    ].join('\n'));
                 }
             }
 
-            if (currentFields.length > 0) embeds.push(currentFields);
+            // Dividir en chunks de ~4000 chars (límite de Discord)
+            const chunks = [];
+            let current = '';
+            for (const line of lines) {
+                if (current.length + line.length > 3800) {
+                    chunks.push(current);
+                    current = line + '\n';
+                } else {
+                    current += line + '\n';
+                }
+            }
+            if (current) chunks.push(current);
 
-            // Enviar embeds (máx 10 por mensaje, pero con recipes normalmente 1-2 bastan)
-            for (let i = 0; i < embeds.length; i++) {
+            for (let i = 0; i < chunks.length; i++) {
                 const embed = new EmbedBuilder()
                     .setTitle(i === 0 ? '⚒️ Recetas de Crafteo' : '⚒️ Recetas de Crafteo (cont.)')
-                    .setDescription(i === 0 ? '> Usa `>craft <recipe_id>` para craftear.\n> Necesitas tener los materiales en tu inventario (`>bag`).' : null)
+                    .setDescription(i === 0
+                        ? `> Usa \`>craft <recipe_id>\` para craftear.\n> Necesitas los materiales en tu inventario (\`>bag\`).\n${chunks[i]}`
+                        : chunks[i])
                     .setColor('#9932CC')
-                    .addFields(embeds[i])
                     .setFooter({ text: `${recipes.length} recetas disponibles · >craft <id> para craftear` })
                     .setTimestamp();
 
@@ -1103,7 +1096,7 @@ class CraftingSystem {
 
         } catch (error) {
             console.error('Error mostrando recetas:', error);
-            message.reply('❌ Error al mostrar las recetas.');
+            await message.reply('❌ Error al mostrar las recetas.');
         }
     }
 

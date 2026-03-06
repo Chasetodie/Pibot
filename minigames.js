@@ -12331,175 +12331,26 @@ const userId = gameState.userId;
     async showGamesList(message) {
         const embed = new EmbedBuilder()
             .setTitle('🎮 Minijuegos — π-b Bot')
-            .setDescription([
-                '> Usa los comandos para jugar y ganar **π-b Coins**.',
-                '> Los cooldowns pueden reducirse con items VIP y eventos.',
-                '',
-                '─────────────────────────────'
-            ].join('\n'))
+            .setDescription('> Usa los comandos para jugar y ganar **π-b Coins**.\n> Cooldowns reducibles con items VIP y eventos.')
             .setColor('#9932CC')
             .addFields(
-                {
-                    name: '🪙 Coinflip',
-                    value: [
-                        '`>coinflip <cara/cruz> <apuesta>`',
-                        '💰 Apuesta: **100 – 5,000** π-b$',
-                        '🏆 Ganancia: **x1.85**',
-                        '⏱️ Cooldown: **30s**'
-                    ].join('\n'),
-                    inline: true
-                },
-                {
-                    name: '🎲 Dados',
-                    value: [
-                        '`>dice <1-6 / alto / bajo> <apuesta>`',
-                        '💰 Apuesta: **100 – 5,000** π-b$',
-                        '🏆 Ganancia: **x1.85** (alto/bajo) · **x4.0** (exacto)',
-                        '⏱️ Cooldown: **45s**'
-                    ].join('\n'),
-                    inline: true
-                },
-                { name: '\u200b', value: '\u200b', inline: false },
-                {
-                    name: '🎰 Lotería',
-                    value: [
-                        '`>lottery <número 1-100> <apuesta>`',
-                        '💰 Apuesta: **500 – 3,000** π-b$',
-                        '🏆 Ganancia: **x100** si aciertas el número',
-                        '⏱️ Cooldown: **5 min**'
-                    ].join('\n'),
-                    inline: true
-                },
-                {
-                    name: '♠️ Blackjack',
-                    value: [
-                        '`>blackjack <apuesta>`',
-                        '💰 Apuesta: **100 – 10,000** π-b$',
-                        '🏆 Ganancia: **x1.9** · **x2.3** con Blackjack natural',
-                        '⏱️ Cooldown: **30s**'
-                    ].join('\n'),
-                    inline: true
-                },
-                { name: '\u200b', value: '\u200b', inline: false },
-                {
-                    name: '🎡 Ruleta',
-                    value: [
-                        '`>roulette <tipo> <apuesta>`',
-                        '💰 Apuesta: **100 – 15,000** π-b$',
-                        '🏆 Ganancia: **x1.85** (color) hasta **x32** (número)',
-                        '⏱️ Cooldown: **20s**'
-                    ].join('\n'),
-                    inline: true
-                },
-                {
-                    name: '🎰 Tragaperras',
-                    value: [
-                        '`>slots <apuesta>`',
-                        '💰 Apuesta: **100 – 8,000** π-b$',
-                        '🏆 Ganancia: **x2.5** hasta **x50** 💎',
-                        '⏱️ Cooldown: **1 min**'
-                    ].join('\n'),
-                    inline: true
-                },
-                { name: '\u200b', value: '\u200b', inline: false },
-                {
-                    name: '🥤 Máquina Expendedora',
-                    value: [
-                        '`>vending`',
-                        '💰 Costo fijo: **10** π-b$',
-                        '🏆 Premio: **40** π-b$ · Probabilidad: **45%**',
-                        '⏱️ Cooldown: **15 min**'
-                    ].join('\n'),
-                    inline: true
-                },
-                {
-                    name: '🔫 Ruleta Rusa',
-                    value: [
-                        '`>russian <apuesta>` · `>startrussian` · `>shoot`',
-                        '💰 Apuesta: **300 – 4,000** π-b$',
-                        '👥 Jugadores: **2-6** · Ganador lleva **80%** del pot',
-                        '⏱️ Cooldown: según ronda'
-                    ].join('\n'),
-                    inline: true
-                },
-                { name: '\u200b', value: '\u200b', inline: false },
-                {
-                    name: '🐎 Carrera de Caballos',
-                    value: [
-                        '`>horses bot <apuesta>` — vs Bot',
-                        '`>horses multi <apuesta>` · `>joinrace` · `>startrace`',
-                        '💰 Apuesta: **200 – 10,000** π-b$',
-                        '🏆 Premios: 🥇**x3.0** 🥈**x1.8** 🥉**x1.2**',
-                        '⚡ Puedes doblar tu apuesta hasta el 75% de la carrera'
-                    ].join('\n'),
-                    inline: true
-                },
-                {
-                    name: '🎴 UNO Multiplayer',
-                    value: [
-                        '`>ujoin <apuesta>` · `>ustart` · `>uplay <color> <número>`',
-                        '`>upickup` robar · `>uhand` ver mano · `>sayuno` ¡UNO!',
-                        '💰 Apuesta: **150 – 8,000** π-b$',
-                        '👥 Jugadores: **2-8** · Ganador lleva **90%** del pot'
-                    ].join('\n'),
-                    inline: true
-                },
-                { name: '\u200b', value: '\u200b', inline: false },
-                {
-                    name: '🕳️ Pozo Semanal',
-                    value: [
-                        '`>potcontribute money/item <valor>` · `>holethings`',
-                        '💰 Rango: **100 – 50,000** π-b$ · Máx **3 items/usuario**',
-                        '🎁 Distribución aleatoria entre participantes cada semana'
-                    ].join('\n'),
-                    inline: true
-                },
-                { name: '\u200b', value: '\u200b', inline: false },
-                {
-                    name: '─── 🧠 Trivia ───────────────',
-                    value: '\u200b',
-                    inline: false
-                },
-                {
-                    name: '📖 Trivia Clásica',
-                    value: [
-                        '`>trivia [easy/medium/hard] [modo] [categoría]`',
-                        '🎁 **Gratis** · 5 preguntas por partida',
-                        '🏆 Recompensa: hasta **1,000** π-b$ + **80** XP',
-                        '⏱️ Cooldown: **1 min**'
-                    ].join('\n'),
-                    inline: true
-                },
-                {
-                    name: '💀 Trivia Survival',
-                    value: [
-                        '`>triviasurvival [easy/medium/hard] [categoría]`',
-                        '🎁 **Gratis** · Sobrevive el mayor número de preguntas',
-                        '🏆 **100** π-b$ + **10** XP por pregunta · dificultad sube cada 5',
-                        '⏱️ Cooldown: **5 min**'
-                    ].join('\n'),
-                    inline: true
-                },
-                {
-                    name: '🏆 Trivia Competitiva',
-                    value: [
-                        '`>triviacomp [dificultad] [apuesta]` · `>jointrivia` · `>starttrivia`',
-                        '💰 Apuesta: **0 – 5,000** π-b$ · Jugadores: **2-6**',
-                        '🏆 Ganador lleva **85%** del pot',
-                        '⏱️ Cooldown: **3 min**'
-                    ].join('\n'),
-                    inline: false
-                },
-                {
-                    name: '📊 Rankings de Trivia',
-                    value: '`>trivialb` · `>trivialb perfect` · `>trivialb accuracy` · `>trivialb played`\n`>trivialb <tipo> global` — Ver ranking global',
-                    inline: false
-                },
-                {
-                    name: '🔮 Próximamente',
-                    value: '• Poker\n• Memory Game\n• Wordle Musical\n• Cine Quiz\n• Anagramas',
-                    inline: false
-                },
+                { name: '🪙 Coinflip', value: '`>coinflip <cara/cruz> <apuesta>`\n💰 100–5,000 π-b$ · 🏆 x1.85 · ⏱️ 30s', inline: false },
+                { name: '🎲 Dados', value: '`>dice <1-6/alto/bajo> <apuesta>`\n💰 100–5,000 π-b$ · 🏆 x1.85 (alto/bajo) · x4.0 (exacto) · ⏱️ 45s', inline: false },
+                { name: '🎰 Lotería', value: '`>lottery <número 1-100> <apuesta>`\n💰 500–3,000 π-b$ · 🏆 x100 si aciertas · ⏱️ 5 min', inline: false },
+                { name: '♠️ Blackjack', value: '`>blackjack <apuesta>`\n💰 100–10,000 π-b$ · 🏆 x1.9 · x2.3 con BJ natural · ⏱️ 30s', inline: false },
+                { name: '🎡 Ruleta', value: '`>roulette <tipo> <apuesta>`\n💰 100–15,000 π-b$ · 🏆 x1.85 (color) hasta x32 (número) · ⏱️ 20s', inline: false },
+                { name: '🎰 Tragaperras', value: '`>slots <apuesta>`\n💰 100–8,000 π-b$ · 🏆 x2.5 hasta x50 💎 · ⏱️ 1 min', inline: false },
+                { name: '🥤 Máquina Expendedora', value: '`>vending`\n💰 Costo: 10 π-b$ · 🏆 40 π-b$ (45% de probabilidad) · ⏱️ 15 min', inline: false },
+                { name: '🔫 Ruleta Rusa', value: '`>russian <apuesta>` · `>startrussian` · `>shoot`\n💰 300–4,000 π-b$ · 👥 2-6 jugadores · 🏆 Ganador lleva 80% del pot', inline: false },
+                { name: '🐎 Carrera de Caballos', value: '`>horses bot <apuesta>` — vs Bot\n`>horses multi <apuesta>` · `>joinrace` · `>startrace`\n💰 200–10,000 π-b$ · 🥇x3.0 🥈x1.8 🥉x1.2 · ⚡ Puedes doblar hasta el 75% de la carrera', inline: false },
+                { name: '🎴 UNO Multiplayer', value: '`>ujoin <apuesta>` · `>ustart` · `>uplay <color> <número>`\n`>upickup` robar · `>uhand` ver mano · `>sayuno` ¡UNO!\n💰 150–8,000 π-b$ · 👥 2-8 jugadores · 🏆 Ganador lleva 90% del pot', inline: false },
+                { name: '🕳️ Pozo Semanal', value: '`>potcontribute money/item <valor>` · `>holethings`\n💰 100–50,000 π-b$ · Máx 3 items/usuario · 🎁 Distribución aleatoria semanal', inline: false },
+                { name: '─── 🧠 Trivia ───', value: '\u200b', inline: false },
+                { name: '📖 Trivia Clásica', value: '`>trivia [easy/medium/hard] [modo] [categoría]`\n🎁 Gratis · 5 preguntas · 🏆 hasta 1,000 π-b$ + 80 XP · ⏱️ 1 min', inline: false },
+                { name: '💀 Trivia Survival', value: '`>triviasurvival [easy/medium/hard] [categoría]`\n🎁 Gratis · 🏆 100 π-b$ + 10 XP por pregunta · ⏱️ 5 min', inline: false },
+                { name: '🏆 Trivia Competitiva', value: '`>triviacomp [dificultad] [apuesta]` · `>jointrivia` · `>starttrivia`\n💰 0–5,000 π-b$ · 👥 2-6 jugadores · 🏆 Ganador lleva 85% del pot · ⏱️ 3 min', inline: false },
+                { name: '📊 Rankings', value: '`>trivialb` · `>trivialb perfect/accuracy/played` · `>trivialb <tipo> global`', inline: false },
+                { name: '🔮 Próximamente', value: '• Poker  • Memory Game  • Wordle Musical  • Cine Quiz  • Anagramas', inline: false },
             )
             .setFooter({ text: 'Juega responsablemente — La casa siempre tiene ventaja 🎰' })
             .setTimestamp();

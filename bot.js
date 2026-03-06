@@ -979,6 +979,17 @@ client.on('messageCreate', async (message) => {
     const userId = message.author.id;
     const now = Date.now();
 
+    // ← AGREGAR: Verificar reembolsos pendientes (máx 1 vez cada 24h por usuario)
+    if (shop) {
+        const lastRefundCheck = shop.refundCheckCache?.get(userId) || 0;
+        if (Date.now() - lastRefundCheck > 86400000) { // 24h
+            if (!shop.refundCheckCache) shop.refundCheckCache = new Map();
+            shop.refundCheckCache.set(userId, Date.now());
+            // No await — que corra en background sin bloquear
+            shop.processUserRefund(userId, message.channel).catch(() => {});
+        }
+    }
+
     await processUserActivityOptimized(userId, message);
 
     messageCount++;

@@ -78,6 +78,10 @@ class LocalDatabase {
                 )
             `);
 
+            // Agregar columnas cosmetic si no existen
+            await this.pool.execute(`ALTER TABLE users ADD COLUMN IF NOT EXISTS cosmetic_nickname VARCHAR(100) DEFAULT NULL`);
+            await this.pool.execute(`ALTER TABLE users ADD COLUMN IF NOT EXISTS cosmetic_role TEXT DEFAULT NULL`);
+
             // Tabla para trades
             await this.pool.execute(`
                 CREATE TABLE IF NOT EXISTS trades (
@@ -775,7 +779,9 @@ class LocalDatabase {
                 user.daily_missions = this.safeJsonParse(user.daily_missions || '{}', {});
                 user.daily_stats = this.safeJsonParse(user.daily_stats || '{}', {});
                 user.achievements = this.safeJsonParse(user.achievements || '{}', {});
-
+                user.cosmetic_nickname = user.cosmetic_nickname || null;
+                user.cosmetic_role = user.cosmetic_role ? this.safeJsonParse(user.cosmetic_role, null) : null;
+                
                 // Guardar en caché antes de retornar
                 this.userCache.set(userId, {
                     data: user, // o newUser
@@ -876,6 +882,8 @@ class LocalDatabase {
                 missions_reset_today: 0,
                 missions_notifications_blocked: 0,
                 cosmetics: {},
+                cosmetic_nickname: null,
+                cosmetic_role: null,
                 permanentEffects: {},
                 activeEffects: {},
                 passiveIncomeStats: {
@@ -920,8 +928,10 @@ class LocalDatabase {
                     cosmetics,
                     permanentEffects,
                     activeEffects,
-                    passiveIncomeStats
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    passiveIncomeStats,
+                    comestic_nickname,
+                    cosmetic_role
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ON DUPLICATE KEY UPDATE id = id
             `, [
                 newUser.id,
@@ -957,7 +967,9 @@ class LocalDatabase {
                 JSON.stringify(newUser.cosmetics),
                 JSON.stringify(newUser.permanentEffects),
                 JSON.stringify(newUser.activeEffects),
-                JSON.stringify(newUser.passiveIncomeStats)
+                JSON.stringify(newUser.passiveIncomeStats),
+                newUser.cosmetic_nickname_nickname,
+                null
             ]);
 
             // Guardar en caché antes de retornar
