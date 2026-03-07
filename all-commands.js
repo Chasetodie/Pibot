@@ -131,13 +131,13 @@ class AllCommands {
             );
 
         // Mostrar rol cosmético si tiene
-        if (cosmeticRole?.name) {
-            embed.addFields({
-                name: '🎭 Rol Personalizado',
-                value: `**${cosmeticRole.name}**` + (cosmeticRole.color ? ` \`${cosmeticRole.color}\`` : ''),
-                inline: true
-            });
-        }
+if (cosmeticRole?.name) {
+    embed.addFields({
+        name: '\u200b',
+        value: `╔════════════════════╗\n**🎭 ${cosmeticRole.name}**${cosmeticRole.color ? `  •  🎨 \`${cosmeticRole.color}\`` : ''}\n╚════════════════════╝`,
+        inline: false
+    });
+}
         
         // ✅ ARREGLO: Mostrar VIP
         if (vipStatus.hasVip) {
