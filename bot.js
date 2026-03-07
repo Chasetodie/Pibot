@@ -693,10 +693,10 @@ client.on('interactionCreate', async (interaction) => {
             await achievements.handleProgressPagination(interaction);
         }
 
-/*if (interaction.customId.startsWith('recipes_')) {
-    await thingsShop.handleRecipesInteraction(interaction);
+if (interaction.customId.startsWith('recipes_')) {
+    await crafting.handleRecipesInteraction(interaction);
     return;
-}*/
+}
         
         if (interaction.customId.startsWith('bj_')) {
             await minigames.handleBlackjackButtons(interaction);
@@ -1315,6 +1315,7 @@ client.login(process.env.TOKEN).then(() => {
 }).catch(error => {
     console.error('❌ Error en el login:', error);
 });*/
+
 
 
 
