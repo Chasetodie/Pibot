@@ -872,6 +872,25 @@ class CraftingSystem {
         return newItems;
     }
 
+async handleRecipesInteraction(interaction) {
+    const parts = interaction.customId.split('_');
+    const userId = parts[parts.length - 1];
+
+    if (interaction.user.id !== userId) {
+        return interaction.reply({ content: '❌ Estas recetas no son tuyas. Usa `>recipes` para abrir las tuyas.', ephemeral: true });
+    }
+
+    const page = parseInt(parts[2]);
+    const fakeMessage = {
+        author: interaction.user,
+        guild: interaction.guild,
+        guildId: interaction.guildId,
+        reply: async (options) => await interaction.update(options)
+    };
+
+    await this.showCraftingRecipes(fakeMessage, page);
+}
+
     async addToCraftingQueue(craftId, userId, recipeId, recipe, completesAt, channelId) {
         await this.shop.economy.database.addCraftToQueue({
             id: craftId,
