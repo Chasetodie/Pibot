@@ -4369,7 +4369,7 @@ class ShopSystem {
                     cosmetic_role: JSON.stringify({
                         name: roleData.roleName,
                         color: roleData.colorHex,
-                        roleId: newRole.id || null,
+                        roleId: newRole?.id || null,
                         guildId: isHomeGuild ? guild.id : null
                     })
                 });
@@ -4643,21 +4643,39 @@ class ShopSystem {
         const currentNickname = member.displayName;
         
         // Extraer el formato base (Pibe/Piba + número)
-        const basePattern = /^(Pibe|Piba)\s+(\d+)/i;
-        const match = currentNickname.match(basePattern);
-        
-        if (!match) {
-            await message.reply({
-                embeds: [new EmbedBuilder()
-                    .setTitle('❌ Formato de Apodo Inválido')
-                    .setDescription('Tu apodo actual no sigue el formato requerido: **Pibe/Piba + número**\n\nContacta a un administrador para corregir tu apodo base.')
-                    .setColor('#FF0000')]
-            });
-            return;
-        }
-        
-        const baseNickname = `${match[1]} ${match[2]}`; // "Pibe 123" o "Piba 456"
-        const finalNickname = `${baseNickname} - ${newNickname}`;
+const HOME_GUILD_ID = '1270508373732884522';
+const isHomeGuild = message.guild?.id === HOME_GUILD_ID;
+
+let finalNickname = newNickname;
+
+if (isHomeGuild) {
+    const basePattern = /^(Pibe|Piba)\s+(\d+)/i;
+    const match = currentNickname.match(basePattern);
+
+    if (!match) {
+        await message.reply({
+            embeds: [new EmbedBuilder()
+                .setTitle('❌ Formato de Apodo Inválido')
+                .setDescription('Tu apodo actual no sigue el formato requerido: **Pibe/Piba + número**\n\nContacta a un administrador para corregir tu apodo base.')
+                .setColor('#FF0000')]
+        });
+        return;
+    }
+
+    const baseNickname = `${match[1]} ${match[2]}`;
+    finalNickname = `${baseNickname} - ${newNickname}`;
+
+    if (finalNickname.length > 32) {
+        const maxCustomLength = 32 - baseNickname.length - 3;
+        await message.reply({
+            embeds: [new EmbedBuilder()
+                .setTitle('❌ Apodo Muy Largo')
+                .setDescription(`El apodo final sería muy largo.\n\n**Tu base:** ${baseNickname}\n**Máximo:** ${maxCustomLength} caracteres`)
+                .setColor('#FF0000')]
+        });
+        return;
+    }
+}
         
         // Verificar que el nuevo apodo no exceda el límite de Discord (32 caracteres)
         if (finalNickname.length > 32) {
