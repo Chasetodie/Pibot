@@ -1245,7 +1245,17 @@ class ShopSystem {
             .setDescription(
                 `🛒 **Bienvenido a la Tienda**\n` +
                 `📄 Página ${page}/${totalPages}\n` +
-                `🏷️ Categoría: **${category === 'all' ? 'Todas' : category}**\n\n` +
+                `🏷️ Categoría: **${({
+    all: 'Todas',
+    consumable: 'Consumibles',
+    permanent: 'Permanentes',
+    cosmetic: 'Cosméticos',
+    special: 'Especiales',
+    equipment: 'Equipamientos',
+    mystery: 'Cofres',
+    trivia: 'Trivia',
+    tool: 'Herramientas'
+})[category] || category}**\n\n` +
                 `💡 Usa el menú desplegable para cambiar de categoría`
             )
             .setColor('#FFD700')
