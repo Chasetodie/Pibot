@@ -4373,6 +4373,8 @@ class ShopSystem {
                         guildId: isHomeGuild ? guild.id : null
                     })
                 });
+
+                this.economy.database.userCache.delete(userId);
                 
                 // Confirmar éxito
                 const successEmbed = new EmbedBuilder()
@@ -4694,9 +4696,10 @@ if (isHomeGuild) {
         const confirmEmbed = new EmbedBuilder()
             .setTitle('🏷️ Confirmar Cambio de Apodo')
             .setDescription(`¿Estás seguro de que quieres cambiar tu apodo?`)
-            .addFields(
-                { name: '📝 Apodo Actual', value: `**${currentNickname}**`, inline: true },
-                { name: '✨ Nuevo Apodo', value: `**${finalNickname}**`, inline: true },
+.addFields(
+    { name: '📝 Apodo Actual', value: `**${currentNickname}**`, inline: true },
+    { name: '✨ Apodo Cosmético', value: `**${newNickname}**`, inline: true },
+    ...(isHomeGuild ? [{ name: '🏷️ Apodo en Discord', value: `**${finalNickname}**`, inline: false }] : []),
                 { name: '💎 Costo', value: '**1x** 🏷️✨ Token de Apodo', inline: false },
                 { name: '⚠️ Importante', value: 'El token será consumido permanentemente. Para cambiar el apodo otra vez necesitarás otro token.', inline: false }
             )
@@ -4802,6 +4805,8 @@ if (isHomeGuild) {
                     items: newItems,
                     cosmetic_nickname: nicknameData.newNickname
                 });
+
+this.economy.database.userCache.delete(userId);
                 
                 // Confirmar éxito
                 const isHomeGuild = interaction.guild.id === HOME_GUILD_ID;
