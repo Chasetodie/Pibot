@@ -4723,7 +4723,7 @@ if (isHomeGuild) {
         this.pendingNicknames.set(userId, {
             newNickname: newNickname,
             finalNickname: finalNickname,
-            baseNickname: baseNickname,
+            baseNickname: baseNickname || null,
             timestamp: Date.now()
         });
         
