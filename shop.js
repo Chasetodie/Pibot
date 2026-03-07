@@ -379,7 +379,7 @@ class ShopSystem {
                 },
                 stackable: true,
                 maxStack: 1,
-                guildExclusive: '1270508373732884522',
+                //guildExclusive: '1270508373732884522',
             },
 
             // === NUEVOS ITEMS PERMANENTES ===
@@ -462,7 +462,7 @@ class ShopSystem {
                 rarity: 'rare',
                 stackable: true,
                 maxStack: 3, // Aumenté porque ahora es ingrediente
-                guildExclusive: '1270508373732884522',
+                //guildExclusive: '1270508373732884522',
             },
             'premium_mystery_box': {
                 id: 'premium_mystery_box',
@@ -754,7 +754,7 @@ class ShopSystem {
                 chestOnly: true,
                 stackable: true,
                 maxStack: 3, // Reduje el stack ya que es más valioso
-                guildExclusive: '1270508373732884522',
+                //guildExclusive: '1270508373732884522',
             },    
             'epic_chest': {
                 id: 'epic_chest',
