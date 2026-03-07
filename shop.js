@@ -4647,6 +4647,7 @@ const HOME_GUILD_ID = '1270508373732884522';
 const isHomeGuild = message.guild?.id === HOME_GUILD_ID;
 
 let finalNickname = newNickname;
+let baseNickname = '';
 
 if (isHomeGuild) {
     const basePattern = /^(Pibe|Piba)\s+(\d+)/i;
@@ -4662,7 +4663,7 @@ if (isHomeGuild) {
         return;
     }
 
-    const baseNickname = `${match[1]} ${match[2]}`;
+    baseNickname = `${match[1]} ${match[2]}`;
     finalNickname = `${baseNickname} - ${newNickname}`;
 
     if (finalNickname.length > 32) {
