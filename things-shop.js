@@ -648,7 +648,7 @@ class CraftingSystem {
                 name: '🏷️✨ Token de Apodo', // Nombre más claro
                 description: 'Permite personalizar tu apodo con estilo. Usa >setnickname <nuevo_apodo>',
                 craftTime: 1800000, // 30 minutos
-                guildExclusive: '1270508373732884522',
+                //guildExclusive: '1270508373732884522',
                 ingredients: [
                     { id: 'rainbow_badge', quantity: 2 },
                     { id: 'golden_trophy', quantity: 2 },
