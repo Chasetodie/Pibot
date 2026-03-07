@@ -4233,7 +4233,7 @@ class ShopSystem {
                 { name: '📝 Nombre del Rol', value: `**${roleName}**`, inline: true },
                 { name: '🎨 Color', value: `\`${colorHex}\``, inline: true },
                 { name: '💎 Costo', value: '**1x** 🎭 Token de Rol Personalizado', inline: false },
-                { name: '⚠️ Importante', value: '• El token será consumido permanentemente\n• Solo puedes tener un rol personalizado\n• El rol será creado automáticamente y asignado a ti', inline: false }
+{ name: '⚠️ Importante', value: '• El token será consumido permanentemente\n• Solo puedes tener un rol personalizado\n• El rol será creado y asignado en este servidor\n• 🎨 El color que elijas también cambiará el borde de tu `>bal` en cualquier servidor', inline: false }
             )
             .setColor(colorInt)
             .setThumbnail(message.author.displayAvatarURL({ dynamic: true }));
@@ -4697,9 +4697,12 @@ if (isHomeGuild) {
             .setTitle('🏷️ Confirmar Cambio de Apodo')
             .setDescription(`¿Estás seguro de que quieres cambiar tu apodo?`)
 .addFields(
-    { name: '📝 Apodo Actual', value: `**${currentNickname}**`, inline: true },
-    { name: '✨ Apodo Cosmético', value: `**${newNickname}**`, inline: true },
-    ...(isHomeGuild ? [{ name: '🏷️ Apodo en Discord', value: `**${finalNickname}**`, inline: false }] : []),
+    ...(isHomeGuild ? [
+        { name: '📝 Apodo Actual', value: `**${currentNickname}**`, inline: true },
+        { name: '✨ Nuevo Apodo', value: `**${finalNickname}**`, inline: true },
+    ] : [
+        { name: '✨ Tu apodo en >bal', value: `💰 ${currentNickname} ✦ **${newNickname}**`, inline: false },
+    ]),
                 { name: '💎 Costo', value: '**1x** 🏷️✨ Token de Apodo', inline: false },
                 { name: '⚠️ Importante', value: 'El token será consumido permanentemente. Para cambiar el apodo otra vez necesitarás otro token.', inline: false }
             )
