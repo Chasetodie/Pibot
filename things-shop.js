@@ -1008,97 +1008,85 @@ class CraftingSystem {
         await message.channel.send({ embeds: [embed] });
     }
     
-    async showCraftingRecipes(message) {
-        try {
-            const currentGuildId = message.guild?.id;
-            const recipes = Object.values(this.CRAFTING_RECIPES)
-                .filter(r => !r.guildExclusive || r.guildExclusive === currentGuildId);
+async showCraftingRecipes(message, page = 1) {
+    try {
+        const currentGuildId = message.guild?.id;
+        const recipes = Object.values(this.CRAFTING_RECIPES)
+            .filter(r => !r.guildExclusive || r.guildExclusive === currentGuildId);
 
-            const rarityEmojis = { common: '⚪', uncommon: '🟢', rare: '🔵', epic: '🟣', legendary: '🟡', mythic: '🔴' };
-            const rarityNames = { common: 'Común', uncommon: 'Poco Común', rare: 'Raro', epic: 'Épico', legendary: 'Legendario', mythic: 'Mítico' };
+        const rarityEmojis = { common: '⚪', uncommon: '🟢', rare: '🔵', epic: '🟣', legendary: '🟡', mythic: '🔴' };
+        const rarityNames = { common: 'Común', uncommon: 'Poco Común', rare: 'Raro', epic: 'Épico', legendary: 'Legendario', mythic: 'Mítico' };
 
-            const formatTime = (ms) => {
-                const m = Math.floor(ms / 60000);
-                const h = Math.floor(m / 60);
-                const rem = m % 60;
-                if (h > 0) return rem > 0 ? `${h}h ${rem}m` : `${h}h`;
-                return `${m}m`;
-            };
+        const formatTime = (ms) => {
+            const m = Math.floor(ms / 60000);
+            const h = Math.floor(m / 60);
+            const rem = m % 60;
+            if (h > 0) return rem > 0 ? `${h}h ${rem}m` : `${h}h`;
+            return `${m}m`;
+        };
 
-            const groups = {
-                '🍀 Amuletos & Suerte': [],
-                '⛏️ Herramientas': [],
-                '🧠 Trivia': [],
-                '💀 Robo': [],
-                '📦 Cofres & Especiales': [],
-                '🔮 Otros': []
-            };
+        const RECIPES_PER_PAGE = 3;
+        const totalPages = Math.ceil(recipes.length / RECIPES_PER_PAGE);
+        const startIndex = (page - 1) * RECIPES_PER_PAGE;
+        const pageRecipes = recipes.slice(startIndex, startIndex + RECIPES_PER_PAGE);
 
-            for (const recipe of recipes) {
-                const id = recipe.id;
-                if (id.includes('charm') || id.includes('luck')) groups['🍀 Amuletos & Suerte'].push(recipe);
-                else if (id.includes('pickaxe')) groups['⛏️ Herramientas'].push(recipe);
-                else if (id.includes('trivia')) groups['🧠 Trivia'].push(recipe);
-                else if (id.includes('glove') || id.includes('robbery') || id.includes('phantom')) groups['💀 Robo'].push(recipe);
-                else if (id.includes('chest') || id.includes('box')) groups['📦 Cofres & Especiales'].push(recipe);
-                else groups['🔮 Otros'].push(recipe);
-            }
+        const embed = new EmbedBuilder()
+            .setTitle('⚒️ Recetas de Crafteo')
+            .setDescription(`> Usa \`>craft <recipe_id>\` para craftear.\n> Necesitas los materiales en tu inventario (\`>bag\`).\n> 📄 Página **${page}/${totalPages}**`)
+            .setColor('#9932CC')
+            .setFooter({ text: `${recipes.length} recetas disponibles · >craft <id> para craftear` })
+            .setTimestamp();
 
-            const lines = [];
+        for (const recipe of pageRecipes) {
+            const rEmoji = rarityEmojis[recipe.result.rarity] || '⚪';
+            const rName = rarityNames[recipe.result.rarity] || '';
+            const ingredients = recipe.ingredients
+                .map(ing => {
+                    const item = this.shop.shopItems[ing.id];
+                    return `${item?.emoji || '📦'} ${ing.quantity}x **${item?.name || ing.id}**`;
+                }).join('\n');
 
-            for (const [groupName, groupRecipes] of Object.entries(groups)) {
-                if (groupRecipes.length === 0) continue;
-                lines.push(`\n**${groupName}**`);
-
-                for (const recipe of groupRecipes) {
-                    const rEmoji = rarityEmojis[recipe.result.rarity] || '⚪';
-                    const rName = rarityNames[recipe.result.rarity] || '';
-                    const ingredients = recipe.ingredients
-                        .map(ing => {
-                            const item = this.shop.shopItems[ing.id];
-                            return `${item?.emoji || '📦'} ${ing.quantity}x ${item?.name || ing.id}`;
-                        }).join('  •  ');
-
-                    lines.push([
-                        `${rEmoji} **${recipe.name}** — \`>craft ${recipe.id}\``,
-                        `┣ ${recipe.description}`,
-                        `┣ 📦 **Materiales:** ${ingredients}`,
-                        `┗ ⏱️ **Tiempo:** ${formatTime(recipe.craftTime)}  |  ✨ **Rareza:** ${rName}`
-                    ].join('\n'));
-                }
-            }
-
-            // Dividir en chunks de ~4000 chars (límite de Discord)
-            const chunks = [];
-            let current = '';
-            for (const line of lines) {
-                if (current.length + line.length > 3800) {
-                    chunks.push(current);
-                    current = line + '\n';
-                } else {
-                    current += line + '\n';
-                }
-            }
-            if (current) chunks.push(current);
-
-            for (let i = 0; i < chunks.length; i++) {
-                const embed = new EmbedBuilder()
-                    .setTitle(i === 0 ? '⚒️ Recetas de Crafteo' : '⚒️ Recetas de Crafteo (cont.)')
-                    .setDescription(i === 0
-                        ? `> Usa \`>craft <recipe_id>\` para craftear.\n> Necesitas los materiales en tu inventario (\`>bag\`).\n${chunks[i]}`
-                        : chunks[i])
-                    .setColor('#9932CC')
-                    .setFooter({ text: `${recipes.length} recetas disponibles · >craft <id> para craftear` })
-                    .setTimestamp();
-
-                await message.channel.send({ embeds: [embed] });
-            }
-
-        } catch (error) {
-            console.error('Error mostrando recetas:', error);
-            await message.reply('❌ Error al mostrar las recetas.');
+            embed.addFields({
+                name: `${rEmoji} ${recipe.name}`,
+                value: [
+                    `*${recipe.description}*`,
+                    `📦 **Materiales:**\n${ingredients}`,
+                    `⏱️ **Tiempo:** ${formatTime(recipe.craftTime)}  |  ✨ ${rName}`,
+                    `\`>craft ${recipe.id}\``
+                ].join('\n'),
+                inline: false
+            });
         }
+
+        // Botones de navegación
+        const uid = message.author.id;
+        const row = new ActionRowBuilder();
+
+        if (page > 1) {
+            row.addComponents(
+                new ButtonBuilder()
+                    .setCustomId(`recipes_prev_${page - 1}_${uid}`)
+                    .setLabel('◀️ Anterior')
+                    .setStyle(ButtonStyle.Secondary)
+            );
+        }
+        if (page < totalPages) {
+            row.addComponents(
+                new ButtonBuilder()
+                    .setCustomId(`recipes_next_${page + 1}_${uid}`)
+                    .setLabel('Siguiente ▶️')
+                    .setStyle(ButtonStyle.Secondary)
+            );
+        }
+
+        const components = row.components.length > 0 ? [row] : [];
+        await message.reply({ embeds: [embed], components });
+
+    } catch (error) {
+        console.error('Error mostrando recetas:', error);
+        await message.reply('❌ Error al mostrar las recetas.');
     }
+}
 
     getRarityEmoji(rarity) {
         const rarityEmojis = {
