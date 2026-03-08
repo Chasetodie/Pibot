@@ -4824,22 +4824,6 @@ if (isHomeGuild) {
             return;
         }
         
-        if (action === 'confirm') {
-            try {
-                // Verificar nuevamente que tiene el token (por si acaso)
-                const user = await this.economy.getUser(userId);
-                const userItems = user.items || {};
-                
-                if (!userItems['nickname_token'] || userItems['nickname_token'].quantity < 1) {
-                    await interaction.update({
-                        embeds: [new EmbedBuilder()
-                            .setTitle('❌ Token No Disponible')
-                            .setDescription('Ya no tienes el token requerido.')
-                            .setColor('#FF0000')],
-                        components: []
-                    });
-                    return;
-                }
 if (action === 'confirm') {
     try {
         const user = await this.economy.getUser(userId);
@@ -4911,9 +4895,6 @@ if (action === 'confirm') {
         });
     }
 }
-            } catch (error) {
-                console.error('Error: ', error);
-            }
     }
 
     // Función para notificar items expirados/agotados
