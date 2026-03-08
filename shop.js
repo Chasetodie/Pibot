@@ -4326,45 +4326,26 @@ if (input.length < 3) {
                     return;
                 }
                 
-                // Crear el rol en Discord usando REST API
                 const guild = interaction.guild;
                 const HOME_GUILD_ID = '1270508373732884522';
                 const isHomeGuild = guild.id === HOME_GUILD_ID;
                 let newRole = null;
                 let member;
 
-                if (isHomeGuild) {
-                    try {
-                        // Crear rol
-                        newRole = await guild.roles.create({
-                            name: `${roleData.roleName}`,
-                            color: roleData.colorInt,
-                            reason: `Rol personalizado creado por ${interaction.user.tag}`
-                        });
-                        
-                        // Obtener miembro y asignar rol usando REST
-                        member = await guild.members.fetch(userId);
-                        await interaction.guild.members.edit(userId, {
-                            roles: [...member.roles.cache.map(r => r.id), newRole.id]
-                        });
-                        
-                    } catch (error) {
-                        console.log('Error con método principal, intentando alternativo:', error);
-                        
-                        // Método alternativo: usar REST client directamente
-                        try {
-                            const { REST } = require('@discordjs/rest');
-                            const rest = new REST({ version: '10' }).setToken(interaction.client.token);
-                            
-                            await rest.put(
-                                `/guilds/${guild.id}/members/${userId}/roles/${newRole.id}`,
-                                { reason: 'Token de rol personalizado' }
-                            );
-                        } catch (restError) {
-                            throw new Error('No se pudo asignar el rol: ' + restError.message);
-                        }
-                    }
-                }
+if (isHomeGuild) {
+    try {
+        newRole = await guild.roles.create({
+            name: roleData.roleName,
+            color: roleData.colorInt,
+            reason: `Rol personalizado de ${interaction.user.tag}`
+        });
+        const member = await guild.members.fetch(userId);
+        await member.roles.add(newRole);
+    } catch (roleError) {
+        console.error('Error creando/asignando rol en Discord:', roleError);
+        newRole = null;
+    }
+}
                 
                 // Consumir el token
                 const newItems = { ...userItems };
