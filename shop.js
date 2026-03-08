@@ -4252,7 +4252,7 @@ if (input.length < 3) {
                 { name: '📝 Nombre del Rol', value: `**${roleName}**`, inline: true },
                 { name: '🎨 Color', value: `\`${colorHex}\``, inline: true },
                 { name: '💎 Costo', value: '**1x** 🎭 Token de Rol Personalizado', inline: false },
-{ name: '⚠️ Importante', value: '• El token será consumido permanentemente\n• Solo puedes tener un rol personalizado\n• El rol será creado y asignado en este servidor\n• 🎨 El color que elijas también cambiará el borde de tu `>bal` en cualquier servidor', inline: false }
+{ name: '⚠️ Importante', value: '• El token será consumido permanentemente\n• Solo puedes tener un rol personalizado\n• El rol será creado y asignado en este servidor\n• 🎨 La barra lateral de este embed muestra el color que tendrá tu `>bal`', inline: false }
             )
             .setColor(colorInt)
             .setThumbnail(message.author.displayAvatarURL({ dynamic: true }));
@@ -5005,6 +5005,28 @@ this.economy.database.userCache.delete(userId);
         
         await message.reply({ embeds: [embed] });
     }
+
+async handleRoleColorSelect(interaction) {
+    const userId = interaction.customId.split('_')[1];
+    if (interaction.user.id !== userId) {
+        return interaction.reply({ content: '❌ Este menú no es tuyo.', ephemeral: true });
+    }
+
+    const color = interaction.values[0];
+    const colorInt = parseInt(color.replace('#', ''), 16);
+
+    const embed = new EmbedBuilder()
+        .setTitle('🎭 Color Seleccionado')
+        .setDescription(`Elegiste el color \`${color}\`\n\nAhora escribe el nombre de tu rol:\n\`>rolcreate ${color} <nombre del rol>\`\n\nEjemplo: \`>rolcreate ${color} Rey Supremo\``)
+        .setColor(colorInt)
+        .addFields({
+            name: '💡 Vista previa',
+            value: `La barra lateral de tu \`>bal\` se verá de este color ☝️`,
+            inline: false
+        });
+
+    await interaction.update({ embeds: [embed], components: [] });
+}
 
     async applyRandomCurse(userId) {
         const user = await this.economy.getUser(userId);
