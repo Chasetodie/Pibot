@@ -134,7 +134,7 @@ class AllCommands {
 if (cosmeticRole?.name) {
     embed.addFields({
         name: '\u200b',
-        value: `╔════════════════════╗\n**🎭 ${cosmeticRole.name}**${cosmeticRole.color ? `  •  🎨 \`${cosmeticRole.color}\`` : ''}\n╚════════════════════╝`,
+        value: `╔════════════════════╗\n✦ **${cosmeticRole.name}**${cosmeticRole.color ? `  —  ${cosmeticRole.color}` : ''}\n╚════════════════════╝`,
         inline: false
     });
 }
