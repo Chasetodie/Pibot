@@ -172,7 +172,8 @@ class ShopSystem {
                     uses: 1
                 },
                 stackable: true,
-                maxStack: 5
+                maxStack: 5,
+                chestOnly: true,
             },
 
             'trivia_skip_token': {
@@ -189,7 +190,8 @@ class ShopSystem {
                     uses: 1
                 },
                 stackable: true,
-                maxStack: 3
+                maxStack: 3,
+                chestOnly: true,
             },
 
             'trivia_audience': {
@@ -207,7 +209,8 @@ class ShopSystem {
                     uses: 1
                 },
                 stackable: true,
-                maxStack: 3
+                maxStack: 3,
+                chestOnly: true,
             },
 
             'trivia_double_reward': {
@@ -225,7 +228,8 @@ class ShopSystem {
                     uses: 1
                 },
                 stackable: true,
-                maxStack: 3
+                maxStack: 3,
+                chestOnly: true,
             },
 
             'trivia_shield': {
@@ -242,7 +246,8 @@ class ShopSystem {
                     uses: 1
                 },
                 stackable: true,
-                maxStack: 2
+                maxStack: 2,
+                chestOnly: true,
             },
 
             // === DECORATIVOS ===
