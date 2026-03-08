@@ -10559,6 +10559,17 @@ const userId = gameState.userId;
             await message.reply({ embeds: [curseNotif] });
         }
 
+const survivalUserData = await this.economy.getUser(userId);
+const survivalActiveEffects = this.shop.parseActiveEffects(survivalUserData.activeEffects);
+let survivalDoubleReward = false;
+
+const survivalDoubleCheck = survivalActiveEffects['trivia_double_reward'] || survivalActiveEffects['trivia_master_pass'];
+if (survivalDoubleCheck && survivalDoubleCheck.length > 0) {
+    survivalDoubleReward = true;
+    const itemId = survivalActiveEffects['trivia_double_reward'] ? 'trivia_double_reward' : 'trivia_master_pass';
+    await this.shop.consumeItemUse(userId, itemId);
+}
+		
         try {
             // Marcar como activo
             this.activeGames.set(`trivia_survival_${userId}`, true);
@@ -10792,7 +10803,7 @@ const userId = gameState.userId;
                     // ✅ Correcto - Continuar
                     correctStreak++;
                     totalCorrect++;
-                    totalEarned += currentReward;
+                    totalEarned += survivalDoubleReward ? currentReward * 2 : currentReward;
                     totalXP += currentXPReward;
 
                     const correctEmbed = new EmbedBuilder()
