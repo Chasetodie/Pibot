@@ -4136,7 +4136,7 @@ if (input.length < 3) {
                     { label: '🤍 Blanco', value: '#FFFFFF', description: '#FFFFFF' },
                     { label: '🖤 Negro', value: '#2C2F33', description: '#2C2F33' },
                     { label: '🩶 Gris', value: '#99AAB5', description: '#99AAB5' },
-                    { label: '✨ Dorado', value: '#FFD700', description: '#FFD700' },
+                    { label: '✨ Dorado', value: '#FFA500', description: '#FFD700' },
                 ])
         );
 
