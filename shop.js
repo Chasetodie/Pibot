@@ -1703,33 +1703,6 @@ class ShopSystem {
         }
     }
 
-    async applyTriviaBoost(userId, itemId, item) {
-        const user = await this.economy.getUser(userId);
-        const activeEffects = this.parseActiveEffects(user.activeEffects);
-
-        // Verificar si ya tiene un boost activo
-        if (activeEffects['trivia_boost']) {
-            return { success: false, message: 'Ya tienes un boost de trivia activo.' };
-        }
-
-        activeEffects['trivia_boost'] = [{
-            itemId: itemId,
-            subtype: item.effect.subtype || itemId,
-            includes: item.effect.includes || [item.effect.type],
-            uses: item.effect.uses || 1,
-            appliedAt: Date.now()
-        }];
-
-        await this.economy.updateUser(userId, {
-            activeEffects: JSON.stringify(activeEffects)
-        });
-
-        return {
-            success: true,
-            message: `✅ Boost de trivia activado. Se aplicará en tu próxima partida de trivia.\n**Incluye:** ${(item.effect.includes || [item.effect.type]).join(', ')}`
-        };
-    }
-
     // 2. NUEVA FUNCIÓN: Abrir bolsa misteriosa
     async openMoneyBag(userId, item) {
         const amount = Math.floor(Math.random() * (item.effect.max - item.effect.min + 1)) + item.effect.min;
@@ -3153,6 +3126,23 @@ class ShopSystem {
                         }
                     }
 
+if (effect.includes || effect.subtype) {
+    const includesList = (effect.includes || [])
+        .map(i => ({
+            extra_time: '⏳ Tiempo extra',
+            skip_question: '⏭️ Saltar pregunta', 
+            eliminate_wrong: '👥 Eliminar incorrectas',
+            wrong_shield: '🛡️ Escudo de error',
+            double_reward: '💰 Doble recompensa'
+        })[i] || i)
+        .join(', ');
+
+    description += `${rarityEmoji} **${item.name}**\n`;
+    description += `├ Beneficios: ${includesList}\n`;
+    description += `└ Usos restantes: ${effect.usesLeft || effect.uses || 1}\n\n`;
+    continue;
+}
+
                     // ✅ NUEVO: Verificar si tiene usos o tiempo
                     if (effect.usesLeft && effect.usesLeft > 0) {
                         // Items con usos (como robbery_kit)
@@ -4492,6 +4482,48 @@ if (input.length < 3) {
         }
     }
 
+async applyTriviaBoost(userId, itemId, item) {
+    const user = await this.economy.getUser(userId);
+    const activeEffects = this.parseActiveEffects(user.activeEffects);
+
+    // Verificar si ya tiene uno activo
+    if (activeEffects['trivia_boost']) {
+        return { 
+            success: false, 
+            message: '⚠️ Ya tienes un boost de trivia activo. Úsalo primero antes de activar otro.' 
+        };
+    }
+
+    activeEffects['trivia_boost'] = [{
+        itemId: itemId,
+        subtype: item.effect.subtype || itemId,
+        includes: item.effect.includes || [item.effect.type],
+        uses: item.effect.uses || 1,
+        usesLeft: item.effect.uses || 1,
+        appliedAt: Date.now()
+    }];
+
+    await this.economy.updateUser(userId, {
+        activeEffects: JSON.stringify(activeEffects)
+    });
+    this.economy.database.userCache.delete(userId);
+
+    const includesList = (item.effect.includes || [item.effect.type])
+        .map(i => ({
+            extra_time: '⏳ Tiempo extra',
+            skip_question: '⏭️ Saltar pregunta',
+            eliminate_wrong: '👥 Eliminar incorrectas',
+            wrong_shield: '🛡️ Escudo de error',
+            double_reward: '💰 Doble recompensa'
+        })[i] || i)
+        .join('\n');
+
+    return {
+        success: true,
+        message: `✅ Boost de trivia activado!\n\n**Incluye:**\n${includesList}\n\n**Usos:** ${item.effect.uses || 1}\nSe aplicará automáticamente en tu próxima partida.`
+    };
+}
+
     async processItemRefunds(notifyChannel = null) {
         console.log('💸 Iniciando proceso de reembolsos...');
         let totalRefunded = 0;
@@ -4808,60 +4840,77 @@ if (isHomeGuild) {
                     });
                     return;
                 }
-                
-                // Cambiar el apodo en Discord
-                const HOME_GUILD_ID = '1270508373732884522'; // ID de tu server
-                if (interaction.guild.id === HOME_GUILD_ID) {
-                    const member = interaction.guild.members.cache.get(userId);
-                    await member.setNickname(nicknameData.finalNickname);
-                }
-                
-                // Consumir el token
-                const newItems = { ...userItems };
-                newItems['nickname_token'].quantity -= 1;
-                if (newItems['nickname_token'].quantity <= 0) {
-                    delete newItems['nickname_token'];
-                }
-                
-                await this.economy.updateUser(userId, { 
-                    items: newItems,
-                    cosmetic_nickname: nicknameData.newNickname
-                });
+if (action === 'confirm') {
+    try {
+        const user = await this.economy.getUser(userId);
+        const userItems = user.items || {};
+        
+        if (!userItems['nickname_token'] || userItems['nickname_token'].quantity < 1) {
+            await interaction.update({
+                embeds: [new EmbedBuilder()
+                    .setTitle('❌ Token No Disponible')
+                    .setDescription('Ya no tienes el token requerido.')
+                    .setColor('#FF0000')],
+                components: []
+            });
+            return;
+        }
 
-this.economy.database.userCache.delete(userId);
-                
-                // Confirmar éxito
-                const isHomeGuild = interaction.guild.id === HOME_GUILD_ID;
+        const HOME_GUILD_ID = '1270508373732884522';
+        const isHomeGuild = interaction.guild.id === HOME_GUILD_ID;
 
-                const successEmbed = new EmbedBuilder()
-                    .setTitle('✅ Apodo Guardado Exitosamente')
-                    .setDescription(isHomeGuild
-                        ? `Tu apodo ha sido actualizado correctamente.`
-                        : `Tu apodo cosmético fue guardado. Puedes verlo usando >bal`)
-                    .addFields(
-                        { name: '✨ Nuevo Apodo', value: `**${nicknameData.finalNickname}**`, inline: true },
-                        { name: '💎 Token Consumido', value: '1x 🏷️✨ Token de Apodo', inline: true },
-                        { name: '🔄 Para Cambiar Otra Vez', value: 'Necesitarás craftear otro token y usar `>setnickname <nuevo_apodo>`', inline: false }
-                    )
-                    .setColor('#00FF00')
-                    .setThumbnail(interaction.user.displayAvatarURL({ dynamic: true }));
-                
-                await interaction.update({ 
-                    embeds: [successEmbed], 
-                    components: [] 
-                });
-                
-            } catch (error) {
-                console.error('Error cambiando apodo:', error);
-                await interaction.update({
-                    embeds: [new EmbedBuilder()
-                        .setTitle('❌ Error al Cambiar Apodo')
-                        .setDescription('Hubo un error al cambiar tu apodo. Tu token no fue consumido. Contacta a un administrador.')
-                        .setColor('#FF0000')],
-                    components: []
-                });
+        // Consumir token y guardar cosmético SIEMPRE
+        const newItems = { ...userItems };
+        newItems['nickname_token'].quantity -= 1;
+        if (newItems['nickname_token'].quantity <= 0) {
+            delete newItems['nickname_token'];
+        }
+
+        await this.economy.updateUser(userId, {
+            items: newItems,
+            cosmetic_nickname: nicknameData.newNickname
+        });
+        this.economy.database.userCache.delete(userId);
+
+        // Cambiar nick en Discord SOLO si es el home guild
+        if (isHomeGuild) {
+            try {
+                const member = await interaction.guild.members.fetch(userId);
+                await member.setNickname(nicknameData.finalNickname);
+            } catch (err) {
+                // Si falla (eres dueño del server, rol más alto, etc.) no importa
+                console.log(`⚠️ No se pudo cambiar nick en Discord: ${err.message}`);
             }
         }
+
+        // Embed de éxito
+        const successEmbed = new EmbedBuilder()
+            .setTitle('✅ Apodo Guardado Exitosamente')
+            .setDescription(isHomeGuild
+                ? `Tu apodo ha sido actualizado correctamente.`
+                : `Tu apodo cosmético fue guardado. Puedes verlo usando \`>bal\``)
+            .addFields(
+                { name: '✨ Apodo Cosmético', value: `**${nicknameData.newNickname}**`, inline: true },
+                ...(isHomeGuild ? [{ name: '🏷️ Apodo en Discord', value: `**${nicknameData.finalNickname}**`, inline: true }] : []),
+                { name: '💎 Token Consumido', value: '1x 🏷️✨ Token de Apodo', inline: false },
+                { name: '🔄 Para Cambiar Otra Vez', value: 'Necesitarás craftear otro token y usar `>setnickname <nuevo_apodo>`', inline: false }
+            )
+            .setColor('#00FF00')
+            .setThumbnail(interaction.user.displayAvatarURL({ dynamic: true }));
+
+        await interaction.update({ embeds: [successEmbed], components: [] });
+
+    } catch (error) {
+        console.error('Error cambiando apodo:', error);
+        await interaction.update({
+            embeds: [new EmbedBuilder()
+                .setTitle('❌ Error al Cambiar Apodo')
+                .setDescription('Hubo un error. Tu token no fue consumido. Contacta a un administrador.')
+                .setColor('#FF0000')],
+            components: []
+        });
+    }
+}
     }
 
     // Función para notificar items expirados/agotados
