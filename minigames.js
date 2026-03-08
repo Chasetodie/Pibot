@@ -9959,35 +9959,37 @@ const userId = gameState.userId;
                                 difficulty !== 'easy' && 
                                 !q.isTrueFalse;
                 
-                if (canUseHint) {
-                    buttons.addComponents(
-                        new ButtonBuilder()
-                            .setCustomId('trivia_hint')
-                            .setLabel(`💡 Pista (${hintsRemaining})`)
-                            .setStyle(ButtonStyle.Secondary)
-                    );
-                }
+const extraButtons = new ActionRowBuilder();
 
-                if (triviaSkipsLeft > 0 && !isTrueFalse) {
-                    buttons.addComponents(
-                        new ButtonBuilder()
-                            .setCustomId('trivia_skip')
-                            .setLabel(`⏭️ Saltar (${triviaSkipsLeft})`)
-                            .setStyle(ButtonStyle.Secondary)
-                    );
-                }
+if (canUseHint) {
+    extraButtons.addComponents(
+        new ButtonBuilder()
+            .setCustomId('trivia_hint')
+            .setLabel(`💡 Pista (${hintsRemaining})`)
+            .setStyle(ButtonStyle.Secondary)
+    );
+}
+if (triviaSkipsLeft > 0 && !isTrueFalse) {
+    extraButtons.addComponents(
+        new ButtonBuilder()
+            .setCustomId('trivia_skip')
+            .setLabel(`⏭️ Saltar (${triviaSkipsLeft})`)
+            .setStyle(ButtonStyle.Secondary)
+    );
+}
+if (triviaEliminatesLeft > 0 && !isTrueFalse) {
+    extraButtons.addComponents(
+        new ButtonBuilder()
+            .setCustomId('trivia_eliminate')
+            .setLabel(`👥 Público (${triviaEliminatesLeft})`)
+            .setStyle(ButtonStyle.Primary)
+    );
+}
 
-                if (triviaEliminatesLeft > 0 && !isTrueFalse) {
-                    buttons.addComponents(
-                        new ButtonBuilder()
-                            .setCustomId('trivia_eliminate')
-                            .setLabel(`👥 Público (${triviaEliminatesLeft})`)
-                            .setStyle(ButtonStyle.Primary)
-                    );
-                }
-
-                await gameMessage.edit({ embeds: [questionEmbed], components: [buttons] });
-
+// Quitar los addComponents de hint/skip/eliminate que están arriba (líneas 9962-9987)
+const components = extraButtons.components.length > 0 ? [buttons, extraButtons] : [buttons];
+await gameMessage.edit({ embeds: [questionEmbed], components });
+				
                 // Timeout para esta pregunta
                 const timeoutPromise = new Promise((resolve) => {
                     setTimeout(() => resolve('timeout'), effectiveTriviaTime);
@@ -9995,7 +9997,7 @@ const userId = gameState.userId;
 
                 // Esperar respuesta del usuario
                 const filter = (i) => i.user.id === userId && i.customId.startsWith('trivia_');
-                
+
                 let answered = false;
                 while (!answered) {
                     const collectorPromise = gameMessage.awaitMessageComponent({ 
