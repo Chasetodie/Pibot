@@ -4468,21 +4468,21 @@ async applyTriviaBoost(userId, itemId, item) {
     const activeEffects = this.parseActiveEffects(user.activeEffects);
 
     // Verificar si ya tiene uno activo
-    if (activeEffects['trivia_boost']) {
+    if (activeEffects[itemId]) {
         return { 
             success: false, 
             message: '⚠️ Ya tienes un boost de trivia activo. Úsalo primero antes de activar otro.' 
         };
     }
 
-    activeEffects['trivia_boost'] = [{
-        itemId: itemId,
-        subtype: item.effect.subtype || itemId,
-        includes: item.effect.includes || [item.effect.type],
-        uses: item.effect.uses || 1,
-        usesLeft: item.effect.uses || 1,
-        appliedAt: Date.now()
-    }];
+activeEffects[itemId] = [{
+    itemId: itemId,
+    subtype: item.effect.subtype || itemId,
+    includes: item.effect.includes || [item.effect.type],
+    uses: item.effect.uses || 1,
+    usesLeft: item.effect.uses || 1,
+    appliedAt: Date.now()
+}];
 
     await this.economy.updateUser(userId, {
         activeEffects: JSON.stringify(activeEffects)
