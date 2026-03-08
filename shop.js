@@ -4911,6 +4911,9 @@ if (action === 'confirm') {
         });
     }
 }
+            } catch (error) {
+                console.error('Error: ', error);
+            }
     }
 
     // Función para notificar items expirados/agotados
