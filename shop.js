@@ -4242,7 +4242,7 @@ if (input.length < 3) {
                 { name: '📝 Nombre del Rol', value: `**${roleName}**`, inline: true },
                 { name: '🎨 Color', value: `\`${colorHex}\``, inline: true },
                 { name: '💎 Costo', value: '**1x** 🎭 Token de Rol Personalizado', inline: false },
-{ name: '⚠️ Importante', value: '• El token será consumido permanentemente\n• Solo puedes tener un rol personalizado\n• El rol será creado y asignado en este servidor\n• 🎨 La barra lateral de este embed muestra el color que tendrá tu `>bal`', inline: false }
+{ name: '⚠️ Importante', value: `• El token será consumido permanentemente\n• Solo puedes tener un rol personalizado\n${interaction.guild?.id === '1270508373732884522' ? '• El rol será creado y asignado en este servidor\n' : ''}• 🎨 El color que elijas cambiará el borde de tu \`>bal\` en cualquier servidor`, inline: false }
             )
             .setColor(colorInt)
             .setThumbnail(message.author.displayAvatarURL({ dynamic: true }));
