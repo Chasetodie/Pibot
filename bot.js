@@ -723,6 +723,11 @@ if (interaction.customId.startsWith('recipes_')) {
             return;
         }
 
+    if (interaction.customId.startsWith('rolecolor_')) {
+    await shop.handleRoleColorSelect(interaction);
+    return;
+    }
+
         if (interaction.customId.startsWith('trade_accept_')) {
             try {
                 // Evitar spam
@@ -1315,6 +1320,7 @@ client.login(process.env.TOKEN).then(() => {
 }).catch(error => {
     console.error('❌ Error en el login:', error);
 });*/
+
 
 
 
