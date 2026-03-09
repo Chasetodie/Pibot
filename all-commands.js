@@ -2373,25 +2373,15 @@ const commandName = command.replace('>', '');
                     if (message.author.id !== '488110147265232898') return;
 
                     const maintenance = await this.economy.database.getActiveMaintenance();
-                    if (maintenance) {
-                        await this.economy.database.disableMaintenance(maintenance.id);
-                    }
+                    if (maintenance) await this.economy.database.disableMaintenance(maintenance.id);
 
-                    // Formato: >endmaintenance 🐛 Bugs: Fix shield, Fix skip | ✨ Nuevo: Paginación recipes
-                    const changelogText = args.slice(1).join(' ');
+                    // Leer changelog.json automáticamente
                     let changes = {};
-
-                    if (changelogText) {
-                        const sections = changelogText.split('|');
-                        for (const section of sections) {
-                            const colonIndex = section.indexOf(':');
-                            if (colonIndex !== -1) {
-                                const cat = section.substring(0, colonIndex).trim();
-                                const itemsStr = section.substring(colonIndex + 1).trim();
-                                changes[cat] = itemsStr.split(',').map(i => i.trim()).filter(Boolean);
-                            }
-                        }
-                    } else {
+                    try {
+                        const fs = require('fs');
+                        const raw = fs.readFileSync('./changelog.json', 'utf8');
+                        changes = JSON.parse(raw);
+                    } catch {
                         changes = { '✨ Actualización': ['Mejoras generales y correcciones de bugs'] };
                     }
 
