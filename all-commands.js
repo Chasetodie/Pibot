@@ -2721,7 +2721,6 @@ const commandName = command.replace('>', '');
                     { name: '>triviacategorias', value: 'Ver categorías disponibles de trivia', inline: true },
                     { name: '>triviacomp <apuesta>', value: 'Trivia competitiva multijugador', inline: true },                    { name: '>trivialb [tipo]', value: 'Rankings de trivia', inline: true },
                     { name: '\u200b', value: '\u200b', inline: true },
-                    { name: '\u200b', value: '\u200b', inline: true },
                 ]
             },
             betting: {
