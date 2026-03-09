@@ -2941,32 +2941,59 @@ const commandName = command.replace('>', '');
             }
         }
 
-            if (category === 'dev') {
-                if (interaction.user.id !== '488110147265232898') {
-                    return interaction.reply({
-                        content: '❌ Esta sección es solo para el desarrollador.',
-                        ephemeral: true
-                    });
-                }
-
-                const embed = new EmbedBuilder()
-                    .setColor('#FF0000')
-                    .setTitle('🔧 Panel de Desarrollador')
-                    .addFields(...categories.dev.fields); // ← usar categories.dev directamente
-
-                const backButton = new ActionRowBuilder().addComponents(
-                    new ButtonBuilder()
-                        .setCustomId(`help_main_${interaction.user.id}`)
-                        .setLabel('⬅️ Volver al Menú')
-                        .setStyle(ButtonStyle.Secondary)
-                );
-
+        if (category === 'dev') {
+            if (interaction.user.id !== '488110147265232898') {
                 return interaction.reply({
-                    embeds: [embed],
-                    components: [backButton],
+                    content: '❌ Esta sección es solo para el desarrollador.',
                     ephemeral: true
                 });
             }
+
+            const embed = new EmbedBuilder()
+                .setColor('#FF0000')
+                .setTitle('🔧 Panel de Desarrollador')
+                .addFields(
+                    { name: '💰 Economía Admin', value: '─────────────────', inline: false },
+                    { name: '>addmoney @user <cant> <razón>', value: 'Dar dinero a un usuario', inline: true },
+                    { name: '>removemoney @user <cant> <razón>', value: 'Quitar dinero a un usuario', inline: true },
+                    { name: '>addxp @user <cant> <razón>', value: 'Dar XP a un usuario', inline: true },
+                    { name: '>giveitem @user <item_id> <cant>', value: 'Dar item a un usuario', inline: true },
+                    { name: '>processrefunds', value: 'Procesar reembolsos de precios', inline: true },
+                    { name: '\u200b', value: '\u200b', inline: true },
+
+                    { name: '📊 Estadísticas', value: '─────────────────', inline: false },
+                    { name: '>shopstats', value: 'Estadísticas globales de la tienda', inline: true },
+                    { name: '>eventstats', value: 'Estadísticas de eventos activos', inline: true },
+                    { name: '>debugpot', value: 'Debug del pozo semanal', inline: true },
+                    { name: '>checklimits', value: 'Debug de límites de juegos', inline: true },
+                    { name: '\u200b', value: '\u200b', inline: true },
+
+                    { name: '🧹 Mantenimiento DB', value: '─────────────────', inline: false },
+                    { name: '>cleancompletedpots', value: 'Limpiar pozos completados de la DB', inline: true },
+                    { name: '>fixoldpots', value: 'Distribuir pozos antiguos sin procesar', inline: true },
+                    { name: '>detectall', value: 'Detectar logros para todos los usuarios', inline: true },
+                    { name: '\u200b', value: '\u200b', inline: true },
+                    { name: '\u200b', value: '\u200b', inline: true },
+
+                    { name: '🔧 Mantenimiento Bot', value: '─────────────────', inline: false },
+                    { name: '>setmaintenance HH:MM [mensaje]', value: 'Programar aviso de mantenimiento', inline: true },
+                    { name: '>endmaintenance', value: 'Finalizar y publicar changelog automático', inline: true },
+                    { name: '>cancelmaintenance', value: 'Cancelar mantenimiento activo', inline: true },
+                    { name: '>maintenanceteston', value: 'Activar modo test', inline: true },
+                    { name: '>maintenancetestoff', value: 'Desactivar modo test', inline: true },
+                    { name: '>resetmaintenancetest', value: 'Resetear datos del usuario de prueba', inline: true },
+
+                    { name: '🤖 IA & Chat', value: '─────────────────', inline: false },
+                    { name: '>orstatus / >aistatus', value: 'Ver estado de proveedores IA', inline: true },
+                    { name: '>orcredits', value: 'Ver créditos y uso de IA', inline: true },
+                    { name: '>chatstats', value: 'Estadísticas de conversaciones', inline: true },
+                );
+
+            return interaction.reply({
+                embeds: [embed],
+                ephemeral: true
+            });
+        }
 
         const fakeMessage = {
             author: interaction.user,
