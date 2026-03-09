@@ -9657,6 +9657,7 @@ const userId = gameState.userId;
         let triviaExtraTime = 0;
         let triviaSkipsLeft = 0;
         let triviaEliminatesLeft = 0;
+		let triviaEliminatesUsed = 0;
         let triviaDoubleReward = false;
         let triviaWrongShield = false;
 
@@ -10163,6 +10164,7 @@ await gameMessage.edit({ embeds: [questionEmbed], components });
                             continue;
                         }
                         triviaEliminatesLeft--;
+						triviaEliminatesUsed++;
 
                         // Eliminar 2 respuestas incorrectas
                         const wrongOpts = q.answers.filter(a => a !== q.correct);
@@ -10225,19 +10227,41 @@ await gameMessage.edit({ embeds: [questionEmbed], components });
                             .setColor('#00FF00');
 
                         await interaction.update({ embeds: [correctEmbed], components: [] });
-                    } else {
-                        const wrongEmbed = new EmbedBuilder()
-                            .setTitle('❌ Incorrecto')
-                            .setDescription(
-                                `<@${userId}> respondió incorrectamente\n\n` +
-                                `**Pregunta:** ${q.question}\n\n` +
-                                `❌ **Tu respuesta:** ${selectedAnswer}\n` +
-                                `✅ **Respuesta correcta:** ${q.correct}`
-                            )
-                            .setColor('#FF0000');
+} else {
+    // Verificar si el shield absorbe este fallo
+    const isFirstWrong = questionResults.filter(r => !r.correct && !r.skipped).length === 1;
+    const shieldActivates = triviaWrongShield && isFirstWrong;
 
-                        await interaction.update({ embeds: [wrongEmbed], components: [] });
-                    }
+    if (shieldActivates) {
+        // Marcar como protegida
+        questionResults[questionResults.length - 1].shielded = true;
+
+        const shieldEmbed = new EmbedBuilder()
+            .setTitle('🛡️ ¡Escudo Activado!')
+            .setDescription(
+                `<@${userId}> falló, pero el **Escudo de Trivia** absorbió el error\n\n` +
+                `**Pregunta:** ${q.question}\n\n` +
+                `❌ **Tu respuesta:** ${selectedAnswer}\n` +
+                `✅ **Respuesta correcta:** ${q.correct}\n\n` +
+                `> ⚠️ El escudo ya fue usado, el próximo fallo contará.`
+            )
+            .setColor('#FFD700');
+
+        await interaction.update({ embeds: [shieldEmbed], components: [] });
+    } else {
+        const wrongEmbed = new EmbedBuilder()
+            .setTitle('❌ Incorrecto')
+            .setDescription(
+                `<@${userId}> respondió incorrectamente\n\n` +
+                `**Pregunta:** ${q.question}\n\n` +
+                `❌ **Tu respuesta:** ${selectedAnswer}\n` +
+                `✅ **Respuesta correcta:** ${q.correct}`
+            )
+            .setColor('#FF0000');
+
+        await interaction.update({ embeds: [wrongEmbed], components: [] });
+    }
+					}
 
                     await new Promise(resolve => setTimeout(resolve, 5000));
 
@@ -10372,16 +10396,18 @@ await gameMessage.edit({ embeds: [questionEmbed], components });
                 await this.economy.updateUser(userId, updateDataTrivia);
             
                 // Crear resumen de preguntas
-                let questionsReview = '';
-                questionResults.forEach((result, index) => {
-                    const emoji = result.correct ? '✅' : '❌';
-                    questionsReview += `${emoji} **Pregunta ${index + 1}:** ${result.question}\n`;
-                    questionsReview += `   **Tu respuesta:** ${result.userAnswer || 'Sin respuesta'}\n`;
-                    if (!result.correct) {
-                        questionsReview += `   **Correcta:** ${result.correctAnswer}\n`;
-                    }
-                    questionsReview += '\n';
-                });
+let questionsReview = '';
+const skippedCount = questionResults.filter(r => r.skipped).length;
+
+questionResults.forEach((result, index) => {
+    const emoji = result.correct ? '✅' : result.shielded ? '🛡️' : result.skipped ? '⏭️' : '❌';
+    questionsReview += `${emoji} **Pregunta ${index + 1}:** ${result.question}\n`;
+    questionsReview += `   **Tu respuesta:** ${result.userAnswer || 'Sin respuesta'}\n`;
+    if (!result.correct && !result.shielded && !result.skipped) {
+        questionsReview += `   **Correcta:** ${result.correctAnswer}\n`;
+    }
+    questionsReview += '\n';
+});
 
                 const hintsUsedd = this.config.trivia.hintsPerGame - hintsRemaining;
                 const modeText = isTrueFalse ? 'Verdadero/Falso' : 'Opción Múltiple';
@@ -10389,8 +10415,10 @@ await gameMessage.edit({ embeds: [questionEmbed], components });
                 const resultEmbed = new EmbedBuilder()
                     .setTitle('🎯 ¡Trivia Completada!')
                     .setDescription(
-                        `Respondiste **${correctAnswers}/${questions.length}** preguntas correctamente\n` +
-                        `${hintsUsedd > 0 ? `💡 Pistas usadas: ${hintsUsedd} (Recompensa -60%)\n` : ''}`
+`Respondiste **${correctAnswers}/${questions.length}** preguntas correctamente\n` +
+`${skippedCount > 0 ? `⏭️ Saltadas: ${skippedCount}\n` : ''}` +
+`${hintsUsedd > 0 ? `💡 Pistas usadas: ${hintsUsedd} (Recompensa -60%)\n` : ''}` +
+`${triviaEliminatesUsed > 0 ? `👥 Ayuda del público usada: ${triviaEliminatesUsed} vez/veces\n` : ''}`
                     )
                     .addFields(
                         { name: '💰 Dinero ganado', value: `${finalMoneyWithBonus} π-b$${triviaEventBonus.eventMessage ? `\n${triviaEventBonus.eventMessage}` : ''}`, inline: true },
@@ -10806,7 +10834,7 @@ if (survivalDoubleCheck && survivalDoubleCheck.length > 0) {
                     correctStreak++;
                     totalCorrect++;
                     totalEarned += survivalDoubleReward ? currentReward * 2 : currentReward;
-                    totalXP += currentXPReward;
+                    totalXP += survivalDoubleReward ? currentXPReward * 2 : currentXPReward;
 
                     const correctEmbed = new EmbedBuilder()
                         .setTitle('✅ ¡Correcto!')
