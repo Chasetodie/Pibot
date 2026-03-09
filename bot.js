@@ -83,7 +83,6 @@ const database = new LocalDatabase();
 database.startCacheCleanup();
 
 const maintenance = new MaintenanceSystem(database);
-allCommands.maintenance = maintenance;
 
 const chatbot = new ChatBotSystem(database, economy);
 
@@ -120,6 +119,7 @@ const crafting = new CraftingSystem(shop, client);
 
 // Instancia del sistema de comandos mejorados
 const allCommands = new AllCommands(economy, shop, trades, auctions, crafting, events, betting, achievements, guildLevels, guildConfig, maintenance);
+//allCommands.maintenance = maintenance;
 
 economy.achievements = achievements;
 minigames.achievements = achievements;
