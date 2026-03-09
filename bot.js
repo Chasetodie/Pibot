@@ -1008,7 +1008,7 @@ client.on('messageCreate', async (message) => {
         }
     }
     
-    if (content.startsWith('>') && !message.author.bot) {
+    if (message.content.startsWith('>') && !message.author.bot) {
         await maintenance.checkAndNotify(message.author.id, message.channel);
     }
 
