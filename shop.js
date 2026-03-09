@@ -4506,7 +4506,7 @@ activeEffects[itemId] = [{
 
     return {
         success: true,
-        message: `✅ Boost de trivia activado!\n\n**Incluye:**\n${includesList}\n\n**Usos:** ${item.effect.uses || 1}\nSe aplicará automáticamente en tu próxima partida.`
+message: `¡Item activado con éxito!\n\n**Beneficios:**\n${includesList}\n\n🎮 **Usos:** ${item.effect.uses || 1}\n\n> ⚠️ Se aplicará automáticamente al iniciar tu próxima trivia.`
     };
 }
 
