@@ -103,9 +103,9 @@ class LocalDatabase {
                     active BOOLEAN DEFAULT FALSE,
                     scheduled_at BIGINT NOT NULL,
                     message TEXT,
-                    changelog JSON,
+                    changelog TEXT,
                     created_at BIGINT NOT NULL
-                );                
+                );
             `);
 
             // Tabla para apuestas
