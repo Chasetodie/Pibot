@@ -171,13 +171,104 @@ class ChatBotSystem {
 
     getAvailableCommands() {
         return `
-    COMANDOS DISPONIBLES:
-    💰 Economía: >balance, >daily, >work, >transfer
-    🎮 Juegos: >minigames
-    🏪 Tienda: >shop, >buy, >inventory
-    💬 Chat IA: >chat, >clearchat, >chatstats
-    📊 Estado: >orstatus, >orcredits, >chatquota, >generarhelp
-    📋 Info: >profile, >leaderboard, >help
+    COMANDOS DISPONIBLES (si preguntan por alguno, explícalo con detalle):
+
+    💰 ECONOMÍA:
+    - >balance / >bal — Ver tu saldo, nivel y XP
+    - >daily — Recompensa diaria gratis
+    - >work [tipo] — Trabajar para ganar dinero
+    - >pay @usuario <cantidad> — Transferir dinero
+    - >robar @usuario — Intentar robar dinero
+    - >top — Ranking de dinero y niveles
+
+    🎮 MINIJUEGOS:
+    - >games — Ver todos los juegos disponibles
+    - >coinflip <cara/cruz> <apuesta> — Cara o cruz
+    - >dice <tipo> <apuesta> — Dados
+    - >slots <apuesta> — Tragaperras
+    - >blackjack <apuesta> — Blackjack
+    - >roulette <tipo> <apuesta> — Ruleta
+    - >lottery <número> <apuesta> — Lotería
+    - >horses <bot/multi> <apuesta> — Carrera de caballos
+    - >russian <apuesta> — Ruleta rusa multijugador
+    - >ujoin <apuesta> — UNO multijugador
+    - >vending — Máquina expendedora
+
+    🧠 TRIVIA:
+    - >trivia [easy/medium/hard] [multiple/tof] — Trivia clásica (gratis)
+    - >triviasurvival start — Modo supervivencia
+    - >triviacomp <apuesta> — Competitiva multijugador
+    - >trivialb [tipo] — Rankings de trivia
+    - >triviacategorias — Ver categorías disponibles
+
+    🏪 TIENDA:
+    - >shop [categoría] — Ver la tienda
+    - >buy <item_id> [cantidad] — Comprar item
+    - >bag / >inventario — Ver tu inventario
+    - >useitem <item_id> — Usar un item
+    - >effects — Ver efectos activos
+    - >cosmeticos — Ver cosméticos equipados
+    - >setnickname <apodo> — Apodo cosmético
+    - >rolcreate <#COLOR> <nombre> — Rol personalizado
+
+    ⚒️ CRAFTEO:
+    - >recipes — Ver recetas disponibles
+    - >craft <recipe_id> — Craftear un item
+    - >craftqueue — Ver cola de crafteo
+    - >cancelcraft <id> — Cancelar crafteo
+
+    🔄 INTERCAMBIOS:
+    - >trade @usuario — Iniciar intercambio
+    - >tradeadd <item_id> [cant] — Agregar item al trade
+    - >trademoney <cantidad> — Agregar dinero al trade
+    - >tradeaccept — Confirmar intercambio
+    - >tradecancel — Cancelar intercambio
+
+    🔨 SUBASTAS:
+    - >auction <item_id> <precio> [minutos] — Subastar item
+    - >bid <id> <cantidad> — Pujar en subasta
+    - >auctionshow — Ver subastas activas
+
+    🎲 APUESTAS:
+    - >bet @usuario <cantidad> <descripción> — Crear apuesta
+    - >acceptbet <id> — Aceptar apuesta
+    - >resolvebet <id> @ganador — Resolver apuesta
+    - >mybets — Ver tus apuestas activas
+
+    🏆 PROGRESO:
+    - >achievements — Ver tus logros
+    - >allachievements — Ver todos los logros posibles
+    - >progress — Progreso de logros
+    - >missions — Misiones diarias
+    - >level — Ver tu nivel global
+    - >slevel — Ver tu nivel en el servidor
+
+    🎉 EVENTOS:
+    - >events — Ver eventos activos
+
+    👑 VIP:
+    - >vip — Ver estado VIP
+    - >viphelp — Guía completa VIP
+    - >vipwork / >vipdaily / >vipgamble — Comandos VIP
+
+    🎵 MÚSICA:
+    - >m play <canción/URL> — Reproducir música
+    - >m pause / >m resume — Pausar/reanudar
+    - >m skip — Saltar canción
+    - >m stop — Detener música
+    - >m queue — Ver cola
+    - >m help — Ver todos los comandos de música
+
+    🎨 IMÁGENES IA:
+    - >imagine <descripción> — Generar imagen con IA
+
+    💬 CHAT IA:
+    - >chat <mensaje> — Chatear conmigo
+    - >clearchat — Limpiar historial
+    - >chatstats — Ver estadísticas de chat
+
+    📋 GENERAL:
+    - >help — Menú de ayuda completo
     `.trim();
     }
 //    🎨 Imágenes IA: >generar, >generaranime, >generar3d, >generarrealista
@@ -529,6 +620,7 @@ class ChatBotSystem {
     TU CONOCIMIENTO:
     - Información general hasta mediados de 2023
     - Para comandos del bot: ${this.getAvailableCommands()}
+    - Si alguien pregunta "cómo uso >X" o "qué hace >X" o "explica >X", explica ese comando específico con detalle: qué hace, cómo se usa, ejemplos
     - Si no sabes algo: "No tengo esa info 😅"
 
     REGLAS CRÍTICAS:

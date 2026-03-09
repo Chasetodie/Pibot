@@ -173,7 +173,6 @@ class ShopSystem {
                 },
                 stackable: true,
                 maxStack: 5,
-                chestOnly: true,
             },
 
             'trivia_skip_token': {
@@ -191,7 +190,6 @@ class ShopSystem {
                 },
                 stackable: true,
                 maxStack: 3,
-                chestOnly: true,
             },
 
             'trivia_audience': {
@@ -210,7 +208,6 @@ class ShopSystem {
                 },
                 stackable: true,
                 maxStack: 3,
-                chestOnly: true,
             },
 
             'trivia_double_reward': {
@@ -229,7 +226,6 @@ class ShopSystem {
                 },
                 stackable: true,
                 maxStack: 3,
-                chestOnly: true,
             },
 
             'trivia_shield': {
@@ -247,7 +243,6 @@ class ShopSystem {
                 },
                 stackable: true,
                 maxStack: 2,
-                chestOnly: true,
             },
 
             // === DECORATIVOS ===
@@ -384,7 +379,6 @@ class ShopSystem {
                 },
                 stackable: true,
                 maxStack: 1,
-                //guildExclusive: '1270508373732884522',
             },
 
             // === NUEVOS ITEMS PERMANENTES ===
@@ -467,7 +461,6 @@ class ShopSystem {
                 rarity: 'rare',
                 stackable: true,
                 maxStack: 3, // Aumenté porque ahora es ingrediente
-                //guildExclusive: '1270508373732884522',
             },
             'premium_mystery_box': {
                 id: 'premium_mystery_box',
@@ -759,7 +752,6 @@ class ShopSystem {
                 chestOnly: true,
                 stackable: true,
                 maxStack: 3, // Reduje el stack ya que es más valioso
-                //guildExclusive: '1270508373732884522',
             },    
             'epic_chest': {
                 id: 'epic_chest',
@@ -1231,7 +1223,7 @@ class ShopSystem {
         if (category === 'all') {
             items = Object.values(this.shopItems).filter(item => !item.chestOnly && guildFilter(item));
         } else {
-            items = Object.values(this.shopItems).filter(item => item.category === category && guildFilter(item));
+            items = Object.values(this.shopItems).filter(item => item.category === category && !item.chestOnly && guildFilter(item));
         }
         
         const itemsPerPage = 3;
@@ -4247,7 +4239,7 @@ if (input.length < 3) {
                 { name: '📝 Nombre del Rol', value: `**${roleName}**`, inline: true },
                 { name: '🎨 Color', value: `\`${colorHex}\``, inline: true },
                 { name: '💎 Costo', value: '**1x** 🎭 Token de Rol Personalizado', inline: false },
-{ name: '⚠️ Importante', value: `• El token será consumido permanentemente\n• Solo puedes tener un rol personalizado\n${message.guild?.id === '1270508373732884522' ? '• El rol será creado y asignado en este servidor\n' : ''}• 🎨 El color que elijas cambiará el borde de tu \`>bal\` en cualquier servidor`, inline: false }
+                { name: '⚠️ Importante', value: `• El token será consumido permanentemente\n• Solo puedes tener un rol personalizado\n${message.guild?.id === '1270508373732884522' ? '• El rol será creado y asignado en este servidor\n' : ''}• 🎨 El color que elijas cambiará el borde de tu \`>bal\` en cualquier servidor`, inline: false }
             )
             .setColor(colorInt)
             .setThumbnail(message.author.displayAvatarURL({ dynamic: true }));
@@ -4337,20 +4329,20 @@ if (input.length < 3) {
                 let newRole = null;
                 let member;
 
-if (isHomeGuild) {
-    try {
-        newRole = await guild.roles.create({
-            name: roleData.roleName,
-            color: roleData.colorInt,
-            reason: `Rol personalizado de ${interaction.user.tag}`
-        });
-        const member = await guild.members.fetch(userId);
-        await member.roles.add(newRole);
-    } catch (roleError) {
-        console.error('Error creando/asignando rol en Discord:', roleError);
-        newRole = null;
-    }
-}
+                if (isHomeGuild) {
+                    try {
+                        newRole = await guild.roles.create({
+                            name: roleData.roleName,
+                            color: roleData.colorInt,
+                            reason: `Rol personalizado de ${interaction.user.tag}`
+                        });
+                        const member = await guild.members.fetch(userId);
+                        await member.roles.add(newRole);
+                    } catch (roleError) {
+                        console.error('Error creando/asignando rol en Discord:', roleError);
+                        newRole = null;
+                    }
+                }
                 
                 // Consumir el token
                 const newItems = { ...userItems };
@@ -4397,7 +4389,7 @@ if (isHomeGuild) {
                 await interaction.update({
                     embeds: [new EmbedBuilder()
                         .setTitle('❌ Error al Crear Rol')
-                        .setDescription('Hubo un error al crear tu rol. Tu token no fue consumido. Contacta a un administrador.')
+                        .setDescription('Hubo un error al crear tu rol. Tu token no fue consumido. Contacta con mi creador (chasetodie10).')
                         .addFields({
                             name: '🔧 Posibles Causas',
                             value: '• El bot no tiene permisos suficientes\n• El servidor alcanzó el límite de roles\n• Error temporal de Discord',
@@ -4682,40 +4674,40 @@ message: `¡Item activado con éxito!\n\n**Beneficios:**\n${includesList}\n\n�
         const currentNickname = member.displayName;
         
         // Extraer el formato base (Pibe/Piba + número)
-const HOME_GUILD_ID = '1270508373732884522';
-const isHomeGuild = message.guild?.id === HOME_GUILD_ID;
+        const HOME_GUILD_ID = '1270508373732884522';
+        const isHomeGuild = message.guild?.id === HOME_GUILD_ID;
 
-let finalNickname = newNickname;
-let baseNickname = '';
+        let finalNickname = newNickname;
+        let baseNickname = '';
 
-if (isHomeGuild) {
-    const basePattern = /^(Pibe|Piba)\s+(\d+)/i;
-    const match = currentNickname.match(basePattern);
+        if (isHomeGuild) {
+            const basePattern = /^(Pibe|Piba)\s+(\d+)/i;
+            const match = currentNickname.match(basePattern);
 
-    if (!match) {
-        await message.reply({
-            embeds: [new EmbedBuilder()
-                .setTitle('❌ Formato de Apodo Inválido')
-                .setDescription('Tu apodo actual no sigue el formato requerido: **Pibe/Piba + número**\n\nContacta a un administrador para corregir tu apodo base.')
-                .setColor('#FF0000')]
-        });
-        return;
-    }
+            if (!match) {
+                await message.reply({
+                    embeds: [new EmbedBuilder()
+                        .setTitle('❌ Formato de Apodo Inválido')
+                        .setDescription('Tu apodo actual no sigue el formato requerido: **Pibe/Piba + número**\n\nContacta a un administrador para corregir tu apodo base.')
+                        .setColor('#FF0000')]
+                });
+                return;
+            }
 
-    baseNickname = `${match[1]} ${match[2]}`;
-    finalNickname = `${baseNickname} - ${newNickname}`;
+            baseNickname = `${match[1]} ${match[2]}`;
+            finalNickname = `${baseNickname} - ${newNickname}`;
 
-    if (finalNickname.length > 32) {
-        const maxCustomLength = 32 - baseNickname.length - 3;
-        await message.reply({
-            embeds: [new EmbedBuilder()
-                .setTitle('❌ Apodo Muy Largo')
-                .setDescription(`El apodo final sería muy largo.\n\n**Tu base:** ${baseNickname}\n**Máximo:** ${maxCustomLength} caracteres`)
-                .setColor('#FF0000')]
-        });
-        return;
-    }
-}
+            if (finalNickname.length > 32) {
+                const maxCustomLength = 32 - baseNickname.length - 3;
+                await message.reply({
+                    embeds: [new EmbedBuilder()
+                        .setTitle('❌ Apodo Muy Largo')
+                        .setDescription(`El apodo final sería muy largo.\n\n**Tu base:** ${baseNickname}\n**Máximo:** ${maxCustomLength} caracteres`)
+                        .setColor('#FF0000')]
+                });
+                return;
+            }
+        }
         
         // Verificar que el nuevo apodo no exceda el límite de Discord (32 caracteres)
         if (finalNickname.length > 32) {
@@ -4810,77 +4802,77 @@ if (isHomeGuild) {
             return;
         }
         
-if (action === 'confirm') {
-    try {
-        const user = await this.economy.getUser(userId);
-        const userItems = user.items || {};
-        
-        if (!userItems['nickname_token'] || userItems['nickname_token'].quantity < 1) {
-            await interaction.update({
-                embeds: [new EmbedBuilder()
-                    .setTitle('❌ Token No Disponible')
-                    .setDescription('Ya no tienes el token requerido.')
-                    .setColor('#FF0000')],
-                components: []
-            });
-            return;
-        }
-
-        const HOME_GUILD_ID = '1270508373732884522';
-        const isHomeGuild = interaction.guild.id === HOME_GUILD_ID;
-
-        // Consumir token y guardar cosmético SIEMPRE
-        const newItems = { ...userItems };
-        newItems['nickname_token'].quantity -= 1;
-        if (newItems['nickname_token'].quantity <= 0) {
-            delete newItems['nickname_token'];
-        }
-
-        await this.economy.updateUser(userId, {
-            items: newItems,
-            cosmetic_nickname: nicknameData.newNickname
-        });
-        this.economy.database.userCache.delete(userId);
-
-        // Cambiar nick en Discord SOLO si es el home guild
-        if (isHomeGuild) {
+        if (action === 'confirm') {
             try {
-                const member = await interaction.guild.members.fetch(userId);
-                await member.setNickname(nicknameData.finalNickname);
-            } catch (err) {
-                // Si falla (eres dueño del server, rol más alto, etc.) no importa
-                console.log(`⚠️ No se pudo cambiar nick en Discord: ${err.message}`);
+                const user = await this.economy.getUser(userId);
+                const userItems = user.items || {};
+                
+                if (!userItems['nickname_token'] || userItems['nickname_token'].quantity < 1) {
+                    await interaction.update({
+                        embeds: [new EmbedBuilder()
+                            .setTitle('❌ Token No Disponible')
+                            .setDescription('Ya no tienes el token requerido.')
+                            .setColor('#FF0000')],
+                        components: []
+                    });
+                    return;
+                }
+
+                const HOME_GUILD_ID = '1270508373732884522';
+                const isHomeGuild = interaction.guild.id === HOME_GUILD_ID;
+
+                // Consumir token y guardar cosmético SIEMPRE
+                const newItems = { ...userItems };
+                newItems['nickname_token'].quantity -= 1;
+                if (newItems['nickname_token'].quantity <= 0) {
+                    delete newItems['nickname_token'];
+                }
+
+                await this.economy.updateUser(userId, {
+                    items: newItems,
+                    cosmetic_nickname: nicknameData.newNickname
+                });
+                this.economy.database.userCache.delete(userId);
+
+                // Cambiar nick en Discord SOLO si es el home guild
+                if (isHomeGuild) {
+                    try {
+                        const member = await interaction.guild.members.fetch(userId);
+                        await member.setNickname(nicknameData.finalNickname);
+                    } catch (err) {
+                        // Si falla (eres dueño del server, rol más alto, etc.) no importa
+                        console.log(`⚠️ No se pudo cambiar nick en Discord: ${err.message}`);
+                    }
+                }
+
+                // Embed de éxito
+                const successEmbed = new EmbedBuilder()
+                    .setTitle('✅ Apodo Guardado Exitosamente')
+                    .setDescription(isHomeGuild
+                        ? `Tu apodo ha sido actualizado correctamente.`
+                        : `Tu apodo cosmético fue guardado. Puedes verlo usando \`>bal\``)
+                    .addFields(
+                        { name: '✨ Apodo Cosmético', value: `**${nicknameData.newNickname}**`, inline: true },
+                        ...(isHomeGuild ? [{ name: '🏷️ Apodo en Discord', value: `**${nicknameData.finalNickname}**`, inline: true }] : []),
+                        { name: '💎 Token Consumido', value: '1x 🏷️✨ Token de Apodo', inline: false },
+                        { name: '🔄 Para Cambiar Otra Vez', value: 'Necesitarás craftear otro token y usar `>setnickname <nuevo_apodo>`', inline: false }
+                    )
+                    .setColor('#00FF00')
+                    .setThumbnail(interaction.user.displayAvatarURL({ dynamic: true }));
+
+                await interaction.update({ embeds: [successEmbed], components: [] });
+
+            } catch (error) {
+                console.error('Error cambiando apodo:', error);
+                await interaction.update({
+                    embeds: [new EmbedBuilder()
+                        .setTitle('❌ Error al Cambiar Apodo')
+                        .setDescription('Hubo un error. Tu token no fue consumido. Contacta con mi creador (chasetodie10).')
+                        .setColor('#FF0000')],
+                    components: []
+                });
             }
         }
-
-        // Embed de éxito
-        const successEmbed = new EmbedBuilder()
-            .setTitle('✅ Apodo Guardado Exitosamente')
-            .setDescription(isHomeGuild
-                ? `Tu apodo ha sido actualizado correctamente.`
-                : `Tu apodo cosmético fue guardado. Puedes verlo usando \`>bal\``)
-            .addFields(
-                { name: '✨ Apodo Cosmético', value: `**${nicknameData.newNickname}**`, inline: true },
-                ...(isHomeGuild ? [{ name: '🏷️ Apodo en Discord', value: `**${nicknameData.finalNickname}**`, inline: true }] : []),
-                { name: '💎 Token Consumido', value: '1x 🏷️✨ Token de Apodo', inline: false },
-                { name: '🔄 Para Cambiar Otra Vez', value: 'Necesitarás craftear otro token y usar `>setnickname <nuevo_apodo>`', inline: false }
-            )
-            .setColor('#00FF00')
-            .setThumbnail(interaction.user.displayAvatarURL({ dynamic: true }));
-
-        await interaction.update({ embeds: [successEmbed], components: [] });
-
-    } catch (error) {
-        console.error('Error cambiando apodo:', error);
-        await interaction.update({
-            embeds: [new EmbedBuilder()
-                .setTitle('❌ Error al Cambiar Apodo')
-                .setDescription('Hubo un error. Tu token no fue consumido. Contacta a un administrador.')
-                .setColor('#FF0000')],
-            components: []
-        });
-    }
-}
     }
 
     // Función para notificar items expirados/agotados

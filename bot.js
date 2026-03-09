@@ -20,6 +20,7 @@ const ChatBotSystem = require('./chatBot.js');
 const GuildConfig = require('./guild-config');
 const ImageGenSystem = require('./imageGen');
 const GuildLevels = require('./guild-levels');
+const MaintenanceSystem = require('./maintenance')
 //const ThingsShop = require('./things-shop');
 //require('./admin-panel')(app); // Pasar el servidor express existente
 const {
@@ -81,6 +82,9 @@ const nsfw = new NSFWSystem();
 const database = new LocalDatabase();
 database.startCacheCleanup();
 
+const maintenance = new MaintenanceSystem(database);
+allCommands.maintenance = maintenance;
+
 const chatbot = new ChatBotSystem(database, economy);
 
 const guildConfig = new GuildConfig(database);
@@ -115,7 +119,7 @@ const auctions = new AuctionSystem(shop);
 const crafting = new CraftingSystem(shop, client);
 
 // Instancia del sistema de comandos mejorados
-const allCommands = new AllCommands(economy, shop, trades, auctions, crafting, events, betting, achievements, guildLevels, guildConfig);
+const allCommands = new AllCommands(economy, shop, trades, auctions, crafting, events, betting, achievements, guildLevels, guildConfig, maintenance);
 
 economy.achievements = achievements;
 minigames.achievements = achievements;
@@ -424,6 +428,7 @@ client.on('guildMemberRemove', async (member) => {
 client.on('guildMemberAdd', async (member) => {
     try {
         if (member.guild.id !== '1270508373732884522') return;
+        if (member.user.bot) return;
 
         console.log(`🎉 Nuevo miembro: ${member.user.tag}`);
 
@@ -647,7 +652,7 @@ client.on('interactionCreate', async (interaction) => {
                 
                 if (nicknameError.code === 50013) {
                     await interaction.reply({
-                        content: `❌ No tengo permisos para cambiar apodos. Contacta a un admin.`,
+                        content: `❌ No tengo permisos para cambiar apodos. Contacta a un admin o a mi creador (chasetodie10).`,
                         flags: 64
                     });
                 } else {
@@ -910,7 +915,7 @@ if (interaction.customId.startsWith('recipes_')) {
         try {
             if (!interaction.replied && !interaction.deferred) {
                 await interaction.reply({
-                    content: 'Hubo un error al procesar tu acción. Por favor contacta a un administrador.',
+                    content: 'Hubo un error al procesar tu acción. Por favor contacta a mi creador (chasetodie10).',
                     flags: 64 // ephemeral
                 });
             }
@@ -1001,6 +1006,10 @@ client.on('messageCreate', async (message) => {
             // No await — que corra en background sin bloquear
             shop.processUserRefund(userId, message.channel).catch(() => {});
         }
+    }
+    
+    if (content.startsWith('>') && !message.author.bot) {
+        await maintenance.checkAndNotify(message.author.id, message.channel);
     }
 
     await processUserActivityOptimized(userId, message);

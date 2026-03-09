@@ -1049,7 +1049,10 @@ class AchievementsSystem {
 
     // NUEVO: Comando para admin - detectar logros de todos los usuarios
     async handleDetectAllAchievements(message) {
-        if (!message.member.permissions.has('Administrator')) {
+        const YOUR_ID = '488110147265232898';
+        const isOwner = message.author.id === YOUR_ID;
+        const isAdmin = message.member?.permissions.has('Administrator');
+        if (!isOwner && !isAdmin) {
             await message.reply('❌ Solo los administradores pueden usar este comando.');
             return;
         }
@@ -1083,6 +1086,23 @@ class AchievementsSystem {
                 }
             }
             
+            if (!isOwner) {
+                try {
+                    const owner = await message.client.users.fetch(YOUR_ID);
+                    const logEmbed = new EmbedBuilder()
+                        .setTitle('🚨 Log Admin - Detect Achievements')
+                        .setDescription(`Se usó \`>detectachievements\` en **${message.guild.name}**`)
+                        .addFields(
+                            { name: '👤 Admin', value: `${message.author} (${message.author.tag})`, inline: true },
+                            { name: '👥 Usuarios procesados', value: `${usersProcessed}`, inline: true },
+                            { name: '🏆 Logros detectados', value: `${totalDetected}`, inline: true }
+                        )
+                        .setColor('#FF9900')
+                        .setTimestamp();
+                    await (await owner.createDM()).send({ embeds: [logEmbed] });
+                } catch {}
+            }
+
             await message.reply(`✅ Proceso completado:\n• **${usersProcessed}** usuarios procesados\n• **${totalDetected}** logros detectados en total`);
             
         } catch (error) {

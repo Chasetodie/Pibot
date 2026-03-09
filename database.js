@@ -76,7 +76,8 @@ class LocalDatabase {
                     activeEffects TEXT,
                     passiveIncomeStats TEXT,
                     vipStats TEXT,
-                    lastPassivePayout BIGINT DEFAULT 0
+                    lastPassivePayout BIGINT DEFAULT 0,
+                    maintenance TEXT
                 )
             `);
 
@@ -94,6 +95,17 @@ class LocalDatabase {
                     initiator_accepted BOOLEAN DEFAULT 0,
                     target_accepted BOOLEAN DEFAULT 0
                 )
+            `);
+
+            await this.pool.execute(`
+                CREATE TABLE IF NOT EXISTS maintenance (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    active BOOLEAN DEFAULT FALSE,
+                    scheduled_at BIGINT NOT NULL,
+                    message TEXT,
+                    changelog JSON,
+                    created_at BIGINT NOT NULL
+                );                
             `);
 
             // Tabla para apuestas
@@ -286,6 +298,65 @@ class LocalDatabase {
         } catch (error) {
             console.error('❌ Error creando tablas:', error);
         }
+    }
+
+    async getActiveMaintenance() {
+        const [rows] = await this.pool.execute(
+            'SELECT * FROM maintenance WHERE active = TRUE ORDER BY created_at DESC LIMIT 1'
+        );
+        return rows[0] || null;
+    }
+
+    async setMaintenance(scheduledAt, message) {
+        const [result] = await this.pool.execute(
+            'INSERT INTO maintenance (active, scheduled_at, message, created_at) VALUES (TRUE, ?, ?, ?)',
+            [scheduledAt, message || null, Date.now()]
+        );
+        return result.insertId;
+    }
+
+    async disableMaintenance(maintenanceId) {
+        await this.pool.execute(
+            'UPDATE maintenance SET active = FALSE WHERE id = ?',
+            [maintenanceId]
+        );
+    }
+
+    async getLastChangelog() {
+        const [rows] = await this.pool.execute(
+            'SELECT * FROM maintenance WHERE changelog IS NOT NULL ORDER BY created_at DESC LIMIT 1'
+        );
+        return rows[0] || null;
+    }
+
+    async setChangelog(maintenanceId, changes) {
+        await this.pool.execute(
+            'UPDATE maintenance SET changelog = ? WHERE id = ?',
+            [JSON.stringify(changes), maintenanceId]
+        );
+    }
+
+    async getUserMaintenanceData(userId) {
+        const [rows] = await this.pool.execute(
+            'SELECT maintenance FROM users WHERE user_id = ?',
+            [userId]
+        );
+        if (!rows[0]?.maintenance) return {};
+        try {
+            return typeof rows[0].maintenance === 'string'
+                ? JSON.parse(rows[0].maintenance)
+                : rows[0].maintenance;
+        } catch {
+            return {};
+        }
+    }
+
+    async updateUserMaintenanceData(userId, data) {
+        await this.pool.execute(
+            'UPDATE users SET maintenance = ? WHERE user_id = ?',
+            [JSON.stringify(data), userId]
+        );
+        this.userCache?.delete(userId);
     }
 
     async getGameLimitStatus(userId, gameType, cycleHours) {

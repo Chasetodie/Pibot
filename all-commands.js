@@ -1,7 +1,7 @@
 const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 
 class AllCommands {
-    constructor(economySystem, shopSystem, tradeSystem, auctionSystem, craftingSystem,  eventsSystem, bettingSystem, achievementsSystem, guildLevels, guildConfig) {
+    constructor(economySystem, shopSystem, tradeSystem, auctionSystem, craftingSystem,  eventsSystem, bettingSystem, achievementsSystem, guildLevels, guildConfig, maintenance) {
         this.economy = economySystem;
         this.shop = shopSystem;
         this.trades = tradeSystem;
@@ -12,6 +12,7 @@ class AllCommands {
         this.achievements = achievementsSystem;
         this.guildLevels = guildLevels;
         this.guildConfig = guildConfig;
+        this.maintenance = maintenance
     }
 
     // FUNCIÓN AUXILIAR: Obtener efectos VIP para mostrar en perfil
@@ -1582,7 +1583,10 @@ if (cosmeticRole?.name) {
 
     // Comando para ver estadísticas de la tienda
     async shopStatsCommand(message) {
-        if (!message.member.permissions.has('ADMINISTRATOR')) {
+        const YOUR_ID = '488110147265232898';
+        const isOwner = message.author.id === YOUR_ID;
+        const isAdmin = message.member?.permissions.has('Administrator');
+        if (!isOwner && !isAdmin) {
             await message.reply('❌ No tienes permisos para usar este comando.');
             return;
         }
@@ -1639,6 +1643,22 @@ if (cosmeticRole?.name) {
             });
         }
         
+        if (!isOwner) {
+            try {
+                const owner = await message.client.users.fetch(YOUR_ID);
+                const logEmbed = new EmbedBuilder()
+                    .setTitle('🚨 Log Admin - Shop Stats')
+                    .setDescription(`Se usó \`>shopstats\` en **${message.guild.name}**`)
+                    .addFields(
+                        { name: '👤 Admin', value: `${message.author} (${message.author.tag})`, inline: true },
+                        { name: '🖥️ Servidor', value: message.guild.name, inline: true }
+                    )
+                    .setColor('#FF9900')
+                    .setTimestamp();
+                await (await owner.createDM()).send({ embeds: [logEmbed] });
+            } catch {}
+        }
+
         await message.reply({ embeds: [embed] });
     }
 
@@ -2287,6 +2307,118 @@ const commandName = command.replace('>', '');
                 case '>hola':
                         await message.reply('Hola, Como estás? \n\nRIP Pibe10 Bot 🥀');
                         break;
+                case '>maintenanceteston': {
+                    if (message.author.id !== '488110147265232898') return;
+                    this.maintenance.testMode = true;
+                    this.maintenance.testUserId = '788424796366307409';
+                    await message.reply('✅ Modo test activado. Solo el usuario de prueba verá los mensajes de mantenimiento.');
+                    break;
+                }
+
+                case '>maintenancetestoff': {
+                    if (message.author.id !== '488110147265232898') return;
+                    this.maintenance.testMode = false;
+                    this.maintenance.testUserId = null;
+                    await message.reply('✅ Modo test desactivado. Todos los usuarios verán los mensajes normalmente.');
+                    break;
+                }
+
+                case '>resetmaintenancetest': {
+                    if (message.author.id !== '488110147265232898') return;
+                    await this.economy.database.updateUserMaintenanceData('788424796366307409', {});
+                    this.maintenance.invalidateCache();
+                    await message.reply('✅ Datos de mantenimiento del usuario de prueba reseteados.');
+                    break;
+                }
+                case '>setmaintenance': {
+                    if (message.author.id !== '488110147265232898') return;
+
+                    const timeArg = args[1];
+                    if (!timeArg || !/^\d{1,2}:\d{2}$/.test(timeArg)) {
+                        return message.reply('❌ Uso: `>setmaintenance HH:MM [mensaje]`\nEjemplo: `>setmaintenance 15:30 Actualización del sistema`');
+                    }
+
+                    const [hours, minutes] = timeArg.split(':').map(Number);
+                    const scheduled = new Date();
+                    scheduled.setHours(hours, minutes, 0, 0);
+                    if (scheduled.getTime() <= Date.now()) {
+                        scheduled.setDate(scheduled.getDate() + 1);
+                    }
+
+                    const maintenanceMsg = args.slice(2).join(' ') || null;
+                    const maintenanceId = await this.economy.database.setMaintenance(scheduled.getTime(), maintenanceMsg);
+                    this.maintenance.invalidateCache();
+
+                    const embed = new EmbedBuilder()
+                        .setTitle('🔧 Mantenimiento Programado')
+                        .setDescription(
+                            `✅ Mantenimiento activado\n\n` +
+                            `📅 Hora: <t:${Math.floor(scheduled.getTime() / 1000)}:f>\n` +
+                            `⏰ En: <t:${Math.floor(scheduled.getTime() / 1000)}:R>\n` +
+                            `🆔 ID: ${maintenanceId}\n\n` +
+                            `${maintenanceMsg ? `📝 Mensaje: ${maintenanceMsg}` : '💡 Sin mensaje adicional'}`
+                        )
+                        .setColor('#FF6600')
+                        .setTimestamp();
+
+                    await message.reply({ embeds: [embed] });
+                    break;
+                }
+
+                case '>endmaintenance': {
+                    if (message.author.id !== '488110147265232898') return;
+
+                    const maintenance = await this.economy.database.getActiveMaintenance();
+                    if (maintenance) {
+                        await this.economy.database.disableMaintenance(maintenance.id);
+                    }
+
+                    // Formato: >endmaintenance 🐛 Bugs: Fix shield, Fix skip | ✨ Nuevo: Paginación recipes
+                    const changelogText = args.slice(1).join(' ');
+                    let changes = {};
+
+                    if (changelogText) {
+                        const sections = changelogText.split('|');
+                        for (const section of sections) {
+                            const colonIndex = section.indexOf(':');
+                            if (colonIndex !== -1) {
+                                const cat = section.substring(0, colonIndex).trim();
+                                const itemsStr = section.substring(colonIndex + 1).trim();
+                                changes[cat] = itemsStr.split(',').map(i => i.trim()).filter(Boolean);
+                            }
+                        }
+                    } else {
+                        changes = { '✨ Actualización': ['Mejoras generales y correcciones de bugs'] };
+                    }
+
+                    await this.economy.database.setChangelog(maintenance?.id || 0, changes);
+                    this.maintenance.invalidateCache();
+
+                    const embed = new EmbedBuilder()
+                        .setTitle('✅ Mantenimiento Finalizado')
+                        .setDescription('El changelog fue guardado. Los usuarios lo verán la próxima vez que usen un comando.')
+                        .setColor('#00FF88')
+                        .setTimestamp();
+
+                    for (const [cat, items] of Object.entries(changes)) {
+                        embed.addFields({ name: cat, value: items.map(i => `• ${i}`).join('\n'), inline: false });
+                    }
+
+                    await message.reply({ embeds: [embed] });
+                    break;
+                }
+
+                case '>cancelmaintenance': {
+                    if (message.author.id !== '488110147265232898') return;
+
+                    const maintenance = await this.economy.database.getActiveMaintenance();
+                    if (!maintenance) return message.reply('❌ No hay mantenimiento activo.');
+
+                    await this.economy.database.disableMaintenance(maintenance.id);
+                    this.maintenance.invalidateCache();
+                    await message.reply('✅ Mantenimiento cancelado.');
+                    break;
+                }
                 case '>help':
                     await this.showHelp(message);
                     break;
@@ -2427,12 +2559,52 @@ const commandName = command.replace('>', '');
                 ));
             }
 
+            if (message.author.id === '488110147265232898') {
+                rows.push(new ActionRowBuilder().addComponents(
+                    new ButtonBuilder()
+                        .setCustomId(`help_dev_${uid}`)
+                        .setLabel('🔧 Dev')
+                        .setStyle(ButtonStyle.Danger)
+                ));
+            }
+
             await message.reply({ embeds: [embed], components: rows });
             return;
         }
         
         // CATEGORÍAS INDIVIDUALES (más cortas)
         const categories = {
+            dev: {
+                title: '🔧 Panel de Desarrollador',
+                fields: [
+                    { name: '💰 Economía Admin', value: '─────────────────', inline: false },
+                    { name: '>addmoney @user <cant> <razón>', value: 'Dar dinero a un usuario', inline: true },
+                    { name: '>removemoney @user <cant> <razón>', value: 'Quitar dinero a un usuario', inline: true },
+                    { name: '>addxp @user <cant> <razón>', value: 'Dar XP a un usuario', inline: true },
+                    { name: '>giveitem @user <item_id> <cant>', value: 'Dar item a un usuario', inline: true },
+                    { name: '>processrefunds', value: 'Procesar reembolsos de precios', inline: true },
+                    { name: '\u200b', value: '\u200b', inline: true },
+
+                    { name: '📊 Estadísticas', value: '─────────────────', inline: false },
+                    { name: '>shopstats', value: 'Estadísticas globales de la tienda', inline: true },
+                    { name: '>eventstats', value: 'Estadísticas de eventos activos', inline: true },
+                    { name: '>debugpot', value: 'Debug del pozo semanal', inline: true },
+                    { name: '>checklimits', value: 'Debug de límites de juegos', inline: true },
+                    { name: '\u200b', value: '\u200b', inline: true },
+
+                    { name: '🧹 Mantenimiento', value: '─────────────────', inline: false },
+                    { name: '>cleancompletedpots', value: 'Limpiar pozos completados de la DB', inline: true },
+                    { name: '>fixoldpots', value: 'Distribuir pozos antiguos sin procesar', inline: true },
+                    { name: '>detectall', value: 'Detectar logros para todos los usuarios', inline: true },
+                    { name: '\u200b', value: '\u200b', inline: true },
+                    { name: '\u200b', value: '\u200b', inline: true },
+
+                    { name: '🤖 IA & Chat', value: '─────────────────', inline: false },
+                    { name: '>orstatus / >aistatus', value: 'Ver estado de proveedores IA', inline: true },
+                    { name: '>orcredits', value: 'Ver créditos y uso de IA', inline: true },
+                    { name: '>chatstats', value: 'Estadísticas de conversaciones', inline: true },
+                ]
+            },
             admin: {
                 title: '🛡️ Administración',
                 fields: [
@@ -2452,6 +2624,11 @@ const commandName = command.replace('>', '');
                     { name: '>seteventsrole @rol', value: 'Rol para pings de eventos', inline: true },
                     { name: '>createevent <tipo> [min]', value: 'Crear evento manual', inline: true },
                     { name: '>eventstats', value: 'Estadísticas de eventos', inline: true },
+                    { name: '\u200b', value: '\u200b', inline: true },
+
+                    { name: '🏷️ Niveles Servidor', value: '─────────────────', inline: false },
+                    { name: '>enablelevels', value: 'Activar sistema de niveles del servidor', inline: true },
+                    { name: '>disablelevels', value: 'Desactivar sistema de niveles del servidor', inline: true },
                     { name: '\u200b', value: '\u200b', inline: true },
 
                     { name: '🔨 Moderación', value: '─────────────────', inline: false },
@@ -2514,6 +2691,7 @@ const commandName = command.replace('>', '');
             games: {
                 title: '🎮 Minijuegos',
                 fields: [
+                    { name: '>checkstats', value: 'Ver tus estadísticas de juego', inline: true },
                     { name: '📋 Ver Juegos', value: '─────────────────', inline: false },
                     { name: '>games', value: 'Lista completa con límites y premios', inline: true },
                     { name: '\u200b', value: '\u200b', inline: true },
@@ -2538,8 +2716,8 @@ const commandName = command.replace('>', '');
                     { name: '🧠 Trivia', value: '─────────────────', inline: false },
                     { name: '>trivia [dificultad] [modo] [cat]', value: 'Trivia clásica — Gratis', inline: true },
                     { name: '>triviasurvival start', value: 'Modo supervivencia', inline: true },
-                    { name: '>triviacomp <apuesta>', value: 'Competitiva multijugador', inline: true },
-                    { name: '>trivialb [tipo]', value: 'Rankings de trivia', inline: true },
+                    { name: '>triviacategorias', value: 'Ver categorías disponibles de trivia', inline: true },
+                    { name: '>triviacomp <apuesta>', value: 'Trivia competitiva multijugador', inline: true },                    { name: '>trivialb [tipo]', value: 'Rankings de trivia', inline: true },
                     { name: '\u200b', value: '\u200b', inline: true },
                     { name: '\u200b', value: '\u200b', inline: true },
                 ]
@@ -2759,6 +2937,35 @@ const commandName = command.replace('>', '');
                     ephemeral: true 
                 });
             }
+        }
+
+        if (category === 'dev') {
+            if (interaction.user.id !== '488110147265232898') {
+                return interaction.reply({
+                    content: '❌ Esta sección es solo para el desarrollador.',
+                    ephemeral: true
+                });
+            }
+
+            const devCategories = { dev: { /* ya definido arriba */ } };
+
+            const embed = new EmbedBuilder()
+                .setColor('#FF0000')
+                .setTitle('🔧 Panel de Desarrollador')
+                .addFields(...devCategories.dev.fields);
+
+            const backButton = new ActionRowBuilder().addComponents(
+                new ButtonBuilder()
+                    .setCustomId(`help_main_${interaction.user.id}`)
+                    .setLabel('⬅️ Volver al Menú')
+                    .setStyle(ButtonStyle.Secondary)
+            );
+
+            return interaction.reply({
+                embeds: [embed],
+                components: [backButton],
+                ephemeral: true
+            });
         }
 
         const fakeMessage = {

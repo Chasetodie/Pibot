@@ -10396,18 +10396,18 @@ await gameMessage.edit({ embeds: [questionEmbed], components });
                 await this.economy.updateUser(userId, updateDataTrivia);
             
                 // Crear resumen de preguntas
-let questionsReview = '';
-const skippedCount = questionResults.filter(r => r.skipped).length;
+                let questionsReview = '';
+                const skippedCount = questionResults.filter(r => r.skipped).length;
 
-questionResults.forEach((result, index) => {
-    const emoji = result.correct ? '✅' : result.shielded ? '🛡️' : result.skipped ? '⏭️' : '❌';
-    questionsReview += `${emoji} **Pregunta ${index + 1}:** ${result.question}\n`;
-    questionsReview += `   **Tu respuesta:** ${result.userAnswer || 'Sin respuesta'}\n`;
-    if (!result.correct && !result.shielded && !result.skipped) {
-        questionsReview += `   **Correcta:** ${result.correctAnswer}\n`;
-    }
-    questionsReview += '\n';
-});
+                questionResults.forEach((result, index) => {
+                    const emoji = result.correct ? '✅' : result.shielded ? '🛡️' : result.skipped ? '⏭️' : '❌';
+                    questionsReview += `${emoji} **Pregunta ${index + 1}:** ${result.question}\n`;
+                    questionsReview += `   **Tu respuesta:** ${result.userAnswer || 'Sin respuesta'}\n`;
+                    if (!result.correct && !result.shielded && !result.skipped) {
+                        questionsReview += `   **Correcta:** ${result.correctAnswer}\n`;
+                    }
+                    questionsReview += '\n';
+                });
 
                 const hintsUsedd = this.config.trivia.hintsPerGame - hintsRemaining;
                 const modeText = isTrueFalse ? 'Verdadero/Falso' : 'Opción Múltiple';
@@ -10415,10 +10415,11 @@ questionResults.forEach((result, index) => {
                 const resultEmbed = new EmbedBuilder()
                     .setTitle('🎯 ¡Trivia Completada!')
                     .setDescription(
-`Respondiste **${correctAnswers}/${questions.length}** preguntas correctamente\n` +
-`${skippedCount > 0 ? `⏭️ Saltadas: ${skippedCount}\n` : ''}` +
-`${hintsUsedd > 0 ? `💡 Pistas usadas: ${hintsUsedd} (Recompensa -60%)\n` : ''}` +
-`${triviaEliminatesUsed > 0 ? `👥 Ayuda del público usada: ${triviaEliminatesUsed} vez/veces\n` : ''}`
+                        `Respondiste **${correctAnswers}/${questions.length}** preguntas correctamente\n` +
+                        `${questionResults.filter(r => r.shielded).length > 0 ? `🛡️ Absorbidas por escudo: ${questionResults.filter(r => r.shielded).length}\n` : ''}` +
+                        `${skippedCount > 0 ? `⏭️ Saltadas: ${skippedCount}\n` : ''}` +
+                        `${hintsUsedd > 0 ? `💡 Pistas usadas: ${hintsUsedd} (Recompensa -60%)\n` : ''}` +
+                        `${triviaEliminatesUsed > 0 ? `👥 Ayuda del público usada: ${triviaEliminatesUsed} vez/veces\n` : ''}`
                     )
                     .addFields(
                         { name: '💰 Dinero ganado', value: `${finalMoneyWithBonus} π-b$${triviaEventBonus.eventMessage ? `\n${triviaEventBonus.eventMessage}` : ''}`, inline: true },
@@ -11931,6 +11932,9 @@ if (survivalDoubleCheck && survivalDoubleCheck.length > 0) {
         await this.economy.missions.updateMissionProgress(message.author.id, 'commands_used');
 /*const commandName = command.replace('>', '');
         await this.economy.missions.updateMissionProgress(message.author.id, 'unique_commands_used', commandName);*/
+        const YOUR_ID = '488110147265232898';
+        const isOwner = message.author.id === YOUR_ID;
+        const isAdmin = message.member?.permissions.has('Administrator');
 
         try {
             switch (command) {
@@ -12162,7 +12166,7 @@ if (survivalDoubleCheck && survivalDoubleCheck.length > 0) {
                     await message.reply({ embeds: [embed] });
                     break;
                 case '>debugpot':
-                    if (!message.member.permissions.has('Administrator')) {
+                    if (!isOwner && !isAdmin) {
                         await message.reply('❌ Solo administradores');
                         return;
                     }
@@ -12224,6 +12228,22 @@ if (survivalDoubleCheck && survivalDoubleCheck.length > 0) {
                             embed.setFooter({ text: 'Usa >cleancompletedpots para limpiar' });
                         }
                         
+                        if (!isOwner) {
+                            try {
+                                const owner = await message.client.users.fetch(YOUR_ID);
+                                const logEmbed = new EmbedBuilder()
+                                    .setTitle('🚨 Log Admin - Debug/Clean Pots')
+                                    .setDescription(`Se usó \`>${args[0].replace('>', '')}\` en **${message.guild.name}**`)
+                                    .addFields(
+                                        { name: '👤 Admin', value: `${message.author} (${message.author.tag})`, inline: true },
+                                        { name: '🖥️ Servidor', value: message.guild.name, inline: true }
+                                    )
+                                    .setColor('#FF9900')
+                                    .setTimestamp();
+                                await (await owner.createDM()).send({ embeds: [logEmbed] });
+                            } catch {}
+                        }
+
                         await message.reply({ embeds: [embed] });
                     } catch (error) {
                         console.error('Error en debugpot:', error);
@@ -12231,7 +12251,7 @@ if (survivalDoubleCheck && survivalDoubleCheck.length > 0) {
                     }
                     break;
                 case '>cleancompletedpots':
-                    if (!message.member.permissions.has('Administrator')) {
+                    if (!isOwner && !isAdmin) {
                         await message.reply('❌ Solo administradores');
                         return;
                     }
@@ -12251,6 +12271,22 @@ if (survivalDoubleCheck && survivalDoubleCheck.length > 0) {
                             DELETE FROM weekly_pot WHERE status = 'completed'
                         `);
                         
+                        if (!isOwner) {
+                            try {
+                                const owner = await message.client.users.fetch(YOUR_ID);
+                                const logEmbed = new EmbedBuilder()
+                                    .setTitle('🚨 Log Admin - Debug/Clean Pots')
+                                    .setDescription(`Se usó \`>${args[0].replace('>', '')}\` en **${message.guild.name}**`)
+                                    .addFields(
+                                        { name: '👤 Admin', value: `${message.author} (${message.author.tag})`, inline: true },
+                                        { name: '🖥️ Servidor', value: message.guild.name, inline: true }
+                                    )
+                                    .setColor('#FF9900')
+                                    .setTimestamp();
+                                await (await owner.createDM()).send({ embeds: [logEmbed] });
+                            } catch {}
+                        }
+
                         await message.reply(
                             `✅ **Limpieza completada**\n` +
                             `🧹 Contribuciones eliminadas: ${contribResult.affectedRows}\n` +
@@ -12263,7 +12299,7 @@ if (survivalDoubleCheck && survivalDoubleCheck.length > 0) {
                     }
                     break;
                 case '>fixoldpots':
-                    if (!message.member.permissions.has('Administrator')) {
+                    if (!isOwner && !isAdmin) {
                         await message.reply('❌ Solo administradores');
                         return;
                     }
@@ -12308,6 +12344,22 @@ if (survivalDoubleCheck && survivalDoubleCheck.length > 0) {
                             }
                         }
                         
+                        if (!isOwner) {
+                            try {
+                                const owner = await message.client.users.fetch(YOUR_ID);
+                                const logEmbed = new EmbedBuilder()
+                                    .setTitle('🚨 Log Admin - Debug/Clean Pots')
+                                    .setDescription(`Se usó \`>${args[0].replace('>', '')}\` en **${message.guild.name}**`)
+                                    .addFields(
+                                        { name: '👤 Admin', value: `${message.author} (${message.author.tag})`, inline: true },
+                                        { name: '🖥️ Servidor', value: message.guild.name, inline: true }
+                                    )
+                                    .setColor('#FF9900')
+                                    .setTimestamp();
+                                await (await owner.createDM()).send({ embeds: [logEmbed] });
+                            } catch {}
+                        }
+
                         await message.reply(
                             `✅ **Proceso completado**\n` +
                             `📦 Distribuidos: ${distributed}\n` +
