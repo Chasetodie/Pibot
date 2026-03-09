@@ -2593,6 +2593,14 @@ const commandName = command.replace('>', '');
                     { name: '\u200b', value: '\u200b', inline: true },
                     { name: '\u200b', value: '\u200b', inline: true },
 
+                    { name: '🔧 Mantenimiento Bot', value: '─────────────────', inline: false },
+                    { name: '>setmaintenance HH:MM [mensaje]', value: 'Programar aviso de mantenimiento', inline: true },
+                    { name: '>endmaintenance', value: 'Finalizar mantenimiento y publicar changelog', inline: true },
+                    { name: '>cancelmaintenance', value: 'Cancelar mantenimiento activo', inline: true },
+                    { name: '>maintenanceteston', value: 'Activar modo test (solo usuario de prueba)', inline: true },
+                    { name: '>maintenancetestoff', value: 'Desactivar modo test', inline: true },
+                    { name: '>resetmaintenancetest', value: 'Resetear datos del usuario de prueba', inline: true },
+
                     { name: '🤖 IA & Chat', value: '─────────────────', inline: false },
                     { name: '>orstatus / >aistatus', value: 'Ver estado de proveedores IA', inline: true },
                     { name: '>orcredits', value: 'Ver créditos y uso de IA', inline: true },
@@ -2933,34 +2941,32 @@ const commandName = command.replace('>', '');
             }
         }
 
-        if (category === 'dev') {
-            if (interaction.user.id !== '488110147265232898') {
+            if (category === 'dev') {
+                if (interaction.user.id !== '488110147265232898') {
+                    return interaction.reply({
+                        content: '❌ Esta sección es solo para el desarrollador.',
+                        ephemeral: true
+                    });
+                }
+
+                const embed = new EmbedBuilder()
+                    .setColor('#FF0000')
+                    .setTitle('🔧 Panel de Desarrollador')
+                    .addFields(...categories.dev.fields); // ← usar categories.dev directamente
+
+                const backButton = new ActionRowBuilder().addComponents(
+                    new ButtonBuilder()
+                        .setCustomId(`help_main_${interaction.user.id}`)
+                        .setLabel('⬅️ Volver al Menú')
+                        .setStyle(ButtonStyle.Secondary)
+                );
+
                 return interaction.reply({
-                    content: '❌ Esta sección es solo para el desarrollador.',
+                    embeds: [embed],
+                    components: [backButton],
                     ephemeral: true
                 });
             }
-
-            const devCategories = { dev: { /* ya definido arriba */ } };
-
-            const embed = new EmbedBuilder()
-                .setColor('#FF0000')
-                .setTitle('🔧 Panel de Desarrollador')
-                .addFields(...devCategories.dev.fields);
-
-            const backButton = new ActionRowBuilder().addComponents(
-                new ButtonBuilder()
-                    .setCustomId(`help_main_${interaction.user.id}`)
-                    .setLabel('⬅️ Volver al Menú')
-                    .setStyle(ButtonStyle.Secondary)
-            );
-
-            return interaction.reply({
-                embeds: [embed],
-                components: [backButton],
-                ephemeral: true
-            });
-        }
 
         const fakeMessage = {
             author: interaction.user,
