@@ -2949,9 +2949,9 @@ const commandName = command.replace('>', '');
                 });
             }
 
-            const embed = new EmbedBuilder()
+            const embed1 = new EmbedBuilder()
                 .setColor('#FF0000')
-                .setTitle('🔧 Panel de Desarrollador')
+                .setTitle('🔧 Panel de Desarrollador (1/2)')
                 .addFields(
                     { name: '💰 Economía Admin', value: '─────────────────', inline: false },
                     { name: '>addmoney @user <cant> <razón>', value: 'Dar dinero a un usuario', inline: true },
@@ -2967,14 +2967,20 @@ const commandName = command.replace('>', '');
                     { name: '>debugpot', value: 'Debug del pozo semanal', inline: true },
                     { name: '>checklimits', value: 'Debug de límites de juegos', inline: true },
                     { name: '\u200b', value: '\u200b', inline: true },
+                    { name: '\u200b', value: '\u200b', inline: true },
 
                     { name: '🧹 Mantenimiento DB', value: '─────────────────', inline: false },
-                    { name: '>cleancompletedpots', value: 'Limpiar pozos completados de la DB', inline: true },
-                    { name: '>fixoldpots', value: 'Distribuir pozos antiguos sin procesar', inline: true },
-                    { name: '>detectall', value: 'Detectar logros para todos los usuarios', inline: true },
+                    { name: '>cleancompletedpots', value: 'Limpiar pozos completados', inline: true },
+                    { name: '>fixoldpots', value: 'Distribuir pozos antiguos', inline: true },
+                    { name: '>detectall', value: 'Detectar logros para todos', inline: true },
                     { name: '\u200b', value: '\u200b', inline: true },
                     { name: '\u200b', value: '\u200b', inline: true },
+                );
 
+            const embed2 = new EmbedBuilder()
+                .setColor('#FF0000')
+                .setTitle('🔧 Panel de Desarrollador (2/2)')
+                .addFields(
                     { name: '🔧 Mantenimiento Bot', value: '─────────────────', inline: false },
                     { name: '>setmaintenance HH:MM [mensaje]', value: 'Programar aviso de mantenimiento', inline: true },
                     { name: '>endmaintenance', value: 'Finalizar y publicar changelog automático', inline: true },
@@ -2990,7 +2996,7 @@ const commandName = command.replace('>', '');
                 );
 
             return interaction.reply({
-                embeds: [embed],
+                embeds: [embed1, embed2],
                 ephemeral: true
             });
         }
