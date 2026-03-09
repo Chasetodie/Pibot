@@ -2340,7 +2340,11 @@ const commandName = command.replace('>', '');
 
                     const [hours, minutes] = timeArg.split(':').map(Number);
                     const scheduled = new Date();
-                    scheduled.setHours(hours, minutes, 0, 0);
+
+                    // Ajustar a UTC-5 (Ecuador)
+                    const utcOffset = -5;
+                    scheduled.setUTCHours(hours - utcOffset, minutes, 0, 0);
+
                     if (scheduled.getTime() <= Date.now()) {
                         scheduled.setDate(scheduled.getDate() + 1);
                     }

@@ -338,7 +338,7 @@ class LocalDatabase {
 
     async getUserMaintenanceData(userId) {
         const [rows] = await this.pool.execute(
-            'SELECT maintenance FROM users WHERE user_id = ?',
+            'SELECT maintenance FROM users WHERE id = ?',  // ← id, no user_id
             [userId]
         );
         if (!rows[0]?.maintenance) return {};
@@ -353,7 +353,7 @@ class LocalDatabase {
 
     async updateUserMaintenanceData(userId, data) {
         await this.pool.execute(
-            'UPDATE users SET maintenance = ? WHERE user_id = ?',
+            'UPDATE users SET maintenance = ? WHERE id = ?',  // ← id, no user_id
             [JSON.stringify(data), userId]
         );
         this.userCache?.delete(userId);
