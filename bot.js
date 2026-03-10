@@ -718,6 +718,11 @@ if (interaction.customId.startsWith('recipes_')) {
     await crafting.handleRecipesInteraction(interaction);
     return;
 }
+
+if (interaction.customId?.startsWith('work_')) {
+    await allCommands.workMinigames.handleInteraction(interaction);
+    return;
+}
         
         if (interaction.customId.startsWith('bj_')) {
             await minigames.handleBlackjackButtons(interaction);
@@ -1345,6 +1350,7 @@ client.login(process.env.TOKEN).then(() => {
 }).catch(error => {
     console.error('❌ Error en el login:', error);
 });*/
+
 
 
 
