@@ -1428,142 +1428,93 @@ class EconomySystem {
 
     async doWork(userId, jobType, guildId = null) {
         const canWorkResult = await this.canWork(userId, jobType, guildId);
-        if (!canWorkResult.canWork) 
-        {
-            return{
+        if (!canWorkResult.canWork) {
+            return {
                 name: canWorkResult.name,
                 canWork: canWorkResult.canWork,
                 reason: canWorkResult.reason,
                 requiredLevel: canWorkResult.requiredLevel,
-                timeLeft: canWorkResult.timeLeft || 0, // Solo si es cooldown
-                canWorkResult: canWorkResult               
-            }; 
+                timeLeft: canWorkResult.timeLeft || 0,
+                canWorkResult: canWorkResult
+            };
         }
+
         const user = await this.getUser(userId);
         const jobs = await this.getWorkJobs();
         const job = jobs[jobType];
-        
-        // Verificar si falla (solo algunos trabajos tienen chance de fallar)
-        const failed = job.failChance && Math.random() < job.failChance;
 
+        // Guardar cooldown inmediatamente
         const updateData = {
             last_work: Date.now(),
             last_job_type: jobType,
-            last_name_work: job.name, // Para mostrar en el embed el nombre del trabajo hecho
+            last_name_work: job.name,
             stats: {
                 ...user.stats,
                 work_count: (user.stats?.work_count || 0) + 1
             }
-        }
-        
-        if (failed) {
-            const failMessage = job.failMessages[Math.floor(Math.random() * job.failMessages.length)];
-            let penalty = Math.floor(job.baseReward * 0.2);
-            let protectionMessage = '';
+        };
+        await this.updateUser(userId, updateData);
 
-            // AGREGAR ESTO:
-            if (this.shop) {
-                const hasProtection = await this.shop.hasGameProtection(userId);
-                if (hasProtection) {
-                    penalty = 0; // No penalty
-                    protectionMessage = '🛡️ Tu protección evitó la penalización!';
-                }
-            }            
-
-            updateData.balance = Math.max(0, user.balance - penalty);
-            updateData.stats.totalSpent = (user.stats?.totalSpent || 0) + penalty;
-
-            await this.updateUser(userId, updateData);
-        
-            return {
-                name: job.name,
-                success: false,
-                failed: true,
-                message: failMessage,
-                penalty: penalty,
-                protectionMessage: protectionMessage,
-                oldBalance: Math.max(0, user.balance + penalty),
-                newBalance: Math.max(0, user.balance),
-                canWork: canWorkResult.canWork,
-                reason: canWorkResult.reason,
-                requiredLevel: canWorkResult.requiredLevel,
-                timeLeft: canWorkResult.timeLeft || 0,
-                canWorkResult: canWorkResult  
-            };
-        }
-        
-        // Trabajo exitoso
+        // Calcular recompensa base
         const variation = Math.floor(Math.random() * job.variation) - Math.floor(job.variation * 0.3);
-        let amount = Math.max(job.baseReward * 0.5, job.baseReward + variation);       
+        let amount = Math.max(job.baseReward * 0.5, job.baseReward + variation);
         const message = job.messages[Math.floor(Math.random() * job.messages.length)];
-        let eventMessage = '';
+        const failMessage = job.failMessages[Math.floor(Math.random() * job.failMessages.length)];
         let finalEarnings = amount;
+        let eventMessage = '';
 
+        // Aplicar eventos
         for (const event of (this.events?.getActiveEvents(guildId) || [])) {
             const workMultiplier = event.multipliers?.work || 1.0;
-            
             if (workMultiplier !== 1.0) {
                 const baseAmount = amount;
                 finalEarnings = Math.floor(baseAmount * workMultiplier);
                 const diff = finalEarnings - baseAmount;
-                
-                if (diff > 0) {
-                    eventMessage = `${event.emoji} **${event.name}** (+${diff} π-b$)`;
-                } else {
-                    eventMessage = `${event.emoji} **${event.name}** (${diff} π-b$)`;
-                }
+                eventMessage = diff > 0
+                    ? `${event.emoji} **${event.name}** (+${diff} π-b$)`
+                    : `${event.emoji} **${event.name}** (${diff} π-b$)`;
                 break;
             }
         }
 
-        // ✅ 2. NUEVO: Aplicar PICOS primero (antes de otros multiplicadores)
+        // Aplicar picos
         let pickaxeMessage = '';
         if (this.shop) {
             const pickaxeBonus = await this.shop.applyPickaxeBonus(userId);
             if (pickaxeBonus.applied) {
                 const beforePickaxe = finalEarnings;
                 finalEarnings = Math.floor(finalEarnings * pickaxeBonus.multiplier);
-                
-                const item = this.shop.shopItems[pickaxeBonus.itemId]; // USAR EL itemId devuelto
-                
-                if (item.category === 'tool') {
-                    if (pickaxeBonus.itemId === 'eternal_pickaxe') {
-                        pickaxeMessage = `**${pickaxeBonus.name}** (+${finalEarnings - beforePickaxe} π-b$) | Durabilidad: ♾️ Infinita`;
-                    } else {
-                        pickaxeMessage = `**${pickaxeBonus.name}** (+${finalEarnings - beforePickaxe} π-b$) | Durabilidad: ${pickaxeBonus.durabilityLeft}/${item.effect.durability} (-${pickaxeBonus.durabilityLost})`;
-                    }
+                const item = this.shop.shopItems[pickaxeBonus.itemId];
+                if (item?.category === 'tool') {
+                    pickaxeMessage = pickaxeBonus.itemId === 'eternal_pickaxe'
+                        ? `**${pickaxeBonus.name}** (+${finalEarnings - beforePickaxe} π-b$) | Durabilidad: ♾️ Infinita`
+                        : `**${pickaxeBonus.name}** (+${finalEarnings - beforePickaxe} π-b$) | Durabilidad: ${pickaxeBonus.durabilityLeft}/${item.effect.durability} (-${pickaxeBonus.durabilityLost})`;
                 } else {
                     pickaxeMessage = `**${pickaxeBonus.name}** (+${finalEarnings - beforePickaxe} π-b$) | Usos restantes: ${pickaxeBonus.usesLeft}`;
                 }
             }
         }
 
-        // *** APLICAR BONUS DE EQUIPAMIENTO ***
-        const equipmentBonus = await this.shop.applyEquipmentBonus(userId);
-
+        // Aplicar equipamiento
         let equipmentMessage = '';
-        if (equipmentBonus.applied) {
-            const extraMoney = Math.floor(result.amount * equipmentBonus.money);
-            result.amount += extraMoney;
-            result.newBalance += extraMoney;
-            
-            // Generar mensaje de todos los items equipados
-            for (const equip of equipmentBonus.items) {
-                equipmentMessage += `\n${equip.wasBroken ? '💔' : '🛡️'} **${equip.name}**: `;
-                
-                if (equip.wasBroken) {
-                    equipmentMessage += `¡SE ROMPIÓ! (era ${equip.durabilityLost})`;
-                } else {
-                    equipmentMessage += `Durabilidad: ${equip.durabilityLeft}/${equip.maxDurability} (-${equip.durabilityLost})`;
+        if (this.shop) {
+            const equipmentBonus = await this.shop.applyEquipmentBonus(userId);
+            if (equipmentBonus.applied) {
+                const extraMoney = Math.floor(finalEarnings * equipmentBonus.money);
+                finalEarnings += extraMoney;
+                for (const equip of equipmentBonus.items) {
+                    equipmentMessage += `\n${equip.wasBroken ? '💔' : '🛡️'} **${equip.name}**: `;
+                    equipmentMessage += equip.wasBroken
+                        ? `¡SE ROMPIÓ! (era ${equip.durabilityLost})`
+                        : `Durabilidad: ${equip.durabilityLeft}/${equip.maxDurability} (-${equip.durabilityLost})`;
                 }
-            }
-            
-            if (extraMoney > 0) {
-                equipmentMessage = `\n💰 Bonus equipamiento: +${this.formatNumber(extraMoney)} π-b$${equipmentMessage}`;
+                if (extraMoney > 0) {
+                    equipmentMessage = `\n💰 Bonus equipamiento: +${this.formatNumber(extraMoney)} π-b$${equipmentMessage}`;
+                }
             }
         }
 
-        // 3. DESPUÉS aplicar multiplicadores de items
+        // Aplicar multiplicadores de items
         let itemMessage = '';
         if (this.shop) {
             const modifiers = await this.shop.getActiveMultipliers(userId, 'work');
@@ -1572,12 +1523,10 @@ class EconomySystem {
                 finalEarnings = Math.floor(finalEarnings * modifiers.multiplier);
                 itemMessage = `✨ **Items Activos** (+${finalEarnings - beforeItems} π-b$)`;
             }
-            
-            // Consumir efectos de uso limitado
             await this.shop.consumeItemUse(userId, 'work');
         }
 
-        // 4. FINALMENTE aplicar VIP
+        // Aplicar VIP
         let vipMessage = '';
         if (this.shop) {
             const vipMultipliers = await this.shop.getVipMultipliers(userId, 'work');
@@ -1585,40 +1534,29 @@ class EconomySystem {
                 const beforeVip = finalEarnings;
                 finalEarnings = Math.floor(finalEarnings * vipMultipliers.multiplier);
                 vipMessage = `👑 **VIP Activo** (+${finalEarnings - beforeVip} π-b$)`;
-            
-                // Cuando un VIP gane dinero extra
-                const vipBonus = finalEarnings - beforeVip;
-                await this.shop.updateVipStats(userId, 'bonusEarnings', vipBonus);
+                await this.shop.updateVipStats(userId, 'bonusEarnings', finalEarnings - beforeVip);
             }
         }
-        
-        await this.updateUser(userId, updateData);
 
-        // ✅ MEJORAR: Combinar todos los mensajes de bonificaciones
-        let allBonusMessages = [eventMessage, pickaxeMessage, equipmentMessage, itemMessage, vipMessage].filter(msg => msg !== '');
+        const allBonusMessages = [eventMessage, pickaxeMessage, equipmentMessage, itemMessage, vipMessage].filter(msg => msg !== '');
 
         return {
-            success: true,
-            amount: amount,
-            message: message,
-            oldBalance: user.balance - finalEarnings,
-            newBalance: user.balance,
-            jobName: job.name,
-            eventMessage: eventMessage,
-            pickaxeMessage: pickaxeMessage, // NUEVO
-            equipmentMessage: equipmentMessage,
-            itemMessage: itemMessage,       // NUEVO
-            vipMessage: vipMessage,         // NUEVO
-            allBonusMessages: allBonusMessages, // NUEVO: array con todos los bonos
-            canWork: canWorkResult.canWork,
-            reason: canWorkResult.reason,
-            requiredLevel: canWorkResult.requiredLevel,
-            timeLeft: canWorkResult.timeLeft || 0, // Solo si es cooldown
-            canWorkResult: canWorkResult,
+            canWork: true,
             needsMinigame: true,
-baseAmount: amount,
-failMessage: job.failMessages[Math.floor(Math.random() * job.failMessages.length)],
-currentStreak: this.workStreaks.get(userId)?.streak || 0,
+            success: true,
+            jobName: job.name,
+            jobType: jobType,
+            message: message,
+            failMessage: failMessage,
+            amount: amount,
+            finalEarnings: finalEarnings,
+            currentStreak: this.workStreaks?.get(userId)?.streak || 0,
+            eventMessage: eventMessage,
+            pickaxeMessage: pickaxeMessage,
+            equipmentMessage: equipmentMessage,
+            itemMessage: itemMessage,
+            vipMessage: vipMessage,
+            allBonusMessages: allBonusMessages,
         };
     }
 
