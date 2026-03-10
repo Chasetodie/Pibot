@@ -14,7 +14,9 @@ class AllCommands {
         this.guildConfig = guildConfig;
         this.maintenance = maintenance;
         const WorkMinigames = require('./work-minigames.js');
-this.workMinigames = new WorkMinigames();
+        this.workMinigames = new WorkMinigames();
+        const RobMinigameHandler = require('./rob-minigame-handler');
+        this.robMinigames = new RobMinigameHandler();
     }
 
     // FUNCIÓN AUXILIAR: Obtener efectos VIP para mostrar en perfil
@@ -1030,384 +1032,480 @@ if (cosmeticRole?.name) {
 
     async handleRobberyCommand(message, args) {
         const robberId = message.author.id;
-        
-        // Verificar que se mencionó a alguien
+
+        // ── Verificar mención ───────────────────────────────
         if (!message.mentions.users.first() && !args[0]) {
-            const errorEmbed = new EmbedBuilder()
-                .setColor('#ff4444')
-                .setTitle('❌ Error')
-                .setDescription('Debes mencionar a un usuario para robar\n**Uso:** `>robar @usuario`')
-                .setTimestamp();
-            
-            return message.reply({ embeds: [errorEmbed] });
+            return message.reply({
+                embeds: [new EmbedBuilder()
+                    .setColor('#ff4444')
+                    .setTitle('❌ Error')
+                    .setDescription('Debes mencionar a un usuario para robar\n**Uso:** `>robar @usuario`')
+                    .setTimestamp()]
+            });
         }
-        
-        // Obtener usuario objetivo
+
+        // ── Resolver target ─────────────────────────────────
         let targetUser = message.mentions.users.first();
         if (!targetUser && args[0]) {
             try {
                 targetUser = await message.client.users.fetch(args[0]);
-            } catch (error) {
-                const errorEmbed = new EmbedBuilder()
-                    .setColor('#ff4444')
-                    .setTitle('❌ Usuario no encontrado')
-                    .setDescription('No se pudo encontrar al usuario especificado')
-                    .setTimestamp();
-                
-                return message.reply({ embeds: [errorEmbed] });
+            } catch {
+                return message.reply({
+                    embeds: [new EmbedBuilder()
+                        .setColor('#ff4444')
+                        .setTitle('❌ Usuario no encontrado')
+                        .setDescription('No se pudo encontrar al usuario especificado')
+                        .setTimestamp()]
+                });
             }
         }
-        
+
         const targetId = targetUser.id;
 
-        console.log(`🐛 DEBUG - Iniciando robo:`, {
-            robberId,
-            targetId,
-            hasShop: !!this.shop,
-            hasEconomy: !!this.economy,
-            activeRobberiesSize: this.economy.activeRobberies?.size
-        });
-        
-        // Verificar que no sea un bot
         if (targetUser.bot) {
-            const errorEmbed = new EmbedBuilder()
-                .setColor('#ff4444')
-                .setTitle('🤖 Error')
-                .setDescription('No puedes robar a un bot')
-                .setTimestamp();
-            
-            return message.reply({ embeds: [errorEmbed] });
-        }
-        
-        // Verificar si puede robar
-        const canRobResult = await this.economy.canRob(robberId, targetId);
-        
-        if (!canRobResult.canRob) {
-            let errorMessage = '';
-            
-            switch (canRobResult.reason) {
-                case 'self_target':
-                    errorMessage = 'No puedes robarte a ti mismo 🙄';
-                    break;
-                case 'level_too_low':
-                    errorMessage = `Necesitas ser nivel **${canRobResult.requiredLevel}** para robar`;
-                    break;
-                case 'target_too_poor':
-                    errorMessage = `${targetUser.username} necesita tener al menos **${canRobResult.minBalance}** ${this.economy.config.currencySymbol}`;
-                    break;
-                case 'cooldown':
-                    const timeLeft = Math.ceil(canRobResult.timeLeft / (1000 * 60 * 60));
-                    errorMessage = `Debes esperar **${timeLeft}h** antes de robar de nuevo`;
-                    break;
-                case 'already_robbing':
-                    errorMessage = 'Ya tienes un robo en progreso';
-                    break;
-                case 'robber_rich':
-                    errorMessage = 'Limite de dinero alcanzado';
-                    break;
-                default:
-                    errorMessage = 'No puedes robar en este momento';
-            }
-            
-            const errorEmbed = new EmbedBuilder()
-                .setColor('#ff4444')
-                .setTitle('🚫 No puedes robar')
-                .setDescription(errorMessage)
-                .setTimestamp();
-            
-            return message.reply({ embeds: [errorEmbed] });
+            return message.reply({
+                embeds: [new EmbedBuilder()
+                    .setColor('#ff4444')
+                    .setTitle('🤖 Error')
+                    .setDescription('No puedes robar a un bot')
+                    .setTimestamp()]
+            });
         }
 
+        // ── canRob ──────────────────────────────────────────
+        const canRobResult = await this.economy.canRob(robberId, targetId);
+        if (!canRobResult.canRob) {
+            let errorMessage = '';
+            switch (canRobResult.reason) {
+                case 'self_target':      errorMessage = 'No puedes robarte a ti mismo 🙄'; break;
+                case 'level_too_low':    errorMessage = `Necesitas ser nivel **${canRobResult.requiredLevel}** para robar`; break;
+                case 'target_too_poor':  errorMessage = `${targetUser.username} necesita tener al menos **${canRobResult.minBalance}** ${this.economy.config.currencySymbol}`; break;
+                case 'cooldown': {
+                    const h = Math.floor(canRobResult.timeLeft / (1000 * 60 * 60));
+                    const m = Math.ceil((canRobResult.timeLeft % (1000 * 60 * 60)) / (1000 * 60));
+                    errorMessage = h > 0
+                        ? `Debes esperar **${h}h ${m}m** antes de robar de nuevo`
+                        : `Debes esperar **${m} minutos** antes de robar de nuevo`;
+                    break;
+                }
+                case 'already_robbing':  errorMessage = 'Ya tienes un robo en progreso'; break;
+                case 'robber_rich':      errorMessage = 'Límite de dinero alcanzado'; break;
+                default:                 errorMessage = 'No puedes robar en este momento';
+            }
+            return message.reply({
+                embeds: [new EmbedBuilder()
+                    .setColor('#ff4444')
+                    .setTitle('🚫 No puedes robar')
+                    .setDescription(errorMessage)
+                    .setTimestamp()]
+            });
+        }
+
+        // ── PHANTOM GLOVES: bypass total ────────────────────
         if (this.shop) {
             const user = await this.economy.getUser(robberId);
             const activeEffects = this.shop.parseActiveEffects(user.activeEffects);
-            
-            for (const [itemId, effects] of Object.entries(activeEffects)) {
-                if (!Array.isArray(effects)) continue;
 
+            for (const [, effects] of Object.entries(activeEffects)) {
+                if (!Array.isArray(effects)) continue;
                 for (const effect of effects) {
-                    if (effect.type === 'robbery_boost' && effect.safe === true && effect.usesLeft > 0) {                       
-                        // Ejecutar robo directo sin minijuego
+                    if (effect.type === 'robbery_boost' && effect.safe === true && effect.usesLeft > 0) {
                         const robberyResult = await this.economy.startRobbery(robberId, targetId, message);
-                        
-                        if (robberyResult.success) {
-                            // Simular clicks máximos para garantizar éxito
-                            robberyResult.robberyData.clicks = this.economy.robberyConfig.maxClicks;
-                            
-                            const finishResult = await this.economy.finishRobbery(robberId);
-                            
-                            // Mostrar resultado
-                            if (finishResult.success && finishResult.robberySuccess) {
-                                const phantomEmbed = new EmbedBuilder()
-                                    .setTitle('👻 Phantom Gloves - Robo Perfecto')
-                                    .setDescription(`¡Los guantes fantasma hicieron su magia! Robaste **${finishResult.stolenAmount}** ${this.economy.config.currencySymbol} sin ser detectado.`)
-                                    .addFields([
-                                        { name: '💰 Cantidad robada', value: `${finishResult.stolenAmount} ${this.economy.config.currencySymbol}`, inline: true },
+                        if (!robberyResult.success) break;
+
+                        robberyResult.robberyData.clicks = this.economy.robberyConfig.maxClicks;
+                        const finishResult = await this.economy.finishRobbery(robberId, null); // null = garantizado
+
+                        if (finishResult.success && finishResult.robberySuccess) {
+                            await message.reply({
+                                embeds: [new EmbedBuilder()
+                                    .setTitle('👻 Phantom Gloves — Robo Perfecto')
+                                    .setColor('#800080')
+                                    .setDescription(
+                                        `Los guantes fantasma hicieron su magia.\n` +
+                                        `<@${robberId}> robó **${finishResult.stolenAmount}** ${this.economy.config.currencySymbol} ` +
+                                        `a <@${targetId}> sin ser detectado.`
+                                    )
+                                    .addFields(
+                                        { name: '💰 Botín', value: `${finishResult.stolenAmount} ${this.economy.config.currencySymbol}`, inline: true },
                                         { name: '👻 Método', value: 'Phantom Gloves', inline: true },
                                         { name: '🎯 Eficiencia', value: '100%', inline: true }
-                                    ])
-                                    .setColor('#800080');
-                                
-                                await message.reply({ embeds: [phantomEmbed] });
-                            }
+                                    )
+                                    .setTimestamp()]
+                            });
                         }
-                        
-                        return; // CRÍTICO: Salir inmediatamente para evitar el minijuego normal
+                        return;
                     }
                 }
             }
         }
-        
-        // Iniciar el robo
+
+        // ── Iniciar robo ────────────────────────────────────
         const robberyResult = await this.economy.startRobbery(robberId, targetId, message);
-        
+
         if (!robberyResult.success) {
-            console.log(`❌ Robo falló para ${robberId}:`, robberyResult);
-            
-            let errorMessage = 'Hubo un problema al iniciar el robo. Inténtalo de nuevo.';
-            
-            // Mensajes específicos según la razón
+            let errorMessage = 'Hubo un problema al iniciar el robo.';
             switch (robberyResult.reason) {
-                case 'start_error':
-                    errorMessage = `Error interno: ${robberyResult.error || 'Desconocido'}`;
-                    break;
-                case 'already_robbing':
-                    errorMessage = 'Ya tienes un robo en progreso';
-                    break;
-                case 'target_protected':
-                    let penaltyText = '';
+                case 'already_robbing':  errorMessage = 'Ya tienes un robo en progreso'; break;
+                case 'target_protected': {
+                    const penaltyText = robberyResult.robberProtection
+                        ? `\n\n${robberyResult.robberProtection}`
+                        : robberyResult.penalty > 0
+                            ? `\n\n💸 **Perdiste** ${robberyResult.penalty} ${this.economy.config.currencySymbol}`
+                            : '';
 
-                    // Verificar si el robber tiene protección
-                    if (robberyResult.robberProtection) {
-                        penaltyText = `\n\n${robberyResult.robberProtection}`;
-                    } else if (robberyResult.penalty > 0) {
-                        penaltyText = `\n\n💸**Perdiste**\n${robberyResult.penalty} π-b$`;
-                    } else {
-                        penaltyText = ''; // Sin penalización y sin mensaje de protección
-                    }
-                    
-                    if (robberyResult.protectionType === 'shield') {
-                        errorMessage = `🛡️ ¡Rayos! **${targetUser.displayName}** tiene un **Escudo Antirrobo** activado. Tu intento de robo rebotó como una pelota de goma. 🏀${penaltyText}`;
-                    } else if (robberyResult.protectionType === 'vault') {
-                        errorMessage = `🏦 **${targetUser.displayName}** guardó su dinero en una **Bóveda Permanente**. Intentaste forzarla pero era más dura que una nuez. 🥜${penaltyText}`;
-                    } else if (robberyResult.protectionType === 'condon') {
-                        errorMessage = `🧃 **${targetUser.displayName}** tiene un gorrito bien colocado. 💰${penaltyText}`;
-                    } else {
-                        errorMessage = `🛡️ **${targetUser.displayName}** está muy bien protegido/a. Parece que invirtió sabiamente en seguridad. 💰${penaltyText}`;
-                    }
+                    if (robberyResult.protectionType === 'shield')
+                        errorMessage = `🛡️ **${targetUser.displayName}** tiene un **Escudo Antirrobo**. Tu intento rebotó. 🏀${penaltyText}`;
+                    else if (robberyResult.protectionType === 'vault')
+                        errorMessage = `🏦 **${targetUser.displayName}** tiene una **Bóveda Permanente**. 🥜${penaltyText}`;
+                    else
+                        errorMessage = `🛡️ **${targetUser.displayName}** está bien protegido/a. 💰${penaltyText}`;
                     break;
-                default:
-                    errorMessage = `No se pudo iniciar el robo: ${robberyResult.reason || 'Razón desconocida'}`;
+                }
+                default: errorMessage = `No se pudo iniciar el robo: ${robberyResult.reason || 'Razón desconocida'}`;
             }
-            
-            const errorEmbed = new EmbedBuilder()
-                .setColor('#ff4444')
-                .setTitle('❌ Error al iniciar robo')
-                .setDescription(errorMessage)
+            return message.reply({
+                embeds: [new EmbedBuilder()
+                    .setColor('#ff4444')
+                    .setTitle('❌ Error al iniciar robo')
+                    .setDescription(errorMessage)
+                    .setTimestamp()]
+            });
+        }
+
+        // ════════════════════════════════════════════════════
+        // FASE 1: CLICKS
+        // ════════════════════════════════════════════════════
+
+        // Verificar si tiene master_gloves (skip fase 1)
+        let skipClicks = false;
+        if (this.shop) {
+            const user = await this.economy.getUser(robberId);
+            const activeEffects = this.shop.parseActiveEffects(user.activeEffects);
+            for (const [, effects] of Object.entries(activeEffects)) {
+                if (!Array.isArray(effects)) continue;
+                for (const effect of effects) {
+                    if (effect.type === 'robbery_boost' && effect.skipClicks === true && effect.usesLeft > 0) {
+                        skipClicks = true;
+                    }
+                }
+            }
+        }
+
+        let finalClicks = 0;
+        let phase1Finished = false;
+
+        if (skipClicks) {
+            // Master Gloves: saltar directamente con clicks máximos
+            finalClicks = this.economy.robberyConfig.maxClicks;
+            phase1Finished = true;
+
+            await message.reply({
+                embeds: [new EmbedBuilder()
+                    .setColor('#4444ff')
+                    .setTitle('🧤 Master Gloves Activados')
+                    .setDescription(`Tus guantes maestros te saltaron la fase de infiltración.\n**Eficiencia máxima garantizada — el minijuego será Fácil.**`)
+                    .setTimestamp()]
+            });
+
+            await new Promise(r => setTimeout(r, 1500));
+        } else {
+            // ── Embed de clicks ─────────────────────────────
+            const progressBar = (clicks) => {
+                const filled = Math.floor((clicks / this.economy.robberyConfig.maxClicks) * 20);
+                return '█'.repeat(filled) + '░'.repeat(20 - filled);
+            };
+
+            const clickEmbed = () => new EmbedBuilder()
+                .setColor('#ffaa00')
+                .setTitle('🦹 INFILTRACIÓN EN PROGRESO')
+                .setDescription(
+                    `**Objetivo:** @${targetUser.username}\n` +
+                    `*Llega al máximo de clicks antes de que se agote el tiempo para asegurar el minijuego más fácil.*`
+                )
+                .addFields(
+                    { name: '⏱️ Tiempo', value: '30 segundos', inline: true },
+                    { name: '👆 Clicks', value: `0/${this.economy.robberyConfig.maxClicks}`, inline: true },
+                    { name: '📊 Progreso', value: progressBar(0), inline: false },
+                    { name: '💡 Tip', value: '**0 clicks = fallo automático.** Más clicks = minijuego más fácil.', inline: false }
+                )
+                .setFooter({ text: '🧤 Master Gloves saltarían esta fase | 👻 Phantom Gloves saltarían todo' })
                 .setTimestamp();
-            
-            return message.reply({ embeds: [errorEmbed] });
-        }      
-        
-        // Crear embed inicial del robo
-        const robberyEmbed = new EmbedBuilder()
-            .setColor('#ffaa00')
-            .setTitle('🦹‍♂️ ROBO EN PROGRESO')
-            .setDescription(`**${message.author.username}** está intentando robar a **${targetUser.username}**!`)
-            .addFields([
-                {
-                    name: '🎯 Objetivo',
-                    value: `${targetUser.username}`,
-                    inline: true
-                },
-                {
-                    name: '⏱️ Tiempo límite',
-                    value: '30 segundos',
-                    inline: true
-                },
-                {
-                    name: '👆 Clicks',
-                    value: `0/${this.economy.robberyConfig.maxClicks}`,
-                    inline: true
-                },
-                {
-                    name: '💡 Instrucciones',
-                    value: 'Haz click en el botón **lo más rápido posible**!\nMientras más clicks hagas, mayor será tu probabilidad de éxito.',
-                    inline: false
-                }
-            ])
-            .setFooter({ text: 'Puedes robar entre 5% - 10% del dinero del objetivo' })
-            .setTimestamp();
-        
-        // Crear botón
-        const robButton = new ButtonBuilder()
-            .setCustomId(`rob_${robberId}_${Date.now()}`)
-            .setLabel('🏃‍♂️ ¡ROBAR!')
-            .setStyle(ButtonStyle.Danger);
-        
-        const row = new ActionRowBuilder()
-            .addComponents(robButton);
-        
-        const robberyMessage = await message.reply({ 
-            embeds: [robberyEmbed], 
-            components: [row] 
-        });
-        
-        // Collector para el botón
-        const collector = robberyMessage.createMessageComponentCollector({
-            time: this.economy.robberyConfig.buttonTimeLimit + 2000
-        });
-        
-        let lastUpdate = Date.now();
-        let robberyFinished = false; // AGREGAR ESTA LÍNEA
 
-        // AGREGAR ESTA FUNCIÓN COMPLETA
-        const finishRobberyAndShowResult = async (reason = 'unknown') => {
-            if (robberyFinished) {
-                console.log(`⚠️ Robo ya fue finalizado, ignorando llamada desde: ${reason}`);
-                return;
-            }
-            
-            robberyFinished = true;
-            console.log(`🎯 Finalizando robo por: ${reason}`);
-            
-            const finishResult = await this.economy.finishRobbery(robberId);
+            const robButton = new ButtonBuilder()
+                .setCustomId(`rob_${robberId}_${Date.now()}`)
+                .setLabel('🏃 ¡INFILTRAR!')
+                .setStyle(ButtonStyle.Danger);
 
-            // En lugar de mostrar el resultado inmediatamente, envía un mensaje separado
-            if (finishResult.success) {
-                // Esperar un poco para que se vea como mensaje separado
-                if (finishResult.robberySuccess) {
-                    // Mensaje de robo exitoso
-                    const successEmbed = new EmbedBuilder()
-                        .setColor('#ff0000')
-                            .setTitle('🦹‍♂️ ¡Robo Exitoso!')
-                            .setDescription(`<@${message.author.id}> robó **${finishResult.stolenAmount}** ${this.economy.config.currencySymbol} a <@${finishResult.targetId}>`)
-                            .addFields(
-                                { name: '💰 Cantidad robada', value: `${finishResult.stolenAmount} ${this.economy.config.currencySymbol}`, inline: true },
-                                { name: '🎯 Eficiencia', value: `${finishResult.efficiency}%`, inline: true },
-                                { name: '👆 Clicks', value: `${finishResult.clicks}/${finishResult.maxClicks}`, inline: true }
-                            );
+            const row = new ActionRowBuilder().addComponents(robButton);
+            const clickMsg = await message.reply({ embeds: [clickEmbed()], components: [row] });
 
-                        // AGREGAR: Mostrar items usados si los hay
-                        if (finishResult.usedItems && finishResult.usedItems.length > 0) {
-                            let itemsText = '';
-                            for (const item of finishResult.usedItems) {
-                                if (item.safe) {
-                                    itemsText += `${item.name} (100% éxito)\n`;
-                                } else if (item.boost > 0) {
-                                    itemsText += `${item.name} (+${Math.round(item.boost * 100)}% éxito)\n`;
-                                } else {
-                                    itemsText += `${item.name}\n`;
-                                }
-                            }
-                            successEmbed.addFields({ name: '🔧 Items Usados', value: itemsText, inline: false });
-                        }
-                        
-                        await message.channel.send({ embeds: [successEmbed] });
-                        
-                        if (finishResult.hitLimit) {
-                            await message.reply(`⚠️ **Límite alcanzado:** No pudiste recibir todo el dinero porque tienes el máximo permitido (${this.formatNumber(this.economy.config.maxBalance)} π-b$).`);
-                        }
-                } else {
-                    // Mensaje de robo fallido
-                    const failEmbed = new EmbedBuilder()
-                        .setColor('#800080')
-                        .setTitle('🚨 ¡Robo Fallido!');
+            let clicks = 0;
+            let lastUpdate = Date.now();
+            let clicksDone = false;
 
-                    // Descripción diferente según si hay protección o no
-                    if (finishResult.protectionMessage) {
-                        failEmbed.setDescription(`<@${message.author.id}> falló el robo pero ${finishResult.protectionMessage}`);
-                        failEmbed.addFields(
-                            { name: '🛡️ Protección', value: finishResult.protectionMessage, inline: true },
-                            { name: '🎯 Eficiencia', value: `${finishResult.efficiency}%`, inline: true },
-                            { name: '👆 Clicks', value: `${finishResult.clicks}/${finishResult.maxClicks}`, inline: true }
-                        );
-                    } else {
-                        failEmbed.setDescription(`<@${message.author.id}> falló el robo y perdió **${finishResult.penalty}** ${this.economy.config.currencySymbol}`);
-                        failEmbed.addFields(
-                            { name: '💸 Penalización', value: `${finishResult.penalty} ${this.economy.config.currencySymbol}`, inline: true },
-                            { name: '🎯 Eficiencia', value: `${finishResult.efficiency}%`, inline: true },
-                            { name: '👆 Clicks', value: `${finishResult.clicks}/${finishResult.maxClicks}`, inline: true }
-                        );
-                    }
-
-                    // AGREGAR: Mostrar items usados también en fallos
-                    if (finishResult.usedItems && finishResult.usedItems.length > 0) {
-                        let itemsText = '';
-                        for (const item of finishResult.usedItems) {
-                            itemsText += `${item.name} (consumido)\n`;
-                        }
-                        failEmbed.addFields({ name: '🔧 Items Usados', value: itemsText, inline: false });
-                    }
-                        
-                    await message.channel.send({ embeds: [failEmbed] });
-                }
-            }              
-        };
-        
-        collector.on('collect', async (interaction) => {
-            // Solo el ladrón puede hacer click
-            if (interaction.user.id !== robberId) {
-                await interaction.reply({
-                    content: '❌ Solo el ladrón puede usar este botón',
-                    ephemeral: true
+            await new Promise((resolve) => {
+                const collector = clickMsg.createMessageComponentCollector({
+                    time: this.economy.robberyConfig.buttonTimeLimit + 2000
                 });
-                return;
-            }
-            
-            // Procesar click
-            const clickResult = await this.economy.processRobberyClick(robberId);
 
-            console.log(`🖱️ Click procesado:`, clickResult);
-            
-            if (!clickResult.success) {
-                console.log(`⚠️ Click falló - Razón: ${clickResult.reason}`);
+                collector.on('collect', async (interaction) => {
+                    if (interaction.user.id !== robberId) {
+                        await interaction.reply({ content: '❌ Solo el ladrón puede usar este botón', ephemeral: true });
+                        return;
+                    }
+
+                    const clickResult = await this.economy.processRobberyClick(robberId);
+                    if (!clickResult.success) {
+                        if (clickResult.reason === 'time_expired') {
+                            collector.stop('time_expired');
+                        }
+                        await interaction.deferUpdate();
+                        return;
+                    }
+
+                    clicks = clickResult.clicks;
+                    const now = Date.now();
+                    const shouldUpdate = clicks % 5 === 0 || now - lastUpdate > 3000;
+
+                    if (shouldUpdate) {
+                        const filled = Math.floor((clicks / clickResult.maxClicks) * 20);
+                        const bar = '█'.repeat(filled) + '░'.repeat(20 - filled);
+                        const efficiency = Math.round((clicks / clickResult.maxClicks) * 100);
+                        const diffLabel = efficiency >= 70 ? '🟢 Fácil' : efficiency >= 30 ? '🟡 Normal' : '🔴 Difícil';
+
+                        const updatedEmbed = new EmbedBuilder()
+                            .setColor('#ffaa00')
+                            .setTitle('🦹 INFILTRACIÓN EN PROGRESO')
+                            .setDescription(`**Objetivo:** @${targetUser.username}`)
+                            .addFields(
+                                { name: '⏱️ Tiempo restante', value: `${Math.ceil(clickResult.timeLeft / 1000)}s`, inline: true },
+                                { name: '👆 Clicks', value: `${clicks}/${clickResult.maxClicks}`, inline: true },
+                                { name: '🎯 Dificultad del minijuego', value: diffLabel, inline: true },
+                                { name: '📊 Progreso', value: bar, inline: false }
+                            )
+                            .setTimestamp();
+
+                        await interaction.update({ embeds: [updatedEmbed] });
+                        lastUpdate = now;
+                    } else {
+                        await interaction.deferUpdate();
+                    }
+
+                    if (clickResult.maxReached) {
+                        collector.stop('max_clicks');
+                    }
+                });
+
+                collector.on('end', async (_, reason) => {
+                    if (!clicksDone) {
+                        clicksDone = true;
+                        finalClicks = clicks;
+
+                        // Deshabilitar botón
+                        const disabledRow = new ActionRowBuilder().addComponents(
+                            ButtonBuilder.from(robButton).setDisabled(true).setLabel('⌛ Fase completada')
+                        );
+                        try {
+                            await clickMsg.edit({ components: [disabledRow] });
+                        } catch {}
+
+                        resolve();
+                    }
+                });
+            });
+
+            phase1Finished = true;
+        }
+
+        // ── 0 clicks → fallo automático ──────────────────────
+        if (finalClicks === 0) {
+            const finishResult = await this.economy.finishRobbery(robberId, false);
+            const penalty = finishResult.success ? finishResult.penalty : 0;
+
+            return message.channel.send({
+                embeds: [new EmbedBuilder()
+                    .setColor('#800080')
+                    .setTitle('🚨 Robo Fallido — Sin Infiltración')
+                    .setDescription(
+                        `<@${robberId}> no hizo ningún click y fue capturado en la entrada.\n` +
+                        (penalty > 0
+                            ? `💸 Penalización: **${penalty}** ${this.economy.config.currencySymbol}`
+                            : '🛡️ Un Fortune Shield te protegió de la penalización.')
+                    )
+                    .setTimestamp()]
+            });
+        }
+
+        // ════════════════════════════════════════════════════
+        // FASE 2: MINIJUEGO
+        // ════════════════════════════════════════════════════
+
+        const clickEfficiency = Math.min(finalClicks / this.economy.robberyConfig.maxClicks, 1);
+        const session = this.robMinigames.createSession(robberId, targetUser.username, clickEfficiency);
+
+        if (!session) {
+            // Seguridad extra (no debería llegar aquí con clicks > 0)
+            const finishResult = await this.economy.finishRobbery(robberId, false);
+            return message.channel.send({
+                embeds: [new EmbedBuilder()
+                    .setColor('#800080')
+                    .setTitle('🚨 Robo Fallido')
+                    .setDescription('Error interno al generar el minijuego.')
+                    .setTimestamp()]
+            });
+        }
+
+        // Pequeña pausa cinematográfica
+        await new Promise(r => setTimeout(r, 1200));
+
+        // Anuncio de transición
+        await message.channel.send({
+            embeds: [new EmbedBuilder()
+                .setColor('#111133')
+                .setDescription(`*Sistema de seguridad de @${targetUser.username} detectado...*\n**Iniciando minijuego de intrusión.**`)
+                .setTimestamp()]
+        });
+
+        await new Promise(r => setTimeout(r, 800));
+
+        const { embed: mgEmbed, rows: mgRows } = this.robMinigames.buildMinigameComponents(session);
+        const mgMsg = await message.channel.send({ embeds: [mgEmbed], components: mgRows });
+
+        // ── Collector del minijuego ──────────────────────────
+        let mgFinished = false;
+
+        const processMinigameResult = async (minigameSuccess, reason = 'answered') => {
+            if (mgFinished) return;
+            mgFinished = true;
+
+            // Deshabilitar botones
+            const disabledRows = mgRows.map(row =>
+                new ActionRowBuilder().addComponents(
+                    row.components.map(b => ButtonBuilder.from(b).setDisabled(true))
+                )
+            );
+            try { await mgMsg.edit({ components: disabledRows }); } catch {}
+
+            // Finalizar robo en economy
+            const finishResult = await this.economy.finishRobbery(robberId, minigameSuccess);
+
+            if (!finishResult.success) {
+                return message.channel.send({
+                    embeds: [new EmbedBuilder()
+                        .setColor('#ff4444')
+                        .setTitle('❌ Error')
+                        .setDescription('Error al procesar el resultado del robo.')
+                        .setTimestamp()]
+                });
             }
-                
-            if (clickResult.reason === 'time_expired') {
-                await finishRobberyAndShowResult('time_expired');
-                collector.stop('time_expired');
+
+            const diffEmoji = { easy: '🟢', normal: '🟡', hard: '🔴' }[session.difficulty] || '⚪';
+
+            if (finishResult.robberySuccess) {
+                // ── ÉXITO ──────────────────────────────────────
+                const successEmbed = new EmbedBuilder()
+                    .setColor('#ff0000')
+                    .setTitle('🦹 ¡Robo Exitoso!')
+                    .setDescription(
+                        `<@${robberId}> superó el sistema de @${targetUser.username} y escapó con el botín.`
+                    )
+                    .addFields(
+                        { name: '💰 Botín', value: `**${finishResult.stolenAmount}** ${this.economy.config.currencySymbol}`, inline: true },
+                        { name: '📊 Clicks', value: `${finalClicks}/${this.economy.robberyConfig.maxClicks}`, inline: true },
+                        { name: `${diffEmoji} Dificultad`, value: session.difficulty.charAt(0).toUpperCase() + session.difficulty.slice(1), inline: true },
+                        { name: '🎮 Minijuego', value: session.minigame.title, inline: true },
+                        { name: '📈 % Robado', value: `${finishResult.stealPercentage}% del balance`, inline: true },
+                    );
+
+                if (finishResult.usedItems?.length > 0) {
+                    successEmbed.addFields({
+                        name: '🔧 Items Usados',
+                        value: finishResult.usedItems.map(i => `${i.name}`).join('\n'),
+                        inline: false
+                    });
+                }
+
+                if (reason === 'timeout') {
+                    successEmbed.setFooter({ text: '⌛ Se acabó el tiempo del minijuego, pero lo resolviste a tiempo.' });
+                }
+
+                await message.channel.send({ embeds: [successEmbed] });
+
+                if (finishResult.hitLimit) {
+                    await message.channel.send({ content: `⚠️ **Límite alcanzado:** No pudiste recibir todo el botín porque tienes el máximo permitido.` });
+                }
+
+            } else {
+                // ── FALLO ──────────────────────────────────────
+                const failEmbed = new EmbedBuilder()
+                    .setColor('#800080')
+                    .setTitle('🚨 ¡Robo Fallido!');
+
+                if (reason === 'timeout') {
+                    failEmbed.setDescription(`<@${robberId}> no respondió a tiempo y fue capturado.`);
+                } else {
+                    failEmbed.setDescription(`<@${robberId}> eligió la opción incorrecta y fue capturado.`);
+                }
+
+                if (finishResult.protectionMessage) {
+                    failEmbed.addFields(
+                        { name: '🛡️ Protección', value: finishResult.protectionMessage, inline: false },
+                    );
+                } else {
+                    failEmbed.addFields(
+                        { name: '💸 Penalización', value: `**${finishResult.penalty}** ${this.economy.config.currencySymbol}`, inline: true },
+                    );
+                }
+
+                failEmbed.addFields(
+                    { name: '📊 Clicks', value: `${finalClicks}/${this.economy.robberyConfig.maxClicks}`, inline: true },
+                    { name: `${diffEmoji} Dificultad`, value: session.difficulty.charAt(0).toUpperCase() + session.difficulty.slice(1), inline: true },
+                    { name: '🎮 Minijuego', value: session.minigame.title, inline: true },
+                );
+
+                if (finishResult.usedItems?.length > 0) {
+                    failEmbed.addFields({
+                        name: '🔧 Items Usados',
+                        value: finishResult.usedItems.map(i => `${i.name} (consumido)`).join('\n'),
+                        inline: false
+                    });
+                }
+
+                await message.channel.send({ embeds: [failEmbed] });
+            }
+        };
+
+        const mgCollector = mgMsg.createMessageComponentCollector({
+            time: session.timeLimit + 2000
+        });
+
+        mgCollector.on('collect', async (interaction) => {
+            if (interaction.user.id !== robberId) {
+                await interaction.reply({ content: '❌ Solo el ladrón puede responder este minijuego', ephemeral: true });
                 return;
             }
-            
-            // Actualizar embed cada 5 clicks o cada 3 segundos para no saturar
-            const now = Date.now();
-            const shouldUpdate = clickResult.clicks % 5 === 0 || now - lastUpdate > 3000;
-            
-            if (shouldUpdate) {
-                const updatedEmbed = EmbedBuilder.from(robberyEmbed)
-                    .spliceFields(2, 1, {
-                        name: '👆 Clicks',
-                        value: `${clickResult.clicks}/${clickResult.maxClicks}`,
-                        inline: true
-                    })
-                    .addFields([
-                        {
-                            name: '⚡ Progreso',
-                            value: `${'█'.repeat(Math.floor((clickResult.clicks / clickResult.maxClicks) * 20))}${'░'.repeat(20 - Math.floor((clickResult.clicks / clickResult.maxClicks) * 20))}`,
-                            inline: false
-                        }
-                    ]);
-                
-                await interaction.update({ embeds: [updatedEmbed] });
-                lastUpdate = now;
-            } else {
+
+            if (!this.robMinigames.isMinigameButton(interaction.customId, session)) {
                 await interaction.deferUpdate();
+                return;
             }
-            
-            // Auto-finalizar si llegó al máximo
-            if (clickResult.maxReached) {
-                await finishRobberyAndShowResult('max_clicks');
-                collector.stop('max_clicks');
-            }
+
+            await interaction.deferUpdate();
+
+            const answeredValue = this.robMinigames.extractAnswer(interaction.customId);
+            const result = this.robMinigames.processAnswer(robberId, answeredValue);
+
+            if (!result.valid) return;
+
+            mgCollector.stop('answered');
+            await processMinigameResult(result.success, 'answered');
         });
-        
-        collector.on('end', async (collected, reason) => {
-            console.log(`🔍 Collector terminado - Razón: ${reason}`);
-            
-            // Solo finalizar si fue por timeout y no se ha finalizado ya
-            if (reason === 'time' && !robberyFinished) {
-                await finishRobberyAndShowResult('collector_timeout');
+
+        mgCollector.on('end', async (_, reason) => {
+            if (reason !== 'answered' && !mgFinished) {
+                this.robMinigames.expireSession(robberId);
+                await processMinigameResult(false, 'timeout');
             }
         });
     }

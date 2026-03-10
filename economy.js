@@ -32,15 +32,14 @@ class EconomySystem {
 
         // Configuración de robos
         this.robberyConfig = {
-            cooldown: 12 * 60 * 60 * 1000, // 12 horas de cooldown
-            minStealPercentage: 2, // Mínimo 2%
-            maxStealPercentage: 5, // Máximo 5%
-            buttonTimeLimit: 30000, // 30 segundos para hacer clicks
-            maxClicks: 50, // Máximo de clicks
-            failChance: 0.6, // 60% de chance de fallar
-            penaltyPercentage: 20, // 20% de penalización si fallas
-            levelRequirement: 5, // Nivel mínimo para robar
-            minTargetBalance: 500, // El objetivo debe tener al menos 500 coins
+            cooldown: 6 * 60 * 60 * 1000,     // 6 horas de cooldown
+            minStealPercentage: 15,           // Mínimo 15%
+            maxStealPercentage: 25,           // Máximo 25%
+            buttonTimeLimit: 30000,           // 30 segundos para hacer clicks
+            maxClicks: 50,                    // Máximo de clicks
+            penaltyPercentage: 15,            // 15% de penalización si fallas el minijuego
+            levelRequirement: 5,              // Nivel mínimo para robar
+            minTargetBalance: 500,            // El objetivo debe tener al menos 500 coins
         };
 
         // AGREGAR ESTAS LÍNEAS:
@@ -1888,7 +1887,7 @@ class EconomySystem {
     }
     
     // Finalizar robo y calcular resultado
-    async finishRobbery(robberId) {
+    async finishRobbery(robberId, minigameSuccess = null) {
         console.log(`🎯 Finalizando robo para usuario: ${robberId}`);
 
         const robberyData = this.activeRobberies.get(robberId);
@@ -1908,31 +1907,25 @@ class EconomySystem {
 
             console.log(`👤 Robber balance: ${robber.balance}, Target balance: ${target.balance}`);
 
-// *** VERIFICACIÓN ADICIONAL: El target aún tiene dinero suficiente ***
-        if (target.balance < this.robberyConfig.minTargetBalance) {
-            console.log(`⚠️ Target ya no tiene suficiente dinero para robar`);
-            return { 
-                success: false, 
-                reason: 'target_too_poor_now',
-                targetBalance: target.balance,
-                minRequired: this.robberyConfig.minTargetBalance
-            };
-        }
+            // *** VERIFICACIÓN ADICIONAL: El target aún tiene dinero suficiente ***
+            if (target.balance < this.robberyConfig.minTargetBalance) {
+                console.log(`⚠️ Target ya no tiene suficiente dinero para robar`);
+                return { 
+                    success: false, 
+                    reason: 'target_too_poor_now',
+                    targetBalance: target.balance,
+                    minRequired: this.robberyConfig.minTargetBalance
+                };
+            }
             
-            // Calcular probabilidad de éxito basada en clicks
             const clickEfficiency = Math.min(robberyData.clicks / this.robberyConfig.maxClicks, 1);
-            const baseSuccessChance = 1 - this.robberyConfig.failChance;
-            const finalSuccessChance = baseSuccessChance + (clickEfficiency * 0.2); // Bonus por clicks
 
-            const successBoost = await this.shop.getSuccessBoost(robberId, 'robbery');
-            // AGREGAR: Obtener lista de items de robo activos
+            // Obtener items usados (solo para mostrar en resultado)
             let usedItems = [];
             if (this.shop) {
                 const user = await this.getUser(robberId);
                 const activeEffects = this.shop.parseActiveEffects(user.activeEffects);
-                
                 const robberyItems = ['master_gloves', 'phantom_gloves', 'robbery_kit'];
-                
                 for (const itemId of robberyItems) {
                     if (activeEffects[itemId] && activeEffects[itemId].length > 0) {
                         for (const effect of activeEffects[itemId]) {
@@ -1951,43 +1944,17 @@ class EconomySystem {
                     }
                 }
             }
-            
-            // Verificar si tiene phantom gloves para garantizar 100% éxito
-            let finalChance = finalSuccessChance + successBoost;
-
-            // NUEVO: Verificar phantom gloves activos
-            if (this.shop) {
-                const user = await this.getUser(robberId);
-                const activeEffects = this.shop.parseActiveEffects(user.activeEffects);
-                
-                for (const [itemId, effects] of Object.entries(activeEffects)) {
-                    if (!Array.isArray(effects)) continue;
-                    
-                    for (const effect of effects) {
-                        if (effect.type === 'robbery_boost' && effect.safe === true && effect.usesLeft > 0) {
-                            finalChance = 1.0; // 100% garantizado para phantom gloves
-                            break;
-                        }
-                    }
-                    if (finalChance === 1.0) break; // Salir del loop exterior también
-                }
-            }
-
-            // Solo aplicar límite si NO son phantom gloves
-            if (finalChance < 1.0) {
-                finalChance = Math.min(finalChance, 0.95);
-            }
-
-            console.log(`🎲 Probabilidad de éxito: ${finalSuccessChance * 100}%`);
-            console.log(`🔧 Boost de kit: ${successBoost*100}%`);
-            console.log(`✅ Probabilidad final: ${finalChance*100}%`);
 
             // Consumir usos de items de robo
             if (this.shop) {
                 await this.shop.consumeRobberyItems(robberId);
             }
-            
-            const success = Math.random() < finalChance;
+
+            // El éxito lo determina el minijuego (pasado como parámetro)
+            // Si minigameSuccess es null, significa que fue phantom_gloves (éxito garantizado)
+            const success = minigameSuccess === null ? true : minigameSuccess;
+
+            console.log(`✅ Resultado del minijuego: ${success ? 'ÉXITO' : 'FALLO'} | Clicks efficiency: ${Math.round(clickEfficiency * 100)}%`);
             
             // Actualizar cooldown del ladrón
             const robberUpdateData = {

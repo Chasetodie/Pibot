@@ -58,7 +58,7 @@ class ShopSystem {
             'robbery_kit': {
                 id: 'robbery_kit',
                 name: '🔧 Kit de Robo',
-                description: 'Aumenta 20% probabilidad de éxito en robos por 1 uso',
+                description: 'Reduce la dificultad de los minijuegos de robo',
                 price: 18000,
                 category: 'consumable',
                 rarity: 'uncommon',
@@ -775,13 +775,14 @@ class ShopSystem {
             'master_gloves': {
                 id: 'master_gloves',
                 name: '💀🧤 Guantes del Ladrón Maestro',
-                description: 'Mejora la efectividad de los robos (+50% éxito, 10 usos)',
+                description: 'Salta la 1era fase del robo (10 usos)',
                 category: 'consumable',
                 rarity: 'epic',
                 effect: {
                     type: 'robbery_boost',
                     successRate: 0.5,
-                    uses: 10
+                    uses: 10,
+                    skipClicks: true
                 },
                 chestOnly: true,
                 stackable: true,
@@ -884,14 +885,14 @@ class ShopSystem {
             'phantom_gloves': {
                 id: 'phantom_gloves',
                 name: '👻🧤 Guantes Fantasma',
-                description: 'Permiten robar sin riesgo de ser atrapado (7 usos)',
+                description: 'Permiten robar sin riesgo de ser atrapado (4 usos)',
                 category: 'consumable',
                 rarity: 'mythic',
                 effect: {
                     type: 'robbery_boost',
                     successRate: 1.0,
                     safe: true,
-                    uses: 7
+                    uses: 4
                 },
                 chestOnly: true,
                 stackable: true,
