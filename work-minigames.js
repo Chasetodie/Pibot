@@ -1297,6 +1297,7 @@ class WorkMinigames {
     async handleInteraction(interaction) {
         const customId = interaction.customId;
         const userId = interaction.user.id;
+        console.log('DEBUG work interaction:', customId, '| userId:', userId);
 
         if (!customId.startsWith('work_')) return false;
 
