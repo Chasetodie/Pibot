@@ -1002,6 +1002,14 @@ class MusicSystem {
                 query = query.replace('/intl-es/', '/').split('?')[0];
             }
 
+            if (query.includes('youtube.com') || query.includes('youtu.be')) {
+                const urlObj = new URL(query);
+                const videoId = urlObj.searchParams.get('v');
+                if (videoId) {
+                    query = `https://www.youtube.com/watch?v=${videoId}`;
+                }
+            }
+
             let searchQuery = query;
             let searchEngine = 'ytsearch';
 
