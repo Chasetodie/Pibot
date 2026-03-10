@@ -12,7 +12,9 @@ class AllCommands {
         this.achievements = achievementsSystem;
         this.guildLevels = guildLevels;
         this.guildConfig = guildConfig;
-        this.maintenance = maintenance
+        this.maintenance = maintenance;
+        const WorkMinigames = require('./work-minigames.js');
+this.workMinigames = new WorkMinigames();
     }
 
     // FUNCIÓN AUXILIAR: Obtener efectos VIP para mostrar en perfil
@@ -854,219 +856,177 @@ if (cosmeticRole?.name) {
         return bonuses.length > 0 ? bonuses.join('\n') : 'No hay bonificaciones activas';
     }
     
-    // Comando !work - Sistema de trabajos
     async handleWork(message) {
         const userId = message.author.id;
         const args = message.content.split(' ');
         const jobType = args[1]?.toLowerCase();
-        
         const jobs = await this.economy.getWorkJobs();
-        
-        // Si no especificó trabajo, mostrar lista
+
+        // Sin argumento → mostrar lista
         if (!jobType) {
-            const user = await this.economy.getUser(message.author.id);
-            
+            const user = await this.economy.getUser(userId);
+            const streakData = this.economy.workStreaks?.get(userId) || { streak: 0 };
+
             const embed = new EmbedBuilder()
                 .setTitle('🛠️ Trabajos Disponibles')
                 .setDescription('Elige un trabajo para ganar π-b Coins')
                 .setColor('#28a745');
-            
+
             for (const [key, job] of Object.entries(jobs)) {
                 const cooldownHours = job.cooldown / (60 * 60 * 1000);
                 const cooldownText = cooldownHours >= 1 ? `${cooldownHours}h` : `${job.cooldown / (60 * 1000)}m`;
-                
                 const available = user.level >= job.levelRequirement ? '✅' : '🔒';
                 const levelText = user.level >= job.levelRequirement ? '' : `\n*Requiere Nivel ${job.levelRequirement}*`;
-                
+
                 embed.addFields({
                     name: `${available} ${job.name}`,
                     value: `**Pago:** ${job.baseReward} - ${job.variation} π-b$\n**Cooldown:** ${cooldownText}${levelText}${job.failChance ? `\n**Riesgo:** ${(job.failChance * 100)}% de fallar` : ''}\n**Comando:** >work ${job.codeName}`,
                     inline: true
                 });
             }
-            
-            embed.addFields({
-                name: '💡 Uso',
-                value: '`>work <tipo>`\nEjemplo: `>work delivery`',
-                inline: false
-            });
-            
+
+            embed.addFields({ name: '💡 Uso', value: '`>work <tipo>`\nEjemplo: `>work delivery`', inline: false });
+            if (streakData.streak > 0) {
+                embed.setFooter({ text: `🔥 Racha actual: ${streakData.streak} éxitos consecutivos` });
+            }
+
             await message.reply({ embeds: [embed] });
             return;
         }
-        
-        // Verificar si el trabajo existe
+
+        // Trabajo no existe
         if (!jobs[jobType]) {
-            await message.reply('❌ Trabajo no válido.\nEscribe \`>work\` para ver los Trabajos Disponibles');
+            await message.reply('❌ Trabajo no válido.\nEscribe `>work` para ver los Trabajos Disponibles');
             return;
         }
-        
+
         // Intentar trabajar
         const result = await this.economy.doWork(userId, jobType, message.guild?.id);
 
+        // No puede trabajar
         if (!result.canWork) {
             if (result.reason === 'level_too_low') {
                 const userLevel = await this.economy.getUser(userId);
                 const embed = new EmbedBuilder()
                     .setTitle('🔒 Nivel Insuficiente')
                     .setDescription(`Necesitas ser **Nivel ${result.requiredLevel}** para este trabajo`)
-                    .addFields({
-                        name: '📊 Tu Nivel Actual',
-                        value: `**${userLevel.level}**`,
-                        inline: true
-                    })
+                    .addFields({ name: '📊 Tu Nivel Actual', value: `**${userLevel.level}**`, inline: true })
                     .setColor('#dc3545');
-                
                 await message.reply({ embeds: [embed] });
                 return;
             }
-            
+
             if (result.reason === 'cooldown') {
                 const timeLeft = this.formatTimeLeft(result.timeLeft);
-                const userJob = await this.economy.getUser(userId);
-
                 const embed = new EmbedBuilder()
                     .setTitle('⏰ En Cooldown')
-                    .setDescription(`Ya trabajaste como **${result.name}** recientemente, espera un momento para volver a trabajar en otra profesión`)
-                    .addFields({
-                        name: '🕐 Tiempo restante',
-                        value: `**${timeLeft}**`,
-                        inline: true
-                    })
+                    .setDescription(`Ya trabajaste como **${result.name}** recientemente`)
+                    .addFields({ name: '🕐 Tiempo restante', value: `**${timeLeft}**`, inline: true })
                     .setColor('#ffc107');
-                
                 await message.reply({ embeds: [embed] });
                 return;
             }
-            
+
             await message.reply('❌ No puedes trabajar en este momento.');
             return;
         }
-        
-        // Trabajo falló
-        if (result.failed) {
-            const embed = new EmbedBuilder()
-                .setTitle('💥 ¡El trabajo salió mal!')
-                .setDescription(`**${jobs[jobType].name}**\n\n${result.message}`)
-                .addFields(
-                    { name: '💸 Perdiste', value: `${this.formatNumber(result.penalty)} π-b$`, inline: true },
-                    {
-                        name: '💸 Balance Anterior',
-                        value: `${this.formatNumber(result.oldBalance)} π-b$`,
-                        inline: true
-                    },
-                    {
-                        name: '💳 Balance Actual',
-                        value: `${this.formatNumber(result.newBalance)} π-b$`,
-                        inline: true
-                    }
-                )
-                .setColor('#dc3545')
-                .setTimestamp();
 
-            // AGREGAR ESTO:
-            if (result.protectionMessage) {
-                embed.addFields({ 
-                    name: '🛡️ Protección', 
-                    value: result.protectionMessage, 
-                    inline: false 
-                });
-                embed.setColor('#FFA500'); // Color diferente si hay protección
-            }
-            
-            await message.reply({ embeds: [embed] });
-            if (result.hitLimit) {
-                await message.reply(`⚠️ **Límite alcanzado:** No pudiste recibir todo el dinero porque tienes el máximo permitido (${this.formatNumber(this.economy.config.maxBalance)} π-b$).`);
-            }
+        // ── LANZAR MINIJUEGO ──
+        const minigameResult = await this.workMinigames.launch(
+            message,
+            jobType,
+            result.finalEarnings,
+            result.currentStreak
+        );
 
-            // *** NUEVO: VERIFICAR ACHIEVEMENTS DESPUÉS DE TRABAJAR ***
-            if (result.success && this.achievements) {
+        if (!minigameResult) {
+            await message.reply('⚠️ Hubo un error al lanzar el minijuego. Inténtalo de nuevo.');
+            return;
+        }
+
+        // Aplicar resultado
+        const applyResult = await this.economy.applyWorkResult(
+            userId,
+            jobType,
+            minigameResult.reward,
+            minigameResult.success
+        );
+
+        // Embed final
+        const isIllegal = ['criminal', 'vendedordelpunto', 'damadecomp', 'sicario', 'contador'].includes(jobType);
+        const color = minigameResult.success ? '#28a745' : (isIllegal ? '#dc3545' : '#ffc107');
+
+        let description = minigameResult.success
+            ? `**${result.jobName}**\n\n📖 *${result.message}*`
+            : `**${result.jobName}**\n\n📖 *${result.failMessage}*`;
+
+        const embed = new EmbedBuilder()
+            .setTitle(minigameResult.success ? '✅ ¡Trabajo Completado!' : '💥 ¡El trabajo salió mal!')
+            .setDescription(description)
+            .setColor(color)
+            .setTimestamp();
+
+        if (minigameResult.success) {
+            embed.addFields(
+                { name: '💰 Ganaste', value: `+${this.formatNumber(applyResult.finalAmount)} π-b$`, inline: true },
+                { name: '💳 Balance Actual', value: `${this.formatNumber(applyResult.newBalance)} π-b$`, inline: true },
+            );
+            if (result.allBonusMessages.length > 0) {
+                embed.addFields({ name: '🎉 Bonificaciones', value: result.allBonusMessages.join('\n'), inline: false });
+            }
+            if (applyResult.streakBonusApplied > 0) {
+                embed.addFields({ name: applyResult.streakBonusLabel, value: `+${this.formatNumber(applyResult.streakBonusApplied)} π-b$ extra`, inline: false });
+            }
+            if (applyResult.newStreak > 0) {
+                embed.setFooter({ text: `🔥 Racha: ${applyResult.newStreak} éxitos consecutivos` });
+            }
+        } else {
+            const lostText = applyResult.finalAmount < 0
+                ? `${this.formatNumber(Math.abs(applyResult.finalAmount))} π-b$`
+                : `0 π-b$ (ganaste ${this.formatNumber(applyResult.finalAmount)} π-b$ de consolación)`;
+            embed.addFields(
+                { name: '💸 Perdiste', value: lostText, inline: true },
+                { name: '💳 Balance Actual', value: `${this.formatNumber(applyResult.newBalance)} π-b$`, inline: true },
+            );
+            embed.setFooter({ text: '💔 Racha reseteada' });
+        }
+
+        await message.channel.send({ embeds: [embed] });
+
+        if (applyResult.hitLimit) {
+            await message.channel.send(`⚠️ **Límite alcanzado:** No pudiste recibir todo el dinero.`);
+        }
+
+        // Achievements y misiones
+        if (minigameResult.success) {
+            if (this.achievements) {
                 try {
                     const newAchievements = await this.achievements.checkAchievements(userId);
-                    if (newAchievements.length > 0) {
-                        await this.achievements.notifyAchievements(message, newAchievements);
-                    }
+                    if (newAchievements.length > 0) await this.achievements.notifyAchievements(message, newAchievements);
                 } catch (error) {
                     console.error('❌ Error verificando logros después del trabajo:', error);
                 }
             }
 
-            // *** NUEVO: NOTIFICAR MISIONES COMPLETADAS ***
             if (this.economy.missions) {
                 const workMissions = await this.economy.missions.updateMissionProgress(userId, 'work');
-                const moneyMissions = await this.economy.missions.updateMissionProgress(userId, 'money_earned_today', result.amount);
-                const trinityMissionss = await this.economy.missions.checkTrinityCompletion(userId); // ← NUEVO
-
-                const allCompleted = [...workMissions, ...moneyMissions, ...trinityMissionss];
-                if (allCompleted.length > 0) {
-                    await this.economy.missions.notifyCompletedMissions(message, allCompleted);
-                }
+                const moneyMissions = await this.economy.missions.updateMissionProgress(userId, 'money_earned_today', applyResult.finalAmount);
+                const trinityMissions = await this.economy.missions.checkTrinityCompletion(userId);
+                const allCompleted = [...workMissions, ...moneyMissions, ...trinityMissions];
+                if (allCompleted.length > 0) await this.economy.missions.notifyCompletedMissions(message, allCompleted);
             }
 
-            return;
-        }
-        
-        // Trabajo exitoso
-        const embed = new EmbedBuilder()
-            .setTitle('✅ ¡Trabajo Completado!')
-            .setDescription(`**${result.jobName}**\n\n${result.message}`)
-            .addFields(
-                { name: '💰 Ganaste', value: `+${this.formatNumber(result.amount)} π-b$`, inline: true },
-                {
-                    name: '💸 Balance Anterior',
-                    value: `${this.formatNumber(result.oldBalance)} π-b$`,
-                    inline: true
-                },
-                {
-                    name: '💳 Balance Actual',
-                    value: `${this.formatNumber(result.newBalance)} π-b$`,
-                    inline: true
-                },
-                { name: '🎉 Bonificaciones', value: this.formatAllBonuses(result), inline: false },
-                //{ name: '🎉 Bonificaciones', value: this.formatBonusMessages(eventMessage, itemMessage, vipMessage), inline: false }
-            )
-            .setColor('#28a745')
-            .setTimestamp();
-
-        await message.reply({ embeds: [embed] });
-        
-        // *** NUEVO: VERIFICAR ACHIEVEMENTS DESPUÉS DE TRABAJAR ***
-        if (result.success && this.achievements) {
-            try {
-                const newAchievements = await this.achievements.checkAchievements(userId);
-                if (newAchievements.length > 0) {
-                    await this.achievements.notifyAchievements(message, newAchievements);
-                }
-            } catch (error) {
-                console.error('❌ Error verificando logros después del trabajo:', error);
-            }
-        }
-
-        // *** NUEVO: NOTIFICAR MISIONES COMPLETADAS ***
-        if (this.economy.missions) {
-            const workMissions = await this.economy.missions.updateMissionProgress(userId, 'work');
-            const moneyMissions = await this.economy.missions.updateMissionProgress(userId, 'money_earned_today', result.amount);
-            
-            const allCompleted = [...workMissions, ...moneyMissions];
-            if (allCompleted.length > 0) {
-                await this.economy.missions.notifyCompletedMissions(message, allCompleted);
-            }
-        }
-
-            // Verificar tesoros al final
             for (const event of this.events.getActiveEvents(message.guild?.id)) {
                 if (event.type === 'treasure_hunt') {
                     const treasures = await this.events.checkSpecialEvents(userId, 'general');
-                    
                     for (const treasure of treasures) {
-                        if (treasure.type === 'treasure') {
-                            message.reply(`🗺️ **¡Tesoro encontrado!**\n${treasure.description}`);
-                        }
+                        if (treasure.type === 'treasure') message.reply(`🗺️ **¡Tesoro encontrado!**\n${treasure.description}`);
                     }
                     break;
                 }
             }
-    }    
+        }
+    }
 
     async handleRobberyCommand(message, args) {
         const robberId = message.author.id;
