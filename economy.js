@@ -1104,6 +1104,249 @@ class EconomySystem {
                     'El fenómeno resultó ser un engaño',
                     'No lograste captar nada inusual'
                 ]
+            },
+
+            'limpiador': {
+                name: '🧹 Limpiador de Oficinas',
+                cooldown: 1.5 * 60 * 60 * 1000,
+                codeName: 'limpiador',
+                baseReward: 200,
+                variation: 100,
+                levelRequirement: 1,
+                failChance: 0.05,
+                messages: [
+                    'El gerente quedó tan impresionado que te dio propina',
+                    'Limpiaste el edificio entero en tiempo récord',
+                    'Encontraste y devolviste un objeto valioso, te recompensaron',
+                    'El encargado te dio un bono por trabajo impecable',
+                    'Terminaste temprano y te pagaron las horas extra'
+                ],
+                failMessages: [
+                    'Volcaste el balde en la oficina del CEO',
+                    'Perdiste las llaves del edificio',
+                    'Rayaste el piso de mármol del lobby'
+                ]
+            },
+
+            'paseador': {
+                name: '🐕 Paseador de Perros',
+                cooldown: 1.5 * 60 * 60 * 1000,
+                codeName: 'paseador',
+                baseReward: 280,
+                variation: 150,
+                levelRequirement: 2,
+                failChance: 0.08,
+                messages: [
+                    'Todos los perros llegaron felices y sanos',
+                    'Un dueño te dejó propina extra por cuidar tan bien a su mascota',
+                    'Los perros te adoraron, te contrataron fijo',
+                    'Evitaste que un perro se peleara, los dueños te felicitaron',
+                    'Paseaste un perro famoso, saliste en redes sociales'
+                ],
+                failMessages: [
+                    'Un perro se soltó y tardaste horas en encontrarlo',
+                    'El Golden se revolcó en el lodo recién bañado',
+                    'Te enredaste con 5 correas y caíste'
+                ]
+            },
+
+            'streamer': {
+                name: '🎮 Streamer',
+                cooldown: 1.5 * 60 * 60 * 1000,
+                codeName: 'streamer',
+                baseReward: 350,
+                variation: 200,
+                levelRequirement: 3,
+                failChance: 0.10,
+                messages: [
+                    'Tus viewers rompieron récord histórico',
+                    'Una marca te ofreció sponsorship en pleno stream',
+                    'Viral en Twitter por tu reacción épica',
+                    'Raid sorpresa de otro streamer famoso',
+                    'Donations llovieron durante toda la sesión'
+                ],
+                failMessages: [
+                    'Tu internet se cayó a mitad del stream',
+                    'Dijiste algo que te ganó un ban temporal',
+                    'Nadie entró al stream hoy'
+                ]
+            },
+
+            'bartender': {
+                name: '🍺 Bartender',
+                cooldown: 2 * 60 * 60 * 1000,
+                codeName: 'bartender',
+                baseReward: 450,
+                variation: 250,
+                levelRequirement: 6,
+                failChance: 0.10,
+                messages: [
+                    'Una celebridad en el bar te dejó una propina enorme',
+                    'Inventaste un cóctel que se hizo viral',
+                    'Noche de viernes: propinas a tope',
+                    'El dueño del bar te ofreció aumento por tu trabajo',
+                    'Cerraste el bar con la mejor recaudación del mes'
+                ],
+                failMessages: [
+                    'Derramaste una botella cara de whisky',
+                    'Confundiste un pedido sin alcohol con uno con alcohol',
+                    'Le serviste a alguien menor de edad sin verificar'
+                ]
+            },
+
+            'uber': {
+                name: '🚗 Taxista Uber',
+                cooldown: 1.5 * 60 * 60 * 1000,
+                codeName: 'uber',
+                baseReward: 320,
+                variation: 180,
+                levelRequirement: 7,
+                failChance: 0.08,
+                messages: [
+                    'Conseguiste 5 estrellas de todos tus pasajeros',
+                    'Un ejecutivo te dejó propina de $50',
+                    'Completaste el doble de viajes gracias a la zona de surge',
+                    'Un pasajero te recomendó con todos sus contactos',
+                    'Noche de concierto: viajes sin parar con surge pricing'
+                ],
+                failMessages: [
+                    'Un pasajero te dio 1 estrella sin razón aparente',
+                    'Te perdiste y el pasajero llegó tarde a su vuelo',
+                    'Multa por estacionar mal frente al aeropuerto'
+                ]
+            },
+
+            'croupier': {
+                name: '🎲 Croupier',
+                cooldown: 2.5 * 60 * 60 * 1000,
+                codeName: 'croupier',
+                baseReward: 600,
+                variation: 350,
+                levelRequirement: 8,
+                failChance: 0.12,
+                messages: [
+                    'La mesa fue la más rentable del casino esta noche',
+                    'Detectaste a un tramposo y ganaste un bono',
+                    'Trabajaste en la mesa VIP con apuestas enormes',
+                    'El casino tuvo una noche excelente gracias a tu gestión',
+                    'Un jugador famoso estuvo en tu mesa y todo salió perfecto'
+                ],
+                failMessages: [
+                    'Cometiste un error en el pago y el casino perdió dinero',
+                    'No detectaste a alguien contando cartas',
+                    'Tuviste un malentendido con un jugador VIP'
+                ]
+            },
+
+            'mecanico': {
+                name: '🔧 Mecanico',
+                cooldown: 3 * 60 * 60 * 1000,
+                codeName: 'mecanico',
+                baseReward: 750,
+                variation: 400,
+                levelRequirement: 11,
+                failChance: 0.12,
+                messages: [
+                    'Reparaste el auto más rápido de lo esperado',
+                    'Diagnosticaste un problema que otros talleres no vieron',
+                    'El cliente te trajo 3 carros más de sus familiares',
+                    'Resolviste una emergencia en carretera, te pagaron el doble',
+                    'Reparaste un auto de lujo y el dueño quedó impresionado'
+                ],
+                failMessages: [
+                    'Una pieza que instalaste falló y tuviste que rehacer el trabajo',
+                    'Olvidaste apretar un tornillo importante',
+                    'El cliente reclamó por un problema que no existía'
+                ]
+            },
+
+            'contador': {
+                name: '📊 Contador',
+                cooldown: 4 * 60 * 60 * 1000,
+                codeName: 'contador',
+                baseReward: 3500,
+                variation: 2500,
+                levelRequirement: 28,
+                failChance: 0.35,
+                messages: [
+                    'Los libros cuadraron perfectamente... esta vez',
+                    'Encontraste una deducción que nadie más había visto',
+                    'La auditoría pasó sin problemas gracias a tu preparación',
+                    'El cliente ahorró una fortuna en impuestos legalmente',
+                    'Cerraste el año fiscal con todos los números en verde'
+                ],
+                failMessages: [
+                    'La auditoría encontró irregularidades',
+                    'Los libros no cuadraron y tuviste que pagar la diferencia',
+                    'Un error en la declaración generó una multa'
+                ]
+            },
+
+            'joyero': {
+                name: '💎 Joyero',
+                cooldown: 3.5 * 60 * 60 * 1000,
+                codeName: 'joyero',
+                baseReward: 2800,
+                variation: 2000,
+                levelRequirement: 30,
+                failChance: 0.15,
+                messages: [
+                    'Valuaste un diamante rarísimo que resultó valer una fortuna',
+                    'Diseñaste una joya personalizada que el cliente pagó premium',
+                    'Reparaste una joya familiar de valor sentimental incalculable',
+                    'Un coleccionista llegó con piezas únicas y pagó bien',
+                    'Vendiste el collar más caro de tu carrera'
+                ],
+                failMessages: [
+                    'Rayaste un diamante valioso con el equipo',
+                    'Confundiste un rubí con granate y el cliente se molestó',
+                    'Perdiste una gema pequeña en el taller'
+                ]
+            },
+
+            'actor_porno': {
+                name: '🎬 Actor',
+                cooldown: 5 * 60 * 60 * 1000,
+                codeName: 'actor_porno',
+                baseReward: 4500,
+                variation: 3000,
+                levelRequirement: 35,
+                failChance: 0.20,
+                messages: [
+                    'La escena quedó perfecta al primer intento',
+                    'El director quedó tan satisfecho que duplicó tu pago',
+                    'Tu actuación fue la más vista del mes en la plataforma',
+                    'Te nominaron al premio del año en tu categoría',
+                    'Una marca premium quiso patrocinarte'
+                ],
+                failMessages: [
+                    'Tuviste un bloqueo creativo en el momento más importante',
+                    'El director no quedó satisfecho con tu actuación',
+                    'Problemas técnicos arruinaron toda la sesión de grabación'
+                ]
+            },
+
+            'sicario': {
+                name: '🎯 Sicario',
+                cooldown: 6 * 60 * 60 * 1000,
+                codeName: 'sicario',
+                baseReward: 8000,
+                variation: 5000,
+                levelRequirement: 40,
+                failChance: 0.45,
+                messages: [
+                    'Contrato completado sin dejar rastro',
+                    'Operacion perfecta, el cliente quedo satisfecho',
+                    'Trabajo limpio, pago inmediato',
+                    'Nadie supo que estuviste ahi',
+                    'Mision cumplida antes del tiempo acordado'
+                ],
+                failMessages: [
+                    'Te detectaron y tuviste que abandonar la operacion',
+                    'El objetivo tenia proteccion adicional no prevista',
+                    'Algo salio muy mal y perdiste parte del anticipo',
+                    'Tuviste que sobornar a alguien para escapar'
+                ]
             }
         };
     }
