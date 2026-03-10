@@ -50,6 +50,7 @@ class EconomySystem {
         
         // Map para trackear robos activos
         this.activeRobberies = new Map();
+        this.workStreaks = new Map(); // userId -> { streak, lastJob }
     }
 
     async initializeDatabase() {
@@ -1591,8 +1592,7 @@ class EconomySystem {
             }
         }
         
-        const addResult = await this.addMoney(userId, finalEarnings, 'work_reward');
-        await this.updateUser(userId, updateData); // ← Reemplaza saveUsers()    
+        await this.updateUser(userId, updateData);
 
         // ✅ MEJORAR: Combinar todos los mensajes de bonificaciones
         let allBonusMessages = [eventMessage, pickaxeMessage, equipmentMessage, itemMessage, vipMessage].filter(msg => msg !== '');
@@ -1610,16 +1610,77 @@ class EconomySystem {
             itemMessage: itemMessage,       // NUEVO
             vipMessage: vipMessage,         // NUEVO
             allBonusMessages: allBonusMessages, // NUEVO: array con todos los bonos
-            finalEarnings: addResult.actualAmount,
-            hitLimit: addResult.hitLimit,
             canWork: canWorkResult.canWork,
             reason: canWorkResult.reason,
             requiredLevel: canWorkResult.requiredLevel,
             timeLeft: canWorkResult.timeLeft || 0, // Solo si es cooldown
-            canWorkResult: canWorkResult               
+            canWorkResult: canWorkResult,
+            needsMinigame: true,
+baseAmount: amount,
+failMessage: job.failMessages[Math.floor(Math.random() * job.failMessages.length)],
+currentStreak: this.workStreaks.get(userId)?.streak || 0,
         };
     }
 
+    async applyWorkResult(userId, jobType, earnedAmount, minigameSuccess) {
+        const user = await this.getUser(userId);
+        const streakData = this.workStreaks.get(userId) || { streak: 0 };
+
+        const illegalJobs = ['criminal', 'vendedordelpunto', 'damadecomp', 'sicario', 'contador'];
+        const bonuses = [
+            { streak: 10, bonus: 0.40, label: '🔥🔥🔥 ¡RACHA LEGENDARIA! +40%' },
+            { streak: 5,  bonus: 0.25, label: '🔥🔥 ¡Racha increíble! +25%' },
+            { streak: 3,  bonus: 0.15, label: '🔥 ¡En racha! +15%' },
+        ];
+
+        let finalAmount = earnedAmount;
+        let newStreak = streakData.streak;
+        let streakBonusApplied = 0;
+        let streakBonusLabel = '';
+
+        if (minigameSuccess) {
+            newStreak = (streakData.streak || 0) + 1;
+            for (const b of bonuses) {
+                if (newStreak >= b.streak) {
+                    streakBonusApplied = Math.floor(finalAmount * b.bonus);
+                    finalAmount += streakBonusApplied;
+                    streakBonusLabel = b.label;
+                    break;
+                }
+            }
+        } else {
+            newStreak = 0;
+        }
+
+        this.workStreaks.set(userId, { streak: newStreak, lastJob: jobType });
+
+        let addResult;
+        if (finalAmount >= 0) {
+            addResult = await this.addMoney(userId, finalAmount, 'work_reward');
+        } else {
+            await this.removeMoney(userId, Math.abs(finalAmount), 'work_penalty');
+            const updatedUser = await this.getUser(userId);
+            addResult = { newBalance: updatedUser.balance, actualAmount: finalAmount, hitLimit: false };
+        }
+
+        await this.updateUser(userId, {
+            stats: {
+                ...user.stats,
+                totalEarned: (user.stats?.totalEarned || 0) + Math.max(0, finalAmount)
+            }
+        });
+
+        return {
+            finalAmount,
+            newBalance: addResult.newBalance,
+            newStreak,
+            streakBonusApplied,
+            streakBonusLabel,
+            hitLimit: addResult.hitLimit || false,
+        };
+    }
+    
+    
     // Después del método getUserNumber(), AGREGAR:
     formatBonusMessages(eventMsg, itemMsg, vipMsg) {
         const messages = [eventMsg, itemMsg, vipMsg].filter(msg => msg && msg.trim() !== '');
