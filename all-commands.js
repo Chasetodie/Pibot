@@ -872,7 +872,7 @@ if (cosmeticRole?.name) {
                 .setDescription('Elige un trabajo para ganar π-b Coins')
                 .setColor('#28a745');
 
-            for (const [key, job] of Object.entries(jobs)) {
+            for (const [key, job] of Object.entries(jobs).sort((a, b) => a[1].levelRequirement - b[1].levelRequirement)) {
                 const cooldownHours = job.cooldown / (60 * 60 * 1000);
                 const cooldownText = cooldownHours >= 1 ? `${cooldownHours}h` : `${job.cooldown / (60 * 1000)}m`;
                 const available = user.level >= job.levelRequirement ? '✅' : '🔒';
