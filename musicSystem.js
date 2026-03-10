@@ -11,7 +11,7 @@ class MusicSystem {
         this.playThrottle = new Map();
         this.nodeList = [];
         this.failedNodes = new Set();
-        this.initialize(); // ← volver a activar esto
+        this.initialize();
     }
 
     initialize() {
@@ -382,29 +382,29 @@ class MusicSystem {
         const loadingMsg = await message.reply(`🔍 Buscando en Spotify **${query}**...`);
 
         try {
-            // Obtener token de Spotify
-            const tokenRes = await fetch('https://accounts.spotify.com/api/token', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/x-www-form-urlencoded',
-                    'Authorization': 'Basic ' + Buffer.from(`${process.env.SPOTIFY_CLIENT_ID}:${process.env.SPOTIFY_CLIENT_SECRET}`).toString('base64')
-                },
-                body: 'grant_type=client_credentials'
-            });
-            const tokenData = await tokenRes.json();
-            if (!tokenData.access_token) throw new Error('No se pudo obtener token de Spotify');
-
-            // Buscar en Spotify
             const searchRes = await fetch(
-                `https://api.spotify.com/v1/search?q=${encodeURIComponent(query)}&type=track&limit=7`,
-                { headers: { 'Authorization': `Bearer ${tokenData.access_token}` } }
+                `https://api.deezer.com/search?q=${encodeURIComponent(query)}&limit=7`,
+                { signal: AbortSignal.timeout(8000) }
             );
             const searchData = await searchRes.json();
-            const tracks = searchData.tracks?.items;
+            const rawTracks = searchData.data;
 
-            if (!tracks || tracks.length === 0) {
+            if (!rawTracks || rawTracks.length === 0) {
                 return loadingMsg.edit('❌ No se encontraron resultados en Spotify.');
             }
+
+            // Normalizar formato Deezer → formato compatible con el resto del código
+            const tracks = rawTracks.map(t => ({
+                name: t.title,
+                artists: [{ name: t.artist.name }],
+                album: {
+                    name: t.album.title,
+                    images: [{ url: t.album.cover_medium }],
+                    release_date: null
+                },
+                duration_ms: t.duration * 1000,
+                external_urls: { spotify: `${t.title} ${t.artist.name}` } // usado para buscar en Lavalink
+            }));
 
             const embed = new EmbedBuilder()
                 .setTitle(`🟢 Spotify — Resultados para "${query}"`)
@@ -457,7 +457,7 @@ class MusicSystem {
 
         } catch (error) {
             console.error('Error en spotifySearchCommand:', error);
-            await loadingMsg.edit('❌ Error al buscar en Spotify.');
+            await loadingMsg.edit('❌ Error al buscar en Spotify. Intenta más tarde.');
         }
     }
 
@@ -470,42 +470,35 @@ class MusicSystem {
 
         const loadingMsg = await message.reply(`🔍 Buscando letra de **${query}**...`);
 
-        // Intentar lyrics.ovh primero, luego Genius
         let lyrics = null;
         let source = null;
 
-        // ── lrclib (reemplaza Genius) ──
-        if (!lyrics) {
-            try {
-                console.log('🎵 Buscando en lrclib...');
-                
-                const lrclibRes = await fetch(
-                    `https://lrclib.net/api/search?q=${encodeURIComponent(query)}`,
-                    { signal: AbortSignal.timeout(8000) }
-                );
+        // ── lrclib ──
+        try {
+            console.log('🎵 Buscando en lrclib...');
+            const lrclibRes = await fetch(
+                `https://lrclib.net/api/search?q=${encodeURIComponent(query)}`,
+                { signal: AbortSignal.timeout(8000) }
+            );
+            console.log('lrclib status:', lrclibRes.status);
 
-                console.log('lrclib status:', lrclibRes.status);
+            if (lrclibRes.ok) {
+                const results = await lrclibRes.json();
+                console.log('lrclib resultados:', results.length);
 
-                if (lrclibRes.ok) {
-                    const results = await lrclibRes.json();
-                    console.log('lrclib resultados:', results.length);
+                if (results.length > 0) {
+                    const song = results[0];
+                    console.log('lrclib canción:', song.trackName, '-', song.artistName);
 
-                    if (results.length > 0) {
-                        const song = results[0];
-                        console.log('lrclib canción:', song.trackName, '-', song.artistName);
-
-                        // Preferir letra sincronizada, si no letra plana
-                        const rawLyrics = song.plainLyrics || song.syncedLyrics;
-                        if (rawLyrics && rawLyrics.length > 50) {
-                            // Limpiar timestamps si hay letra sincronizada
-                            lyrics = rawLyrics.replace(/\[\d+:\d+\.\d+\]/g, '').trim();
-                            source = `lrclib — ${song.trackName} (${song.artistName})`;
-                        }
+                    const rawLyrics = song.plainLyrics || song.syncedLyrics;
+                    if (rawLyrics && rawLyrics.length > 50) {
+                        lyrics = rawLyrics.replace(/\[\d+:\d+\.\d+\]/g, '').trim();
+                        source = `lrclib — ${song.trackName} (${song.artistName})`;
                     }
                 }
-            } catch (e) {
-                console.warn('lrclib falló:', e.message);
             }
+        } catch (e) {
+            console.warn('lrclib falló:', e.message);
         }
 
         if (!lyrics) {
@@ -531,37 +524,25 @@ class MusicSystem {
         }
         if (currentChunk) chunks.push(currentChunk.trim());
 
-        // Buscar imagen Y metadata de la canción en Spotify
+        // ── Metadata con Deezer (reemplaza Spotify, sin token ni Premium) ──
         let songThumbnail = null;
-        let songTitle = query; // fallback
+        let songTitle = query;
         let songArtist = null;
 
-        if (process.env.SPOTIFY_CLIENT_ID && process.env.SPOTIFY_CLIENT_SECRET) {
-            try {
-                const tokenRes = await fetch('https://accounts.spotify.com/api/token', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/x-www-form-urlencoded',
-                        'Authorization': 'Basic ' + Buffer.from(`${process.env.SPOTIFY_CLIENT_ID}:${process.env.SPOTIFY_CLIENT_SECRET}`).toString('base64')
-                    },
-                    body: 'grant_type=client_credentials'
-                });
-                const tokenData = await tokenRes.json();
-
-                const searchRes = await fetch(
-                    `https://api.spotify.com/v1/search?q=${encodeURIComponent(query)}&type=track&limit=1`,
-                    { headers: { 'Authorization': `Bearer ${tokenData.access_token}` } }
-                );
-                const searchData = await searchRes.json();
-                const track = searchData.tracks?.items?.[0];
-                if (track) {
-                    songThumbnail = track.album?.images?.[0]?.url || null;
-                    songTitle = track.name;
-                    songArtist = track.artists.map(a => a.name).join(', ');
-                }
-            } catch (e) {
-                console.warn('Spotify metadata falló:', e.message);
+        try {
+            const deezerRes = await fetch(
+                `https://api.deezer.com/search?q=${encodeURIComponent(query)}&limit=1`,
+                { signal: AbortSignal.timeout(5000) }
+            );
+            const deezerData = await deezerRes.json();
+            const track = deezerData.data?.[0];
+            if (track) {
+                songThumbnail = track.album?.cover_medium || null;
+                songTitle = track.title;
+                songArtist = track.artist.name;
             }
+        } catch (e) {
+            console.warn('Deezer metadata falló:', e.message);
         }
 
         const embed = new EmbedBuilder()
@@ -606,16 +587,16 @@ class MusicSystem {
             if (interaction.customId.startsWith('lyrics_next')) currentPage++;
             if (interaction.customId.startsWith('lyrics_prev')) currentPage--;
 
-        const pageEmbed = new EmbedBuilder()
-            .setTitle(`🎵 ${songTitle}`)
-            .setDescription(chunks[currentPage] + '\n\u200b')
-            .setColor('#9932CC')
-            .setThumbnail(songThumbnail)
-            .setTimestamp();
+            const pageEmbed = new EmbedBuilder()
+                .setTitle(`🎵 ${songTitle}`)
+                .setDescription(chunks[currentPage] + '\n\u200b')
+                .setColor('#9932CC')
+                .setThumbnail(songThumbnail)
+                .setTimestamp();
 
-        if (songArtist) pageEmbed.addFields({ name: '👤 Artista', value: songArtist, inline: true });
-        pageEmbed.addFields({ name: '📖 Fuente', value: source, inline: true });
-        pageEmbed.setFooter({ text: `Página ${currentPage + 1}/${chunks.length}` });
+            if (songArtist) pageEmbed.addFields({ name: '👤 Artista', value: songArtist, inline: true });
+            pageEmbed.addFields({ name: '📖 Fuente', value: source, inline: true });
+            pageEmbed.setFooter({ text: `Página ${currentPage + 1}/${chunks.length}` });
 
             const updatedRow = new ActionRowBuilder().addComponents(
                 new ButtonBuilder()
@@ -929,43 +910,48 @@ class MusicSystem {
 
     async getSpotifyPlaylistThumbnail(spotifyUrl) {
         try {
-            // Extraer playlist ID de la URL
+            // Intentar obtener el nombre de la playlist desde la URL
+            // Formato: https://open.spotify.com/playlist/37i9dQZF1DXcBWIGoYBM5M
             const match = spotifyUrl.match(/playlist\/([a-zA-Z0-9]+)/);
             if (!match) return null;
-            const playlistId = match[1];
 
-            // Obtener token de Spotify
-            const tokenRes = await fetch('https://accounts.spotify.com/api/token', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/x-www-form-urlencoded',
-                    'Authorization': 'Basic ' + Buffer.from(`${process.env.SPOTIFY_CLIENT_ID}:${process.env.SPOTIFY_CLIENT_SECRET}`).toString('base64')
-                },
-                body: 'grant_type=client_credentials'
-            });
-            const tokenData = await tokenRes.json();
+            // Primero intentamos buscar en Deezer por el ID — a veces coinciden
+            // con playlists editoriales populares
+            const byId = await fetch(
+                `https://api.deezer.com/playlist/${match[1]}`,
+                { signal: AbortSignal.timeout(4000) }
+            );
+            const idData = await byId.json();
+            if (idData.picture_medium && !idData.error) {
+                return idData.picture_medium;
+            }
 
-            // Obtener info de la playlist
-            const res = await fetch(`https://api.spotify.com/v1/playlists/${playlistId}?fields=images`, {
-                headers: { 'Authorization': `Bearer ${tokenData.access_token}` }
-            });
-            const data = await res.json();
-            return data.images?.[0]?.url || null;
+            // Si no encontró por ID, intentar con la URL directa de Kazagumo
+            // para obtener el nombre de la playlist y buscarlo en Deezer
+            const result = await this.kazagumo.search(spotifyUrl, { requester: null });
+            const playlistName = result?.playlistName;
+            if (!playlistName) return null;
+
+            const searchRes = await fetch(
+                `https://api.deezer.com/search/playlist?q=${encodeURIComponent(playlistName)}&limit=1`,
+                { signal: AbortSignal.timeout(4000) }
+            );
+            const searchData = await searchRes.json();
+            return searchData.data?.[0]?.picture_medium || null;
+
         } catch (e) {
             return null;
         }
     }
 
     async playCommand(message, args, member, channel, guild, author) {
-        // AGREGAR THROTTLE:
         const lastPlay = this.playThrottle.get(guild.id) || 0;
-        if (Date.now() - lastPlay < 2000) { // 2 segundos entre plays
+        if (Date.now() - lastPlay < 2000) {
             return message.reply('⏳ Espera un momento antes de agregar más canciones.');
         }
         this.playThrottle.set(guild.id, Date.now());
 
         const voiceChannel = member.voice.channel;
-
         if (!voiceChannel) {
             return message.reply('❌ Debes estar en un canal de voz para usar este comando.');
         }
@@ -975,10 +961,7 @@ class MusicSystem {
         }
 
         let query = args.slice(2).join(' ');
-
-        await message.reply({
-            content: `🔍 Buscando... \`${query}\``,
-        });
+        await message.reply({ content: `🔍 Buscando... \`${query}\`` });
 
         try {
             let player = this.kazagumo.getPlayer(guild.id);
@@ -993,29 +976,37 @@ class MusicSystem {
                     }
                     bestNode = this.getBestNode();
                 }
-                
-                player = await this.kazagumo.createPlayer({
-                    guildId: guild.id,
-                    textId: channel.id,
-                    voiceId: voiceChannel.id,
-                    shardId: guild.shardId || 0,
-                });
+
+                // Retry createPlayer hasta 3 veces
+                for (let attempt = 1; attempt <= 3; attempt++) {
+                    try {
+                        player = await this.kazagumo.createPlayer({
+                            guildId: guild.id,
+                            textId: channel.id,
+                            voiceId: voiceChannel.id,
+                            shardId: guild.shardId || 0,
+                        });
+                        break;
+                    } catch (playerErr) {
+                        if (attempt === 3) throw playerErr;
+                        console.log(`⚠️ createPlayer intento ${attempt} fallido, reintentando...`);
+                        await new Promise(r => setTimeout(r, 1000 * attempt));
+                    }
+                }
             }
 
-            this.clearPlayerTimeout(guild.id); // Limpiar timeout si existe
+            this.clearPlayerTimeout(guild.id);
 
             // Limpiar URLs de Spotify
             if (query.includes('spotify.com')) {
-                query = query
-                    .replace('/intl-es/', '/')
-                    .split('?')[0];
+                query = query.replace('/intl-es/', '/').split('?')[0];
             }
 
             let searchQuery = query;
             let searchEngine = 'ytsearch';
 
             if (searchQuery.startsWith('http')) {
-                searchEngine = null; // URLs directas — LavaSrc y plugin de YT detectan automáticamente
+                searchEngine = null;
             } else if (searchQuery.startsWith('spsearch:')) {
                 searchEngine = 'spsearch';
                 searchQuery = searchQuery.slice(9);
@@ -1024,19 +1015,28 @@ class MusicSystem {
                 searchQuery = searchQuery.slice(9);
             }
 
-            const result = await this.kazagumo.search(
-                searchQuery,
-                searchEngine
-                    ? { requester: author, engine: searchEngine }
-                    : { requester: author }
-            );
+            // Retry kazagumo.search hasta 3 veces
+            let result = null;
+            for (let attempt = 1; attempt <= 3; attempt++) {
+                try {
+                    result = await this.kazagumo.search(
+                        searchQuery,
+                        searchEngine
+                            ? { requester: author, engine: searchEngine }
+                            : { requester: author }
+                    );
+                    break;
+                } catch (searchErr) {
+                    if (attempt === 3) throw searchErr;
+                    console.log(`⚠️ kazagumo.search intento ${attempt} fallido, reintentando...`);
+                    await new Promise(r => setTimeout(r, 1000 * attempt));
+                }
+            }
 
-
-            if (!result.tracks.length) {
+            if (!result || !result.tracks.length) {
                 return message.reply('❌ No se encontraron resultados para tu búsqueda.');
             }
 
-            // Antes de player.play():
             const track = result.tracks[0];
             if (track.length > this.maxSongDuration) {
                 return message.reply('❌ La canción es muy larga (máximo 2 horas).');
@@ -1046,20 +1046,18 @@ class MusicSystem {
                 .setColor('#00FF00')
                 .setTimestamp();
 
-                if (result.type === 'PLAYLIST') {
-                    player.queue.add(result.tracks);
-                    
-                    // Intentar obtener thumbnail real de Spotify
-                    let playlistThumb = result.tracks.find(t => t.thumbnail)?.thumbnail || null;
-                    if (searchQuery.includes('spotify.com/playlist')) {
-                        playlistThumb = await this.getSpotifyPlaylistThumbnail(searchQuery) || playlistThumb;
-                    }
+            if (result.type === 'PLAYLIST') {
+                player.queue.add(result.tracks);
 
-                    embed.setTitle('📂 Playlist Agregada')
-                        .setDescription(`**${result.playlistName}**\n${result.tracks.length} canciones agregadas`)
-                        .setThumbnail(playlistThumb);
-                } else {
-                const track = result.tracks[0];
+                let playlistThumb = result.tracks.find(t => t.thumbnail)?.thumbnail || null;
+                if (searchQuery.includes('spotify.com/playlist')) {
+                    playlistThumb = await this.getSpotifyPlaylistThumbnail(searchQuery) || playlistThumb;
+                }
+
+                embed.setTitle('📂 Playlist Agregada')
+                    .setDescription(`**${result.playlistName}**\n${result.tracks.length} canciones agregadas`)
+                    .setThumbnail(playlistThumb);
+            } else {
                 player.queue.add(track);
                 embed.setTitle('🎵 Canción Agregada a la Cola')
                     .setDescription(`**${track.title}**\nDuración: ${this.formatTime(track.length)}`)
@@ -1072,13 +1070,16 @@ class MusicSystem {
             }
 
             await message.channel.send({ embeds: [embed] });
+
         } catch (error) {
             console.error('Error en play command:', error);
-            
-            if (error.status === 429) {
-                return message.reply('⏳ El servidor de música está sobrecargado. Intenta en unos segundos o usa `>m fix` para cambiar de nodo.');
+
+            if (error.name === 'AbortError' || error instanceof DOMException) {
+                return message.reply('❌ El servidor de música tardó demasiado en responder. Intenta de nuevo en unos segundos.');
             }
-            
+            if (error.status === 429) {
+                return message.reply('⏳ El servidor de música está sobrecargado. Intenta en unos segundos.');
+            }
             await message.reply('❌ Ocurrió un error al reproducir la música.');
         }
     }
