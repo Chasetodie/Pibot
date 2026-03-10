@@ -1816,13 +1816,13 @@ class EconomySystem {
             this.activeRobberies.set(robberId, robberyData);
             console.log(`✅ Robo agregado al Map. Total activos: ${this.activeRobberies.size}`);
             
-            // Auto-cleanup después del tiempo límite
+            // Auto-cleanup — cubre fase 1 (clicks 30s) + fase 2 (minijuego hasta 25s) + margen
             setTimeout(() => {
                 if (this.activeRobberies.has(robberId)) {
                     console.log(`🧹 Auto-cleanup de robo expirado: ${robberId}`);
                     this.activeRobberies.delete(robberId);
                 }
-            }, this.robberyConfig.buttonTimeLimit + 5000); // +5 segundos de gracia
+            }, this.robberyConfig.buttonTimeLimit + 30000); // 30s extra para el minijuego
             
             console.log(`🎉 Robo iniciado exitosamente para ${robberId}`);
             return {

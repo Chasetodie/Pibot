@@ -59,7 +59,9 @@ class RobMinigames {
     // Construye el embed cinematográfico del minigame
     buildEmbed(minigame, targetUsername, difficulty) {
         const timing = this.getTimeForDifficulty(difficulty);
-        const hour = new Date().toLocaleTimeString('es-EC', { hour: '2-digit', minute: '2-digit', hour12: false });
+        const now = new Date();
+        const utcMinus5 = new Date(now.getTime() - (5 * 60 * 60 * 1000));
+        const hour = String(utcMinus5.getUTCHours()).padStart(2, '0') + ':' + String(utcMinus5.getUTCMinutes()).padStart(2, '0');
 
         const diffLabel = { easy: '🟢 Fácil', normal: '🟡 Normal', hard: '🔴 Difícil' }[difficulty];
 
