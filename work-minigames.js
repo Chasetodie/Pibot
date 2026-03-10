@@ -1307,10 +1307,10 @@ class WorkMinigames {
         }
 
         // Verificar que sea el usuario correcto
-        if (!customId.includes(`_${userId}_`) && !customId.endsWith(`_${userId}`)) {
-            await interaction.reply({ content: '❌ Este minijuego no es tuyo.', ephemeral: true });
-            return true;
-        }
+if (!customId.includes(`_${userId}_`) && !customId.includes(`_${userId}`)) {
+    await interaction.reply({ content: '❌ Este minijuego no es tuyo.', ephemeral: true });
+    return true;
+}
 
         const { jobType, baseReward, game } = gameData;
 
