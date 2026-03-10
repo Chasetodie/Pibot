@@ -105,6 +105,22 @@ setTimeout(async () => {
     console.log('✅ Sistemas de eventos listo');
 }, 2000);
 
+// Keepalive para Lavalink
+setInterval(async () => {
+    try {
+        const response = await fetch('http://http://160.191.77.60:7555/version', {
+            headers: { 'Authorization': 'ichangethepasscauseimdumb' }
+        });
+        if (response.ok) {
+            console.log('✅ Lavalink keepalive OK');
+        } else {
+            console.log('⚠️ Lavalink keepalive falló:', response.status);
+        }
+    } catch (err) {
+        console.log('⚠️ Lavalink keepalive error:', err.message);
+    }
+}, 4 * 60 * 1000); // cada 4 minutos
+
 /*setInterval(async () => {
     await economy.database.backup(); // Crear backup cada 6 horas
 }, 6 * 60 * 60 * 1000);*/
