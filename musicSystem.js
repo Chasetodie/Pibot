@@ -219,21 +219,21 @@ class MusicSystem {
                     case 'stop':
                     case 'leave':
                     case 'disconnect':
-                        await this.stopCommand(message, guild);
+                        await this.stopCommand(message, guild, member);
                         break;
                     
                     case 'skip':
                     case 's':
-                        await this.skipCommand(message, args, guild);
+                        await this.skipCommand(message, args, guild, member);
                         break;
                     
                     case 'pause':
-                        await this.pauseCommand(message, guild);
+                        await this.pauseCommand(message, guild, member);
                         break;
                     
                     case 'resume':
                     case 'unpause':
-                        await this.resumeCommand(message, guild);
+                        await this.resumeCommand(message, guild, member);
                         break;
                     
                     case 'queue':
@@ -261,30 +261,30 @@ class MusicSystem {
 
                     case 'fix':
                     case 'restart':
-                        await this.fixPlayerCommand(message, guild);
+                        await this.fixPlayerCommand(message, guild, member);
                         break;
                     case 'seek':
                     case 'adelantar':
                     case 'forward':
-                        await this.seekCommand(message, args, guild);
+                        await this.seekCommand(message, args, guild, member);
                         break;
                     
                     case 'volume':
                     case 'vol':
-                        await this.volumeCommand(message, args, guild);
+                        await this.volumeCommand(message, args, guild, member);
                         break;
                     
                     case 'loop':
                     case 'repeat':
-                        await this.loopCommand(message, args, guild);
+                        await this.loopCommand(message, args, guild, member);
                         break;
                     
                     case 'shuffle':
-                        await this.shuffleCommand(message, guild);
+                        await this.shuffleCommand(message, guild, member);
                         break;
                     
                     case 'clear':
-                        await this.clearQueueCommand(message, guild);
+                        await this.clearQueueCommand(message, guild, member);
                         break;
                     
                     default:
@@ -1099,11 +1099,16 @@ class MusicSystem {
         }
     }
 
-    async stopCommand(message, guild) {
+    async stopCommand(message, guild, member) {
         const player = this.kazagumo.getPlayer(guild.id);
 
         if (!player) {
             return message.reply('❌ No hay música reproduciéndose.');
+        }
+
+        const voiceChannel = member.voice.channel;
+        if (!voiceChannel) {
+            return message.reply('❌ Debes estar en un canal de voz para usar este comando.');
         }
 
         await player.destroy();
@@ -1117,7 +1122,7 @@ class MusicSystem {
         await message.reply({ embeds: [embed] });
     }
 
-    async skipCommand(message, args, guild) {
+    async skipCommand(message, args, guild, member) {
         const player = this.kazagumo.getPlayer(guild.id);
         if (!player) return message.reply('❌ No hay música reproduciéndose.');
 
@@ -1127,6 +1132,11 @@ class MusicSystem {
         const totalDisponible = player.queue.size + 1;
         if (amount > totalDisponible) {
             return message.reply(`❌ Solo hay ${totalDisponible} canciones disponibles para saltar.`);
+        }
+
+        const voiceChannel = member.voice.channel;
+        if (!voiceChannel) {
+            return message.reply('❌ Debes estar en un canal de voz para usar este comando.');
         }
 
         const currentTrack = player.queue.current;
@@ -1147,7 +1157,7 @@ class MusicSystem {
         await message.reply({ embeds: [embed] });
     }
 
-    async pauseCommand(message, guild) {
+    async pauseCommand(message, guild, member) {
         const player = this.kazagumo.getPlayer(guild.id);
 
         if (!player) {
@@ -1156,6 +1166,11 @@ class MusicSystem {
 
         if (player.paused) {
             return message.reply('❌ La música ya está pausada.');
+        }
+
+        const voiceChannel = member.voice.channel;
+        if (!voiceChannel) {
+            return message.reply('❌ Debes estar en un canal de voz para usar este comando.');
         }
 
         player.pause(true);
@@ -1168,7 +1183,7 @@ class MusicSystem {
         await message.reply({ embeds: [embed] });
     }
 
-    async resumeCommand(message, guild) {
+    async resumeCommand(message, guild, member) {
         const player = this.kazagumo.getPlayer(guild.id);
         
         if (!player) {
@@ -1179,6 +1194,11 @@ class MusicSystem {
             return message.reply('❌ La música no está pausada.');
         }
         
+        const voiceChannel = member.voice.channel;
+        if (!voiceChannel) {
+            return message.reply('❌ Debes estar en un canal de voz para usar este comando.');
+        }
+
         player.pause(false);
         player.setVolume(player.volume); // "Kick" al player
         
@@ -1258,7 +1278,7 @@ class MusicSystem {
         await message.reply({ embeds: [embed] });
     }
 
-    async volumeCommand(message, args, guild) {
+    async volumeCommand(message, args, guild, member) {
         const player = this.kazagumo.getPlayer(guild.id);
 
         if (!player) {
@@ -1267,6 +1287,11 @@ class MusicSystem {
 
         if (!args[2]) {
             return message.reply(`🔊 Volumen actual: **${player.volume}%**\nUsa \`>music volume <1-100>\` para cambiar el volumen.`);
+        }
+
+        const voiceChannel = member.voice.channel;
+        if (!voiceChannel) {
+            return message.reply('❌ Debes estar en un canal de voz para usar este comando.');
         }
 
         const volume = parseInt(args[2]);
@@ -1285,11 +1310,16 @@ class MusicSystem {
         await message.reply({ embeds: [embed] });
     }
 
-    async fixPlayerCommand(message, guild) {
+    async fixPlayerCommand(message, guild, member) {
         const player = this.kazagumo.getPlayer(guild.id);
         
         if (!player) {
             return message.reply('❌ No hay música reproduciéndose.');
+        }
+
+        const voiceChannel = member.voice.channel;
+        if (!voiceChannel) {
+            return message.reply('❌ Debes estar en un canal de voz para usar este comando.');
         }
         
         const queue = [...player.queue];
@@ -1311,7 +1341,7 @@ class MusicSystem {
         await message.reply('✅ Player reiniciado correctamente.');
     }
 
-    async seekCommand(message, args, guild) {
+    async seekCommand(message, args, guild, member) {
         const player = this.kazagumo.getPlayer(guild.id);
         
         if (!player || !player.queue.current) {
@@ -1320,6 +1350,11 @@ class MusicSystem {
         
         if (!args[2]) {
             return message.reply('❌ Especifica el tiempo.\nEjemplos:\n• `>m seek 1:30` (1 min 30 seg)\n• `>m seek 30` (30 segundos)\n• `>m seek +30` (adelantar 30 seg)\n• `>m seek -15` (retroceder 15 seg)');
+        }
+
+        const voiceChannel = member.voice.channel;
+        if (!voiceChannel) {
+            return message.reply('❌ Debes estar en un canal de voz para usar este comando.');
         }
         
         const input = args[2];
@@ -1362,11 +1397,16 @@ class MusicSystem {
         await message.reply({ embeds: [embed] });
     }
 
-    async loopCommand(message, args, guild) {
+    async loopCommand(message, args, guild, member) {
         const player = this.kazagumo.getPlayer(guild.id);
 
         if (!player) {
             return message.reply('❌ No hay música reproduciéndose.');
+        }
+
+        const voiceChannel = member.voice.channel;
+        if (!voiceChannel) {
+            return message.reply('❌ Debes estar en un canal de voz para usar este comando.');
         }
 
         const loopMode = args[2] ? args[2].toLowerCase() : null;
@@ -1408,7 +1448,7 @@ class MusicSystem {
         await message.reply({ embeds: [embed] });
     }
 
-    async shuffleCommand(message, guild) {
+    async shuffleCommand(message, guild, member) {
         const player = this.kazagumo.getPlayer(guild.id);
 
         if (!player) {
@@ -1417,6 +1457,11 @@ class MusicSystem {
 
         if (player.queue.size < 2) {
             return message.reply('❌ Necesitas al menos 2 canciones en la cola para mezclar.');
+        }
+
+        const voiceChannel = member.voice.channel;
+        if (!voiceChannel) {
+            return message.reply('❌ Debes estar en un canal de voz para usar este comando.');
         }
 
         player.queue.shuffle();
@@ -1429,7 +1474,7 @@ class MusicSystem {
         await message.reply({ embeds: [embed] });
     }
 
-    async clearQueueCommand(message, guild) {
+    async clearQueueCommand(message, guild, member) {
         const player = this.kazagumo.getPlayer(guild.id);
 
         if (!player) {
@@ -1438,6 +1483,11 @@ class MusicSystem {
 
         if (player.queue.size === 0) {
             return message.reply('❌ La cola ya está vacía.');
+        }
+
+        const voiceChannel = member.voice.channel;
+        if (!voiceChannel) {
+            return message.reply('❌ Debes estar en un canal de voz para usar este comando.');
         }
 
         const clearedCount = player.queue.size;
