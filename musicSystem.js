@@ -671,13 +671,13 @@ class MusicSystem {
                     if (!voiceChannel) return interaction.editReply({ content: '❌ Debes estar en un canal de voz.', embeds: [], components: [] });
 
                     try {
-                        const spotifyUrl = track.external_urls.spotify;
+                        const searchQuery = `${track.name} ${track.artists[0].name}`;
 
                         // Retry hasta 3 veces si hay AbortError
                         let result = null;
                         for (let attempt = 1; attempt <= 3; attempt++) {
                             try {
-                                result = await this.kazagumo.search(spotifyUrl, { requester: session.author });
+                                result = await this.kazagumo.search(searchQuery, { requester: session.author, engine: 'ytsearch' });
                                 break;
                             } catch (searchErr) {
                                 if (attempt === 3) throw searchErr;
@@ -746,7 +746,6 @@ class MusicSystem {
                         { name: '💿 Álbum', value: track.album.name, inline: true },
                         { name: '⏱️ Duración', value: this.formatTime(track.duration_ms), inline: true },
                         { name: '📅 Lanzamiento', value: track.album.release_date || 'Desconocido', inline: true },
-                        { name: '🔗 URL', value: track.external_urls.spotify, inline: false }
                     )
                     .setTimestamp();
 
@@ -1002,10 +1001,18 @@ class MusicSystem {
                 query = query.replace('/intl-es/', '/').split('?')[0];
             }
 
+            // Limpiar URLs de YouTube — solo limpiar si es video solo (sin lista)
             if (query.includes('youtube.com') || query.includes('youtu.be')) {
                 const urlObj = new URL(query);
                 const videoId = urlObj.searchParams.get('v');
-                if (videoId) {
+                const listId = urlObj.searchParams.get('list');
+                const startRadio = urlObj.searchParams.get('start_radio');
+
+                if (videoId && listId && !startRadio) {
+                    // Tiene video Y playlist real → dejar la URL como está para cargar la playlist completa
+                    // no hacer nada
+                } else if (videoId && (startRadio || !listId)) {
+                    // Es un video solo o una radio automática → limpiar a solo el video
                     query = `https://www.youtube.com/watch?v=${videoId}`;
                 }
             }
@@ -1529,9 +1536,7 @@ class MusicSystem {
                     name: '💡 Ejemplos',
                     value: [
                         '`>m play bad guy` — Busca en YouTube',
-                        '`>m play https://open.spotify.com/track/...` — Link Spotify',
-                        '`>m play ` - Link Album Spotify',
-                        '`>m play ` - Link Playlist Spotify (La Playlist debe ser Pública)',
+                        '`>m spsearch nombre canción — Buscar en Spotify',
                         '`>m play https://youtube.com/watch?v=...` — Link YouTube',
                         '`>m play ` - Link Playlist YouTube',
                         '`>m ytsearch la lagartija` — Buscar en YouTube con selección',
