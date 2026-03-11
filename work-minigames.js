@@ -72,12 +72,38 @@ class WorkMinigames {
     }
 
     // NUEVO: Matemática rápida con operación aleatoria cada vez
-    buildMath({ context, userId, difficulty = 'easy' }) {
+    buildMath({ context, userId, difficulty = 'easy', customQuestion = null, customAnswer = null }) {
+        let question;
+
+        if (customQuestion && customAnswer !== null) {
+            // Modo pregunta propia: usa los valores fijos que pasaste
+            const wrongs = new Set();
+            while (wrongs.size < 3) {
+                // El offset es entre 5% y 30% del valor correcto, mínimo 2
+                const range = Math.max(2, Math.floor(customAnswer * 0.30));
+                const min  = Math.max(1, Math.floor(customAnswer * 0.05));
+                const offset = this.getRandomInt(min, range) * (Math.random() > 0.5 ? 1 : -1);
+                const w = customAnswer + offset;
+                if (w !== customAnswer && w > 0) wrongs.add(w);
+            }
+            const all = this.shuffle([
+                { label: customAnswer.toString(), correct: true },
+                ...[...wrongs].map(w => ({ label: w.toString(), correct: false }))
+            ]);
+            const row = new ActionRowBuilder().addComponents(
+                all.map((opt, i) => new ButtonBuilder()
+                    .setCustomId(`work_mc_${userId}_${i}_${opt.correct}`)
+                    .setLabel(opt.label)
+                    .setStyle(ButtonStyle.Success))
+            );
+            return { question: `🔢 **${customQuestion}**`, row, type: 'multiple_choice' };
+        }
+
+        // Modo contexto: genera operación aleatoria
         let a, b, op, answer;
         if (difficulty === 'easy') {
             a = this.getRandomInt(10, 99); b = this.getRandomInt(10, 99);
             op = this.getRandom(['+', '-']);
-            answer = op === '+' ? a + b : Math.abs(a - b);
             if (op === '-' && a < b) [a, b] = [b, a];
             answer = op === '+' ? a + b : a - b;
         } else if (difficulty === 'medium') {
@@ -89,15 +115,22 @@ class WorkMinigames {
             op = this.getRandom(['+', '-', '×']);
             answer = op === '+' ? a + b : op === '-' ? Math.abs(a - b) : a * b;
         }
+
         const wrongs = new Set();
         while (wrongs.size < 3) {
             const offset = this.getRandomInt(1, 25) * (Math.random() > 0.5 ? 1 : -1);
             const w = answer + offset;
             if (w !== answer && w > 0) wrongs.add(w);
         }
-        const all = this.shuffle([{ label: answer.toString(), correct: true }, ...[...wrongs].map(w => ({ label: w.toString(), correct: false }))]);
+        const all = this.shuffle([
+            { label: answer.toString(), correct: true },
+            ...[...wrongs].map(w => ({ label: w.toString(), correct: false }))
+        ]);
         const row = new ActionRowBuilder().addComponents(
-            all.map((opt, i) => new ButtonBuilder().setCustomId(`work_mc_${userId}_${i}_${opt.correct}`).setLabel(opt.label).setStyle(ButtonStyle.Success))
+            all.map((opt, i) => new ButtonBuilder()
+                .setCustomId(`work_mc_${userId}_${i}_${opt.correct}`)
+                .setLabel(opt.label)
+                .setStyle(ButtonStyle.Success))
         );
         return { question: `🔢 **${context}**\n\n¿Cuánto es **${a} ${op} ${b}**?`, row, type: 'multiple_choice' };
     }
@@ -205,7 +238,7 @@ class WorkMinigames {
             this.buildPoolChoice({ userId: u, question: '🚽 El baño está en estado apocalíptico. ¿Por dónde empiezas?', correct: 'Inodoros con desinfectante primero', wrongPool: ['Pisos primero', 'Lavabos primero', 'Espejos primero', 'Llamas a un exorcista', 'La puerta primero'] }),
             this.buildReaction({ userId: u, prompt: '😱 ¡Volcaste el balde en la alfombra del jefe! ¡Limpia RÁPIDO!', buttonLabel: '🧻 ¡LIMPIAR!' }),
             this.buildSequence({ userId: u, instruction: '🧹 Ordena la rutina de limpieza correcta:', steps: [{ label: '🪣 Preparar materiales', order: 0 }, { label: '🧹 Barrer antes de trapear', order: 1 }, { label: '🧽 Limpiar superficies', order: 2 }] }),
-            this.buildMath({ userId: u, context: 'Tienes 2 horas para 10 oficinas. ¿Cuántos minutos por oficina?', difficulty: 'easy' }),
+            this.buildMath({ userId: u, customQuestion: 'Tienes 2 horas para 10 oficinas. ¿Cuántos minutos por oficina?', customAnswer: 12 }),
             this.buildTrueFalse({ userId: u, statement: 'Se debe mezclar cloro con amoníaco para limpiar más rápido y efectivo', isTrue: false }),
             this.buildIntruso({ userId: u, question: '¿Cuál NO es un producto de limpieza?', intruso: 'Mayonesa', wrongPool: ['Cloro', 'Desinfectante', 'Amoníaco', 'Detergente', 'Jabón líquido'] }),
             this.buildFillBlank({ userId: u, sentence: 'Antes de trapear siempre hay que ___ el piso primero', correct: 'barrer', wrongPool: ['mojar', 'encerar', 'pintar', 'ignorar', 'fotografiar'] }),
@@ -227,7 +260,7 @@ class WorkMinigames {
         return this.shuffle([
             this.buildReaction({ userId: u, prompt: '🐕 ¡El Golden vio una ardilla y salió disparado! ¡Aguanta la correa!', buttonLabel: '💪 ¡AGUANTAR!', timeLimit: 3500 }),
             this.buildPoolChoice({ userId: u, question: '🐕🐕 El Chihuahua y el Rottweiler están a punto de pelearse. ¿Qué haces?', correct: 'Los separas inmediatamente y cambias de ruta', wrongPool: ['Los dejas pelear', 'Gritas fuerte', 'Sueltas las correas', 'Les das comida a los dos', 'Jalas solo al Chihuahua'] }),
-            this.buildMath({ userId: u, context: 'Cobras $15 por perro, paseas 5 perros 3 veces a la semana. ¿Cuánto ganas?', difficulty: 'easy' }),
+            this.buildMath({ userId: u, customQuestion: 'Cobras $15 por perro, paseas 5 perros 3 veces a la semana. ¿Cuánto ganas?', customAnswer: 225 }),
             this.buildTrueFalse({ userId: u, statement: 'Se puede llevar 10 perros grandes al mismo tiempo sin problema de seguridad', isTrue: false }),
             this.buildIntruso({ userId: u, question: '¿Cuál NO deberías llevar en tu bolsa de paseador?', intruso: 'Salchicha sin empacar', wrongPool: ['Bolsas para heces', 'Agua', 'Correas de repuesto', 'Golosinas', 'Botiquín básico'] }),
             this.buildSequence({ userId: u, instruction: '🎒 Ordena la preparación antes del paseo:', steps: [{ label: '🔍 Revisar las correas', order: 0 }, { label: '💧 Llevar agua y bolsas', order: 1 }, { label: '🐕 Recoger a los perros', order: 2 }] }),
@@ -250,7 +283,7 @@ class WorkMinigames {
         return this.shuffle([
             this.buildPoolChoice({ userId: u, question: '💬 Tu chat está spameando sin parar. ¿Qué haces?', correct: 'Reaccionas con energía y agradeces el hype', wrongPool: ['Baneas a todos', 'Ignoras el chat', 'Apagas el stream', 'Lloras en cámara', 'Pones modo solo subs'] }),
             this.buildReaction({ userId: u, prompt: '🔴 ¡Un sub de 5 años acaba de subscribirse! ¡Agradécelo AHORA!', buttonLabel: '🎉 ¡HYPE!' }),
-            this.buildMath({ userId: u, context: '1000 subs a $5/mes, Twitch se queda el 50%. ¿Cuánto ganas al mes?', difficulty: 'medium' }),
+            this.buildMath({ userId: u, customQuestion: '1000 subs a $5/mes, Twitch se queda el 50%. ¿Cuánto ganas al mes?', customAnswer: 2500 }),
             this.buildTrueFalse({ userId: u, statement: 'Streamear 20 horas seguidas sin descanso es una buena estrategia de crecimiento sostenible', isTrue: false }),
             this.buildIntruso({ userId: u, question: '¿Cuál NO es una plataforma de streaming en vivo?', intruso: 'LinkedIn', wrongPool: ['Twitch', 'YouTube', 'Kick', 'Facebook Gaming', 'TikTok Live'] }),
             this.buildSequence({ userId: u, instruction: '🎮 Ordena cómo manejar un raid de 500 personas:', steps: [{ label: '👋 Dar bienvenida al raider', order: 0 }, { label: '📢 Presentarte al nuevo público', order: 1 }, { label: '🎮 Continuar con el contenido', order: 2 }] }),
@@ -296,7 +329,7 @@ class WorkMinigames {
         return this.shuffle([
             this.buildPoolChoice({ userId: u, question: '🍕 Cliente alérgico al gluten pide pizza. ¿Qué haces?', correct: 'Le ofreces base sin gluten', wrongPool: ['Le das la normal igual', 'No hay opciones, que busque otro lado', 'Ignoras la alergia', 'Le ofreces solo la salsa'] }),
             this.buildReaction({ userId: u, prompt: '🔥 ¡La pizza se está QUEMANDO! ¡Sácala AHORA!', buttonLabel: '🧤 ¡SACAR!', timeLimit: 3000 }),
-            this.buildMath({ userId: u, context: 'Pizza grande ($12) + extra queso ($2) + delivery ($3). ¿Total?', difficulty: 'easy' }),
+            this.buildMath({ userId: u, customQuestion: 'Pizza grande ($12) + extra queso ($2) + delivery ($3). ¿Total?', customAnswer: 17 }),
             this.buildTrueFalse({ userId: u, statement: 'La pizza Margherita lleva pepperoni como ingrediente principal', isTrue: false }),
             this.buildIntruso({ userId: u, question: '¿Cuál NO es ingrediente de una pizza Cuatro Quesos?', intruso: 'Jamón serrano', wrongPool: ['Mozzarella', 'Gorgonzola', 'Parmesano', 'Emmental', 'Provolone'] }),
             this.buildSequence({ userId: u, instruction: '👨‍🍳 Ordena los pasos para hacer una pizza:', steps: [{ label: '🍞 Preparar la masa', order: 0 }, { label: '🫙 Agregar salsa', order: 1 }, { label: '🧀 Poner queso y toppings', order: 2 }] }),
@@ -319,7 +352,7 @@ class WorkMinigames {
         return this.shuffle([
             this.buildPoolChoice({ userId: u, question: '🍸 ¿Qué lleva un Cosmopolitan clásico?', correct: 'Vodka, arándano, triple sec, limón', wrongPool: ['Gin, vermut, aceituna', 'Tequila, sal, limón', 'Ron, coca, limón', 'Whisky, miel, limón'] }),
             this.buildReaction({ userId: u, prompt: '🔥 ¡El cliente quiere un trago flameado! ¡Enciéndelo antes de que se enfríe!', buttonLabel: '🔥 ¡ENCENDER!', timeLimit: 3500 }),
-            this.buildMath({ userId: u, context: 'La cuenta es $47.50 y pagan con $60. ¿Cuánto de cambio?', difficulty: 'easy' }),
+            this.buildMath({ userId: u, customQuestion: 'La cuenta es $47.50 y pagan con $60. ¿Cuánto de cambio?', customAnswer: 13 }),
             this.buildTrueFalse({ userId: u, statement: 'El Dry Martini clásico se prepara con vodka y jugo de naranja', isTrue: false }),
             this.buildIntruso({ userId: u, question: '¿Cuál NO es ingrediente del Mojito clásico?', intruso: 'Tequila', wrongPool: ['Ron blanco', 'Menta fresca', 'Azúcar', 'Limón', 'Soda'] }),
             this.buildSequence({ userId: u, instruction: '🍹 Prepara un Mojito en orden correcto:', steps: [{ label: '🌿 Muele la menta con azúcar', order: 0 }, { label: '🥃 Agrega ron y hielo', order: 1 }, { label: '🫧 Completa con soda', order: 2 }] }),
@@ -342,7 +375,7 @@ class WorkMinigames {
         return this.shuffle([
             this.buildPoolChoice({ userId: u, question: '🗺️ El GPS dice una ruta pero hay obras. ¿Qué haces?', correct: 'Tomas la ruta alterna que conoces', wrongPool: ['Sigues el GPS ciegamente', 'Cancelas el viaje', 'Cobras extra por el desvío', 'Esperas a que terminen las obras'] }),
             this.buildReaction({ userId: u, prompt: '🟢 ¡Llegó una solicitud a 2 minutos! ¡Acéptala RÁPIDO!', buttonLabel: '✅ ¡ACEPTAR!' }),
-            this.buildMath({ userId: u, context: '15km a $1.20/km + $2 base. ¿Total del viaje?', difficulty: 'easy' }),
+            this.buildMath({ userId: u, customQuestion: '15km a $1.20/km + $2 base. ¿Total del viaje?', customAnswer: 20 }),
             this.buildTrueFalse({ userId: u, statement: 'Puedes cancelar un viaje de Uber sin penalización si lo haces antes de los 5 minutos', isTrue: true }),
             this.buildIntruso({ userId: u, question: '¿Cuál NO es un factor que afecta tu calificación en Uber?', intruso: 'El color de tu carro', wrongPool: ['Puntualidad', 'Limpieza del vehículo', 'Actitud con el pasajero', 'Ruta eficiente', 'Música apropiada'] }),
             this.buildSequence({ userId: u, instruction: '⭐ Ordena las prioridades para tener 5 estrellas:', steps: [{ label: '🚗 Auto limpio y con buen olor', order: 0 }, { label: '🗺️ Ruta eficiente', order: 1 }, { label: '😊 Actitud amable', order: 2 }] }),
@@ -365,7 +398,7 @@ class WorkMinigames {
         return this.shuffle([
             this.buildPoolChoice({ userId: u, question: '🃏 En blackjack, el jugador tiene 16 y tú muestras un 7. ¿Qué hace correctamente?', correct: 'Pide carta', wrongPool: ['Se planta con 16', 'Dobla la apuesta', 'Se rinde', 'Divide los 16'] }),
             this.buildReaction({ userId: u, prompt: '🎴 ¡Es tu turno de repartir! ¡Hazlo RÁPIDO y con elegancia!', buttonLabel: '🃏 ¡REPARTIR!', timeLimit: 3500 }),
-            this.buildMath({ userId: u, context: 'Jugador apuesta $200 al rojo en ruleta y gana. ¿Cuánto recibe en total?', difficulty: 'easy' }),
+            this.buildMath({ userId: u, customQuestion: 'Jugador apuesta $200 al rojo en ruleta y gana. ¿Cuánto recibe en total?', customAnswer: 400 }),
             this.buildTrueFalse({ userId: u, statement: 'La ruleta europea tiene 38 números, incluyendo el 0 y el 00', isTrue: false }),
             this.buildIntruso({ userId: u, question: '¿Cuál NO es un juego de mesa de casino?', intruso: 'Bingo de granja', wrongPool: ['Blackjack', 'Baccarat', 'Ruleta', 'Póker', 'Craps'] }),
             this.buildSequence({ userId: u, instruction: '🃏 Ordena el inicio de una mesa de blackjack:', steps: [{ label: '🔀 Barajar el mazo', order: 0 }, { label: '💰 Recolectar apuestas', order: 1 }, { label: '🃏 Repartir las cartas', order: 2 }] }),
@@ -379,7 +412,7 @@ class WorkMinigames {
             this.buildFillBlank({ userId: u, sentence: 'Cuando un jugador quiere "doblar" en blackjack solo puede hacerlo con ___ cartas en mano', correct: 'las primeras 2', wrongPool: ['cualquier cantidad', '3 o más', '4 cartas exactas', '1 sola carta', 'ninguna'] }),
             this.buildGuessNumber({ userId: u, question: '🎲 ¿Cuántos números tiene la ruleta europea?', correct: '37', wrongPool: ['36', '38', '32', '40', '34'] }),
             this.buildPoolChoice({ userId: u, question: '🤑 Un jugador ganó $50,000 en tu mesa. ¿Qué debes hacer?', correct: 'Notificar al supervisor y completar el papeleo requerido', wrongPool: ['Felicitarlo y seguir normal', 'Pedirle propina en privado', 'Reportarlo como sospechoso', 'Negarle más juego'] }),
-            this.buildMath({ userId: u, context: 'Calculas el pago de un blackjack natural (pago 3:2) sobre una apuesta de $100', difficulty: 'medium' }),
+            this.buildMath({ userId: u, customQuestion: 'Pago de blackjack natural (3:2) sobre apuesta de $100. ¿Cuánto recibe el jugador en total?', customAnswer: 250 }),
         ]).slice(0, 10);
     }
 
@@ -388,7 +421,7 @@ class WorkMinigames {
         return this.shuffle([
             this.buildPoolChoice({ userId: u, question: '☕ Un VIP pide "Espresso Romano". ¿Qué lleva?', correct: 'Espresso + rodaja de limón', wrongPool: ['Espresso + leche', 'Espresso + caramelo', 'Espresso + crema batida', 'Espresso + canela'] }),
             this.buildReaction({ userId: u, prompt: '😱 ¡Derramaste café sobre la mesa de blackjack! ¡Limpia AHORA!', buttonLabel: '🧹 ¡LIMPIAR!', timeLimit: 3500 }),
-            this.buildMath({ userId: u, context: 'Jugador ganó $5000, te da propina del 5%. ¿Cuánto recibes?', difficulty: 'medium' }),
+            this.buildMath({ userId: u, customQuestion: 'Jugador ganó $5000, te da propina del 5%. ¿Cuánto recibes?', customAnswer: 250 }),
             this.buildTrueFalse({ userId: u, statement: 'El espresso debe prepararse con agua a temperatura de ebullición exacta (100°C)', isTrue: false }),
             this.buildIntruso({ userId: u, question: '¿Cuál NO es un tipo de preparación de café espresso?', intruso: 'Café americano con leche de soya y hielo frappé', wrongPool: ['Ristretto', 'Lungo', 'Cortado', 'Macchiato', 'Doppio'] }),
             this.buildSequence({ userId: u, instruction: '☕ Ordena cómo preparar un cappuccino perfecto:', steps: [{ label: '☕ Preparar el espresso', order: 0 }, { label: '🥛 Vaporizar la leche', order: 1 }, { label: '🎨 Verter haciendo latte art', order: 2 }] }),
@@ -434,7 +467,7 @@ class WorkMinigames {
         return this.shuffle([
             this.buildReaction({ userId: u, prompt: '🚪 ¡Es exactamente tu hora de apertura! ¡Abre AHORA!', buttonLabel: '🔑 ¡ABRIR!', timeLimit: 3000 }),
             this.buildPoolChoice({ userId: u, question: '🔞 Un joven quiere comprar alcohol. ¿Qué haces?', correct: 'Pides identificación oficial antes de vender', wrongPool: ['Le vendes si parece mayor', 'Le preguntas la edad y le crees', 'No vendes a nadie', 'Lo dejas si viene con adulto'] }),
-            this.buildMath({ userId: u, context: 'El cliente paga $50 por una compra de $37.50. ¿Cuánto de cambio?', difficulty: 'easy' }),
+            this.buildMath({ userId: u, customQuestion: 'El cliente paga $50 por una compra de $37.50. ¿Cuánto de cambio?', customAnswer: 13 }),
             this.buildTrueFalse({ userId: u, statement: 'En México, los Oxxo pueden vender alcohol las 24 horas sin ninguna restricción legal', isTrue: false }),
             this.buildIntruso({ userId: u, question: '¿Cuál NO es un servicio que puedes pagar en Oxxo?', intruso: 'Trámite de pasaporte', wrongPool: ['Recarga de celular', 'Pago de luz', 'Pago de agua', 'Recarga de transporte', 'Pago de internet'] }),
             this.buildSequence({ userId: u, instruction: '🔐 Protocolo de apertura del Oxxo:', steps: [{ label: '🔍 Verificar área exterior', order: 0 }, { label: '🔑 Desactivar alarma', order: 1 }, { label: '🚪 Abrir puertas al público', order: 2 }] }),
@@ -457,7 +490,7 @@ class WorkMinigames {
         return this.shuffle([
             this.buildPoolChoice({ userId: u, question: '🔧 El cliente dice que el carro "hace ruido raro al frenar". ¿Qué revisas primero?', correct: 'Discos y pastillas de freno', wrongPool: ['El motor', 'La batería', 'El aceite', 'El radio'] }),
             this.buildReaction({ userId: u, prompt: '🔥 ¡El motor está sobrecalentado! ¡Apágalo RÁPIDO!', buttonLabel: '🔑 ¡APAGAR!', timeLimit: 3500 }),
-            this.buildMath({ userId: u, context: '$350 en piezas + 3 horas a $50/hora. ¿Total de la reparación?', difficulty: 'easy' }),
+            this.buildMath({ userId: u, customQuestion: '$350 en piezas + 3 horas a $50/hora. ¿Total de la reparación?', customAnswer: 500 }),
             this.buildTrueFalse({ userId: u, statement: 'El aceite sintético de motor dura más entre cambios que el aceite convencional', isTrue: true }),
             this.buildIntruso({ userId: u, question: '¿Cuál NO es síntoma de batería fallando?', intruso: 'El auto acelera más rápido de lo normal', wrongPool: ['Motor que no enciende fácil', 'Luces más tenues', 'Radio que falla', 'Clic al encender', 'Luz de batería encendida'] }),
             this.buildSequence({ userId: u, instruction: '🛢️ Ordena un cambio de aceite correcto:', steps: [{ label: '🔩 Drenar el aceite viejo', order: 0 }, { label: '🔧 Cambiar el filtro', order: 1 }, { label: '🛢️ Llenar con aceite nuevo', order: 2 }] }),
@@ -480,7 +513,7 @@ class WorkMinigames {
         return this.shuffle([
             this.buildPoolChoice({ userId: u, question: '🩺 Paciente con fiebre 39°C, dolor de garganta y ganglios. ¿Diagnóstico más probable?', correct: 'Amigdalitis bacteriana', wrongPool: ['Gripe común', 'COVID-19', 'Alergia estacional', 'Laringitis viral'] }),
             this.buildReaction({ userId: u, prompt: '💔 ¡PACIENTE EN PARO CARDÍACO! ¡USA EL DESFIBRILADOR!', buttonLabel: '⚡ ¡DESFIBRILA!', timeLimit: 4000 }),
-            this.buildMath({ userId: u, context: 'Paciente de 70kg necesita 10mg/kg. ¿Cuántos mg administras?', difficulty: 'medium' }),
+            this.buildMath({ userId: u, customQuestion: 'Paciente de 70kg necesita 10mg/kg. ¿Cuántos mg administras?', customAnswer: 700 }),
             this.buildTrueFalse({ userId: u, statement: 'La penicilina es antibiótico seguro para pacientes alérgicos a la amoxicilina', isTrue: false }),
             this.buildIntruso({ userId: u, question: '¿Cuál NO es un signo vital básico?', intruso: 'Color del cabello', wrongPool: ['Presión arterial', 'Frecuencia cardíaca', 'Temperatura corporal', 'Frecuencia respiratoria', 'Saturación de oxígeno'] }),
             this.buildSequence({ userId: u, instruction: '🏥 Ordena los pasos de atención en urgencias:', steps: [{ label: '📋 Triaje inicial', order: 0 }, { label: '🩺 Diagnóstico y tratamiento', order: 1 }, { label: '📝 Alta o ingreso', order: 2 }] }),
@@ -503,7 +536,7 @@ class WorkMinigames {
         return this.shuffle([
             this.buildSequence({ userId: u, instruction: '🕺 Ejecuta el baile icónico del Dr. Simi:', steps: [{ label: '🙌 Palmas arriba', order: 0 }, { label: '💃 Giro completo', order: 1 }, { label: '🎉 Salto final', order: 2 }] }),
             this.buildReaction({ userId: u, prompt: '📸 ¡Un niño quiere foto con el Dr. Simi! ¡Posa AHORA!', buttonLabel: '😄 ¡POSAR!', timeLimit: 3000 }),
-            this.buildMath({ userId: u, context: '8 horas como botarga a $15/hora. ¿Cuánto ganas?', difficulty: 'easy' }),
+            this.buildMath({ userId: u, customQuestion: '8 horas como botarga a $15/hora. ¿Cuánto ganas?', customAnswer: 120 }),
             this.buildTrueFalse({ userId: u, statement: 'Dentro de la botarga del Dr. Simi puede hacer hasta 15°C más que la temperatura exterior', isTrue: true }),
             this.buildIntruso({ userId: u, question: '¿Cuál NO es riesgo real de trabajar como botarga?', intruso: 'Volverse famoso instantáneamente', wrongPool: ['Golpe de calor', 'Visibilidad reducida', 'Dificultad para respirar', 'Problemas de movilidad', 'Deshidratación'] }),
             this.buildFillBlank({ userId: u, sentence: 'Si sientes mareo dentro de la botarga, lo correcto es ___ y buscar ayuda de inmediato', correct: 'parar inmediatamente', wrongPool: ['seguir bailando más fuerte', 'quitarte la cabeza del disfraz en público', 'pedir agua a un niño', 'ignorarlo', 'echarte al suelo'] }),
