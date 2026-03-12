@@ -714,16 +714,16 @@ client.on('interactionCreate', async (interaction) => {
             await achievements.handleProgressPagination(interaction);
         }
 
-if (interaction.customId.startsWith('recipes_')) {
-    await crafting.handleRecipesInteraction(interaction);
-    return;
-}
+        if (interaction.customId.startsWith('recipes_')) {
+            await crafting.handleRecipesInteraction(interaction);
+            return;
+        }
 
-if (interaction.customId?.startsWith('work_')) {
-    await allCommands.workMinigames.handleInteraction(interaction);
-    return;
-}
-        
+        if (interaction.customId?.startsWith('work_') && !interaction.customId.startsWith('work_page_')) {
+            await allCommands.workMinigames.handleInteraction(interaction);
+            return;
+        }
+                
         if (interaction.customId.startsWith('bj_')) {
             await minigames.handleBlackjackButtons(interaction);
             return; // Importante: return para no continuar con otros botones
