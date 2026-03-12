@@ -832,7 +832,7 @@ class EconomySystem {
 
         // *** NUEVO: ACTUALIZAR ESTADÍSTICAS DE ACHIEVEMENTS ***
         if (this.achievements) {
-            await this.achievements.updateStats(userId, 'daily_claimed');
+            await this.achievements.update1Stats(userId, 'daily_claimed');
         }
         
         return {
@@ -938,10 +938,10 @@ class EconomySystem {
                 name: '🚪 Abre Puertas Oxxo',
                 cooldown: 2 * 60 * 60 * 1000, // 3 hora
                 codeName: 'abrepuertasoxxo',
-                baseReward: 2500,
-                variation: 1500,
+                baseReward: 1500,
+                variation: 1200,
                 levelRequirement: 9,
-                failChance: 0.40, // 75% de fallar
+                failChance: 0.55, // 55% de fallar
                 messages: [
                     'Abriste las puertas correctamente',
                     'Apertura de puertas sin contratiempos',

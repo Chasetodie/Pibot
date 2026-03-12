@@ -864,35 +864,85 @@ if (cosmeticRole?.name) {
         const jobType = args[1]?.toLowerCase();
         const jobs = await this.economy.getWorkJobs();
 
-        // Sin argumento → mostrar lista
         if (!jobType) {
             const user = await this.economy.getUser(userId);
             const streakData = this.economy.workStreaks?.get(userId) || { streak: 0 };
+            const JOBS_PER_PAGE = 5;
 
-            const embed = new EmbedBuilder()
-                .setTitle('🛠️ Trabajos Disponibles')
-                .setDescription('Elige un trabajo para ganar π-b Coins')
-                .setColor('#28a745');
+            const sortedJobs = Object.entries(jobs).sort((a, b) => a[1].levelRequirement - b[1].levelRequirement);
+            const totalPages = Math.ceil(sortedJobs.length / JOBS_PER_PAGE);
+            let currentPage = 0;
 
-            for (const [key, job] of Object.entries(jobs).sort((a, b) => a[1].levelRequirement - b[1].levelRequirement)) {
-                const cooldownHours = job.cooldown / (60 * 60 * 1000);
-                const cooldownText = cooldownHours >= 1 ? `${cooldownHours}h` : `${job.cooldown / (60 * 1000)}m`;
-                const available = user.level >= job.levelRequirement ? '✅' : '🔒';
-                const levelText = user.level >= job.levelRequirement ? '' : `\n*Requiere Nivel ${job.levelRequirement}*`;
+            const buildEmbed = (page) => {
+                const start = page * JOBS_PER_PAGE;
+                const pageJobs = sortedJobs.slice(start, start + JOBS_PER_PAGE);
 
-                embed.addFields({
-                    name: `${available} ${job.name}`,
-                    value: `**Pago:** ${job.baseReward} - ${job.variation} π-b$\n**Cooldown:** ${cooldownText}${levelText}${job.failChance ? `\n**Riesgo:** ${(job.failChance * 100)}% de fallar` : ''}\n**Comando:** >work ${job.codeName}`,
-                    inline: true
+                const embed = new EmbedBuilder()
+                    .setTitle('🛠️ Trabajos Disponibles')
+                    .setDescription('Elige un trabajo para ganar π-b Coins')
+                    .setColor('#28a745');
+
+                for (const [key, job] of pageJobs) {
+                    const cooldownHours = job.cooldown / (60 * 60 * 1000);
+                    const cooldownText = cooldownHours >= 1 ? `${cooldownHours}h` : `${job.cooldown / (60 * 1000)}m`;
+                    const available = user.level >= job.levelRequirement ? '✅' : '🔒';
+                    const levelText = user.level < job.levelRequirement ? `\n🔒 *Requiere Nivel ${job.levelRequirement}*` : '';
+                    const diffText = job.failChance ? `${Math.round(job.failChance * 100)}% difícil` : 'Variable';
+
+                    embed.addFields({
+                        name: `${available} ${job.name}`,
+                        value: `💵 ${job.baseReward} – ${job.variation} π-b$\n⏱️ ${cooldownText}  •  🎮 ${diffText}\n\`>work ${job.codeName}\`${levelText}`,
+                        inline: true
+                    });
+                }
+
+                const footerParts = [];
+                if (streakData.streak > 0) footerParts.push(`🔥 Racha: ${streakData.streak}`);
+                footerParts.push(`Página ${page + 1}/${totalPages}`);
+                embed.setFooter({ text: footerParts.join('  •  ') });
+
+                return embed;
+            };
+
+            const buildRow = (page) => new ActionRowBuilder().addComponents(
+                new ButtonBuilder()
+                    .setCustomId(`work_page_prev_${userId}`)
+                    .setEmoji('◀️')
+                    .setStyle(ButtonStyle.Secondary)
+                    .setDisabled(page === 0),
+                new ButtonBuilder()
+                    .setCustomId(`work_page_next_${userId}`)
+                    .setEmoji('▶️')
+                    .setStyle(ButtonStyle.Secondary)
+                    .setDisabled(page === totalPages - 1)
+            );
+
+            const reply = await message.reply({
+                embeds: [buildEmbed(currentPage)],
+                components: [buildRow(currentPage)]
+            });
+
+            const collector = reply.createMessageComponentCollector({
+                filter: i => i.user.id === userId && (i.customId === `work_page_prev_${userId}` || i.customId === `work_page_next_${userId}`),
+                time: 60000
+            });
+
+            collector.on('collect', async (interaction) => {
+                if (interaction.customId === `work_page_next_${userId}`) currentPage++;
+                else currentPage--;
+
+                await interaction.update({
+                    embeds: [buildEmbed(currentPage)],
+                    components: [buildRow(currentPage)]
                 });
-            }
+            });
 
-            embed.addFields({ name: '💡 Uso', value: '`>work <tipo>`\nEjemplo: `>work delivery`', inline: false });
-            if (streakData.streak > 0) {
-                embed.setFooter({ text: `🔥 Racha actual: ${streakData.streak} éxitos consecutivos` });
-            }
+            collector.on('end', async () => {
+                try {
+                    await reply.edit({ components: [] });
+                } catch {}
+            });
 
-            await message.reply({ embeds: [embed] });
             return;
         }
 
