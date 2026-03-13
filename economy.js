@@ -1561,7 +1561,7 @@ class EconomySystem {
 
     async applyWorkResult(userId, jobType, earnedAmount, minigameSuccess) {
         const user = await this.getUser(userId);
-        const streakData = this.workStreaks.get(userId) || { streak: 0 };
+        const streakData = this.workStreaks.get(userId) || { streak: user.stats?.workStreak || 0 };
 
         const illegalJobs = ['criminal', 'vendedordelpunto', 'damadecomp', 'sicario', 'contador'];
         const bonuses = [
@@ -1600,12 +1600,13 @@ class EconomySystem {
             addResult = { newBalance: updatedUser.balance, actualAmount: finalAmount, hitLimit: false };
         }
 
-        await this.updateUser(userId, {
-            stats: {
-                ...user.stats,
-                totalEarned: (user.stats?.totalEarned || 0) + Math.max(0, finalAmount)
-            }
-        });
+await this.updateUser(userId, {
+    stats: {
+        ...user.stats,
+        totalEarned: (user.stats?.totalEarned || 0) + Math.max(0, finalAmount),
+        workStreak: newStreak
+    }
+});
 
         return {
             finalAmount,
