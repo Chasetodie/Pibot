@@ -724,7 +724,7 @@ class CraftingSystem {
             'master_gloves_craft': {
                 id: 'master_gloves_craft',
                 name: '💀🧤 Guantes del Ladrón Maestro',
-                description: 'Mejora la efectividad de los robos (+50% éxito, 10 usos)',
+                description: 'Salta la 1era fase del robo (5 usos)',
                 craftTime: 3600000, // 1 hora
                 ingredients: [
                     { id: 'robbery_kit', quantity: 5 },
@@ -737,7 +737,8 @@ class CraftingSystem {
                     effect: {
                         type: 'robbery_boost',
                         successRate: 0.5,
-                        uses: 10
+                        uses: 5,
+                        skipClicks: true
                     },
                     stackable: true,
                     maxStack: 2
@@ -820,7 +821,7 @@ class CraftingSystem {
             'phantom_gloves_craft': {
                 id: 'phantom_gloves_craft',
                 name: '👻🧤 Guantes Fantasma',
-                description: 'Permiten robar sin riesgo de ser atrapado (7 usos)',
+                description: 'Permiten robar sin riesgo de ser atrapado (3 usos)',
                 craftTime: 21600000, // 6 horas
                 ingredients: [
                     { id: 'master_gloves', quantity: 1 },
@@ -835,7 +836,7 @@ class CraftingSystem {
                         type: 'robbery_boost',
                         successRate: 1.0,
                         safe: true,
-                        uses: 7
+                        uses: 3
                     },
                     stackable: true,
                     maxStack: 1
