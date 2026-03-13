@@ -775,13 +775,13 @@ class ShopSystem {
             'master_gloves': {
                 id: 'master_gloves',
                 name: '💀🧤 Guantes del Ladrón Maestro',
-                description: 'Salta la 1era fase del robo (10 usos)',
+                description: 'Salta la 1era fase del robo (5 usos)',
                 category: 'consumable',
                 rarity: 'epic',
                 effect: {
                     type: 'robbery_boost',
                     successRate: 0.5,
-                    uses: 10,
+                    uses: 5,
                     skipClicks: true
                 },
                 chestOnly: true,
@@ -885,14 +885,14 @@ class ShopSystem {
             'phantom_gloves': {
                 id: 'phantom_gloves',
                 name: '👻🧤 Guantes Fantasma',
-                description: 'Permiten robar sin riesgo de ser atrapado (4 usos)',
+                description: 'Permiten robar sin riesgo de ser atrapado (3 usos)',
                 category: 'consumable',
                 rarity: 'mythic',
                 effect: {
                     type: 'robbery_boost',
                     successRate: 1.0,
                     safe: true,
-                    uses: 4
+                    uses: 3
                 },
                 chestOnly: true,
                 stackable: true,
