@@ -1235,7 +1235,7 @@ if (cosmeticRole?.name) {
             for (const [, effects] of Object.entries(activeEffects)) {
                 if (!Array.isArray(effects)) continue;
                 for (const effect of effects) {
-                    if (effect.type === 'robbery_boost' && effect.skipClicks === true && effect.usesLeft > 0) {
+                    if (effect.type === 'robbery_boost' && effect.safe !== true && effect.usesLeft > 0) {
                         skipClicks = true;
                     }
                 }
