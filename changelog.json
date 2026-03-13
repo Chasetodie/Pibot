@@ -1,4 +1,21 @@
 {
-    "Nuevo": ["Sistema de mantenimiento"],
-    "Bugs": ["Fix de prueba"]
+    "Nuevo": [
+        "Minijuegos en el sistema de robo (92 minijuegos temáticos)",
+        "Minijuegos en trabajos",
+        "Sistema de rachas en trabajos",
+        "Comando de lyrics en música"
+    ],
+    "Bugs": [
+        "Fix en el embed de trabajos",
+        "Fix en el help de música",
+        "Fix en el embed de crafteos",
+        "Racha de trabajos se reseteaba al reiniciar el bot",
+        "Varios ítems tenían descripción incorrecta"
+    ],
+    "Balances": [
+        "Varios ítems en la tienda bajaron de precio"
+    ],
+    "Info": [
+        "¿Encontraste un bug o tienes una sugerencia? Contáctate con chasetodie10"
+    ]
 }
