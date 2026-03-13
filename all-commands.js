@@ -2480,8 +2480,9 @@ const commandName = command.replace('>', '');
                 case '>endmaintenance': {
                     if (message.author.id !== '488110147265232898') return;
 
-                    const maintenance = await this.economy.database.getActiveMaintenance();
-                    if (maintenance) await this.economy.database.disableMaintenance(maintenance.id);
+const maintenance = await this.economy.database.getActiveMaintenance();
+const maintenanceId = maintenance?.id || null;
+if (maintenance) await this.economy.database.disableMaintenance(maintenanceId);
 
                     // Leer changelog.json automáticamente
                     let changes = {};
@@ -2493,7 +2494,7 @@ const commandName = command.replace('>', '');
                         changes = { '✨ Actualización': ['Mejoras generales y correcciones de bugs'] };
                     }
 
-                    await this.economy.database.setChangelog(maintenance?.id || 0, changes);
+                    await this.economy.database.setChangelog(maintenanceId || 0, changes);
                     this.maintenance.invalidateCache();
 
                     const embed = new EmbedBuilder()
