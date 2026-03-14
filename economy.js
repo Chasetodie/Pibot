@@ -832,7 +832,7 @@ class EconomySystem {
 
         // *** NUEVO: ACTUALIZAR ESTADÍSTICAS DE ACHIEVEMENTS ***
         if (this.achievements) {
-            await this.achievements.update1Stats(userId, 'daily_claimed');
+            await this.achievements.updateStats(userId, 'daily_claimed');
         }
         
         return {
