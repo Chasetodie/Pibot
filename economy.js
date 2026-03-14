@@ -824,7 +824,7 @@ class EconomySystem {
             last_daily: Date.now(),
             stats: {
                 ...user.stats,
-                dailyClaims: user.stats.dailyClaims + 1
+                dailyClaims: (user.stats?.dailyClaims || 0) + 1
             }
         }
         
