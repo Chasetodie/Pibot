@@ -69,7 +69,7 @@ class NSFWSystem {
     async getRule34(tags, amount = 1) {
         try {
             // Normalizar tags y agregar filtros
-            const normalizedTags = tags.toLowerCase().trim().replace(/\s+/g, '+');
+            const normalizedTags = tags.toLowerCase().trim();
             const filteredTags = `${normalizedTags} -ai_generated -stable_diffusion -midjourney -dall-e`;
 
             // Pedir más del necesario para compensar filtros posteriores
@@ -167,11 +167,18 @@ class NSFWSystem {
 
         if (isGif || isVideo) {
             try {
-                const response = await axios.get(item.url, {
-                    responseType: 'arraybuffer',
-                    timeout: 30000,
-                    headers: { 'User-Agent': 'Mozilla/5.0' }
-                });
+const head = await axios.head(item.url, { timeout: 5000 }).catch(() => null);
+const contentLength = head?.headers?.['content-length'];
+if (contentLength && parseInt(contentLength) > 7 * 1024 * 1024) {
+    // Muy grande — solo enviar link
+    throw new Error('Request entity too large');
+}
+
+const response = await axios.get(item.url, {
+    responseType: 'arraybuffer',
+    timeout: 30000,
+    headers: { 'User-Agent': 'Mozilla/5.0' }
+});
 
                 const ext = item.url.split('.').pop().split('?')[0].toLowerCase();
                 const filename = `media.${ext}`;
