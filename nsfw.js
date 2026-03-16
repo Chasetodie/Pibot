@@ -263,7 +263,7 @@ const response = await axios.get(item.url, {
         await message.channel.sendTyping();
 
         // Pedir más para compensar el filtro de solo GIFs
-        const results = await this.getRule34(`${tags}+animated`, count * 4);
+        const results = await this.getRule34(`${tags} animated`, count * 4);
         const gifs = results.filter(item => /\.gif$/i.test(item.url)).slice(0, count);
 
         if (gifs.length === 0)
@@ -284,7 +284,7 @@ const response = await axios.get(item.url, {
 
         await message.channel.sendTyping();
 
-        const results = await this.getRule34(`${tags}+video+animated`, count * 5);
+        const results = await this.getRule34(`${tags} video animated`, count * 5);
         const videos = results.filter(item => /\.(mp4|webm)$/i.test(item.url)).slice(0, count);
 
         if (videos.length === 0)
@@ -313,7 +313,7 @@ const response = await axios.get(item.url, {
 
         await message.channel.sendTyping();
 
-        const results = await this.getRule34('sex+animated', 15);
+        const results = await this.getRule34('sex animated', 15);
         const gifs = results.filter(item => /\.gif$/i.test(item.url));
 
         if (gifs.length === 0)
@@ -366,7 +366,7 @@ const response = await axios.get(item.url, {
             category = 'sex'; genderText = '👫 Hetero (géneros no detectados)';
         }
 
-        const results = await this.getRule34(`${category}+animated`, 15);
+        const results = await this.getRule34(`${category} animated`, 15);
         const gifs = results.filter(item => /\.gif$/i.test(item.url));
 
         if (gifs.length === 0)
