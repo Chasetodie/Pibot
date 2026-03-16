@@ -1,4 +1,4 @@
-const { Client, GatewayIntentBits, ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder, SlashCommandBuilder, Events, REST, Routes, Collection } = require('discord.js');
+const { Client, GatewayIntentBits, ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder, SlashCommandBuilder, Events, REST, Routes, Collection, ActivityType } = require('discord.js');
 const { Options } = require('discord.js'); // agregar al inicio del archivo si no está
 const express = require('express');
 const fs = require('fs');
@@ -374,6 +374,15 @@ client.once('ready', async () => {
     await chatbot.initChatTables();
     console.log('🤖 Sistema de ChatBot inicializado');
 
+client.user.setPresence({
+    activities: [{
+        type: ActivityType.Custom,
+        name: 'custom',
+        state: '💬 Escríbeme o usa >help — siempre estoy aquí 🤖',
+    }],
+    status: 'online'
+});
+    
     setInterval(() => {
         const used = process.memoryUsage();
         const heapUsedMB = Math.round(used.heapUsed / 1024 / 1024);
