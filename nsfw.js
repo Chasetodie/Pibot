@@ -49,14 +49,14 @@ class NSFWSystem {
             const lastArg = args[args.length - 1];
             if (!isNaN(lastArg) && parseInt(lastArg) > 0) {
                 count = Math.min(parseInt(lastArg), maxCount);
-                tags = args.slice(0, -1).join('+') || defaultTags;
+                tags = args.slice(0, -1).join(' ') || defaultTags;
             } else {
-                tags = args.join('+');
+                tags = args.join(' ');
             }
         }
 
         // Normalizar tags: minúsculas, espacios → +
-        tags = tags.toLowerCase().trim().replace(/\s+/g, '+');
+        tags = tags.toLowerCase().trim();
         if (!tags) tags = defaultTags;
 
         return { tags, count };
@@ -70,7 +70,7 @@ class NSFWSystem {
         try {
             // Normalizar tags y agregar filtros
             const normalizedTags = tags.toLowerCase().trim().replace(/\s+/g, '+');
-            const filteredTags = `${normalizedTags}+-ai_generated+-stable_diffusion+-midjourney+-dall-e`;
+            const filteredTags = `${normalizedTags} -ai_generated -stable_diffusion -midjourney -dall-e`;
 
             // Pedir más del necesario para compensar filtros posteriores
             const requestLimit = Math.min(amount * 3, 100);
