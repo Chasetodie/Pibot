@@ -171,23 +171,28 @@ class WorkMinigames {
     }
 
     // NUEVO: Memoria numérica
-    buildMemory({ context, userId }) {
-        const secret = this.getRandomInt(100, 9999);
-        const wrongs = new Set();
-        while (wrongs.size < 3) {
-            const w = secret + this.getRandomInt(1, 50) * (Math.random() > 0.5 ? 1 : -1);
-            if (w !== secret && w > 0) wrongs.add(w);
-        }
-        const all = this.shuffle([{ label: secret.toString(), correct: true }, ...[...wrongs].map(w => ({ label: w.toString(), correct: false }))]);
-        const row = new ActionRowBuilder().addComponents(
-            all.map((opt, i) => new ButtonBuilder().setCustomId(`work_mc_${userId}_${i}_${opt.correct}`).setLabel(opt.label).setStyle(ButtonStyle.Primary))
-        );
-        return {
-            question: `🧠 **¡Memoriza este número!**\n\n# ${secret}\n\n${context}\n\n*(Tienes unos segundos para memorizarlo)*`,
-            row, type: 'multiple_choice', memoryNumber: secret
-        };
-    }
-
+buildMemory({ context, userId }) {
+    const secret = this.getRandomInt(1000, 9999); // siempre 4 dígitos
+    const digits = [0,1,2,3,4,5,6,7,8,9];
+    const rows = [
+        new ActionRowBuilder().addComponents(
+            [1,2,3,4,5].map(d => new ButtonBuilder()
+                .setCustomId(`work_mem_${userId}_${d}`)
+                .setLabel(d.toString())
+                .setStyle(ButtonStyle.Primary))
+        ),
+        new ActionRowBuilder().addComponents(
+            [6,7,8,9,0].map(d => new ButtonBuilder()
+                .setCustomId(`work_mem_${userId}_${d}`)
+                .setLabel(d.toString())
+                .setStyle(ButtonStyle.Primary))
+        ),
+    ];
+    return {
+        question: `🧠 **¡Memoriza este número!**\n\n# ${secret}\n\n${context}\n\n*(Tienes unos segundos para memorizarlo)*`,
+        rows, type: 'memory', memoryNumber: secret
+    };
+}
     // NUEVO: Prioridad urgente (variante de secuencia)
     buildPriority({ situation, items, userId }) {
         const shuffled = this.shuffle([...items]);
@@ -803,8 +808,23 @@ class WorkMinigames {
             this.activeGames.get(userId).sequenceProgress = [];
         }
 
-        const sentMessage = await message.reply({ embeds: [embed], components: [game.row] });
+const isMemory = game.type === 'memory';
+const components = isMemory ? [] : [game.row];
+const sentMessage = await message.reply({ embeds: [embed], components });
 
+if (isMemory) {
+    await new Promise(r => setTimeout(r, 4000));
+    const gameData = this.activeGames.get(userId);
+    if (!gameData || gameData.resolved) return;
+    gameData.memoryInput = []; // array de dígitos ingresados
+    const revealEmbed = new EmbedBuilder()
+        .setColor('#FFA500')
+        .setTitle('💼 Minijuego de Trabajo')
+        .setDescription(`🧠 **¿Cuál era el número de 4 dígitos?**\n\n**Ingresado:** \`_ _ _ _\`\n\n⏰ Tienes **${timeLimit / 1000} segundos** para responder${streakText}`)
+        .setFooter({ text: `Recompensa base: ${baseReward.toLocaleString()} π-b$` });
+    await sentMessage.edit({ embeds: [revealEmbed], components: game.rows }).catch(() => {});
+}
+        
         const timeout = setTimeout(async () => {
             const gameData = this.activeGames.get(userId);
             if (!gameData || gameData.resolved) return;
@@ -890,6 +910,31 @@ class WorkMinigames {
             return true;
         }
 
+if (customId.startsWith('work_mem_')) {
+    const parts = customId.split('_');
+    const digit = parts[parts.length - 1];
+    if (!gameData.memoryInput) gameData.memoryInput = [];
+    gameData.memoryInput.push(digit);
+
+    const display = gameData.memoryInput.join(' ') + ' ' + '_ '.repeat(4 - gameData.memoryInput.length).trim();
+
+    if (gameData.memoryInput.length < 4) {
+        // Actualizar embed con progreso
+        const progressEmbed = new EmbedBuilder()
+            .setColor('#FFA500')
+            .setTitle('💼 Minijuego de Trabajo')
+            .setDescription(`🧠 **¿Cuál era el número de 4 dígitos?**\n\n**Ingresado:** \`${display}\`\n\n⏰ Sigue ingresando...`)
+            .setFooter({ text: `Recompensa base: ${gameData.baseReward.toLocaleString()} π-b$` });
+        await interaction.update({ embeds: [progressEmbed], components: game.rows }).catch(() => {});
+    } else {
+        // 4 dígitos completos — verificar
+        const entered = gameData.memoryInput.join('');
+        const isCorrect = entered === gameData.game.memoryNumber.toString();
+        await this.resolveGame(interaction, gameData, isCorrect, gameData.jobType, gameData.baseReward);
+    }
+    return true;
+}
+        
         return false;
     }
 
