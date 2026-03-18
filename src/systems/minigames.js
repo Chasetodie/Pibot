@@ -6813,7 +6813,7 @@ const userId = gameState.userId;
             folder = 'flip';
         }
         
-        const fullPath = path.join(__dirname, 'images', 'UnoImages', folder, `${imageName}.png`);
+        const fullPath = path.join(__dirname, 'assets', 'UnoImages', folder, `${imageName}.png`);
         return fullPath;
     }
 

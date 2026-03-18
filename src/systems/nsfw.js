@@ -167,18 +167,18 @@ class NSFWSystem {
 
         if (isGif || isVideo) {
             try {
-const head = await axios.head(item.url, { timeout: 5000 }).catch(() => null);
-const contentLength = head?.headers?.['content-length'];
-if (contentLength && parseInt(contentLength) > 7 * 1024 * 1024) {
-    // Muy grande — solo enviar link
-    throw new Error('Request entity too large');
-}
+                const head = await axios.head(item.url, { timeout: 5000 }).catch(() => null);
+                const contentLength = head?.headers?.['content-length'];
+                if (contentLength && parseInt(contentLength) > 7 * 1024 * 1024) {
+                    console.log('[NSFW] Archivo muy grande, saltando...');
+                    return null; // Lo manejamos arriba
+                }
 
-const response = await axios.get(item.url, {
-    responseType: 'arraybuffer',
-    timeout: 30000,
-    headers: { 'User-Agent': 'Mozilla/5.0' }
-});
+                const response = await axios.get(item.url, {
+                    responseType: 'arraybuffer',
+                    timeout: 30000,
+                    headers: { 'User-Agent': 'Mozilla/5.0' }
+                });
 
                 const ext = item.url.split('.').pop().split('?')[0].toLowerCase();
                 const filename = `media.${ext}`;
@@ -228,7 +228,8 @@ const response = await axios.get(item.url, {
             return message.reply(`❌ No se encontraron resultados para: \`${tags.replace(/\+/g, ' ')}\`\n💡 Intenta con otros tags`);
 
         for (const item of results) {
-            await this.sendMediaReply(message, item, '🔞 Rule34.xxx');
+            const sent = await this.sendMediaReply(message, item, '🔞 Rule34.xxx');
+            if (!sent) continue;
             if (results.length > 1) await new Promise(r => setTimeout(r, 800));
         }
     }
@@ -248,7 +249,8 @@ const response = await axios.get(item.url, {
             return message.reply(`❌ No se encontraron resultados para: \`${tags.replace(/\+/g, ' ')}\`\n💡 Intenta con otros tags`);
 
         for (const item of results) {
-            await this.sendMediaReply(message, item, '🔞 NSFW');
+            const sent = await this.sendMediaReply(message, item, '🔞 NSFW');
+            if (!sent) continue;
             if (results.length > 1) await new Promise(r => setTimeout(r, 800));
         }
     }
@@ -270,7 +272,8 @@ const response = await axios.get(item.url, {
             return message.reply(`❌ No se encontraron GIFs para: \`${tags.replace(/\+/g, ' ')}\`\n💡 Intenta con: hentai, pokemon, anime`);
 
         for (const item of gifs) {
-            await this.sendMediaReply(message, item, '🔞 GIF');
+            const sent = await this.sendMediaReply(message, item, '🔞 GIF');
+            if (!sent) continue;
             if (gifs.length > 1) await new Promise(r => setTimeout(r, 800));
         }
     }
@@ -284,14 +287,15 @@ const response = await axios.get(item.url, {
 
         await message.channel.sendTyping();
 
-        const results = await this.getRule34(`${tags} video animated`, count * 5);
+        const results = await this.getRule34(`${tags} animated`, count * 5);
         const videos = results.filter(item => /\.(mp4|webm)$/i.test(item.url)).slice(0, count);
 
         if (videos.length === 0)
             return message.reply(`❌ No se encontraron videos para: \`${tags.replace(/\+/g, ' ')}\`\n💡 Los videos son más escasos, intenta: hentai, sex`);
 
         for (const item of videos) {
-            await this.sendMediaReply(message, item, '🔞 Video');
+            const sent = await this.sendMediaReply(message, item, '🔞 Video');
+            if (!sent) continue;
             if (videos.length > 1) await new Promise(r => setTimeout(r, 800));
         }
     }
@@ -341,7 +345,7 @@ const response = await axios.get(item.url, {
         if (!targetUser)
             return message.reply('❌ Debes mencionar a alguien o responder a su mensaje.\n**Ejemplo:** `>fd @usuario`');
 
-        const authorNickname = message.author.displayName;
+        const authorNickname = message.member?.displayName || message.author.displayName;
         const targetNickname = targetUser.displayName;
         const authorGender = this.detectGender(authorNickname);
         const targetGender = this.detectGender(targetNickname);
@@ -376,11 +380,7 @@ const response = await axios.get(item.url, {
         const person1 = message.author.displayName;
         const person2 = targetUser.displayName;
 
-        const description =
-            `**Autor:** ${person1} (${authorGender})\n` +
-            `**Target:** ${person2} (${targetGender})\n` +
-            `**Categoría:** ${genderText}\n\n` +
-            `💕 **${person1}** se folló a **${person2}** 💕`;
+        const description = `💕 **${person1}** se folló a **${person2}** 💕`;
 
         await this.sendMediaReply(message, selected, '🔞 FuckDetect', description);
     }

@@ -1,5 +1,5 @@
 require('dotenv').config();
-const LocalDatabase = require('./database');
+const LocalDatabase = require('../../database');
 const EventsSystem = require('./events');
 
 const richUC = new Map();

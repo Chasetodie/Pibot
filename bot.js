@@ -5,29 +5,29 @@ const fs = require('fs');
 const path = require('path');
 const app = express();
 const PORT = process.env.PORT || 3000;
-const EconomySystem = require('./economy'); // Importar el sistema de economia
-const EventsSystem = require('./events');
-const TradeSystem = require('./trade');
-const MinigamesSystem = require('./minigames'); // Importar el sistema de minijuegos
-const AchievementsSystem = require('./achievements');
-const BettingSystem = require('./betting');
-const MissionsSystem = require('./missions');
-const ShopSystem = require('./shop');
-const AllCommands = require('./all-commands');
-const LocalDatabase = require('./database');
-const MusicSystem = require('./musicSystem.js');
-const ChatBotSystem = require('./chatBot.js');
-const GuildConfig = require('./guild-config');
-const ImageGenSystem = require('./imageGen');
-const GuildLevels = require('./guild-levels');
-const MaintenanceSystem = require('./maintenance')
+const EconomySystem = require('./src/systems/economy.js'); // Importar el sistema de economia
+const EventsSystem = require('./src/systems/events.js');
+const TradeSystem = require('./src/systems/trade.js');
+const MinigamesSystem = require('./src/systems/minigames.js'); // Importar el sistema de minijuegos
+const AchievementsSystem = require('./src/systems/achievements.js');
+const BettingSystem = require('./src/systems/betting.js');
+const MissionsSystem = require('./src/systems/missions.js');
+const ShopSystem = require('./src/systems/shop.js');
+const AllCommands = require('./src/commands/all-commands.js');
+const LocalDatabase = require('./src/database/database.js');
+const MusicSystem = require('./src/systems/musicSystem.js');
+const ChatBotSystem = require('./src/systems/chatBot.js');
+const GuildConfig = require('./src/systems/guild-config.js');
+const ImageGenSystem = require('./src/systems/imageGen.js');
+const GuildLevels = require('./src/systems/guild-levels.js');
+const MaintenanceSystem = require('./src/systems/maintenance.js')
 //const ThingsShop = require('./things-shop');
 //require('./admin-panel')(app); // Pasar el servidor express existente
 const {
     AuctionSystem,
     CraftingSystem
-} = require('./things-shop');
-const NSFWSystem = require('./nsfw.js');
+} = require('./src/systems/things-shop.js');
+const NSFWSystem = require('./src/systems/nsfw.js');
 
 if (typeof File === 'undefined') {
   global.File = class File {
