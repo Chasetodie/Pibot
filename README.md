@@ -49,8 +49,8 @@ Pibot utiliza servicios externos para ciertas funciones:
 
 Consulta los siguientes documentos:
 
-- [Términos de Servicio](./shit/TERMS.md)
-- [Política de Privacidad](./shit/PRIVACY.md)
+- [Términos de Servicio](./config/TERMS.md)
+- [Política de Privacidad](./config/PRIVACY.md)
 
 ---
 
