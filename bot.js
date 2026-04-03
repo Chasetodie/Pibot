@@ -9,6 +9,7 @@ if (process.env.TESTING === 'true') {
     console.log('DB_HOST:', process.env.DB_HOST);
     console.log('TOKEN:', process.env.TOKEN ? 'cargado' : 'vacío');
 }
+//nomas
 const PORT = process.env.PORT || 3000;
 const EconomySystem = require('./src/systems/economy.js'); // Importar el sistema de economia
 const EventsSystem = require('./src/systems/events.js');
