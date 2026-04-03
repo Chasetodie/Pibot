@@ -13,9 +13,9 @@ class AllCommands {
         this.guildLevels = guildLevels;
         this.guildConfig = guildConfig;
         this.maintenance = maintenance;
-        const WorkMinigames = require('./work-minigames.js');
+        const WorkMinigames = require('../systems/work-minigames');
         this.workMinigames = new WorkMinigames();
-        const RobMinigameHandler = require('./rob-minigame-handler');
+        const RobMinigameHandler = require('../systems/rob-minigame-handler');
         this.robMinigames = new RobMinigameHandler();
     }
 
@@ -131,6 +131,8 @@ class AllCommands {
                 { name: '⭐ XP Total', value: `**${this.formatNumber(user.total_xp)}**`, inline: true },
                 { name: '📈 Progreso al Siguiente Nivel', value: `\`${progressBar}\` ${progressPercentage}%\n**${this.formatNumber(xpProgress)}** / **${this.formatNumber(xpForNextLevel)}** XP\n*Faltan ${this.formatNumber(xpNeeded)} XP*`, inline: false },
                 { name: '💬 Mensajes Enviados', value: `${this.formatNumber(user.messages_count)}`, inline: true },
+                { name: '🌱 Racha de Presencia', value: `${user.presence_streak || 0} días`, inline: true },
+                { name: '⚔️ Profesión', value: user.profession ? this.economy.PROFESSIONS[user.profession]?.name || 'Ninguna' : 'Ninguna', inline: true },
                 { name: '📥 Total Ganado', value: `${this.formatNumber(user.stats.totalEarned)} ${this.economy.config.currencySymbol}`, inline: true },
                 { name: '📤 Total Gastado', value: `${this.formatNumber(user.stats.totalSpent)} ${this.economy.config.currencySymbol}`, inline: true }
             );
@@ -184,6 +186,37 @@ if (cosmeticRole?.name) {
         await message.reply({ embeds: [embed] });
     }
 
+    async handleRachas(message) {
+        const userId = message.author.id;
+        const user = await this.economy.getUser(userId);
+        const streak = user.presence_streak || 0;
+        const lastPresence = user.last_presence || 0;
+
+        const nextMilestone = [3, 7, 15, 30].find(m => m > streak) || null;
+        const daysToNext = nextMilestone ? nextMilestone - streak : null;
+
+        const milestoneText =
+            `${streak >= 3  ? '✅' : '⬜'} 3 días — Notificación de racha\n` +
+            `${streak >= 7  ? '✅' : '⬜'} 7 días — +500π\n` +
+            `${streak >= 15 ? '✅' : '⬜'} 15 días — +2,000π + Energy Drink\n` +
+            `${streak >= 30 ? '✅' : '⬜'} 30 días — +10,000π + Mystery Box`;
+
+        const embed = new EmbedBuilder()
+            .setColor('#FFD700')
+            .setTitle('🌱 Racha de Presencia')
+            .setThumbnail(message.author.displayAvatarURL({ dynamic: true }))
+            .addFields(
+                { name: '🔥 Racha actual', value: `**${streak}** días`, inline: true },
+                { name: '📅 Última conexión', value: lastPresence ? `<t:${Math.floor(lastPresence / 1000)}:R>` : 'Nunca', inline: true },
+                { name: '🎯 Próximo hito', value: nextMilestone ? `${nextMilestone} días (faltan **${daysToNext}**)` : '🏆 ¡Completaste todos!', inline: true },
+                { name: '🏆 Hitos', value: milestoneText, inline: false }
+            )
+            .setFooter({ text: 'Si no usas el bot por 48h tu racha se resetea' })
+            .setTimestamp();
+
+        await message.reply({ embeds: [embed] });
+    }
+
     // Comando !daily - Reclamar dinero diario
     async handleDaily(message) {
         const userId = message.author.id;
@@ -206,7 +239,7 @@ if (cosmeticRole?.name) {
             await message.reply({ embeds: [embed] });
             return;
         }
-        
+
         const embed = new EmbedBuilder()
             .setTitle('🎁 Daily Reclamado!')
             .setDescription(`¡Has reclamado tu recompensa diaria!`)
@@ -232,6 +265,38 @@ if (cosmeticRole?.name) {
             .setFooter({ text: 'Vuelve mañana por más!' })
             .setTimestamp();
         
+        if (result.professionBonus && result.professionBonus.mult !== 1.0) {
+            const pct = Math.round((result.professionBonus.mult - 1) * 100);
+            const sign = pct > 0 ? '+' : '';
+            embed.addFields({ name: `${result.professionBonus.name}`, value: `${sign}${pct}% daily`, inline: true });
+        }
+
+        // Bonus de libros a minijuegos
+        const userMG = await this.economy.getUser(userId);
+        const bookBonusesMG = this.economy.getBookBonuses(userMG);
+
+        // Mensaje de bonus de libros
+        if (bookBonusesMG.dailyBonus > 0) {
+            const pct = Math.round(bookBonusesMG.dailyBonus * 100);
+            embed.addFields({ name: `📚 **Biblioteca**`, value: `+${pct}% daily`, inline: true });
+        }
+
+        if (result.petBonus?.pet) {
+            const r = this.economy.PET_RARITIES[result.petBonus.pet.rarity];
+            const pct = Math.round(result.petBonus.amount * 100);
+            embed.addFields({ name: `${r.emoji} **${result.petBonus.pet.name}**`, value: `+${pct}% daily`, inline: true });
+        }
+
+        // Bonus matrimonial
+        const { bonus: marriageBonus, partnerId: marriagePartnerId } = await this.economy.applyMarriageBonus(userId, applyResult.finalAmount);
+        if (marriageBonus > 0 && marriagePartnerId) {
+            embed.addFields({
+                name: '💍 Bonus Matrimonial',
+                value: `+${this.formatNumber(marriageBonus)} π-b$ enviados a <@${marriagePartnerId}>`,
+                inline: false
+            });
+        }
+
         await message.reply({ embeds: [embed] });
             // AÑADIR ESTO:
             if (result.hitLimit) {
@@ -267,7 +332,7 @@ if (cosmeticRole?.name) {
         // Verificar tesoros al final
         for (const event of this.events.getActiveEvents(message.guild?.id)) {
             if (event.type === 'treasure_hunt') {
-                const treasures = await this.events.checkSpecialEvents(userId, 'general');
+                const treasures = await this.events.checkSpecialEvents(userId, 'general', message);
                     
                 for (const treasure of treasures) {
                     if (treasure.type === 'treasure') {
@@ -817,6 +882,21 @@ if (cosmeticRole?.name) {
             await message.channel.send({ embeds: [levelUpEmbed] });
         }
 
+        // Anuncio de hito de mentoría
+        if (xpResult.mentorMilestone) {
+            const { mentorMilestone } = xpResult;
+            message.channel.send({
+                embeds: [new EmbedBuilder()
+                    .setTitle(`🎓 ${mentorMilestone.milestone.label}`)
+                    .setDescription(
+                        `<@${targetUser.id}> superó un hito de mentoría al alcanzar **Nivel ${xpResult.newLevel}**!\n` +
+                        `💰 **+${mentorMilestone.reward.toLocaleString()} π-b$** para el aprendiz y el mentor <@${mentorMilestone.mentorId}>.`
+                    )
+                    .setColor('#5865F2')
+                    .setTimestamp()]
+            }).catch(() => {});
+        }
+
         if (!isOwner) {
             try {
                 const owner = await client.users.fetch(YOUR_ID, { force: true })
@@ -858,6 +938,714 @@ if (cosmeticRole?.name) {
         return bonuses.length > 0 ? bonuses.join('\n') : 'No hay bonificaciones activas';
     }
     
+    async handlePedir(message) {
+        const userId = message.author.id;
+        const user = await this.economy.getUser(userId);
+
+        // Verificar cooldown
+        const lastPedir = user.last_pedir || 0;
+        const cooldownLeft = this.economy.mendicidadConfig.cooldown - (Date.now() - lastPedir);
+        if (cooldownLeft > 0) {
+            let h = Math.floor(cooldownLeft / (1000 * 60 * 60));
+            let m = Math.round((cooldownLeft % (1000 * 60 * 60)) / (1000 * 60));
+            if (m === 60) { h += 1; m = 0; }
+            return message.reply({
+                embeds: [new EmbedBuilder()
+                    .setColor('#ff4444')
+                    .setTitle('🙏 Mendicidad')
+                    .setDescription(`Ya pediste dinero recientemente.\n⏳ Podrás pedir de nuevo en **${h}h ${m}m**`)
+                    .setTimestamp()]
+            });
+        }
+
+        const result = await this.economy.doPedir(userId);
+
+        if (!result.success) {
+            const msgs = {
+                no_users: 'No hay usuarios activos a quienes pedirles. ¡Vuelve cuando haya más gente!',
+            };
+            return message.reply({
+                embeds: [new EmbedBuilder()
+                    .setColor('#ff4444')
+                    .setTitle('🙏 Mendicidad')
+                    .setDescription(msgs[result.reason] || 'No se pudo procesar la solicitud.')
+                    .setTimestamp()]
+            });
+        }
+
+        await message.reply({
+            embeds: [new EmbedBuilder()
+                .setColor('#FFD700')
+                .setTitle('🙏 ¡Solicitud enviada!')
+                .setDescription(`Enviaste una solicitud de donación a **${result.targets.length}** usuarios.\nLa cantidad donada depende del balance de cada uno.`)
+                .setFooter({ text: 'Cooldown: 8 horas' })
+                .setTimestamp()]
+        });
+
+        // Enviar solicitud a cada usuario seleccionado
+        for (const targetId of result.targets) {
+            // Verificar que esté en el servidor
+            let member;
+            try {
+                member = await message.guild.members.fetch(targetId);
+            } catch { continue; } // No está en el server, saltar
+
+            const targetUser = member.user;
+
+            // Calcular cantidad dinámica según balance del donante
+            const donorData = await this.economy.getUser(targetId);
+            let donationAmount = 500;
+            if (donorData.balance > 200000) donationAmount = 5000;
+            else if (donorData.balance > 50000) donationAmount = 2500;
+            else if (donorData.balance > 10000) donationAmount = 1000;
+
+            const donateButton = new ButtonBuilder()
+                .setCustomId(`pedir_donar_${userId}_${targetId}_${donationAmount}`)
+                .setLabel(`💝 Donar ${donationAmount} ${this.economy.config.currencySymbol}`)
+                .setStyle(ButtonStyle.Success);
+
+            const ignoreButton = new ButtonBuilder()
+                .setCustomId(`pedir_ignorar_${userId}_${targetId}_${donationAmount}`)
+                .setLabel('❌ Ignorar')
+                .setStyle(ButtonStyle.Secondary);
+
+            const row = new ActionRowBuilder().addComponents(donateButton, ignoreButton);
+
+            const requestEmbed = new EmbedBuilder()
+                .setColor('#FFD700')
+                .setTitle('🙏 Alguien te pide dinero')
+                .setDescription(
+                    `**${message.author.displayName}** está pasando por un mal momento...\n\n` +
+                    `*"Por favor, cualquier ayuda cuenta 🥺"*\n\n` +
+                    `¿Le donas **${donationAmount} ${this.economy.config.currencySymbol}**?`
+                )
+                .setThumbnail(message.author.displayAvatarURL({ dynamic: true }))
+                .setFooter({ text: 'Esta solicitud expira en 10 minutos' })
+                .setTimestamp();
+
+            try {
+                await message.channel.send({
+                    content: `<@${targetId}>`,
+                    embeds: [requestEmbed],
+                    components: [row]
+                });
+            } catch { continue; }
+        }
+    }
+
+    async handleBiblioteca(message, args) {
+        const userId = message.author.id;
+        const subcommand = args[1]?.toLowerCase();
+
+        // Ver estado de lectura actual
+        if (subcommand === 'estado') {
+            const current = await this.economy.database.getCurrentReading(userId);
+            if (!current) {
+                return message.reply({
+                    embeds: [new EmbedBuilder()
+                        .setColor('#8B4513')
+                        .setTitle('📚 Biblioteca — Estado')
+                        .setDescription('No estás leyendo ningún libro actualmente.')
+                        .setTimestamp()]
+                });
+            }
+            const book = this.economy.BOOKS[current.book_id];
+            const isFinished = current.finishes_at <= Date.now();
+            return message.reply({
+                embeds: [new EmbedBuilder()
+                    .setColor('#8B4513')
+                    .setTitle('📚 Biblioteca — Estado')
+                    .setDescription(
+                        isFinished
+                            ? `✅ **${book?.name}** terminado — usa cualquier comando para recibir el bonus`
+                            : `📖 Leyendo **${book?.name}**\n⏳ Termina <t:${Math.floor(current.finishes_at / 1000)}:R>`
+                    )
+                    .setTimestamp()]
+            });
+        }
+
+        // Comprar libro
+        if (subcommand === 'comprar') {
+            const bookId = args[2]?.toLowerCase();
+            if (!bookId) {
+                return message.reply({
+                    embeds: [new EmbedBuilder()
+                        .setColor('#ff4444')
+                        .setTitle('📚 Biblioteca')
+                        .setDescription('Debes especificar el ID del libro.\n**Uso:** `>biblioteca comprar <id>`')
+                        .setTimestamp()]
+                });
+            }
+
+            const result = await this.economy.buyBook(userId, bookId);
+
+            if (!result.success) {
+                const msgs = {
+                    invalid_book:    'Ese libro no existe. Usa `>biblioteca` para ver el catálogo.',
+                    already_read:    'Ya leíste ese libro. Sus efectos ya están activos.',
+                    already_reading: `Ya estás leyendo **${this.economy.BOOKS[result.book?.book_id]?.name || 'un libro'}**. Termínalo primero.`,
+                    cooldown:        `Debes esperar **<t:${Math.floor((Date.now() + result.timeLeft) / 1000)}:R>** antes de leer otro libro.`,
+                    too_poor:        `Necesitas **${this.formatNumber(result.price)} ${this.economy.config.currencySymbol}** para comprar este libro.`,
+                };
+                return message.reply({
+                    embeds: [new EmbedBuilder()
+                        .setColor('#ff4444')
+                        .setTitle('📚 Biblioteca')
+                        .setDescription(msgs[result.reason] || 'Error desconocido.')
+                        .setTimestamp()]
+                });
+            }
+
+            const effectText = result.book.effect.type === 'recipe'
+                ? '📜 Receta secreta de crafteo desbloqueada'
+                : `+${Math.round(result.book.effect.value * 100)}% ${
+                    result.book.effect.type === 'dailyBonus' ? 'al daily' :
+                    result.book.effect.type === 'workBonus' ? 'al trabajo' :
+                    result.book.effect.type === 'robBonus' ? 'al robo' :
+                    result.book.effect.type === 'workCooldown' ? 'reducción cooldown trabajo' :
+                    result.book.effect.type === 'robCooldown' ? 'reducción cooldown robo' :
+                    'a minijuegos'
+                }`;
+
+            return message.reply({
+                embeds: [new EmbedBuilder()
+                    .setColor('#8B4513')
+                    .setTitle('📚 ¡Empezaste a leer!')
+                    .setDescription(
+                        `**${result.book.name}**\n\n` +
+                        `⏳ Terminarás de leerlo <t:${Math.floor(result.finishesAt / 1000)}:R>\n` +
+                        `🎁 Efecto al terminar: ${effectText}\n\n` +
+                        `*Usa \`>biblioteca estado\` para ver el progreso*`
+                    )
+                    .setTimestamp()]
+            });
+        }
+
+        // Catálogo — sin subcomando
+        const readBooks = await this.economy.database.getReadBooks(userId);
+        const user = await this.economy.getUser(userId);
+        const bookBonuses = this.economy.getBookBonuses(user);
+        const BOOKS_PER_PAGE = 6;
+        const bookEntries = Object.entries(this.economy.BOOKS);
+        const totalPages = Math.ceil(bookEntries.length / BOOKS_PER_PAGE);
+        let currentPage = 0;
+
+        const buildEmbed = (page) => {
+            const pageBooks = bookEntries.slice(page * BOOKS_PER_PAGE, (page + 1) * BOOKS_PER_PAGE);
+            const embed = new EmbedBuilder()
+                .setColor('#8B4513')
+                .setTitle('📚 Biblioteca')
+                .setDescription(
+                    `Compra libros para desbloquear mejoras permanentes.\n` +
+                    `**Uso:** \`>biblioteca comprar <id>\`\n\n` +
+                    `📖 Libros leídos: **${readBooks.length}/${bookEntries.length}**`
+                )
+                .setFooter({ text: `Página ${page + 1}/${totalPages}` });
+
+            for (const [id, book] of pageBooks) {
+                const read = readBooks.includes(id);
+                const effectText = book.effect.type === 'recipe'
+                    ? '📜 Receta secreta'
+                    : `+${Math.round(book.effect.value * 100)}% ${
+                        book.effect.type === 'dailyBonus' ? 'daily' :
+                        book.effect.type === 'workBonus' ? 'trabajo' :
+                        book.effect.type === 'robBonus' ? 'robo' :
+                        book.effect.type === 'workCooldown' ? 'cooldown trabajo' :
+                        book.effect.type === 'robCooldown' ? 'cooldown robo' : 'minijuegos'
+                    }`;
+                embed.addFields({
+                    name: `${read ? '✅' : '⬜'} ${book.name}`,
+                    value: `${effectText}\n💰 ${this.formatNumber(book.price)} π-b$ • ⏱️ ${book.readHours}h\n\`${id}\``,
+                    inline: true
+                });
+            }
+            return embed;
+        };
+
+        const buildRow = (page) => new ActionRowBuilder().addComponents(
+            new ButtonBuilder().setCustomId(`lib_prev_${userId}`).setEmoji('◀️').setStyle(ButtonStyle.Secondary).setDisabled(page === 0),
+            new ButtonBuilder().setCustomId(`lib_next_${userId}`).setEmoji('▶️').setStyle(ButtonStyle.Secondary).setDisabled(page === totalPages - 1)
+        );
+
+        const reply = await message.reply({ embeds: [buildEmbed(currentPage)], components: [buildRow(currentPage)] });
+
+        const collector = reply.createMessageComponentCollector({
+            filter: i => i.user.id === userId,
+            time: 60000
+        });
+
+        collector.on('collect', async (interaction) => {
+            if (interaction.customId === `lib_next_${userId}`) currentPage++;
+            else currentPage--;
+            await interaction.update({ embeds: [buildEmbed(currentPage)], components: [buildRow(currentPage)] });
+        });
+
+        collector.on('end', async () => {
+            try { await reply.edit({ components: [] }); } catch {}
+        });
+    }
+
+    async handleSicario(message, args) {
+        const userId = message.author.id;
+        const targetUser = message.mentions.users.first();
+        if (!targetUser) {
+            await message.delete().catch(() => {});
+            return message.channel.send({
+                embeds: [new EmbedBuilder()
+                    .setColor('#ff4444')
+                    .setTitle('🗡️ Sicario')
+                    .setDescription('Debes mencionar al objetivo.\n**Uso:** `>sicario @usuario`')
+                    .setTimestamp()]
+            });
+        }
+
+        const amount = 1000;
+        const result = await this.economy.hireSicario(userId, targetUser.id, amount, message.channel.id, message.guild?.id);
+        const timeLeft = this.formatTimeLeft(result.timeLeft);
+        
+        if (!result.success) {
+            const msgs = {
+                self_target:        'No puedes contratarte contra ti mismo.',
+                too_poor:           `No tienes suficiente dinero. Necesitas **${this.formatNumber(amount)} ${this.economy.config.currencySymbol}**.`,
+                target_not_found:   'No se encontró al usuario objetivo.',
+                already_contracted: `**${targetUser.displayName}** ya tiene un contrato activo en su contra.`,
+                cooldown:           `Debes esperar **${timeLeft}** para contratar otro sicario`
+            };
+            await message.delete().catch(() => {});
+            return message.channel.send({
+                embeds: [new EmbedBuilder()
+                    .setColor('#ff4444')
+                    .setTitle('🗡️ Sicario')
+                    .setDescription(msgs[result.reason] || 'Error desconocido.')
+                    .setTimestamp()]
+            });
+        }
+
+        // Borrar mensaje del usuario
+        await message.delete().catch(() => {});
+
+        const deleteButton = new ButtonBuilder()
+            .setCustomId(`sicario_delete_${userId}`)
+            .setLabel('🗑️ Borrar')
+            .setStyle(ButtonStyle.Secondary);
+
+        const deleteRow = new ActionRowBuilder().addComponents(deleteButton);
+
+        const reply = await message.channel.send({
+            embeds: [new EmbedBuilder()
+                .setColor('#8B0000')
+                .setTitle('🗡️ ¡Contrato firmado!')
+                .setDescription(
+                    `Contrataste un sicario contra **${targetUser.displayName}**.\n\n` +
+                    `*La próxima vez que trabaje, hay un **60%** de que falle.*`
+                )
+                .addFields(
+                    { name: '💰 Pagado', value: `${this.formatNumber(amount)} ${this.economy.config.currencySymbol}`, inline: true },
+                    { name: '⏳ Expira en', value: '24 horas', inline: true },
+                    { name: '🎯 Objetivo', value: targetUser.displayName, inline: true }
+                )
+                .setFooter({ text: 'Solo tú puedes ver y borrar este mensaje' })
+                .setTimestamp()],
+            components: [deleteRow]
+        });
+
+        // Collector del botón borrar
+        const collector = reply.createMessageComponentCollector({
+            filter: i => i.user.id === userId && i.customId === `sicario_delete_${userId}`,
+            time: 24 * 60 * 60 * 1000, // 24h
+            max: 1
+        });
+
+        collector.on('collect', async (interaction) => {
+            await reply.delete().catch(() => {});
+        });
+
+        collector.on('end', async () => {
+            try { await reply.edit({ components: [] }); } catch {}
+        });
+
+        return;
+    }
+
+    async handleMapa(message) {
+        const userId = message.author.id;
+
+        const map = await this.economy.database.getActiveTreasureMap(userId);
+        if (!map) {
+            return message.reply({
+                embeds: [new EmbedBuilder()
+                    .setColor('#ff4444')
+                    .setTitle('🗺️ Mapa del Tesoro')
+                    .setDescription('No tienes ningún mapa activo.\n*Los mapas se obtienen como drop raro al trabajar (~1%).*')
+                    .setTimestamp()]
+            });
+        }
+
+        const currentClue = map.clues[map.current_clue];
+        const rewardText = map.reward.type === 'money'
+            ? `${this.formatNumber(map.reward.amount)} ${this.economy.config.currencySymbol}`
+            : `${map.reward.amount} XP`;
+
+        const embed = new EmbedBuilder()
+            .setColor('#FFD700')
+            .setTitle('🗺️ Tu Mapa del Tesoro')
+            .setDescription(
+                `**Pista ${map.current_clue + 1}/${map.clues.length}:**\n\n` +
+                `*${currentClue.text}*\n\n` +
+                `━━━━━━━━━━━━━━━━━━━━━━\n` +
+                `Usa \`>excavar #canal\` o \`>excavar @usuario\` para responder`
+            )
+            .addFields(
+                { name: '💰 Recompensa', value: rewardText, inline: true },
+                { name: '📍 Progreso', value: `${map.current_clue + 1}/${map.clues.length} pistas`, inline: true },
+                { name: '⏳ Expira', value: `<t:${Math.floor(map.expires_at / 1000)}:R>`, inline: true },
+            )
+            .setFooter({ text: 'Si fallas una pista el mapa se destruye' })
+            .setTimestamp();
+
+        await message.reply({ embeds: [embed] });
+    }
+
+    async handleExcavar(message, args) {
+        const userId = message.author.id;
+
+        const mention = message.mentions.channels.first() || message.mentions.users.first();
+        if (!mention) {
+            return message.reply({
+                embeds: [new EmbedBuilder()
+                    .setColor('#ff4444')
+                    .setTitle('🗺️ Excavar')
+                    .setDescription('Debes mencionar un canal o usuario.\n**Uso:** `>excavar #canal` o `>excavar @usuario`')
+                    .setTimestamp()]
+            });
+        }
+
+        const isChannel = !!message.mentions.channels.first();
+        const answerId = mention.id;
+        const answerType = isChannel ? 'channel' : 'user';
+
+        const result = await this.economy.checkTreasureAnswer(userId, answerId, answerType);
+
+        if (!result.success) {
+            const msgs = {
+                no_map: 'No tienes ningún mapa activo.',
+                no_clue: 'Error al procesar la pista.',
+            };
+            return message.reply({
+                embeds: [new EmbedBuilder()
+                    .setColor('#ff4444')
+                    .setTitle('🗺️ Excavar')
+                    .setDescription(msgs[result.reason] || 'Error desconocido.')
+                    .setTimestamp()]
+            });
+        }
+
+        if (!result.correct) {
+            // Respuesta incorrecta — destruir mapa
+            const map = await this.economy.database.getActiveTreasureMap(userId);
+            if (map) await this.economy.database.completeTreasureMap(map.id);
+
+            const embedIncorrect = new EmbedBuilder()
+                .setColor('#ff0000')
+                .setTitle('❌ ¡Respuesta incorrecta!')
+                .setDescription('*El mapa se quemó en tus manos...*\n\nLa pista era sobre otro lugar. El mapa fue destruido.')                   
+                .setFooter({ text: 'Sigue trabajando para encontrar otro mapa' })
+                .setTimestamp();
+
+            if (answerType === 'channel') embedIncorrect.addFields({name: 'El lugar correcto era: ', value: `<#${result.correctAnswer}>`});
+            else if (answerType === 'user') embedIncorrect.addFields({name: 'El usuario correcto era: ', value: `<@${result.correctAnswer}>`});
+                
+            return message.reply({
+                embeds: [embedIncorrect]
+            });
+        }
+
+        if (result.finished) {
+            const rewardText = result.reward.type === 'money'
+                ? `**${this.formatNumber(result.reward.amount)} ${this.economy.config.currencySymbol}**`
+                : result.reward.type === 'xp'
+                    ? `**${result.reward.amount} XP**`
+                    : `**${this.economy.shop?.shopItems[result.reward.itemId]?.name || result.reward.itemId}**`;
+
+            return message.reply({
+                embeds: [new EmbedBuilder()
+                    .setColor('#FFD700')
+                    .setTitle('🎉 ¡Tesoro encontrado!')
+                    .setDescription(`*Cavaste en el lugar correcto y encontraste el tesoro...*\n\n💰 Recibiste ${rewardText}!`)
+                    .addFields({ name: '📍 Pistas resueltas', value: `${result.totalClues}/${result.totalClues}`, inline: true })
+                    .setTimestamp()]
+            });
+        }
+
+        // Respuesta correcta, siguiente pista
+        return message.reply({
+            embeds: [new EmbedBuilder()
+                .setColor('#00ff88')
+                .setTitle('✅ ¡Correcto!')
+                .setDescription(
+                    `*Vas por buen camino...*\n\n` +
+                    `**Pista ${result.currentClue + 1}/${result.totalClues}:**\n\n` +
+                    `*${result.nextClue.text}*`
+                )
+                .setFooter({ text: 'Usa >excavar #canal o >excavar @usuario para responder' })
+                .setTimestamp()]
+        });
+    }
+
+    async handlePacto(message) {
+        const userId = message.author.id;
+        const user = await this.economy.getUser(userId);
+
+        // Verificar cooldown antes de mostrar confirmación
+        const lastPacto = user.last_pacto || 0;
+        const cooldownLeft = this.economy.pactoConfig.cooldown - (Date.now() - lastPacto);
+        if (cooldownLeft > 0) {
+            const h = Math.floor(cooldownLeft / (1000 * 60 * 60));
+            const m = Math.round((cooldownLeft % (1000 * 60 * 60)) / (1000 * 60));
+            return message.reply({
+                embeds: [new EmbedBuilder()
+                    .setColor('#ff4444')
+                    .setTitle('😈 Pacto con el Diablo')
+                    .setDescription(`Ya hiciste un pacto recientemente.\n⏳ Podrás hacerlo de nuevo en **${h}h ${m}m**`)
+                    .setTimestamp()]
+            });
+        }
+
+        if (user.balance < this.economy.pactoConfig.minBalance) {
+            return message.reply({
+                embeds: [new EmbedBuilder()
+                    .setColor('#ff4444')
+                    .setTitle('😈 Pacto con el Diablo')
+                    .setDescription(`No tienes suficiente dinero para hacer un pacto.\n💰 Mínimo: **${this.economy.pactoConfig.minBalance}** ${this.economy.config.currencySymbol}`)
+                    .setTimestamp()]
+            });
+        }
+
+        const half = Math.floor(user.balance * 0.30);
+
+        // Embed de confirmación
+        const confirmEmbed = new EmbedBuilder()
+            .setColor('#8B0000')
+            .setTitle('😈 Pacto con el Diablo')
+            .setDescription(
+                `*El diablo te ofrece un trato...*\n\n` +
+                `Apuestas el 30% de tu balance:\n` +
+                `**${this.formatNumber(half)} ${this.economy.config.currencySymbol}**\n\n` +
+                `🟢 **50%** — Ganas y recibes el doble\n` +
+                `🔴 **50%** — Pierdes esa mitad para siempre\n\n` +
+                `*¿Aceptas el trato?*`
+            )
+            .setFooter({ text: 'Cooldown: 48 horas tras el pacto' })
+            .setTimestamp();
+
+        const row = new ActionRowBuilder().addComponents(
+            new ButtonBuilder()
+                .setCustomId(`pacto_confirm_${userId}`)
+                .setLabel('😈 Aceptar el trato')
+                .setStyle(ButtonStyle.Danger),
+            new ButtonBuilder()
+                .setCustomId(`pacto_cancel_${userId}`)
+                .setLabel('❌ Cancelar')
+                .setStyle(ButtonStyle.Secondary)
+        );
+
+        const reply = await message.reply({ embeds: [confirmEmbed], components: [row] });
+
+        const collector = reply.createMessageComponentCollector({
+            filter: i => i.user.id === userId,
+            time: 30000,
+            max: 1
+        });
+
+        collector.on('collect', async (interaction) => {
+            if (interaction.customId === `pacto_cancel_${userId}`) {
+                await interaction.update({
+                    embeds: [new EmbedBuilder()
+                        .setColor('#888888')
+                        .setTitle('😈 Pacto con el Diablo')
+                        .setDescription('*Huiste del trato. El diablo sonríe... por ahora.*')
+                        .setTimestamp()],
+                    components: []
+                });
+                return;
+            }
+
+            // Ejecutar pacto
+            const result = await this.economy.doPacto(userId);
+
+            if (!result.success) {
+                await interaction.update({
+                    embeds: [new EmbedBuilder()
+                        .setColor('#ff4444')
+                        .setTitle('😈 Error')
+                        .setDescription('No se pudo procesar el pacto. Intenta de nuevo.')
+                        .setTimestamp()],
+                    components: []
+                });
+                return;
+            }
+
+            const resultEmbed = new EmbedBuilder()
+                .setColor(result.won ? '#00ff88' : '#8B0000')
+                .setTitle(result.won ? '😈 ¡El diablo cumplió su trato!' : '😈 El diablo se llevó su parte...')
+                .setDescription(result.won
+                    ? `*Las llamas brillaron a tu favor...*\n\n💰 Ganaste **${this.formatNumber(result.amount)} ${this.economy.config.currencySymbol}**`
+                    : `*Una carcajada resuena en la oscuridad...*\n\n💸 Perdiste **${this.formatNumber(result.amount)} ${this.economy.config.currencySymbol}**`
+                )
+                .addFields(
+                    { name: result.won ? '💰 Ganado' : '💸 Perdido', value: `${this.formatNumber(result.amount)} ${this.economy.config.currencySymbol}`, inline: true },
+                    { name: '💳 Balance actual', value: `${this.formatNumber(result.newBalance)} ${this.economy.config.currencySymbol}`, inline: true }
+                )
+                .setFooter({ text: 'Próximo pacto disponible en 48 horas' })
+                .setTimestamp();
+
+            await interaction.update({ embeds: [resultEmbed], components: [] });
+        });
+
+        collector.on('end', async (collected) => {
+            if (collected.size === 0) {
+                try {
+                    await reply.edit({
+                        embeds: [new EmbedBuilder()
+                            .setColor('#888888')
+                            .setTitle('😈 Pacto con el Diablo')
+                            .setDescription('*El diablo perdió la paciencia. El trato expiró.*')
+                            .setTimestamp()],
+                        components: []
+                    });
+                } catch {}
+            }
+        });
+    }
+
+    async handleProfesion(message, args) {
+        const userId = message.author.id;
+        const user = await this.economy.getUser(userId);
+        const profKey = args[1]?.toLowerCase();
+
+        // Sin args → mostrar lista de profesiones
+        if (!profKey) {
+            const currentProf = user.profession ? this.economy.PROFESSIONS[user.profession] : null;
+            const pages = [
+                [
+                    { key: 'ladron',     p: this.economy.PROFESSIONS.ladron },
+                    { key: 'empresario', p: this.economy.PROFESSIONS.empresario },
+                    { key: 'apostador',  p: this.economy.PROFESSIONS.apostador },
+                    { key: 'artesano',   p: this.economy.PROFESSIONS.artesano },
+                    { key: 'aventurero', p: this.economy.PROFESSIONS.aventurero },
+                ],
+                [
+                    { key: 'doctor',   p: this.economy.PROFESSIONS.doctor },
+                    { key: 'guardian', p: this.economy.PROFESSIONS.guardian },
+                    { key: 'ludopata', p: this.economy.PROFESSIONS.ludopata },
+                    //{ key: 'cazador',  p: this.economy.PROFESSIONS.cazador },
+                    { key: 'granjero', p: this.economy.PROFESSIONS.granjero },
+                ],
+            ];
+
+            const profDescriptions = {
+                ladron:     '⚔️ +robos rápidos\n💔 -15% trabajo',
+                empresario: '⚔️ +25% trabajo\n💔 No puede robar',
+                apostador:  '⚔️ +30% minijuegos\n💔 +15% penalizaciones',
+                artesano:   '⚔️ -40% tiempo crafteo, recetas exclusivas\n💔 -25% trabajo, -20% daily',
+                aventurero: '⚔️ +100% misiones\n💔 Daily cada 26h',
+                doctor:     '⚔️ -50% penalizaciones\n💔 Puede curar mano del muerto',
+                guardian:   '⚔️ +20% xp, +15% daily\n💔 No puede robar, -20% trabajo',
+                ludopata:   '⚔️ +40% minijuegos apuesta\n💔 -30% trabajo, -20% daily',
+                //cazador:    '⚔️ +50% recompensa jefes\n💔 -20% trabajo',
+                granjero:   '⚔️ +50% huerto\n💔 No puede robar, -15% daily',
+            };
+
+            let currentPage = 0;
+
+            const buildEmbed = (page) => {
+                const embed = new EmbedBuilder()
+                    .setColor('#9B59B6')
+                    .setTitle('⚔️ Profesiones')
+                    .setDescription(
+                        `${currentProf ? `**Tu profesión actual:** ${currentProf.name}` : '**Sin profesión** — elige una para siempre'}\n` +
+                        `📊 Nivel requerido: **${this.economy.professionConfig.minLevel}**\n` +
+                        `💰 Cambiar profesión: **${this.formatNumber(this.economy.professionConfig.changeCost)} ${this.economy.config.currencySymbol}** (cooldown 30 días)\n\n` +
+                        `Usa \`>profesion <nombre>\` para elegir`
+                    )
+                    .setFooter({ text: `Página ${page + 1}/2` });
+
+                for (const { key, p } of pages[page]) {
+                    const isActive = user.profession === key;
+                    embed.addFields({
+                        name: `${isActive ? '✅' : '⬜'} ${p.name}`,
+                        value: profDescriptions[key],
+                        inline: true
+                    });
+                }
+                return embed;
+            };
+
+            const buildRow = (page) => new ActionRowBuilder().addComponents(
+                new ButtonBuilder().setCustomId(`prof_prev_${userId}`).setEmoji('◀️').setStyle(ButtonStyle.Secondary).setDisabled(page === 0),
+                new ButtonBuilder().setCustomId(`prof_next_${userId}`).setEmoji('▶️').setStyle(ButtonStyle.Secondary).setDisabled(page === 1)
+            );
+
+            const reply = await message.reply({ embeds: [buildEmbed(currentPage)], components: [buildRow(currentPage)] });
+
+            const collector = reply.createMessageComponentCollector({
+                filter: i => i.user.id === userId,
+                time: 60000
+            });
+
+            collector.on('collect', async (interaction) => {
+                if (interaction.customId === `prof_next_${userId}`) currentPage++;
+                else currentPage--;
+                await interaction.update({ embeds: [buildEmbed(currentPage)], components: [buildRow(currentPage)] });
+            });
+
+            collector.on('end', async () => {
+                try { await reply.edit({ components: [] }); } catch {}
+            });
+            return;
+        }
+
+        // Con arg → elegir profesión
+        if (user.level < this.economy.professionConfig.minLevel) {
+            return message.reply({
+                embeds: [new EmbedBuilder()
+                    .setColor('#ff4444')
+                    .setTitle('⚔️ Profesiones')
+                    .setDescription(`Necesitas ser **Nivel ${this.economy.professionConfig.minLevel}** para elegir una profesión.\n📊 Tu nivel actual: **${user.level}**`)
+                    .setTimestamp()]
+            });
+        }
+
+        const result = await this.economy.setProfession(userId, profKey);
+
+        if (!result.success) {
+            const msgs = {
+                invalid_profession: `Profesión no válida. Usa \`>profesion\` para ver las disponibles.`,
+                cooldown: `Cambiaste de profesión hace poco. Podrás cambiar en **${Math.ceil(result.timeLeft / (1000 * 60 * 60 * 24))} días**.`,
+                too_poor: `Necesitas **${this.formatNumber(result.cost)} ${this.economy.config.currencySymbol}** para cambiar de profesión.`,
+            };
+            return message.reply({
+                embeds: [new EmbedBuilder()
+                    .setColor('#ff4444')
+                    .setTitle('⚔️ Profesiones')
+                    .setDescription(msgs[result.reason] || 'Error desconocido.')
+                    .setTimestamp()]
+            });
+        }
+
+        const isChange = !!user.profession;
+        return message.reply({
+            embeds: [new EmbedBuilder()
+                .setColor('#9B59B6')
+                .setTitle('⚔️ ¡Profesión elegida!')
+                .setDescription(
+                    `${isChange ? `Cambiaste de **${this.economy.PROFESSIONS[user.profession]?.name}** a` : 'Elegiste la profesión'} **${result.profession.name}**!\n\n` +
+                    `*Los efectos se aplican inmediatamente.*`
+                )
+                .setTimestamp()]
+        });
+    }
+
     async handleWork(message) {
         const userId = message.author.id;
         const args = message.content.split(' ');
@@ -996,6 +1784,9 @@ if (cosmeticRole?.name) {
             return;
         }
 
+        let embedTrue = false;
+        let falseMapResult;
+
         // Aplicar resultado
         const applyResult = await this.economy.applyWorkResult(
             userId,
@@ -1003,6 +1794,32 @@ if (cosmeticRole?.name) {
             minigameResult.reward,
             minigameResult.success
         );
+
+        // Drop de mapa del tesoro
+        if (minigameResult.success && result.droppedMap && message.guild) {
+            const mapResult = await this.economy.generateTreasureMap(userId, message.guild.id, message.guild);           
+            falseMapResult = mapResult;
+
+            if (mapResult.success) embedTrue = true;
+            else embedTrue = false;
+        }
+
+        const sicarioContract = await this.economy.checkSicarioContract(userId, minigameResult.success);
+        if (sicarioContract?.activated && minigameResult.success) {
+            minigameResult.success = false;
+            await this.economy.addMoney(sicarioContract.hiredBy, applyResult.finalAmount, 'sicario_reward');
+            await this.economy.removeMoney(userId, applyResult.finalAmount, 'sicario_rob');
+
+            // Transferir mapa si tiene uno activo
+            const victimMap = await this.economy.database.getActiveTreasureMap(userId);
+            if (victimMap) {
+                await this.economy.database.transferTreasureMap(victimMap.id, sicarioContract.hiredBy);
+            }
+        }
+        const hadContract = !!sicarioContract;
+        const sabotaged = sicarioContract?.activated || false;
+        const sabotageHiredBy = sicarioContract?.hiredBy || null;
+        const sabotageChannelId2 = sicarioContract?.channelId || null;
 
         // Embed final
         const isIllegal = ['criminal', 'vendedordelpunto', 'damadecomp', 'sicario', 'contador'].includes(jobType);
@@ -1018,7 +1835,7 @@ if (cosmeticRole?.name) {
             .setColor(color)
             .setTimestamp();
 
-        if (minigameResult.success) {
+        if (minigameResult.success) {           
             embed.addFields(
                 { name: '💰 Ganaste', value: `+${this.formatNumber(applyResult.finalAmount)} π-b$`, inline: true },
                 { name: '💳 Balance Actual', value: `${this.formatNumber(applyResult.newBalance)} π-b$`, inline: true },
@@ -1032,6 +1849,82 @@ if (cosmeticRole?.name) {
             if (applyResult.newStreak > 0) {
                 embed.setFooter({ text: `🔥 Racha: ${applyResult.newStreak} éxitos consecutivos` });
             }
+            if (applyResult.professionBonus && applyResult.professionBonus.mult !== 1.0) {
+                const pct = Math.round((applyResult.professionBonus.mult - 1) * 100);
+                const sign = pct > 0 ? '+' : '';
+                embed.addFields({ name: `${applyResult.professionBonus.name}`, value: `${sign}${pct}% trabajo`, inline: true });
+            }
+            // Bonus de libros a minijuegos
+            const userMG = await this.economy.getUser(userId);
+            const bookBonusesMG = this.economy.getBookBonuses(userMG);
+
+            // Mensaje de bonus de libros
+            if (bookBonusesMG.workBonus > 0) {
+                const pct = Math.round(bookBonusesMG.workBonus * 100);
+                embed.addFields({ name: `📚 **Biblioteca**`, value: `+${pct}% work`, inline: true });
+            }
+            // Bonus matrimonial
+            const { bonus: marriageBonus, partnerId: marriagePartnerId } = await this.economy.applyMarriageBonus(userId, result.finalEarnings);
+            if (marriageBonus > 0 && marriagePartnerId) {
+                const marriage = await this.economy.getMarriage(userId);
+                const partnerId = marriage.user1_id === userId ? marriage.user2_id : marriage.user1_id;
+                embed.addFields({ 
+                    name: '💍 Bonus Matrimonial', 
+                    value: `+${this.formatNumber(marriageBonus)} π-b$ enviados a <@${marriagePartnerId}>`,
+                    inline: false 
+                });
+            }
+            if (applyResult.petBonus?.pet) {
+                const r = this.economy.PET_RARITIES[applyResult.petBonus.pet.rarity];
+                const pct = Math.round(applyResult.petBonus.amount * 100);
+                embed.addFields({ name: `${r.emoji} **${applyResult.petBonus.pet.name}**`, value: `+${pct}% trabajo`, inline: true });
+            }
+            if (applyResult.petEvolutions?.length > 0) {
+                for (const evo of applyResult.petEvolutions) {
+                    message.channel.send({
+                        embeds: [new EmbedBuilder()
+                            .setTitle('✨ ¡Tu mascota evolucionó!')
+                            .setDescription(`**${evo.name}** pasó de Forma ${evo.oldForm} a **Forma ${evo.newForm}**!`)
+                            .setColor('#FFD700')]
+                    }).catch(() => {});
+                }
+            }
+            if (embedTrue) {
+                const rewardText = falseMapResult.reward.type === 'money'
+                    ? `${this.formatNumber(falseMapResult.reward.amount)} ${this.economy.config.currencySymbol}`
+                    : falseMapResult.reward.type === 'xp'
+                    ? `${falseMapResult.reward.amount} XP`
+                    : `un ítem especial`;
+                embed.addFields({
+                    name: '🗺️ ¡Encontraste un Mapa del Tesoro!',
+                    value: `Usa \`>mapa\` para ver tu primera pista.\n💰 Recompensa: ${rewardText} en ${falseMapResult.clueCount} pistas`,
+                    inline: false
+                });
+            }
+
+            if (hadContract && !sabotaged && sabotageHiredBy) {
+                try {
+                    const embed = new EmbedBuilder()
+                        .setColor('#ff4444')
+                        .setTitle('🗡️ Sicario Fallido')
+                        .setDescription(`Tu sicario contra **${message.author.displayName}** falló.\n💸 El dinero pagado no se recupera.`)
+                        .setTimestamp();
+
+                    // Intentar canal primero, DM como fallback
+                    let notified = false;
+                    if (sabotageChannelId2) {
+                        const channel = await message.client.channels.fetch(sabotageChannelId2).catch(() => null);
+                        if (channel) {
+                            await channel.send({ content: `<@${sabotageHiredBy}>`, embeds: [embed] });
+                            notified = true;
+                        }
+                    }
+                    if (!notified) {
+                        const hirer = await message.client.users.fetch(sabotageHiredBy);
+                        await hirer.send({ embeds: [embed] }).catch(() => {});
+                    }
+                } catch {}
+            }
         } else {
             const lostText = applyResult.finalAmount < 0
                 ? `${this.formatNumber(Math.abs(applyResult.finalAmount))} π-b$`
@@ -1040,6 +1933,12 @@ if (cosmeticRole?.name) {
                 { name: '💸 Perdiste', value: lostText, inline: true },
                 { name: '💳 Balance Actual', value: `${this.formatNumber(applyResult.newBalance)} π-b$`, inline: true },
             );
+            if (sabotaged) {
+                embed.addFields({ name: '🗡️ ¡Saboteado!', value: `Alguien contrató un sicario contra ti... **${this.formatNumber(applyResult.finalAmount)} ${this.economy.config.currencySymbol}** serán entregados a quien lo contrató.`, inline: false });
+            }
+            if (embedTrue) {
+                embed.addFields({ name: '🗺️💔 Perdiste un mapa', value: 'El sicario se robó el mapa y se lo entregará a quien lo contrató.', inline: false });                
+            }
             embed.setFooter({ text: '💔 Racha reseteada' });
         }
 
@@ -1070,7 +1969,7 @@ if (cosmeticRole?.name) {
 
             for (const event of this.events.getActiveEvents(message.guild?.id)) {
                 if (event.type === 'treasure_hunt') {
-                    const treasures = await this.events.checkSpecialEvents(userId, 'general');
+                    const treasures = await this.events.checkSpecialEvents(userId, 'general', message);
                     for (const treasure of treasures) {
                         if (treasure.type === 'treasure') message.reply(`🗺️ **¡Tesoro encontrado!**\n${treasure.description}`);
                     }
@@ -1132,13 +2031,14 @@ if (cosmeticRole?.name) {
                 case 'target_too_poor':  errorMessage = `${targetUser.username} necesita tener al menos **${canRobResult.minBalance}** ${this.economy.config.currencySymbol}`; break;
                 case 'cooldown': {
                     const h = Math.floor(canRobResult.timeLeft / (1000 * 60 * 60));
-                    const m = Math.ceil((canRobResult.timeLeft % (1000 * 60 * 60)) / (1000 * 60));
+                    const m = Math.round((canRobResult.timeLeft % (1000 * 60 * 60)) / (1000 * 60));
                     errorMessage = h > 0
                         ? `Debes esperar **${h}h ${m}m** antes de robar de nuevo`
                         : `Debes esperar **${m} minutos** antes de robar de nuevo`;
                     break;
                 }
                 case 'already_robbing':  errorMessage = 'Ya tienes un robo en progreso'; break;
+                case 'profession_block': errorMessage = `Tu profesión **${this.economy.getProfession(await this.economy.getUser(robberId))?.name}** no te permite robar`; break;
                 case 'robber_rich':      errorMessage = 'Límite de dinero alcanzado'; break;
                 default:                 errorMessage = 'No puedes robar en este momento';
             }
@@ -1167,21 +2067,33 @@ if (cosmeticRole?.name) {
                         const finishResult = await this.economy.finishRobbery(robberId, null); // null = garantizado
 
                         if (finishResult.success && finishResult.robberySuccess) {
+                            const embed = new EmbedBuilder()
+                                .setTitle('👻 Phantom Gloves — Robo Perfecto')
+                                .setColor('#800080')
+                                .setDescription(
+                                    `Los guantes fantasma hicieron su magia.\n` +
+                                    `<@${robberId}> robó **${finishResult.stolenAmount}** ${this.economy.config.currencySymbol} ` +
+                                    `a <@${targetId}> sin ser detectado.`
+                                )
+                                .addFields(
+                                    { name: '💰 Botín', value: `${finishResult.stolenAmount} ${this.economy.config.currencySymbol}`, inline: true },
+                                    { name: '👻 Método', value: 'Phantom Gloves', inline: true },
+                                    { name: '🎯 Eficiencia', value: '100%', inline: true }
+                                )
+                                .setTimestamp()
+
+                            // Bonus de libros a minijuegos
+                            const userMG = await this.economy.getUser(robberId);
+                            const bookBonusesMG = this.economy.getBookBonuses(userMG);
+
+                            // Mensaje de bonus de libros
+                            if (bookBonusesMG.robBonus > 0) {
+                                const pct = Math.round(bookBonusesMG.robBonus * 100);
+                                embed.addFields({ name: `📚 **Biblioteca**`, value: `+${pct}% robo`, inline: true });
+                            }         
+
                             await message.reply({
-                                embeds: [new EmbedBuilder()
-                                    .setTitle('👻 Phantom Gloves — Robo Perfecto')
-                                    .setColor('#800080')
-                                    .setDescription(
-                                        `Los guantes fantasma hicieron su magia.\n` +
-                                        `<@${robberId}> robó **${finishResult.stolenAmount}** ${this.economy.config.currencySymbol} ` +
-                                        `a <@${targetId}> sin ser detectado.`
-                                    )
-                                    .addFields(
-                                        { name: '💰 Botín', value: `${finishResult.stolenAmount} ${this.economy.config.currencySymbol}`, inline: true },
-                                        { name: '👻 Método', value: 'Phantom Gloves', inline: true },
-                                        { name: '🎯 Eficiencia', value: '100%', inline: true }
-                                    )
-                                    .setTimestamp()]
+                                embeds: [embed]
                             });
                         }
                         return;
@@ -1197,6 +2109,7 @@ if (cosmeticRole?.name) {
             let errorMessage = 'Hubo un problema al iniciar el robo.';
             switch (robberyResult.reason) {
                 case 'already_robbing':  errorMessage = 'Ya tienes un robo en progreso'; break;
+                case 'profession_block': errorMessage = `Tu profesión **${this.economy.getProfession(await this.economy.getUser(robberId))?.name}** no te permite robar`; break;
                 case 'target_protected': {
                     const penaltyText = robberyResult.robberProtection
                         ? `\n\n${robberyResult.robberProtection}`
@@ -1392,7 +2305,7 @@ if (cosmeticRole?.name) {
         // ════════════════════════════════════════════════════
 
         const clickEfficiency = Math.min(finalClicks / this.economy.robberyConfig.maxClicks, 1);
-        const session = this.robMinigames.createSession(robberId, targetUser.username, clickEfficiency);
+        const session = await this.robMinigames.createSession(robberId, targetUser.username, clickEfficiency);
 
         if (!session) {
             // Seguridad extra (no debería llegar aquí con clicks > 0)
@@ -1475,6 +2388,16 @@ if (cosmeticRole?.name) {
                         inline: false
                     });
                 }
+
+                // Bonus de libros a minijuegos
+                const userMG = await this.economy.getUser(robberId);
+                const bookBonusesMG = this.economy.getBookBonuses(userMG);
+
+                // Mensaje de bonus de libros
+                if (bookBonusesMG.robBonus > 0) {
+                    const pct = Math.round(bookBonusesMG.robBonus * 100);
+                    successEmbed.addFields({ name: `📚 **Biblioteca**`, value: `+${pct}% robo`, inline: false });
+                }                
 
                 if (reason === 'timeout') {
                     successEmbed.setFooter({ text: '⌛ Se acabó el tiempo del minijuego, pero lo resolviste a tiempo.' });
@@ -2118,6 +3041,72 @@ const commandName = command.replace('>', '');
                 case '>rob':
                     await this.handleRobberyCommand(message, args)
                     break;
+                case '>pacto':
+                    await this.handlePacto(message);
+                    break;
+                case '>mapa':
+                    await this.handleMapa(message);
+                    break;
+                case '>excavar':
+                    await this.handleExcavar(message, args);
+                    break;
+                case '>biblioteca':
+                case '>libreria':
+                    await this.handleBiblioteca(message, args);
+                    break;
+                case '>sicario':
+                case '>hire':
+                    await this.handleSicario(message, args);
+                    break;
+                case '>profesion':
+                case '>profesión':
+                case '>clase':
+                case '>profesiones':
+                case '>prof':
+                    await this.handleProfesion(message, args);
+                    break;
+                case '>pedir':
+                case '>mendigar':
+                    await this.handlePedir(message);
+                    break;
+                case '>rachas':
+                case '>racha':
+                case '>presencia':
+                    await this.handleRachas(message);
+                    break;
+                case '>huerto':
+                case '>garden':
+                case '>granja':
+                    await this.handleHuerto(message, args);
+                    break;
+                case '>mascota':
+                case '>pet':
+                case '>mascotas':
+                    await this.handleMascota(message, args);
+                    break;
+                case '>curar':
+                case '>cure':
+                case '>doctor':
+                    await this.handleDoctorCure(message, args);
+                    return;
+                case '>casar':
+                case '>marry':
+                case '>proponer':
+                    await this.handleCasar(message, args);
+                    break;
+                case '>divorcio':
+                case '>divorce':
+                    await this.handleDivorcio(message, args);
+                    break;
+                case '>pareja':
+                case '>matrimonio':
+                case '>esposo':
+                case '>esposa':
+                    await this.handleVerMatrimonio(message);
+                    break;
+                case '>mentor':
+                    await this.handleMentor(message, args);
+                    break;
                 case '>addmoney':
                 case '>givemoney':
                 case '>givem':
@@ -2201,6 +3190,11 @@ const commandName = command.replace('>', '');
                     await this.shop.processItemRefunds(message.channel);
                     break;
                 }
+                case '>changelog':
+                case '>cambios':
+                case '>updates':
+                    await this.maintenance.showChangelog(message);
+                    break;
                 case '>eventstats':
                     await this.events.showEventStats(message);
                     break;
@@ -2355,8 +3349,10 @@ const commandName = command.replace('>', '');
                     break;
                     
                 case '>recipes':
-                    await this.crafting.showCraftingRecipes(message);
-                    break;                    
+                    const recipeCat = args[1] || null;
+                    const recipePage = parseInt(args[2]) || 1;
+                    await this.crafting.showCraftingRecipes(message, recipePage, recipeCat);
+                    break;
                 case '>craft':
                     if (!args[1]) {
                         await message.reply('❌ Especifica la receta. Usa `>recipes` para ver las disponibles.');
@@ -2608,51 +3604,59 @@ if (maintenance) await this.economy.database.disableMaintenance(maintenanceId);
             .setTimestamp();
         
         if (category === 'main') {
-            embed.setTitle('📖 Menú de Ayuda Principal')
-                .setDescription('Selecciona una categoría para ver sus comandos:')
+            embed
+                .setTitle('🤖 Pibot — Centro de Ayuda')
+                .setDescription(
+                    '> Usa los botones para explorar los comandos disponibles.\n' +
+                    '> Escríbele a Pibot con **@Pibot** para chatear con la IA.\n\n' +
+                    '💡 `>changelog` — ver las últimas novedades\n' +
+                    '💡 `>profesion` — elige tu clase y desbloquea bonos\n' +
+                    '💡 `>recipes` — taller de crafteo con categorías'
+                )
                 .addFields(
-                    { name: '⚙️ Admin', value: 'Configuración del servidor', inline: true },
-                    { name: '💰 Economía', value: 'Dinero, trabajo, daily', inline: true },
-                    { name: '🛒 Tienda', value: 'Shop, items, efectos', inline: true },
-                    { name: '🎮 Minijuegos', value: 'Gambling y juegos', inline: true },
-                    { name: '🎲 Apuestas', value: 'Sistema de apuestas', inline: true },
-                    { name: '🔄 Trading', value: 'Intercambios y subastas', inline: true },
-                    { name: '⚒️ Crafteo', value: 'Recetas y fabricación', inline: true },
-                    { name: '🏆 Progreso', value: 'Logros y misiones', inline: true },
-                    { name: '👑 VIP', value: 'Comandos premium', inline: true },
-                    { name: '🎵 Música', value: 'Reproductor de música', inline: true },
-                    { name: '🎨 Imágenes IA', value: 'Genera imágenes con IA', inline: true },
-                );
-            
-            const eventsEnabled = this.guildConfig 
+                    { name: '💰 Economía',      value: 'Trabajo, daily, robos, rankings',       inline: true },
+                    { name: '🌿 Mundo',          value: 'Huerto, mascotas, expediciones',        inline: true },
+                    { name: '💍 Social',         value: 'Matrimonio, mentor, mendicidad',        inline: true },
+                    { name: '🛒 Tienda',         value: 'Items, inventario, cosméticos',         inline: true },
+                    { name: '⚒️ Crafteo',        value: 'Recetas, materiales, cola de crafteo',  inline: true },
+                    { name: '🎮 Minijuegos',     value: 'Coinflip, dados, blackjack y más',      inline: true },
+                    { name: '🎲 Apuestas',       value: 'Apuestas directas entre usuarios',      inline: true },
+                    { name: '🔄 Trading',        value: 'Intercambios y subastas',               inline: true },
+                    { name: '🏆 Progreso',       value: 'Logros, misiones, niveles',             inline: true },
+                    { name: '👑 VIP',            value: 'Beneficios y comandos premium',         inline: true },
+                    { name: '🎵 Música',         value: 'Reproductor con Spotify y YouTube',     inline: true },
+                    { name: '🤖 Chat IA',        value: 'Habla con Pibot mencionándolo',         inline: true },
+                )
+                .setFooter({ text: 'Pibot • Desarrollado por chasetodie10' })
+                .setColor('#5865F2');
+
+            const eventsEnabled = this.guildConfig
                 ? await this.guildConfig.areEventsEnabled(message.guild?.id)
                 : true;
-
-            // Solo agregar botón admin si tiene permisos (evita duplicados)
             const isAdmin = message.member?.permissions?.has('ManageGuild');
-
-            // BOTONES para cada categoría
             const uid = message.author.id;
+
             const rows = [
                 new ActionRowBuilder().addComponents(
                     new ButtonBuilder().setCustomId(`help_economy_${uid}`).setLabel('💰 Economía').setStyle(ButtonStyle.Primary),
+                    new ButtonBuilder().setCustomId(`help_world_${uid}`).setLabel('🌿 Mundo').setStyle(ButtonStyle.Success),
+                    new ButtonBuilder().setCustomId(`help_social_${uid}`).setLabel('💍 Social').setStyle(ButtonStyle.Success),
                     new ButtonBuilder().setCustomId(`help_shop_${uid}`).setLabel('🛒 Tienda').setStyle(ButtonStyle.Primary),
+                    new ButtonBuilder().setCustomId(`help_craft_${uid}`).setLabel('⚒️ Crafteo').setStyle(ButtonStyle.Primary),
+                ),
+                new ActionRowBuilder().addComponents(
                     new ButtonBuilder().setCustomId(`help_games_${uid}`).setLabel('🎮 Minijuegos').setStyle(ButtonStyle.Primary),
                     new ButtonBuilder().setCustomId(`help_betting_${uid}`).setLabel('🎲 Apuestas').setStyle(ButtonStyle.Primary),
-                    new ButtonBuilder().setCustomId(`help_trading_${uid}`).setLabel('🔄 Trading').setStyle(ButtonStyle.Primary)
-                ),
-                new ActionRowBuilder().addComponents(
-                    new ButtonBuilder().setCustomId(`help_craft_${uid}`).setLabel('⚒️ Crafteo').setStyle(ButtonStyle.Primary),
-                    new ButtonBuilder().setCustomId(`help_auctions_${uid}`).setLabel('🔨 Subastas').setStyle(ButtonStyle.Primary),
+                    new ButtonBuilder().setCustomId(`help_trading_${uid}`).setLabel('🔄 Trading').setStyle(ButtonStyle.Primary),
                     new ButtonBuilder().setCustomId(`help_progress_${uid}`).setLabel('🏆 Progreso').setStyle(ButtonStyle.Primary),
-                    new ButtonBuilder().setCustomId(`help_vip_${uid}`).setLabel('👑 VIP').setStyle(ButtonStyle.Primary),
-                    new ButtonBuilder().setCustomId(`help_music_${uid}`).setLabel('🎵 Música').setStyle(ButtonStyle.Primary)
+                    new ButtonBuilder().setCustomId(`help_vip_${uid}`).setLabel('👑 VIP').setStyle(ButtonStyle.Secondary),
                 ),
                 new ActionRowBuilder().addComponents(
-                    new ButtonBuilder().setCustomId(`help_nsfw_${uid}`).setLabel('🔞 NSFW').setStyle(ButtonStyle.Primary),
-                    new ButtonBuilder().setCustomId(`help_events_${uid}`).setLabel(eventsEnabled ? '🎉 Eventos' : '🔴 Eventos').setStyle(eventsEnabled ? ButtonStyle.Primary : ButtonStyle.Secondary),
+                    new ButtonBuilder().setCustomId(`help_music_${uid}`).setLabel('🎵 Música').setStyle(ButtonStyle.Primary),
                     new ButtonBuilder().setCustomId(`help_chatIA_${uid}`).setLabel('🤖 Chat IA').setStyle(ButtonStyle.Primary),
-                    new ButtonBuilder().setCustomId(`help_imagine_${uid}`).setLabel('🎨 Imágenes IA').setStyle(ButtonStyle.Primary)
+                    new ButtonBuilder().setCustomId(`help_imagine_${uid}`).setLabel('🎨 Imágenes IA').setStyle(ButtonStyle.Primary),
+                    new ButtonBuilder().setCustomId(`help_nsfw_${uid}`).setLabel('🔞 NSFW').setStyle(ButtonStyle.Danger),
+                    new ButtonBuilder().setCustomId(`help_events_${uid}`).setLabel(eventsEnabled ? '🎉 Eventos' : '🔴 Eventos').setStyle(eventsEnabled ? ButtonStyle.Primary : ButtonStyle.Secondary),
                 ),
             ];
 
@@ -2661,13 +3665,9 @@ if (maintenance) await this.economy.database.disableMaintenance(maintenanceId);
                     new ButtonBuilder().setCustomId(`help_admin_${uid}`).setLabel('🛡️ Admin').setStyle(ButtonStyle.Danger)
                 ));
             }
-
             if (message.author.id === '488110147265232898') {
                 rows.push(new ActionRowBuilder().addComponents(
-                    new ButtonBuilder()
-                        .setCustomId(`help_dev_${uid}`)
-                        .setLabel('🔧 Dev')
-                        .setStyle(ButtonStyle.Danger)
+                    new ButtonBuilder().setCustomId(`help_dev_${uid}`).setLabel('🔧 Dev').setStyle(ButtonStyle.Danger)
                 ));
             }
 
@@ -2746,6 +3746,58 @@ if (maintenance) await this.economy.database.disableMaintenance(maintenanceId);
                     { name: '>clear [cantidad]', value: 'Borrar mensajes del canal', inline: true },
                 ]
             },
+            world: {
+                title: '🌿 Mundo — Huerto & Mascotas',
+                fields: [
+                    { name: '🌿 Huerto', value: '─────────────────', inline: false },
+                    { name: '>huerto', value: 'Ver estado de tu huerto', inline: true },
+                    { name: '>huerto plantar <slot> <semilla>', value: 'Plantar una semilla', inline: true },
+                    { name: '>huerto cosechar <slot/todo>', value: 'Cosechar plantas listas', inline: true },
+                    { name: '>huerto fumigar <slot>', value: 'Eliminar plaga (500π)', inline: true },
+                    { name: '>huerto help', value: 'Ver ayuda completa del huerto', inline: true },
+                    { name: '\u200b', value: '\u200b', inline: true },
+
+                    { name: '🐾 Mascotas', value: '─────────────────', inline: false },
+                    { name: '>mascota', value: 'Ver tus mascotas', inline: true },
+                    { name: '>mascota incubar', value: 'Incubar un 🥚 Huevo Misterioso', inline: true },
+                    { name: '>mascota equipar <id>', value: 'Equipar mascota para bonos', inline: true },
+                    { name: '>mascota desequipar', value: 'Desequipar mascota actual', inline: true },
+                    { name: '>mascota expedicion <id> <tipo>', value: '`money` / `ingredients` / `special`', inline: true },
+                    { name: '>mascota reclamar <id>', value: 'Reclamar recompensa de expedición', inline: true },
+                    { name: '>mascota curar <id> <medicina>', value: 'Curar mascota enferma', inline: true },
+                    { name: '>mascota liberar <id>', value: 'Liberar mascota a cambio de π', inline: true },
+                    { name: '>mascota renombrar <id> <nombre>', value: 'Cambiar nombre de mascota', inline: true },
+                    { name: '>mascota help', value: 'Ver ayuda completa de mascotas', inline: true },
+                    { name: '\u200b', value: '\u200b', inline: true },
+
+                    { name: '🛒 Ítems relacionados', value: '─────────────────', inline: false },
+                    { name: '>buy common_seed', value: 'Semilla común (200π)', inline: true },
+                    { name: '>buy pet_egg', value: 'Huevo misterioso (5,000π)', inline: true },
+                    { name: '>buy pet_slot_extra', value: 'Slot extra de mascota (25,000π)', inline: true },
+                ]
+            },
+            social: {
+                title: '💍 Social — Matrimonio & Mentor',
+                fields: [
+                    { name: '💍 Matrimonio', value: '─────────────────', inline: false },
+                    { name: '>casar @usuario', value: 'Proponer matrimonio (50,000π c/u)', inline: true },
+                    { name: '>pareja', value: 'Ver estado de tu matrimonio', inline: true },
+                    { name: '>divorcio', value: 'Iniciar proceso de divorcio', inline: true },
+                    { name: '\u200b', value: '\u200b', inline: true },
+                    { name: '💰 Bonus matrimonial', value: '10% de tus ganancias van a tu pareja\n15% al mes de casados', inline: false },
+
+                    { name: '🎓 Mentor', value: '─────────────────', inline: false },
+                    { name: '>mentor', value: 'Ver tu relación de mentoría', inline: true },
+                    { name: '>mentor @usuario', value: 'Proponer mentoría (tú nv20+, él nv5-)', inline: true },
+                    { name: '\u200b', value: '\u200b', inline: true },
+                    { name: '🏅 Hitos del aprendiz', value: 'Nivel 10 → 5,000π\nNivel 15 → 15,000π\nNivel 20 → 30,000π + Mystery Box', inline: false },
+
+                    { name: '🙏 Otros', value: '─────────────────', inline: false },
+                    { name: '>pedir', value: 'Pedir dinero a 3 usuarios aleatorios', inline: true },
+                    { name: '>curar @usuario', value: 'Curar maldición (solo Doctores)', inline: true },
+                    { name: '>changelog', value: 'Ver las últimas novedades del bot', inline: true },
+                ]
+            },
             economy: {
                 title: '💰 Economía',
                 fields: [
@@ -2757,6 +3809,10 @@ if (maintenance) await this.economy.database.disableMaintenance(maintenanceId);
                     { name: '💼 Trabajo', value: '─────────────────', inline: false },
                     { name: '>work [tipo]', value: 'Trabajar para ganar dinero', inline: true },
                     { name: '>robar @user', value: 'Intentar robar dinero', inline: true },
+                    { name: '>profesion', value: 'Ver y cambiar tu profesión', inline: true },
+                    { name: '>pacto', value: 'Pacto con el diablo (cada 48h)', inline: true },
+                    { name: '>mapa', value: 'Mapa del tesoro (1% al trabajar)', inline: true },
+                    { name: '>biblioteca', value: 'Libros que mejoran tus stats', inline: true },
                     { name: '\u200b', value: '\u200b', inline: true },
 
                     { name: '🏆 Rankings', value: '─────────────────', inline: false },
@@ -2882,17 +3938,26 @@ if (maintenance) await this.economy.database.disableMaintenance(maintenanceId);
                 ]
             },
             craft: {
-                title: '⚒️ Crafteo',
+                title: '⚒️ Crafteo — Taller de Ítems',
                 fields: [
-                    { name: '📖 Recetas', value: '─────────────────', inline: false },
-                    { name: '>recipes', value: 'Ver todas las recetas disponibles', inline: true },
-                    { name: '\u200b', value: '\u200b', inline: true },
+                    { name: '📋 Ver Recetas', value: '─────────────────', inline: false },
+                    { name: '>recipes', value: 'Ver menú de recetas por categoría', inline: true },
+                    { name: '>recipes <categoría>', value: '`potion` `combat` `nature` `economy` `artesano_exclusive`', inline: true },
                     { name: '\u200b', value: '\u200b', inline: true },
 
                     { name: '🔨 Craftear', value: '─────────────────', inline: false },
-                    { name: '>craft <recipe_id>', value: 'Iniciar crafteo de un item', inline: true },
-                    { name: '>craftqueue', value: 'Ver tu cola de crafteo', inline: true },
-                    { name: '>cancelcraft <craft_id>', value: 'Cancelar un crafteo en progreso', inline: true },
+                    { name: '>craft <recipe_id>', value: 'Iniciar crafteo de una receta', inline: true },
+                    { name: '>queue', value: 'Ver cola de crafteos en progreso', inline: true },
+                    { name: '>cancelcraft <número>', value: 'Cancelar crafteo (recuperas 80%)', inline: true },
+
+                    { name: '🛒 Materiales en tienda', value: '─────────────────', inline: false },
+                    { name: 'fire_ember', value: '🔥 Brasa Ígnea (1,500π)', inline: true },
+                    { name: 'crystal_shard', value: '💎 Fragmento de Cristal (2,000π)', inline: true },
+                    { name: 'moon_essence', value: '🌙 Esencia Lunar (5,000π)', inline: true },
+                    { name: 'shadow_fiber', value: '🕸️ Fibra de Sombra (4,000π)', inline: true },
+                    { name: 'golden_dust', value: '✨ Polvo Dorado (10,000π)', inline: true },
+                    { name: 'dragon_scale', value: '🐉 Escama de Dragón (15,000π)', inline: true },
+                    { name: '⚗️ Artesano exclusivos', value: 'void_crystal (30,000π) • star_fragment (20,000π) • mythril_shard (25,000π)', inline: false },
                 ]
             },
             progress: {
@@ -3009,6 +4074,893 @@ if (maintenance) await this.economy.database.disableMaintenance(maintenanceId);
             
             await message.reply({ embeds: [embed], components: [backButton] });
         }
+    }
+
+    async handleVerMatrimonio(message) {
+        const userId = message.author.id;
+        const marriage = await this.economy.getMarriage(userId);
+
+        if (!marriage) {
+            return message.reply({
+                embeds: [new EmbedBuilder()
+                    .setTitle('💍 Estado Civil')
+                    .setDescription('No estás casado/a. Usa `>casar @usuario` para proponer matrimonio.')
+                    .setColor('#888888')]
+            });
+        }
+
+        const partnerId = marriage.user1_id === userId ? marriage.user2_id : marriage.user1_id;
+        const monthsMarried = Math.floor((Date.now() - marriage.married_at) / (30 * 24 * 60 * 60 * 1000));
+        const milestones = marriage.anniversary_milestones || [];
+
+        const nextMilestone = [1, 3, 6, 12].find(m => !milestones.includes(m));
+        const nextLabel = nextMilestone
+            ? `${nextMilestone} ${nextMilestone === 1 ? 'mes' : 'meses'}`
+            : '¡Todos los hitos alcanzados! 🏆';
+
+        return message.reply({
+            embeds: [new EmbedBuilder()
+                .setTitle('💍 Tu Matrimonio')
+                .setColor('#ff69b4')
+                .addFields(
+                    { name: '💑 Pareja', value: `<@${partnerId}>`, inline: true },
+                    { name: '📅 Casados desde', value: `<t:${Math.floor(marriage.married_at / 1000)}:D>`, inline: true },
+                    { name: '🗓️ Tiempo juntos', value: `${monthsMarried} ${monthsMarried === 1 ? 'mes' : 'meses'}`, inline: true },
+                    { name: '🏅 Hitos alcanzados', value: milestones.length > 0 ? milestones.map(m => `${m} mes`).join(', ') : 'Ninguno aún', inline: true },
+                    { name: '🎯 Próximo hito', value: nextLabel, inline: true },
+                    { name: '💰 Bonus activo', value: `+${milestones.includes(1) ? 15 : 10}% ganancias a tu pareja`, inline: true },
+                )]
+        });
+    }
+
+    async handleCasar(message, args) {
+        const userId = message.author.id;
+        const target = message.mentions.users.first();
+
+        if (!target) {
+            return message.reply({
+                embeds: [new EmbedBuilder()
+                    .setTitle('💍 Sistema de Matrimonio')
+                    .setColor('#ff69b4')
+                    .addFields(
+                        { name: '📝 Uso', value: '`>casar @usuario`', inline: false },
+                        { name: '💰 Costo', value: '50,000π para cada uno', inline: true },
+                        { name: '🎁 Bonus', value: '+10% de tus ganancias van a tu pareja\n(+15% al mes de casados)', inline: true },
+                        { name: '⚠️ Notas', value: '• Ambos deben tener 50,000π\n• Cooldown de 30 días tras un divorcio', inline: false },
+                    )]
+            });
+        }
+
+        if (target.id === userId) return message.reply('❌ No puedes casarte contigo mismo 💀');
+        if (target.bot) return message.reply('❌ No puedes casarte con un bot.');
+
+        const result = await this.economy.proposeMarriage(userId, target.id);
+
+        if (!result.success) {
+            const reasons = {
+                self: '❌ No puedes casarte contigo mismo.',
+                already_married_proposer: '❌ Ya estás casado/a. Usa `>divorcio` primero.',
+                already_married_target: `❌ **${target.displayName}** ya está casado/a.`,
+                divorce_cooldown: `⏰ Debes esperar **${this.formatTimeLeft(result.timeLeft)}** antes de volver a casarte.`,
+                proposer_no_money: `❌ Necesitas **${this.formatNumber(result.cost)} π-b$** para casarte.`,
+                target_no_money: `❌ **${target.displayName}** no tiene suficiente dinero (necesita ${this.formatNumber(50000)} π-b$).`,
+            };
+            return message.reply(reasons[result.reason] || '❌ Error desconocido.');
+        }
+
+        const row = new ActionRowBuilder().addComponents(
+            new ButtonBuilder().setCustomId(`marry_accept_${userId}_${target.id}`).setLabel('💍 Aceptar').setStyle(ButtonStyle.Success),
+            new ButtonBuilder().setCustomId(`marry_reject_${userId}_${target.id}`).setLabel('❌ Rechazar').setStyle(ButtonStyle.Danger),
+        );
+
+        const proposalMsg = await message.channel.send({
+            content: `<@${target.id}>`,
+            embeds: [new EmbedBuilder()
+                .setTitle('💍 ¡Propuesta de Matrimonio!')
+                .setDescription(`<@${userId}> quiere casarse contigo 💕`)
+                .addFields(
+                    { name: '💰 Costo', value: `${this.formatNumber(result.cost)} π-b$ para cada uno`, inline: true },
+                    { name: '⏰ Expira', value: 'En 60 segundos', inline: true },
+                )
+                .setColor('#ff69b4')],
+            components: [row]
+        });
+
+        const collector = proposalMsg.createMessageComponentCollector({
+            filter: i => i.user.id === target.id && (i.customId === `marry_accept_${userId}_${target.id}` || i.customId === `marry_reject_${userId}_${target.id}`),
+            time: 60000,
+            max: 1
+        });
+
+        collector.on('collect', async (interaction) => {
+            if (interaction.customId.startsWith('marry_reject_')) {
+                await interaction.update({
+                    embeds: [new EmbedBuilder().setTitle('💔 Propuesta rechazada').setColor('#888888')],
+                    components: []
+                });
+                return;
+            }
+
+            const acceptResult = await this.economy.acceptMarriage(userId, target.id);
+            if (!acceptResult.success) {
+                await interaction.update({ content: '❌ Error al procesar el matrimonio.', components: [] });
+                return;
+            }
+
+            await interaction.update({
+                embeds: [new EmbedBuilder()
+                    .setTitle('💍 ¡Felicidades!')
+                    .setDescription(`<@${userId}> y <@${target.id}> ¡ahora están casados! 🎊`)
+                    .addFields({ name: '💰 Bonus activo', value: '+10% de tus ganancias irán a tu pareja automáticamente' })
+                    .setColor('#ff69b4')],
+                components: []
+            });
+        });
+
+        collector.on('end', async (collected) => {
+            if (collected.size === 0) {
+                await proposalMsg.edit({
+                    embeds: [new EmbedBuilder().setTitle('💍 Propuesta expirada').setColor('#888888')],
+                    components: []
+                }).catch(() => {});
+            }
+        });
+    }
+
+    async handleDivorcio(message, args) {
+        const userId = message.author.id;
+
+        const result = await this.economy.initiateDivorce(userId);
+
+        if (!result.success) {
+            const reasons = {
+                not_married: '❌ No estás casado/a.',
+                no_money: `❌ Necesitas al menos **${this.formatNumber(result.min)} π-b$** para iniciar un divorcio.`,
+            };
+            return message.reply(reasons[result.reason] || '❌ Error.');
+        }
+
+        const partnerId = result.partnerId;
+
+        const row = new ActionRowBuilder().addComponents(
+            new ButtonBuilder().setCustomId(`divorce_accept_${userId}_${result.marriage.id}`).setLabel('✅ Aceptar divorcio').setStyle(ButtonStyle.Success),
+            new ButtonBuilder().setCustomId(`divorce_reject_${userId}_${result.marriage.id}`).setLabel('❌ Rechazar').setStyle(ButtonStyle.Danger),
+        );
+
+        // Confirmar al iniciador
+        await message.reply({
+            embeds: [new EmbedBuilder()
+                .setTitle('💔 Solicitud de Divorcio Enviada')
+                .setDescription(`Le enviaste la solicitud a <@${partnerId}>.\n\n• Si acepta: **50,000π** cada uno\n• Si no responde en 24h: **100,000π** solo tú`)
+                .setColor('#ff4444')]
+        });
+
+        const notifMsg = await message.channel.send({
+            content: `<@${partnerId}>`,
+            embeds: [new EmbedBuilder()
+                .setTitle('💔 Solicitud de Divorcio')
+                .setDescription(`<@${userId}> quiere divorciarse.\n\n• Si aceptas: **50,000π** cada uno\n• Si rechazas o ignoras (24h): **100,000π** solo para quien lo inició`)
+                .setColor('#ff4444')],
+            components: [row]
+        });
+
+        const collector = notifMsg.createMessageComponentCollector({
+            filter: i => i.user.id === partnerId,
+            time: 24 * 60 * 60 * 1000,
+            max: 1
+        });
+
+        collector.on('collect', async (interaction) => {
+            const accepted = interaction.customId.startsWith('divorce_accept_');
+            const divorceResult = await this.economy.processDivorce(result.marriage.id, userId, accepted);
+
+            await interaction.update({
+                embeds: [new EmbedBuilder()
+                    .setTitle(accepted ? '💔 Divorcio completado' : '💕 Divorcio rechazado')
+                    .setDescription(accepted
+                        ? 'El matrimonio ha sido disuelto. Cada uno pagó 50,000π.'
+                        : 'El divorcio fue rechazado. El matrimonio continúa.')
+                    .setColor(accepted ? '#888888' : '#ff69b4')],
+                components: []
+            });
+        });
+
+        collector.on('end', async (collected) => {
+            if (collected.size === 0) {
+                await this.economy.processDivorce(result.marriage.id, userId, false);
+                await notifMsg.edit({
+                    embeds: [new EmbedBuilder()
+                        .setTitle('💔 Divorcio por tiempo')
+                        .setDescription(`No hubo respuesta en 24h. Se cobró **100,000π** a <@${userId}>.`)
+                        .setColor('#888888')],
+                    components: []
+                }).catch(() => {});
+            }
+        });
+    }
+
+    async handleMentor(message, args) {
+        const userId = message.author.id;
+        const target = message.mentions.users.first();
+
+        if (!target) {
+            // Ver estado actual
+            const mentorship = await this.economy.database.getMentorship(userId);
+
+            if (!mentorship) {
+                return message.reply({
+                    embeds: [new EmbedBuilder()
+                        .setTitle('🎓 Sistema de Mentoría')
+                        .setColor('#5865F2')
+                        .addFields(
+                            { name: '📝 Uso', value: '`>mentor @usuario` — proponer mentoría', inline: false },
+                            { name: '📋 Requisitos', value: '**Mentor:** Nivel 20+\n**Aprendiz:** Nivel 5 o menos', inline: false },
+                            { name: '🏅 Hitos del aprendiz', value: 'Nivel 10 → 5,000π cada uno\nNivel 15 → 15,000π cada uno\nNivel 20 → 30,000π + Mystery Box (graduación)', inline: false },
+                        )]
+                });
+            }
+
+            const isMentor = mentorship.mentor_id === userId;
+            const otherId = isMentor ? mentorship.apprentice_id : mentorship.mentor_id;
+            const lastMilestone = mentorship.last_milestone || 0;
+
+            return message.reply({
+                embeds: [new EmbedBuilder()
+                    .setTitle(`🎓 Tu Mentoría — ${mentorship.status === 'completed' ? '✅ Completada' : '🔵 Activa'}`)
+                    .setColor('#5865F2')
+                    .addFields(
+                        { name: isMentor ? '👨‍🎓 Tu Aprendiz' : '👨‍🏫 Tu Mentor', value: `<@${otherId}>`, inline: true },
+                        { name: '📅 Iniciada', value: `<t:${Math.floor(mentorship.started_at / 1000)}:D>`, inline: true },
+                        { name: '🏅 Último hito', value: lastMilestone > 0 ? `Nivel ${lastMilestone}` : 'Ninguno aún', inline: true },
+                    )]
+            });
+        }
+
+        if (target.id === userId) return message.reply('❌ No puedes ser tu propio mentor.');
+        if (target.bot) return message.reply('❌ No puedes tener un bot como aprendiz.');
+
+        // Verificar requisitos ANTES de enviar propuesta
+        const mentor = await this.economy.getUser(userId);
+        const apprentice = await this.economy.getUser(target.id);
+
+        if (mentor.level < 20) return message.reply(`❌ Necesitas ser **Nivel 20** para ser mentor. (Eres nivel ${mentor.level})`);
+        if (apprentice.level > 5) return message.reply(`❌ **${target.displayName}** debe ser nivel 5 o menos. (Es nivel ${apprentice.level})`);
+
+        const mentorRel = await this.economy.database.getMentorship(userId);
+        const apprenticeRel = await this.economy.database.getMentorship(target.id);
+        if (mentorRel) return message.reply('❌ Ya tienes una mentoría activa.');
+        if (apprenticeRel) return message.reply(`❌ **${target.displayName}** ya tiene un mentor activo.`);
+
+        const row = new ActionRowBuilder().addComponents(
+            new ButtonBuilder().setCustomId(`mentor_accept_${userId}_${target.id}`).setLabel('✅ Aceptar').setStyle(ButtonStyle.Success),
+            new ButtonBuilder().setCustomId(`mentor_reject_${userId}_${target.id}`).setLabel('❌ Rechazar').setStyle(ButtonStyle.Danger),
+        );
+
+        const proposalMsg = await message.channel.send({
+            content: `<@${target.id}>`,
+            embeds: [new EmbedBuilder()
+                .setTitle('🎓 ¡Propuesta de Mentoría!')
+                .setDescription(`<@${userId}> quiere ser tu mentor 👨‍🏫`)
+                .addFields(
+                    { name: '🏅 Hitos', value: 'Nivel 10 → 5,000π\nNivel 15 → 15,000π\nNivel 20 → 30,000π + Mystery Box', inline: false },
+                    { name: '⏰ Expira', value: 'En 60 segundos', inline: true },
+                )
+                .setColor('#5865F2')],
+            components: [row]
+        });
+
+        const collector = proposalMsg.createMessageComponentCollector({
+            filter: i => i.user.id === target.id && (i.customId === `mentor_accept_${userId}_${target.id}` || i.customId === `mentor_reject_${userId}_${target.id}`),
+            time: 60000,
+            max: 1
+        });
+
+        collector.on('collect', async (interaction) => {
+            if (interaction.customId.startsWith('mentor_reject_')) {
+                await interaction.update({
+                    embeds: [new EmbedBuilder().setTitle('❌ Propuesta rechazada').setColor('#888888')],
+                    components: []
+                });
+                return;
+            }
+
+            const result = await this.economy.startMentorship(userId, target.id);
+            if (!result.success) {
+                await interaction.update({ content: '❌ Error al crear la mentoría.', components: [] });
+                return;
+            }
+
+            await interaction.update({
+                embeds: [new EmbedBuilder()
+                    .setTitle('🎓 ¡Mentoría iniciada!')
+                    .setDescription(`<@${userId}> ahora es el mentor de <@${target.id}> 🎉`)
+                    .addFields({ name: '🏅 Hitos', value: 'Nivel 10 → 5,000π\nNivel 15 → 15,000π\nNivel 20 → 30,000π + Mystery Box (graduación)' })
+                    .setColor('#5865F2')],
+                components: []
+            });
+        });
+
+        collector.on('end', async (collected) => {
+            if (collected.size === 0) {
+                await proposalMsg.edit({
+                    embeds: [new EmbedBuilder().setTitle('🎓 Propuesta expirada').setColor('#888888')],
+                    components: []
+                }).catch(() => {});
+            }
+        });
+    }
+
+    async handleDoctorCure(message, args) {
+        const userId = message.author.id;
+        const user = await this.economy.getUser(userId);
+        const prof = this.economy.getProfession(user);
+
+        // Verificar profesión antes de cualquier otra cosa
+        if (prof?.name !== '🩺 Doctor') {
+            return message.reply({
+                embeds: [new EmbedBuilder()
+                    .setTitle('❌ Solo para Doctores')
+                    .setDescription('Este comando es exclusivo de la profesión **🩺 Doctor**.\nUsa `>profesion doctor` para obtenerla.')
+                    .setColor('#dc3545')]
+            });
+        }
+
+        // Sin argumentos: mostrar ayuda del comando
+        if (!args[1]) {
+            const lastCure = user.stats?.lastDoctorCure || 0;
+            const cooldownLeft = this.economy.doctorConfig.cooldown - (Date.now() - lastCure);
+            const cdText = cooldownLeft > 0 ? `⏰ Cooldown: **${this.formatTimeLeft(cooldownLeft)}**` : '✅ Listo para curar';
+
+            return message.reply({
+                embeds: [new EmbedBuilder()
+                    .setTitle('🩺 Doctor — Curar Maldición')
+                    .setDescription('Como Doctor, puedes eliminar la maldición **☠️ Mano del Muerto** de cualquier usuario.')
+                    .setColor('#00bcd4')
+                    .addFields(
+                        { name: '📝 Uso', value: '`>curar @usuario`\n`>curar` (para curarte a ti mismo)', inline: false },
+                        { name: '💰 Costo', value: `**${this.formatNumber(this.economy.doctorConfig.cureCost)} π-b$** por curar a otro\n**Gratis** si te curas a ti mismo`, inline: true },
+                        { name: '⏱️ Cooldown', value: '2 horas (solo curando a otros)', inline: true },
+                        { name: '📍 Estado', value: cdText, inline: false },
+                    )]
+            });
+        }
+
+        // Determinar target
+        let targetId = userId; // por defecto se cura a sí mismo
+        let targetName = message.member?.displayName || message.author.username;
+
+        const mentioned = message.mentions.users.first();
+        if (mentioned) {
+            targetId = mentioned.id;
+            const member = message.guild?.members.cache.get(targetId);
+            targetName = member?.displayName || mentioned.username;
+        }
+
+        const result = await this.economy.doctorCure(userId, targetId);
+
+        if (!result.success) {
+            const reasons = {
+                not_doctor: '❌ No eres Doctor.',
+                cooldown: `⏰ Debes esperar **${this.formatTimeLeft(result.timeLeft)}** para volver a curar.`,
+                not_cursed: `✅ **${targetName}** no tiene ninguna maldición activa.`,
+                no_money: `❌ Necesitas **${this.formatNumber(result.cost)} π-b$** para curar a otro usuario.`,
+            };
+            return message.reply(reasons[result.reason] || '❌ Error desconocido.');
+        }
+
+        if (result.isSelf) {
+            return message.reply({
+                embeds: [new EmbedBuilder()
+                    .setTitle('🩺 ¡Autocuración exitosa!')
+                    .setDescription('Te has curado la **☠️ Mano del Muerto** usando tus conocimientos médicos.\n\n*El Doctor se receta a sí mismo — clásico.*')
+                    .setColor('#00bcd4')]
+            });
+        }
+
+        return message.reply({
+            embeds: [new EmbedBuilder()
+                .setTitle('🩺 ¡Curación exitosa!')
+                .setDescription(`Curaste la **☠️ Mano del Muerto** de <@${targetId}>`)
+                .addFields(
+                    { name: '💰 Cobrado', value: `${this.formatNumber(result.cost)} π-b$`, inline: true },
+                    { name: '😮‍💨 Paciente', value: targetName, inline: true },
+                )
+                .setColor('#00bcd4')
+                .setFooter({ text: '⏰ Cooldown de 2h activado' })]
+        });
+    }
+
+    // ===== HUERTO =====
+    async handleHuerto(message, args) {
+        const userId = message.author.id;
+        const sub = args[1];
+
+        // Sin argumentos: mostrar estado del huerto
+        if (!sub || sub === 'ver') {
+            const garden = await this.economy.database.getGarden(userId);
+            const user = await this.economy.getUser(userId);
+            const totalSlots = 4 + (garden.extra_slots || 0);
+            const now = Date.now();
+
+            const formatTime = (ms) => {
+                const h = Math.floor(ms / 3600000);
+                const m = Math.floor((ms % 3600000) / 60000);
+                return h > 0 ? `${h}h ${m}m` : `${m}m`;
+            };
+
+            let slotsText = '';
+            for (let i = 1; i <= totalSlots; i++) {
+                const slot = garden[`slot${i}`];
+                if (!slot) {
+                    slotsText += `**[Slot ${i}]** 🟫 Vacío\n`;
+                } else if (slot.plagued) {
+                    const seed = this.economy.SEEDS[slot.seedType];
+                    slotsText += `**[Slot ${i}]** ⚠️ ${seed?.emoji || '🌱'} ${slot.seedType} — **PLAGADA** (usa \`>huerto fumigar ${i}\`)\n`;
+                } else if (now >= slot.readyAt) {
+                    const seed = this.economy.SEEDS[slot.seedType];
+                    slotsText += `**[Slot ${i}]** ✅ ${seed?.emoji || '🌱'} ${slot.seedType} — **¡Lista para cosechar!**\n`;
+                } else {
+                    const seed = this.economy.SEEDS[slot.seedType];
+                    slotsText += `**[Slot ${i}]** ${seed?.emoji || '🌱'} ${slot.seedType} — lista en **${formatTime(slot.readyAt - now)}**\n`;
+                }
+            }
+
+            const prof = this.economy.getProfession(user);
+            const isGranjero = prof?.gardenMult > 1;
+
+            const embed = new EmbedBuilder()
+                .setTitle('🌿 Tu Huerto')
+                .setDescription(slotsText || 'No tienes slots disponibles.')
+                .setColor('#4CAF50')
+                .addFields({
+                    name: '📋 Comandos',
+                    value: '`>huerto plantar <slot> <semilla>` • `>huerto cosechar <slot>` • `>huerto cosechar todo` • `>huerto fumigar <slot>`'
+                })
+                .setFooter({ text: isGranjero ? '🌿 Bonus de Granjero activo: +50% ganancias' : `Slots: ${totalSlots}/8` });
+
+            return message.reply({ embeds: [embed] });
+        }
+
+        if (sub === 'plantar') {
+            const slot = parseInt(args[2]);
+            const seedType = args[3];
+            if (!slot || !seedType) return message.reply('❌ Uso: `>huerto plantar <slot> <tipo_semilla>`\nEjemplo: `>huerto plantar 1 common_seed`');
+
+            const result = await this.economy.plantSeed(userId, slot, seedType);
+            if (!result.success) {
+                const reasons = {
+                    invalid_slot: '❌ Slot inválido.',
+                    slot_occupied: '❌ Ese slot ya está ocupado.',
+                    invalid_seed: '❌ Tipo de semilla inválido.',
+                    no_seed: '❌ No tienes esa semilla en el inventario. Cómprala con `>buy common_seed`.',
+                };
+                return message.reply(reasons[result.reason] || '❌ Error desconocido.');
+            }
+
+            const readyDate = new Date(result.readyAt);
+            const seed = this.economy.SEEDS[result.seedType];
+            return message.reply({
+                embeds: [new EmbedBuilder()
+                    .setTitle('🌱 ¡Semilla plantada!')
+                    .setDescription(`Plantaste **${seed.emoji} ${result.seedType}** en el slot ${result.slot}`)
+                    .addFields({ name: '⏰ Lista en', value: `<t:${Math.floor(result.readyAt / 1000)}:R>` })
+                    .setColor('#4CAF50')]
+            });
+        }
+
+        if (sub === 'cosechar') {
+            const arg = args[2];
+
+            if (arg === 'todo') {
+                const results = await this.economy.harvestAll(userId);
+                if (results.length === 0) return message.reply('❌ No hay plantas listas para cosechar.');
+
+                const total = results.reduce((sum, r) => sum + r.money, 0);
+                const ingredients = results.filter(r => r.ingredient).map(r => r.ingredient);
+
+                return message.reply({
+                    embeds: [new EmbedBuilder()
+                        .setTitle('🌾 ¡Cosecha masiva!')
+                        .setDescription(`Cosechaste **${results.length}** slots`)
+                        .addFields(
+                            { name: '💰 Total ganado', value: `${this.formatNumber(total)} π-b$`, inline: true },
+                            { name: '🌿 Ingredientes', value: ingredients.length > 0 ? ingredients.join(', ') : 'Ninguno esta vez', inline: true }
+                        )
+                        .setColor('#FFD700')]
+                });
+            }
+
+            const slot = parseInt(arg);
+            if (!slot) return message.reply('❌ Uso: `>huerto cosechar <slot>` o `>huerto cosechar todo`');
+
+            const result = await this.economy.harvestSlot(userId, slot);
+            if (!result.success) {
+                const reasons = {
+                    empty_slot: '❌ Ese slot está vacío.',
+                    plagued: '⚠️ Esa planta está plagada. Fumígala primero.',
+                    not_ready: `⏰ Todavía no está lista. Tiempo restante: **${this.formatTimeLeft(result.timeLeft)}**`,
+                };
+                return message.reply(reasons[result.reason] || '❌ Error.');
+            }
+
+            return message.reply({
+                embeds: [new EmbedBuilder()
+                    .setTitle('🌾 ¡Cosecha exitosa!')
+                    .addFields(
+                        { name: '💰 Ganaste', value: `${this.formatNumber(result.money)} π-b$`, inline: true },
+                        { name: '🌿 Ingrediente', value: result.ingredient || 'Ninguno esta vez', inline: true }
+                    )
+                    .setColor('#FFD700')]
+            });
+        }
+
+        if (sub === 'fumigar') {
+            const slot = parseInt(args[2]);
+            if (!slot) return message.reply('❌ Uso: `>huerto fumigar <slot>`');
+
+            const result = await this.economy.fumigarSlot(userId, slot);
+            if (!result.success) {
+                const reasons = {
+                    empty_slot: '❌ Ese slot está vacío.',
+                    not_plagued: '✅ Esa planta no está plagada.',
+                    no_money: `❌ Necesitas **${result.cost} π-b$** para fumigar.`,
+                };
+                return message.reply(reasons[result.reason] || '❌ Error.');
+            }
+
+            return message.reply({
+                embeds: [new EmbedBuilder()
+                    .setTitle('🧪 ¡Fumigación exitosa!')
+                    .setDescription(`El slot fue fumigado por **${result.cost} π-b$**. La planta puede seguir creciendo.`)
+                    .setColor('#4CAF50')]
+            });
+        }
+
+        if (sub === 'help' || sub === 'ayuda') {
+            return message.reply({
+                embeds: [new EmbedBuilder()
+                    .setTitle('🌿 Ayuda — Huerto')
+                    .setColor('#4CAF50')
+                    .addFields(
+                        { name: '`>huerto`', value: 'Ver el estado de tu huerto', inline: true },
+                        { name: '`>huerto plantar <slot> <semilla>`', value: 'Plantar una semilla en un slot', inline: true },
+                        { name: '`>huerto cosechar <slot>`', value: 'Cosechar un slot listo', inline: true },
+                        { name: '`>huerto cosechar todo`', value: 'Cosechar todos los slots listos', inline: true },
+                        { name: '`>huerto fumigar <slot>`', value: 'Fumigar un slot plagado (500 π-b$)', inline: true },
+                        { name: '🌱 Semillas disponibles', value: '`common_seed` → 2h\n`rare_seed` → 6h\n`epic_seed` → 12h\n`legendary_seed` → 24h', inline: false },
+                        { name: '🪴 Slots extra', value: 'Compra `garden_slot_extra` en la tienda para ampliar de 4 a 8 slots', inline: false },
+                        { name: '⚠️ Plagas', value: 'Cada hora hay 5% de que un slot se plague. Si no lo fumigas no puedes cosechar esa planta.', inline: false },
+                        { name: '🌿 Granjero', value: 'La profesión Granjero da +50% de ganancias en el huerto', inline: false },
+                    )]
+            });
+        }
+
+        return message.reply('❌ Subcomando inválido. Usa `>huerto help` para ver todos los comandos.');
+    }
+
+    // ===== MASCOTAS =====
+    async handleMascota(message, args) {
+        const userId = message.author.id;
+        const sub = args[1];
+
+        const rarityColors = { common: '#aaaaaa', uncommon: '#55aa55', rare: '#5588ff', epic: '#aa55ff', legendary: '#FFD700' };
+
+        if (!sub || sub === 'ver') {
+            const pets = await this.economy.database.getUserPets(userId);
+            if (pets.length === 0) {
+                return message.reply({
+                    embeds: [new EmbedBuilder()
+                        .setTitle('🐾 Tus Mascotas')
+                        .setDescription('No tienes mascotas. Consigue un 🥚 **Huevo Misterioso** trabajando o cómpralo en la tienda, luego usa `>mascota incubar`.')
+                        .setColor('#888888')]
+                });
+            }
+
+            const rarityData = this.economy.PET_RARITIES;
+            let desc = '';
+            for (const pet of pets) {
+                const r = rarityData[pet.rarity];
+                const statusIcon = pet.sick ? '🤒' : pet.equipped ? '✅' : pet.expedition_end ? '🗺️' : '💤';
+                const formLabel = pet.form === 3 ? 'Forma III' : pet.form === 2 ? 'Forma II' : 'Forma I';
+                desc += `${statusIcon} **[${pet.id}]** ${r.emoji} **${pet.name}** — ${r.name} | Nv.${pet.level} | ${formLabel}\n`;
+            }
+
+            return message.reply({
+                embeds: [new EmbedBuilder()
+                    .setTitle('🐾 Tus Mascotas')
+                    .setDescription(desc)
+                    .setColor('#FFD700')
+                    .setFooter({ text: `${pets.length}/5 mascotas | ✅ equipada • 🤒 enferma • 🗺️ expedición • 💤 descansando` })]
+            });
+        }
+
+        if (sub === 'info') {
+            const petId = parseInt(args[2]);
+            if (!petId) return message.reply('❌ Uso: `>mascota info <id>`');
+
+            const pet = await this.economy.database.getPet(petId);
+            if (!pet || pet.user_id !== userId) return message.reply('❌ Mascota no encontrada.');
+
+            const r = this.economy.PET_RARITIES[pet.rarity];
+            const xpNeeded = r.xpToLevel * pet.level;
+            const bonusText = r.bonus.type === 'all' ? `+${r.bonus.amount * 100}% a todo` : `+${r.bonus.amount * 100}% a ${r.bonus.type}`;
+            const statusText = pet.sick ? '🤒 Enferma' : pet.equipped ? '✅ Equipada' : pet.expedition_end ? `🗺️ En expedición (<t:${Math.floor(pet.expedition_end / 1000)}:R>)` : '💤 Descansando';
+
+            return message.reply({
+                embeds: [new EmbedBuilder()
+                    .setTitle(`${r.emoji} ${pet.name}`)
+                    .setColor(rarityColors[pet.rarity])
+                    .addFields(
+                        { name: '⭐ Rareza', value: r.name, inline: true },
+                        { name: '📊 Nivel', value: `${pet.level}`, inline: true },
+                        { name: '🔮 Forma', value: `${pet.form}/3`, inline: true },
+                        { name: '✨ XP', value: `${pet.xp}/${xpNeeded}`, inline: true },
+                        { name: '🎁 Bonus', value: bonusText, inline: true },
+                        { name: '📍 Estado', value: statusText, inline: true },
+                    )]
+            });
+        }
+
+        if (sub === 'incubar') {
+            const user = await this.economy.getUser(userId);
+            const items = user.items || {};
+            if (!items['pet_egg'] || items['pet_egg'].quantity < 1) {
+                return message.reply('❌ No tienes ningún **🥚 Huevo Misterioso**. Trabaja para conseguir uno o cómpralo con `>buy pet_egg`.');
+            }
+
+            // Consumir el huevo
+            items['pet_egg'].quantity -= 1;
+            if (items['pet_egg'].quantity <= 0) delete items['pet_egg'];
+            await this.economy.updateUser(userId, { items });
+
+            const waitMsg = await message.reply('🥚 Incubando el huevo...');
+            await new Promise(res => setTimeout(res, 1500));
+            await waitMsg.edit('🌡️ El huevo empieza a vibrar...');
+            await new Promise(res => setTimeout(res, 1500));
+            await waitMsg.edit('✨ ¡Algo está saliendo!...');
+            await new Promise(res => setTimeout(res, 1000));
+
+            const result = await this.economy.incubateEgg(userId);
+            if (!result.success) {
+                // Devolver el huevo si falló
+                items['pet_egg'] = items['pet_egg'] || { id: 'pet_egg', quantity: 0 };
+                items['pet_egg'].quantity += 1;
+                await this.economy.updateUser(userId, { items });
+                return message.reply(`❌ Ya tienes el máximo de **${result.max}** mascotas. Libera una con \`>mascota liberar <id>\` o compra más espacio con \`>buy pet_slot_extra\`.`);
+            }
+
+            const r = this.economy.PET_RARITIES[result.rarity];
+            return waitMsg.edit({
+                content: '',
+                embeds: [new EmbedBuilder()
+                    .setTitle('🥚 ¡El huevo eclosionó!')
+                    .setDescription(`¡Apareció **${r.emoji} ${result.name}**!\n\nRareza: **${r.name}**\nUsa \`>mascota equipar ${result.petId}\` para equiparla.`)
+                    .setColor(rarityColors[result.rarity])]
+            });
+        }
+
+        if (sub === 'equipar') {
+            const petId = parseInt(args[2]);
+            if (!petId) return message.reply('❌ Uso: `>mascota equipar <id>`');
+
+            const result = await this.economy.equipPet(userId, petId);
+            if (!result.success) {
+                const reasons = {
+                    not_found: '❌ Mascota no encontrada.',
+                    sick: '❌ No puedes equipar una mascota enferma. ¡Cúrala primero!',
+                    on_expedition: '❌ Esa mascota está en expedición.',
+                };
+                return message.reply(reasons[result.reason] || '❌ Error.');
+            }
+
+            return message.reply(`✅ ¡**${result.pet.name}** equipada! Ahora te da sus bonos en trabajos y daily.`);
+        }
+
+        if (sub === 'liberar') {
+            const petId = parseInt(args[2]);
+            if (!petId) return message.reply('❌ Uso: `>mascota liberar <id>`');
+
+            const pet = await this.economy.database.getPet(petId);
+            if (!pet || pet.user_id !== userId) return message.reply('❌ Mascota no encontrada.');
+
+            const r = this.economy.PET_RARITIES[pet.rarity];
+            const rarityRewards = { common: 500, uncommon: 1500, rare: 4000, epic: 10000, legendary: 30000 };
+            const baseReward = rarityRewards[pet.rarity] || 500;
+            const estimatedReward = baseReward + pet.level * 100;
+
+            // Pedir confirmación
+            const row = new ActionRowBuilder().addComponents(
+                new ButtonBuilder().setCustomId(`pet_release_confirm_${userId}_${petId}`).setLabel('💔 Sí, liberar').setStyle(ButtonStyle.Danger),
+                new ButtonBuilder().setCustomId(`pet_release_cancel_${userId}`).setLabel('❌ Cancelar').setStyle(ButtonStyle.Secondary),
+            );
+
+            const confirmMsg = await message.reply({
+                embeds: [new EmbedBuilder()
+                    .setTitle('⚠️ ¿Seguro que quieres liberar esta mascota?')
+                    .setDescription(`Vas a liberar a **${r.emoji} ${pet.name}** (${pet.rarity}, Nv.${pet.level}, Forma ${pet.form})\n\nEsta acción **no se puede deshacer**.`)
+                    .addFields(
+                        { name: '💰 Recompensa estimada', value: `~${this.formatNumber(estimatedReward)} π-b$`, inline: true },
+                        { name: '🥚 Huevo de vuelta', value: pet.form >= 2 ? '✅ Sí (Forma 2+)' : '❌ No (solo Forma 1)', inline: true },
+                    )
+                    .setColor('#ff4444')],
+                components: [row]
+            });
+
+            const collector = confirmMsg.createMessageComponentCollector({
+                filter: i => i.user.id === userId,
+                time: 30000,
+                max: 1
+            });
+
+            collector.on('collect', async (interaction) => {
+                if (interaction.customId.startsWith('pet_release_cancel_')) {
+                    return interaction.update({
+                        embeds: [new EmbedBuilder().setTitle('❌ Liberación cancelada').setColor('#888888')],
+                        components: []
+                    });
+                }
+
+                const result = await this.economy.liberarMascota(userId, petId);
+                if (!result.success) {
+                    const reasons = {
+                        not_found: '❌ Mascota no encontrada.',
+                        equipped: '❌ Desequipa la mascota antes de liberarla.',
+                        on_expedition: '❌ La mascota está en expedición.',
+                    };
+                    return interaction.update({ content: reasons[result.reason] || '❌ Error.', components: [] });
+                }
+
+                return interaction.update({
+                    embeds: [new EmbedBuilder()
+                        .setTitle('💔 Mascota liberada')
+                        .setDescription(`**${r.emoji} ${result.petName}** fue liberada. Espero que seas feliz donde vayas... 🌈`)
+                        .addFields(
+                            { name: '💰 Recibiste', value: `${this.formatNumber(result.reward)} π-b$`, inline: true },
+                            { name: '🥚 Huevo', value: result.givesEgg ? '¡Recibiste un huevo de vuelta!' : 'Sin huevo (era Forma 1)', inline: true },
+                        )
+                        .setColor('#888888')],
+                    components: []
+                });
+            });
+
+            collector.on('end', async (collected) => {
+                if (collected.size === 0) {
+                    await confirmMsg.edit({ components: [] }).catch(() => {});
+                }
+            });
+
+            return;
+        }
+
+        if (sub === 'desequipar') {
+            const current = await this.economy.database.getEquippedPet(userId);
+            if (!current) return message.reply('❌ No tienes ninguna mascota equipada.');
+
+            await this.economy.database.updatePet(current.id, { equipped: 0 });
+            return message.reply(`✅ **${current.name}** fue desequipada. Ya puedes enviarla de expedición.`);
+        }
+
+        if (sub === 'renombrar') {
+            const petId = parseInt(args[2]);
+            const newName = args.slice(3).join(' ');
+            if (!petId || !newName) return message.reply('❌ Uso: `>mascota renombrar <id> <nuevo nombre>`');
+            if (newName.length > 30) return message.reply('❌ El nombre no puede tener más de 30 caracteres.');
+
+            const pet = await this.economy.database.getPet(petId);
+            if (!pet || pet.user_id !== userId) return message.reply('❌ Mascota no encontrada.');
+
+            await this.economy.database.updatePet(petId, { name: newName });
+            return message.reply(`✅ Tu mascota ahora se llama **${newName}** 🐾`);
+        }
+
+        if (sub === 'curar') {
+            const petId = parseInt(args[2]);
+            const itemId = args[3];
+            if (!petId || !itemId) return message.reply('❌ Uso: `>mascota curar <id> <medicina>`\nMedicinas: `medicine_basic`, `medicine_advanced`, `medicine_legendary`');
+
+            const result = await this.economy.curePet(userId, petId, itemId);
+            if (!result.success) {
+                const reasons = {
+                    not_found: '❌ Mascota no encontrada.',
+                    not_sick: '✅ Esa mascota no está enferma.',
+                    invalid_item: '❌ Ítem de cura inválido.',
+                    wrong_medicine: '❌ Esa medicina no sirve para la rareza de tu mascota.',
+                    no_item: '❌ No tienes esa medicina. Cómprala en la tienda.',
+                };
+                return message.reply(reasons[result.reason] || '❌ Error.');
+            }
+
+            return message.reply({
+                embeds: [new EmbedBuilder()
+                    .setTitle('💊 ¡Mascota curada!')
+                    .setDescription(`**${result.petName}** se recuperó completamente. ¡Ya puede dar bonos de nuevo!`)
+                    .setColor('#00ff88')]
+            });
+        }
+
+        if (sub === 'expedicion' || sub === 'expedición') {
+            const petId = parseInt(args[2]);
+            const type = args[3];
+
+            if (!petId || !type) return message.reply('❌ Uso: `>mascota expedicion <id> <tipo>`\nTipos: `money` (forma 1+) • `ingredients` (forma 2+) • `special` (forma 3)`');
+
+            const result = await this.economy.sendPetExpedition(userId, petId, type);
+            if (!result.success) {
+                const reasons = {
+                    not_found: '❌ Mascota no encontrada.',
+                    sick: '❌ No puedes enviar una mascota enferma.',
+                    equipped: '❌ Desequipa la mascota antes de enviarla.',
+                    already_on_expedition: '❌ Ya está en una expedición.',
+                    invalid_type: '❌ Tipo inválido. Usa `money`, `ingredients` o `special`.',
+                    form_required: `❌ Necesitas Forma ${result?.required} para ese tipo de expedición.`,
+                };
+                return message.reply(reasons[result.reason] || '❌ Error.');
+            }
+
+            return message.reply({
+                embeds: [new EmbedBuilder()
+                    .setTitle(`🗺️ ${result.label}`)
+                    .setDescription(`Tu mascota salió de expedición. Regresa <t:${Math.floor(result.expeditionEnd / 1000)}:R> para reclamar la recompensa.`)
+                    .addFields({ name: '📋 Reclamar', value: `\`>mascota reclamar ${petId}\`` })
+                    .setColor('#5865F2')]
+            });
+        }
+
+        if (sub === 'reclamar') {
+            const petId = parseInt(args[2]);
+            if (!petId) return message.reply('❌ Uso: `>mascota reclamar <id>`');
+
+            const result = await this.economy.claimPetExpedition(userId, petId);
+            if (!result.success) {
+                const reasons = {
+                    not_found: '❌ Mascota no encontrada.',
+                    not_on_expedition: '❌ Esa mascota no está en expedición.',
+                    not_ready: `⏰ La expedición termina <t:${Math.floor((Date.now() + result.timeLeft) / 1000)}:R>.`,
+                };
+                return message.reply(reasons[result.reason] || '❌ Error.');
+            }
+
+            const rewardText = result.reward.money
+                ? `💰 **${this.formatNumber(result.reward.money)} π-b$**`
+                : result.reward.ingredient
+                    ? `🌿 **${result.reward.ingredient}**`
+                    : '✨ Recompensa especial';
+
+            return message.reply({
+                embeds: [new EmbedBuilder()
+                    .setTitle('🎉 ¡Expedición completada!')
+                    .addFields(
+                        { name: '🎁 Recompensa', value: rewardText, inline: true },
+                        { name: '✨ XP ganada', value: `+${result.xpBonus} XP`, inline: true },
+                    )
+                    .setColor('#FFD700')]
+            });
+        }
+
+        if (sub === 'help' || sub === 'ayuda') {
+            return message.reply({
+                embeds: [new EmbedBuilder()
+                    .setTitle('🐾 Ayuda — Mascotas')
+                    .setColor('#FFD700')
+                    .addFields(
+                        { name: '`>mascota`', value: 'Ver todas tus mascotas', inline: true },
+                        { name: '`>mascota info <id>`', value: 'Ver detalles de una mascota', inline: true },
+                        { name: '`>mascota incubar`', value: 'Incubar un 🥚 Huevo Misterioso', inline: true },
+                        { name: '`>mascota equipar <id>`', value: 'Equipar mascota para recibir bonos', inline: true },
+                        { name: '`>mascota desequipar`', value: 'Desequipar mascota actual', inline: true },
+                        { name: '`>mascota liberar <id>`', value: 'Liberar mascota a cambio de π-b$ y posible huevo', inline: true },
+                        { name: '`>mascota renombrar <id> <nombre>`', value: 'Cambiar el nombre de una mascota', inline: true },
+                        { name: '`>mascota curar <id> <medicina>`', value: 'Curar mascota enferma', inline: true },
+                        { name: '`>mascota expedicion <id> <tipo>`', value: 'Enviar a expedición (`money` / `ingredients` / `special`)', inline: true },
+                        { name: '`>mascota reclamar <id>`', value: 'Reclamar recompensa de expedición', inline: true },
+                        { name: '💊 Medicinas', value: '`medicine_basic` → común/poco común\n`medicine_advanced` → rara/épica\n`medicine_legendary` → cualquiera', inline: false },
+                        { name: '🗺️ Expediciones', value: '`money` → Forma 1+ (2h)\n`ingredients` → Forma 2+ (4h)\n`special` → Forma 3 (8h)', inline: false },
+                        { name: '🥚 ¿Cómo conseguir mascotas?', value: 'Compra un huevo con `>buy pet_egg` y luego usa `>mascota incubar`', inline: false },
+                    )]
+            });
+        }
+
+        return message.reply('❌ Subcomando inválido. Usa `>mascota help` para ver todos los comandos.');
     }
 
     // MANEJAR interacciones de botones

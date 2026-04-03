@@ -18,20 +18,18 @@ class LocalDatabase {
     }
 
     async init() {
-        try {
-            // Configuración corregida para mysql2
+        try {         
             this.pool = mysql.createPool({
-                host: 'sql3.freesqldatabase.com',
-                port: 3306,
-                user: 'sql3814346',
-                password: 'VFjMPfrHY9',
-                database: 'sql3814346',
+                host: process.env.DB_HOST,
+                port: process.env.DB_PORT || 3306,
+                user: process.env.DB_USER,
+                password: process.env.DB_PASSWORD,
+                database: process.env.DB_NAME,
                 connectionLimit: 3,
                 waitForConnections: true,
                 queueLimit: 0
-                // Removidas opciones que causan warnings
             });
-            
+
             console.log('✅ MySQL Pool conectado');
             await this.initTables();
         } catch (err) {
@@ -77,7 +75,114 @@ class LocalDatabase {
                     passiveIncomeStats TEXT,
                     vipStats TEXT,
                     lastPassivePayout BIGINT DEFAULT 0,
-                    maintenance TEXT
+                    last_pacto BIGINT DEFAULT 0,
+                    last_pedir BIGINT DEFAULT 0,
+                    profession VARCHAR(50) DEFAULT NULL,
+                    last_profession_change BIGINT DEFAULT 0,
+                    presence_streak INT DEFAULT 0,
+                    last_presence BIGINT DEFAULT 0,
+                    last_vending BIGINT DEFAULT 0,
+                    last_trivia BIGINT DEFAULT 0,
+                    last_trivia_survival BIGINT DEFAULT 0,
+                    maintenance TEXT,
+                    last_job_type VARCHAR(50) DEFAULT NULL,
+                    last_hire BIGINT DEFAULT 0
+                )
+            `);
+
+            await this.pool.execute(`
+                CREATE TABLE IF NOT EXISTS contracts (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    hired_by VARCHAR(255) NOT NULL,
+                    target_id VARCHAR(255) NOT NULL,
+                    amount INT NOT NULL,
+                    created_at BIGINT NOT NULL,
+                    expires_at BIGINT NOT NULL,
+                    active BOOLEAN DEFAULT 1,
+                    channel_id VARCHAR(255) DEFAULT NULL
+                )
+            `);
+
+            await this.pool.execute(`
+                CREATE TABLE IF NOT EXISTS marriages (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    user1_id VARCHAR(255) NOT NULL,
+                    user2_id VARCHAR(255) NOT NULL,
+                    married_at BIGINT NOT NULL,
+                    anniversary_milestones TEXT DEFAULT NULL,
+                    last_marriage_change BIGINT DEFAULT 0,
+                    status VARCHAR(20) DEFAULT 'active'
+                )
+            `);
+
+            await this.pool.execute(`
+                CREATE TABLE IF NOT EXISTS mentorships (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    mentor_id VARCHAR(255) NOT NULL,
+                    apprentice_id VARCHAR(255) NOT NULL,
+                    started_at BIGINT NOT NULL,
+                    last_milestone INT DEFAULT 0,
+                    status VARCHAR(20) DEFAULT 'active'
+                )
+            `);
+
+            await this.pool.execute(`
+                CREATE TABLE IF NOT EXISTS gardens (
+                    user_id VARCHAR(255) PRIMARY KEY,
+                    slot1 TEXT DEFAULT NULL,
+                    slot2 TEXT DEFAULT NULL,
+                    slot3 TEXT DEFAULT NULL,
+                    slot4 TEXT DEFAULT NULL,
+                    slot5 TEXT DEFAULT NULL,
+                    slot6 TEXT DEFAULT NULL,
+                    slot7 TEXT DEFAULT NULL,
+                    slot8 TEXT DEFAULT NULL,
+                    extra_slots INT DEFAULT 0
+                )
+            `);
+
+            await this.pool.execute(`
+                CREATE TABLE IF NOT EXISTS pets (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    user_id VARCHAR(255) NOT NULL,
+                    name VARCHAR(100) NOT NULL,
+                    rarity VARCHAR(50) NOT NULL,
+                    form INT DEFAULT 1,
+                    xp INT DEFAULT 0,
+                    level INT DEFAULT 1,
+                    equipped BOOLEAN DEFAULT 0,
+                    sick BOOLEAN DEFAULT 0,
+                    sick_since BIGINT DEFAULT NULL,
+                    expedition_end BIGINT DEFAULT NULL,
+                    expedition_type VARCHAR(50) DEFAULT NULL,
+                    created_at BIGINT NOT NULL
+                )
+            `);
+
+            await this.pool.execute(`
+                CREATE TABLE IF NOT EXISTS treasure_maps (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    user_id VARCHAR(255) NOT NULL,
+                    guild_id VARCHAR(255) NOT NULL,
+                    clues TEXT NOT NULL,
+                    current_clue INT DEFAULT 0,
+                    reward TEXT NOT NULL,
+                    created_at BIGINT NOT NULL,
+                    expires_at BIGINT NOT NULL,
+                    active BOOLEAN DEFAULT 1,
+                    completed BOOLEAN DEFAULT 0
+                )
+            `);
+
+            await this.pool.execute(`
+                CREATE TABLE IF NOT EXISTS library (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    user_id VARCHAR(255) NOT NULL,
+                    book_id VARCHAR(50) NOT NULL,
+                    started_at BIGINT NOT NULL,
+                    finishes_at BIGINT NOT NULL,
+                    completed BOOLEAN DEFAULT 0,
+                    notified BOOLEAN DEFAULT 0
                 )
             `);
 
@@ -1037,13 +1142,13 @@ class LocalDatabase {
                 JSON.stringify(newUser.permanentEffects),
                 JSON.stringify(newUser.activeEffects),
                 JSON.stringify(newUser.passiveIncomeStats),
-                newUser.cosmetic_nickname_nickname,
+                newUser.cosmetic_nickname,
                 null
             ]);
 
             // Guardar en caché antes de retornar
             this.userCache.set(userId, {
-                data: user, // o newUser
+                data: newUser, // o newUser
                 timestamp: Date.now()
             });
                 
@@ -1943,6 +2048,303 @@ class LocalDatabase {
     // Método para obtener conexión (para el panel web)
     getConnection() {
         return this.pool;
+    }
+
+    async createContract(hiredBy, targetId, amount, channelId = null) {
+        const now = Date.now();
+        const expiresAt = now + 24 * 60 * 60 * 1000;
+        await this.pool.execute(
+            'INSERT INTO contracts (hired_by, target_id, amount, created_at, expires_at, active, channel_id) VALUES (?, ?, ?, ?, ?, 1, ?)',
+            [hiredBy, targetId, amount, now, expiresAt, channelId]
+        );
+    }
+
+    async getActiveContract(targetId) {
+        const [rows] = await this.pool.execute(
+            'SELECT * FROM contracts WHERE target_id = ? AND active = 1 AND expires_at > ? LIMIT 1',
+            [targetId, Date.now()]
+        );
+        return rows[0] || null;
+    }
+
+    async deactivateContract(contractId) {
+        await this.pool.execute(
+            'UPDATE contracts SET active = 0 WHERE id = ?',
+            [contractId]
+        );
+    }
+
+    async cleanExpiredContracts() {
+        // Primero desactivar los expirados
+        await this.pool.execute(
+            'UPDATE contracts SET active = 0 WHERE expires_at <= ? AND active = 1',
+            [Date.now()]
+        );
+        // Luego borrar físicamente los inactivos de más de 24h
+        await this.pool.execute(
+            'DELETE FROM contracts WHERE active = 0 AND expires_at <= ?',
+            [Date.now() - 24 * 60 * 60 * 1000]
+        );
+    }
+
+    async createTreasureMap(userId, guildId, clues, reward) {
+        const now = Date.now();
+        const expiresAt = now + 24 * 60 * 60 * 1000; // 24h
+        const [result] = await this.pool.execute(
+            'INSERT INTO treasure_maps (user_id, guild_id, clues, current_clue, reward, created_at, expires_at) VALUES (?, ?, ?, 0, ?, ?, ?)',
+            [userId, guildId, JSON.stringify(clues), JSON.stringify(reward), now, expiresAt]
+        );
+        return result.insertId;
+    }
+
+    async getActiveTreasureMap(userId) {
+        const [rows] = await this.pool.execute(
+            'SELECT * FROM treasure_maps WHERE user_id = ? AND active = 1 AND completed = 0 AND expires_at > ? LIMIT 1',
+            [userId, Date.now()]
+        );
+        if (!rows[0]) return null;
+        const map = rows[0];
+        map.clues = JSON.parse(map.clues);
+        map.reward = JSON.parse(map.reward);
+        return map;
+    }
+
+    async advanceTreasureMap(mapId, nextClue) {
+        await this.pool.execute(
+            'UPDATE treasure_maps SET current_clue = ? WHERE id = ?',
+            [nextClue, mapId]
+        );
+    }
+
+    async completeTreasureMap(mapId) {
+        await this.pool.execute(
+            'UPDATE treasure_maps SET completed = 1, active = 0 WHERE id = ?',
+            [mapId]
+        );
+    }
+
+    async transferTreasureMap(mapId, newUserId) {
+        await this.pool.execute(
+            'UPDATE treasure_maps SET user_id = ?, current_clue = 0 WHERE id = ?',
+            [newUserId, mapId]
+        );
+    }
+
+    async cleanExpiredTreasureMaps() {
+        await this.pool.execute(
+            'DELETE FROM treasure_maps WHERE expires_at <= ? AND active = 1',
+            [Date.now()]
+        );
+    }
+
+    async startReading(userId, bookId, finishesAt) {
+        await this.pool.execute(
+            'INSERT INTO library (user_id, book_id, started_at, finishes_at) VALUES (?, ?, ?, ?)',
+            [userId, bookId, Date.now(), finishesAt]
+        );
+    }
+
+    async getCurrentReading(userId) {
+        const [rows] = await this.pool.execute(
+            'SELECT * FROM library WHERE user_id = ? AND completed = 0 ORDER BY started_at DESC LIMIT 1',
+            [userId]
+        );
+        return rows[0] || null;
+    }
+
+    async getCompletedUnnotified(userId) {
+        const [rows] = await this.pool.execute(
+            'SELECT * FROM library WHERE user_id = ? AND completed = 0 AND notified = 0 AND finishes_at <= ?',
+            [userId, Date.now()]
+        );
+        return rows;
+    }
+
+    async completeReading(id) {
+        await this.pool.execute(
+            'UPDATE library SET completed = 1, notified = 1 WHERE id = ?',
+            [id]
+        );
+    }
+
+    async getReadBooks(userId) {
+        const [rows] = await this.pool.execute(
+            'SELECT book_id FROM library WHERE user_id = ? AND completed = 1',
+            [userId]
+        );
+        return rows.map(r => r.book_id);
+    }
+
+    async getLastCompleted(userId) {
+        const [rows] = await this.pool.execute(
+            'SELECT * FROM library WHERE user_id = ? AND completed = 1 ORDER BY finishes_at DESC LIMIT 1',
+            [userId]
+        );
+        return rows[0] || null;
+    }
+
+    // ===== MARRIAGE METHODS =====
+    async getMarriage(userId) {
+        const [rows] = await this.pool.execute(
+            'SELECT * FROM marriages WHERE (user1_id = ? OR user2_id = ?) AND status = "active" LIMIT 1',
+            [userId, userId]
+        );
+        if (!rows[0]) return null;
+        const m = rows[0];
+        if (m.anniversary_milestones) m.anniversary_milestones = JSON.parse(m.anniversary_milestones);
+        else m.anniversary_milestones = [];
+        return m;
+    }
+
+    async createMarriage(user1Id, user2Id) {
+        const [result] = await this.pool.execute(
+            'INSERT INTO marriages (user1_id, user2_id, married_at, anniversary_milestones) VALUES (?, ?, ?, ?)',
+            [user1Id, user2Id, Date.now(), '[]']
+        );
+        return result.insertId;
+    }
+
+    async dissolveMarriage(marriageId, userId) {
+        await this.pool.execute(
+            'UPDATE marriages SET status = "divorced", last_marriage_change = ? WHERE id = ?',
+            [Date.now(), marriageId]
+        );
+        // Guardar cooldown en el usuario
+        await this.pool.execute(
+            'UPDATE users SET stats = JSON_SET(COALESCE(stats, "{}"), "$.lastDivorce", ?) WHERE id = ?',
+            [Date.now(), userId]
+        );
+    }
+
+    async getActiveMarriages() {
+        const [rows] = await this.pool.execute('SELECT * FROM marriages WHERE status = "active"');
+        return rows.map(m => {
+            if (m.anniversary_milestones) m.anniversary_milestones = JSON.parse(m.anniversary_milestones);
+            else m.anniversary_milestones = [];
+            return m;
+        });
+    }
+
+    async updateMarriageMilestones(marriageId, milestones) {
+        await this.pool.execute(
+            'UPDATE marriages SET anniversary_milestones = ? WHERE id = ?',
+            [JSON.stringify(milestones), marriageId]
+        );
+    }
+
+    // ===== MENTORSHIP METHODS =====
+    async getMentorship(userId) {
+        const [rows] = await this.pool.execute(
+            'SELECT * FROM mentorships WHERE (mentor_id = ? OR apprentice_id = ?) AND status = "active" LIMIT 1',
+            [userId, userId]
+        );
+        return rows[0] || null;
+    }
+
+    async createMentorship(mentorId, apprenticeId) {
+        const [result] = await this.pool.execute(
+            'INSERT INTO mentorships (mentor_id, apprentice_id, started_at) VALUES (?, ?, ?)',
+            [mentorId, apprenticeId, Date.now()]
+        );
+        return result.insertId;
+    }
+
+    async completeMentorship(mentorshipId) {
+        await this.pool.execute(
+            'UPDATE mentorships SET status = "completed" WHERE id = ?',
+            [mentorshipId]
+        );
+    }
+
+    async updateMentorshipMilestone(mentorshipId, milestone) {
+        await this.pool.execute(
+            'UPDATE mentorships SET last_milestone = ? WHERE id = ?',
+            [milestone, mentorshipId]
+        );
+    }
+
+    // ===== GARDEN METHODS =====
+    async getGarden(userId) {
+        const [rows] = await this.pool.execute('SELECT * FROM gardens WHERE user_id = ?', [userId]);
+        if (!rows[0]) {
+            await this.pool.execute('INSERT INTO gardens (user_id) VALUES (?)', [userId]);
+            return { user_id: userId, slot1: null, slot2: null, slot3: null, slot4: null, extra_slots: 0 };
+        }
+        const g = rows[0];
+        for (let i = 1; i <= 8; i++) {
+            const key = `slot${i}`;
+            if (g[key]) g[key] = JSON.parse(g[key]);
+        }
+        return g;
+    }
+
+    async updateGardenSlot(userId, slot, data) {
+        const col = `slot${slot}`;
+        await this.pool.execute(
+            `UPDATE gardens SET ${col} = ? WHERE user_id = ?`,
+            [data ? JSON.stringify(data) : null, userId]
+        );
+    }
+
+    async getActiveGardens() {
+        const [rows] = await this.pool.execute('SELECT * FROM gardens');
+        return rows.map(g => {
+            for (let i = 1; i <= 8; i++) {
+                const key = `slot${i}`;
+                if (g[key]) g[key] = JSON.parse(g[key]);
+            }
+            return g;
+        }).filter(g => {
+            for (let i = 1; i <= 8; i++) {
+                if (g[`slot${i}`]) return true;
+            }
+            return false;
+        });
+    }
+
+    // ===== PET METHODS =====
+    async createPet(userId, name, rarity) {
+        const [result] = await this.pool.execute(
+            'INSERT INTO pets (user_id, name, rarity, created_at) VALUES (?, ?, ?, ?)',
+            [userId, name, rarity, Date.now()]
+        );
+        return result.insertId;
+    }
+
+    async getUserPets(userId) {
+        const [rows] = await this.pool.execute('SELECT * FROM pets WHERE user_id = ?', [userId]);
+        return rows;
+    }
+
+    async getPet(petId) {
+        const [rows] = await this.pool.execute('SELECT * FROM pets WHERE id = ?', [petId]);
+        return rows[0] || null;
+    }
+
+    async getEquippedPet(userId) {
+        const [rows] = await this.pool.execute('SELECT * FROM pets WHERE user_id = ? AND equipped = 1 LIMIT 1', [userId]);
+        return rows[0] || null;
+    }
+
+    async updatePet(petId, data) {
+        const fields = Object.keys(data).map(k => `${k} = ?`).join(', ');
+        const values = [...Object.values(data), petId];
+        await this.pool.execute(`UPDATE pets SET ${fields} WHERE id = ?`, values);
+    }
+
+    async deletePet(petId) {
+        await this.pool.execute('DELETE FROM pets WHERE id = ?', [petId]);
+    }
+
+    async getSickPets() {
+        const [rows] = await this.pool.execute('SELECT * FROM pets WHERE sick = 1');
+        return rows;
+    }
+
+    async getAllPetsForPlague() {
+        // Mascotas vivas con dueño activo en últimos 7 días
+        const [rows] = await this.pool.execute('SELECT p.* FROM pets p');
+        return rows;
     }
 }
 

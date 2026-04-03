@@ -23,7 +23,7 @@ class MissionsSystem {
             'send_messages_10': {
                 id: 'send_messages_10',
                 name: '💬 Conversador',
-                description: 'Envía 10 mensajes en el servidor',
+                description: 'Envía 10 mensajes en cualquier servidor',
                 type: 'messages',
                 target: 10,
                 reward: { money: 80, xp: 20 },
@@ -32,7 +32,7 @@ class MissionsSystem {
             'send_messages_25': {
                 id: 'send_messages_25',
                 name: '🗣️ Hablador',
-                description: 'Envía 25 mensajes en el servidor',
+                description: 'Envía 25 mensajes en cualquier servidor',
                 type: 'messages',
                 target: 25,
                 reward: { money: 150, xp: 40 },
@@ -41,7 +41,7 @@ class MissionsSystem {
             'send_messages_50': {
                 id: 'send_messages_50',
                 name: '📢 Locutor',
-                description: 'Envía 50 mensajes en el servidor',
+                description: 'Envía 50 mensajes en cualquier servidor',
                 type: 'messages',
                 target: 50,
                 reward: { money: 300, xp: 80 },
@@ -296,18 +296,6 @@ class MissionsSystem {
                 reward: { money: 400, xp: 80 },
                 rarity: 'uncommon'
             },
-
-            // 2. Misiones de Logros
-            'unlock_achievement': {
-                id: 'unlock_achievement',
-                name: '🏆 Cazador de Logros',
-                description: 'Desbloquea 1 logro hoy',
-                type: 'achievements_unlocked_today',
-                target: 1,
-                reward: { money: 800, xp: 200 },
-                rarity: 'rare'
-            },
-
             // 3. Misiones Sociales Avanzadas
             'help_someone': {
                 id: 'help_someone',
@@ -317,7 +305,7 @@ class MissionsSystem {
                 target: 3,
                 reward: { money: 600, xp: 120 },
                 rarity: 'uncommon'
-            },
+            },*/
 
             'receive_money': {
                 id: 'receive_money',
@@ -328,8 +316,6 @@ class MissionsSystem {
                 reward: { money: 300, xp: 60 },
                 rarity: 'common'
             },
-
-            // 4. Misiones de Tienda
             'buy_item': {
                 id: 'buy_item',
                 name: '🛒 Comprador',
@@ -339,18 +325,6 @@ class MissionsSystem {
                 reward: { money: 400, xp: 80 },
                 rarity: 'uncommon'
             },
-
-            'use_consumable': {
-                id: 'use_consumable',
-                name: '🧪 Consumidor',
-                description: 'Usa 3 items consumibles',
-                type: 'consumables_used',
-                target: 3,
-                reward: { money: 600, xp: 120 },
-                rarity: 'uncommon'
-            },
-
-            // 5. Misiones de XP
             'gain_xp': {
                 id: 'gain_xp',
                 name: '📚 Estudiante',
@@ -361,7 +335,7 @@ class MissionsSystem {
                 rarity: 'rare'
             },
 
-            // 6. Misiones de Actividad Continua
+/*            // 6. Misiones de Actividad Continua
             'stay_active': {
                 id: 'stay_active',
                 name: '⚡ Incansable',
@@ -370,9 +344,7 @@ class MissionsSystem {
                 target: 4,
                 reward: { money: 500, xp: 100 },
                 rarity: 'uncommon'
-            },
-
-            // 7. Misiones de Economía
+            },*/
             'reach_balance': {
                 id: 'reach_balance',
                 name: '💰 Meta Financiera',
@@ -382,17 +354,15 @@ class MissionsSystem {
                 reward: { money: 600, xp: 120 },
                 rarity: 'uncommon'
             },
-
-            // 8. Misión Especial Diaria
             'daily_perfectionist': {
                 id: 'daily_perfectionist',
                 name: '💎 Perfeccionista',
                 description: 'Usa Daily, Work y juega un minijuego',
                 type: 'trinity_complete',
-                target: 1,
+                target: 3, // ← cambiar de 1 a 3
                 reward: { money: 1000, xp: 200 },
                 rarity: 'epic'
-            },*/
+            },
             // Al final de availableMissions, antes de cerrar el objeto
             /*'vip_spend_big': {
                 id: 'vip_spend_big',
@@ -681,7 +651,10 @@ class MissionsSystem {
                     consecutive_wins: 0,
                     consecutive_losses: 0,
                     starting_balance: user.balance, // ← NUEVO: guardar balance inicial del día
-                    balance_milestone_today: 0
+                    balance_milestone_today: 0,
+                    items_bought_today: 0,
+                    money_received_today: 0,
+                    xp_gained_today: 0,
                 }
             };
             
@@ -744,11 +717,11 @@ class MissionsSystem {
     // Actualizar progreso de misiones
     async updateMissionProgress(userId, actionType, value, maxChecks = 3, checkedInSession = new Set()) {        
         // Solo aplicar cooldown para acciones muy frecuentes
-        if (actionType === 'message' || actionType === 'commands_used') {
+        if (actionType === 'message' || actionType === 'commands_used' || actionType === 'xp_gained_today') {
             const cooldownKey = `mission_update_${userId}_${actionType}`;
             if (this.updateCooldowns.has(cooldownKey)) {
                 const lastUpdate = this.updateCooldowns.get(cooldownKey);
-                if (Date.now() - lastUpdate < 1000) { // 1 segundo de cooldown
+                if (Date.now() - lastUpdate < 1000) {
                     return [];
                 }
             }
@@ -885,10 +858,6 @@ class MissionsSystem {
                 updateData.daily_stats.unique_commands = Array.from(uniqueCommands);
                 break;
 
-            case 'achievements_unlocked_today':
-                updateData.daily_stats.achievements_unlocked_today = (user.daily_stats.achievements_unlocked_today || 0) + 1;
-                break;
-
             /*case 'unique_transfers':
                 // Trackear usuarios únicos a los que transferiste
                 const uniqueTransfers = updateData.daily_stats.unique_transfers || new Set();
@@ -904,12 +873,9 @@ class MissionsSystem {
                 updateData.daily_stats.items_bought_today = (user.daily_stats.items_bought_today || 0) + 1;
                 break;
 
-            case 'consumables_used':
-                updateData.daily_stats.consumables_used = (user.daily_stats.consumables_used || 0) + 1;
-                break;
-
             case 'xp_gained_today':
                 updateData.daily_stats.xp_gained_today = (user.daily_stats.xp_gained_today || 0) + value;
+                console.log(`✅ xp_gained_today actualizado a:`, updateData.daily_stats.xp_gained_today);
                 break;
 
             case 'unique_channels':
@@ -919,9 +885,9 @@ class MissionsSystem {
                 break;
 
             case 'balance_milestone_today':
-                // Trackear ganancia neta del día
-                const startBalance = user.daily_stats.starting_balance || user.balance;
-                const currentGain = user.balance - startBalance;
+                const startBalance = user.daily_stats.starting_balance ?? 0;
+                const freshUser = await this.economy.getUser(userId);
+                const currentGain = Math.max(0, freshUser.balance - startBalance);
                 updateData.daily_stats.balance_milestone_today = currentGain;
                 break;
 
@@ -945,7 +911,7 @@ class MissionsSystem {
             if (!mission) continue;
             
             const currentProgress = this.getCurrentProgress(user, mission);
-            
+ 
             if (currentProgress >= mission.target && !updateData.daily_missions?.[missionId]) {
                 // Marcar como verificado en esta sesion
                 checkedInSession.add(missionId);
@@ -964,6 +930,15 @@ class MissionsSystem {
                 if (mission.reward.money && user.balance < this.economy.config.maxBalance) {
                     let finalEarnings = mission.reward.money;
                     let eventMessage = '';
+
+                    let professionMessage = '';
+                    const profMission = this.economy.getProfession(user);
+                    if (profMission?.missionMult && profMission.missionMult !== 1.0) {
+                        const bonus = Math.floor(finalEarnings * (profMission.missionMult - 1));
+                        finalEarnings += bonus;
+                        const pct = Math.round((profMission.missionMult - 1) * 100);
+                        professionMessage = `⚔️ **${profMission.name}** (+${pct}% misiones = +${bonus} π-b$)`;
+                    }
 
                     for (const event of this.events.getActiveEvents()) {
                         const rewardMultiplier = event.multipliers?.rewards || 1.0;
@@ -1110,9 +1085,6 @@ class MissionsSystem {
                 const commands = stats.unique_commands || [];
                 return Array.isArray(commands) ? commands.length : 0;
 
-            case 'achievements_unlocked_today':
-                return stats.achievements_unlocked_today || 0;
-
 /*            case 'unique_transfers':
                 const transfers = stats.unique_transfers || [];
                 return Array.isArray(transfers) ? transfers.length : 0;*/
@@ -1123,9 +1095,6 @@ class MissionsSystem {
             case 'items_bought_today':
                 return stats.items_bought_today || 0;
 
-            case 'consumables_used':
-                return stats.consumables_used || 0;
-
             case 'xp_gained_today':
                 return stats.xp_gained_today || 0;
 
@@ -1134,13 +1103,13 @@ class MissionsSystem {
                 return Array.isArray(channels) ? channels.length : 0;
 
             case 'balance_milestone_today':
-                const startingBalance = user.daily_stats?.starting_balance || 0;
-                const currentBalance = user.balance || 0;
-                const netGain = Math.max(0, currentBalance - startingBalance);
-                return netGain;
+                return stats.balance_milestone_today || 0;
 
             case 'trinity_complete':
-                return stats.trinity_complete ? 1 : 0;
+                const hasDaily = stats.daily_claimed_today === true ? 1 : 0;
+                const hasWork = (stats.work_today || 0) > 0 ? 1 : 0;
+                const hasGame = (stats.games_today || 0) > 0 ? 1 : 0;
+                return hasDaily + hasWork + hasGame;
             default:
                 return 0;
         }
@@ -1154,23 +1123,9 @@ class MissionsSystem {
         const hasWork = (stats.work_today || 0) > 0;
         const hasGame = (stats.games_today || 0) > 0;
         
-        // Si completó las 3 cosas y aún no está marcado
-        if (hasDaily && hasWork && hasGame && !stats.trinity_complete) {
-            const updateData = {
-                daily_stats: {
-                    ...stats,
-                    trinity_complete: true
-                }
-            };
-            
-            await this.economy.updateUser(userId, updateData);
-            
-            // Verificar si completó la misión
-            const completedMissions = await this.updateMissionProgress(userId, 'trinity_complete', 1);
-            return completedMissions;
-        }
-        
-        return [];
+        // ✅ Siempre disparar para actualizar el progreso parcial
+        const completedMissions = await this.updateMissionProgress(userId, 'trinity_complete');
+        return completedMissions;
     }
     
     // Mostrar misiones del usuario
@@ -1309,7 +1264,18 @@ class MissionsSystem {
                 .setTimestamp();
             
             const rewards = [];
-            if (mission.reward.money) rewards.push(`+${mission.reward.money} π-b$`);
+            const profNotify = this.economy.getProfession(user);
+            if (mission.reward.money) {
+                let moneyReward = mission.reward.money;
+                let profBonus = '';
+                if (profNotify?.missionMult && profNotify.missionMult !== 1.0) {
+                    const bonus = Math.floor(moneyReward * (profNotify.missionMult - 1));
+                    const pct = Math.round((profNotify.missionMult - 1) * 100);
+                    profBonus = ` *(+${pct}% ${profNotify.name})*`;
+                    moneyReward += bonus;
+                }
+                rewards.push(`+${moneyReward} π-b$${profBonus}`);
+            }
             if (mission.reward.xp) rewards.push(`+${mission.reward.xp} XP`);
             
             if (rewards.length > 0) {

@@ -817,6 +817,300 @@ class CraftingSystem {
                 }
             },
 
+            // ===== 🧪 POCIONES =====
+            'fire_potion_craft': {
+                id: 'fire_potion_craft',
+                name: '🔥 Poción de Fuego',
+                description: '+25% trabajo por 2h',
+                craftTime: 1800000,
+                category: 'potion',
+                ingredients: [
+                    { id: 'fire_ember', quantity: 3 },
+                    { id: 'herb_common', quantity: 2 },
+                ],
+                result: { id: 'fire_potion', category: 'consumable', rarity: 'uncommon', stackable: true, maxStack: 10 }
+            },
+
+            'moon_potion_craft': {
+                id: 'moon_potion_craft',
+                name: '🌙 Poción Lunar',
+                description: '+20% minijuegos por 3h',
+                craftTime: 3600000,
+                category: 'potion',
+                ingredients: [
+                    { id: 'moon_essence', quantity: 2 },
+                    { id: 'crystal_shard', quantity: 1 },
+                ],
+                result: { id: 'moon_potion', category: 'consumable', rarity: 'rare', stackable: true, maxStack: 5 }
+            },
+
+            'shadow_elixir_craft': {
+                id: 'shadow_elixir_craft',
+                name: '🕸️ Elixir de Sombra',
+                description: '-50% cooldown robo por 1h',
+                craftTime: 2700000,
+                category: 'potion',
+                ingredients: [
+                    { id: 'shadow_fiber', quantity: 3 },
+                    { id: 'robbery_kit', quantity: 2 },
+                ],
+                result: { id: 'shadow_elixir', category: 'consumable', rarity: 'rare', stackable: true, maxStack: 5 }
+            },
+
+            'crystal_vision_craft': {
+                id: 'crystal_vision_craft',
+                name: '💎 Visión Cristalina',
+                description: '+15% suerte en minijuegos por 2h',
+                craftTime: 3600000,
+                category: 'potion',
+                ingredients: [
+                    { id: 'crystal_shard', quantity: 4 },
+                    { id: 'double_xp_potion', quantity: 1 },
+                ],
+                result: { id: 'crystal_vision', category: 'consumable', rarity: 'rare', stackable: true, maxStack: 5 }
+            },
+
+/*            // ===== ⚔️ COMBATE =====
+            'battle_tonic_craft': {
+                id: 'battle_tonic_craft',
+                name: '⚔️ Tónico de Batalla',
+                description: '+30% ATK en batallas',
+                craftTime: 1800000,
+                category: 'combat',
+                ingredients: [
+                    { id: 'fire_ember', quantity: 2 },
+                    { id: 'herb_epic', quantity: 1 },
+                ],
+                result: { id: 'battle_tonic', category: 'consumable', rarity: 'rare', stackable: true, maxStack: 5 }
+            },
+
+            'iron_shield_brew_craft': {
+                id: 'iron_shield_brew_craft',
+                name: '🛡️ Brebaje Escudo',
+                description: '+30% DEF en batallas',
+                craftTime: 1800000,
+                category: 'combat',
+                ingredients: [
+                    { id: 'refined_metal', quantity: 3 },
+                    { id: 'herb_rare', quantity: 2 },
+                ],
+                result: { id: 'iron_shield_brew', category: 'consumable', rarity: 'rare', stackable: true, maxStack: 5 }
+            },
+
+            'dragon_brew_craft': {
+                id: 'dragon_brew_craft',
+                name: '🐉 Brebaje del Dragón',
+                description: '+50% ATK y DEF en batallas por 1h',
+                craftTime: 7200000,
+                category: 'combat',
+                ingredients: [
+                    { id: 'dragon_scale', quantity: 1 },
+                    { id: 'fire_ember', quantity: 3 },
+                    { id: 'refined_metal', quantity: 2 },
+                ],
+                result: { id: 'dragon_brew', category: 'consumable', rarity: 'epic', stackable: true, maxStack: 3 }
+            },*/
+
+            // ===== 🌿 NATURALEZA =====
+            'nature_boost_craft': {
+                id: 'nature_boost_craft',
+                name: '🌿 Impulso Natural',
+                description: '+20% a todo por 1h',
+                craftTime: 3600000,
+                category: 'nature',
+                ingredients: [
+                    { id: 'herb_common', quantity: 5 },
+                    { id: 'herb_rare', quantity: 3 },
+                    { id: 'moon_essence', quantity: 1 },
+                ],
+                result: { id: 'nature_boost', category: 'consumable', rarity: 'rare', stackable: true, maxStack: 5 }
+            },
+
+            'garden_fertilizer_craft': {
+                id: 'garden_fertilizer_craft',
+                name: '🌱 Fertilizante Mágico',
+                description: 'Próxima cosecha del huerto da x2',
+                craftTime: 5400000,
+                category: 'nature',
+                ingredients: [
+                    { id: 'herb_legendary', quantity: 1 },
+                    { id: 'golden_dust', quantity: 1 },
+                ],
+                result: { id: 'garden_fertilizer', category: 'consumable', rarity: 'epic', stackable: true, maxStack: 3 }
+            },
+
+            // ===== 🎲 ECONOMÍA =====
+            'golden_touch_craft': {
+                id: 'golden_touch_craft',
+                name: '👆 Toque Dorado',
+                description: '+40% al próximo daily',
+                craftTime: 3600000,
+                category: 'economy',
+                ingredients: [
+                    { id: 'golden_dust', quantity: 2 },
+                    { id: 'lucky_charm', quantity: 2 },
+                ],
+                result: { id: 'golden_touch', category: 'consumable', rarity: 'epic', stackable: true, maxStack: 3 }
+            },
+
+            'work_frenzy_craft': {
+                id: 'work_frenzy_craft',
+                name: '💼 Frenesí Laboral',
+                description: 'Próximo trabajo da x3',
+                craftTime: 5400000,
+                category: 'economy',
+                ingredients: [
+                    { id: 'fire_ember', quantity: 4 },
+                    { id: 'energy_drink', quantity: 3 },
+                    { id: 'crystal_shard', quantity: 1 },
+                ],
+                result: { id: 'work_frenzy', category: 'consumable', rarity: 'epic', stackable: true, maxStack: 3 }
+            },
+
+            'shadow_contract_craft': {
+                id: 'shadow_contract_craft',
+                name: '📜 Contrato Sombrío',
+                description: '-50% costo próximo sicario',
+                craftTime: 7200000,
+                category: 'economy',
+                ingredients: [
+                    { id: 'shadow_fiber', quantity: 5 },
+                    { id: 'crystal_shard', quantity: 2 },
+                ],
+                result: { id: 'shadow_contract', category: 'consumable', rarity: 'epic', stackable: true, maxStack: 2 }
+            },
+
+            // ===== 🌟 LEGENDARIO (Artesano) =====
+            'void_elixir_craft': {
+                id: 'void_elixir_craft',
+                name: '🔮 Elixir del Vacío',
+                description: '+100% a todo por 1h — Solo Artesano',
+                craftTime: 14400000,
+                category: 'legendary',
+                artesanoOnly: true,
+                ingredients: [
+                    { id: 'void_crystal', quantity: 1 },
+                    { id: 'arcane_dust', quantity: 3 },
+                    { id: 'dragon_scale', quantity: 2 },
+                ],
+                result: { id: 'void_elixir', category: 'consumable', rarity: 'mythic', stackable: true, maxStack: 1 }
+            },
+
+            'star_blessing_craft': {
+                id: 'star_blessing_craft',
+                name: '⭐ Bendición Estelar',
+                description: '+50% XP por 24h — Solo Artesano',
+                craftTime: 21600000,
+                category: 'legendary',
+                artesanoOnly: true,
+                ingredients: [
+                    { id: 'star_fragment', quantity: 2 },
+                    { id: 'golden_dust', quantity: 3 },
+                    { id: 'moon_essence', quantity: 2 },
+                ],
+                result: { id: 'star_blessing', category: 'consumable', rarity: 'mythic', stackable: true, maxStack: 1 }
+            },
+
+            // ⚗️ RECETAS EXCLUSIVAS DEL ARTESANO
+            'artesano_speed_gauntlet': {
+                id: 'artesano_speed_gauntlet',
+                name: '⚙️ Guantelete de Velocidad',
+                description: 'Reduce todos los cooldowns en 35% por 4 horas. Solo Artesanos.',
+                craftTime: 3600000, // 1h (con artesano = 36min)
+                artesanoOnly: true,
+                ingredients: [
+                    { id: 'refined_metal', quantity: 5 },
+                    { id: 'energy_drink', quantity: 3 },
+                    { id: 'work_boots', quantity: 1 },
+                ],
+                result: {
+                    id: 'speed_gauntlet',
+                    category: 'consumable',
+                    rarity: 'epic',
+                    effect: {
+                        type: 'cooldown_reduction',
+                        targets: ['all'],
+                        reduction: 0.35,
+                        duration: 14400
+                    },
+                    stackable: true,
+                    maxStack: 3,
+                }
+            },
+
+            'artesano_arcane_multiplier': {
+                id: 'artesano_arcane_multiplier',
+                name: '🔮 Multiplicador Arcano',
+                description: '+50% a todo durante 2 horas. Creación exclusiva del Artesano.',
+                craftTime: 7200000, // 2h (con artesano = ~1h 12min)
+                artesanoOnly: true,
+                ingredients: [
+                    { id: 'arcane_dust', quantity: 4 },
+                    { id: 'lucky_charm', quantity: 3 },
+                    { id: 'refined_metal', quantity: 2 },
+                ],
+                result: {
+                    id: 'arcane_multiplier',
+                    category: 'consumable',
+                    rarity: 'legendary',
+                    effect: {
+                        type: 'multiplier',
+                        targets: ['work', 'games'],
+                        multiplier: 1.50,
+                        duration: 7200
+                    },
+                    stackable: true,
+                    maxStack: 2,
+                }
+            },
+
+            'artesano_mythril_forge': {
+                id: 'artesano_mythril_forge',
+                name: '💠 Forja de Mitril',
+                description: 'El item definitivo del Artesano. +75% trabajo permanente por 6h + -50% cooldown trabajo.',
+                craftTime: 21600000, // 6h (con artesano = ~3h 36min)
+                artesanoOnly: true,
+                ingredients: [
+                    { id: 'mythril_shard', quantity: 3 },
+                    { id: 'arcane_dust', quantity: 5 },
+                    { id: 'refined_metal', quantity: 8 },
+                    { id: 'money_magnet', quantity: 1 },
+                ],
+                result: {
+                    id: 'mythril_forge_item',
+                    category: 'consumable',
+                    rarity: 'mythic',
+                    effect: {
+                        type: 'cooldown_reduction',
+                        targets: ['work'],
+                        reduction: 0.50,
+                        duration: 21600,
+                        bonusMultiplier: 1.75,
+                    },
+                    stackable: false,
+                    maxStack: 1,
+                }
+            },
+
+            // 🔩 Recetas intermedias (materiales → materiales mejores, para todos pero útiles al artesano)
+            'refined_to_arcane': {
+                id: 'refined_to_arcane',
+                name: '🔩→✨ Purificación',
+                description: 'Convierte metal refinado en polvo arcano.',
+                craftTime: 1800000, // 30min (artesano = 18min)
+                ingredients: [
+                    { id: 'refined_metal', quantity: 5 },
+                    { id: 'double_xp_potion', quantity: 1 },
+                ],
+                result: {
+                    id: 'arcane_dust',
+                    category: 'ingredient',
+                    rarity: 'rare',
+                    stackable: true,
+                    maxStack: 30,
+                }
+            },
+
             // 💀 Robbery Kit → Master Gloves → Phantom Gloves
             'phantom_gloves_craft': {
                 id: 'phantom_gloves_craft',
@@ -841,7 +1135,103 @@ class CraftingSystem {
                     stackable: true,
                     maxStack: 1
                 }
-            }
+            },
+            // 🌿 Recetas con ingredientes del huerto
+            'herb_potion_craft': {
+                id: 'herb_potion_craft',
+                name: '🧪 Poción de Hierbas',
+                description: 'Una poción básica hecha con hierbas del huerto. +15% trabajo por 1h',
+                craftTime: 1800000, // 30 minutos
+                ingredients: [
+                    { id: 'herb_common', quantity: 3 },
+                    { id: 'herb_rare', quantity: 1 }
+                ],
+                result: {
+                    id: 'herb_potion',
+                    category: 'consumable',
+                    rarity: 'uncommon',
+                    effect: {
+                        type: 'multiplier',
+                        targets: ['work'],
+                        multiplier: 1.15,
+                        duration: 3600
+                    },
+                    stackable: true,
+                    maxStack: 10
+                }
+            },
+
+            'epic_herb_elixir_craft': {
+                id: 'epic_herb_elixir_craft',
+                name: '⚗️ Elixir Épico',
+                description: 'Un elixir poderoso. +30% a todo por 2h',
+                craftTime: 7200000, // 2 horas
+                ingredients: [
+                    { id: 'herb_rare', quantity: 2 },
+                    { id: 'herb_epic', quantity: 2 },
+                    { id: 'energy_drink', quantity: 2 }
+                ],
+                result: {
+                    id: 'epic_elixir',
+                    category: 'consumable',
+                    rarity: 'epic',
+                    effect: {
+                        type: 'multiplier',
+                        targets: ['work', 'games'],
+                        multiplier: 1.30,
+                        duration: 7200
+                    },
+                    stackable: true,
+                    maxStack: 5
+                }
+            },
+
+            'legendary_brew_craft': {
+                id: 'legendary_brew_craft',
+                name: '✨ Brebaje Legendario',
+                description: 'Lo mejor del huerto. +50% a todo por 3h + XP doble',
+                craftTime: 21600000, // 6 horas
+                ingredients: [
+                    { id: 'herb_legendary', quantity: 2 },
+                    { id: 'herb_epic', quantity: 2 },
+                    { id: 'double_xp_potion', quantity: 2 }
+                ],
+                result: {
+                    id: 'legendary_brew',
+                    category: 'consumable',
+                    rarity: 'legendary',
+                    effect: {
+                        type: 'multiplier',
+                        targets: ['work', 'games'],
+                        multiplier: 1.50,
+                        duration: 10800
+                    },
+                    stackable: true,
+                    maxStack: 2
+                }
+            },
+
+            'pet_treat_craft': {
+                id: 'pet_treat_craft',
+                name: '🐾 Golosina de Mascota',
+                description: 'Da +10 XP extra a todas tus mascotas al usarla',
+                craftTime: 3600000, // 1 hora
+                ingredients: [
+                    { id: 'herb_common', quantity: 5 },
+                    { id: 'herb_rare', quantity: 2 }
+                ],
+                result: {
+                    id: 'pet_treat',
+                    category: 'pet',
+                    rarity: 'rare',
+                    effect: {
+                        type: 'pet_xp',
+                        amount: 10
+                    },
+                    stackable: true,
+                    maxStack: 10
+                }
+            },
         };
     }
 
@@ -873,24 +1263,37 @@ class CraftingSystem {
         return newItems;
     }
 
-async handleRecipesInteraction(interaction) {
-    const parts = interaction.customId.split('_');
-    const userId = parts[parts.length - 1];
+    async handleRecipesInteraction(interaction) {
+        const parts = interaction.customId.split('_');
+        const userId = parts[parts.length - 1];
 
-    if (interaction.user.id !== userId) {
-        return interaction.reply({ content: '❌ Estas recetas no son tuyas. Usa `>recipes` para abrir las tuyas.', ephemeral: true });
+        if (interaction.user.id !== userId) {
+            return interaction.reply({ content: '❌ Estas recetas no son tuyas. Usa `>recipes` para abrir las tuyas.', ephemeral: true });
+        }
+
+        const fakeMessage = {
+            author: interaction.user,
+            guild: interaction.guild,
+            guildId: interaction.guildId,
+            reply: async (options) => await interaction.update(options)
+        };
+
+        // recipes_back_menu_userId
+        if (interaction.customId.startsWith('recipes_back_menu_')) {
+            return await this.showCraftingRecipes(fakeMessage, 1, null);
+        }
+
+        // recipes_cat_<category>_<page>_userId
+        if (interaction.customId.startsWith('recipes_cat_')) {
+            const category = parts[2];
+            const page = parseInt(parts[3]) || 1;
+            return await this.showCraftingRecipes(fakeMessage, page, category);
+        }
+
+        // Fallback legacy (prev/next sin categoría)
+        const page = parseInt(parts[2]) || 1;
+        await this.showCraftingRecipes(fakeMessage, page, null);
     }
-
-    const page = parseInt(parts[2]);
-    const fakeMessage = {
-        author: interaction.user,
-        guild: interaction.guild,
-        guildId: interaction.guildId,
-        reply: async (options) => await interaction.update(options)
-    };
-
-    await this.showCraftingRecipes(fakeMessage, page);
-}
 
     async addToCraftingQueue(craftId, userId, recipeId, recipe, completesAt, channelId) {
         await this.shop.economy.database.addCraftToQueue({
@@ -989,6 +1392,187 @@ async handleRecipesInteraction(interaction) {
         }
     }
 
+    async showCraftingRecipes(message, page = 1, filterCategory = null) {
+        try {
+            const userId = message.author.id;
+            const user = await this.shop.economy.getUser(userId);
+            const prof = this.shop.economy.getProfession(user);
+            const isArtesano = prof?.name === '⚗️ Artesano';
+            const currentGuildId = message.guild?.id;
+
+            const CATEGORIES = {
+                potion:            { label: '🧪 Pociones',           color: '#9B59B6' },
+                combat:            { label: '⚔️ Combate',            color: '#E74C3C' },
+                nature:            { label: '🌿 Naturaleza',         color: '#2ECC71' },
+                economy:           { label: '🎲 Economía',           color: '#F39C12' },
+                tool:              { label: '🔨 Herramientas',       color: '#95A5A6' },
+                artesano_exclusive:{ label: '⚗️ Exclusivas Artesano',color: '#00BCD4' },
+                general:           { label: '📦 General',            color: '#7F8C8D' },
+            };
+
+            const formatTime = (ms) => {
+                const m = Math.floor(ms / 60000);
+                const h = Math.floor(m / 60);
+                const rem = m % 60;
+                if (h > 0) return rem > 0 ? `${h}h ${rem}m` : `${h}h`;
+                return `${m}m`;
+            };
+
+            const rarityEmojis = { common: '⚪', uncommon: '🟢', rare: '🔵', epic: '🟣', legendary: '🟠', mythic: '🔴' };
+
+            // Agrupar recetas por categoría
+            const allRecipes = Object.values(this.CRAFTING_RECIPES)
+                .filter(r => !r.guildExclusive || r.guildExclusive === currentGuildId);
+
+            const grouped = {};
+            for (const recipe of allRecipes) {
+            const cat = recipe.artesanoOnly ? 'artesano_exclusive' :
+                        (recipe.category || 'general');
+                if (!grouped[cat]) grouped[cat] = [];
+                grouped[cat].push(recipe);
+            }
+
+            // Si hay filtro de categoría activo
+            const activeCategory = filterCategory && CATEGORIES[filterCategory] ? filterCategory : null;
+
+            if (!activeCategory) {
+                // Mostrar menú de categorías
+                const embed = new EmbedBuilder()
+                    .setTitle('⚒️ Taller de Crafteo')
+                    .setDescription(
+                        `Bienvenido al taller. Selecciona una categoría para ver las recetas.\n\n` +
+                        `📋 Usa \`>recipes <categoría>\` para ir directo.\n` +
+                        `⚗️ Las recetas **🌟 Legendario** son exclusivas del Artesano.`
+                    )
+                    .setColor('#9932CC')
+                    .setTimestamp();
+
+                for (const [catId, catInfo] of Object.entries(CATEGORIES)) {
+                    const catRecipes = grouped[catId] || [];
+                    if (catRecipes.length === 0) continue;
+
+                    const locked = catId === 'artesano_exclusive' && !isArtesano;
+                    embed.addFields({
+                        name: `${catInfo.label} ${locked ? '🔒' : ''}`,
+                        value: `${catRecipes.length} receta${catRecipes.length !== 1 ? 's' : ''} • \`>recipes ${catId}\``,
+                        inline: true,
+                    });
+                }
+
+                if (isArtesano) {
+                    embed.setFooter({ text: '⚗️ Artesano activo — -40% tiempo de crafteo en todas las recetas' });
+                } else {
+                    embed.setFooter({ text: 'Usa >recipes <categoría> para ver las recetas de esa sección' });
+                }
+
+                // Botones de categoría
+                const rows = [];
+                const catEntries = Object.entries(CATEGORIES).filter(([id]) => (grouped[id] || []).length > 0);
+
+                for (let i = 0; i < catEntries.length; i += 4) {
+                    const row = new ActionRowBuilder();
+                    for (const [catId, catInfo] of catEntries.slice(i, i + 4)) {
+                        const locked = catId === 'artesano_exclusive' && !isArtesano;
+                        row.addComponents(
+                            new ButtonBuilder()
+                                .setCustomId(`recipes_cat_${catId}_1_${userId}`)
+                                .setLabel(catInfo.label.replace(/[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/gu, '').trim())
+                                .setEmoji(catInfo.label.match(/[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/gu)?.[0] || '📦')
+                                .setStyle(locked ? ButtonStyle.Secondary : ButtonStyle.Primary)
+                                .setDisabled(locked)
+                        );
+                    }
+                    if (row.components.length > 0) rows.push(row);
+                }
+
+                return message.reply({ embeds: [embed], components: rows.slice(0, 5) });
+            }
+
+            // Mostrar recetas de una categoría
+            const catRecipes = grouped[activeCategory] || [];
+            const catInfo = CATEGORIES[activeCategory];
+            const RECIPES_PER_PAGE = 3;
+            const totalPages = Math.ceil(catRecipes.length / RECIPES_PER_PAGE);
+            const currentPage = Math.max(1, Math.min(page, totalPages));
+            const pageRecipes = catRecipes.slice((currentPage - 1) * RECIPES_PER_PAGE, currentPage * RECIPES_PER_PAGE);
+
+            const embed = new EmbedBuilder()
+                .setTitle(`${catInfo.label} — Recetas de Crafteo`)
+                .setDescription(`Página **${currentPage}/${totalPages}** • ${catRecipes.length} recetas\n\`>craft <recipe_id>\` para craftear`)
+                .setColor(catInfo.color)
+                .setTimestamp();
+
+            for (const recipe of pageRecipes) {
+                const rEmoji = rarityEmojis[recipe.result.rarity] || '⚪';
+                const craftSpeedMult = isArtesano ? (this.shop.economy.getProfession(user)?.craftSpeedMult || 1.0) : 1.0;
+                const effectiveTime = Math.floor(recipe.craftTime * craftSpeedMult);
+
+                const timeText = isArtesano && craftSpeedMult < 1.0
+                    ? `~~${formatTime(recipe.craftTime)}~~ → **${formatTime(effectiveTime)}** ⚗️`
+                    : formatTime(recipe.craftTime);
+
+                // Verificar si el usuario tiene los materiales
+                const userItems = user.items || {};
+                const hasMaterials = this.hasRequiredMaterials(userItems, recipe.ingredients);
+
+                const ingredients = recipe.ingredients.map(ing => {
+                    const item = this.shop.shopItems[ing.id];
+                    const userQty = userItems[ing.id]?.quantity || 0;
+                    const hasIt = userQty >= ing.quantity;
+                    return `${hasIt ? '✅' : '❌'} ${item?.name || ing.id}: ${userQty}/${ing.quantity}`;
+                }).join('\n');
+
+                embed.addFields({
+                    name: `${rEmoji} ${recipe.name} ${hasMaterials ? '✅' : ''} ${recipe.artesanoOnly ? '🔒⚗️' : ''}`,
+                    value: [
+                        `*${recipe.description}*`,
+                        `📦 **Materiales:**\n${ingredients}`,
+                        `⏱️ **Tiempo:** ${timeText}`,
+                        `\`>craft ${recipe.id}\``,
+                    ].join('\n'),
+                    inline: false,
+                });
+            }
+
+            if (isArtesano) {
+                embed.setFooter({ text: `⚗️ Artesano — -40% tiempo de crafteo activo • Página ${currentPage}/${totalPages}` });
+            } else {
+                embed.setFooter({ text: `Página ${currentPage}/${totalPages} • ✅ = tienes los materiales` });
+            }
+
+            // Botones de navegación
+            const navRow = new ActionRowBuilder();
+            navRow.addComponents(
+                new ButtonBuilder()
+                    .setCustomId(`recipes_back_menu_${userId}`)
+                    .setLabel('⬅️ Categorías')
+                    .setStyle(ButtonStyle.Secondary),
+            );
+            if (currentPage > 1) {
+                navRow.addComponents(
+                    new ButtonBuilder()
+                        .setCustomId(`recipes_cat_${activeCategory}_${currentPage - 1}_${userId}`)
+                        .setLabel('◀️ Anterior')
+                        .setStyle(ButtonStyle.Primary)
+                );
+            }
+            if (currentPage < totalPages) {
+                navRow.addComponents(
+                    new ButtonBuilder()
+                        .setCustomId(`recipes_cat_${activeCategory}_${currentPage + 1}_${userId}`)
+                        .setLabel('Siguiente ▶️')
+                        .setStyle(ButtonStyle.Primary)
+                );
+            }
+
+            return message.reply({ embeds: [embed], components: [navRow] });
+
+        } catch (error) {
+            console.error('Error mostrando recetas:', error);
+            await message.reply('❌ Error al mostrar las recetas.');
+        }
+    }
+
     async showCraftingQueue(message) {
         const userId = message.author.id;
         const crafts = await this.shop.economy.database.getCraftingQueue(userId);
@@ -1027,86 +1611,6 @@ async handleRecipesInteraction(interaction) {
         
         await message.channel.send({ embeds: [embed] });
     }
-    
-async showCraftingRecipes(message, page = 1) {
-    try {
-        const currentGuildId = message.guild?.id;
-        const recipes = Object.values(this.CRAFTING_RECIPES)
-            .filter(r => !r.guildExclusive || r.guildExclusive === currentGuildId);
-
-        const rarityEmojis = { common: '⚪', uncommon: '🟢', rare: '🔵', epic: '🟣', legendary: '🟡', mythic: '🔴' };
-        const rarityNames = { common: 'Común', uncommon: 'Poco Común', rare: 'Raro', epic: 'Épico', legendary: 'Legendario', mythic: 'Mítico' };
-
-        const formatTime = (ms) => {
-            const m = Math.floor(ms / 60000);
-            const h = Math.floor(m / 60);
-            const rem = m % 60;
-            if (h > 0) return rem > 0 ? `${h}h ${rem}m` : `${h}h`;
-            return `${m}m`;
-        };
-
-        const RECIPES_PER_PAGE = 3;
-        const totalPages = Math.ceil(recipes.length / RECIPES_PER_PAGE);
-        const startIndex = (page - 1) * RECIPES_PER_PAGE;
-        const pageRecipes = recipes.slice(startIndex, startIndex + RECIPES_PER_PAGE);
-
-        const embed = new EmbedBuilder()
-            .setTitle('⚒️ Recetas de Crafteo')
-            .setDescription(`> Usa \`>craft <recipe_id>\` para craftear.\n> Necesitas los materiales en tu inventario (\`>bag\`).\n> 📄 Página **${page}/${totalPages}**`)
-            .setColor('#9932CC')
-            .setFooter({ text: `${recipes.length} recetas disponibles · >craft <id> para craftear` })
-            .setTimestamp();
-
-        for (const recipe of pageRecipes) {
-            const rEmoji = rarityEmojis[recipe.result.rarity] || '⚪';
-            const rName = rarityNames[recipe.result.rarity] || '';
-            const ingredients = recipe.ingredients
-                .map(ing => {
-                    const item = this.shop.shopItems[ing.id];
-                    return `${item?.emoji || '📦'} ${ing.quantity}x **${item?.name || ing.id}**`;
-                }).join('\n');
-
-            embed.addFields({
-                name: `${rEmoji} ${recipe.name}`,
-                value: [
-                    `*${recipe.description}*`,
-                    `📦 **Materiales:**\n${ingredients}`,
-                    `⏱️ **Tiempo:** ${formatTime(recipe.craftTime)}  |  ✨ ${rName}`,
-                    `\`>craft ${recipe.id}\``
-                ].join('\n'),
-                inline: false
-            });
-        }
-
-        // Botones de navegación
-        const uid = message.author.id;
-        const row = new ActionRowBuilder();
-
-        if (page > 1) {
-            row.addComponents(
-                new ButtonBuilder()
-                    .setCustomId(`recipes_prev_${page - 1}_${uid}`)
-                    .setLabel('◀️ Anterior')
-                    .setStyle(ButtonStyle.Secondary)
-            );
-        }
-        if (page < totalPages) {
-            row.addComponents(
-                new ButtonBuilder()
-                    .setCustomId(`recipes_next_${page + 1}_${uid}`)
-                    .setLabel('Siguiente ▶️')
-                    .setStyle(ButtonStyle.Secondary)
-            );
-        }
-
-        const components = row.components.length > 0 ? [row] : [];
-        await message.reply({ embeds: [embed], components });
-
-    } catch (error) {
-        console.error('Error mostrando recetas:', error);
-        await message.reply('❌ Error al mostrar las recetas.');
-    }
-}
 
     getRarityEmoji(rarity) {
         const rarityEmojis = {
@@ -1136,6 +1640,18 @@ async showCraftingRecipes(message, page = 1) {
                 return message.reply('❌ Esta receta no está disponible en este servidor.');
             }
                         
+            if (recipe.artesanoOnly) {
+                const prof = this.shop.economy.getProfession(userData);
+                if (prof?.name !== '⚗️ Artesano') {
+                    return message.reply({
+                        embeds: [new EmbedBuilder()
+                            .setTitle('🔒 Receta Exclusiva')
+                            .setDescription(`**${recipe.name}** solo puede ser crafteada por la profesión **⚗️ Artesano**.\n\nUsa \`>profesion artesano\` para cambiar tu profesión.`)
+                            .setColor('#E74C3C')]
+                    });
+                }
+            }
+
             const userData = await this.shop.economy.getUser(message.author.id);
             if (!userData) {
                 return message.reply('❌ Usuario no registrado.');
@@ -1199,7 +1715,10 @@ async showCraftingRecipes(message, page = 1) {
             // Agregar item crafteado
             // En lugar de dar el item inmediatamente, agregarlo a la cola
             const craftId = `${message.author.id}_${Date.now()}`;
-            const completesAt = Date.now() + recipe.craftTime;
+            const prof = this.shop.economy.getProfession(userData);
+            const craftSpeedMult = prof?.craftSpeedMult || 1.0;
+            const effectiveCraftTime = Math.floor(recipe.craftTime * craftSpeedMult);
+            const completesAt = Date.now() + effectiveCraftTime;
 
             // Actualizar inventario (consumir materiales)
             await this.shop.economy.updateUser(message.author.id, { items: newItems });
@@ -1215,7 +1734,9 @@ async showCraftingRecipes(message, page = 1) {
                     fields: [
                         {
                             name: '⏱️ Tiempo de Crafteo',
-                            value: `${minutes} minutos`,
+                            value: craftSpeedMult < 1.0
+                                ? `~~${Math.floor(recipe.craftTime / 60000)}m~~ → **${Math.floor(effectiveCraftTime / 60000)}m** ⚗️ Artesano`
+                                : `${Math.floor(effectiveCraftTime / 60000)} minutos`,
                             inline: true
                         },
                         {
@@ -1229,8 +1750,7 @@ async showCraftingRecipes(message, page = 1) {
                 await message.channel.send({ embeds: [embed] });
                 
                 // Programar finalización
-                setTimeout(() => this.completeCraft(craftId), recipe.craftTime);
-                
+                setTimeout(() => this.completeCraft(craftId), effectiveCraftTime);
             } catch (error) {
                 console.error('Error iniciando crafteo:', error);
                 message.reply('❌ Error iniciando el crafteo.');

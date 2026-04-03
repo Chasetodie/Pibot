@@ -1,5 +1,5 @@
 require('dotenv').config();
-const LocalDatabase = require('../../database');
+const LocalDatabase = require('../database/database');
 const EventsSystem = require('./events');
 
 const richUC = new Map();
@@ -42,6 +42,70 @@ class EconomySystem {
             minTargetBalance: 500,            // El objetivo debe tener al menos 500 coins
         };
 
+        this.pactoConfig = {
+            cooldown: 48 * 60 * 60 * 1000, // 72 horas
+            minBalance: 100,                // mínimo para hacer pacto
+        };
+
+        this.PROFESSIONS = {
+            ladron:      { name: '🗡️ Ladrón',      workMult: 0.85, robCooldownMult: 0.5,  robAlwaysFail: false, dailyMult: 1.0,  minigameMult: 1.0,  missionMult: 1.0  },
+            empresario:  { name: '💼 Empresario',   workMult: 1.25, robCooldownMult: 1.0,  robAlwaysFail: true,  dailyMult: 1.0,  minigameMult: 1.0,  missionMult: 1.0  },
+            apostador:   { name: '🎲 Apostador',    workMult: 1.0,  robCooldownMult: 1.0,  robAlwaysFail: false, dailyMult: 1.0,  minigameMult: 1.3,  missionMult: 1.0, minigameFail: 1.15},
+            artesano:    { name: '⚗️ Artesano',     workMult: 0.75, robCooldownMult: 1.0,  robAlwaysFail: false, dailyMult: 0.8,  minigameMult: 1.0,  missionMult: 1.0, craftSpeedMult: 0.6  },
+            aventurero:  { name: '🌟 Aventurero',   workMult: 1.0,  robCooldownMult: 1.0,  robAlwaysFail: false, dailyMult: 1.0,  minigameMult: 1.0,  missionMult: 2.0, dailyExtraHours: true },
+            doctor:      { name: '🩺 Doctor',       workMult: 1.0,  robCooldownMult: 1.0,  robAlwaysFail: false, dailyMult: 1.0,  minigameMult: 1.0,  missionMult: 1.0, penaltyMult: 0.5  },
+            guardian:    { name: '🛡️ Guardián',     workMult: 0.8,  robCooldownMult: 1.0,  robAlwaysFail: true,  dailyMult: 1.15, minigameMult: 1.0,  missionMult: 1.0, xpMult: 1.20 },
+            ludopata:    { name: '🎰 Ludópata',     workMult: 0.7,  robCooldownMult: 1.0,  robAlwaysFail: false, dailyMult: 0.8,  minigameMult: 1.4,  missionMult: 1.0  },
+//            cazador:     { name: '🏹 Cazador',      workMult: 0.8,  robCooldownMult: 1.0,  robAlwaysFail: false, dailyMult: 1.0,  minigameMult: 1.0,  missionMult: 1.0, bossMult: 1.5     },
+            granjero:    { name: '🌿 Granjero',     workMult: 1.0,  robCooldownMult: 1.0,  robAlwaysFail: true,  dailyMult: 0.85, minigameMult: 1.0,  missionMult: 1.0, gardenMult: 1.5   },
+        };
+
+        this.professionConfig = {
+            minLevel: 10,
+            changeCost: 150000,
+            changeCooldown: 30 * 24 * 60 * 60 * 1000, // 30 días
+        };
+
+        this.doctorConfig = {
+            cureCost: 5000,
+            cooldown: 2 * 60 * 60 * 1000,
+        };
+
+        this.mendicidadConfig = {
+            cooldown: 8 * 60 * 60 * 1000,  // 8 horas
+            donationAmount: 500,            // cantidad fija a donar
+            usersToMention: 3,              // usuarios a mencionar
+            requestExpiry: 10 * 60 * 1000, // 10 minutos para que expire
+        };
+
+        this.BOOKS = {
+            // Daily
+            tomo_finanzas:      { name: '📘 Tomo Básico de Finanzas',      price: 5000,  readHours: 1, effect: { type: 'dailyBonus',      value: 0.02 } },
+            tratado_economia:   { name: '📗 Tratado de Economía',          price: 15000, readHours: 1, effect: { type: 'dailyBonus',      value: 0.03 } },
+            arte_prosperidad:   { name: '📙 Arte de la Prosperidad',       price: 40000, readHours: 3, effect: { type: 'dailyBonus',      value: 0.05 } },
+            // Trabajo
+            manual_trabajador:  { name: '📘 Manual del Trabajador',        price: 8000,  readHours: 1, effect: { type: 'workBonus',       value: 0.02 } },
+            guia_productividad: { name: '📗 Guía de Productividad',        price: 20000, readHours: 3, effect: { type: 'workBonus',       value: 0.03 } },
+            secretos_gremio:    { name: '📙 Secretos del Gremio',          price: 50000, readHours: 6, effect: { type: 'workBonus',       value: 0.05 } },
+            // Robo
+            intro_sigilo:       { name: '📘 Introducción al Sigilo',       price: 10000, readHours: 1, effect: { type: 'robBonus',        value: 0.02 } },
+            arte_engano:        { name: '📗 Arte del Engaño',              price: 25000, readHours: 3, effect: { type: 'robBonus',        value: 0.03 } },
+            codigo_ladron:      { name: '📙 Código del Ladrón',            price: 60000, readHours: 6, effect: { type: 'robBonus',        value: 0.05 } },
+            // Cooldown trabajo
+            tecnicas_eficiencia:{ name: '📘 Técnicas de Eficiencia',       price: 20000, readHours: 3, effect: { type: 'workCooldown',    value: 0.10 } },
+            maestria_laboral:   { name: '📙 Maestría Laboral',             price: 60000, readHours: 6, effect: { type: 'workCooldown',    value: 0.20 } },
+            // Cooldown robo
+            tacticas_escape:    { name: '📘 Tácticas de Escape',           price: 25000, readHours: 3, effect: { type: 'robCooldown',     value: 0.10 } },
+            sombras_silencios:  { name: '📙 Sombras y Silencios',          price: 70000, readHours: 6, effect: { type: 'robCooldown',     value: 0.20 } },
+            // Minijuegos
+            teoria_azar:        { name: '📗 Teoría del Azar',              price: 30000, readHours: 3, effect: { type: 'minigameBonus',   value: 0.03 } },
+            probabilidades_av:  { name: '📙 Probabilidades Avanzadas',     price: 80000, readHours: 6, effect: { type: 'minigameBonus',   value: 0.05 } },
+            // Recetas
+            pergamino_i:        { name: '📜 Pergamino Antiguo I',          price: 15000, readHours: 2, effect: { type: 'recipe',          recipeId: 'secret_recipe_1' } },
+            pergamino_ii:       { name: '📜 Pergamino Antiguo II',         price: 35000, readHours: 2, effect: { type: 'recipe',          recipeId: 'secret_recipe_2' } },
+            pergamino_iii:      { name: '📜 Pergamino Antiguo III',        price: 75000, readHours: 6, effect: { type: 'recipe',          recipeId: 'secret_recipe_3' } },
+        };
+
         // AGREGAR ESTAS LÍNEAS:
         this.userCache = new Map();
         this.MAX_CACHE_SIZE = 500;
@@ -50,6 +114,43 @@ class EconomySystem {
         // Map para trackear robos activos
         this.activeRobberies = new Map();
         this.workStreaks = new Map(); // userId -> { streak, lastJob }
+
+        this.SEEDS = {
+            common_seed:    { time: 2,  moneyMin: 100,   moneyMax: 500,   ingredient: 'herb_common',    emoji: '🌱' },
+            rare_seed:      { time: 6,  moneyMin: 500,   moneyMax: 2000,  ingredient: 'herb_rare',      emoji: '🌿' },
+            epic_seed:      { time: 12, moneyMin: 2000,  moneyMax: 8000,  ingredient: 'herb_epic',      emoji: '🌺' },
+            legendary_seed: { time: 24, moneyMin: 8000,  moneyMax: 25000, ingredient: 'herb_legendary', emoji: '🌸' },
+        };
+
+        this.PET_RARITIES = {
+            common:    { name: 'Común', emoji: '⚪', bonus: { type: 'daily',     amount: 0.02 }, xpToLevel: 50,  evolutionLevel: [11, 31] },
+            uncommon:  { name: 'Poco Común', emoji: '🟢', bonus: { type: 'work',      amount: 0.03 }, xpToLevel: 80,  evolutionLevel: [11, 31] },
+            rare:      { name: 'Raro', emoji: '🔵', bonus: { type: 'minigames', amount: 0.05 }, xpToLevel: 120, evolutionLevel: [11, 31] },
+            epic:      { name: 'Épico', emoji: '🟣', bonus: { type: 'all',       amount: 0.08 }, xpToLevel: 200, evolutionLevel: [11, 31] },
+            legendary: { name: 'Legendario', emoji: '🟡', bonus: { type: 'all',       amount: 0.15, special: true }, xpToLevel: 300, evolutionLevel: [11, 31] },
+        };
+
+        this.PET_NAMES = {
+            common:    ['Sandia', 'Chiflón', 'Polvorín', 'Grisáceo'],
+            uncommon:  ['Verdoso', 'Hojín', 'Trebol', 'Musgo'],
+            rare:      ['Zafiro', 'Marino', 'Celeste', 'Aguamiel'],
+            epic:      ['Sombra', 'Nebula', 'Vórtex', 'Eclipse'],
+            legendary: ['Aurum', 'Solaris', 'Nexus', 'Infinito'],
+        };
+
+        this.ANNIVERSARY_MILESTONES = {
+            1:  { type: 'bonus_percent', amount: 0.05, label: '💕 +5% ganancias compartidas' },
+            3:  { type: 'item',          itemId: 'lucky_charm', label: '🎁 Amuleto de Ganancias de aniversario' },
+            6:  { type: 'money',         amount: 50000, label: '💰 50,000π de bono' },
+            12: { type: 'title',         label: '💍 Título "Eterno" desbloqueado' },
+        };
+
+
+        this.MENTOR_MILESTONES = {
+            10: { reward: 5000,  label: '🎓 Nivel 10 alcanzado' },
+            15: { reward: 15000, label: '🎓 Nivel 15 alcanzado' },
+            20: { reward: 30000, itemId: 'mystery_box', label: '🎓 ¡Graduado! Nivel 20' },
+        };
     }
 
     async initializeDatabase() {
@@ -244,6 +345,9 @@ class EconomySystem {
         //console.log(`💰 +${amount} ${this.config.currencySymbol} para ${userId} (${reason})`);
         await this.updateUser(userId, updateData);
        
+        // Al final de addMoney(), después de updateUser()
+        await this.missions.updateMissionProgress(userId, 'balance_milestone_today');
+
         return {
             newBalance,
             actualAmount,
@@ -294,9 +398,6 @@ class EconomySystem {
             };
         }
         
-        await this.missions.updateMissionProgress(fromUserId, 'unique_transfers', toUserId);
-        await this.missions.updateMissionProgress(toUserId, 'money_received_today', amount);
-
         const fromUser = await this.getUser(fromUserId);
         const toUser = await this.getUser(toUserId);
 
@@ -366,6 +467,11 @@ class EconomySystem {
         // *** NUEVO: ACTUALIZAR MISIONES ***
         if (this.missions) {
             await this.missions.updateMissionProgress(fromUserId, 'money_transferred', amount);
+            await this.missions.updateMissionProgress(fromUserId, 'unique_transfers', toUserId);
+            await this.missions.updateMissionProgress(toUserId, 'money_received_today', amount);
+
+            await this.missions.updateMissionProgress(fromUserId, 'balance_milestone_today');
+            await this.missions.updateMissionProgress(toUserId, 'balance_milestone_today');
         }
        
         return {
@@ -435,12 +541,17 @@ class EconomySystem {
             xpGained = await this.shop.applyXpEffects(userId, xpGained);
         }
 
-        await this.missions.updateMissionProgress(userId, 'xp_gained_today', xpGained);
+        // Multiplicador de profesión (Guardián +20% XP)
+        const profXp = this.getProfession(user);
+        if (profXp?.xpMult && profXp.xpMult !== 1.0) {
+            const bonus = Math.floor(xpGained * (profXp.xpMult - 1));
+            xpGained += bonus;
+        }
        
         const oldLevel = user.level;
         const newXp = user.xp + xpGained;
         const newTotalXp = user.total_xp + xpGained;
-        
+
         // Calcular nuevo nivel
         const newLevel = this.getLevelFromXp(newTotalXp);
         const levelUps = newLevel - oldLevel;
@@ -457,7 +568,6 @@ class EconomySystem {
             const levelBonus = newLevel * 75;
             const totalReward = reward + levelBonus;
             
-            // Agregar campos de level up
             updateData.level = newLevel;
             updateData.balance = user.balance + totalReward;
             updateData.stats = {
@@ -465,8 +575,12 @@ class EconomySystem {
                 totalEarned: (user.stats.totalEarned || 0) + totalReward
             };
             
-            await this.updateUser(userId, updateData); // ← Reemplaza saveUsers()
-           
+            await this.updateUser(userId, updateData);
+            await this.missions.updateMissionProgress(userId, 'xp_gained_today', xpGained);
+
+            // Verificar hitos de mentoría
+            const mentorMilestone = await this.checkMentorMilestone(userId, newLevel).catch(() => null);
+
             return {
                 levelUp: true,
                 levelsGained: levelUps,
@@ -475,11 +589,15 @@ class EconomySystem {
                 reward: totalReward,
                 baseReward: reward,
                 levelBonus: levelBonus,
+                mentorMilestone,
             };
         }
         
         await this.updateUser(userId, updateData); // ← Reemplaza saveUsers()
-        
+
+        await this.missions.updateMissionProgress(userId, 'xp_gained_today', xpGained);
+
+
         return {
             levelUp: false,
             xpGained: newTotalXp,
@@ -764,6 +882,8 @@ class EconomySystem {
         const user = await this.getUser(userId);
         const now = Date.now();
         let dayInMs = 24 * 60 * 60 * 1000;
+        let dayInMsAv = 26 * 60 * 60 * 1000;
+        const prof = this.getProfession(user);
 
         // Aplicar reducción de cooldown por eventos
         for (const event of (this.events?.getActiveEvents(guildId) || [])) {
@@ -781,14 +901,25 @@ class EconomySystem {
             }
         }
 
-        return (now - user.last_daily) >= dayInMs;
+        // Aventurero: daily cada 26h
+        if (prof?.dailyExtraHours) {
+            return (now - user.last_daily) >= dayInMsAv;           
+        }
+        else
+            return (now - user.last_daily) >= dayInMs;
     }
 
     // Usar comando daily
     async useDaily(userId, guildId = null) {
         if (!await this.canUseDaily(userId, guildId)) {
             const user = await this.getUser(userId);
-            const timeLeft = 24 * 60 * 60 * 1000 - (Date.now() - user.last_daily);
+            let timeLeft = 24 * 60 * 60 * 1000 - (Date.now() - user.last_daily);
+            const prof = this.getProfession(user);
+
+            if (prof?.dailyExtraHours) {
+                timeLeft = 26 * 60 * 60 * 1000 - (Date.now() - user.last_daily);
+            }
+
             return {
                 success: false,
                 timeLeft: timeLeft
@@ -818,6 +949,27 @@ class EconomySystem {
             }
         }
 
+        // Aplicar multiplicador de profesión al daily
+        const prof = this.getProfession(user);
+        if (prof?.dailyMult && prof.dailyMult !== 1.0) {
+            finalEarnings = Math.floor(finalEarnings * prof.dailyMult);
+        }
+
+        // Toque Dorado (next daily boost)
+        if (user.stats?.nextDailyBoost) {
+            finalEarnings = Math.floor(finalEarnings * user.stats.nextDailyBoost);
+            await this.updateUser(userId, {
+                stats: { ...user.stats, nextDailyBoost: null }
+            });
+        }
+
+        // Bonus de libros
+        const bookBonuses = this.getBookBonuses(user);
+        if (bookBonuses.dailyBonus > 0) {
+            const bonus = Math.floor(finalEarnings * bookBonuses.dailyBonus);
+            finalEarnings += bonus;
+        }
+
         const addResult = await this.addMoney(userId, finalEarnings, 'daily_reward');
               
         const updateData = {
@@ -834,10 +986,16 @@ class EconomySystem {
         if (this.achievements) {
             await this.achievements.updateStats(userId, 'daily_claimed');
         }
-        
+       
+        await this.addPetXP(userId);
+
+        const petBonus = await this.getPetBonus(userId, 'daily');
+
         return {
             success: true,
-            amount: amount,
+            amount: finalEarnings,
+            professionBonus: prof ? { name: prof.name, mult: prof.dailyMult } : null,
+            petBonus: petBonus > 0 ? { amount: petBonus, pet: await this.database.getEquippedPet(userId) } : null,
             oldBalance: user.balance - finalEarnings,
             newBalance: user.balance,
             eventMessage: eventMessage,
@@ -1394,6 +1552,12 @@ class EconomySystem {
             effectiveCooldown = Math.floor(effectiveCooldown * (1 - cooldownReduction));
         }
 
+        // Reducción de cooldown por libros
+        const bookBonusesWork = this.getBookBonuses(user);
+        if (bookBonusesWork.workCooldown > 0) {
+            effectiveCooldown = Math.floor(effectiveCooldown * (1 - bookBonusesWork.workCooldown));
+        }
+
         if (now - lastWork < effectiveCooldown) {
             const timeLeft = effectiveCooldown - (now - lastWork);
             // Usar el nombre del último trabajo hecho, no el que se intenta usar
@@ -1539,6 +1703,12 @@ class EconomySystem {
 
         const allBonusMessages = [eventMessage, pickaxeMessage, equipmentMessage, itemMessage, vipMessage].filter(msg => msg !== '');
 
+        // Drop raro del mapa del tesoro (~1%)
+        let droppedMap = false;
+        if (Math.random() < 0.01) {
+            droppedMap = true;
+        }
+
         return {
             canWork: true,
             needsMinigame: true,
@@ -1556,6 +1726,7 @@ class EconomySystem {
             itemMessage: itemMessage,
             vipMessage: vipMessage,
             allBonusMessages: allBonusMessages,
+            droppedMap: droppedMap,
         };
     }
 
@@ -1572,10 +1743,29 @@ class EconomySystem {
 
         let finalAmount = earnedAmount;
         let newStreak = streakData.streak;
+        // Aplicar multiplicador de profesión
+        const prof = this.getProfession(user);
+        if (prof?.workMult && prof.workMult !== 1.0) {
+            finalAmount = Math.floor(finalAmount * prof.workMult);
+        }
+
+        // Frenesí Laboral (next work boost)
+        if (user.stats?.nextWorkBoost && minigameSuccess) {
+            finalAmount = Math.floor(finalAmount * user.stats.nextWorkBoost);
+            await this.updateUser(userId, {
+                stats: { ...user.stats, nextWorkBoost: null }
+            });
+        }
+
+        // Bonus de libros
+        const bookBonuses = this.getBookBonuses(user);
+        if (bookBonuses.workBonus > 0) {
+            finalAmount = Math.floor(finalAmount * (1 + bookBonuses.workBonus));
+        }
         let streakBonusApplied = 0;
         let streakBonusLabel = '';
 
-        if (minigameSuccess) {
+        if (minigameSuccess) {     
             newStreak = (streakData.streak || 0) + 1;
             for (const b of bonuses) {
                 if (newStreak >= b.streak) {
@@ -1600,13 +1790,17 @@ class EconomySystem {
             addResult = { newBalance: updatedUser.balance, actualAmount: finalAmount, hitLimit: false };
         }
 
-await this.updateUser(userId, {
-    stats: {
-        ...user.stats,
-        totalEarned: (user.stats?.totalEarned || 0) + Math.max(0, finalAmount),
-        workStreak: newStreak
-    }
-});
+        await this.updateUser(userId, {
+            stats: {
+                ...user.stats,
+                totalEarned: (user.stats?.totalEarned || 0) + Math.max(0, finalAmount),
+                workStreak: newStreak
+            }
+        });
+
+        // XP para mascotas
+        const petEvolutions = await this.addPetXP(userId);
+        const petBonus = await this.getPetBonus(userId, 'work');
 
         return {
             finalAmount,
@@ -1615,6 +1809,9 @@ await this.updateUser(userId, {
             streakBonusApplied,
             streakBonusLabel,
             hitLimit: addResult.hitLimit || false,
+            professionBonus: prof ? { name: prof.name, mult: prof.workMult } : null,
+            petEvolutions,
+            petBonus: petBonus > 0 ? { amount: petBonus, pet: await this.database.getEquippedPet(userId) } : null,
         };
     }
     
@@ -1693,8 +1890,19 @@ await this.updateUser(userId, {
         const lastRobbery = robber.last_robbery || 0;
         const now = Date.now();
         
-        if (now - lastRobbery < this.robberyConfig.cooldown) {
-            const timeLeft = this.robberyConfig.cooldown - (now - lastRobbery);
+        // Aplicar cooldown de profesión
+        const robberProf = this.getProfession(robber);
+        if (robberProf?.robAlwaysFail) {
+            return { canRob: false, reason: 'profession_block' };
+        }
+        const bookBonuses = this.getBookBonuses(robber);
+        const robCooldown = Math.floor(
+            this.robberyConfig.cooldown * 
+            (1 - (bookBonuses?.robCooldown || 0)) *
+            (robberProf?.robCooldownMult || 1.0)
+        );
+        if (now - lastRobbery < robCooldown) {
+            const timeLeft = robCooldown - (now - lastRobbery);
             return { canRob: false, reason: 'cooldown', timeLeft: timeLeft };
         }
         
@@ -1971,8 +2179,12 @@ await this.updateUser(userId, {
                 // Calcular cantidad robada basada en clicks
                 const minSteal = this.robberyConfig.minStealPercentage / 100;
                 const maxSteal = this.robberyConfig.maxStealPercentage / 100;
-                
-                const stealPercentage = minSteal + (clickEfficiency * (maxSteal - minSteal));
+             
+                // Bonus de libros al robo
+                const bookBonuses = this.getBookBonuses(robber);
+                const adjustedMaxSteal = maxSteal + (bookBonuses.robBonus || 0);
+
+                const stealPercentage = minSteal + (clickEfficiency * (adjustedMaxSteal - minSteal));
                 const stolenAmount = Math.floor(target.balance * stealPercentage);
                 
                 if (stolenAmount <= 0) {
@@ -2073,6 +2285,530 @@ await this.updateUser(userId, {
         }
     }
     
+    getBookBonuses(user) {
+        return user.stats?.bookBonuses || {
+            dailyBonus: 0,
+            workBonus: 0,
+            robBonus: 0,
+            workCooldown: 0,
+            robCooldown: 0,
+            minigameBonus: 0,
+            recipes: []
+        };
+    }
+
+    async buyBook(userId, bookId) {
+        const book = this.BOOKS[bookId];
+        if (!book) return { success: false, reason: 'invalid_book' };
+
+        const user = await this.getUser(userId);
+
+        // Verificar si ya lo leyó
+        const readBooks = await this.database.getReadBooks(userId);
+        if (readBooks.includes(bookId)) return { success: false, reason: 'already_read' };
+
+        // Verificar si está leyendo algo
+        const current = await this.database.getCurrentReading(userId);
+        if (current) return { success: false, reason: 'already_reading', book: current };
+
+        // Verificar cooldown (12h desde último libro completado)
+        const lastCompleted = await this.database.getLastCompleted(userId);
+        if (lastCompleted) {
+            const cooldownLeft = (lastCompleted.finishes_at + 12 * 60 * 60 * 1000) - Date.now();
+            if (cooldownLeft > 0) return { success: false, reason: 'cooldown', timeLeft: cooldownLeft };
+        }
+
+        // Verificar balance
+        if (user.balance < book.price) return { success: false, reason: 'too_poor', price: book.price };
+
+        // Cobrar y empezar lectura
+        await this.removeMoney(userId, book.price, 'library_book');
+        const finishesAt = Date.now() + /*book.readHours * 60 * 60 * 1000*/20000;
+        await this.database.startReading(userId, bookId, finishesAt);
+
+        return { success: true, book, finishesAt };
+    }
+
+    async checkCompletedBooks(userId) {
+        const completed = await this.database.getCompletedUnnotified(userId);
+        if (completed.length === 0) return [];
+
+        const user = await this.getUser(userId);
+        const bookBonuses = this.getBookBonuses(user);
+        const notifications = [];
+
+        for (const reading of completed) {
+            const book = this.BOOKS[reading.book_id];
+            if (!book) continue;
+
+            // Aplicar efecto
+            if (book.effect.type === 'recipe') {
+                if (!bookBonuses.recipes) bookBonuses.recipes = [];
+                if (!bookBonuses.recipes.includes(book.effect.recipeId)) {
+                    bookBonuses.recipes.push(book.effect.recipeId);
+                }
+            } else {
+                bookBonuses[book.effect.type] = (bookBonuses[book.effect.type] || 0) + book.effect.value;
+            }
+
+            await this.database.completeReading(reading.id);
+            notifications.push(book);
+        }
+
+        await this.updateUser(userId, {
+            stats: { ...user.stats, bookBonuses }
+        });
+
+        return notifications;
+    }
+
+    getProfession(user) {
+        if (!user.profession) return null;
+        return this.PROFESSIONS[user.profession] || null;
+    }
+
+    async setProfession(userId, professionKey) {
+        const user = await this.getUser(userId);
+
+        // Verificar nivel mínimo
+        if (user.level < this.professionConfig.minLevel) {
+            return { success: false, reason: 'level_too_low', required: this.professionConfig.minLevel };
+        }
+
+        // Verificar que la profesión exista
+        if (!this.PROFESSIONS[professionKey]) {
+            return { success: false, reason: 'invalid_profession' };
+        }
+
+        // Si ya tiene profesión, verificar cooldown y costo de cambio
+        if (user.profession) {
+            const lastChange = user.last_profession_change || 0;
+            const cooldownLeft = this.professionConfig.changeCooldown - (Date.now() - lastChange);
+            if (cooldownLeft > 0) {
+                return { success: false, reason: 'cooldown', timeLeft: cooldownLeft };
+            }
+            if (user.balance < this.professionConfig.changeCost) {
+                return { success: false, reason: 'too_poor', cost: this.professionConfig.changeCost };
+            }
+            await this.removeMoney(userId, this.professionConfig.changeCost, 'profession_change');
+        }
+
+        await this.updateUser(userId, {
+            profession: professionKey,
+            last_profession_change: Date.now(),
+        });
+
+        return { success: true, profession: this.PROFESSIONS[professionKey] };
+    }
+    
+    // Verificar si puede usar daily
+    async canUseHire(userId, guildId = null) {
+        const user = await this.getUser(userId);
+        const now = Date.now();
+        let dayInMs = 24 * 60 * 60 * 1000;
+
+        // Aplicar reducción de cooldown por eventos
+        for (const event of (this.events?.getActiveEvents(guildId) || [])) {
+            if (event.type === 'fever_time') {
+                dayInMs = Math.floor(dayInMs * 0.5); // 🔥 -50% tiempo
+                break;
+            }
+            else if (event.type === 'market_crash') {
+                dayInMs = Math.floor(dayInMs * 0.4); // 🔥 -40% tiempo
+                break;
+            }
+            else if (event.type === 'server_anniversary') {
+                dayInMs = Math.floor(dayInMs * 0.3); // 🔥 -30% tiempo
+                break;
+            }
+        }
+
+        return (now - user.last_hire) >= dayInMs;
+    }
+
+    async hireSicario(userId, targetId, amount, channelId = null, guildId = null) {
+        if (!await this.canUseHire(userId, guildId)) {
+            const user = await this.getUser(userId);
+            const timeLeft = 3 * 60 * 60 * 1000 - (Date.now() - user.last_hire);
+
+            return {
+                success: false,
+                timeLeft: timeLeft,
+                reason: 'cooldown'
+            };
+        }
+
+        const user = await this.getUser(userId);
+        const target = await this.getUser(targetId);
+
+        if (userId === targetId)
+            return { success: false, reason: 'self_target' };
+        if (user.balance < amount)
+            return { success: false, reason: 'too_poor' };
+        if (!target)
+            return { success: false, reason: 'target_not_found' };
+
+        // Verificar si ya hay contrato activo contra ese target
+        const existing = await this.database.getActiveContract(targetId);
+        if (existing)
+            return { success: false, reason: 'already_contracted' };
+
+        // Descuento de Contrato Sombrío
+        if (user.stats?.sicarioDiscount) {
+            amount = Math.floor(amount * (1 - user.stats.sicarioDiscount));
+            await this.updateUser(userId, {
+                stats: { ...user.stats, sicarioDiscount: null }
+            });
+        }
+
+        await this.removeMoney(userId, amount, 'sicario_hire');
+        await this.database.createContract(userId, targetId, amount, channelId);
+
+        const updateData = { last_hire: Date.now() }
+        
+        await this.updateUser(userId, updateData);
+
+        return { success: true, amount, targetId, channelId };
+    }
+
+    async checkSicarioContract(targetId, minigameSucess) {
+        const contract = await this.database.getActiveContract(targetId);
+        if (!contract) return null;
+
+        if(!minigameSucess) return null;
+
+        // 60% de activarse, 40% falla
+        const activated = Math.random() < 0.60;
+
+        await this.database.deactivateContract(contract.id);
+
+        return {
+            activated,
+            hiredBy: contract.hired_by,
+            amount: contract.amount,
+            contractId: contract.id,
+            channelId: contract.channel_id,
+        };
+    }
+
+    async generateTreasureMap(userId, guildId, guild) {
+        // Verificar que no tenga mapa activo
+        const existing = await this.database.getActiveTreasureMap(userId);
+        if (existing) return { success: false, reason: 'already_active' };
+
+        if (!process.env.GROQ_API_KEY) return { success: false, reason: 'no_api' };
+
+        // Determinar recompensa aleatoria y cantidad de pistas
+        const rewardRoll = Math.random();
+        let reward, clueCount;
+
+        if (rewardRoll < 0.50) {
+            const amount = Math.floor(1000 + Math.random() * 4000);
+            reward = { type: 'money', amount };
+            clueCount = 2;
+        } else if (rewardRoll < 0.80) {
+            const amount = Math.floor(5000 + Math.random() * 20000);
+            reward = { type: 'money', amount };
+            clueCount = 3;
+        } else if (rewardRoll < 0.95) {
+            const amount = Math.floor(25000 + Math.random() * 75000);
+            reward = { type: 'money', amount };
+            clueCount = 4;
+        } else if (rewardRoll < 0.95) {
+            const xp = Math.floor(500 + Math.random() * 1500);
+            reward = { type: 'xp', amount: xp };
+            clueCount = 5;
+        } else {
+            // Ítem raro
+            const itemPool = ['anti_theft_shield', 'robbery_kit', 'mystery_box'];
+            const itemId = itemPool[Math.floor(Math.random() * itemPool.length)];
+            reward = { type: 'item', itemId };
+            clueCount = 4;
+        }
+
+        // Obtener canales y usuarios del servidor
+        const channels = guild.channels.cache
+            .filter(c => c.type === 0) // Solo text channels
+            .map(c => ({ id: c.id, name: c.name }))
+            .slice(0, 20);
+
+        const members = guild.members.cache
+            .filter(m => !m.user.bot)
+            .map(m => ({ id: m.id, name: m.displayName }))
+            .slice(0, 20);
+
+        if (channels.length + members.length < clueCount) {
+            return { success: false, reason: 'not_enough_targets' };
+        }
+
+        // Mezclar canales y usuarios y elegir targets para pistas
+        const allTargets = [
+            ...channels.map(c => ({ ...c, type: 'channel' })),
+            ...members.map(m => ({ ...m, type: 'user' }))
+        ].sort(() => Math.random() - 0.5).slice(0, clueCount);
+
+        // Generar pistas con Groq
+        const clues = [];
+        for (const target of allTargets) {
+            try {
+                const targetDesc = target.type === 'channel'
+                    ? `canal de Discord llamado "${target.name}"`
+                    : `usuario de Discord llamado "${target.name}"`;
+
+                const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${process.env.GROQ_API_KEY}`,
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        model: 'llama-3.1-8b-instant',
+                        max_tokens: 100,
+                        temperature: 0.8,
+                        messages: [
+                            { role: 'system', content: 'Eres un generador de acertijos para un juego. Respondes SOLO con el acertijo, sin explicaciones ni texto adicional. El acertijo debe ser en español, creativo pero no demasiado difícil, máximo 2 oraciones.' },
+                            { role: 'user', content: `Genera un acertijo que describa sin mencionar directamente este ${targetDesc}. El acertijo debe dar pistas sobre su nombre o función pero sin decirlo explícitamente.` }
+                        ]
+                    }),
+                    signal: AbortSignal.timeout(5000)
+                });
+
+                if (!response.ok) throw new Error('API error');
+                const data = await response.json();
+                const clueText = data.choices?.[0]?.message?.content?.trim();
+                if (!clueText) throw new Error('No content');
+
+                clues.push({
+                    text: clueText,
+                    targetId: target.id,
+                    targetType: target.type,
+                    targetName: target.name,
+                });
+            } catch {
+                // Fallback genérico
+                clues.push({
+                    text: target.type === 'channel'
+                        ? `Busca donde la gente habla sobre "${target.name.replace(/-/g, ' ')}"...`
+                        : `Encuentra a quien se hace llamar "${target.name}"...`,
+                    targetId: target.id,
+                    targetType: target.type,
+                    targetName: target.name,
+                });
+            }
+        }
+
+        const mapId = await this.database.createTreasureMap(userId, guildId, clues, reward);
+        return { success: true, mapId, clues, reward, clueCount };
+    }
+
+    async checkTreasureAnswer(userId, answerId, answerType) {
+        const map = await this.database.getActiveTreasureMap(userId);
+        if (!map) return { success: false, reason: 'no_map' };
+
+        const currentClue = map.clues[map.current_clue];
+        if (!currentClue) return { success: false, reason: 'no_clue' };
+
+        // Verificar respuesta
+        const isCorrect = currentClue.targetId === answerId && currentClue.targetType === answerType;
+
+        if (!isCorrect) {
+            return {
+                success: true,
+                correct: false,
+                clue: currentClue,
+                currentClue: map.current_clue,
+                totalClues: map.clues.length,
+                correctAnswer: currentClue.targetId
+            };
+        }
+
+        const nextClue = map.current_clue + 1;
+        const isFinished = nextClue >= map.clues.length;
+
+        if (isFinished) {
+            // Completar mapa y dar recompensa
+            await this.database.completeTreasureMap(map.id);
+
+            if (map.reward.type === 'money') {
+                await this.addMoney(userId, map.reward.amount, 'treasure_map');
+            } else if (map.reward.type === 'xp') {
+                await this.addXp(userId, map.reward.amount);
+            } else if (map.reward.type === 'item') {
+                const user = await this.getUser(userId);
+                const userItems = user.items || {};
+                if (userItems[map.reward.itemId]) {
+                    userItems[map.reward.itemId].quantity += 1;
+                } else {
+                    userItems[map.reward.itemId] = { id: map.reward.itemId, quantity: 1, purchaseDate: new Date().toISOString() };
+                }
+                await this.updateUser(userId, { items: userItems });
+            }
+
+            return {
+                success: true,
+                correct: true,
+                finished: true,
+                reward: map.reward,
+                currentClue: map.current_clue,
+                totalClues: map.clues.length,
+            };
+        }
+
+        // Avanzar a siguiente pista
+        await this.database.advanceTreasureMap(map.id, nextClue);
+        const nextClueData = map.clues[nextClue];
+
+        return {
+            success: true,
+            correct: true,
+            finished: false,
+            nextClue: nextClueData,
+            currentClue: nextClue,
+            totalClues: map.clues.length,
+        };
+    }
+
+    async checkPresenceStreak(userId) {
+        const user = await this.getUser(userId);
+        const now = Date.now();
+        const lastPresence = user.last_presence || 0;
+        const timeSinceLast = now - lastPresence;
+        const oneDay = 24 * 60 * 60 * 1000;
+        const twoDays = 48 * 60 * 60 * 1000;
+
+        // Si ya se chequeó hoy, no hacer nada
+        if (timeSinceLast < oneDay) return null;
+
+        let newStreak = user.presence_streak || 0;
+        let milestone = null;
+
+        // Si pasaron más de 48h, resetear racha
+        let streakLost = null;
+        if (timeSinceLast > twoDays && user.presence_streak > 0) {
+            streakLost = user.presence_streak; // guardar racha perdida para notificar
+            newStreak = 1;
+        } else {
+            newStreak += 1;
+        }
+
+        // Verificar hitos
+        const milestones = {
+            3:  { bonus: 0,     item: null,             label: '🔥 ¡3 días seguidos!' },
+            7:  { bonus: 500,   item: null,             label: '🔥 ¡Una semana seguida! +500π' },
+            15: { bonus: 2000,  item: 'energy_drink',   label: '🔥 ¡15 días seguidos! +2000π + Energy Drink' },
+            30: { bonus: 10000, item: 'mystery_box',    label: '🔥 ¡30 días seguidos! +10000π + Mystery Box' },
+        };
+
+        if (milestones[newStreak]) {
+            milestone = { ...milestones[newStreak], streak: newStreak };
+            if (milestone.bonus > 0) {
+                await this.addMoney(userId, milestone.bonus, 'presence_streak');
+            }
+            if (milestone.item) {
+                const userItems = user.items || {};
+                const item = this.shop.shopItems[milestone.item];
+                
+                if (item) {
+                    if (userItems[milestone.item]) {
+                        userItems[milestone.item].quantity += 1;
+                    } else {
+                        userItems[milestone.item] = {
+                            id: milestone.item,
+                            quantity: 1,
+                            purchaseDate: new Date().toISOString()
+                        };
+                    }
+                    await this.updateUser(userId, { items: userItems });
+                }
+            }
+        }
+
+        await this.updateUser(userId, {
+            presence_streak: newStreak,
+            last_presence: now,
+        });
+
+        return { streak: newStreak, milestone, streakLost };
+    }
+
+    async doPedir(userId) {
+        const user = await this.getUser(userId);
+
+        const lastPedir = user.last_pedir || 0;
+        const cooldownLeft = this.mendicidadConfig.cooldown - (Date.now() - lastPedir);
+        if (cooldownLeft > 0) {
+            return { success: false, reason: 'cooldown', timeLeft: cooldownLeft };
+        }
+
+        // Obtener usuarios activos aleatorios (excluyendo al que pide)
+        const allUsers = await this.getAllUsers();
+        const activeUsers = allUsers
+            .filter(u => 
+                u.id !== userId && 
+                u.last_presence > Date.now() - 7 * 24 * 60 * 60 * 1000 &&
+                u.balance >= this.mendicidadConfig.donationAmount
+            )
+            .sort(() => Math.random() - 0.5)
+            .slice(0, this.mendicidadConfig.usersToMention);
+
+        if (activeUsers.length === 0) {
+            return { success: false, reason: 'no_users' };
+        }
+
+        await this.updateUser(userId, { last_pedir: Date.now() });
+
+        return { success: true, targets: activeUsers.map(u => u.id) };
+    }
+
+    async processDonation(donorId, recipientId, amount) {
+        const donor = await this.getUser(donorId);
+        if (donor.balance < amount) {
+            return { success: false, reason: 'too_poor' };
+        }
+        await this.removeMoney(donorId, amount, 'mendicidad_donate');
+        await this.addMoney(recipientId, amount, 'mendicidad_receive');
+        return { success: true, amount };
+    }
+
+    async doPacto(userId) {
+        const user = await this.getUser(userId);
+
+        // Verificar cooldown
+        const lastPacto = user.last_pacto || 0;
+        const cooldownLeft = this.pactoConfig.cooldown - (Date.now() - lastPacto);
+        if (cooldownLeft > 0) {
+            return { success: false, reason: 'cooldown', timeLeft: cooldownLeft };
+        }
+
+        // Verificar balance mínimo
+        if (user.balance < this.pactoConfig.minBalance) {
+            return { success: false, reason: 'too_poor', minBalance: this.pactoConfig.minBalance };
+        }
+
+        const half = Math.floor(user.balance * 0.30);
+        const won = Math.random() < 0.5;
+
+        if (won) {
+            await this.addMoney(userId, half, 'pacto_win');
+        } else {
+            await this.removeMoney(userId, half, 'pacto_lose');
+        }
+
+        const updatedUser = await this.getUser(userId);
+
+        await this.updateUser(userId, {
+            last_pacto: Date.now(),
+            stats: { ...user.stats }
+        });
+
+        return {
+            success: true,
+            won,
+            amount: half,
+            newBalance: updatedUser.balance,
+        };
+    }
+
     // Obtener estadísticas de robo activo
     getRobberyStats(robberId) {
         const robberyData = this.activeRobberies.get(robberId);
@@ -2100,6 +2836,657 @@ await this.updateUser(userId, {
             return true;
         }
         return false;
+    }
+
+    // ===== HUERTO =====
+
+    async plantSeed(userId, slot, seedType) {
+        const garden = await this.database.getGarden(userId);
+        const totalSlots = 4 + (garden.extra_slots || 0);
+        
+        if (slot < 1 || slot > totalSlots) return { success: false, reason: 'invalid_slot' };
+
+        const slotData = garden[`slot${slot}`];
+        if (slotData) return { success: false, reason: 'slot_occupied' };
+
+        const seed = this.SEEDS[seedType];
+        if (!seed) return { success: false, reason: 'invalid_seed' };
+
+        // Verificar que tiene la semilla en inventario
+        const user = await this.getUser(userId);
+        const items = user.items || {};
+        if (!items[seedType] || items[seedType].quantity < 1) {
+            return { success: false, reason: 'no_seed' };
+        }
+
+        // Multiplicador de granjero
+        const prof = this.getProfession(user);
+        const gardenMult = prof?.gardenMult || 1.0;
+
+        const now = Date.now();
+        const readyAt = now + seed.time * 60 * 60 * 1000;
+
+        // Descontar semilla del inventario
+        items[seedType].quantity -= 1;
+        if (items[seedType].quantity <= 0) delete items[seedType];
+        await this.updateUser(userId, { items });
+
+        await this.database.updateGardenSlot(userId, slot, {
+            seedType,
+            plantedAt: now,
+            readyAt,
+            watered: false,
+            plagued: false,
+            harvested: false,
+            gardenMult,
+        });
+
+        return { success: true, seedType, slot, readyAt };
+    }
+
+    async harvestSlot(userId, slot) {
+        const garden = await this.database.getGarden(userId);
+        const slotData = garden[`slot${slot}`];
+
+        if (!slotData) return { success: false, reason: 'empty_slot' };
+        if (slotData.plagued) return { success: false, reason: 'plagued' };
+        if (Date.now() < slotData.readyAt) return { success: false, reason: 'not_ready', timeLeft: slotData.readyAt - Date.now() };
+
+        const seed = this.SEEDS[slotData.seedType];
+        const user = await this.getUser(userId);
+        let mult = slotData.gardenMult || 1.0;
+
+        // Fertilizante
+        if (user.stats?.gardenFertilizer) {
+            mult *= 2.0;
+            await this.updateUser(userId, {
+                stats: { ...user.stats, gardenFertilizer: false }
+            });
+        }
+
+        const money = Math.floor((Math.random() * (seed.moneyMax - seed.moneyMin) + seed.moneyMin) * mult);
+
+        await this.addMoney(userId, money, 'garden_harvest');
+        await this.database.updateGardenSlot(userId, slot, null);
+
+        // Drop de ingrediente (60% chance)
+        let ingredient = null;
+        if (Math.random() < 0.6) {
+            ingredient = seed.ingredient;
+            const user = await this.getUser(userId);
+            const items = user.items || {};
+            if (items[ingredient]) {
+                items[ingredient].quantity += 1;
+            } else {
+                items[ingredient] = { id: ingredient, quantity: 1, purchaseDate: new Date().toISOString() };
+            }
+            await this.updateUser(userId, { items });
+        }
+
+        return { success: true, money, ingredient, seedType: slotData.seedType };
+    }
+
+    async harvestAll(userId) {
+        const garden = await this.database.getGarden(userId);
+        const totalSlots = 4 + (garden.extra_slots || 0);
+        const results = [];
+
+        for (let i = 1; i <= totalSlots; i++) {
+            const slot = garden[`slot${i}`];
+            if (slot && !slot.plagued && Date.now() >= slot.readyAt) {
+                const res = await this.harvestSlot(userId, i);
+                if (res.success) results.push({ slot: i, ...res });
+            }
+        }
+        return results;
+    }
+
+    async fumigarSlot(userId, slot) {
+        const garden = await this.database.getGarden(userId);
+        const slotData = garden[`slot${slot}`];
+
+        if (!slotData) return { success: false, reason: 'empty_slot' };
+        if (!slotData.plagued) return { success: false, reason: 'not_plagued' };
+
+        const FUMIGATION_COST = 500;
+        const user = await this.getUser(userId);
+        if (user.balance < FUMIGATION_COST) return { success: false, reason: 'no_money', cost: FUMIGATION_COST };
+
+        await this.removeMoney(userId, FUMIGATION_COST, 'fumigation');
+        slotData.plagued = false;
+        await this.database.updateGardenSlot(userId, slot, slotData);
+
+        return { success: true, cost: FUMIGATION_COST };
+    }
+
+    async checkGardenPlagued(userId) {
+        const garden = await this.database.getGarden(userId);
+        const totalSlots = 4 + (garden.extra_slots || 0);
+        const plagued = [];
+
+        for (let i = 1; i <= totalSlots; i++) {
+            const slot = garden[`slot${i}`];
+            if (slot && !slot.plagued && !slot.harvested) {
+                if (Math.random() < 0.05) {
+                    slot.plagued = true;
+                    await this.database.updateGardenSlot(userId, i, slot);
+                    plagued.push(i);
+                }
+            }
+        }
+        return plagued;
+    }
+
+    // ===== MASCOTAS =====
+
+    async liberarMascota(userId, petId) {
+        const pet = await this.database.getPet(petId);
+        if (!pet || pet.user_id !== userId) return { success: false, reason: 'not_found' };
+        if (pet.equipped) return { success: false, reason: 'equipped', msg: 'Desequipa la mascota antes de liberarla.' };
+        if (pet.expedition_end) return { success: false, reason: 'on_expedition', msg: 'La mascota está en expedición, espera a que regrese.' };
+
+        // Recompensa según rareza y nivel
+        const rarityRewards = { common: 500, uncommon: 1500, rare: 4000, epic: 10000, legendary: 30000 };
+        const baseReward = rarityRewards[pet.rarity] || 500;
+        const levelBonus = pet.level * 100;
+        const totalReward = baseReward + levelBonus;
+
+        // Si tiene forma 2 o 3 da un huevo de vuelta también
+        const givesEgg = pet.form >= 2;
+
+        await this.database.deletePet(petId);
+        await this.addMoney(userId, totalReward, 'pet_released');
+
+        if (givesEgg) {
+            const user = await this.getUser(userId);
+            const items = user.items || {};
+            items['pet_egg'] = items['pet_egg'] || { id: 'pet_egg', quantity: 0 };
+            items['pet_egg'].quantity += 1;
+            await this.updateUser(userId, { items });
+        }
+
+        return {
+            success: true,
+            petName: pet.name,
+            rarity: pet.rarity,
+            reward: totalReward,
+            givesEgg,
+            form: pet.form,
+        };
+    }
+    
+    async incubateEgg(userId) {
+        const pets = await this.database.getUserPets(userId);
+        const user = await this.getUser(userId);
+        const maxPets = user.stats?.petSlots || 5;
+        if (pets.length >= maxPets) return { success: false, reason: 'max_pets', current: pets.length, max: maxPets };
+
+        const rarityRoll = Math.random();
+        let rarity;
+        if      (rarityRoll < 0.50) rarity = 'common';
+        else if (rarityRoll < 0.78) rarity = 'uncommon';
+        else if (rarityRoll < 0.93) rarity = 'rare';
+        else if (rarityRoll < 0.99) rarity = 'epic';
+        else                        rarity = 'legendary';
+
+        const namesPool = this.PET_NAMES[rarity];
+        const name = namesPool[Math.floor(Math.random() * namesPool.length)];
+
+        const petId = await this.database.createPet(userId, name, rarity);
+        return { success: true, petId, name, rarity, emoji: this.PET_RARITIES[rarity].emoji };
+    }
+
+    async equipPet(userId, petId) {
+        const pet = await this.database.getPet(petId);
+        if (!pet || pet.user_id !== userId) return { success: false, reason: 'not_found' };
+        if (pet.sick) return { success: false, reason: 'sick' };
+        if (pet.expedition_end) return { success: false, reason: 'on_expedition' };
+
+        // Desequipar actual
+        const current = await this.database.getEquippedPet(userId);
+        if (current) await this.database.updatePet(current.id, { equipped: 0 });
+
+        await this.database.updatePet(petId, { equipped: 1 });
+        return { success: true, pet };
+    }
+
+    async addPetXP(userId, amount = null) {
+        const xp = amount ?? (Math.floor(Math.random() * 5) + 1);
+        const pets = await this.database.getUserPets(userId);
+        const evolutions = [];
+
+        for (const pet of pets) {
+            if (pet.sick) continue;
+
+            const rarityData = this.PET_RARITIES[pet.rarity];
+            const xpNeeded = rarityData.xpToLevel;
+            let newXp = pet.xp + xp;
+            let newLevel = pet.level;
+            let newForm = pet.form;
+
+            while (newXp >= xpNeeded * newLevel) {
+                newXp -= xpNeeded * newLevel;
+                newLevel++;
+            }
+
+            // Evolución
+            if (newLevel >= 31 && newForm < 3) {
+                newForm = 3;
+                evolutions.push({ petId: pet.id, name: pet.name, oldForm: pet.form, newForm: 3 });
+            } else if (newLevel >= 11 && newForm < 2) {
+                newForm = 2;
+                evolutions.push({ petId: pet.id, name: pet.name, oldForm: pet.form, newForm: 2 });
+            }
+
+            await this.database.updatePet(pet.id, { xp: newXp, level: newLevel, form: newForm });
+        }
+
+        return evolutions;
+    }
+
+    async getPetBonus(userId, type) {
+        const pet = await this.database.getEquippedPet(userId);
+        if (!pet || pet.sick) return 0;
+
+        const rarityData = this.PET_RARITIES[pet.rarity];
+        const bonus = rarityData.bonus;
+        const formMult = pet.form === 3 ? 1.5 : pet.form === 2 ? 1.2 : 1.0;
+
+        if (bonus.type === 'all' || bonus.type === type) {
+            return bonus.amount * formMult;
+        }
+        return 0;
+    }
+
+    async checkPetSickness(userId) {
+        const pets = await this.database.getUserPets(userId);
+        const sickened = [];
+
+        for (const pet of pets) {
+            if (!pet.sick && Math.random() < 0.03) {
+                await this.database.updatePet(pet.id, { sick: 1, sick_since: Date.now() });
+                sickened.push(pet);
+            }
+        }
+        return sickened;
+    }
+
+    async curePet(userId, petId, itemId) {
+        const pet = await this.database.getPet(petId);
+        if (!pet || pet.user_id !== userId) return { success: false, reason: 'not_found' };
+        if (!pet.sick) return { success: false, reason: 'not_sick' };
+
+        const CURE_ITEMS = {
+            medicine_basic:    ['common', 'uncommon'],
+            medicine_advanced: ['rare', 'epic'],
+            medicine_legendary: ['common', 'uncommon', 'rare', 'epic', 'legendary'],
+        };
+
+        const allowed = CURE_ITEMS[itemId];
+        if (!allowed) return { success: false, reason: 'invalid_item' };
+        if (!allowed.includes(pet.rarity)) return { success: false, reason: 'wrong_medicine' };
+
+        const user = await this.getUser(userId);
+        const items = user.items || {};
+        if (!items[itemId] || items[itemId].quantity < 1) return { success: false, reason: 'no_item' };
+
+        items[itemId].quantity -= 1;
+        if (items[itemId].quantity <= 0) delete items[itemId];
+        await this.updateUser(userId, { items });
+        await this.database.updatePet(petId, { sick: 0, sick_since: null });
+
+        return { success: true, petName: pet.name };
+    }
+
+    async sendPetExpedition(userId, petId, type) {
+        const pet = await this.database.getPet(petId);
+        if (!pet || pet.user_id !== userId) return { success: false, reason: 'not_found' };
+        if (pet.sick) return { success: false, reason: 'sick' };
+        if (pet.equipped) return { success: false, reason: 'equipped' };
+        if (pet.expedition_end) return { success: false, reason: 'already_on_expedition' };
+
+        const EXPEDITION_TYPES = {
+            money:       { form: 1, hours: 2,  label: '💰 Expedición de dinero' },
+            ingredients: { form: 2, hours: 4,  label: '🌿 Expedición de ingredientes' },
+            special:     { form: 3, hours: 8,  label: '✨ Expedición especial' },
+        };
+
+        const exp = EXPEDITION_TYPES[type];
+        if (!exp) return { success: false, reason: 'invalid_type' };
+        if (pet.form < exp.form) return { success: false, reason: 'form_required', required: exp.form };
+
+        const expeditionEnd = Date.now() + exp.hours * 60 * 60 * 1000;
+        await this.database.updatePet(petId, { expedition_end: expeditionEnd, expedition_type: type });
+
+        return { success: true, expeditionEnd, label: exp.label };
+    }
+
+    async claimPetExpedition(userId, petId) {
+        const pet = await this.database.getPet(petId);
+        if (!pet || pet.user_id !== userId) return { success: false, reason: 'not_found' };
+        if (!pet.expedition_end) return { success: false, reason: 'not_on_expedition' };
+        if (Date.now() < pet.expedition_end) return { success: false, reason: 'not_ready', timeLeft: pet.expedition_end - Date.now() };
+
+        const type = pet.expedition_type;
+        const rarityMult = { common: 1, uncommon: 1.2, rare: 1.5, epic: 2.0, legendary: 3.0 };
+        const mult = rarityMult[pet.rarity] || 1;
+        let reward = {};
+        let xpBonus = 5;
+        const needsMinigame = Math.random() < 0.3;
+
+        if (type === 'money') {
+            reward.money = Math.floor((500 + Math.random() * 1500) * mult);
+            await this.addMoney(userId, reward.money, 'pet_expedition');
+        } else if (type === 'ingredients') {
+            const ingredientPool = ['herb_common', 'herb_rare', 'herb_epic'];
+            reward.ingredient = ingredientPool[Math.floor(Math.random() * ingredientPool.length)];
+            const user = await this.getUser(userId);
+            const items = user.items || {};
+            items[reward.ingredient] = items[reward.ingredient] || { id: reward.ingredient, quantity: 0 };
+            items[reward.ingredient].quantity += 1;
+            await this.updateUser(userId, { items });
+        } else if (type === 'special') {
+            reward.money = Math.floor((2000 + Math.random() * 5000) * mult);
+            await this.addMoney(userId, reward.money, 'pet_expedition_special');
+        }
+
+        if (needsMinigame) xpBonus = 8;
+
+        await this.addPetXP(userId, xpBonus);
+        await this.database.updatePet(petId, { expedition_end: null, expedition_type: null });
+
+        return { success: true, reward, needsMinigame, xpBonus };
+    }
+
+    async doctorCure(doctorId, targetId) {
+        const doctor = await this.getUser(doctorId);
+        const prof = this.getProfession(doctor);
+
+        if (prof?.name !== '🩺 Doctor') {
+            return { success: false, reason: 'not_doctor' };
+        }
+
+        const isSelf = doctorId === targetId;
+
+        // Cooldown (solo aplica curando a otros)
+        if (!isSelf) {
+            const lastCure = doctor.stats?.lastDoctorCure || 0;
+            const cooldownLeft = this.doctorConfig.cooldown - (Date.now() - lastCure);
+            if (cooldownLeft > 0) {
+                return { success: false, reason: 'cooldown', timeLeft: cooldownLeft };
+            }
+        }
+
+        const target = await this.getUser(targetId);
+        const activeEffects = this.shop.parseActiveEffects(target.activeEffects);
+
+        if (!activeEffects['death_hand_curse'] || activeEffects['death_hand_curse'].length === 0) {
+            return { success: false, reason: 'not_cursed' };
+        }
+
+        // Verificar que la maldición no esté expirada ya
+        const curse = activeEffects['death_hand_curse'][0];
+        if (curse.expiresAt <= Date.now()) {
+            return { success: false, reason: 'not_cursed' };
+        }
+
+        // Cobrar si no es autocuración
+        if (!isSelf) {
+            if (doctor.balance < this.doctorConfig.cureCost) {
+                return { success: false, reason: 'no_money', cost: this.doctorConfig.cureCost };
+            }
+            await this.removeMoney(doctorId, this.doctorConfig.cureCost, 'doctor_cure');
+        }
+
+        // Eliminar maldición
+        delete activeEffects['death_hand_curse'];
+        await this.updateUser(targetId, { activeEffects });
+
+        // Guardar cooldown del doctor
+        if (!isSelf) {
+            await this.updateUser(doctorId, {
+                stats: {
+                    ...doctor.stats,
+                    lastDoctorCure: Date.now(),
+                }
+            });
+        }
+
+        return {
+            success: true,
+            isSelf,
+            cost: isSelf ? 0 : this.doctorConfig.cureCost,
+        };
+    }
+
+    // ===== MATRIMONIO =====
+
+    async getMarriage(userId) {
+        return await this.database.getMarriage(userId);
+    }
+
+    async proposeMarriage(proposerId, targetId) {
+        if (proposerId === targetId) return { success: false, reason: 'self' };
+
+        const [proposer, target] = await Promise.all([
+            this.getUser(proposerId),
+            this.getUser(targetId)
+        ]);
+
+        const [proposerMarriage, targetMarriage] = await Promise.all([
+            this.database.getMarriage(proposerId),
+            this.database.getMarriage(targetId)
+        ]);
+
+        if (proposerMarriage) return { success: false, reason: 'already_married_proposer' };
+        if (targetMarriage) return { success: false, reason: 'already_married_target' };
+
+        // Cooldown de divorcio (30 días)
+        const lastDivorce = proposer.stats?.lastDivorce || 0;
+        if (Date.now() - lastDivorce < 30 * 24 * 60 * 60 * 1000) {
+            return { success: false, reason: 'divorce_cooldown', timeLeft: (30 * 24 * 60 * 60 * 1000) - (Date.now() - lastDivorce) };
+        }
+
+        const COST = 50000;
+        if (proposer.balance < COST) return { success: false, reason: 'proposer_no_money', cost: COST };
+        if (target.balance < COST) return { success: false, reason: 'target_no_money', cost: COST };
+
+        return { success: true, cost: COST };
+    }
+
+    async acceptMarriage(proposerId, targetId) {
+        const COST = 50000;
+        await this.removeMoney(proposerId, COST, 'marriage_cost');
+        await this.removeMoney(targetId, COST, 'marriage_cost');
+        const id = await this.database.createMarriage(proposerId, targetId);
+        return { success: true, id };
+    }
+
+    async applyMarriageBonus(userId, amount, isLoss = false) {
+        const marriage = await this.database.getMarriage(userId);
+        if (!marriage) return { bonus: 0, partnerId: null };
+
+        const partnerId = marriage.user1_id === userId ? marriage.user2_id : marriage.user1_id;
+
+        const milestones = marriage.anniversary_milestones || [];
+        const hasPercentBonus = milestones.includes(1);
+        const pct = hasPercentBonus ? 0.15 : 0.10;
+
+        const bonus = Math.floor(Math.abs(amount) * pct);
+        if (bonus <= 0) return { bonus: 0, partnerId };
+
+        if (isLoss) {
+            await this.removeMoney(partnerId, bonus, 'marriage_loss_share');
+        } else {
+            await this.addMoney(partnerId, bonus, 'marriage_bonus');
+        }
+
+        return { bonus, partnerId };
+    }
+
+    async initiateDivorce(userId) {
+        const marriage = await this.database.getMarriage(userId);
+        if (!marriage) return { success: false, reason: 'not_married' };
+
+        const user = await this.getUser(userId);
+        if (user.balance < 50000) return { success: false, reason: 'no_money', min: 50000 };
+
+        const partnerId = marriage.user1_id === userId ? marriage.user2_id : marriage.user1_id;
+        return { success: true, marriage, partnerId };
+    }
+
+    async processDivorce(marriageId, initiatorId, partnerAccepted) {
+        const COST_MUTUAL = 50000;
+        const COST_UNILATERAL = 100000;
+
+        const initiator = await this.getUser(initiatorId);
+
+        if (partnerAccepted) {
+            const marriage = await this.database.pool.execute('SELECT * FROM marriages WHERE id = ?', [marriageId]);
+            const m = marriage[0][0];
+            if (!m) return { success: false };
+            await this.removeMoney(initiatorId, COST_MUTUAL, 'divorce_cost');
+            const partnerId = m.user1_id === initiatorId ? m.user2_id : m.user1_id;
+            await this.removeMoney(partnerId, COST_MUTUAL, 'divorce_cost');
+        } else {
+            if (initiator.balance < COST_UNILATERAL) {
+                return { success: false, reason: 'no_money_unilateral' };
+            }
+            await this.removeMoney(initiatorId, COST_UNILATERAL, 'divorce_unilateral');
+        }
+
+        await this.database.dissolveMarriage(marriageId, initiatorId);
+        return { success: true };
+    }
+
+    async checkInactiveSpouses() {
+        const marriages = await this.database.getActiveMarriages();
+        const thirtyDays = 30 * 24 * 60 * 60 * 1000;
+
+        for (const marriage of marriages) {
+            const [u1, u2] = await Promise.all([
+                this.getUser(marriage.user1_id),
+                this.getUser(marriage.user2_id)
+            ]);
+
+            const u1inactive = (Date.now() - (u1.last_presence || 0)) > thirtyDays;
+            const u2inactive = (Date.now() - (u2.last_presence || 0)) > thirtyDays;
+
+            if (u1inactive && !u2inactive) {
+                const transfer = Math.floor(u1.balance * 0.40);
+                if (transfer > 0) await this.addMoney(marriage.user2_id, transfer, 'inheritance');
+                await this.database.dissolveMarriage(marriage.id, marriage.user1_id);
+                try {
+                    const user = await this.client.users.fetch(marriage.user2_id);
+                    user.send(`💝 Tu pareja estuvo inactiva 30 días. Recibiste **${transfer.toLocaleString()} π-b$** de herencia y el matrimonio fue disuelto automáticamente.`).catch(() => {});
+                } catch {}
+            } else if (u2inactive && !u1inactive) {
+                const transfer = Math.floor(u2.balance * 0.40);
+                if (transfer > 0) await this.addMoney(marriage.user1_id, transfer, 'inheritance');
+                await this.database.dissolveMarriage(marriage.id, marriage.user2_id);
+                try {
+                    const user = await this.client.users.fetch(marriage.user1_id);
+                    user.send(`💝 Tu pareja estuvo inactiva 30 días. Recibiste **${transfer.toLocaleString()} π-b$** de herencia y el matrimonio fue disuelto automáticamente.`).catch(() => {});
+                } catch {}
+            }
+        }
+    }
+
+    async checkAnniversaries() {
+        const marriages = await this.database.getActiveMarriages();
+
+        for (const marriage of marriages) {
+            const monthsMarried = Math.floor((Date.now() - marriage.married_at) / (30 * 24 * 60 * 60 * 1000));
+            const achieved = marriage.anniversary_milestones || [];
+
+            for (const [months, reward] of Object.entries(this.ANNIVERSARY_MILESTONES)) {
+                const m = parseInt(months);
+                if (monthsMarried >= m && !achieved.includes(m)) {
+                    achieved.push(m);
+                    await this.database.updateMarriageMilestones(marriage.id, achieved);
+
+                    for (const uid of [marriage.user1_id, marriage.user2_id]) {
+                        if (reward.type === 'money') {
+                            await this.addMoney(uid, reward.amount, 'anniversary_bonus');
+                        } else if (reward.type === 'item') {
+                            const user = await this.getUser(uid);
+                            const items = user.items || {};
+                            items[reward.itemId] = items[reward.itemId] || { id: reward.itemId, quantity: 0 };
+                            items[reward.itemId].quantity += 1;
+                            await this.updateUser(uid, { items });
+                        }
+
+                        try {
+                            const discordUser = await this.client.users.fetch(uid);
+                            discordUser.send(`💍 **¡Aniversario de ${m} ${m === 1 ? 'mes' : 'meses'}!**\n🎁 Recompensa: ${reward.label}`).catch(() => {});
+                        } catch {}
+                    }
+                }
+            }
+        }
+    }
+
+    // ===== MENTOR =====
+
+    async startMentorship(mentorId, apprenticeId) {
+        if (mentorId === apprenticeId) return { success: false, reason: 'self' };
+
+        const [mentor, apprentice] = await Promise.all([
+            this.getUser(mentorId),
+            this.getUser(apprenticeId)
+        ]);
+
+        if (mentor.level < 20) return { success: false, reason: 'mentor_level', required: 20, current: mentor.level };
+        if (apprentice.level > 5) return { success: false, reason: 'apprentice_level', max: 5, current: apprentice.level };
+
+        const [mentorRel, apprenticeRel] = await Promise.all([
+            this.database.getMentorship(mentorId),
+            this.database.getMentorship(apprenticeId)
+        ]);
+
+        if (mentorRel) return { success: false, reason: 'mentor_busy' };
+        if (apprenticeRel) return { success: false, reason: 'apprentice_busy' };
+
+        await this.database.createMentorship(mentorId, apprenticeId);
+        return { success: true };
+    }
+
+    async checkMentorMilestone(apprenticeId, newLevel) {
+        const mentorship = await this.database.getMentorship(apprenticeId);
+        if (!mentorship || mentorship.apprentice_id !== apprenticeId) return null;
+        if (mentorship.status !== 'active') return null;
+
+        // Buscar si hay algún hito en los niveles alcanzados que aún no se haya dado
+        const milestoneLevel = Object.keys(this.MENTOR_MILESTONES)
+            .map(Number)
+            .filter(m => m <= newLevel && m > (mentorship.last_milestone || 0))
+            .sort((a, b) => b - a)[0]; // El más alto pendiente
+
+        if (!milestoneLevel) return null;
+        const milestone = this.MENTOR_MILESTONES[milestoneLevel];
+
+        await this.database.updateMentorshipMilestone(mentorship.id, newLevel);
+
+        // Dar recompensas a ambos
+        await this.addMoney(apprenticeId, milestone.reward, 'mentor_milestone');
+        await this.addMoney(mentorship.mentor_id, milestone.reward, 'mentor_milestone');
+
+        if (milestone.itemId) {
+            for (const uid of [apprenticeId, mentorship.mentor_id]) {
+                const user = await this.getUser(uid);
+                const items = user.items || {};
+                items[milestone.itemId] = items[milestone.itemId] || { id: milestone.itemId, quantity: 0 };
+                items[milestone.itemId].quantity += 1;
+                await this.updateUser(uid, { items });
+            }
+        }
+
+        // Completar si llegó a nivel 20
+        if (newLevel >= 20) {
+            await this.database.completeMentorship(mentorship.id);
+        }
+
+        return { milestone, mentorId: mentorship.mentor_id, reward: milestone.reward };
     }
 
     // Método para conectar eventos

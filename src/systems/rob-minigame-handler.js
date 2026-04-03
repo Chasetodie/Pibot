@@ -14,11 +14,23 @@ class RobMinigameHandler {
     // ─────────────────────────────────────────────
     // Crear sesión de minijuego para un robo
     // ─────────────────────────────────────────────
-    createSession(robberId, targetUsername, clickEfficiency) {
+    async createSession(robberId, targetUsername, clickEfficiency) {
         const difficulty = this.pool.getDifficulty(clickEfficiency);
-        if (!difficulty) return null; // 0 clicks → fallo
+        if (!difficulty) return null;
 
-        const minigame = this.pool.getRandomMinigame(targetUsername, difficulty);
+        // Intentar IA 70% del tiempo, fallback al pool
+        let minigame = null;
+        const useAI = Math.random() < 0.7;
+        console.log(`[RobMG] Intentando AI: ${useAI}`);
+        if (useAI) {
+            minigame = await this.pool.generateAIMinigame(targetUsername, difficulty);
+            console.log(`[RobMG] AI resultado: ${minigame ? '✅ generó' : '❌ falló, usando pool'}`);
+        }
+        if (!minigame) {
+            minigame = this.pool.getRandomMinigame(targetUsername, difficulty);
+            console.log(`[RobMG] Usando pool predefinido: ${minigame.title || minigame.id}`);
+        }
+
         const timing = this.pool.getTimeForDifficulty(difficulty);
 
         const session = {

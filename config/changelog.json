@@ -1,19 +1,53 @@
 {
-    "Nuevo": [
-        "Minijuegos en el sistema de robo (92 minijuegos temáticos)",
-        "Minijuegos en trabajos",
-        "Sistema de rachas en trabajos",
-        "Comando de lyrics en música"
+    "Nuevos Sistemas": [
+        "Huerto: planta semillas, cosecha ingredientes y dinero con >huerto",
+        "Mascotas: incuba huevos, equipa mascotas y mándalas de expedición con >mascota",
+        "Matrimonio: cásate con otro usuario para compartir ganancias con >casar",
+        "Mentor: guía a un aprendiz y recibe recompensas al subir de nivel con >mentor",
+        "Artesano: profesión con -40% tiempo de crafteo y recetas exclusivas"
+    ],
+    "Crafteo": [
+        "Nuevo menú de crafteo por categorías: pociones, combate, naturaleza, economía y más",
+        "15+ nuevas recetas disponibles para todos los usuarios",
+        "5 recetas exclusivas para la profesión Artesano",
+        "8 nuevos ingredientes comprables en la tienda",
+        "Los ingredientes ahora muestran un tip de qué recetas los usan"
+    ],
+    "Profesiones": [
+        "Ladrón: robos más rápidos y posibilidad de robar objetos raros",
+        "Empresario: +25% ganancias en trabajos y no puede ser robado por otros usuarios",
+        "Apostador: +30% ganancias en minijuegos de apuesta y +15% penalizaciones",
+        "Aventurero: +100% misiones completadas pero el daily se puede reclamar cada 26 horas",
+        "Guardian: +20% XP y +15% ganancias en el daily pero no puede robar y tiene -20% ganancias en trabajos",
+        "Ludópata: +40% ganancias en minijuegos de apuesta pero -30% ganancias en trabajos y -20% en el daily",
+        "Doctor: puede curar la maldición Mano del Muerto con >curar",
+        "Artesano: crafteo más rápido y recetas únicas implementadas",
+        "Granjero: +50% ganancias en el huerto"
+    ],
+    "Mascotas": [
+        "Sistema de evolución: las mascotas evolucionan al nivel 11 y 31",
+        "Sistema de enfermedades: cura a tu mascota antes de que pierda niveles",
+        "Expediciones: manda mascotas a buscar dinero o ingredientes",
+        "Slots expandibles: hasta 10 mascotas con >buy pet_slot_extra",
+        "Liberar mascotas: suelta una mascota a cambio de π y posible huevo"
+    ],
+    "Social": [
+        "Matrimonio: bonus compartido en trabajo, daily y minijuegos",
+        "Divorcio con costos y sistema de aceptación",
+        "Aniversarios matrimoniales con recompensas por hitos",
+        "Herencia automática si tu pareja lleva 30 días inactiva"
+    ],
+    "Mejoras": [
+        "Nuevo sistema de mantenimiento y changelog automático",
+        "Minijuegos de robo con 92 enunciados temáticos únicos",
+        "Minijuegos de trabajo mejorados con enunciados únicos",
+        "Sistema de rachas en trabajos con bonificaciones",
+        "ChatBot mejorado: responde mejor y puede leer imágenes"
     ],
     "Bugs": [
-        "Fix en el embed de trabajos",
-        "Fix en el help de música",
-        "Fix en el embed de crafteos",
-        "Racha de trabajos se reseteaba al reiniciar el bot",
+        "Fix en embed de trabajos y crafteos",
+        "Fix en racha de trabajos al reiniciar el bot",
         "Varios ítems tenían descripción incorrecta"
-    ],
-    "Balances": [
-        "Varios ítems en la tienda bajaron de precio"
     ],
     "Info": [
         "¿Encontraste un bug o tienes una sugerencia? Contáctate con chasetodie10"

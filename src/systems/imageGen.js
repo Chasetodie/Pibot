@@ -52,7 +52,7 @@ class ImageGenSystem {
 
         const cfModels = [
             /*'@cf/black-forest-labs/flux-1-schnell',  */       // FLUX clásico rápido
-            '@cf/stabilityai/stable-diffusion-xl-base-1.0', // SDXL estable*/
+            '@cf/stabilityai/stable-diffusion-xl-base-1.0', // SDXL estable
             //'@cf/runwayml/stable-diffusion-v1-5',           // SD 1.5 fallback
         ];
 
@@ -119,6 +119,13 @@ return { buffer, type: 'buffer' };
         const loadingMsg = await message.reply('🎨 Generando imagen...');
         const startTime = Date.now();
 
+        const emojis = ['🎨', '🖌️', '✨', '🖼️'];
+        let emojiIndex = 0;
+        const loadingInterval = setInterval(() => {
+            emojiIndex = (emojiIndex + 1) % emojis.length;
+            loadingMsg.edit(`${emojis[emojiIndex]} Generando imagen...`).catch(() => {});
+        }, 1500);
+
         let lastError = null;
         for (const provider of this.providers) {
             try {
@@ -140,12 +147,13 @@ return { buffer, type: 'buffer' };
                 if (result.type === 'url') {
                     embed.setImage(result.url);
                     await loadingMsg.edit({ content: '', embeds: [embed] });
-} else if (result.type === 'buffer') {
-    const attachment = new AttachmentBuilder(result.buffer, { name: 'imagen.png' });
-    embed.setImage('attachment://imagen.png');
-    await loadingMsg.edit({ content: '', embeds: [embed], files: [attachment] });
+                } else if (result.type === 'buffer') {
+                    const attachment = new AttachmentBuilder(result.buffer, { name: 'imagen.png' });
+                    embed.setImage('attachment://imagen.png');
+                    await loadingMsg.edit({ content: '', embeds: [embed], files: [attachment] });
                 }
 
+                clearInterval(loadingInterval);
                 return;
             } catch (err) {
                 console.warn(`⚠️ ${provider.name} falló: ${err.message}`);
@@ -153,6 +161,7 @@ return { buffer, type: 'buffer' };
             }
         }
 
+        clearInterval(loadingInterval);
         // Todos fallaron
         await loadingMsg.edit(`❌ No se pudo generar la imagen. Todos los proveedores fallaron.\nÚltimo error: \`${lastError?.message || 'desconocido'}\``);
     }

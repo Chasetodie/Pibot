@@ -4,6 +4,11 @@ const express = require('express');
 const fs = require('fs');
 const path = require('path');
 const app = express();
+if (process.env.TESTING === 'true') {
+    require('dotenv').config({ path: '.env.testing' });
+    console.log('DB_HOST:', process.env.DB_HOST);
+    console.log('TOKEN:', process.env.TOKEN ? 'cargado' : 'vacío');
+}
 const PORT = process.env.PORT || 3000;
 const EconomySystem = require('./src/systems/economy.js'); // Importar el sistema de economia
 const EventsSystem = require('./src/systems/events.js');
@@ -120,6 +125,121 @@ setInterval(async () => {
         console.log('⚠️ Lavalink keepalive error:', err.message);
     }
 }, 4 * 60 * 1000); // cada 4 minutos
+
+setInterval(async () => {
+    await economy.database.cleanExpiredTreasureMaps();
+    
+    // Obtener contratos expirados antes de limpiarlos
+    const [expiredContracts] = await economy.database.pool.execute(
+        'SELECT * FROM contracts WHERE expires_at <= ? AND active = 1',
+        [Date.now()]
+    );
+
+    // Notificar a cada contratante
+    for (const contract of expiredContracts) {
+        try {
+            const embed = new EmbedBuilder()
+                .setColor('#888888')
+                .setTitle('🗡️ Contrato Expirado')
+                .setDescription(`Tu contrato de sicario expiró sin activarse.\n💸 El dinero pagado no se recupera.`)
+                .addFields(
+                    { name: '💰 Pagado', value: `${contract.amount.toLocaleString()} π-b$`, inline: true },
+                )
+                .setTimestamp();
+
+            let notified = false;
+            if (contract.channel_id) {
+                const channel = await client.channels.fetch(contract.channel_id).catch(() => null);
+                if (channel) {
+                    await channel.send({ content: `<@${contract.hired_by}>`, embeds: [embed] });
+                    notified = true;
+                }
+            }
+            if (!notified) {
+                const hirer = await client.users.fetch(contract.hired_by).catch(() => null);
+                if (hirer) await hirer.send({ embeds: [embed] }).catch(() => {});
+            }
+        } catch {}
+    }
+
+    await economy.database.cleanExpiredContracts();
+}, 60 * 60 * 1000);
+
+// Checker diario: herencia + aniversarios
+setInterval(async () => {
+    try {
+        await economy.checkInactiveSpouses();
+        await economy.checkAnniversaries();
+    } catch (e) { console.error('❌ Error checker matrimonios:', e.message); }
+}, 24 * 60 * 60 * 1000);
+
+// Checker de plagas en huerto — cada hora
+setInterval(async () => {
+    try {
+        const activeGardens = await economy.database.getActiveGardens();
+        for (const garden of activeGardens) {
+            const plagued = await economy.checkGardenPlagued(garden.user_id);
+            if (plagued.length > 0) {
+                const user = await client.users.fetch(garden.user_id).catch(() => null);
+                if (user) {
+                    user.send({
+                        embeds: [new EmbedBuilder()
+                            .setColor('#ff6600')
+                            .setTitle('⚠️ ¡Plaga en tu huerto!')
+                            .setDescription(`Los slots **${plagued.join(', ')}** de tu huerto fueron plagados.\nUsa \`>huerto fumigar <slot>\` para curarlos (cuesta 500 π-b$).`)
+                            .setTimestamp()]
+                    }).catch(() => {});
+                }
+            }
+        }
+    } catch (e) { console.error('❌ Error checker plagas:', e.message); }
+}, 60 * 60 * 1000);
+
+// Checker de enfermedades de mascotas — cada 12h
+setInterval(async () => {
+    try {
+        const allPets = await economy.database.getAllPetsForPlague();
+        const usersSickened = new Map();
+
+        for (const pet of allPets) {
+            if (!pet.sick && Math.random() < 0.03) {
+                await economy.database.updatePet(pet.id, { sick: 1, sick_since: Date.now() });
+                if (!usersSickened.has(pet.user_id)) usersSickened.set(pet.user_id, []);
+                usersSickened.get(pet.user_id).push(pet.name);
+            }
+        }
+
+        for (const [userId, names] of usersSickened) {
+            const user = await client.users.fetch(userId).catch(() => null);
+            if (user) {
+                user.send({
+                    embeds: [new EmbedBuilder()
+                        .setColor('#ff4444')
+                        .setTitle('🤒 ¡Tu mascota está enferma!')
+                        .setDescription(`**${names.join(', ')}** se enfermaron.\nUsa \`>mascota curar <id> <medicina>\` antes de que pierda niveles.`)
+                        .setTimestamp()]
+                }).catch(() => {});
+            }
+        }
+
+        // Consecuencias de enfermedad prolongada
+        const sickPets = await economy.database.getSickPets();
+        for (const pet of sickPets) {
+            if (!pet.sick_since) continue;
+            const sickHours = (Date.now() - pet.sick_since) / 3600000;
+
+            if (sickHours >= 72) {
+                await economy.database.deletePet(pet.id);
+                const user = await client.users.fetch(pet.user_id).catch(() => null);
+                if (user) user.send(`💀 Tu mascota **${pet.name}** murió por no recibir atención médica a tiempo.`).catch(() => {});
+            } else if (sickHours >= 48 && pet.form > 1) {
+                await economy.database.updatePet(pet.id, { form: pet.form - 1 });
+            } else if (sickHours >= 24 && pet.level > 1) {
+                await economy.database.updatePet(pet.id, { level: pet.level - 1 });
+            }
+        }
+    } catch (e) { console.error('❌ Error checker mascotas:', e.message); }
+}, 12 * 60 * 60 * 1000);
 
 /*setInterval(async () => {
     await economy.database.backup(); // Crear backup cada 6 horas
@@ -241,11 +361,26 @@ async function processMessageSafe({ message, userId, now }) {
             guildLevels.processMessage(userId, message.guild?.id)
         ]);
 
-        // Level up global (igual que antes)
+        // Level up global
         if (xpResult.status === 'fulfilled' && xpResult.value?.levelUp) {
             const channelId = await guildConfig.get(message.guild.id, 'levelup_channel');
             const channel = channelId ? message.guild.channels.cache.get(channelId) : null;
             if (channel) await sendLevelUpSafe(message, xpResult.value, channel);
+
+            // Hito de mentoría
+            if (xpResult.value?.mentorMilestone) {
+                const { mentorMilestone } = xpResult.value;
+                const milestoneChannel = channel || message.channel;
+
+                // Anuncio en canal
+                milestoneChannel.send({
+                    embeds: [new EmbedBuilder()
+                        .setTitle(`🎓 ${mentorMilestone.milestone.label}`)
+                        .setDescription(`<@${userId}> alcanzó **Nivel ${xpResult.value.newLevel}** y superó un hito de mentoría!\n💰 **+${mentorMilestone.reward.toLocaleString()} π-b$** para el aprendiz y el mentor.`)
+                        .setColor('#5865F2')
+                        .setTimestamp()]
+                }).catch(() => {});
+            }
         }
 
         // Level up del servidor
@@ -264,6 +399,20 @@ async function processMessageSafe({ message, userId, now }) {
             }
         }
 
+        // XP aleatoria para mascotas por mensaje
+        if (xpResult.status === 'fulfilled') {
+            economy.addPetXP(userId).then(evolutions => {
+                if (!evolutions?.length) return;
+                for (const evo of evolutions) {
+                    message.channel.send({
+                        embeds: [new EmbedBuilder()
+                            .setTitle('✨ ¡Tu mascota evolucionó!')
+                            .setDescription(`<@${userId}> ¡**${evo.name}** pasó de Forma ${evo.oldForm} a **Forma ${evo.newForm}**!`)
+                            .setColor('#FFD700')]
+                    }).catch(() => {});
+                }
+            }).catch(() => {});
+        }
     } catch (error) {
         console.error('❌ Error procesando mensaje:', error.message);
     }
@@ -732,6 +881,60 @@ client.on('interactionCreate', async (interaction) => {
             await allCommands.workMinigames.handleInteraction(interaction);
             return;
         }
+
+        if (interaction.customId.startsWith('sicario_delete_')) {
+            const ownerId = interaction.customId.replace('sicario_delete_', '');
+            if (interaction.user.id !== ownerId) {
+                await interaction.reply({ content: '❌ Solo quien contrató puede borrar este mensaje.', ephemeral: true });
+                return;
+            }
+            await interaction.message.delete().catch(() => {});
+            return;
+        } 
+
+        if (interaction.customId.startsWith('pedir_donar_') || interaction.customId.startsWith('pedir_ignorar_')) {
+            const parts = interaction.customId.split('_');
+            const requesterId = parts[2];
+            const donorId = interaction.user.id;
+            const donationAmount = parseInt(parts[4]) || 500;
+
+            if (donorId !== parts[3]) {
+                await interaction.reply({ content: '❌ Este botón no es para ti.', ephemeral: true });
+                return;
+            }
+
+            if (interaction.customId.startsWith('pedir_ignorar_')) {
+                await interaction.update({
+                    embeds: [new EmbedBuilder()
+                        .setColor('#888888')
+                        .setTitle('❌ Solicitud ignorada')
+                        .setDescription('Decidiste no donar esta vez.')
+                        .setTimestamp()],
+                    components: []
+                });
+                return;
+            }
+
+            // Procesar donación
+            const result = await economy.processDonation(donorId, requesterId, donationAmount);
+
+            if (!result.success) {
+                await interaction.reply({ content: `❌ No tienes suficiente dinero para donar.`, ephemeral: true });
+                return;
+            }
+
+            await interaction.update({
+                content: `<@${requesterId}>`,
+                embeds: [new EmbedBuilder()
+                    .setColor('#00ff88')
+                    .setTitle('💝 ¡Donación enviada!')
+                    .setDescription(`Donaste **${donationAmount} ${economy.config.currencySymbol}** a <@${requesterId}> 🥺`)
+                    .setTimestamp()],
+                components: []
+            });
+
+            return;
+        }
                 
         if (interaction.customId.startsWith('bj_')) {
             await minigames.handleBlackjackButtons(interaction);
@@ -1044,6 +1247,61 @@ client.on('messageCreate', async (message) => {
 
     await processUserActivityOptimized(userId, message);
 
+    // Racha de presencia — una vez por día por usuario
+    const presenceResult = await economy.checkPresenceStreak(userId).catch(() => null);
+    if (presenceResult?.streakLost) {
+        const lostEmbed = new EmbedBuilder()
+            .setColor('#ff4444')
+            .setTitle('💔 ¡Perdiste tu racha!')
+            .setDescription(
+                `No te conectaste por más de 48 horas y perdiste tu racha de **${presenceResult.streakLost} días**.\n\n` +
+                `*Vuelve mañana para empezar de nuevo desde 1.*`
+            )
+            .setFooter({ text: 'Conéctate cada día para mantener tu racha' })
+            .setTimestamp();
+        message.channel.send({ embeds: [lostEmbed] }).catch(() => {});
+    }
+    if (presenceResult?.milestone) {
+        const { milestone } = presenceResult;
+        const streakEmbed = new EmbedBuilder()
+            .setColor('#FFD700')
+            .setTitle('🌱 ¡Racha de Presencia!')
+            .setDescription(`${milestone.label}`)
+            .addFields(
+                { name: '🔥 Racha actual', value: `${presenceResult.streak} días`, inline: true },
+            )
+            .setFooter({ text: 'Conéctate cada día para mantener tu racha' })
+            .setTimestamp();
+        message.channel.send({ embeds: [streakEmbed] }).catch(() => {});
+    }
+
+    // Verificar libros completados
+    const completedBooks = await economy.checkCompletedBooks(userId).catch(() => []);
+    if (completedBooks.length > 0) {
+        for (const book of completedBooks) {
+            const effectText = book.effect.type === 'recipe'
+                ? '📜 Receta secreta de crafteo desbloqueada'
+                : `+${Math.round(book.effect.value * 100)}% ${
+                    book.effect.type === 'dailyBonus' ? 'al daily' :
+                    book.effect.type === 'workBonus' ? 'al trabajo' :
+                    book.effect.type === 'robBonus' ? 'al robo' :
+                    book.effect.type === 'workCooldown' ? 'reducción cooldown trabajo' :
+                    book.effect.type === 'robCooldown' ? 'reducción cooldown robo' :
+                    'a minijuegos'
+                }`;
+            message.channel.send({
+                embeds: [new EmbedBuilder()
+                    .setColor('#FFD700')
+                    .setTitle('📚 ¡Libro terminado!')
+                    .setDescription(
+                        `<@${userId}> terminó de leer **${book.name}**\n\n` +
+                        `✨ ${effectText} desbloqueado permanentemente`
+                    )
+                    .setTimestamp()]
+            }).catch(() => {});
+        }
+    }
+
     messageCount++;
     checkMessageRate();
 
@@ -1146,12 +1404,37 @@ client.on('messageCreate', async (message) => {
                 }
 
                 // Procesar mensaje con contexto Y mensaje referenciado
+                const cleanMessage = message.content
+                    .replace(/<@!?\d+>/g, '')
+                    .trim();
+
+                // Detectar si hay imagen adjunta
+                let imageBase64 = null;
+                let imageMimeType = null;
+
+                if (message.attachments.size > 0) {
+                    const attachment = message.attachments.first();
+                    if (attachment.contentType?.startsWith('image/')) {
+                        try {
+                            const imgResponse = await fetch(attachment.url);
+                            const arrayBuffer = await imgResponse.arrayBuffer();
+                            imageBase64 = Buffer.from(arrayBuffer).toString('base64');
+                            imageMimeType = attachment.contentType;
+                            console.log(`🖼️ Imagen detectada: ${attachment.contentType}`);
+                        } catch (e) {
+                            console.log('❌ Error procesando imagen:', e.message);
+                        }
+                    }
+                }
+
                 const result = await chatbot.processMessage(
                     message.author.id,
-                    message.content,
+                    cleanMessage,
                     message.member?.displayName || message.author.globalName || message.author.username,
                     botContext,
-                    repliedToMessage
+                    repliedToMessage,
+                    imageBase64,
+                    imageMimeType
                 );
 
                 // Detener animación

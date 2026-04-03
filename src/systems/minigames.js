@@ -3,6 +3,7 @@ const fs = require('fs');
 const path = require('path');
 const EventsSystem = require('./events');
 const { PlayerState } = require('kazagumo');
+const { findPackageJSON } = require('module');
 
 // Colores y tipos de cartas UNO
 const UNO_COLORS = ['red', 'yellow', 'green', 'blue'];
@@ -207,7 +208,7 @@ class MinigamesSystem {
                     hard: { multiplier: 2.0, xp: 80 }
                 },
                 survival: {
-                    timePerQuestion: 15000,        // 10 segundos (más rápido)
+                    timePerQuestion: 10000,        // 10 segundos (más rápido)
                     baseReward: 100,               // 100 π-b$ por pregunta correcta
                     baseXP: 10,                    // 10 XP por pregunta correcta
                     difficultyIncrement: 5,        // Cada 5 preguntas sube dificultad
@@ -218,7 +219,7 @@ class MinigamesSystem {
                     minPlayers: 2,
                     maxPlayers: 6,
                     joinTime: 45000,               // 45 segundos para unirse
-                    timePerQuestion: 15000,         // 25 segundos por pregunta
+                    timePerQuestion: 10000,         // 10 segundos por pregunta
                     questionsPerGame: 5,            // 5 preguntas
                     minBet: 0,                      // Apuesta mínima (0 = gratis)
                     maxBet: 5000,                   // Apuesta máxima
@@ -791,7 +792,7 @@ class MinigamesSystem {
         return { canCoinPlay: true };
     }
 
-    formatGameBonuses(eventMessage, luckMessage, itemMessage, equipmentMessage, vipMessage) {
+    formatGameBonuses(eventMessage, luckMessage, itemMessage, equipmentMessage, vipMessage, professionMessage, petMessage = '') {
         let bonuses = [];
         
         if (eventMessage) bonuses.push(eventMessage);
@@ -799,8 +800,41 @@ class MinigamesSystem {
         if (itemMessage) bonuses.push(itemMessage);
         if (vipMessage) bonuses.push(vipMessage);
         if (equipmentMessage) bonuses.push(equipmentMessage);
+        if (professionMessage) bonuses.push(professionMessage);
+        if (petMessage) bonuses.push(petMessage);
         
         return bonuses.length > 0 ? bonuses.join('\n') : 'No hay bonificaciones activas';
+    }
+
+    async applyPetBonus(userId, baseAmount) {
+        const petBonus = await this.economy.getPetBonus(userId, 'minigames');
+        if (petBonus <= 0) return { finalAmount: baseAmount, petMessage: '' };
+
+        const bonus = Math.floor(baseAmount * petBonus);
+        const pet = await this.economy.database.getEquippedPet(userId);
+        const r = this.economy.PET_RARITIES[pet.rarity];
+        const pct = Math.round(petBonus * 100);
+
+        return {
+            finalAmount: baseAmount + bonus,
+            petMessage: `${r.emoji} **${pet.name}** (+${pct}% minijuegos, +${this.formatNumber(bonus)} π-b$)`
+        };
+    }
+    
+    async applyMarriageBonusMinigame(userId, amount, isLoss, message) {
+        const { bonus, partnerId } = await this.economy.applyMarriageBonus(userId, amount, isLoss);
+        if (!bonus || !partnerId) return;
+
+        const action = isLoss ? `💔 -${this.formatNumber(bonus)} π-b$` : `💕 +${this.formatNumber(bonus)} π-b$`;
+        const reason = isLoss ? 'compartiste la pérdida' : 'compartiste la ganancia';
+
+        message.channel.send({
+            embeds: [new EmbedBuilder()
+                .setTitle('💍 Bonus Matrimonial')
+                .setDescription(`<@${userId}> ${reason} con <@${partnerId}>\n${action}`)
+                .setColor(isLoss ? '#ff4444' : '#ff69b4')
+                .setTimestamp()]
+        }).catch(() => {});
     }
 
     async handleCoinflip(message, args) {
@@ -982,7 +1016,25 @@ class MinigamesSystem {
                 finalEarnings -= penaltyAmount;
             }
            
+            // Multiplicador de profesión
+            const profMG = this.economy.getProfession(await this.economy.getUser(userId));
+            if (profMG?.minigameMult && profMG.minigameMult !== 1.0) {
+                const bonus = Math.floor(finalEarnings * (profMG.minigameMult - 1));
+                console.log("profBon: " + bonus);
+                finalEarnings += bonus;
+                console.log("finalprof: " + finalEarnings);
+            }
+
+            // Bonus de libros a minijuegos
+            const userMG = await this.economy.getUser(userId);
+            const bookBonusesMG = this.economy.getBookBonuses(userMG);
+            if (bookBonusesMG.minigameBonus > 0) {
+                const bookBonus = Math.floor(finalEarnings * bookBonusesMG.minigameBonus);
+                finalEarnings += bookBonus;
+            }
+
             const addResult = await this.economy.addMoney(userId, finalEarnings, 'coinflip_win');
+            this.applyMarriageBonusMinigame(userId, finalEarnings, false, message).catch(() => {});
             finalEarnings = addResult.actualAmount; // Usar cantidad real
             
             await this.economy.updateUser(userId, updateData);
@@ -1009,6 +1061,19 @@ class MinigamesSystem {
                 }
             }
 
+            // Mensaje de profesión
+            let professionMessage = '';
+            if (profMG?.minigameMult && profMG.minigameMult !== 1.0) {
+                const pct = Math.round((profMG.minigameMult - 1) * 100);
+                professionMessage = `⚔️ **${profMG.name}** (+${pct}% minijuegos)`;
+            }
+
+            // Mensaje de bonus de libros
+            if (bookBonusesMG.minigameBonus > 0) {
+                const pct = Math.round(bookBonusesMG.minigameBonus * 100);
+                professionMessage += professionMessage ? `\n📚 **Biblioteca** (+${pct}% minijuegos)` : `📚 **Biblioteca** (+${pct}% minijuegos)`;
+            }
+
             // Obtener mensajes de items
             let itemMessage = '';
             if (this.shop) {
@@ -1016,6 +1081,22 @@ class MinigamesSystem {
                 if (modifiers.multiplier > 1) {
                     itemMessage = `✨ **Items Activos** (x${modifiers.multiplier.toFixed(1)} ganancia)`;
                 }
+            }
+
+            // Pet bonus
+            const petResult = await this.applyPetBonus(userId, finalEarnings);
+            finalEarnings = petResult.finalAmount;
+            const petMessage = petResult.petMessage;
+
+            // Evoluciones de mascotas
+            const petEvolutions = await this.economy.addPetXP(userId);
+            for (const evo of petEvolutions) {
+                message.channel.send({
+                    embeds: [new EmbedBuilder()
+                        .setTitle('✨ ¡Tu mascota evolucionó!')
+                        .setDescription(`**${evo.name}** pasó de Forma ${evo.oldForm} a **Forma ${evo.newForm}**!`)
+                        .setColor('#FFD700')]
+                }).catch(() => {});
             }
 
             // Combinar todos los mensajes
@@ -1026,10 +1107,10 @@ class MinigamesSystem {
                 .addFields(
                     { name: '🪙 Resultado', value: result === 'cara' ? '🟡 Cara' : '⚪ Cruz', inline: true },
                     { name: '🎯 Tu Elección', value: normalizedChoice === 'cara' ? '🟡 Cara' : '⚪ Cruz', inline: true },
-                    { name: '💰 Ganancia', value: `+${this.formatNumber(profit)} π-b$`, inline: true },
-                    { name: '💸 Balance Antiguo', value: `${this.formatNumber(user.balance - profit)} π-b$`, inline: false },
+                    { name: '💰 Ganancia', value: `+${this.formatNumber(finalEarnings)} π-b$`, inline: true },
+                    { name: '💸 Balance Antiguo', value: `${this.formatNumber(user.balance - finalEarnings)} π-b$`, inline: false },
                     { name: '💳 Balance Actual', value: `${this.formatNumber(user.balance)} π-b$`, inline: false },
-                    { name: '🎉 Bonificaciones', value: this.formatGameBonuses(eventMessage, luckMessage, itemMessage, equipmentMessage), inline: false }
+                    { name: '🎉 Bonificaciones', value: this.formatGameBonuses(eventMessage, luckMessage, itemMessage, equipmentMessage, '', professionMessage, petMessage), inline: false }
                 );
 
             if (curseMoneyPenalty > 0) {
@@ -1107,6 +1188,21 @@ class MinigamesSystem {
                 }
             }
             
+            // Multiplicador de profesión
+            const profMG = this.economy.getProfession(await this.economy.getUser(userId));
+            let moneyBeforeLost = betAmount;
+            if (profMG?.minigameFail && profMG.minigameFail !== 1.0) {
+                const bonus = Math.floor(betAmount * (profMG.minigameFail - 1));
+                moneyBeforeLost += bonus;
+            }
+
+            // Mensaje de profesión
+            let professionMessage = '';
+            if (profMG?.minigameFail && profMG.minigameFail !== 1.0) {
+                const pct = Math.round((profMG.minigameFail - 1) * 100);
+                professionMessage = `⚔️ **${profMG.name}** (+${pct}% penalizaciones)`;
+            }
+
             // ✅ Aplicar protección o pérdida
             if (hasProtected) {
                 await message.reply(protectionMessage);
@@ -1114,7 +1210,8 @@ class MinigamesSystem {
                 if (protectionMessage) {
                     await message.reply(protectionMessage); // Mostrar que falló
                 }
-                await this.economy.removeMoney(userId, betAmount, 'coinflip_loss');
+                await this.economy.removeMoney(userId, moneyBeforeLost, 'coinflip_loss');
+                this.applyMarriageBonusMinigame(userId, moneyBeforeLost, true, message).catch(() => {});
             }
 
             await this.economy.updateUser(userId, updateData);
@@ -1138,9 +1235,10 @@ class MinigamesSystem {
                 );
             } else {
                 embed.addFields(
-                    { name: '💸 Perdiste', value: `${this.formatNumber(betAmount)} π-b$`, inline: true },
-                    { name: '💸 Balance Antiguo', value: `${this.formatNumber(user.balance + betAmount)} π-b$`, inline: false },
-                    { name: '💳 Balance Actual', value: `${this.formatNumber(user.balance)} π-b$`, inline: false }
+                    { name: '💸 Perdiste', value: `${this.formatNumber(moneyBeforeLost)} π-b$`, inline: true },
+                    { name: '💸 Balance Antiguo', value: `${this.formatNumber(user.balance + moneyBeforeLost)} π-b$`, inline: false },
+                    { name: '💳 Balance Actual', value: `${this.formatNumber(user.balance)} π-b$`, inline: false },
+                    { name: '⚔️ Profesiones', value: this.formatGameBonuses('', '', '', '', '', professionMessage), inline: false }
                 );
             }
         }
@@ -1432,12 +1530,44 @@ class MinigamesSystem {
                 finalEarnings = Math.min(finalEarnings, spaceLeft);
             }
 
+            // Mensaje de profesión
+            const profMG = this.economy.getProfession(await this.economy.getUser(userId));
+            let professionMessage = '';
+            if (profMG?.minigameMult && profMG.minigameMult !== 1.0) {
+                const pct = Math.round((profMG.minigameMult - 1) * 100);
+                professionMessage = `⚔️ **${profMG.name}** (+${pct}% minijuegos)`;
+            }
+
+            // Mensaje de bonus de libros
+            const userMG = await this.economy.getUser(userId);
+            const bookBonusesMG = this.economy.getBookBonuses(userMG);
+            if (bookBonusesMG.minigameBonus > 0) {
+                const pct = Math.round(bookBonusesMG.minigameBonus * 100);
+                professionMessage += professionMessage ? `\n📚 **Biblioteca** (+${pct}% minijuegos)` : `📚 **Biblioteca** (+${pct}% minijuegos)`;
+            }
+
             let itemMessage = '';
             if (this.shop) {
                 const modifiers = await this.shop.getActiveMultipliers(userId, 'games');
                 if (modifiers.multiplier > 1) {
                     itemMessage = `✨ **Items Activos** (x${modifiers.multiplier.toFixed(1)} ganancia)`;
                 }
+            }
+
+            // Pet bonus
+            const petResult = await this.applyPetBonus(userId, finalEarnings);
+            finalEarnings = petResult.finalAmount;
+            const petMessage = petResult.petMessage;
+
+            // Evoluciones
+            const petEvolutions = await this.economy.addPetXP(userId);
+            for (const evo of petEvolutions) {
+                message.channel.send({
+                    embeds: [new EmbedBuilder()
+                        .setTitle('✨ ¡Tu mascota evolucionó!')
+                        .setDescription(`**${evo.name}** pasó de Forma ${evo.oldForm} a **Forma ${evo.newForm}**!`)
+                        .setColor('#FFD700')]
+                }).catch(() => {});
             }
 
             // ✅ Aplicar penalización de maldición (-25% dinero)
@@ -1451,7 +1581,20 @@ class MinigamesSystem {
                 finalEarnings -= penaltyAmount;
             }
 
+            // Multiplicador de profesión
+            if (profMG?.minigameMult && profMG.minigameMult !== 1.0) {
+                const bonus = Math.floor(finalEarnings * (profMG.minigameMult - 1));
+                finalEarnings += bonus;
+            }
+
+            // Bonus de libros a minijuegos
+            if (bookBonusesMG.minigameBonus > 0) {
+                const bookBonus = Math.floor(finalEarnings * bookBonusesMG.minigameBonus);
+                finalEarnings += bookBonus;
+            }
+
             const addResult = await this.economy.addMoney(userId, finalEarnings, 'dice_win');
+            this.applyMarriageBonusMinigame(userId, finalEarnings, false, message).catch(() => {}); 
             finalEarnings = addResult.actualAmount;
             await this.economy.updateUser(userId, updateData);
 
@@ -1491,10 +1634,10 @@ class MinigamesSystem {
             embed.setDescription(`🎉 **¡GANASTE!**`)
                 .addFields(
                     { name: '💰 Multiplicador', value: `x${multiplier}`, inline: true },
-                    { name: '💰 Ganancia', value: `+${this.formatNumber(profit)} π-b$`, inline: false },
-                    { name: '💸 Balance Antiguo', value: `${this.formatNumber(user.balance - profit)} π-b$`, inline: false },
+                    { name: '💰 Ganancia', value: `+${this.formatNumber(finalEarnings)} π-b$`, inline: false },
+                    { name: '💸 Balance Antiguo', value: `${this.formatNumber(user.balance - finalEarnings)} π-b$`, inline: false },
                     { name: '💳 Balance Actual', value: `${this.formatNumber(user.balance)} π-b$`, inline: false },
-                    { name: '🎉 Bonificaciones', value: this.formatGameBonuses(eventMessage, luckMessage, itemMessage, equipmentMessage), inline: false }
+                    { name: '🎉 Bonificaciones', value: this.formatGameBonuses(eventMessage, luckMessage, itemMessage, equipmentMessage, '', professionMessage, petMessage), inline: false }
                 );
 
             if (curseMoneyPenalty > 0) {
@@ -1573,6 +1716,21 @@ class MinigamesSystem {
                 }
             }
             
+            // Multiplicador de profesión
+            const profMG = this.economy.getProfession(await this.economy.getUser(userId));
+            let moneyBeforeLost = betAmount;
+            if (profMG?.minigameFail && profMG.minigameFail !== 1.0) {
+                const bonus = Math.floor(betAmount * (profMG.minigameFail - 1));
+                moneyBeforeLost += bonus;
+            }
+
+            // Mensaje de profesión
+            let professionMessage = '';
+            if (profMG?.minigameFail && profMG.minigameFail !== 1.0) {
+                const pct = Math.round((profMG.minigameFail - 1) * 100);
+                professionMessage = `⚔️ **${profMG.name}** (+${pct}% penalizaciones)`;
+            }
+            
             // ✅ Aplicar protección o pérdida
             if (hasProtected) {
                 await message.reply(protectionMessage);
@@ -1580,7 +1738,8 @@ class MinigamesSystem {
                 if (protectionMessage) {
                     await message.reply(protectionMessage); // Mostrar que falló
                 }
-                await this.economy.removeMoney(userId, betAmount, 'dice_loss');
+                await this.economy.removeMoney(userId, moneyBeforeLost, 'dice_loss');
+                this.applyMarriageBonusMinigame(userId, moneyBeforeLost, true, message).catch(() => {});
             }
             
             await this.economy.updateUser(userId, updateData);
@@ -1594,9 +1753,10 @@ class MinigamesSystem {
 
             embed.setDescription(`💸 **Perdiste...**`)
                 .addFields(
-                    { name: '💰 Dinero Apostado', value: `${this.formatNumber(betAmount)} π-b$`, inline: false },
-                    { name: '💸 Balance Antiguo', value: `${this.formatNumber(user.balance + betAmount)} π-b$`, inline: false },
+                    { name: '💰 Dinero Apostado', value: `${this.formatNumber(moneyBeforeLost)} π-b$`, inline: false },
+                    { name: '💸 Balance Antiguo', value: `${this.formatNumber(user.balance + moneyBeforeLost)} π-b$`, inline: false },
                     { name: '💳 Balance Actual', value: `${this.formatNumber(user.balance)} π-b$`, inline: false },
+                    { name: '⚔️ Profesiones', value: this.formatGameBonuses('', '', '', '', '', professionMessage), inline: false }
                 );
         }
 
@@ -1868,6 +2028,22 @@ class MinigamesSystem {
                 finalEarnings = Math.min(finalEarnings, spaceLeft);
             }
             
+            // Mensaje de profesión
+            const profMG = this.economy.getProfession(await this.economy.getUser(userId));
+            let professionMessage = '';
+            if (profMG?.minigameMult && profMG.minigameMult !== 1.0) {
+                const pct = Math.round((profMG.minigameMult - 1) * 100);
+                professionMessage = `⚔️ **${profMG.name}** (+${pct}% minijuegos)`;
+            }
+
+            const userMG = await this.economy.getUser(userId);
+            const bookBonusesMG = this.economy.getBookBonuses(userMG);
+            // Mensaje de bonus de libros
+            if (bookBonusesMG.minigameBonus > 0) {
+                const pct = Math.round(bookBonusesMG.minigameBonus * 100);
+                professionMessage += professionMessage ? `\n📚 **Biblioteca** (+${pct}% minijuegos)` : `📚 **Biblioteca** (+${pct}% minijuegos)`;
+            }
+
             // Obtener mensajes de items
             let itemMessage = '';
             if (this.shop) {
@@ -1875,6 +2051,22 @@ class MinigamesSystem {
                 if (modifiers.multiplier > 1) {
                     itemMessage = `✨ **Items Activos** (x${modifiers.multiplier.toFixed(1)} ganancia)`;
                 }
+            }
+
+            // Pet bonus
+            const petResult = await this.applyPetBonus(userId, finalEarnings);
+            finalEarnings = petResult.finalAmount;
+            const petMessage = petResult.petMessage;
+
+            // Evoluciones
+            const petEvolutions = await this.economy.addPetXP(userId);
+            for (const evo of petEvolutions) {
+                message.channel.send({
+                    embeds: [new EmbedBuilder()
+                        .setTitle('✨ ¡Tu mascota evolucionó!')
+                        .setDescription(`**${evo.name}** pasó de Forma ${evo.oldForm} a **Forma ${evo.newForm}**!`)
+                        .setColor('#FFD700')]
+                }).catch(() => {});
             }
 
             // ✅ Aplicar penalización de maldición (-25% dinero)
@@ -1890,7 +2082,20 @@ class MinigamesSystem {
 
             await this.economy.database.incrementGameLimit(userId, gameType);
 
-            const addResult = await this.economy.addMoney(userId, finalEarnings, 'lottery_win');     
+            // Multiplicador de profesión
+            if (profMG?.minigameMult && profMG.minigameMult !== 1.0) {
+                const bonus = Math.floor(finalEarnings * (profMG.minigameMult - 1));
+                finalEarnings += bonus;
+            }
+
+            // Bonus de libros a minijuegos
+            if (bookBonusesMG.minigameBonus > 0) {
+                const bookBonus = Math.floor(finalEarnings * bookBonusesMG.minigameBonus);
+                finalEarnings += bookBonus;
+            }
+
+            const addResult = await this.economy.addMoney(userId, finalEarnings, 'lottery_win');
+            this.applyMarriageBonusMinigame(userId, finalEarnings, false, message).catch(() => {});     
             finalEarnings = addResult.actualAmount;
             
             // AGREGAR ESTAS LÍNEAS:
@@ -1940,10 +2145,10 @@ class MinigamesSystem {
                 .addFields(
                     { name: '🎊 ¡Increíble!', value: `¡Acertaste el número exacto!`, inline: false },
                     { name: '💎 Multiplicador', value: `x${this.config.lottery.winMultiplier}`, inline: true },
-                    { name: '🤑 Ganancia Total', value: `+${this.formatNumber(profit)} π-b$`, inline: true },
-                    { name: '💸 Balance Anterior', value: `${this.formatNumber(user.balance - profit)} π-b$`, inline: false },
+                    { name: '🤑 Ganancia Total', value: `+${this.formatNumber(finalEarnings)} π-b$`, inline: true },
+                    { name: '💸 Balance Anterior', value: `${this.formatNumber(user.balance - finalEarnings)} π-b$`, inline: false },
                     { name: '💳 Balance Actual', value: `${this.formatNumber(user.balance)} π-b$ 🚀`, inline: false },
-                    { name: '🎉 Bonificaciones', value: this.formatGameBonuses(eventMessage, luckMessage, itemMessage, equipmentMessage), inline: false }
+                    { name: '🎉 Bonificaciones', value: this.formatGameBonuses(eventMessage, luckMessage, itemMessage, equipmentMessage, '', professionMessage, petMessage), inline: false }
                 );
 
             if (curseMoneyPenalty > 0) {
@@ -2023,6 +2228,21 @@ class MinigamesSystem {
                 }
             }
             
+            // Multiplicador de profesión
+            const profMG = this.economy.getProfession(await this.economy.getUser(userId));
+            let moneyBeforeLost = betAmount;
+            if (profMG?.minigameFail && profMG.minigameFail !== 1.0) {
+                const bonus = Math.floor(betAmount * (profMG.minigameFail - 1));
+                moneyBeforeLost += bonus;
+            }
+
+            // Mensaje de profesión
+            let professionMessage = '';
+            if (profMG?.minigameFail && profMG.minigameFail !== 1.0) {
+                const pct = Math.round((profMG.minigameFail - 1) * 100);
+                professionMessage = `⚔️ **${profMG.name}** (+${pct}% penalizaciones)`;
+            }
+
             // ✅ Aplicar protección o pérdida
             if (hasProtected) {
                 await message.reply(protectionMessage);
@@ -2030,7 +2250,8 @@ class MinigamesSystem {
                 if (protectionMessage) {
                     await message.reply(protectionMessage); // Mostrar que falló
                 }
-                await this.economy.removeMoney(userId, betAmount, 'lottery');
+                await this.economy.removeMoney(userId, moneyBeforeLost, 'lottery');
+                this.applyMarriageBonusMinigame(userId, moneyBeforeLost, true, message).catch(() => {});
             }
             
             await this.economy.updateUser(userId, updateData);
@@ -2058,9 +2279,10 @@ class MinigamesSystem {
             resultEmbed.setDescription(`💸 **No ganaste esta vez...** ${encouragement}`)
                 .addFields(
                     { name: '📊 Diferencia', value: `${difference} números`, inline: true },
-                    { name: '💸 Perdiste', value: `${this.formatNumber(betAmount)} π-b$`, inline: true },
-                    { name: '💸 Balance Anterior', value: `${this.formatNumber(user.balance + betAmount)} π-b$`, inline: false },
+                    { name: '💸 Perdiste', value: `${this.formatNumber(moneyBeforeLost)} π-b$`, inline: true },
+                    { name: '💸 Balance Anterior', value: `${this.formatNumber(user.balance + moneyBeforeLost)} π-b$`, inline: false },
                     { name: '💳 Balance Actual', value: `${this.formatNumber(user.balance)} π-b$`, inline: false },
+                    { name: '⚔️ Profesiones', value: this.formatGameBonuses('', '', '', '', '', professionMessage), inline: false }   ,                 
                     { name: '💡 Consejo', value: 'La lotería es pura suerte. ¡Cada número tiene la misma probabilidad!', inline: false }
                 );
         }
@@ -2432,6 +2654,7 @@ const userId = gameState.userId;
         
         // ✅ DOBLAR APUESTA
         await this.economy.removeMoney(userId, player.bet, 'horserace_double');
+        this.applyMarriageBonusMinigame(userId, player.bet, true, message).catch(() => {});
         player.hasDoubled = true;
         
         if (game.mode === 'multi') {
@@ -2579,6 +2802,7 @@ const userId = gameState.userId;
 
         let finalEarnings = 0;
         let eventMessage = '';
+        let professionMessage = '';
         let itemMessage = '';
         const gameType = 'blackjack';
 
@@ -2591,6 +2815,14 @@ const userId = gameState.userId;
         let protectionMessage = '';
         const curse = activeEffects['death_hand_curse'];
         let curseMoneyPenalty = 0;
+        const profMG = this.economy.getProfession(await this.economy.getUser(userId));
+        const userMG = await this.economy.getUser(userId);
+        const bookBonusesMG = this.economy.getBookBonuses(userMG);
+        let bonus = 0;
+        let moneyBeforeLost = betAmount;
+        const petResult = await this.applyPetBonus(userId, finalEarnings);
+        const petMessage = petResult.petMessage;
+        const petEvolutions = await this.economy.addPetXP(userId);
 
         switch (result) {
             case 'blackjack':
@@ -2606,7 +2838,7 @@ const userId = gameState.userId;
                 const eventBonus = await this.applyEventEffects(userId, profit, 'minigames', messageOrInteraction.guild?.id);
                 finalEarnings = eventBonus.finalAmount; // sin let — usa la variable del scope exterior
                 eventMessage = eventBonus.eventMessage; // asignar el mensaje
-                
+
                 // APLICAR ITEMS
                 if (this.shop) {
                     const modifiers = await this.shop.getActiveMultipliers(userId, 'games');
@@ -2620,12 +2852,34 @@ const userId = gameState.userId;
                     await this.shop.consumeItemUse(userId, 'games');
                 }
 
+                if (profMG?.minigameMult && profMG.minigameMult !== 1.0) {
+                    const pct = Math.round((profMG.minigameMult - 1) * 100);
+                    professionMessage = `⚔️ **${profMG.name}** (+${pct}% minijuegos)`;
+                }
+
+                // Mensaje de bonus de libros
+                if (bookBonusesMG.minigameBonus > 0) {
+                    const pct = Math.round(bookBonusesMG.minigameBonus * 100);
+                    professionMessage += professionMessage ? `\n📚 **Biblioteca** (+${pct}% minijuegos)` : `📚 **Biblioteca** (+${pct}% minijuegos)`;
+                }
+
                 // Obtener mensajes de items
                 if (this.shop) {
                     const modifiers = await this.shop.getActiveMultipliers(userId, 'games');
                     if (modifiers.multiplier > 1) {
                         itemMessage = `✨ **Items Activos** (x${modifiers.multiplier.toFixed(1)} ganancia)`;
                     }
+                }
+
+                finalEarnings = petResult.finalAmount;
+
+                for (const evo of petEvolutions) {
+                    message.channel.send({
+                        embeds: [new EmbedBuilder()
+                            .setTitle('✨ ¡Tu mascota evolucionó!')
+                            .setDescription(`**${evo.name}** pasó de Forma ${evo.oldForm} a **Forma ${evo.newForm}**!`)
+                            .setColor('#FFD700')]
+                    }).catch(() => {});
                 }
 
                 if (equipmentBonus.applied && equipmentBonus.money > 0) {
@@ -2662,8 +2916,21 @@ const userId = gameState.userId;
                     finalEarnings -= penaltyAmount;
                 }
 
+                if (profMG?.minigameMult && profMG.minigameMult !== 1.0) {
+                    bonus = Math.floor(finalEarnings * (profMG.minigameMult - 1));
+                    finalEarnings += bonus;
+                }
+
+                // Bonus de libros a minijuegos
+                if (bookBonusesMG.minigameBonus > 0) {
+                    const bookBonus = Math.floor(finalEarnings * bookBonusesMG.minigameBonus);
+                    finalEarnings += bookBonus;
+                }
+
                 addResult = await this.economy.addMoney(userId, finalEarnings, 'blackjack_win');
+                this.applyMarriageBonusMinigame(userId, finalEarnings, false, message).catch(() => {});
                 finalEarnings = addResult.actualAmount;
+                profit = finalEarnings;
                 
                 // *** NUEVO: ACTUALIZAR ESTADÍSTICAS DE ACHIEVEMENTS ***
                 if (this.achievements) {
@@ -2714,11 +2981,33 @@ const userId = gameState.userId;
                     await this.shop.consumeItemUse(userId, 'games');
                 }
 
+                if (profMG?.minigameMult && profMG.minigameMult !== 1.0) {
+                    const pct = Math.round((profMG.minigameMult - 1) * 100);
+                    professionMessage = `⚔️ **${profMG.name}** (+${pct}% minijuegos)`;
+                }
+
+                // Mensaje de bonus de libros
+                if (bookBonusesMG.minigameBonus > 0) {
+                    const pct = Math.round(bookBonusesMG.minigameBonus * 100);
+                    professionMessage += professionMessage ? `\n📚 **Biblioteca** (+${pct}% minijuegos)` : `📚 **Biblioteca** (+${pct}% minijuegos)`;
+                }
+
                 if (this.shop) {
                     const modifiers = await this.shop.getActiveMultipliers(userId, 'games');
                     if (modifiers.multiplier > 1) {
                         itemMessage = `✨ **Items Activos** (x${modifiers.multiplier.toFixed(1)} ganancia)`;
                     }
+                }
+
+                finalEarnings = petResult.finalAmount;
+
+                for (const evo of petEvolutions) {
+                    message.channel.send({
+                        embeds: [new EmbedBuilder()
+                            .setTitle('✨ ¡Tu mascota evolucionó!')
+                            .setDescription(`**${evo.name}** pasó de Forma ${evo.oldForm} a **Forma ${evo.newForm}**!`)
+                            .setColor('#FFD700')]
+                    }).catch(() => {});
                 }
 
                 if (equipmentBonus.applied && equipmentBonus.money > 0) {
@@ -2755,8 +3044,21 @@ const userId = gameState.userId;
                     finalEarnings -= penaltyAmount;
                 }
 
+                if (profMG?.minigameMult && profMG.minigameMult !== 1.0) {
+                    bonus = Math.floor(finalEarnings * (profMG.minigameMult - 1));
+                    finalEarnings += bonus;
+                }
+
+                // Bonus de libros a minijuegos
+                if (bookBonusesMG.minigameBonus > 0) {
+                    const bookBonus = Math.floor(finalEarnings * bookBonusesMG.minigameBonus);
+                    finalEarnings += bookBonus;
+                }
+
                 addResult = await this.economy.addMoney(userId, finalEarnings, 'blackjack_win');
+                this.applyMarriageBonusMinigame(userId, finalEarnings, false, messageOrInteraction).catch(() => {});
                 finalEarnings = addResult.actualAmount;
+                profit = finalEarnings;
                 
                 // *** NUEVO: ACTUALIZAR ESTADÍSTICAS DE ACHIEVEMENTS ***
                 if (this.achievements) {
@@ -2795,7 +3097,6 @@ const userId = gameState.userId;
                 break;
             case 'bust':
                 resultText = '💥 **¡TE PASASTE!**';
-                profit = -finalBet;
 
                 await this.economy.database.incrementGameLimit(userId, gameType);
                 await this.economy.missions.updateMissionProgress(userId, 'consecutive_loss');
@@ -2854,6 +3155,20 @@ const userId = gameState.userId;
                     }
                 }
                 
+                // Multiplicador de profesión
+                if (profMG?.minigameFail && profMG.minigameFail !== 1.0) {
+                    const bonus = Math.floor(finalBet * (profMG.minigameFail - 1));
+                    moneyBeforeLost += bonus;
+                }
+
+                // Mensaje de profesión
+                if (profMG?.minigameFail && profMG.minigameFail !== 1.0) {
+                    const pct = Math.round((profMG.minigameFail - 1) * 100);
+                    professionMessage = `⚔️ **${profMG.name}** (+${pct}% penalizaciones)`;
+                }
+
+                profit = -moneyBeforeLost;
+
                 // ✅ Aplicar protección o pérdida
                 if (hasProtected) {
                     if (messageOrInteraction?.followUp) {
@@ -2863,7 +3178,8 @@ const userId = gameState.userId;
                     if (protectionMessage && messageOrInteraction?.followUp) {
                         await messageOrInteraction.followUp({ content: protectionMessage, ephemeral: false });
                     }
-                    await this.economy.removeMoney(userId, finalBet, 'blackjack_loss');
+                    await this.economy.removeMoney(userId, moneyBeforeLost, 'blackjack_loss');
+                    this.applyMarriageBonusMinigame(userId, moneyBeforeLost, true, messageOrInteraction).catch(() => {});
                 }
 
 
@@ -2876,7 +3192,6 @@ const userId = gameState.userId;
                 break;
             case 'lose':
                 resultText = '💸 **Perdiste...**';
-                profit = -finalBet;
 
                 await this.economy.database.incrementGameLimit(userId, gameType);
                 await this.economy.missions.updateMissionProgress(userId, 'consecutive_loss');
@@ -2935,6 +3250,19 @@ const userId = gameState.userId;
                     }
                 }
                 
+                if (profMG?.minigameFail && profMG.minigameFail !== 1.0) {
+                    const bonus = Math.floor(betAmount * (profMG.minigameFail - 1));
+                    moneyBeforeLost += bonus;
+                }
+
+                // Mensaje de profesión
+                if (profMG?.minigameFail && profMG.minigameFail !== 1.0) {
+                    const pct = Math.round((profMG.minigameFail - 1) * 100);
+                    professionMessage = `⚔️ **${profMG.name}** (+${pct}% penalizaciones)`;
+                }
+
+                profit = -moneyBeforeLost;
+
                 // ✅ Aplicar protección o pérdida
                 if (hasProtected) {
                     if (messageOrInteraction?.followUp) {
@@ -2944,7 +3272,8 @@ const userId = gameState.userId;
                     if (protectionMessage && messageOrInteraction?.followUp) {
                         await messageOrInteraction.followUp({ content: protectionMessage, ephemeral: false });
                     }
-                    await this.economy.removeMoney(userId, finalBet, 'blackjack_loss');
+                    await this.economy.removeMoney(userId, moneyBeforeLost, 'blackjack_loss');
+                    this.applyMarriageBonusMinigame(userId, moneyBeforeLost, true, messageOrInteraction).catch(() => {});
                 }
 
                 // *** NUEVO: ACTUALIZAR ESTADÍSTICAS DE ACHIEVEMENTS ***
@@ -2984,12 +3313,13 @@ const userId = gameState.userId;
             embed.addFields(
                 { name: '💰 Ganancia', value: `+${this.formatNumber(profit)} π-b$`, inline: true },
                 { name: '💳 Balance Actual', value: `${this.formatNumber(user.balance)} π-b$`, inline: true },
-                { name: '🎉 Bonificaciones', value: this.formatGameBonuses(eventMessage, '', itemMessage, equipmentMessage), inline: false }
+                { name: '🎉 Bonificaciones', value: this.formatGameBonuses(eventMessage, '', itemMessage, equipmentMessage, '', professionMessage, petMessage), inline: false }
             );
         } else if (profit < 0) {
             embed.addFields(
                 { name: '💸 Perdiste', value: `${this.formatNumber(Math.abs(profit))} π-b$`, inline: true },
-                { name: '💳 Balance Actual', value: `${this.formatNumber(user.balance)} π-b$`, inline: true }
+                { name: '💳 Balance Actual', value: `${this.formatNumber(user.balance)} π-b$`, inline: true },
+                { name: '⚔️ Profesiones', value: this.formatGameBonuses('', '', '', '', '', professionMessage), inline: false }
             );
         } else {
             embed.addFields(
@@ -3034,7 +3364,7 @@ const userId = gameState.userId;
         const guildId = messageOrInteraction?.guild?.id || messageOrInteraction?.guildId;
         for (const event of this.events.getActiveEvents(guildId)) {
             if (event.type === 'treasure_hunt') {
-                const treasures = await this.events.checkSpecialEvents(userId, 'general');
+                const treasures = await this.events.checkSpecialEvents(userId, 'general', messageOrInteraction);
                     
                 for (const treasure of treasures) {
                     if (treasure.type === 'treasure') {
@@ -3382,6 +3712,22 @@ const userId = gameState.userId;
                 finalEarnings = Math.min(finalEarnings, spaceLeft);
             }
 
+            // Mensaje de profesión
+            const profMG = this.economy.getProfession(await this.economy.getUser(userId));
+            let professionMessage = '';
+            if (profMG?.minigameMult && profMG.minigameMult !== 1.0) {
+                const pct = Math.round((profMG.minigameMult - 1) * 100);
+                professionMessage = `⚔️ **${profMG.name}** (+${pct}% minijuegos)`;
+            }
+
+            // Mensaje de bonus de libros
+            const userMG = await this.economy.getUser(userId);
+            const bookBonusesMG = this.economy.getBookBonuses(userMG);
+            if (bookBonusesMG.minigameBonus > 0) {
+                const pct = Math.round(bookBonusesMG.minigameBonus * 100);
+                professionMessage += professionMessage ? `\n📚 **Biblioteca** (+${pct}% minijuegos)` : `📚 **Biblioteca** (+${pct}% minijuegos)`;
+            }
+
             // Obtener mensajes de items
             let itemMessage = '';
             if (this.shop) {
@@ -3389,6 +3735,22 @@ const userId = gameState.userId;
                 if (modifiers.multiplier > 1) {
                     itemMessage = `✨ **Items Activos** (x${modifiers.multiplier.toFixed(1)} ganancia)`;
                 }
+            }
+
+            // Pet bonus
+            const petResult = await this.applyPetBonus(userId, finalEarnings);
+            finalEarnings = petResult.finalAmount;
+            const petMessage = petResult.petMessage;
+
+            // Evoluciones
+            const petEvolutions = await this.economy.addPetXP(userId);
+            for (const evo of petEvolutions) {
+                message.channel.send({
+                    embeds: [new EmbedBuilder()
+                        .setTitle('✨ ¡Tu mascota evolucionó!')
+                        .setDescription(`**${evo.name}** pasó de Forma ${evo.oldForm} a **Forma ${evo.newForm}**!`)
+                        .setColor('#FFD700')]
+                }).catch(() => {});
             }
 
             await this.economy.database.incrementGameLimit(userId, gameType);
@@ -3404,7 +3766,20 @@ const userId = gameState.userId;
                 finalEarnings -= penaltyAmount;
             }
 
+            // Multiplicador de profesión
+            if (profMG?.minigameMult && profMG.minigameMult !== 1.0) {
+                const bonus = Math.floor(finalEarnings * (profMG.minigameMult - 1));
+                finalEarnings += bonus;
+            }
+
+            // Bonus de libros a minijuegos
+            if (bookBonusesMG.minigameBonus > 0) {
+                const bookBonus = Math.floor(finalEarnings * bookBonusesMG.minigameBonus);
+                finalEarnings += bookBonus;
+            }
+
             const addResult = await this.economy.addMoney(userId, finalEarnings, 'roulette_win');
+            this.applyMarriageBonusMinigame(userId, finalEarnings, false, message).catch(() => {});
             finalEarnings = addResult.actualAmount;
             
             await this.economy.updateUser(userId, updateData);
@@ -3446,10 +3821,10 @@ const userId = gameState.userId;
                 .addFields(
                     { name: '🎊 ¡Felicidades!', value: `¡Tu apuesta fue correcta!`, inline: false },
                     { name: '💎 Multiplicador', value: `x${multiplier}`, inline: true },
-                    { name: '🤑 Ganancia Total', value: `+${this.formatNumber(profit)} π-b$`, inline: true },
-                    { name: '💸 Balance Anterior', value: `${this.formatNumber(user.balance - profit)} π-b$`, inline: false },
+                    { name: '🤑 Ganancia Total', value: `+${this.formatNumber(finalEarnings)} π-b$`, inline: true },
+                    { name: '💸 Balance Anterior', value: `${this.formatNumber(user.balance - finalEarnings)} π-b$`, inline: false },
                     { name: '💳 Balance Actual', value: `${this.formatNumber(user.balance)} π-b$ 🚀`, inline: false },
-                    { name: '🎉 Bonificaciones', value: this.formatGameBonuses(eventMessage, luckMessage, itemMessage, equipmentMessage), inline: false }
+                    { name: '🎉 Bonificaciones', value: this.formatGameBonuses(eventMessage, luckMessage, itemMessage, equipmentMessage, '', professionMessage, petMessage), inline: false }
                 );
     
             // Mensaje especial para números exactos
@@ -3537,6 +3912,21 @@ const userId = gameState.userId;
                     }
                 }
             }
+
+            // Multiplicador de profesión
+            const profMG = this.economy.getProfession(await this.economy.getUser(userId));
+            let moneyBeforeLost = betAmount;
+            if (profMG?.minigameFail && profMG.minigameFail !== 1.0) {
+                const bonus = Math.floor(betAmount * (profMG.minigameFail - 1));
+                moneyBeforeLost += bonus;
+            }
+
+            // Mensaje de profesión
+            let professionMessage = '';
+            if (profMG?.minigameFail && profMG.minigameFail !== 1.0) {
+                const pct = Math.round((profMG.minigameFail - 1) * 100);
+                professionMessage = `⚔️ **${profMG.name}** (+${pct}% penalizaciones)`;
+            }
             
             // ✅ Aplicar protección o pérdida
             if (hasProtected) {
@@ -3545,7 +3935,8 @@ const userId = gameState.userId;
                 if (protectionMessage) {
                     await message.reply(protectionMessage); // Mostrar que falló
                 }
-                await this.economy.removeMoney(userId, betAmount, 'roulette_loss');
+                await this.economy.removeMoney(userId, moneyBeforeLost, 'roulette_loss');
+                this.applyMarriageBonusMinigame(userId, moneyBeforeLost, true, message).catch(() => {});
             }
             
             await this.economy.updateUser(userId, updateData);
@@ -3571,9 +3962,10 @@ const userId = gameState.userId;
             
             resultEmbed.setDescription(`💸 **No ganaste esta vez...** ${encouragement}`)
                 .addFields(
-                    { name: '💸 Perdiste', value: `${this.formatNumber(betAmount)} π-b$`, inline: true },
-                    { name: '💸 Balance Anterior', value: `${this.formatNumber(user.balance + betAmount)} π-b$`, inline: false },
+                    { name: '💸 Perdiste', value: `${this.formatNumber(moneyBeforeLost)} π-b$`, inline: true },
+                    { name: '💸 Balance Anterior', value: `${this.formatNumber(user.balance + moneyBeforeLost)} π-b$`, inline: false },
                     { name: '💳 Balance Actual', value: `${this.formatNumber(user.balance)} π-b$`, inline: false },
+                    { name: '⚔️ Profesiones', value: this.formatGameBonuses('', '', '', '', '', professionMessage), inline: false },
                     { name: '💡 Consejo', value: 'En la ruleta, cada giro es independiente. ¡No te rindas!', inline: false }
                 );
         }
@@ -4100,7 +4492,23 @@ const userId = gameState.userId;
                 finalEarnings = Math.min(finalEarnings, spaceLeft);
             }
             
+            // Multiplicador de profesión
+            const profMG = this.economy.getProfession(await this.economy.getUser(userId));
+            if (profMG?.minigameMult && profMG.minigameMult !== 1.0) {
+                const bonus = Math.floor(finalEarnings * (profMG.minigameMult - 1));
+                finalEarnings += bonus;
+            }
+
+            // Bonus de libros a minijuegos
+            const userMG = await this.economy.getUser(userId);
+            const bookBonusesMG = this.economy.getBookBonuses(userMG);
+            if (bookBonusesMG.minigameBonus > 0) {
+                const bookBonus = Math.floor(finalEarnings * bookBonusesMG.minigameBonus);
+                finalEarnings += bookBonus;
+            }
+
             const addResult = await this.economy.addMoney(userId, finalEarnings, 'slots_wins');
+            this.applyMarriageBonusMinigame(userId, finalEarnings, false, message).catch(() => {});
             finalEarnings = addResult.actualAmount;
             
             // ✅ Aplicar penalización de maldición (-25% dinero)
@@ -4137,6 +4545,19 @@ const userId = gameState.userId;
                 }
             }
             
+            // Mensaje de profesión
+            let professionMessage = '';
+            if (profMG?.minigameMult && profMG.minigameMult !== 1.0) {
+                const pct = Math.round((profMG.minigameMult - 1) * 100);
+                professionMessage = `⚔️ **${profMG.name}** (+${pct}% minijuegos)`;
+            }
+
+            // Mensaje de bonus de libros
+            if (bookBonusesMG.minigameBonus > 0) {
+                const pct = Math.round(bookBonusesMG.minigameBonus * 100);
+                professionMessage += professionMessage ? `\n📚 **Biblioteca** (+${pct}% minijuegos)` : `📚 **Biblioteca** (+${pct}% minijuegos)`;
+            }
+
             // Items message
             let itemMessage = '';
             if (this.shop) {
@@ -4145,13 +4566,29 @@ const userId = gameState.userId;
                     itemMessage = `✨ **Items Activos** (x${modifiers.multiplier.toFixed(1)} ganancia)`;
                 }
             }
-            
+
+            // Pet bonus
+            const petResult = await this.applyPetBonus(userId, finalEarnings);
+            finalEarnings = petResult.finalAmount;
+            const petMessage = petResult.petMessage;
+
+            // Evoluciones
+            const petEvolutions = await this.economy.addPetXP(userId);
+            for (const evo of petEvolutions) {
+                message.channel.send({
+                    embeds: [new EmbedBuilder()
+                        .setTitle('✨ ¡Tu mascota evolucionó!')
+                        .setDescription(`**${evo.name}** pasó de Forma ${evo.oldForm} a **Forma ${evo.newForm}**!`)
+                        .setColor('#FFD700')]
+                }).catch(() => {});
+            }
+
             embed.setTitle('🎰 Tragaperras - ¡GANASTE!')
                 .setDescription(embed.data.description + `\n\n${resultText}`)
                 .addFields(
-                    { name: '💰 Ganancia', value: `+${this.formatNumber(winAmount - betAmount)} π-b$`, inline: true },
+                    { name: '💰 Ganancia', value: `+${this.formatNumber(finalEarnings - betAmount)} π-b$`, inline: true },
                     { name: '💳 Balance Actual', value: `${this.formatNumber(userData.balance)} π-b$`, inline: true },
-                    { name: '🎉 Bonificaciones', value: this.formatGameBonuses(eventBonus.eventMessage, luckMessage, itemMessage, equipmentMessage), inline: false }
+                    { name: '🎉 Bonificaciones', value: this.formatGameBonuses(eventMessage, luckMessage, itemMessage, equipmentMessage, '', professionMessage, petMessage), inline: false }
                 );
             
             if (curseMoneyPenalty > 0) {
@@ -4230,6 +4667,21 @@ const userId = gameState.userId;
                 }
             }
             
+            // Multiplicador de profesión
+            const profMG = this.economy.getProfession(await this.economy.getUser(userId));
+            let moneyBeforeLost = betAmount;
+            if (profMG?.minigameFail && profMG.minigameFail !== 1.0) {
+                const bonus = Math.floor(betAmount * (profMG.minigameFail - 1));
+                moneyBeforeLost += bonus;
+            }
+
+            // Mensaje de profesión
+            let professionMessage = '';
+            if (profMG?.minigameFail && profMG.minigameFail !== 1.0) {
+                const pct = Math.round((profMG.minigameFail - 1) * 100);
+                professionMessage = `⚔️ **${profMG.name}** (+${pct}% penalizaciones)`;
+            }
+
             // ✅ Aplicar protección o pérdida
             if (hasProtected) {
                 await message.reply(protectionMessage);
@@ -4237,7 +4689,8 @@ const userId = gameState.userId;
                 if (protectionMessage) {
                     await message.reply(protectionMessage); // Mostrar que falló
                 }
-                await this.economy.removeMoney(userId, betAmount, 'slots_loss');
+                await this.economy.removeMoney(userId, moneyBeforeLost, 'slots_loss');
+                this.applyMarriageBonusMinigame(userId, moneyBeforeLost, true, message).catch(() => {});
             }
             
             await this.economy.updateUser(userId, updateData);
@@ -4251,8 +4704,9 @@ const userId = gameState.userId;
             embed.setTitle('🎰 Tragaperras - Sin Suerte')
                 .setDescription(embed.data.description + `\n\n${resultText}`)
                 .addFields(
-                    { name: '💸 Perdiste', value: `${this.formatNumber(betAmount)} π-b$`, inline: true },
-                    { name: '💳 Balance Actual', value: `${this.formatNumber(user.balance)} π-b$`, inline: true }
+                    { name: '💸 Perdiste', value: `${this.formatNumber(moneyBeforeLost)} π-b$`, inline: true },
+                    { name: '💳 Balance Actual', value: `${this.formatNumber(user.balance)} π-b$`, inline: true },
+                    { name: '⚔️ Profesiones', value: this.formatGameBonuses('', '', '', '', '', professionMessage), inline: false }
                 );
         }
 
@@ -5085,6 +5539,7 @@ const userId = gameState.userId;
         for (const [playerId, player] of Object.entries(game.players)) {
             if (playerId !== 'bot') {
                 await this.economy.addMoney(playerId, player.bet, 'horserace_refund');
+                this.applyMarriageBonusMinigame(playerId, player.bet, false, message).catch(() => {});
             }
         }
         
@@ -5477,6 +5932,34 @@ const userId = gameState.userId;
                     }
                 }
 
+                // Multiplicador de profesión
+                const profMG = this.economy.getProfession(await this.economy.getUser(playerId));
+                if (profMG?.minigameMult && profMG.minigameMult !== 1.0) {
+                    const bonus = Math.floor(winnings * (profMG.minigameMult - 1));
+                    winnings += bonus;
+                }
+
+                // Bonus de libros a minijuegos
+                const userMG = await this.economy.getUser(userId);
+                const bookBonusesMG = this.economy.getBookBonuses(userMG);
+                if (bookBonusesMG.minigameBonus > 0) {
+                    const bookBonus = Math.floor(finalEarnings * bookBonusesMG.minigameBonus);
+                    finalEarnings += bookBonus;
+                }
+
+                // Mensaje de profesión
+                let professionMessage = '';
+                if (profMG?.minigameMult && profMG.minigameMult !== 1.0) {
+                    const pct = Math.round((profMG.minigameMult - 1) * 100);
+                    professionMessage = `⚔️ **${profMG.name}** (+${pct}% minijuegos)`;
+                }
+
+                // Mensaje de bonus de libros
+                if (bookBonusesMG.minigameBonus > 0) {
+                    const pct = Math.round(bookBonusesMG.minigameBonus * 100);
+                    professionMessage += professionMessage ? `\n📚 **Biblioteca** (+${pct}% minijuegos)` : `📚 **Biblioteca** (+${pct}% minijuegos)`;
+                }
+                
                 // Evento de dinero
                 let eventMessage = '';
                 if (playerId !== 'bot' && winnings > 0) {
@@ -5484,6 +5967,7 @@ const userId = gameState.userId;
                     winnings = eventBonus.finalAmount;
                     eventMessage = eventBonus.eventMessage;
                     await this.economy.addMoney(playerId, winnings, 'horserace_win');
+                    this.applyMarriageBonusMinigame(playerId, winnings, false, message).catch(() => {});
                 }
 
                 const doubledText = player.hasDoubled ? ' (x2 🎲)' : '';
@@ -5497,7 +5981,8 @@ const userId = gameState.userId;
                     doubled: player.hasDoubled,
                     doubledText,
                     playersOnHorse: playersCount,
-                    eventMessage
+                    eventMessage,
+                    professionMessage
                 });
             }
         }
@@ -5557,7 +6042,8 @@ const userId = gameState.userId;
                 const doubleEmoji = player.hasDoubled ? '💰' : '';
                 
                 const eventMsg = resultData?.eventMessage ? ` ${resultData.eventMessage}` : '';
-                resultsText += `${posEmoji} ${horse.emoji} ${playerName}${doubleEmoji} → ${profitEmoji} ${profitText}${eventMsg}\n`;
+                const profMsg = resultData?.professionMessage ? ` ${resultData.professionMessage}` : '';
+                resultsText += `${posEmoji} ${horse.emoji} ${playerName}${doubleEmoji} → ${profitEmoji} ${profitText}${eventMsg}${profMsg}\n`;
             }
         }
         
@@ -9321,6 +9807,22 @@ const userId = gameState.userId;
                 }
             }
 
+            // Pet bonus
+            const petResult = await this.applyPetBonus(userId, finalEarnings);
+            finalEarnings = petResult.finalAmount;
+            const petMessage = petResult.petMessage;
+
+            // Evoluciones
+            const petEvolutions = await this.economy.addPetXP(userId);
+            for (const evo of petEvolutions) {
+                message.channel.send({
+                    embeds: [new EmbedBuilder()
+                        .setTitle('✨ ¡Tu mascota evolucionó!')
+                        .setDescription(`**${evo.name}** pasó de Forma ${evo.oldForm} a **Forma ${evo.newForm}**!`)
+                        .setColor('#FFD700')]
+                }).catch(() => {});
+            }
+
             const activeEffects = this.shop.parseActiveEffects(user.activeEffects);
             const curse = activeEffects['death_hand_curse'];
             let curseMoneyPenalty = 0;
@@ -9359,7 +9861,7 @@ const userId = gameState.userId;
                 .addFields(
                     { name: '💰 Ganancia', value: `+${this.formatNumber(finalEarnings)} π-b$`, inline: true },
                     { name: '💳 Balance Actual', value: `${this.formatNumber(userData.balance)} π-b$`, inline: true },
-                    { name: '🎉 Bonificaciones', value: this.formatGameBonuses(eventMessage, '', itemMessage, equipmentMessage), inline: false }
+                    { name: '🎉 Bonificaciones', value: this.formatGameBonuses(eventMessage, '', itemMessage, equipmentMessage, '', '', petMessage), inline: false }
                 );
 
             if (curseMoneyPenalty > 0) {
@@ -10557,7 +11059,7 @@ await gameMessage.edit({ embeds: [questionEmbed], components });
                         value: '**Nivel 1** (1-5): 100 π-b$ + 10 XP / pregunta\n**Nivel 2** (6-10): 150 π-b$ + 15 XP / pregunta\n**Nivel 3** (11-15): 225 π-b$ + 22 XP / pregunta\n**Nivel 4+**: sigue subiendo x1.5',
                         inline: false
                     },
-                    { name: '⏱️ Tiempo', value: '**15s** por pregunta', inline: true },
+                    { name: '⏱️ Tiempo', value: '**10s** por pregunta', inline: true },
                     { name: '⏰ Cooldown', value: '**5 minutos**', inline: true },
                     { name: '🚫 Pistas', value: 'No disponibles', inline: true },
                     { name: '🏆 Objetivo', value: 'Sobrevivir la mayor cantidad de preguntas posible y batir el récord del servidor', inline: false }
@@ -10621,7 +11123,7 @@ if (survivalDoubleCheck && survivalDoubleCheck.length > 0) {
                 .setDescription(
                     `**Categoría:** ${categoryName}\n` +
                     `**Dificultad Inicial:** Easy\n` +
-                    `**Tiempo por pregunta:** 15 segundos\n\n` +
+                    `**Tiempo por pregunta:** 10 segundos\n\n` +
                     `¡Responde correctamente para seguir adelante!`
                 )
                 .setColor('#FF4500')
@@ -10787,7 +11289,7 @@ if (survivalDoubleCheck && survivalDoubleCheck.length > 0) {
                         { name: '💰 Próxima recompensa', value: `${currentReward} π-b$ + ${currentXPReward} XP`, inline: true }
                     )
                     .setColor('#FF4500')
-                    .setFooter({ text: `⏱️ Tienes 15 segundos | 💎 Total ganado: ${totalEarned} π-b$` });
+                    .setFooter({ text: `⏱️ Tienes 10 segundos | 💎 Total ganado: ${totalEarned} π-b$` });
 
                 const buttons = new ActionRowBuilder();
                 letters.forEach((letter, index) => {

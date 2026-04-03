@@ -7,6 +7,7 @@ const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('
 
 class RobMinigames {
     constructor() {
+        this.groqApiKey = process.env.GROQ_API_KEY;
         this.categories = {
             HACKEO: 'hackeo',
             SIGILO: 'sigilo',
@@ -84,7 +85,7 @@ class RobMinigames {
         const buttons = shuffled.map((opt, i) =>
             new ButtonBuilder()
                 .setCustomId(`robmg_${gameId}_${opt.value}`)
-                .setLabel(opt.label)
+                .setLabel(opt.label.length > 80 ? opt.label.substring(0, 77) + '...' : opt.label)
                 .setStyle(ButtonStyle.Secondary)
         );
 
@@ -93,6 +94,93 @@ class RobMinigames {
             rows.push(new ActionRowBuilder().addComponents(buttons.slice(i, i + 4)));
         }
         return rows;
+    }
+
+    async generateAIMinigame(targetUsername, difficulty) {
+        if (!this.groqApiKey) return null;
+
+        const categories = [
+            { name: 'hackeo', emoji: '💻', color: '#00ff88', desc: 'hackear sistemas y tecnología' },
+            { name: 'sigilo', emoji: '🤫', color: '#4a0080', desc: 'moverse sin ser detectado' },
+            { name: 'cerraduras', emoji: '🔓', color: '#ff6600', desc: 'abrir cerraduras y cajas fuertes' },
+            { name: 'social', emoji: '🎭', color: '#cc0044', desc: 'engañar y manipular personas' },
+            { name: 'ejecucion', emoji: '💼', color: '#884400', desc: 'ejecutar y escapar con el botín' },
+            { name: 'caos', emoji: '🎲', color: '#5500aa', desc: 'situaciones imprevistas del robo' },
+        ];
+
+        const cat = categories[Math.floor(Math.random() * categories.length)];
+
+        const cleanTarget = targetUsername.split('#')[0].trim();
+
+        const prompt = `Eres un generador de minijuegos de robo. Genera uno siguiendo EXACTAMENTE este ejemplo:
+
+        EJEMPLO:
+        {"title":"Bypass de Cámara","narrative":"Las cámaras de ${cleanTarget} tienen un punto ciego justo en la esquina norte. Tienes 10 segundos.","question":"**¿Qué haces para aprovechar el punto ciego?**","correct":"Te mueves pegado a la pared norte en silencio","wrong1":"Corres directo a la caja fuerte","wrong2":"Esperas a que el guardia se distraiga","wrong3":"Lanzas algo para romper la cámara"}
+
+        REGLAS:
+        - "narrative" habla de la bóveda/guardia/sistema de ${cleanTarget} en tercera persona, NUNCA digas quién roba
+        - El jugador es "tú" implícito — usa frases como "Tienes X segundos", "El sistema de ${cleanTarget}...", "Los guardias de ${cleanTarget}..."
+        - Categoría: ${cat.desc}
+        - Las opciones son frases completas, NUNCA letras sueltas
+        - Las opciones deben tener MÁXIMO 60 caracteres cada una, sé conciso
+        - Dificultad "${difficulty}": ${difficulty === 'easy' ? 'pregunta obvia con respuesta claramente correcta, opciones muy distintas entre sí' : difficulty === 'normal' ? 'pregunta moderada, opciones algo parecidas pero una claramente mejor' : 'pregunta ambigua y difícil, opciones muy similares y confusas, solo una es correcta'}
+        - Responde SOLO con JSON, sin texto extra ni markdown`;
+
+        try {
+            const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${this.groqApiKey}`,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    model: 'llama-3.1-8b-instant',
+                    max_tokens: 400,
+                    temperature: 0.9,
+                    messages: [
+                        { role: 'system', content: 'Eres un generador de minijuegos de robo para Discord. Respondes SOLO con JSON válido, sin texto adicional ni markdown. Todo en español.' },
+                        { role: 'user', content: prompt }
+                    ]
+                }),
+                signal: AbortSignal.timeout(5000)
+            });
+
+            if (!response.ok) return null;
+
+            const data = await response.json();
+            const raw = data.choices?.[0]?.message?.content?.trim();
+            if (!raw) return null;
+
+            const parsed = JSON.parse(raw);
+            if (!parsed.title || !parsed.question || !parsed.correct) return null;
+
+            console.log(`[RobMG AI] 📝 ${parsed.title}`);
+            console.log(`[RobMG AI] ❓ ${parsed.question}`);
+            console.log(`[RobMG AI] ✅ ${parsed.correct}`);
+
+            // Construir en formato compatible con buildEmbed/buildButtons
+            return {
+                id: `ai_${Date.now()}`,
+                category: cat.name,
+                emoji: cat.emoji,
+                color: cat.color,
+                title: parsed.title,
+                narrative: parsed.narrative || `La bóveda de @${targetUsername} está esperando...`,
+                question: parsed.question,
+                options: this.shuffle([
+                    { label: parsed.correct, value: 'correct' },
+                    { label: parsed.wrong1, value: 'wrong1' },
+                    { label: parsed.wrong2, value: 'wrong2' },
+                    { label: parsed.wrong3, value: 'wrong3' },
+                ]),
+                correct: 'correct',
+                isAI: true,
+            };
+
+        } catch (err) {
+            console.log(`[RobMG] AI falló (${err.message}), usando pool predefinido`);
+            return null;
+        }
     }
 
     // ─────────────────────────────────────────────

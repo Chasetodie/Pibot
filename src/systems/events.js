@@ -165,7 +165,7 @@ class EventsSystem {
                 } else {
                     console.log('⚠️ Economy no disponible, usando eventos en memoria');
                 }
-            }, 1000);
+            }, 5000);
     }
 
     // En EventsSystem, agregar esta función
@@ -760,7 +760,7 @@ class EventsSystem {
     }
 
     // Verificar eventos especiales para contextos específicos
-    async checkSpecialEvents(userId, context, data = {}) {
+    async checkSpecialEvents(userId, context, message, data = {}) {
         let rewards = [];
         let appliedEvents = [];
         

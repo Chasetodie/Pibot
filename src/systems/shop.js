@@ -9,7 +9,7 @@ class ShopSystem {
             // === CONSUMIBLES TEMPORALES ===
             'lucky_charm': {
                 id: 'lucky_charm',
-                name: '🍀 Amuleto de Suerte',
+                name: '💰🍀 Amuleto de Ganancias',
                 description: 'Aumenta tus ganancias en trabajos y juegos por 2 horas',
                 price: 15000,
                 category: 'consumable',
@@ -270,6 +270,17 @@ class ShopSystem {
             },
 
             // === ESPECIALES ===
+            'mystery_box_pro': {
+                id: 'mystery_box_pro',
+                name: '🎰 Caja del Destino',
+                description: 'Una caja completamente aleatoria. Puede darte desde 1π hasta ítems legendarios... o hacerte perder dinero.',
+                price: 75000,
+                category: 'mystery',
+                rarity: 'epic',
+                effect: { type: 'mystery_pro' },
+                stackable: true,
+                maxStack: 10
+            },
             'mystery_box': {
                 id: 'mystery_box',
                 name: '📦 Caja Misteriosa',
@@ -610,6 +621,144 @@ class ShopSystem {
                 maxStack: 10
             },
 
+            // === SEMILLAS ===
+            'common_seed': {
+                id: 'common_seed',
+                name: '🌱 Semilla Común',
+                description: 'Plántala en tu huerto. Lista en 2h. Da dinero y herb_common',
+                price: 200,
+                category: 'seed',
+                rarity: 'common',
+                stackable: true,
+                maxStack: 50,
+            },
+            'rare_seed': {
+                id: 'rare_seed',
+                name: '🌿 Semilla Rara',
+                description: 'Plántala en tu huerto. Lista en 6h. Da más dinero y herb_rare',
+                price: 800,
+                category: 'seed',
+                rarity: 'rare',
+                stackable: true,
+                maxStack: 30,
+            },
+            'epic_seed': {
+                id: 'epic_seed',
+                name: '🌺 Semilla Épica',
+                description: 'Plántala en tu huerto. Lista en 12h.',
+                price: 2500,
+                category: 'seed',
+                rarity: 'epic',
+                stackable: true,
+                maxStack: 20,
+            },
+            'legendary_seed': {
+                id: 'legendary_seed',
+                name: '🌸 Semilla Legendaria',
+                description: 'Plántala en tu huerto. Lista en 24h. Grandes recompensas.',
+                price: 8000,
+                category: 'seed',
+                rarity: 'legendary',
+                stackable: true,
+                maxStack: 10,
+            },
+            'garden_slot_extra': {
+                id: 'garden_slot_extra',
+                name: '🪴 Slot de Huerto Extra',
+                description: 'Agrega un slot adicional a tu huerto (máx 8)',
+                price: 50000,
+                category: 'permanent',
+                rarity: 'rare',
+                stackable: true,
+                maxStack: 4,
+            },
+            // === INGREDIENTES (no comprables, solo obtenibles) ===
+            'herb_common': {
+                id: 'herb_common',
+                name: '🌿 Hierba Común',
+                description: 'Ingrediente obtenido del huerto. Sirve para crafteo.',
+                price: 0,
+                category: 'ingredient',
+                rarity: 'common',
+                stackable: true,
+                maxStack: 99,
+                chestOnly: true,
+            },
+            'herb_rare': {
+                id: 'herb_rare',
+                name: '🌿 Hierba Rara',
+                description: 'Ingrediente raro del huerto.',
+                price: 0,
+                category: 'ingredient',
+                rarity: 'rare',
+                stackable: true,
+                maxStack: 99,
+                chestOnly: true,
+            },
+            'herb_epic': {
+                id: 'herb_epic',
+                name: '🌺 Hierba Épica',
+                description: 'Ingrediente épico del huerto.',
+                price: 0,
+                category: 'ingredient',
+                rarity: 'epic',
+                stackable: true,
+                maxStack: 99,
+                chestOnly: true,
+            },
+            'herb_legendary': {
+                id: 'herb_legendary',
+                name: '🌸 Hierba Legendaria',
+                description: 'Ingrediente legendario del huerto.',
+                price: 0,
+                category: 'ingredient',
+                rarity: 'legendary',
+                stackable: true,
+                maxStack: 99,
+                chestOnly: true,
+            },
+            'pet_egg': {
+                id: 'pet_egg',
+                name: '🥚 Huevo Misterioso',
+                description: 'Incúbalo con >mascota incubar para obtener una mascota aleatoria',
+                price: 5000,
+                category: 'pet',
+                rarity: 'rare',
+                stackable: true,
+                maxStack: 5,
+            },
+            // === MEDICINAS DE MASCOTAS ===
+            'medicine_basic': {
+                id: 'medicine_basic',
+                name: '💊 Medicina Básica',
+                description: 'Cura mascotas comunes y poco comunes',
+                price: 1500,
+                category: 'pet',
+                rarity: 'common',
+                stackable: true,
+                maxStack: 10,
+            },
+            'medicine_advanced': {
+                id: 'medicine_advanced',
+                name: '💉 Medicina Avanzada',
+                description: 'Cura mascotas raras y épicas',
+                price: 5000,
+                category: 'pet',
+                rarity: 'rare',
+                stackable: true,
+                maxStack: 5,
+            },
+            'medicine_legendary': {
+                id: 'medicine_legendary',
+                name: '🧬 Medicina Legendaria',
+                description: 'Cura cualquier mascota sin importar rareza',
+                price: 15000,
+                category: 'pet',
+                rarity: 'legendary',
+                stackable: true,
+                maxStack: 3,
+            },
+
             // ✨ Skin Dorada
             'golden_skin': {
                 price: 200000,
@@ -771,7 +920,59 @@ class ShopSystem {
                 chestOnly: true,
                 stackable: true,
                 maxStack: 5
-            },             
+            },         
+            'speed_gauntlet': {
+                id: 'speed_gauntlet',
+                name: '⚙️ Guantelete de Velocidad',
+                description: '-35% cooldowns por 4h',
+                price: 0,
+                category: 'consumable',
+                rarity: 'epic',
+                effect: {
+                    type: 'cooldown_reduction',
+                    targets: ['all'],
+                    reduction: 0.35,
+                    duration: 14400
+                },
+                stackable: true,
+                maxStack: 3,
+                chestOnly: true,
+            },
+            'arcane_multiplier': {
+                id: 'arcane_multiplier',
+                name: '🔮 Multiplicador Arcano',
+                description: '+50% a todo por 2h',
+                price: 0,
+                category: 'consumable',
+                rarity: 'legendary',
+                effect: {
+                    type: 'multiplier',
+                    targets: ['work', 'games'],
+                    multiplier: 1.50,
+                    duration: 7200
+                },
+                stackable: true,
+                maxStack: 2,
+                chestOnly: true,
+            },
+            'mythril_forge_item': {
+                id: 'mythril_forge_item',
+                name: '💠 Forja de Mitril',
+                description: '+75% trabajo y -50% cooldown trabajo por 6h',
+                price: 0,
+                category: 'consumable',
+                rarity: 'mythic',
+                effect: {
+                    type: 'cooldown_reduction',
+                    targets: ['work'],
+                    reduction: 0.50,
+                    duration: 21600,
+                    bonusMultiplier: 1.75,
+                },
+                stackable: false,
+                maxStack: 1,
+                chestOnly: true,
+            },    
             'master_gloves': {
                 id: 'master_gloves',
                 name: '💀🧤 Guantes del Ladrón Maestro',
@@ -788,6 +989,274 @@ class ShopSystem {
                 stackable: true,
                 maxStack: 2
             },      
+            // === MATERIALES DE ARTESANO (solo comprables) ===
+            'refined_metal': {
+                id: 'refined_metal',
+                name: '🔩 Metal Refinado',
+                description: 'Material de alta calidad. Solo útil para crafteo del Artesano.',
+                price: 3000,
+                category: 'ingredient',
+                rarity: 'uncommon',
+                stackable: true,
+                maxStack: 50,
+            },
+            'arcane_dust': {
+                id: 'arcane_dust',
+                name: '✨ Polvo Arcano',
+                description: 'Polvo mágico concentrado. Ingrediente exclusivo del Artesano.',
+                price: 8000,
+                category: 'ingredient',
+                rarity: 'rare',
+                stackable: true,
+                maxStack: 30,
+            },
+            'mythril_shard': {
+                id: 'mythril_shard',
+                name: '💠 Fragmento de Mitril',
+                description: 'Material legendario para las creaciones más poderosas.',
+                price: 25000,
+                category: 'ingredient',
+                rarity: 'epic',
+                stackable: true,
+                maxStack: 10,
+            },
+            // === INGREDIENTES GENERALES ===
+            'crystal_shard': {
+                id: 'crystal_shard',
+                name: '💎 Fragmento de Cristal',
+                description: 'Material cristalino para pociones y crafteos.',
+                price: 2000,
+                category: 'ingredient',
+                rarity: 'uncommon',
+                stackable: true,
+                maxStack: 50,
+            },
+            'dragon_scale': {
+                id: 'dragon_scale',
+                name: '🐉 Escama de Dragón',
+                description: 'Escama resistente al fuego. Ingrediente de alto nivel.',
+                price: 15000,
+                category: 'ingredient',
+                rarity: 'epic',
+                stackable: true,
+                maxStack: 20,
+            },
+            'moon_essence': {
+                id: 'moon_essence',
+                name: '🌙 Esencia Lunar',
+                description: 'Esencia concentrada de luz de luna.',
+                price: 5000,
+                category: 'ingredient',
+                rarity: 'rare',
+                stackable: true,
+                maxStack: 30,
+            },
+            'fire_ember': {
+                id: 'fire_ember',
+                name: '🔥 Brasa Ígnea',
+                description: 'Brasa que nunca se apaga. Ingrediente básico de crafteo.',
+                price: 1500,
+                category: 'ingredient',
+                rarity: 'common',
+                stackable: true,
+                maxStack: 99,
+            },
+            'shadow_fiber': {
+                id: 'shadow_fiber',
+                name: '🕸️ Fibra de Sombra',
+                description: 'Fibra tejida con oscuridad pura.',
+                price: 4000,
+                category: 'ingredient',
+                rarity: 'rare',
+                stackable: true,
+                maxStack: 40,
+            },
+            'golden_dust': {
+                id: 'golden_dust',
+                name: '✨ Polvo Dorado',
+                description: 'Polvo mágico con propiedades económicas.',
+                price: 10000,
+                category: 'ingredient',
+                rarity: 'epic',
+                stackable: true,
+                maxStack: 20,
+            },
+            'void_crystal': {
+                id: 'void_crystal',
+                name: '🔮 Cristal del Vacío',
+                description: 'Cristal dimensional. Solo útil para el Artesano.',
+                price: 30000,
+                category: 'ingredient',
+                rarity: 'legendary',
+                stackable: true,
+                maxStack: 10,
+            },
+            'star_fragment': {
+                id: 'star_fragment',
+                name: '⭐ Fragmento Estelar',
+                description: 'Fragmento caído de una estrella. Solo para Artesanos.',
+                price: 20000,
+                category: 'ingredient',
+                rarity: 'legendary',
+                stackable: true,
+                maxStack: 10,
+            },
+
+            // === ITEMS RESULTADO DE CRAFTEO (no comprables) ===
+            'fire_potion': {
+                id: 'fire_potion',
+                name: '🔥 Poción de Fuego',
+                description: '+25% trabajo por 2h',
+                price: 0,
+                category: 'consumable',
+                rarity: 'uncommon',
+                effect: { type: 'multiplier', targets: ['work'], multiplier: 1.25, duration: 7200 },
+                stackable: true,
+                maxStack: 10,
+            },
+            'moon_potion': {
+                id: 'moon_potion',
+                name: '🌙 Poción Lunar',
+                description: '+20% minijuegos por 3h',
+                price: 0,
+                category: 'consumable',
+                rarity: 'rare',
+                effect: { type: 'multiplier', targets: ['games'], multiplier: 1.20, duration: 10800 },
+                stackable: true,
+                maxStack: 5,
+            },
+            'shadow_elixir': {
+                id: 'shadow_elixir',
+                name: '🕸️ Elixir de Sombra',
+                description: '-50% cooldown robo por 1h',
+                price: 0,
+                category: 'consumable',
+                rarity: 'rare',
+                effect: { type: 'cooldown_reduction', targets: ['robbery'], reduction: 0.50, duration: 3600 },
+                stackable: true,
+                maxStack: 5,
+            },
+            'crystal_vision': {
+                id: 'crystal_vision',
+                name: '💎 Visión Cristalina',
+                description: '+15% suerte en minijuegos por 2h',
+                price: 0,
+                category: 'consumable',
+                rarity: 'rare',
+                effect: { type: 'luck_boost', targets: ['games'], boost: 0.15, duration: 7200 },
+                stackable: true,
+                maxStack: 5,
+            },
+/*            'battle_tonic': {
+                id: 'battle_tonic',
+                name: '⚔️ Tónico de Batalla',
+                description: '+30% ATK en batallas',
+                price: 0,
+                category: 'consumable',
+                rarity: 'rare',
+                effect: { type: 'battle_boost', stat: 'atk', amount: 0.30, duration: 3600 },
+                stackable: true,
+                maxStack: 5,
+            },
+            'iron_shield_brew': {
+                id: 'iron_shield_brew',
+                name: '🛡️ Brebaje Escudo',
+                description: '+30% DEF en batallas',
+                price: 0,
+                category: 'consumable',
+                rarity: 'rare',
+                effect: { type: 'battle_boost', stat: 'def', amount: 0.30, duration: 3600 },
+                stackable: true,
+                maxStack: 5,
+            },
+            'dragon_brew': {
+                id: 'dragon_brew',
+                name: '🐉 Brebaje del Dragón',
+                description: '+50% ATK y DEF en batallas por 1h',
+                price: 0,
+                category: 'consumable',
+                rarity: 'epic',
+                effect: { type: 'battle_boost', stat: 'both', amount: 0.50, duration: 3600 },
+                stackable: true,
+                maxStack: 3,
+            },*/
+            'nature_boost': {
+                id: 'nature_boost',
+                name: '🌿 Impulso Natural',
+                description: '+20% a todo por 1h',
+                price: 0,
+                category: 'consumable',
+                rarity: 'rare',
+                effect: { type: 'multiplier', targets: ['work', 'games'], multiplier: 1.20, duration: 3600 },
+                stackable: true,
+                maxStack: 5,
+            },
+            'garden_fertilizer': {
+                id: 'garden_fertilizer',
+                name: '🌱 Fertilizante Mágico',
+                description: 'La próxima cosecha del huerto da x2 recompensas',
+                price: 0,
+                category: 'consumable',
+                rarity: 'epic',
+                effect: { type: 'garden_boost', multiplier: 2.0, uses: 1 },
+                stackable: true,
+                maxStack: 3,
+            },
+            'golden_touch': {
+                id: 'golden_touch',
+                name: '👆 Toque Dorado',
+                description: '+40% al próximo daily',
+                price: 0,
+                category: 'consumable',
+                rarity: 'epic',
+                effect: { type: 'next_daily_boost', multiplier: 1.40, uses: 1 },
+                stackable: true,
+                maxStack: 3,
+            },
+            'work_frenzy': {
+                id: 'work_frenzy',
+                name: '💼 Frenesí Laboral',
+                description: 'El próximo trabajo da x3 recompensas',
+                price: 0,
+                category: 'consumable',
+                rarity: 'epic',
+                effect: { type: 'next_work_boost', multiplier: 3.0, uses: 1 },
+                stackable: true,
+                maxStack: 3,
+            },
+            'shadow_contract': {
+                id: 'shadow_contract',
+                name: '📜 Contrato Sombrío',
+                description: 'Reduce el costo del próximo sicario en 50%',
+                price: 0,
+                category: 'consumable',
+                rarity: 'epic',
+                effect: { type: 'sicario_discount', discount: 0.50, uses: 1 },
+                stackable: true,
+                maxStack: 2,
+            },
+            'void_elixir': {
+                id: 'void_elixir',
+                name: '🔮 Elixir del Vacío',
+                description: '+100% a todo por 1h',
+                price: 0,
+                category: 'consumable',
+                rarity: 'mythic',
+                effect: { type: 'multiplier', targets: ['work', 'games'], multiplier: 2.0, duration: 3600 },
+                stackable: true,
+                maxStack: 1,
+            },
+            'star_blessing': {
+                id: 'star_blessing',
+                name: '⭐ Bendición Estelar',
+                description: '+50% XP por 24h',
+                price: 0,
+                category: 'consumable',
+                rarity: 'mythic',
+                effect: { type: 'xp_multiplier', multiplier: 1.50, duration: 86400 },
+                stackable: true,
+                maxStack: 1,
+            },
             'trivia_kit': {
                 id: 'trivia_kit',
                 name: '🧠 Kit de Trivia',
@@ -897,7 +1366,81 @@ class ShopSystem {
                 chestOnly: true,
                 stackable: true,
                 maxStack: 1
-            }
+            },
+            // 🌿 Recetas con ingredientes del huerto
+            'herb_potion': {
+                id: 'herb_potion',
+                name: '🧪 Poción de Hierbas',
+                description: 'Una poción básica hecha con hierbas del huerto. +15% trabajo por 1h',
+                category: 'consumable',
+                rarity: 'uncommon',
+                effect: {
+                    type: 'multiplier',
+                    targets: ['work'],
+                    multiplier: 1.15,
+                    duration: 3600
+                },
+                stackable: true,
+                maxStack: 10,
+                chestOnly: true
+            },
+
+            'epic_herb_elixir': {
+                id: 'epic_elixir',
+                name: '⚗️ Elixir Épico',
+                description: 'Un elixir poderoso. +30% a todo por 2h',
+                category: 'consumable',
+                rarity: 'epic',
+                effect: {
+                    type: 'multiplier',
+                    targets: ['work', 'games', 'all'],
+                    multiplier: 1.30,
+                    duration: 7200
+                },
+                stackable: true,
+                maxStack: 5,
+                chestOnly: true
+            },
+            'legendary_brew': {
+                id: 'legendary_brew',
+                name: '✨ Brebaje Legendario',
+                description: 'Lo mejor del huerto. +50% a todo por 3h + XP doble',
+                category: 'consumable',
+                rarity: 'legendary',
+                effect: {
+                    type: 'multiplier',
+                    targets: ['work', 'games', 'all'],
+                    multiplier: 1.50,
+                    duration: 10800
+                },
+                stackable: true,
+                maxStack: 2,
+                chestOnly: true
+            },
+            'pet_treat': {
+                id: 'pet_treat',
+                name: '🐾 Golosina de Mascota',
+                description: 'Da +10 XP extra a todas tus mascotas al usarla',
+                category: 'pet',
+                rarity: 'rare',
+                effect: {
+                    type: 'pet_xp',
+                    amount: 10
+                },
+                stackable: true,
+                maxStack: 10,
+                chestOnly: true
+            },
+            'pet_slot_extra': {
+                id: 'pet_slot_extra',
+                name: '🏠 Espacio Extra para Mascota',
+                description: 'Aumenta tu límite de mascotas en 1 (máximo 10)',
+                price: 25000,
+                category: 'pet',
+                rarity: 'epic',
+                stackable: true,
+                maxStack: 5,
+            },
         };
         
         // Colores por rareza
@@ -1244,16 +1787,18 @@ class ShopSystem {
                 `🛒 **Bienvenido a la Tienda**\n` +
                 `📄 Página ${page}/${totalPages}\n` +
                 `🏷️ Categoría: **${({
-    all: 'Todas',
-    consumable: 'Consumibles',
-    permanent: 'Permanentes',
-    cosmetic: 'Cosméticos',
-    special: 'Especiales',
-    equipment: 'Equipamientos',
-    mystery: 'Cofres',
-    trivia: 'Trivia',
-    tool: 'Herramientas'
-})[category] || category}**\n\n` +
+                    all: 'Todas',
+                    consumable: 'Consumibles',
+                    permanent: 'Permanentes',
+                    cosmetic: 'Cosméticos',
+                    special: 'Especiales',
+                    equipment: 'Equipamientos',
+                    mystery: 'Cofres',
+                    seed: 'Semillas',
+                    pet: 'Mascotas',
+                    trivia: 'Trivia',
+                    tool: 'Herramientas'
+                })[category] || category}**\n\n` +
                 `💡 Usa el menú desplegable para cambiar de categoría`
             )
             .setColor('#FFD700')
@@ -1338,6 +1883,16 @@ class ShopSystem {
                             label: 'Cofres',
                             value: 'mystery',
                             emoji: '🗝️'
+                        },
+                        {
+                            label: 'Semillas',
+                            value: 'seed',
+                            emoji: '🌱'
+                        },
+                        {
+                            label: 'Mascotas',
+                            value: 'pet',
+                            emoji: '🐕'
                         },
                         {
                             label: 'Trivia',
@@ -1537,6 +2092,14 @@ class ShopSystem {
             }
         }
         
+        const map = await this.economy.database.getActiveTreasureMap(userId);
+        if (map) {
+            inventoryText += `🗺️ **Mapa del Tesoro**\n`;
+            inventoryText += `├ Solo puedes tener 1 mapa a la vez\n`;
+            inventoryText += `├ *Se obtienen como drop raro al trabajar (~1%).*\n`;
+            inventoryText += `└ 💡 Uso: \`>mapa\`\n\n`
+        }
+
         embed.setDescription(inventoryText || 'No tienes comprado ningun item');
         embed.addFields(
             { name: '💎 Valor Total', value: `${totalValue.toLocaleString('es-ES')} π-b$`, inline: true },
@@ -1648,7 +2211,7 @@ class ShopSystem {
         }
 
         // Prevenir uso directo de items lanzables
-        if (item.effect.throwable) {
+        if (item.effect?.throwable) {
             return { 
                 success: false, 
                 message: `❌ Este item no se puede usar directamente. Usa \`>throw @usuario\` para lanzarlo.` 
@@ -1663,9 +2226,23 @@ class ShopSystem {
                     return await this.resetAllCooldowns(userId, item);
                 }
 
+                if (item.effect.type === 'garden_boost') {
+                    return await this.applyGardenFertilizer(userId, item);
+                }
+
+                if (item.effect.type === 'next_daily_boost') {
+                    return await this.applyNextDailyBoost(userId, item);
+                }
+
+                if (item.effect.type === 'next_work_boost') {
+                    return await this.applyNextWorkBoost(userId, item);
+                }
+
+                if (item.effect.type === 'sicario_discount') {
+                    return await this.applySicarioDiscount(userId, item);
+                }
+
                 return await this.applyConsumableEffect(userId, itemId, item);
-            case 'permanent':
-                return await this.applyPermanentEffect(userId, itemId, item);
             case 'tool':
                 return await this.applyToolEffect(userId, itemId, item);  
             case 'equipment':
@@ -1693,9 +2270,55 @@ class ShopSystem {
                 if (item.effect.type === 'open_chest') {
                     return await this.openChest(userId, item);
                 }
+                if (item.effect.type === 'mystery_pro') {
+                    return await this.openMysteryBoxPro(userId);
+                }
                 return await this.openMysteryBox(userId, item);
             case 'cosmetic':
                 return await this.applyCosmeticItem(userId, itemId, item);
+            case 'seed':
+                return { success: false, message: '🌱 Las semillas no se usan directamente. Ve a tu huerto con `>huerto plantar <slot> ' + item.id + '`.' };
+            case 'ingredient':
+                return { success: false, message: '🌿 Los ingredientes son materiales de crafteo, no se usan directamente. Usa >recipes' };
+            case 'pet':
+                if (item.id === 'pet_treat') {
+                    const evos = await this.economy.addPetXP(userId, 10);
+                    const evoText = evos.length > 0 ? `\n✨ ¡${evos.map(e => e.name).join(', ')} evolucionó!` : '';
+                    return { success: true, message: `🐾 Tus mascotas recibieron **+10 XP** extra.${evoText}` };
+                }
+                if (item.id === 'pet_egg') {
+                    return { success: false, message: '🥚 Los huevos no se usan así. Usa `>mascota incubar` para incubar tu huevo.' };
+                }
+                if (item.id.startsWith('medicine_')) {
+                    return { success: false, message: '💊 Las medicinas se usan con `>mascota curar <id_mascota> ' + item.id + '`.' };
+                }
+                if (item.id === 'pet_slot_extra') {
+                    const user = await this.economy.getUser(userId);
+                    const currentMax = user.stats?.petSlots || 5;
+                    if (currentMax >= 10) {
+                        return { success: false, message: '❌ Ya tienes el máximo de 10 slots de mascota.' };
+                    }
+                    await this.economy.updateUser(userId, {
+                        stats: { ...user.stats, petSlots: currentMax + 1 }
+                    });
+                    return { success: true, message: `🏠 ¡Slot desbloqueado! Ahora puedes tener hasta **${currentMax + 1}** mascotas.` };
+                }
+                return { success: false, message: '❌ Este ítem de mascota no se puede usar directamente.' };
+            case 'permanent':
+                if (item.id === 'garden_slot_extra') {
+                    // Aplicar slot extra al huerto
+                    const garden = await this.economy.database.getGarden(userId);
+                    const currentExtra = garden.extra_slots || 0;
+                    if (currentExtra >= 4) {
+                        return { success: false, message: '❌ Ya tienes el máximo de slots de huerto (8 en total).' };
+                    }
+                    await this.economy.database.pool.execute(
+                        'UPDATE gardens SET extra_slots = ? WHERE user_id = ?',
+                        [currentExtra + 1, userId]
+                    );
+                    return { success: true, message: `🪴 ¡Slot de huerto desbloqueado! Ahora tienes **${4 + currentExtra + 1} slots**.` };
+                }
+                return await this.applyPermanentEffect(userId, itemId, item);
             default:
                 return { success: false, message: 'Este item no se puede usar.' };
         }
@@ -2296,6 +2919,124 @@ class ShopSystem {
         };
     }
     
+    async openMysteryBoxPro(userId) {
+        const user = await this.economy.getUser(userId);
+        const roll = Math.random() * 100;
+
+        // Tabla de probabilidades
+        // 💀 Pérdida (10%)
+        if (roll < 10) {
+            const lossPercent = 0.05 + Math.random() * 0.10; // 5-15% del balance
+            const loss = Math.floor(user.balance * lossPercent);
+            const actualLoss = Math.min(loss, user.balance);
+            if (actualLoss > 0) {
+                await this.economy.removeMoney(userId, actualLoss, 'mystery_box_pro_loss');
+            }
+            return {
+                success: true,
+                type: 'loss',
+                message: `💀 **¡Mala suerte!** La caja estaba trampeada...\n💸 Perdiste **${actualLoss.toLocaleString('es-ES')} ${this.economy.config.currencySymbol}**`,
+            };
+        }
+
+        // 🪙 Dinero pequeño (30%)
+        if (roll < 40) {
+            const amount = Math.floor(100 + Math.random() * 900); // 100-1,000π
+            await this.economy.addMoney(userId, amount, 'mystery_box_pro_small');
+            return {
+                success: true,
+                type: 'money_small',
+                message: `🪙 Encontraste **${amount.toLocaleString('es-ES')} ${this.economy.config.currencySymbol}** en la caja.`,
+            };
+        }
+
+        // 💰 Dinero medio (25%)
+        if (roll < 65) {
+            const amount = Math.floor(1000 + Math.random() * 9000); // 1,000-10,000π
+            await this.economy.addMoney(userId, amount, 'mystery_box_pro_medium');
+            return {
+                success: true,
+                type: 'money_medium',
+                message: `💰 ¡Encontraste **${amount.toLocaleString('es-ES')} ${this.economy.config.currencySymbol}**!`,
+            };
+        }
+
+        // 💎 Dinero grande (20%)
+        if (roll < 85) {
+            const amount = Math.floor(10000 + Math.random() * 40000); // 10,000-50,000π
+            await this.economy.addMoney(userId, amount, 'mystery_box_pro_large');
+            return {
+                success: true,
+                type: 'money_large',
+                message: `💎 ¡**JACKPOT!** Encontraste **${amount.toLocaleString('es-ES')} ${this.economy.config.currencySymbol}**!`,
+            };
+        }
+
+        // 🎁 Ítem común (8%)
+        if (roll < 93) {
+            const commonItems = Object.values(this.shopItems).filter(i =>
+                i.rarity === 'common' && i.stackable && i.id !== 'mystery_box_pro'
+            );
+            if (commonItems.length > 0) {
+                const won = commonItems[Math.floor(Math.random() * commonItems.length)];
+                const userItems = user.items || {};
+                if (userItems[won.id]) userItems[won.id].quantity += 1;
+                else userItems[won.id] = { id: won.id, quantity: 1, purchaseDate: new Date().toISOString() };
+                await this.economy.updateUser(userId, { items: userItems });
+                return {
+                    success: true,
+                    type: 'item_common',
+                    message: `🎁 ¡Obtuviste **${won.name}**!`,
+                };
+            }
+        }
+
+        // ✨ Ítem raro (5%)
+        if (roll < 98) {
+            const rareItems = Object.values(this.shopItems).filter(i =>
+                (i.rarity === 'rare' || i.rarity === 'uncommon') && i.stackable && i.id !== 'mystery_box_pro'
+            );
+            if (rareItems.length > 0) {
+                const won = rareItems[Math.floor(Math.random() * rareItems.length)];
+                const userItems = user.items || {};
+                if (userItems[won.id]) userItems[won.id].quantity += 1;
+                else userItems[won.id] = { id: won.id, quantity: 1, purchaseDate: new Date().toISOString() };
+                await this.economy.updateUser(userId, { items: userItems });
+                return {
+                    success: true,
+                    type: 'item_rare',
+                    message: `✨ ¡**RARO!** Obtuviste **${won.name}**!`,
+                };
+            }
+        }
+
+        // 👑 Ítem legendario (2%)
+        const legendaryItems = Object.values(this.shopItems).filter(i =>
+            (i.rarity === 'legendary' || i.rarity === 'epic') && i.stackable && i.id !== 'mystery_box_pro'
+        );
+        if (legendaryItems.length > 0) {
+            const won = legendaryItems[Math.floor(Math.random() * legendaryItems.length)];
+            const userItems = user.items || {};
+            if (userItems[won.id]) userItems[won.id].quantity += 1;
+            else userItems[won.id] = { id: won.id, quantity: 1, purchaseDate: new Date().toISOString() };
+            await this.economy.updateUser(userId, { items: userItems });
+            return {
+                success: true,
+                type: 'item_legendary',
+                message: `👑 ¡**LEGENDARIO!** ¡Obtuviste **${won.name}**! ¡Increíble suerte!`,
+            };
+        }
+
+        // Fallback — dinero medio si no hay ítems
+        const amount = Math.floor(5000 + Math.random() * 5000);
+        await this.economy.addMoney(userId, amount, 'mystery_box_pro_fallback');
+        return {
+            success: true,
+            type: 'money_medium',
+            message: `💰 ¡Encontraste **${amount.toLocaleString('es-ES')} ${this.economy.config.currencySymbol}**!`,
+        };
+    }
+
     // === ABRIR CAJA MISTERIOSA ===
     async openMysteryBox(userId, item) {
         const possibleItems = Object.values(this.shopItems).filter(i => 
@@ -5018,27 +5759,78 @@ message: `¡Item activado con éxito!\n\n**Beneficios:**\n${includesList}\n\n�
         await message.reply({ embeds: [embed] });
     }
 
-async handleRoleColorSelect(interaction) {
-    const userId = interaction.customId.split('_')[1];
-    if (interaction.user.id !== userId) {
-        return interaction.reply({ content: '❌ Este menú no es tuyo.', ephemeral: true });
+    async handleRoleColorSelect(interaction) {
+        const userId = interaction.customId.split('_')[1];
+        if (interaction.user.id !== userId) {
+            return interaction.reply({ content: '❌ Este menú no es tuyo.', ephemeral: true });
+        }
+
+        const color = interaction.values[0];
+        const colorInt = parseInt(color.replace('#', ''), 16);
+
+        const embed = new EmbedBuilder()
+            .setTitle('🎭 Color Seleccionado')
+            .setDescription(`Elegiste el color \`${color}\`\n\nAhora escribe el nombre de tu rol:\n\`>rolcreate ${color} <nombre del rol>\`\n\nEjemplo: \`>rolcreate ${color} Rey Supremo\``)
+            .setColor(colorInt)
+            .addFields({
+                name: '💡 Vista previa',
+                value: `La barra lateral de tu \`>bal\` se verá de este color ☝️`,
+                inline: false
+            });
+
+        await interaction.update({ embeds: [embed], components: [] });
     }
 
-    const color = interaction.values[0];
-    const colorInt = parseInt(color.replace('#', ''), 16);
-
-    const embed = new EmbedBuilder()
-        .setTitle('🎭 Color Seleccionado')
-        .setDescription(`Elegiste el color \`${color}\`\n\nAhora escribe el nombre de tu rol:\n\`>rolcreate ${color} <nombre del rol>\`\n\nEjemplo: \`>rolcreate ${color} Rey Supremo\``)
-        .setColor(colorInt)
-        .addFields({
-            name: '💡 Vista previa',
-            value: `La barra lateral de tu \`>bal\` se verá de este color ☝️`,
-            inline: false
+    async applyGardenFertilizer(userId, item) {
+        const user = await this.economy.getUser(userId);
+        const stats = user.stats || {};
+        if (stats.gardenFertilizer) {
+            return { success: false, message: '❌ Ya tienes un fertilizante activo. Espera a cosechar primero.' };
+        }
+        await this.economy.updateUser(userId, {
+            stats: { ...stats, gardenFertilizer: true }
         });
+        return { success: true, message: '🌱 ¡Fertilizante aplicado! Tu próxima cosecha del huerto dará **x2 recompensas**.' };
+    }
 
-    await interaction.update({ embeds: [embed], components: [] });
-}
+    async applyNextDailyBoost(userId, item) {
+        const user = await this.economy.getUser(userId);
+        const stats = user.stats || {};
+        if (stats.nextDailyBoost) {
+            return { success: false, message: '❌ Ya tienes un boost de daily activo.' };
+        }
+        await this.economy.updateUser(userId, {
+            stats: { ...stats, nextDailyBoost: item.effect.multiplier }
+        });
+        const pct = Math.round((item.effect.multiplier - 1) * 100);
+        return { success: true, message: `👆 ¡Toque Dorado activado! Tu próximo \`>daily\` dará **+${pct}% extra**.` };
+    }
+
+    async applyNextWorkBoost(userId, item) {
+        const user = await this.economy.getUser(userId);
+        const stats = user.stats || {};
+        if (stats.nextWorkBoost) {
+            return { success: false, message: '❌ Ya tienes un boost de trabajo activo.' };
+        }
+        await this.economy.updateUser(userId, {
+            stats: { ...stats, nextWorkBoost: item.effect.multiplier }
+        });
+        const pct = Math.round((item.effect.multiplier - 1) * 100);
+        return { success: true, message: `💼 ¡Frenesí Laboral activado! Tu próximo trabajo dará **+${pct}% extra**.` };
+    }
+
+    async applySicarioDiscount(userId, item) {
+        const user = await this.economy.getUser(userId);
+        const stats = user.stats || {};
+        if (stats.sicarioDiscount) {
+            return { success: false, message: '❌ Ya tienes un descuento de sicario activo.' };
+        }
+        await this.economy.updateUser(userId, {
+            stats: { ...stats, sicarioDiscount: item.effect.discount }
+        });
+        const pct = Math.round(item.effect.discount * 100);
+        return { success: true, message: `📜 ¡Contrato Sombrío activo! Tu próximo \`>sicario\` costará **${pct}% menos**.` };
+    }
 
     async applyRandomCurse(userId) {
         const user = await this.economy.getUser(userId);

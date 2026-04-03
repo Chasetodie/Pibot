@@ -1,5 +1,6 @@
 # Credenciales
 .env
+.env.testing
 
 # Archivos del sistema
 node_modules/
@@ -12,3 +13,6 @@ node_modules/
 
 # Pero permitir la DB principal
 !bot_data.db
+
+# Shit
+onlycommandsnew.txt

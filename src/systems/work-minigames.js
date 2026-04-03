@@ -4,12 +4,137 @@ class WorkMinigames {
     constructor() {
         this.TIMEOUT = 20000;
         this.activeGames = new Map();
+        this.groqApiKey = process.env.GROQ_API_KEY;
+        this.aiCache = new Map(); // Cache para no repetir preguntas AI recientes
+        this.AI_CACHE_MAX = 50;
         this.illegalJobs = ['criminal', 'vendedordelpunto', 'damadecomp', 'sicario', 'contador'];
         this.streakBonuses = [
             { streak: 10, bonus: 0.40, label: '🔥🔥🔥 ¡RACHA LEGENDARIA!' },
             { streak: 5,  bonus: 0.25, label: '🔥🔥 ¡Racha increíble!' },
             { streak: 3,  bonus: 0.15, label: '🔥 ¡En racha!' },
         ];
+    }
+
+    async generateAIMinigame(jobType, userId) {
+        if (!this.groqApiKey) return null;
+
+        const jobContexts = {
+            limpiador: 'limpiador de oficinas y edificios',
+            paseador: 'paseador de perros profesional',
+            streamer: 'streamer de videojuegos',
+            delivery: 'repartidor de comida a domicilio',
+            pizzero: 'pizzero y cocinero de pizzería',
+            bartender: 'bartender de bar nocturno',
+            uber: 'conductor de uber y transporte privado',
+            croupier: 'croupier de casino',
+            barista_casino: 'barista de casino',
+            programmer: 'programador de software',
+            abrepuertasoxxo: 'empleado de tienda OXXO',
+            mecanico: 'mecánico automotriz',
+            doctor: 'médico y doctor',
+            botargadrsimi: 'empleado disfrazado de Dr. Simi',
+            criminal: 'criminal callejero',
+            vendedordelpunto: 'vendedor ambulante',
+            ofseller: 'vendedor de OnlyFans',
+            damadecomp: 'dama de compañía',
+            paranormalinv: 'investigador paranormal',
+            contador: 'contador público',
+            joyero: 'joyero y vendedor de joyas',
+            actor_porno: 'actor de contenido adulto',
+            sicario: 'sicario y contratista',
+        };
+
+        const types = ['multiple_choice', 'true_false', 'fill_blank', 'guess_number'];
+        const type = this.getRandom(types);
+        const jobName = jobContexts[jobType] || jobType;
+
+        const prompts = {
+            multiple_choice: `Genera una pregunta de opción múltiple para un ${jobName}. Debe ser una situación realista del trabajo. Responde SOLO con JSON válido sin markdown:
+    {"question":"pregunta aquí","correct":"respuesta correcta","wrong1":"opción incorrecta 1","wrong2":"opción incorrecta 2","wrong3":"opción incorrecta 3"}`,
+
+            true_false: `Genera un enunciado verdadero o falso para un ${jobName}. Debe ser sobre el trabajo. Responde SOLO con JSON válido sin markdown:
+    {"statement":"enunciado aquí","isTrue":true}`,
+
+            fill_blank: `Genera una oración con espacio en blanco para un ${jobName}. Usa ___ para el espacio faltante. La respuesta debe ser un sustantivo o acción específica del trabajo, no un verbo genérico. Responde SOLO con JSON válido sin markdown:
+    {"sentence":"oración específica del trabajo con ___ aquí","correct":"palabra o frase específica del trabajo","wrong1":"opción incorrecta 1","wrong2":"opción incorrecta 2","wrong3":"opción incorrecta 3","wrong4":"opción incorrecta 4"}`,
+
+            guess_number: `Genera una pregunta de estimación simple para un ${jobName}. Debe ser una pregunta de conocimiento del trabajo, NO matemática. Ejemplo: "¿A qué temperatura se hornea una pizza?" o "¿Cuántos minutos dura un turno estándar?". Responde SOLO con JSON válido sin markdown:
+    {"question":"pregunta de estimación simple aquí","correct":"número correcto con unidad","wrong1":"número incorrecto cercano","wrong2":"número incorrecto cercano","wrong3":"número incorrecto cercano","wrong4":"número incorrecto cercano","wrong5":"número incorrecto cercano"}`,
+        };
+
+        try {
+            const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${this.groqApiKey}`,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    model: 'llama-3.1-8b-instant',
+                    max_tokens: 300,
+                    temperature: 0.9,
+                    messages: [
+                        { role: 'system', content: 'Eres un generador de minijuegos para un bot de Discord. Respondes SOLO con JSON válido, sin texto adicional ni markdown.' },
+                        { role: 'user', content: prompts[type] }
+                    ]
+                }),
+                signal: AbortSignal.timeout(5000)
+            });
+
+            if (!response.ok) return null;
+
+            const data = await response.json();
+            const raw = data.choices?.[0]?.message?.content?.trim();
+            if (!raw) return null;
+
+            const parsed = JSON.parse(raw);
+
+            console.log(`[WorkMG AI] 📝 Tipo: ${type} | Job: ${jobType}`);
+            console.log(`[WorkMG AI] ❓ ${parsed.question || parsed.statement || parsed.sentence}`);
+            console.log(`[WorkMG AI] ✅ ${parsed.correct || (parsed.isTrue ? 'VERDADERO' : 'FALSO')}`);
+
+            // Construir minijuego según tipo
+            if (type === 'multiple_choice' && parsed.question && parsed.correct) {
+                return this.buildPoolChoice({
+                    userId,
+                    question: `🤖 ${parsed.question}`,
+                    correct: parsed.correct,
+                    wrongPool: [parsed.wrong1, parsed.wrong2, parsed.wrong3].filter(Boolean)
+                });
+            }
+
+            if (type === 'true_false' && parsed.statement) {
+                return this.buildTrueFalse({
+                    userId,
+                    statement: parsed.statement,
+                    isTrue: parsed.isTrue === true || parsed.isTrue === 'true'
+                });
+            }
+
+            if (type === 'fill_blank' && parsed.sentence && parsed.correct) {
+                return this.buildFillBlank({
+                    userId,
+                    sentence: parsed.sentence,
+                    correct: parsed.correct,
+                    wrongPool: [parsed.wrong1, parsed.wrong2, parsed.wrong3, parsed.wrong4].filter(Boolean)
+                });
+            }
+
+            if (type === 'guess_number' && parsed.question && parsed.correct) {
+                return this.buildGuessNumber({
+                    userId,
+                    question: parsed.question,
+                    correct: parsed.correct,
+                    wrongPool: [parsed.wrong1, parsed.wrong2, parsed.wrong3, parsed.wrong4, parsed.wrong5].filter(Boolean)
+                });
+            }
+
+            return null;
+
+        } catch (err) {
+            console.log(`[WorkMG] AI falló (${err.message}), usando pool predefinido`);
+            return null;
+        }
     }
 
     getRandom(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
@@ -781,7 +906,14 @@ buildMemory({ context, userId }) {
         const games = this.getMinigamesForJob(jobType, userId);
         if (!games) return null;
 
-        const game = this.getRandom(games);
+        // Intentar generar con IA (70% del tiempo), fallback al pool
+        let game = null;
+        if (Math.random() < 0.70) {
+            game = await this.generateAIMinigame(jobType, userId);
+        }
+        if (!game) {
+            game = this.getRandom(games);
+        }
         const streakBonus = this.getStreakBonus(workStreak);
 
         this.activeGames.set(userId, {

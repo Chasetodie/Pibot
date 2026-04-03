@@ -114,6 +114,40 @@ class MaintenanceSystem {
             }
         }
     }
+
+    async showChangelog(message) {
+        const changelog = await this.database.getLastChangelog();
+
+        if (!changelog) {
+            return message.reply({
+                embeds: [new EmbedBuilder()
+                    .setTitle('📋 Changelog')
+                    .setDescription('No hay changelogs disponibles aún.')
+                    .setColor('#888888')]
+            });
+        }
+
+        const changes = typeof changelog.changelog === 'string'
+            ? JSON.parse(changelog.changelog)
+            : changelog.changelog;
+
+        const embed = new EmbedBuilder()
+            .setTitle('✨ Último Changelog de Pibot')
+            .setDescription('Estos son los cambios más recientes:')
+            .setColor('#00FF88')
+            .setTimestamp(changelog.created_at);
+
+        for (const [category, items] of Object.entries(changes)) {
+            embed.addFields({
+                name: category,
+                value: items.map(i => `• ${i}`).join('\n'),
+                inline: false
+            });
+        }
+
+        embed.setFooter({ text: '¿Encontraste un bug? Contáctate con chasetodie10' });
+        return message.reply({ embeds: [embed] });
+    }
 }
 
 module.exports = MaintenanceSystem;
