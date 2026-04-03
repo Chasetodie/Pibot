@@ -288,7 +288,7 @@ if (cosmeticRole?.name) {
         }
 
         // Bonus matrimonial
-        const { bonus: marriageBonus, partnerId: marriagePartnerId } = await this.economy.applyMarriageBonus(userId, applyResult.finalAmount);
+        const { bonus: marriageBonus, partnerId: marriagePartnerId } = await this.economy.applyMarriageBonus(userId, result.finalAmount);
         if (marriageBonus > 0 && marriagePartnerId) {
             embed.addFields({
                 name: '💍 Bonus Matrimonial',
