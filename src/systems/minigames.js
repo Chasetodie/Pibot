@@ -5940,7 +5940,7 @@ const userId = gameState.userId;
                 }
 
                 // Bonus de libros a minijuegos
-                const userMG = await this.economy.getUser(userId);
+                const userMG = await this.economy.getUser(playerId);
                 const bookBonusesMG = this.economy.getBookBonuses(userMG);
                 if (bookBonusesMG.minigameBonus > 0) {
                     const bookBonus = Math.floor(finalEarnings * bookBonusesMG.minigameBonus);

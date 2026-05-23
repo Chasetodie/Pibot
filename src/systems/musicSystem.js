@@ -17,8 +17,8 @@ class MusicSystem {
     initialize() {
         const nodes = [
             {
-                name: 'Lavalink95',
-                url: '160.191.77.60:7555',
+                name: 'Lavalink95-2',
+                url: '160.191.77.60:8281',
                 auth: process.env.LAVAPASS,
                 secure: false
             }

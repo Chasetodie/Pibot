@@ -2323,7 +2323,7 @@ class EconomySystem {
 
         // Cobrar y empezar lectura
         await this.removeMoney(userId, book.price, 'library_book');
-        const finishesAt = Date.now() + /*book.readHours * 60 * 60 * 1000*/20000;
+        const finishesAt = Date.now() + book.readHours * 60 * 60 * 1000;
         await this.database.startReading(userId, bookId, finishesAt);
 
         return { success: true, book, finishesAt };
