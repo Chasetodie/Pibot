@@ -9224,6 +9224,16 @@ const userId = gameState.userId;
     async checkWeeklyPotExpiry() {
         try {
             const currentPot = await this.economy.database.getCurrentWeeklyPot();
+
+            // ← NUEVO: distribuir pozos viejos que quedaron activos
+            const oldPots = await this.economy.database.getOldActivePots(
+                currentPot?.week_start || Date.now()
+            );
+            for (const oldPot of oldPots) {
+                console.log(`⚠️ Pozo viejo encontrado, distribuyendo: ${oldPot.week_start}`);
+                await this.distributePot(oldPot);
+            }            
+
             if (!currentPot) {
                 console.log('⚠️ No hay pozo actual');
                 return;

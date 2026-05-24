@@ -5716,15 +5716,41 @@ message: `¡Item activado con éxito!\n\n**Beneficios:**\n${includesList}\n\n�
             return;
         }
         
+        // Cooldown por víctima
+        const cooldownMs = 2 * 60 * 60 * 1000; // 2 horas
+        const cooldowns = user.stats?.curseTargetCooldowns || {};
+        const cdExpiry = cooldowns[targetUserId] || 0;
+        const cdLeft = cdExpiry - Date.now();
+
+        if (cdLeft > 0) {
+            const hours = Math.floor(cdLeft / 3600000);
+            const mins = Math.floor((cdLeft % 3600000) / 60000);
+            const timeText = hours > 0 ? `${hours}h ${mins}m` : `${mins}m`;
+            await message.reply(`⏰ Ya maldijiste a esta persona recientemente. Podrás volver a hacerlo en **${timeText}**.`);
+            return;
+        }
+        
         // Consumir el item
         const newItems = { ...userItems };
         newItems['death_hand'].quantity -= 1;
         if (newItems['death_hand'].quantity <= 0) {
             delete newItems['death_hand'];
         }
+
+        // Guardar cooldown para esta víctima (limpiando entradas expiradas)
+        const updatedCooldowns = Object.fromEntries(
+            Object.entries({ ...cooldowns, [targetUserId]: Date.now() + cooldownMs })
+                .filter(([_, expiry]) => expiry > Date.now())
+        );
         
-        await this.economy.updateUser(message.author.id, { items: newItems });
-        
+        await this.economy.updateUser(message.author.id, { 
+            items: newItems,
+            stats: {
+                ...user.stats,
+                curseTargetCooldowns: updatedCooldowns
+            } 
+        });
+            
         // Aplicar maldición al objetivo
         const targetUser = await this.economy.getUser(targetUserId);
         const activeEffects = this.parseActiveEffects(targetUser.activeEffects);

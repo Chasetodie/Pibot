@@ -137,7 +137,7 @@ class AchievementsSystem {
             },
             'daily_master': {
                 name: '🗓️ Maestro de la Rutina',
-                description: 'Reclama tu daily 30 días seguidos',
+                description: 'Reclama tu daily 30 veces',
                 requirement: { type: 'daily_streak', value: 30 },
                 reward: { money: 10000, xp: 750 },
                 rarity: 'epic',

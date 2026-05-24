@@ -4443,7 +4443,7 @@ if (maintenance) await this.economy.database.disableMaintenance(maintenanceId);
                 not_doctor: '❌ No eres Doctor.',
                 cooldown: `⏰ Debes esperar **${this.formatTimeLeft(result.timeLeft)}** para volver a curar.`,
                 not_cursed: `✅ **${targetName}** no tiene ninguna maldición activa.`,
-                no_money: `❌ Necesitas **${this.formatNumber(result.cost)} π-b$** para curar a otro usuario.`,
+                no_money: `❌ **${targetName}** no tiene suficiente dinero para pagar la cura.\nCosto: **${this.formatNumber(result.cost)} π-b$**`,
             };
             return message.reply(reasons[result.reason] || '❌ Error desconocido.');
         }

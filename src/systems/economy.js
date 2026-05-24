@@ -3232,10 +3232,11 @@ class EconomySystem {
 
         // Cobrar si no es autocuración
         if (!isSelf) {
-            if (doctor.balance < this.doctorConfig.cureCost) {
+            if (target.balance < this.doctorConfig.cureCost) {
                 return { success: false, reason: 'no_money', cost: this.doctorConfig.cureCost };
             }
-            await this.removeMoney(doctorId, this.doctorConfig.cureCost, 'doctor_cure');
+            await this.removeMoney(targetId, this.doctorConfig.cureCost, 'doctor_cure_payment');
+            await this.addMoney(doctorId, this.doctorConfig.cureCost, 'doctor_cure_income');
         }
 
         // Eliminar maldición

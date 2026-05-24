@@ -14,6 +14,7 @@ class LocalDatabase {
         setInterval(() => {
             this.cleanOldGameLimits();
             this.cleanOldNotifications();
+            this.cleanupExpiredRecords();
         }, 24 * 60 * 60 * 1000);
     }
 
@@ -1169,12 +1170,10 @@ class LocalDatabase {
 
     async getOldActivePots(currentWeekStart) {
         try {
-            const [rows] = await this.pool.execute(`
-                SELECT * FROM weekly_pot 
-                WHERE status = 'active' 
-                AND week_start < ? 
-                ORDER BY week_start ASC
-            `, [currentWeekStart]);
+            const [rows] = await this.pool.execute(
+                `SELECT * FROM weekly_pot WHERE status = 'active' AND week_start < ?`, 
+                [currentWeekStart]
+            );
             
             console.log(`📊 Pozos antiguos encontrados: ${rows.length}`);
             return rows || [];
@@ -1271,6 +1270,42 @@ class LocalDatabase {
             
             console.log(`🧹 Database cache: ${cleaned} usuarios limpiados, ${this.userCache.size} restantes`);
         }, 10 * 60 * 1000); // Cada 10 minutos
+    }
+
+    async cleanupExpiredRecords() {
+        try {
+            const now = Date.now();
+
+            // Limpiar treasure_maps completados o expirados
+            const [tmResult] = await this.pool.execute(
+                'DELETE FROM treasure_maps WHERE completed = 1 OR expires_at <= ?',
+                [now]
+            );
+
+            // Limpiar crafting_queue completados o con completes_at muy viejo (+1 día de margen)
+            const [cqResult] = await this.pool.execute(
+                'DELETE FROM crafting_queue WHERE status IN (?, ?)',
+                ['completed', 'cancelled']
+            );
+
+            // Limpiar weekly_pot, conservando los 2 más recientes completados
+            const [wpResult] = await this.pool.execute(`
+                DELETE FROM weekly_pot 
+                WHERE status = 'completed'
+                AND week_start NOT IN (
+                    SELECT week_start FROM (
+                        SELECT week_start FROM weekly_pot
+                        WHERE status = 'completed'
+                        ORDER BY week_start DESC
+                        LIMIT 2
+                    ) as recent
+                )
+            `);
+
+            console.log(`🧹 Cleanup: ${tmResult.affectedRows} treasure_maps, ${cqResult.affectedRows} crafting_queue eliminados, ${wpResult.affectedRows} weekly_pot eliminados`);
+        } catch (err) {
+            console.error('❌ Error en cleanupExpiredRecords:', err);
+        }
     }
 
     async getAllUsers() {

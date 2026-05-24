@@ -2064,55 +2064,21 @@ _Totalmente gratis, sin límites_`,
 
     /**
      * Limpiar mensajes antiguos GLOBALMENTE
-     * Mantiene solo los últimos N mensajes por usuario
+     * Mantiene solo mensajes del ultimo dia (24 horas) para evitar que la base de datos crezca indefinidamente
      */
     async cleanupOldMessages() {
         try {
             console.log('🧹 Iniciando limpieza de base de datos...');
-            
-            // Obtener todos los usuarios únicos
-            const [users] = await this.database.pool.execute(
-                'SELECT DISTINCT user_id FROM chat_conversations'
+
+            const oneDayAgo = Date.now() - (24 * 60 * 60 * 1000);
+
+            const [result] = await this.database.pool.execute(
+                'DELETE FROM chat_conversations WHERE timestamp < ?',
+                [oneDayAgo]
             );
-            
-            let totalDeleted = 0;
-            const keepPerUser = 15; // Mantener últimos 30 mensajes por usuario
-            
-            for (const user of users) {
-                const userId = user.user_id;
-                
-                // Contar mensajes del usuario
-                const [count] = await this.database.pool.execute(
-                    'SELECT COUNT(*) as total FROM chat_conversations WHERE user_id = ?',
-                    [userId]
-                );
-                
-                const totalMessages = count[0].total;
-                
-                // Si tiene más de 30, borrar los viejos
-                if (totalMessages > keepPerUser) {
-                    const toDelete = totalMessages - keepPerUser;
-                    
-                    const [result] = await this.database.pool.execute(`
-                        DELETE FROM chat_conversations 
-                        WHERE user_id = ? 
-                        AND id NOT IN (
-                            SELECT id FROM (
-                                SELECT id FROM chat_conversations 
-                                WHERE user_id = ? 
-                                ORDER BY timestamp DESC 
-                                LIMIT ?
-                            ) as recent
-                        )`,
-                        [userId, userId, keepPerUser]
-                    );
-                    
-                    totalDeleted += result.affectedRows || 0;
-                }
-            }
-            
-            console.log(`✅ Limpieza completada: ${totalDeleted} mensajes eliminados`);
-            
+
+            console.log(`✅ Limpieza completada: ${result.affectedRows} mensajes eliminados`);
+
         } catch (error) {
             console.error('❌ Error en limpieza de BD:', error);
         }

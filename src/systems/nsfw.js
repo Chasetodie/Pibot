@@ -49,14 +49,13 @@ class NSFWSystem {
             const lastArg = args[args.length - 1];
             if (!isNaN(lastArg) && parseInt(lastArg) > 0) {
                 count = Math.min(parseInt(lastArg), maxCount);
-                tags = args.slice(0, -1).join(' ') || defaultTags;
+                tags = args.slice(0, -1).join('+') || defaultTags;
             } else {
-                tags = args.join(' ');
+                tags = args.join('+');
             }
         }
 
-        // Normalizar tags: minúsculas, espacios → +
-        tags = tags.toLowerCase().trim();
+        tags = tags.toLowerCase().trim().replace(/\s+/g, '+');
         if (!tags) tags = defaultTags;
 
         return { tags, count };
@@ -70,10 +69,10 @@ class NSFWSystem {
         try {
             // Normalizar tags y agregar filtros
             const normalizedTags = tags.toLowerCase().trim();
-            const filteredTags = `${normalizedTags} -ai_generated -stable_diffusion -midjourney -dall-e`;
+            const filteredTags = `${normalizedTags} -ai_generated`/* -stable_diffusion -midjourney -dall-e`*/;
 
             // Pedir más del necesario para compensar filtros posteriores
-            const requestLimit = Math.min(amount * 3, 100);
+            const requestLimit = 100;
             const pid = Math.floor(Math.random() * 20); // Primeras páginas tienen más resultados
 
             const params = {
@@ -164,49 +163,61 @@ class NSFWSystem {
     async sendMediaReply(message, item, title = '🔞 NSFW', extraDescription = '') {
         const isGif = /\.gif$/i.test(item.url);
         const isVideo = /\.(mp4|webm)$/i.test(item.url);
+        const isImage = /\.(jpg|jpeg|png|webp)$/i.test(item.url);
 
-        if (isGif || isVideo) {
+        const embed = this.createNSFWEmbed(item, title, extraDescription);
+
+        // Imágenes estáticas: también descargar como attachment
+        if (isImage || isGif) {
             try {
-                const head = await axios.head(item.url, { timeout: 5000 }).catch(() => null);
+                const head = await axios.head(item.url, {
+                    timeout: 5000,
+                    headers: {
+                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
+                        'Referer': 'https://rule34.xxx/'
+                    }
+                }).catch(() => null);
                 const contentLength = head?.headers?.['content-length'];
-                if (contentLength && parseInt(contentLength) > 7 * 1024 * 1024) {
-                    console.log('[NSFW] Archivo muy grande, saltando...');
-                    return null; // Lo manejamos arriba
+                if (contentLength && parseInt(contentLength) > 8 * 1024 * 1024) {
+                    // Muy grande, mandar solo el link
+                    embed.setDescription(`${extraDescription ? extraDescription + '\n\n' : ''}📎 [Click para ver](${item.url})\n*Archivo muy grande para adjuntar*`);
+                    return await message.reply({ embeds: [embed] });
                 }
 
                 const response = await axios.get(item.url, {
                     responseType: 'arraybuffer',
                     timeout: 30000,
-                    headers: { 'User-Agent': 'Mozilla/5.0' }
+                    headers: {
+                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
+                        'Referer': 'https://rule34.xxx/',
+                        'Accept': 'image/webp,image/apng,image/*,*/*;q=0.8'
+                    }
                 });
 
-                const ext = item.url.split('.').pop().split('?')[0].toLowerCase();
+                const ext = isGif ? 'gif' : item.url.split('.').pop().split('?')[0].toLowerCase();
                 const filename = `media.${ext}`;
                 const attachment = new AttachmentBuilder(Buffer.from(response.data), { name: filename });
 
-                const embed = this.createNSFWEmbed(item, title, extraDescription);
+                // Sobreescribir el embed para que use el attachment
+                embed.setImage(`attachment://${filename}`);
+                if (extraDescription) embed.setDescription(extraDescription);
 
-                if (isGif) {
-                    embed.setImage(`attachment://${filename}`);
-                } else {
-                    // Videos: no se pueden incrustar, solo link
-                    embed.setDescription(`${extraDescription ? extraDescription + '\n\n' : ''}🎬 [Ver video en navegador](${item.url})`);
-                }
-
-                await message.reply({ embeds: [embed], files: [attachment] });
+                return await message.reply({ embeds: [embed], files: [attachment] });
 
             } catch (err) {
-                console.error('[NSFW] Error descargando media:', err.message);
-                // Fallback: solo link
-                const embed = this.createNSFWEmbed(item, title, extraDescription);
-                embed.setDescription(`${extraDescription ? extraDescription + '\n\n' : ''}📎 [Click para ver](${item.url})\n*No se pudo adjuntar el archivo*`);
-                await message.reply({ embeds: [embed] });
+                console.error('[NSFW] Error descargando imagen/gif:', err.message);
+                embed.setDescription(`${extraDescription ? extraDescription + '\n\n' : ''}📎 [Click para ver](${item.url})\n*No se pudo adjuntar*`);
+                return await message.reply({ embeds: [embed] });
             }
-        } else {
-            // Imagen estática normal
-            const embed = this.createNSFWEmbed(item, title, extraDescription);
-            await message.reply({ embeds: [embed] });
         }
+
+        if (isVideo) {
+            return await message.reply(`🎬 ${item.url}`);
+        }
+
+        // Fallback genérico
+        embed.setDescription(`${extraDescription ? extraDescription + '\n\n' : ''}📎 [Click para ver](${item.url})`);
+        return await message.reply({ embeds: [embed] });
     }
 
     // ─────────────────────────────────────────────
@@ -227,11 +238,7 @@ class NSFWSystem {
         if (results.length === 0)
             return message.reply(`❌ No se encontraron resultados para: \`${tags.replace(/\+/g, ' ')}\`\n💡 Intenta con otros tags`);
 
-        for (const item of results) {
-            const sent = await this.sendMediaReply(message, item, '🔞 Rule34.xxx');
-            if (!sent) continue;
-            if (results.length > 1) await new Promise(r => setTimeout(r, 800));
-        }
+        await this.sendBatchReply(message, results, '🔞 Rule34.xxx', tags);
     }
 
     async handleNSFW(message, args) {
@@ -248,34 +255,73 @@ class NSFWSystem {
         if (results.length === 0)
             return message.reply(`❌ No se encontraron resultados para: \`${tags.replace(/\+/g, ' ')}\`\n💡 Intenta con otros tags`);
 
-        for (const item of results) {
-            const sent = await this.sendMediaReply(message, item, '🔞 NSFW');
-            if (!sent) continue;
-            if (results.length > 1) await new Promise(r => setTimeout(r, 800));
-        }
+        await this.sendBatchReply(message, results, '🔞 NSFW', tags);
     }
 
-    async handleGifs(message, args) {
-        if (!this.isNSFWChannel(message.channel))
-            return message.reply('🔞 Este comando solo funciona en canales NSFW.');
+    async sendBatchReply(message, items, title, tags) {
+        const attachments = [];
+        const skipped = [];
 
-        const { tags, count } = this.parseArgs(args, 'hentai', 20);
-        console.log(`[GIFS] tags="${tags}" count=${count}`);
+        for (const item of items) {
+            const isVideo = /\.(mp4|webm)$/i.test(item.url);
 
-        await message.channel.sendTyping();
+            if (isVideo) {
+                await message.reply(`🎬 ${item.url}`);
+                continue;
+            }
 
-        // Pedir más para compensar el filtro de solo GIFs
-        const results = await this.getRule34(`${tags} animated`, count * 4);
-        const gifs = results.filter(item => /\.gif$/i.test(item.url)).slice(0, count);
+            try {
+                const head = await axios.head(item.url, {
+                    timeout: 5000,
+                    headers: {
+                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
+                        'Referer': 'https://rule34.xxx/'
+                    }
+                }).catch(() => null);
+                const contentLength = head?.headers?.['content-length'];
+                if (contentLength && parseInt(contentLength) > 8 * 1024 * 1024) {
+                    skipped.push(item.url);
+                    continue;
+                }
 
-        if (gifs.length === 0)
-            return message.reply(`❌ No se encontraron GIFs para: \`${tags.replace(/\+/g, ' ')}\`\n💡 Intenta con: hentai, pokemon, anime`);
+                const response = await axios.get(item.url, {
+                    responseType: 'arraybuffer',
+                    timeout: 30000,
+                    headers: {
+                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
+                        'Referer': 'https://rule34.xxx/',
+                        'Accept': 'image/webp,image/apng,image/*,*/*;q=0.8'
+                    }
+                });
 
-        for (const item of gifs) {
-            const sent = await this.sendMediaReply(message, item, '🔞 GIF');
-            if (!sent) continue;
-            if (gifs.length > 1) await new Promise(r => setTimeout(r, 800));
+                const ext = item.url.split('.').pop().split('?')[0].toLowerCase();
+                const filename = `media_${attachments.length + 1}.${ext}`;
+                attachments.push(new AttachmentBuilder(Buffer.from(response.data), { name: filename }));
+
+            } catch (err) {
+                console.error('[NSFW] Error descargando:', err.message);
+                skipped.push(item.url);
+            }
         }
+
+        if (attachments.length === 0 && skipped.length === 0)
+            return message.reply('❌ No se pudo descargar ningún archivo.');
+
+        if (attachments.length === 0) return; // solo había videos, ya se mandaron arriba
+
+        const embed = new EmbedBuilder()
+            .setTitle(title)
+            .setColor('#FF69B4')
+            .setDescription(`🏷️ Tags: \`${tags.replace(/\+/g, ' ')}\` — ${attachments.length} archivo(s)`)
+            .setFooter({ text: 'Rule34.xxx' })
+            .setTimestamp();
+
+        if (skipped.length > 0) {
+            const links = skipped.map((url, i) => `[📎 Ver ${i + 1}](${url})`).join(' · ');
+            embed.addFields({ name: '🔗 Links (muy grandes)', value: links });
+        }
+
+        await message.reply({ embeds: [embed], files: attachments });
     }
 
     async handleVideos(message, args) {
@@ -287,15 +333,14 @@ class NSFWSystem {
 
         await message.channel.sendTyping();
 
-        const results = await this.getRule34(`${tags} animated`, count * 5);
+        const results = await this.getRule34(tags, count * 5);
         const videos = results.filter(item => /\.(mp4|webm)$/i.test(item.url)).slice(0, count);
 
         if (videos.length === 0)
             return message.reply(`❌ No se encontraron videos para: \`${tags.replace(/\+/g, ' ')}\`\n💡 Los videos son más escasos, intenta: hentai, sex`);
 
         for (const item of videos) {
-            const sent = await this.sendMediaReply(message, item, '🔞 Video');
-            if (!sent) continue;
+            await message.reply(`🎬 ${item.url}`);
             if (videos.length > 1) await new Promise(r => setTimeout(r, 800));
         }
     }
@@ -327,7 +372,12 @@ class NSFWSystem {
         const person1 = message.author.displayName;
         const person2 = targetUser.displayName;
 
-        await this.sendMediaReply(message, selected, '🔞 FUCK', `💕 **${person1}** se folló a **${person2}** 💕`);
+        // En handleFuck:
+        if (/\.(mp4|webm)$/i.test(selected.url)) {
+            await message.reply(`💕 **${person1}** se folló a **${person2}** 💕\n🎬 ${selected.url}`);
+        } else {
+            await this.sendMediaReply(message, selected, '🔞 FUCK', `💕 **${person1}** se folló a **${person2}** 💕`);
+        }
     }
 
     async handleFuckDetect(message, args) {
@@ -382,7 +432,12 @@ class NSFWSystem {
 
         const description = `💕 **${person1}** se folló a **${person2}** 💕`;
 
-        await this.sendMediaReply(message, selected, '🔞 FuckDetect', description);
+        // En handleFuckDetect:
+        if (/\.(mp4|webm)$/i.test(selected.url)) {
+            await message.reply(`💕 **${person1}** se folló a **${person2}** 💕\n🎬 ${selected.url}`);
+        } else {
+            await this.sendMediaReply(message, selected, '🔞 FuckDetect', description);
+        }
     }
 
     // ─────────────────────────────────────────────
@@ -397,7 +452,6 @@ class NSFWSystem {
             switch (command) {
                 case '>r34':      await this.handleR34(message, args); break;
                 case '>nsfw':     await this.handleNSFW(message, args); break;
-                case '>gifs':     await this.handleGifs(message, args); break;
                 case '>videos':   await this.handleVideos(message, args); break;
                 case '>fuck':     await this.handleFuck(message, args); break;
                 case '>fuckdetect':
