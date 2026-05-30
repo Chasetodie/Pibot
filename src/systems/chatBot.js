@@ -60,39 +60,7 @@ class ChatBotSystem {
                 `SELECT COUNT(*) as total FROM chat_conversations WHERE user_id = ?`,
                 [userId]
             );
-            
-            const isFirstTimeEver = totalMessages[0].total === 0;
-            
-            if (isFirstTimeEver) {
-                // Mensaje de bienvenida SOLO primera vez en la vida
-                const welcomeMsg = `¡Hola ${userDisplayName}! 💕✨ *sonríe emocionada* 
-
-    ¡Cómo es la primera vez que hablamos, me presento! Soy Pibot, tu amiga IA súper expresiva 😊🎭
-
-    **Tips rápidos:**
-    - Puedo hablar de CUALQUIER tema (sin filtros) 🔥
-    - Uso emojis y *acciones* para ser más expresiva
-    - Usa \`>chathelp\` para ver todos mis comandos
-    - Usa \`>orstatus\` para ver los modelos disponibles
-
-    ¡Ahora cuéntame todo, podrías volver a hablarme sobre ${message}!? 💬✨`;
-
-                await this.addMessageToContext(userId, 'assistant', welcomeMsg, 'Pibot');
-                
-                return {
-                    success: true,
-                    response: welcomeMsg,
-                    contextLength: 1
-                };
-            }
-            
-            // Si el contexto está vacío pero ya habló antes (pasaron 2 horas)
-            if (context.length === 0 && !isFirstTimeEver) {
-                // Agregar contexto simple SIN enviar mensaje de saludo
-                const contextNote = `[Han pasado más de 2 horas desde la última conversación con ${userDisplayName}]`;
-                // NO agregamos mensaje al contexto, solo lo mencionamos en el prompt
-            }
-            
+                                  
             await this.addMessageToContext(userId, 'user', message, userDisplayName);
 
             // 4. Obtener contexto actualizado DESPUÉS de guardar el mensaje del usuario

@@ -33,8 +33,8 @@ class MinigamesSystem {
         this.recentTriviaQuestions = new Map(); // ← AGREGAR ESTO
 
         this.potConfig = {
-            minMoney: 1000,
-            maxMoney: 500000,
+            minMoney: 100,
+            maxMoney: 50000,
             maxItemsPerUser: 3,
             weekDuration: 7 * 24 * 60 * 60 * 1000 // 7 dias en ms
         };
@@ -121,7 +121,7 @@ class MinigamesSystem {
                 minBet: 500,
                 maxBet: 3000,           // Cambiar de 5000 a 3000
                 cooldown: 300000,      // Cambiar de 900000 a 1800000 (30 minutos)
-                winMultiplier: 100,      // Cambiar de 100 a 75
+                winMultiplier: 75,      // Cambiar de 100 a 75
                 minNumber: 1,
                 maxNumber: 100
             },
@@ -237,16 +237,16 @@ class MinigamesSystem {
             },
             russianRoulette: {
                 minBet: 300,            // Cambiar de 200 a 300
-                maxBet: 4000,           // Cambiar de 5000 a 4000
+                maxBet: 5000,           // Cambiar de 5000 a 4000
                 minPlayers: 2,
                 maxPlayers: 6,
                 joinTime: 60000,
-                turnTime: 20000,
+                turnTime: 30000,
                 winnerMultiplier: 0.80  // Cambiar de 0.85 a 0.80 (casa 20%)
             },
             uno: {
                 minBet: 150,
-                maxBet: 8000,
+                maxBet: 10000,
                 minPlayers: 2,
                 maxPlayers: 8,
                 joinTime: 60000,
@@ -1837,7 +1837,7 @@ class MinigamesSystem {
                     { name: '🏆 Ganancia', value: `**x${this.config.lottery.winMultiplier}** si aciertas`, inline: true },
                     { name: '📊 Probabilidad', value: '**1%** de ganar', inline: true },
                     { name: '💰 Apuesta', value: `**Mín:** ${this.formatNumber(this.config.lottery.minBet)} π-b$\n**Máx:** ${this.formatNumber(this.config.lottery.maxBet)} π-b$`, inline: true },
-                    { name: '⏱️ Cooldown', value: '**5 minutos**', inline: true }
+                    { name: '⏱️ Cooldown', value: '**30 minutos**', inline: true }
                 )
                 .setColor('#FF1493')
                 .setFooter({ text: '1% de probabilidad, 100% de ganancia. ¿Te sientes con suerte?' });
@@ -5943,8 +5943,8 @@ const userId = gameState.userId;
                 const userMG = await this.economy.getUser(playerId);
                 const bookBonusesMG = this.economy.getBookBonuses(userMG);
                 if (bookBonusesMG.minigameBonus > 0) {
-                    const bookBonus = Math.floor(finalEarnings * bookBonusesMG.minigameBonus);
-                    finalEarnings += bookBonus;
+                    const bookBonus = Math.floor(winnings * bookBonusesMG.minigameBonus);
+                    winnings += bookBonus;
                 }
 
                 // Mensaje de profesión
@@ -5967,7 +5967,7 @@ const userId = gameState.userId;
                     winnings = eventBonus.finalAmount;
                     eventMessage = eventBonus.eventMessage;
                     await this.economy.addMoney(playerId, winnings, 'horserace_win');
-                    this.applyMarriageBonusMinigame(playerId, winnings, false, message).catch(() => {});
+                    this.applyMarriageBonusMinigame(playerId, winnings, false, channelOrMessage).catch(() => {});
                 }
 
                 const doubledText = player.hasDoubled ? ' (x2 🎲)' : '';
@@ -6111,7 +6111,7 @@ const userId = gameState.userId;
                     },
                     { name: '👥 Jugadores', value: `**Mín:** ${this.config.russianRoulette.minPlayers}\n**Máx:** ${this.config.russianRoulette.maxPlayers}`, inline: true },
                     { name: '💰 Apuesta', value: `**Mín:** ${this.formatNumber(this.config.russianRoulette.minBet)} π-b$\n**Máx:** ${this.formatNumber(this.config.russianRoulette.maxBet)} π-b$`, inline: true },
-                    { name: '⏱️ Tiempos', value: '**60s** para unirse\n**20s** por turno', inline: true }
+                    { name: '⏱️ Tiempos', value: '**60s** para unirse\n**30s** por turno', inline: true }
                 )
                 .setColor('#8B0000')
                 .setFooter({ text: '⚠️ Items y efectos no aplican en este juego.' });
@@ -9700,7 +9700,7 @@ const userId = gameState.userId;
                     { name: '🎮 Uso', value: '`>vending`', inline: false },
                     { name: '💰 Costo', value: '**10** π-b$ fijo', inline: true },
                     { name: '🏆 Premio', value: '**40** π-b$', inline: true },
-                    { name: '📊 Probabilidad', value: '**45%** de ganar', inline: true },
+                    { name: '📊 Probabilidad', value: '**55%** de ganar', inline: true },
                     { name: '⏱️ Cooldown', value: '**15 minutos**', inline: true }
                 )
                 .setColor('#FF6B6B')
@@ -11102,16 +11102,16 @@ await gameMessage.edit({ embeds: [questionEmbed], components });
             await message.reply({ embeds: [curseNotif] });
         }
 
-const survivalUserData = await this.economy.getUser(userId);
-const survivalActiveEffects = this.shop.parseActiveEffects(survivalUserData.activeEffects);
-let survivalDoubleReward = false;
+        const survivalUserData = await this.economy.getUser(userId);
+        const survivalActiveEffects = this.shop.parseActiveEffects(survivalUserData.activeEffects);
+        let survivalDoubleReward = false;
 
-const survivalDoubleCheck = survivalActiveEffects['trivia_double_reward'] || survivalActiveEffects['trivia_master_pass'];
-if (survivalDoubleCheck && survivalDoubleCheck.length > 0) {
-    survivalDoubleReward = true;
-    const itemId = survivalActiveEffects['trivia_double_reward'] ? 'trivia_double_reward' : 'trivia_master_pass';
-    await this.shop.consumeItemUse(userId, itemId);
-}
+        const survivalDoubleCheck = survivalActiveEffects['trivia_double_reward'] || survivalActiveEffects['trivia_master_pass'];
+        if (survivalDoubleCheck && survivalDoubleCheck.length > 0) {
+            survivalDoubleReward = true;
+            const itemId = survivalActiveEffects['trivia_double_reward'] ? 'trivia_double_reward' : 'trivia_master_pass';
+            await this.shop.consumeItemUse(userId, itemId);
+        }
 		
         try {
             // Marcar como activo
@@ -12941,14 +12941,14 @@ if (survivalDoubleCheck && survivalDoubleCheck.length > 0) {
             .addFields(
                 { name: '🪙 Coinflip', value: '`>coinflip <cara/cruz> <apuesta>`\n💰 100–5,000 π-b$ · 🏆 x1.85 · ⏱️ 30s', inline: false },
                 { name: '🎲 Dados', value: '`>dice <1-6/alto/bajo> <apuesta>`\n💰 100–5,000 π-b$ · 🏆 x1.85 (alto/bajo) · x4.0 (exacto) · ⏱️ 45s', inline: false },
-                { name: '🎰 Lotería', value: '`>lottery <número 1-100> <apuesta>`\n💰 500–3,000 π-b$ · 🏆 x100 si aciertas · ⏱️ 5 min', inline: false },
+                { name: '🎰 Lotería', value: '`>lottery <número 1-100> <apuesta>`\n💰 500–3,000 π-b$ · 🏆 x75 si aciertas · ⏱️ 30 min', inline: false },
                 { name: '♠️ Blackjack', value: '`>blackjack <apuesta>`\n💰 100–10,000 π-b$ · 🏆 x1.9 · x2.3 con BJ natural · ⏱️ 30s', inline: false },
                 { name: '🎡 Ruleta', value: '`>roulette <tipo> <apuesta>`\n💰 100–15,000 π-b$ · 🏆 x1.85 (color) hasta x32 (número) · ⏱️ 20s', inline: false },
                 { name: '🎰 Tragaperras', value: '`>slots <apuesta>`\n💰 100–8,000 π-b$ · 🏆 x2.5 hasta x50 💎 · ⏱️ 1 min', inline: false },
-                { name: '🥤 Máquina Expendedora', value: '`>vending`\n💰 Costo: 10 π-b$ · 🏆 40 π-b$ (45% de probabilidad) · ⏱️ 15 min', inline: false },
-                { name: '🔫 Ruleta Rusa', value: '`>russian <apuesta>` · `>startrussian` · `>shoot`\n💰 300–4,000 π-b$ · 👥 2-6 jugadores · 🏆 Ganador lleva 80% del pot', inline: false },
+                { name: '🥤 Máquina Expendedora', value: '`>vending`\n💰 Costo: 10 π-b$ · 🏆 40 π-b$ (55% de probabilidad) · ⏱️ 15 min', inline: false },
+                { name: '🔫 Ruleta Rusa', value: '`>russian <apuesta>` · `>startrussian` · `>shoot`\n💰 300–5,000 π-b$ · 👥 2-6 jugadores · 🏆 Ganador lleva 80% del pot', inline: false },
                 { name: '🐎 Carrera de Caballos', value: '`>horses bot <apuesta>` — vs Bot\n`>horses multi <apuesta>` · `>joinrace` · `>startrace`\n💰 200–10,000 π-b$ · 🥇x3.0 🥈x1.8 🥉x1.2 · ⚡ Puedes doblar hasta el 75% de la carrera', inline: false },
-                { name: '🎴 UNO Multiplayer', value: '`>ujoin <apuesta>` · `>ustart` · `>uplay <color> <número>`\n`>upickup` robar · `>uhand` ver mano · `>sayuno` ¡UNO!\n💰 150–8,000 π-b$ · 👥 2-8 jugadores · 🏆 Ganador lleva 90% del pot', inline: false },
+                { name: '🎴 UNO Multiplayer', value: '`>ujoin <apuesta>` · `>ustart` · `>uplay <color> <número>`\n`>upickup` robar · `>uhand` ver mano · `>sayuno` ¡UNO!\n💰 150–10,000 π-b$ · 👥 2-8 jugadores · 🏆 Ganador lleva 90% del pot', inline: false },
                 { name: '🕳️ Pozo Semanal', value: '`>potcontribute money/item <valor>` · `>holethings`\n💰 100–50,000 π-b$ · Máx 3 items/usuario · 🎁 Distribución aleatoria semanal', inline: false },
                 { name: '─── 🧠 Trivia ───', value: '\u200b', inline: false },
                 { name: '📖 Trivia Clásica', value: '`>trivia [easy/medium/hard] [modo] [categoría]`\n🎁 Gratis · 5 preguntas · 🏆 hasta 1,000 π-b$ + 80 XP · ⏱️ 1 min', inline: false },

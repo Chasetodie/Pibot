@@ -29,7 +29,7 @@ class MusicSystem {
 
         this.kazagumo = new Kazagumo(
             {
-                defaultSearchEngine: 'ytsearch',
+                defaultSearchEngine: /*'ytsearch'*/'dzsearch',
                 plugins: [new Plugins.PlayerMoved(this.client)],
                 send: (guildId, payload) => {
                     const guild = this.client.guilds.cache.get(guildId);
@@ -248,7 +248,7 @@ class MusicSystem {
 
                     case 'ytsearch':
                     case 'ys':
-                        await this.searchCommand(message, args, member, channel, guild, author, 'ytsearch');
+                        await this.searchCommand(message, args, member, channel, guild, author, /*'ytsearch'*/'dzsearch');
                         break;
                     case 'spsearch':
                     case 'ss':
@@ -301,7 +301,7 @@ class MusicSystem {
     async searchCommand(message, args, member, channel, guild, author, engine) {
         const query = args.slice(2).join(' ').trim();
         if (!query) {
-            const prefix = engine === 'ytsearch' ? 'ytsearch' : 'spsearch';
+            const prefix = engine === /*'ytsearch'*/'dzsearch' ? 'dzsearch' : 'spsearch';
             return message.reply(`❌ Escribe algo para buscar.\nEjemplo: \`>m ${prefix} la lagartija\``);
         }
 
@@ -315,11 +315,11 @@ class MusicSystem {
             }
 
             const tracks = result.tracks.slice(0, 7);
-            const platform = engine === 'ytsearch' ? '🎬 YouTube' : '🟢 Spotify';
+            const platform = engine === /*'ytsearch'*/'dzsearch' ? '🎬 YouTube' : '🟢 Spotify';
 
             const embed = new EmbedBuilder()
                 .setTitle(`${platform} — Resultados para "${query}"`)
-                .setColor(engine === 'ytsearch' ? '#FF0000' : '#1DB954')
+                .setColor(engine === /*'ytsearch'*/'dzsearch' ? '#FF0000' : '#1DB954')
                 .setDescription(
                     tracks.map((t, i) => {
                         const duration = this.formatTime(t.length);
@@ -677,7 +677,7 @@ class MusicSystem {
                         let result = null;
                         for (let attempt = 1; attempt <= 3; attempt++) {
                             try {
-                                result = await this.kazagumo.search(searchQuery, { requester: session.author, engine: 'ytsearch' });
+                                result = await this.kazagumo.search(searchQuery, { requester: session.author, engine: /*'ytsearch'*/'dzsearch' });
                                 break;
                             } catch (searchErr) {
                                 if (attempt === 3) throw searchErr;
@@ -788,7 +788,7 @@ class MusicSystem {
                         { name: '🎵 Título', value: selected.title, inline: false },
                         { name: '👤 Artista', value: selected.author || 'Desconocido', inline: true },
                         { name: '⏱️ Duración', value: this.formatTime(selected.length), inline: true },
-                        { name: '📡 Plataforma', value: session.engine === 'ytsearch' ? 'YouTube' : 'Spotify', inline: true },
+                        { name: '📡 Plataforma', value: session.engine === /*'ytsearch'*/'dzsearch' ? '🎬 YouTube' : '🟢 Spotify', inline: true },
                         { name: '🔗 URL', value: selected.uri || 'No disponible', inline: false }
                     )
                     .setTimestamp();
@@ -863,11 +863,11 @@ class MusicSystem {
 
             if (customId.startsWith('mback_')) {
                 const tracks = session.tracks;
-                const platform = session.engine === 'ytsearch' ? '🎬 YouTube' : '🟢 Spotify';
+                const platform = session.engine === /*'ytsearch'*/'dzsearch' ? '🎬 YouTube' : '🟢 Spotify';
 
                 const embed = new EmbedBuilder()
                     .setTitle(`${platform} — Resultados`)
-                    .setColor(session.engine === 'ytsearch' ? '#FF0000' : '#1DB954')
+                    .setColor(session.engine === /*'ytsearch'*/'dzsearch' ? '#FF0000' : '#1DB954')
                     .setDescription(
                         tracks.map((t, i) =>
                             `\`${i + 1}.\` **${t.title}**\n└ ${this.formatTime(t.length)} • ${t.author || 'Desconocido'}`
@@ -1018,7 +1018,7 @@ class MusicSystem {
             }
 
             let searchQuery = query;
-            let searchEngine = 'ytsearch';
+            let searchEngine = dzsearch/*'ytsearch'*/;
 
             if (searchQuery.startsWith('http')) {
                 searchEngine = null;
