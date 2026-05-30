@@ -1104,7 +1104,7 @@ class LocalDatabase {
                     permanentEffects,
                     activeEffects,
                     passiveIncomeStats,
-                    comestic_nickname,
+                    cosmetic_nickname,
                     cosmetic_role
                 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ON DUPLICATE KEY UPDATE id = id

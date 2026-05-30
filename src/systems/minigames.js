@@ -12947,7 +12947,7 @@ await gameMessage.edit({ embeds: [questionEmbed], components });
                 { name: '🎰 Tragaperras', value: '`>slots <apuesta>`\n💰 100–8,000 π-b$ · 🏆 x2.5 hasta x50 💎 · ⏱️ 1 min', inline: false },
                 { name: '🥤 Máquina Expendedora', value: '`>vending`\n💰 Costo: 10 π-b$ · 🏆 40 π-b$ (55% de probabilidad) · ⏱️ 15 min', inline: false },
                 { name: '🔫 Ruleta Rusa', value: '`>russian <apuesta>` · `>startrussian` · `>shoot`\n💰 300–5,000 π-b$ · 👥 2-6 jugadores · 🏆 Ganador lleva 80% del pot', inline: false },
-                { name: '🐎 Carrera de Caballos', value: '`>horses bot <apuesta>` — vs Bot\n`>horses multi <apuesta>` · `>joinrace` · `>startrace`\n💰 200–10,000 π-b$ · 🥇x3.0 🥈x1.8 🥉x1.2 · ⚡ Puedes doblar hasta el 75% de la carrera', inline: false },
+                { name: '🐎 Carrera de Caballos', value: '`>horses bot <apuesta>` — vs Bot\n`>horses multi <apuesta>` · `>joinrace` · `>startrace`\n💰 (Bot: 200–5,000 π-b$) - (Multiplayer: 100–10,000 π-b$) · 🥇x3.0 🥈x1.8 🥉x1.2 · ⚡ Puedes doblar hasta el 75% de la carrera', inline: false },
                 { name: '🎴 UNO Multiplayer', value: '`>ujoin <apuesta>` · `>ustart` · `>uplay <color> <número>`\n`>upickup` robar · `>uhand` ver mano · `>sayuno` ¡UNO!\n💰 150–10,000 π-b$ · 👥 2-8 jugadores · 🏆 Ganador lleva 90% del pot', inline: false },
                 { name: '🕳️ Pozo Semanal', value: '`>potcontribute money/item <valor>` · `>holethings`\n💰 100–50,000 π-b$ · Máx 3 items/usuario · 🎁 Distribución aleatoria semanal', inline: false },
                 { name: '─── 🧠 Trivia ───', value: '\u200b', inline: false },
