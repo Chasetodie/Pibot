@@ -52,13 +52,6 @@ class MusicSystem {
                 auth: 'https://seretia.link/discord',
                 secure: false
             },
-            // Con SSL
-            {
-                name: 'TriniumHost-SSL',
-                url: 'lavalink-v4.triniumhost.com:443',
-                auth: 'free',
-                secure: true
-            },
         ];
 
         this.nodeList = nodes;
