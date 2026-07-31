@@ -14,9 +14,9 @@ export default function App() {
         <Divider />
         <Features />
         <Divider />
-        <Commands />
-        <Divider />
         <Leaderboard />
+        <Divider />
+        <Commands />
       </main>
     </div>
   );

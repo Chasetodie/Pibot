@@ -16,12 +16,12 @@ export default function Hero() {
     <section id="inicio" className="relative isolate overflow-hidden pt-20 pb-16 px-6 text-center max-w-5xl mx-auto">
       {/* Banner de fondo (la ilustración de Pibot, muy tenue, con desvanecido radial) */}
       <div
-        className="absolute inset-0 bg-cover bg-center -z-20"
+        className="absolute inset-0 bg-cover bg-[left_9000%] -z-20"
         style={{
           backgroundImage: `url('${import.meta.env.BASE_URL}pibot-banner.png')`,
           opacity: 0.22,
-          maskImage: 'radial-gradient(ellipse 65% 55% at 50% 28%, black 35%, transparent 85%)',
-          WebkitMaskImage: 'radial-gradient(ellipse 65% 55% at 50% 28%, black 35%, transparent 85%)',
+          maskImage: 'radial-gradient(ellipse 65% 55% at 50% 28%, black 35%, transparent 90%)',
+          WebkitMaskImage: 'radial-gradient(ellipse 65% 55% at 50% 28%, black 35%, transparent 90%)',
         }}
       />
       {/* Luz de fondo acorde a la estética */}
@@ -50,12 +50,12 @@ export default function Hero() {
       {/* Botones OAuth2 y Soporte */}
       <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
         <a
-          href="https://discord.com/oauth2/authorize?client_id=TU_CLIENT_ID"
+          href="https://discord.com/oauth2/authorize?client_id=1402028858223362238&permissions=8&integration_type=0&scope=applications.commands+bot"
           target="_blank"
           rel="noreferrer"
           className="w-full sm:w-auto bg-pibot-pink-dark hover:bg-pibot-pink text-white font-bold text-lg px-8 py-4 rounded-xl transition-all shadow-xl shadow-pibot-pink-dark/30 hover:scale-105 active:scale-95 flex items-center justify-center gap-2"
         >
-          <span>🚀</span> Añadir a Discord
+          <span></span> Añadir a Discord
         </a>
         <a
           href="https://discord.com/users/488110147265232898"
@@ -63,7 +63,7 @@ export default function Hero() {
           rel="noreferrer"
           className="w-full sm:w-auto bg-pibot-panel hover:bg-pibot-panel-hover text-pibot-text font-bold text-lg px-8 py-4 rounded-xl border border-pibot-panel-hover transition-all hover:scale-105 active:scale-95 flex items-center justify-center gap-2"
         >
-          <span>💬</span> ¿Dudas? Contacta con mi desarrollador
+          <span></span> ¿Dudas o Sugerencias? Contacta con mi desarrollador
         </a>
       </div>
 
