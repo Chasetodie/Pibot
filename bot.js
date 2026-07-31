@@ -1,5 +1,6 @@
 const { Client, GatewayIntentBits, ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder, SlashCommandBuilder, Events, REST, Routes, Collection, ActivityType } = require('discord.js');
 const { Options } = require('discord.js'); // agregar al inicio del archivo si no está
+const { iniciarApiServer } = require('./apiServer.js');
 const express = require('express');
 const fs = require('fs');
 const path = require('path');
@@ -477,18 +478,555 @@ app.listen(PORT, '0.0.0.0', () => {
     console.log(`   - Admin: http://0.0.0.0:${PORT}/admin`);
 });
 
-client.on(Events.InteractionCreate, async interaction => {
-  if (!interaction.isChatInputCommand()) return;
-  if (interaction.commandName === 'ping') {
-    await interaction.reply('Pong!');
-  }
-});
-
-// Register slash command
 const commands = [
-  new SlashCommandBuilder()
-    .setName('ping')
-    .setDescription('Replies with Pong!')
+
+    // ── ECONOMÍA ─────────────────────────────────────────────
+    new SlashCommandBuilder()
+        .setName('balance')
+        .setDescription('Ver tu balance de monedas')
+        .addUserOption(o => o.setName('usuario').setDescription('Usuario a consultar').setRequired(false)),
+
+    new SlashCommandBuilder()
+        .setName('daily')
+        .setDescription('Reclamar tu recompensa diaria'),
+
+    new SlashCommandBuilder()
+        .setName('work')
+        .setDescription('Trabajar para ganar monedas')
+        .addStringOption(o => o.setName('trabajo').setDescription('Nombre del trabajo (vacío = ver lista)').setRequired(false)),
+
+    new SlashCommandBuilder()
+        .setName('robar')
+        .setDescription('Intentar robarle a alguien')
+        .addUserOption(o => o.setName('usuario').setDescription('Usuario al que robarle').setRequired(true)),
+
+    new SlashCommandBuilder()
+        .setName('pay')
+        .setDescription('Transferir dinero a otro usuario')
+        .addUserOption(o => o.setName('usuario').setDescription('A quién enviarle').setRequired(true))
+        .addIntegerOption(o => o.setName('cantidad').setDescription('Cantidad').setRequired(true).setMinValue(10)),
+
+    new SlashCommandBuilder()
+        .setName('top')
+        .setDescription('Ver el ranking del servidor o global')
+        .addStringOption(o => o.setName('tipo').setDescription('Qué ranking ver').setRequired(false)
+            .addChoices(
+                { name: '💰 Dinero', value: 'money' },
+                { name: '📊 Nivel', value: 'level' }
+            ))
+        .addStringOption(o => o.setName('alcance').setDescription('Servidor o global').setRequired(false)
+            .addChoices(
+                { name: '🏠 Servidor', value: 'server' },
+                { name: '🌍 Global', value: 'global' }
+            )),
+
+    new SlashCommandBuilder()
+        .setName('level')
+        .setDescription('Ver tu nivel y XP')
+        .addUserOption(o => o.setName('usuario').setDescription('Usuario a consultar').setRequired(false)),
+
+    new SlashCommandBuilder()
+        .setName('pacto')
+        .setDescription('Pacto del Diablo — gana dinero a cambio de XP'),
+
+    new SlashCommandBuilder()
+        .setName('pedir')
+        .setDescription('Pedir dinero a otros usuarios (mendicidad)'),
+
+    new SlashCommandBuilder()
+        .setName('rachas')
+        .setDescription('Ver tu racha de presencia diaria'),
+
+    new SlashCommandBuilder()
+        .setName('mapa')
+        .setDescription('Ver tu mapa del tesoro activo'),
+
+    new SlashCommandBuilder()
+        .setName('excavar')
+        .setDescription('Responder la pista del mapa del tesoro')
+        .addChannelOption(o => o.setName('canal').setDescription('Canal que crees que es la respuesta').setRequired(false))
+        .addUserOption(o => o.setName('usuario').setDescription('Usuario que crees que es la respuesta').setRequired(false)),
+
+    new SlashCommandBuilder()
+        .setName('sicario')
+        .setDescription('Contratar un sicario contra alguien')
+        .addUserOption(o => o.setName('usuario').setDescription('Objetivo').setRequired(true))
+        .addIntegerOption(o => o.setName('cantidad').setDescription('Pago').setRequired(true).setMinValue(1)),
+
+    new SlashCommandBuilder()
+        .setName('biblioteca')
+        .setDescription('Comprar libros para mejoras permanentes')
+        .addStringOption(o => o.setName('accion').setDescription('Qué hacer').setRequired(false)
+            .addChoices(
+                { name: '📚 Ver catálogo', value: 'catalogo' },
+                { name: '🛒 Comprar libro', value: 'comprar' },
+                { name: '📖 Ver estado', value: 'estado' }
+            ))
+        .addStringOption(o => o.setName('libro_id').setDescription('ID del libro (solo para comprar)').setRequired(false)),
+
+    new SlashCommandBuilder()
+        .setName('profesion')
+        .setDescription('Ver o elegir tu clase/profesión')
+        .addStringOption(o => o.setName('clase').setDescription('ID de la clase (vacío = ver lista)').setRequired(false)),
+
+    new SlashCommandBuilder()
+        .setName('huerto')
+        .setDescription('Gestionar tu huerto')
+        .addStringOption(o => o.setName('accion').setDescription('Qué hacer').setRequired(false)
+            .addChoices(
+                { name: '🌿 Ver huerto', value: 'ver' },
+                { name: '🌱 Plantar', value: 'plantar' },
+                { name: '🌾 Cosechar', value: 'cosechar' },
+                { name: '💧 Regar', value: 'regar' },
+                { name: '🧪 Fumigar', value: 'fumigar' }
+            ))
+        .addStringOption(o => o.setName('slot').setDescription('Número de slot').setRequired(false))
+        .addStringOption(o => o.setName('planta').setDescription('ID de planta (para plantar)').setRequired(false)),
+
+    new SlashCommandBuilder()
+        .setName('mascota')
+        .setDescription('Gestionar tus mascotas')
+        .addStringOption(o => o.setName('accion').setDescription('Qué hacer').setRequired(false)
+            .addChoices(
+                { name: '🐾 Ver mascotas', value: 'ver' },
+                { name: '🥚 Incubar huevo', value: 'incubar' },
+                { name: '⚔️ Equipar', value: 'equipar' },
+                { name: '🔓 Desequipar', value: 'desequipar' },
+                { name: '🆓 Liberar', value: 'liberar' },
+                { name: '✏️ Renombrar', value: 'renombrar' },
+                { name: '💊 Curar', value: 'curar' },
+                { name: '🗺️ Expedición', value: 'expedicion' },
+                { name: '🎁 Reclamar', value: 'reclamar' },
+                { name: '❓ Ayuda', value: 'help' }
+            ))
+        .addStringOption(o => o.setName('id').setDescription('ID de la mascota').setRequired(false))
+        .addStringOption(o => o.setName('extra').setDescription('Nombre, medicina, tipo de expedición, etc.').setRequired(false)),
+
+    new SlashCommandBuilder()
+        .setName('curar')
+        .setDescription('Curar a alguien con un item médico')
+        .addUserOption(o => o.setName('usuario').setDescription('Usuario a curar').setRequired(true))
+        .addStringOption(o => o.setName('medicina').setDescription('ID del item de medicina').setRequired(true)),
+
+    new SlashCommandBuilder()
+        .setName('casar')
+        .setDescription('Proponer matrimonio a alguien')
+        .addUserOption(o => o.setName('usuario').setDescription('A quién proponerle').setRequired(true)),
+
+    new SlashCommandBuilder()
+        .setName('divorcio')
+        .setDescription('Divorciarte de tu pareja'),
+
+    new SlashCommandBuilder()
+        .setName('pareja')
+        .setDescription('Ver info de tu matrimonio actual'),
+
+    new SlashCommandBuilder()
+        .setName('mentor')
+        .setDescription('Sistema de mentoría')
+        .addStringOption(o => o.setName('accion').setDescription('Qué hacer').setRequired(false)
+            .addChoices(
+                { name: '🎓 Ver mentor', value: 'ver' },
+                { name: '👤 Aceptar aprendiz', value: 'aceptar' },
+                { name: '❌ Abandonar', value: 'abandonar' }
+            ))
+        .addUserOption(o => o.setName('usuario').setDescription('Usuario (para asignar mentor)').setRequired(false)),
+
+    // ── TIENDA ────────────────────────────────────────────────
+    new SlashCommandBuilder()
+        .setName('shop')
+        .setDescription('Ver la tienda')
+        .addStringOption(o => o.setName('categoria').setDescription('Categoría a ver').setRequired(false)
+            .addChoices(
+                { name: '🧪 Consumibles', value: 'consumable' },
+                { name: '💎 Permanentes', value: 'permanent' },
+                { name: '✨ Cosméticos', value: 'cosmetic' },
+                { name: '🎁 Especiales', value: 'special'},
+                { name: '⚔️ Equipamiento', value: 'equipment' },
+                { name: '🗝️ Cofres', value: 'mystery' },
+                { name: '🌱 Semillas', value: 'seed' },
+                { name: '🐕 Mascotas', value: 'pet' },
+                { name: '🧠 Trivia', value: 'trivia' }
+            )),
+
+    new SlashCommandBuilder()
+        .setName('buy')
+        .setDescription('Comprar un item de la tienda')
+        .addStringOption(o => o.setName('item').setDescription('ID del item').setRequired(true))
+        .addIntegerOption(o => o.setName('cantidad').setDescription('Cantidad (default: 1)').setRequired(false).setMinValue(1)),
+
+    new SlashCommandBuilder()
+        .setName('bag')
+        .setDescription('Ver tu inventario')
+        .addUserOption(o => o.setName('usuario').setDescription('Ver inventario de otro usuario').setRequired(false)),
+
+    new SlashCommandBuilder()
+        .setName('useitem')
+        .setDescription('Usar un item de tu inventario')
+        .addStringOption(o => o.setName('item').setDescription('ID del item').setRequired(true)),
+
+    new SlashCommandBuilder()
+        .setName('lanzar')
+        .setDescription('Lanzar una maldición a alguien')
+        .addUserOption(o => o.setName('usuario').setDescription('Objetivo').setRequired(true)),
+
+    new SlashCommandBuilder()
+        .setName('efectos')
+        .setDescription('Ver tus efectos activos'),
+
+    new SlashCommandBuilder()
+        .setName('quitarefecto')
+        .setDescription('Quitar un efecto permanente')
+        .addStringOption(o => o.setName('item').setDescription('ID del item').setRequired(true)),
+
+    new SlashCommandBuilder()
+        .setName('autoworker')
+        .setDescription('Ver el estado de tu auto-worker'),
+
+    new SlashCommandBuilder()
+        .setName('cosmeticos')
+        .setDescription('Ver tus cosméticos activos'),
+
+    new SlashCommandBuilder()
+        .setName('setnickname')
+        .setDescription('Cambiar tu apodo cosmético')
+        .addStringOption(o => o.setName('apodo').setDescription('Tu nuevo apodo').setRequired(true).setMaxLength(20)),
+
+    new SlashCommandBuilder()
+        .setName('rolcreate')
+        .setDescription('Crear tu rol personalizado')
+        .addStringOption(o => o.setName('color').setDescription('Color hex, ej: #FF0000 (vacío = ver menú)').setRequired(false))
+        .addStringOption(o => o.setName('nombre').setDescription('Nombre del rol').setRequired(false)),
+
+    new SlashCommandBuilder()
+        .setName('vip')
+        .setDescription('Ver info y beneficios VIP'),
+
+    new SlashCommandBuilder()
+        .setName('vipwork')
+        .setDescription('Activar bonus VIP de trabajo'),
+
+    new SlashCommandBuilder()
+        .setName('viphelp')
+        .setDescription('Ver todos los comandos VIP'),
+
+    // ── MINIJUEGOS ────────────────────────────────────────────
+    new SlashCommandBuilder()
+        .setName('coinflip')
+        .setDescription('Lanzamiento de moneda')
+        .addStringOption(o => o.setName('lado').setDescription('Cara o cruz').setRequired(true)
+            .addChoices(
+                { name: '👑 Cara', value: 'cara' },
+                { name: '⚡ Cruz', value: 'cruz' }
+            ))
+        .addIntegerOption(o => o.setName('apuesta').setDescription('Cantidad a apostar').setRequired(true).setMinValue(1)),
+
+    new SlashCommandBuilder()
+        .setName('dice')
+        .setDescription('Jugar a los dados')
+        .addIntegerOption(o => o.setName('apuesta').setDescription('Cantidad a apostar').setRequired(true).setMinValue(1))
+        .addIntegerOption(o => o.setName('numero').setDescription('Número a predecir (1-6)').setRequired(false).setMinValue(1).setMaxValue(6)),
+
+    new SlashCommandBuilder()
+        .setName('blackjack')
+        .setDescription('Jugar al blackjack')
+        .addIntegerOption(o => o.setName('apuesta').setDescription('Cantidad a apostar').setRequired(true).setMinValue(1)),
+
+    new SlashCommandBuilder()
+        .setName('roulette')
+        .setDescription('Jugar a la ruleta')
+        .addIntegerOption(o => o.setName('apuesta').setDescription('Cantidad a apostar').setRequired(true).setMinValue(1))
+        .addStringOption(o => o.setName('opcion').setDescription('En qué apostar (ej: rojo, 7)').setRequired(false)),
+
+    new SlashCommandBuilder()
+        .setName('slots')
+        .setDescription('Jugar al tragaperras')
+        .addIntegerOption(o => o.setName('apuesta').setDescription('Cantidad a apostar').setRequired(true).setMinValue(1)),
+
+    new SlashCommandBuilder()
+        .setName('lottery')
+        .setDescription('Comprar tickets de lotería')
+        .addIntegerOption(o => o.setName('tickets').setDescription('Cantidad (default: 1)').setRequired(false).setMinValue(1)),
+
+    new SlashCommandBuilder()
+        .setName('horserace')
+        .setDescription('Carrera de caballos')
+        .addStringOption(o => o.setName('accion').setDescription('Qué hacer').setRequired(false)
+            .addChoices(
+                { name: '🐴 Crear carrera', value: 'crear' },
+                { name: '🏇 Unirse', value: 'join' },
+                { name: '🏁 Iniciar', value: 'start' },
+                { name: '❌ Cancelar', value: 'cancel' }
+            ))
+        .addIntegerOption(o => o.setName('apuesta').setDescription('Cantidad a apostar').setRequired(false).setMinValue(1)),
+
+    new SlashCommandBuilder()
+        .setName('vending')
+        .setDescription('Usar la máquina expendedora'),
+
+    // /russian agrupa: russian, shoot, startrussian, cancelrussian
+    new SlashCommandBuilder()
+        .setName('russian')
+        .setDescription('Ruleta rusa')
+        .addStringOption(o => o.setName('accion').setDescription('Qué hacer').setRequired(false)
+            .addChoices(
+                { name: '🔫 Desafiar a alguien', value: 'desafiar' },
+                { name: '💥 Disparar', value: 'shoot' },
+                { name: '▶️ Iniciar partida', value: 'start' },
+                { name: '❌ Cancelar partida', value: 'cancel' }
+            ))
+        .addUserOption(o => o.setName('usuario').setDescription('Usuario a desafiar').setRequired(false))
+        .addIntegerOption(o => o.setName('apuesta').setDescription('Cantidad a apostar').setRequired(false).setMinValue(1)),
+
+    new SlashCommandBuilder()
+        .setName('limits')
+        .setDescription('Ver tus límites de juegos diarios'),
+
+    new SlashCommandBuilder()
+        .setName('games')
+        .setDescription('Ver lista de todos los minijuegos'),
+
+    // /uno agrupa: ujoin, ustart, ucancel, uplay, upickup, ushowhand, utable, sayuno, ucallout
+    new SlashCommandBuilder()
+        .setName('uno')
+        .setDescription('Jugar al UNO')
+        .addStringOption(o => o.setName('accion').setDescription('Qué hacer').setRequired(true)
+            .addChoices(
+                { name: '🃏 Unirse', value: 'join' },
+                { name: '▶️ Iniciar', value: 'start' },
+                { name: '❌ Cancelar', value: 'cancel' },
+                { name: '🎴 Jugar carta', value: 'play' },
+                { name: '🤚 Robar carta', value: 'pickup' },
+                { name: '👀 Ver mi mano', value: 'hand' },
+                { name: '🏓 Ver mesa', value: 'table' },
+                { name: '📢 Decir UNO', value: 'sayuno' },
+                { name: '🚨 Acusar a alguien', value: 'callout' }
+            ))
+        .addIntegerOption(o => o.setName('apuesta').setDescription('Cantidad a apostar - Solo al Unirse').setRequired(false).setMinValue(150))
+        .addIntegerOption(o => o.setName('carta').setDescription('Índice de carta a jugar (solo para "jugar carta")').setRequired(false).setMinValue(0))
+        .addStringOption(o => o.setName('color').setDescription('Color para comodín').setRequired(false)
+            .addChoices(
+                { name: '🔴 Rojo', value: 'red' },
+                { name: '🔵 Azul', value: 'blue' },
+                { name: '🟢 Verde', value: 'green' },
+                { name: '🟡 Amarillo', value: 'yellow' }
+            ))
+        .addUserOption(o => o.setName('usuario').setDescription('Usuario a acusar (solo para "acusar")').setRequired(false)),
+
+    // /trivia agrupa: trivia, triviasurvival, triviamulti, jointrivia, starttrivia, canceltrivia, trivialb, triviacat
+    new SlashCommandBuilder()
+        .setName('trivia')
+        .setDescription('Jugar trivia')
+        .addStringOption(o => o.setName('modo').setDescription('Modo de juego').setRequired(false)
+            .addChoices(
+                { name: '🧠 Normal', value: 'normal' },
+                { name: '💀 Supervivencia', value: 'survival' },
+                { name: '👥 Multijugador', value: 'multi' },
+                { name: '🚪 Unirse a multi', value: 'join' },
+                { name: '▶️ Iniciar multi', value: 'start' },
+                { name: '❌ Cancelar multi', value: 'cancel' },
+                { name: '🏆 Ranking', value: 'lb' },
+                { name: '📋 Categorías', value: 'cat' }
+            ))
+        .addStringOption(o => o.setName('dificultad').setDescription('Dificultad (para modo normal)').setRequired(false)
+            .addChoices(
+                { name: '🟢 Fácil', value: 'easy' },
+                { name: '🟡 Medio', value: 'medium' },
+                { name: '🔴 Difícil', value: 'hard' }
+            ))
+        .addStringOption(o => o.setName('categoria').setDescription('Categoría (ej: anime, historia)').setRequired(false))
+        .addIntegerOption(o => o.setName('rondas').setDescription('Rondas para modo multi').setRequired(false).setMinValue(1).setMaxValue(20)),
+
+    // /apuesta agrupa: bet, acceptbet, declinebet, mybets, betstats, resolvebet, cancelbet
+    new SlashCommandBuilder()
+        .setName('apuesta')
+        .setDescription('Sistema de apuestas')
+        .addStringOption(o => o.setName('accion').setDescription('Qué hacer').setRequired(true)
+            .addChoices(
+                { name: '🎲 Crear apuesta', value: 'crear' },
+                { name: '✅ Aceptar', value: 'aceptar' },
+                { name: '❌ Rechazar', value: 'rechazar' },
+                { name: '📋 Mis apuestas', value: 'mias' },
+                { name: '📊 Estadísticas', value: 'stats' },
+                { name: '🏆 Resolver', value: 'resolver' },
+                { name: '🗑️ Cancelar', value: 'cancelar' }
+            ))
+        .addUserOption(o => o.setName('usuario').setDescription('Usuario (para crear apuesta)').setRequired(false))
+        .addIntegerOption(o => o.setName('cantidad').setDescription('Cantidad (para crear)').setRequired(false).setMinValue(1))
+        .addStringOption(o => o.setName('descripcion').setDescription('Descripción (para crear)').setRequired(false))
+        .addStringOption(o => o.setName('id').setDescription('ID de apuesta (para resolver/cancelar)').setRequired(false))
+        .addStringOption(o => o.setName('ganador').setDescription('ID del ganador (para resolver)').setRequired(false)),
+
+    // /trade agrupa: trade, tradeadd, trademoney, tradeaccept, tradecancel, tradeshow
+    new SlashCommandBuilder()
+        .setName('trade')
+        .setDescription('Sistema de intercambios')
+        .addStringOption(o => o.setName('accion').setDescription('Qué hacer').setRequired(false)
+            .addChoices(
+                { name: '🔄 Iniciar trade', value: 'iniciar' },
+                { name: '📦 Agregar item', value: 'additem' },
+                { name: '💰 Agregar dinero', value: 'addmoney' },
+                { name: '✅ Aceptar', value: 'aceptar' },
+                { name: '❌ Cancelar', value: 'cancelar' },
+                { name: '👀 Ver trade', value: 'ver' }
+            ))
+        .addUserOption(o => o.setName('usuario').setDescription('Con quién tradear').setRequired(false))
+        .addStringOption(o => o.setName('item').setDescription('ID del item (para agregar item)').setRequired(false))
+        .addIntegerOption(o => o.setName('cantidad').setDescription('Cantidad de item o dinero').setRequired(false).setMinValue(1)),
+
+    // /subasta agrupa: auction, bid, auctionshow
+    new SlashCommandBuilder()
+        .setName('subasta')
+        .setDescription('Sistema de subastas')
+        .addStringOption(o => o.setName('accion').setDescription('Qué hacer').setRequired(false)
+            .addChoices(
+                { name: '🔨 Crear subasta', value: 'crear' },
+                { name: '💰 Pujar', value: 'bid' },
+                { name: '📋 Ver subastas', value: 'ver' }
+            ))
+        .addStringOption(o => o.setName('item').setDescription('ID del item (para crear)').setRequired(false))
+        .addIntegerOption(o => o.setName('precio').setDescription('Precio inicial o puja').setRequired(false).setMinValue(1))
+        .addIntegerOption(o => o.setName('duracion').setDescription('Duración en minutos (para crear)').setRequired(false).setMinValue(1))
+        .addStringOption(o => o.setName('id').setDescription('ID de subasta (para pujar)').setRequired(false)),
+
+    // /craft agrupa: craft, craftqueue, cancelcraft, recipes
+    new SlashCommandBuilder()
+        .setName('craft')
+        .setDescription('Sistema de crafteo')
+        .addStringOption(o => o.setName('accion').setDescription('Qué hacer').setRequired(false)
+            .addChoices(
+                { name: '📜 Ver recetas', value: 'recetas' },
+                { name: '⚒️ Craftear', value: 'craftear' },
+                { name: '📋 Ver cola', value: 'cola' },
+                { name: '❌ Cancelar crafteo', value: 'cancelar' }
+            ))
+        .addStringOption(o => o.setName('receta').setDescription('ID de la receta (para craftear)').setRequired(false))
+        .addIntegerOption(o => o.setName('cantidad').setDescription('Cantidad a craftear o nº a cancelar').setRequired(false).setMinValue(1))
+        .addStringOption(o => o.setName('categoria').setDescription('Categoría de recetas').setRequired(false)),
+
+    // /logros agrupa: achievements, allachievements, progress, detectachievements, missions, blockmissions, unblockmissions
+    new SlashCommandBuilder()
+        .setName('logros')
+        .setDescription('Logros, misiones y progreso')
+        .addStringOption(o => o.setName('accion').setDescription('Qué ver').setRequired(false)
+            .addChoices(
+                { name: '🏆 Mis logros', value: 'logros' },
+                { name: '📋 Todos los logros', value: 'todos' },
+                { name: '📈 Progreso', value: 'progreso' },
+                { name: '🔍 Detectar logros', value: 'detectar' },
+                { name: '📅 Misiones', value: 'misiones' },
+                { name: '🔕 Silenciar notifs', value: 'silenciar' },
+                { name: '🔔 Activar notifs', value: 'activar' }
+            )),
+
+    // /chat agrupa: chat, clearchat, chathelp
+    new SlashCommandBuilder()
+        .setName('chat')
+        .setDescription('Chat con IA')
+        .addStringOption(o => o.setName('accion').setDescription('Qué hacer').setRequired(false)
+            .addChoices(
+                { name: '💬 Enviar mensaje', value: 'mensaje' },
+                { name: '🗑️ Borrar historial', value: 'limpiar' },
+                { name: '❓ Ayuda', value: 'ayuda' }
+            ))
+        .addStringOption(o => o.setName('mensaje').setDescription('Tu mensaje (para chatear)').setRequired(false)),
+
+    // /m agrupa todos los comandos de música
+    new SlashCommandBuilder()
+        .setName('music')
+        .setDescription('Comandos de música')
+        .addStringOption(o => o.setName('accion').setDescription('Qué hacer').setRequired(true)
+            .addChoices(
+                { name: '▶️ Reproducir', value: 'play' },
+                { name: '⏹️ Detener', value: 'stop' },
+                { name: '⏭️ Saltar', value: 'skip' },
+                { name: '⏸️ Pausar', value: 'pause' },
+                { name: '▶️ Reanudar', value: 'resume' },
+                { name: '📋 Cola', value: 'queue' },
+                { name: '🎵 Sonando ahora', value: 'np' },
+                { name: '🔍 Buscar YouTube', value: 'ytsearch' },
+                { name: '🔍 Buscar Spotify', value: 'spsearch' },
+                { name: '📝 Letra', value: 'lyrics' },
+                { name: '🔧 Reparar', value: 'fix' },
+                { name: '⏩ Adelantar', value: 'seek' },
+                { name: '🔊 Volumen', value: 'volume' },
+                { name: '🔁 Repetir', value: 'loop' },
+                { name: '🔀 Mezclar', value: 'shuffle' },
+                { name: '🗑️ Limpiar cola', value: 'clear' }
+            ))
+        .addStringOption(o => o.setName('query').setDescription('Canción/búsqueda/tiempo (según acción)').setRequired(false))
+        .addIntegerOption(o => o.setName('numero').setDescription('Número (para volumen 0-100, skip N, etc.)').setRequired(false)),
+
+    // ── NSFW ──────────────────────────────────────────────────
+    new SlashCommandBuilder()
+        .setName('r34')
+        .setDescription('Rule34 (solo canales NSFW)')
+        .addStringOption(o => o.setName('tags').setDescription('Tags a buscar').setRequired(false))
+        .addIntegerOption(o => o.setName('cantidad').setDescription('Cantidad (default: 20)').setRequired(false).setMinValue(1).setMaxValue(20)),
+
+    new SlashCommandBuilder()
+        .setName('nsfw')
+        .setDescription('Imágenes NSFW (solo canales NSFW)')
+        .addStringOption(o => o.setName('tags').setDescription('Tags a buscar').setRequired(false))
+        .addIntegerOption(o => o.setName('cantidad').setDescription('Cantidad').setRequired(false).setMinValue(1).setMaxValue(20)),
+
+    new SlashCommandBuilder()
+        .setName('videos')
+        .setDescription('Videos NSFW (solo canales NSFW)')
+        .addStringOption(o => o.setName('tags').setDescription('Tags a buscar').setRequired(false))
+        .addIntegerOption(o => o.setName('cantidad').setDescription('Cantidad (default: 10)').setRequired(false).setMinValue(1).setMaxValue(10)),
+
+    new SlashCommandBuilder()
+        .setName('fuck')
+        .setDescription('Contenido NSFW con mención (solo canales NSFW)')
+        .addUserOption(o => o.setName('usuario').setDescription('Usuario a mencionar').setRequired(true)),
+
+    new SlashCommandBuilder()
+        .setName('fuckdetect')
+        .setDescription('Versión alternativa de fuck (solo canales NSFW)')
+        .addUserOption(o => o.setName('usuario').setDescription('Usuario a mencionar').setRequired(true)),
+
+    // ── IMAGEN IA ─────────────────────────────────────────────
+    new SlashCommandBuilder()
+        .setName('imagine')
+        .setDescription('Generar una imagen con IA')
+        .addStringOption(o => o.setName('prompt').setDescription('Descripción de la imagen').setRequired(true)),
+
+    // ── NIVELES DEL SERVIDOR ──────────────────────────────────
+    new SlashCommandBuilder()
+        .setName('srank')
+        .setDescription('Ver tu nivel en el servidor'),
+
+    new SlashCommandBuilder()
+        .setName('servtop')
+        .setDescription('Ver el ranking de niveles del servidor'),
+
+    // ── EVENTOS Y MISC ────────────────────────────────────────
+    new SlashCommandBuilder()
+        .setName('events')
+        .setDescription('Ver eventos activos'),
+
+    new SlashCommandBuilder()
+        .setName('potcontribute')
+        .setDescription('Contribuir al pozo semanal')
+        .addIntegerOption(o => o.setName('cantidad').setDescription('Cantidad a contribuir').setRequired(true).setMinValue(1)),
+
+    new SlashCommandBuilder()
+        .setName('potstatus')
+        .setDescription('Ver el estado del pozo semanal'),
+
+    new SlashCommandBuilder()
+        .setName('help')
+        .setDescription('Ver todos los comandos disponibles'),
+
+    new SlashCommandBuilder()
+        .setName('changelog')
+        .setDescription('Ver las últimas novedades del bot'),
+
+    new SlashCommandBuilder()
+        .setName('checkstats')
+        .setDescription('Ver tus estadísticas de minijuegos'),
+
 ].map(cmd => cmd.toJSON());
 
 const rest = new REST({ version: '10' }).setToken(process.env.TOKEN);
@@ -523,15 +1061,16 @@ client.once('ready', async () => {
     await auctions.loadActiveAuctions(client);
     await chatbot.initChatTables();
     console.log('🤖 Sistema de ChatBot inicializado');
+    iniciarApiServer(client, economy, 20329);
 
-client.user.setPresence({
-    activities: [{
-        type: ActivityType.Custom,
-        name: 'custom',
-        state: '💬 Escríbeme o usa >help — siempre estoy aquí 🤖',
-    }],
-    status: 'online'
-});
+    client.user.setPresence({
+        activities: [{
+            type: ActivityType.Custom,
+            name: 'custom',
+            state: '💬 Escríbeme o usa >help — siempre estoy aquí 🤖',
+        }],
+        status: 'online'
+    });
     
     setInterval(() => {
         const used = process.memoryUsage();
@@ -760,6 +1299,631 @@ client.on('messageReactionAdd', async (reaction, user) => {
 
 // Evento para manejar interacciones con botones
 client.on('interactionCreate', async (interaction) => {
+    // ── SLASH COMMANDS ────────────────────────────────────────
+    if (interaction.isChatInputCommand()) {
+        const cmd = interaction.commandName;
+ 
+        const fakeMessage = {
+            author:   interaction.user,
+            member:   interaction.member,
+            guild:    interaction.guild,
+            channel:  interaction.channel,
+            client:   interaction.client,
+            mentions: {
+                users:    new Map(),
+                members:  new Map(),
+                channels: new Map(),
+                everyone: false,
+            },
+            content: `>${cmd}`,
+            reply: async (data) => {
+                if (interaction.replied || interaction.deferred) {
+                    return interaction.editReply(data).catch(() => {});
+                }
+                return interaction.reply(data).catch(() => {});
+            }
+        };
+        fakeMessage.mentions.users.first    = () => fakeMessage.mentions.users.values().next().value   || null;
+        fakeMessage.mentions.members.first  = () => fakeMessage.mentions.members.values().next().value || null;
+        fakeMessage.mentions.channels.first = () => fakeMessage.mentions.channels.values().next().value || null;
+ 
+        const addUser    = (u) => { if (u) { fakeMessage.mentions.users.set(u.id, u); } };
+        const addMember  = (m) => { if (m) { fakeMessage.mentions.members.set(m.id, m); addUser(m.user || m); } };
+        const addChannel = (c) => { if (c) { fakeMessage.mentions.channels.set(c.id, c); } };
+ 
+        await interaction.deferReply();
+ 
+        try {
+            switch (cmd) {
+ 
+                // ── ECONOMÍA ──────────────────────────────────
+                case 'balance': {
+                    const t = interaction.options.getMember('usuario');
+                    if (t) addMember(t);
+                    await allCommands.processCommand(fakeMessage);
+                    break;
+                }
+                case 'daily':
+                    await allCommands.processCommand(fakeMessage);
+                    break;
+ 
+                case 'work': {
+                    const trabajo = interaction.options.getString('trabajo') || '';
+                    fakeMessage.content = `>work ${trabajo}`.trim();
+                    await allCommands.processCommand(fakeMessage);
+                    break;
+                }
+                case 'robar': {
+                    const t = interaction.options.getUser('usuario');
+                    addUser(t);
+                    fakeMessage.content = `>robar <@${t.id}>`;
+                    await allCommands.processCommand(fakeMessage);
+                    break;
+                }
+                case 'pay': {
+                    const t = interaction.options.getUser('usuario');
+                    const amt = interaction.options.getInteger('cantidad');
+                    addUser(t);
+                    fakeMessage.content = `>pay <@${t.id}> ${amt}`;
+                    await allCommands.processCommand(fakeMessage);
+                    break;
+                }
+                case 'top': {
+                    const tipo    = interaction.options.getString('tipo')    || 'money';
+                    const alcance = interaction.options.getString('alcance') || 'server';
+                    fakeMessage.content = `>top ${tipo} ${alcance === 'global' ? 'global' : ''}`.trim();
+                    await allCommands.processCommand(fakeMessage);
+                    break;
+                }
+                case 'level': {
+                    const t = interaction.options.getMember('usuario');
+                    if (t) addMember(t);
+                    fakeMessage.content = '>level';
+                    await allCommands.processCommand(fakeMessage);
+                    break;
+                }
+                case 'pacto':
+                case 'pedir':
+                case 'rachas':
+                case 'mapa':
+                    await allCommands.processCommand(fakeMessage);
+                    break;
+ 
+                case 'excavar': {
+                    const canal   = interaction.options.getChannel('canal');
+                    const usuario = interaction.options.getUser('usuario');
+                    if (canal) {
+                        addChannel(canal);
+                        fakeMessage.content = `>excavar <#${canal.id}>`;
+                    } else if (usuario) {
+                        addUser(usuario);
+                        fakeMessage.content = `>excavar <@${usuario.id}>`;
+                    } else {
+                        await interaction.editReply('❌ Debes mencionar un canal o usuario.');
+                        break;
+                    }
+                    await allCommands.processCommand(fakeMessage);
+                    break;
+                }
+                case 'sicario': {
+                    const t   = interaction.options.getUser('usuario');
+                    const amt = interaction.options.getInteger('cantidad');
+                    addUser(t);
+                    fakeMessage.content = `>sicario <@${t.id}> ${amt}`;
+                    await allCommands.processCommand(fakeMessage);
+                    break;
+                }
+                case 'biblioteca': {
+                    const accion  = interaction.options.getString('accion')   || '';
+                    const libroId = interaction.options.getString('libro_id') || '';
+                    if (accion === 'comprar' && libroId) fakeMessage.content = `>biblioteca comprar ${libroId}`;
+                    else if (accion === 'estado')        fakeMessage.content = '>biblioteca estado';
+                    else                                 fakeMessage.content = '>biblioteca';
+                    await allCommands.handleBiblioteca(fakeMessage, fakeMessage.content.split(/ +/));
+                    break;
+                }
+                case 'profesion': {
+                    const clase = interaction.options.getString('clase') || '';
+                    fakeMessage.content = `>profesion ${clase}`.trim();
+                    await allCommands.handleProfesion(fakeMessage, fakeMessage.content.split(/ +/));
+                    break;
+                }
+                case 'huerto': {
+                    const accion = interaction.options.getString('accion') || '';
+                    const slot   = interaction.options.getString('slot')   || '';
+                    const planta = interaction.options.getString('planta') || '';
+                    fakeMessage.content = `>huerto ${accion} ${slot} ${planta}`.trim().replace(/ +/g, ' ');
+                    await allCommands.handleHuerto(fakeMessage, fakeMessage.content.split(/ +/));
+                    break;
+                }
+                case 'mascota': {
+                    const accion = interaction.options.getString('accion') || '';
+                    const id     = interaction.options.getString('id')     || '';
+                    const extra  = interaction.options.getString('extra')  || '';
+                    fakeMessage.content = `>mascota ${accion} ${id} ${extra}`.trim().replace(/ +/g, ' ');
+                    await allCommands.handleMascota(fakeMessage, fakeMessage.content.split(/ +/));
+                    break;
+                }
+                case 'curar': {
+                    const t   = interaction.options.getUser('usuario');
+                    const med = interaction.options.getString('medicina');
+                    addUser(t);
+                    fakeMessage.content = `>curar <@${t.id}> ${med}`;
+                    await allCommands.handleDoctorCure(fakeMessage, fakeMessage.content.split(/ +/));
+                    break;
+                }
+                case 'casar': {
+                    const t = interaction.options.getUser('usuario');
+                    addUser(t);
+                    fakeMessage.content = `>casar <@${t.id}>`;
+                    await allCommands.handleCasar(fakeMessage, fakeMessage.content.split(/ +/));
+                    break;
+                }
+                case 'divorcio':
+                    await allCommands.handleDivorcio(fakeMessage, ['>divorcio']);
+                    break;
+                case 'pareja':
+                    await allCommands.handleVerMatrimonio(fakeMessage);
+                    break;
+                case 'mentor': {
+                    const accion  = interaction.options.getString('accion') || '';
+                    const usuario = interaction.options.getUser('usuario');
+                    if (usuario) addUser(usuario);
+                    fakeMessage.content = `>mentor ${accion} ${usuario ? `<@${usuario.id}>` : ''}`.trim();
+                    await allCommands.handleMentor(fakeMessage, fakeMessage.content.split(/ +/));
+                    break;
+                }
+ 
+                // ── TIENDA ────────────────────────────────────
+                case 'shop': {
+                    const cat = interaction.options.getString('categoria') || '';
+                    fakeMessage.content = `>shop ${cat}`.trim();
+                    await shop.processCommand(fakeMessage);
+                    break;
+                }
+                case 'buy': {
+                    const item = interaction.options.getString('item');
+                    const cant = interaction.options.getInteger('cantidad') || 1;
+                    fakeMessage.content = `>buy ${item} ${cant}`;
+                    await shop.processCommand(fakeMessage);
+                    break;
+                }
+                case 'bag': {
+                    const t = interaction.options.getMember('usuario');
+                    if (t) addMember(t);
+                    fakeMessage.content = '>bag';
+                    await shop.processCommand(fakeMessage);
+                    break;
+                }
+                case 'useitem': {
+                    fakeMessage.content = `>useitem ${interaction.options.getString('item')}`;
+                    await shop.processCommand(fakeMessage);
+                    break;
+                }
+                case 'lanzar': {
+                    const t = interaction.options.getUser('usuario');
+                    addUser(t);
+                    fakeMessage.content = `>lanzar <@${t.id}>`;
+                    await shop.processCommand(fakeMessage);
+                    break;
+                }
+                case 'efectos':
+                    fakeMessage.content = '>efectos';
+                    await shop.processCommand(fakeMessage);
+                    break;
+                case 'quitarefecto': {
+                    fakeMessage.content = `>quitarefecto ${interaction.options.getString('item')}`;
+                    await shop.processCommand(fakeMessage);
+                    break;
+                }
+                case 'autoworker':
+                    fakeMessage.content = '>autoworker';
+                    await shop.processCommand(fakeMessage);
+                    break;
+                case 'cosmeticos':
+                    fakeMessage.content = '>cosmetics';
+                    await shop.processCommand(fakeMessage);
+                    break;
+                case 'setnickname': {
+                    const apodo = interaction.options.getString('apodo');
+                    fakeMessage.content = `>setnickname ${apodo}`;
+                    await shop.processCommand(fakeMessage);
+                    break;
+                }
+                case 'rolcreate': {
+                    const color  = interaction.options.getString('color')  || '';
+                    const nombre = interaction.options.getString('nombre') || '';
+                    fakeMessage.content = `>rolcreate ${color} ${nombre}`.trim();
+                    await shop.processCommand(fakeMessage);
+                    break;
+                }
+                case 'vip':
+                    fakeMessage.content = '>vip';
+                    await shop.processCommand(fakeMessage);
+                    break;
+                case 'vipwork':
+                    fakeMessage.content = '>vipwork';
+                    await shop.processCommand(fakeMessage);
+                    break;
+                case 'viphelp':
+                    fakeMessage.content = '>viphelp';
+                    await shop.processCommand(fakeMessage);
+                    break;
+ 
+                // ── MINIJUEGOS ────────────────────────────────
+                case 'coinflip': {
+                    const lado    = interaction.options.getString('lado');
+                    const apuesta = interaction.options.getInteger('apuesta');
+                    fakeMessage.content = `>coinflip ${lado} ${apuesta}`;
+                    await minigames.processCommand(fakeMessage);
+                    break;
+                }
+                case 'dice': {
+                    const apuesta = interaction.options.getInteger('apuesta');
+                    const numero  = interaction.options.getInteger('numero') || '';
+                    fakeMessage.content = `>dice ${apuesta} ${numero}`.trim();
+                    await minigames.processCommand(fakeMessage);
+                    break;
+                }
+                case 'blackjack': {
+                    fakeMessage.content = `>blackjack ${interaction.options.getInteger('apuesta')}`;
+                    await minigames.processCommand(fakeMessage);
+                    break;
+                }
+                case 'roulette': {
+                    const apuesta = interaction.options.getInteger('apuesta');
+                    const opcion  = interaction.options.getString('opcion') || '';
+                    fakeMessage.content = `>roulette ${apuesta} ${opcion}`.trim();
+                    await minigames.processCommand(fakeMessage);
+                    break;
+                }
+                case 'slots': {
+                    fakeMessage.content = `>slots ${interaction.options.getInteger('apuesta')}`;
+                    await minigames.processCommand(fakeMessage);
+                    break;
+                }
+                case 'lottery': {
+                    fakeMessage.content = `>lottery ${interaction.options.getInteger('tickets') || 1}`;
+                    await minigames.processCommand(fakeMessage);
+                    break;
+                }
+                case 'horserace': {
+                    const accion  = interaction.options.getString('accion') || '';
+                    const apuesta = interaction.options.getInteger('apuesta') || '';
+                    if (accion === 'join') {
+                        fakeMessage.content = `>joinrace ${apuesta}`.trim();
+                    } else if (accion === 'start') {
+                        fakeMessage.content = '>startrace';
+                    } else if (accion === 'cancel') {
+                        fakeMessage.content = '>cancelrace';
+                    } else {
+                        // 'crear' o vacío = crear carrera
+                        fakeMessage.content = `>horserace ${apuesta}`.trim();
+                    }
+                    await minigames.processCommand(fakeMessage);
+                    break;
+                }
+                case 'joinrace': {
+                    const apuesta = interaction.options.getInteger('apuesta') || '';
+                    fakeMessage.content = `>joinrace ${apuesta}`.trim();
+                    await minigames.processCommand(fakeMessage);
+                    break;
+                }
+                case 'startrace':
+                    fakeMessage.content = '>startrace';
+                    await minigames.processCommand(fakeMessage);
+                    break;
+                case 'cancelrace':
+                    fakeMessage.content = '>cancelrace';
+                    await minigames.processCommand(fakeMessage);
+                    break;
+                case 'vending':
+                    fakeMessage.content = '>vending';
+                    await minigames.processCommand(fakeMessage);
+                    break;
+                case 'russian': {
+                    const accion  = interaction.options.getString('accion') || '';
+                    const t       = interaction.options.getUser('usuario');
+                    const apuesta = interaction.options.getInteger('apuesta') || '';
+                    if (accion === 'shoot') {
+                        fakeMessage.content = '>shoot';
+                    } else if (accion === 'start') {
+                        fakeMessage.content = '>startrussian';
+                    } else if (accion === 'cancel') {
+                        fakeMessage.content = '>cancelrussian';
+                    } else {
+                        // 'desafiar' o vacío
+                        if (t) addUser(t);
+                        fakeMessage.content = `>russian ${t ? `<@${t.id}>` : ''} ${apuesta}`.trim();
+                    }
+                    await minigames.processCommand(fakeMessage);
+                    break;
+                }
+                case 'limits':
+                    fakeMessage.content = '>limits';
+                    await minigames.processCommand(fakeMessage);
+                    break;
+                case 'games':
+                    fakeMessage.content = '>games';
+                    await minigames.processCommand(fakeMessage);
+                    break;
+ 
+                // ── TRIVIA ────────────────────────────────────
+                case 'trivia': {
+                    const modo  = interaction.options.getString('modo') || 'normal';
+                    const dif   = interaction.options.getString('dificultad') || '';
+                    const cat   = interaction.options.getString('categoria')  || '';
+                    const rondas = interaction.options.getInteger('rondas')   || '';
+                    switch (modo) {
+                        case 'survival': fakeMessage.content = '>triviasurvival'; break;
+                        case 'multi':    fakeMessage.content = `>triviamulti ${rondas}`.trim(); break;
+                        case 'join':     fakeMessage.content = '>jointrivia'; break;
+                        case 'start':    fakeMessage.content = '>starttrivia'; break;
+                        case 'cancel':   fakeMessage.content = '>canceltrivia'; break;
+                        case 'lb':       fakeMessage.content = '>trivialb'; break;
+                        case 'cat':      fakeMessage.content = '>triviacategorias'; break;
+                        default:         fakeMessage.content = `>trivia ${dif} ${cat}`.trim(); break;
+                    }
+                    await minigames.processCommand(fakeMessage);
+                    break;
+                }
+ 
+                // ── UNO ───────────────────────────────────────
+                case 'uno': {
+                    const accion = interaction.options.getString('accion');
+                    const apuesta = interaction.options.getInteger('apuesta') || 150;
+                    const carta  = interaction.options.getInteger('carta');
+                    const color  = interaction.options.getString('color') || '';
+                    const t      = interaction.options.getUser('usuario');
+                    switch (accion) {
+                        case 'join':    fakeMessage.content = `>ujoin ${apuesta}`.trim();   break;
+                        case 'start':   fakeMessage.content = '>ustart';  break;
+                        case 'cancel':  fakeMessage.content = '>ucancel'; break;
+                        case 'pickup':  fakeMessage.content = '>upickup'; break;
+                        case 'hand':    fakeMessage.content = '>ushowhand'; break;
+                        case 'table':   fakeMessage.content = '>utable';  break;
+                        case 'sayuno':  fakeMessage.content = '>sayuno!'; break;
+                        case 'callout':
+                            if (t) addUser(t);
+                            fakeMessage.content = `>ucallout <@${t?.id}>`; break;
+                        case 'play':
+                            fakeMessage.content = `>uplay ${color} ${carta ?? 0}`.trim(); break;
+                    }
+                    await minigames.processCommand(fakeMessage);
+                    break;
+                }
+ 
+                // ── APUESTAS ──────────────────────────────────
+                case 'apuesta': {
+                    const accion = interaction.options.getString('accion');
+                    const t      = interaction.options.getUser('usuario');
+                    const amt    = interaction.options.getInteger('cantidad');
+                    const desc   = interaction.options.getString('descripcion') || '';
+                    const id     = interaction.options.getString('id') || '';
+                    const ganador = interaction.options.getString('ganador') || '';
+                    switch (accion) {
+                        case 'crear':
+                            if (t) addUser(t);
+                            fakeMessage.content = `>bet <@${t?.id}> ${amt} ${desc}`;
+                            break;
+                        case 'aceptar':  fakeMessage.content = '>acceptbet'; break;
+                        case 'rechazar': fakeMessage.content = '>declinebet'; break;
+                        case 'mias':     fakeMessage.content = '>mybets'; break;
+                        case 'stats':
+                            if (t) addMember(await interaction.guild.members.fetch(t.id).catch(() => null));
+                            fakeMessage.content = '>betstats'; break;
+                        case 'resolver': fakeMessage.content = `>resolvebet ${id} ${ganador}`.trim(); break;
+                        case 'cancelar': fakeMessage.content = `>cancelbet ${id}`.trim(); break;
+                    }
+                    await allCommands.processCommand(fakeMessage);
+                    break;
+                }
+ 
+                // ── TRADING ───────────────────────────────────
+                case 'trade': {
+                    const accion = interaction.options.getString('accion') || 'iniciar';
+                    const t      = interaction.options.getUser('usuario');
+                    const item   = interaction.options.getString('item') || '';
+                    const cant   = interaction.options.getInteger('cantidad') || 1;
+                    switch (accion) {
+                        case 'iniciar':
+                            if (t) { addUser(t); fakeMessage.content = `>trade <@${t.id}>`; }
+                            else   { fakeMessage.content = '>trade'; }
+                            break;
+                        case 'additem':   fakeMessage.content = `>tradeadd ${item} ${cant}`; break;
+                        case 'addmoney':  fakeMessage.content = `>trademoney ${cant}`;        break;
+                        case 'aceptar':   fakeMessage.content = '>tradeaccept';               break;
+                        case 'cancelar':  fakeMessage.content = '>tradecancel';               break;
+                        case 'ver':       fakeMessage.content = '>tradeshow';                 break;
+                    }
+                    await allCommands.processCommand(fakeMessage);
+                    break;
+                }
+                case 'subasta': {
+                    const accion  = interaction.options.getString('accion') || 'ver';
+                    const item    = interaction.options.getString('item')    || '';
+                    const precio  = interaction.options.getInteger('precio') || 0;
+                    const dur     = interaction.options.getInteger('duracion') || 60;
+                    const id      = interaction.options.getString('id')      || '';
+                    const cant    = interaction.options.getInteger('precio') || 0; // reusa precio para bid
+                    switch (accion) {
+                        case 'crear':
+                            fakeMessage.content = (item && precio) ? `>auction ${item} ${precio} ${dur}` : '>auction';
+                            break;
+                        case 'bid':
+                            fakeMessage.content = `>bid ${id} ${cant}`;
+                            break;
+                        case 'ver':
+                        default:
+                            fakeMessage.content = '>auctionshow';
+                    }
+                    await allCommands.processCommand(fakeMessage);
+                    break;
+                }
+ 
+                // ── CRAFTEO ───────────────────────────────────
+                case 'craft': {
+                    const accion   = interaction.options.getString('accion') || 'recetas';
+                    const receta   = interaction.options.getString('receta') || '';
+                    const cantidad = interaction.options.getInteger('cantidad') || '';
+                    const cat      = interaction.options.getString('categoria') || '';
+                    switch (accion) {
+                        case 'recetas':  fakeMessage.content = `>recipes ${cat} ${cantidad}`.trim(); break;
+                        case 'craftear': fakeMessage.content = `>craft ${receta} ${cantidad}`.trim(); break;
+                        case 'cola':     fakeMessage.content = '>craftqueue'; break;
+                        case 'cancelar': fakeMessage.content = `>cancelcraft ${cantidad}`.trim(); break;
+                    }
+                    await allCommands.processCommand(fakeMessage);
+                    break;
+                }
+ 
+                // ── MISIONES Y LOGROS ─────────────────────────
+                case 'logros': {
+                    const accion = interaction.options.getString('accion') || 'logros';
+                    switch (accion) {
+                        case 'logros':   fakeMessage.content = '>achievements';      await achievements.processCommand(fakeMessage); break;
+                        case 'todos':    fakeMessage.content = '>allachievements';   await achievements.processCommand(fakeMessage); break;
+                        case 'progreso': fakeMessage.content = '>progress';          await achievements.processCommand(fakeMessage); break;
+                        case 'detectar': fakeMessage.content = '>detectachievements'; await achievements.processCommand(fakeMessage); break;
+                        case 'misiones': fakeMessage.content = '>missions';          await missions.processCommand(fakeMessage); break;
+                        case 'silenciar': fakeMessage.content = '>blockmissions';    await missions.processCommand(fakeMessage); break;
+                        case 'activar':  fakeMessage.content = '>unblockmissions';   await missions.processCommand(fakeMessage); break;
+                    }
+                    break;
+                }
+                // ── NIVELES DEL SERVIDOR ──────────────────────
+                case 'srank':
+                    fakeMessage.content = '>srank';
+                    await guildLevels.processCommand(fakeMessage, interaction.client);
+                    break;
+                case 'servtop':
+                    fakeMessage.content = '>stop';
+                    await guildLevels.processCommand(fakeMessage, interaction.client);
+                    break;
+ 
+                // ── MÚSICA ────────────────────────────────────
+                case 'music': {
+                    const accion = interaction.options.getString('accion');
+                    const query  = interaction.options.getString('query') || '';
+                    const numero = interaction.options.getInteger('numero') || '';
+                    // Mapear acciones del choice al subcomando real
+                    const subMap = {
+                        'play': 'play', 'stop': 'stop', 'skip': 'skip',
+                        'pause': 'pause', 'resume': 'resume', 'queue': 'queue',
+                        'np': 'nowplaying', 'ytsearch': 'ytsearch', 'spsearch': 'spsearch',
+                        'lyrics': 'lyrics', 'fix': 'fix', 'seek': 'seek',
+                        'volume': 'volume', 'loop': 'loop', 'shuffle': 'shuffle', 'clear': 'clear'
+                    };
+                    const sub = subMap[accion] || accion;
+                    // Para volume y skip el número va en query si no hay query
+                    const param = query || numero || '';
+                    fakeMessage.content = `>m ${sub} ${param}`.trim();
+                    await music.processCommand(fakeMessage);
+                    break;
+                }
+ 
+                // ── CHAT IA ───────────────────────────────────
+                case 'chat': {
+                    const accion  = interaction.options.getString('accion')  || 'mensaje';
+                    const mensaje = interaction.options.getString('mensaje') || '';
+                    switch (accion) {
+                        case 'mensaje': fakeMessage.content = `>chat ${mensaje}`; break;
+                        case 'limpiar': fakeMessage.content = '>clearchat'; break;
+                        case 'ayuda':   fakeMessage.content = '>chathelp'; break;
+                    }
+                    await chatbot.processCommand(fakeMessage);
+                    break;
+                }
+ 
+                // ── NSFW ──────────────────────────────────────
+                case 'r34': {
+                    const tags = interaction.options.getString('tags')       || '';
+                    const cant = interaction.options.getInteger('cantidad')  || '';
+                    fakeMessage.content = `>r34 ${tags} ${cant}`.trim();
+                    await nsfw.processCommand(fakeMessage);
+                    break;
+                }
+                case 'nsfw': {
+                    const tags = interaction.options.getString('tags')      || '';
+                    const cant = interaction.options.getInteger('cantidad') || '';
+                    fakeMessage.content = `>nsfw ${tags} ${cant}`.trim();
+                    await nsfw.processCommand(fakeMessage);
+                    break;
+                }
+                case 'videos': {
+                    const tags = interaction.options.getString('tags')      || '';
+                    const cant = interaction.options.getInteger('cantidad') || '';
+                    fakeMessage.content = `>videos ${tags} ${cant}`.trim();
+                    await nsfw.processCommand(fakeMessage);
+                    break;
+                }
+                case 'fuck': {
+                    const t = interaction.options.getMember('usuario');
+                    addMember(t);
+                    fakeMessage.content = `>fuck <@${t.id}>`;
+                    await nsfw.processCommand(fakeMessage);
+                    break;
+                }
+                case 'fuckdetect': {
+                    const t = interaction.options.getMember('usuario');
+                    addMember(t);
+                    fakeMessage.content = `>fuckdetect <@${t.id}>`;
+                    await nsfw.processCommand(fakeMessage);
+                    break;
+                }
+ 
+                // ── IMAGEN IA ─────────────────────────────────
+                case 'imagine': {
+                    fakeMessage.content = `>imagine ${interaction.options.getString('prompt')}`;
+                    await imageGen.processCommand(fakeMessage);
+                    break;
+                }
+ 
+                // ── EVENTOS ───────────────────────────────────
+                case 'events':
+                    fakeMessage.content = '>events';
+                    await allCommands.processCommand(fakeMessage);
+                    break;
+ 
+                // ── POZO SEMANAL ──────────────────────────────
+                case 'potcontribute': {
+                    fakeMessage.content = `>potcontribute ${interaction.options.getInteger('cantidad')}`;
+                    await minigames.processCommand(fakeMessage);
+                    break;
+                }
+                case 'potstatus':
+                    fakeMessage.content = '>potstatus';
+                    await minigames.processCommand(fakeMessage);
+                    break;
+ 
+                // ── AYUDA Y MISC ──────────────────────────────
+                case 'help':
+                    fakeMessage.content = '>help';
+                    await allCommands.processCommand(fakeMessage);
+                    break;
+                case 'changelog':
+                    fakeMessage.content = '>changelog';
+                    await allCommands.processCommand(fakeMessage);
+                    break;
+                case 'checkstats':
+                    fakeMessage.content = '>checkstats';
+                    await minigames.processCommand(fakeMessage);
+                    break;
+ 
+                default:
+                    await interaction.editReply('❌ Comando no reconocido.');
+            }
+        } catch (err) {
+            console.error(`❌ Error en slash /${cmd}:`, err.message);
+            try {
+                if (interaction.deferred && !interaction.replied) {
+                    await interaction.editReply('❌ Ocurrió un error ejecutando el comando.');
+                }
+            } catch {}
+        }
+        return;
+    }
+
     if (!interaction.isStringSelectMenu() && !interaction.isButton()) return;
 
     try {
@@ -957,15 +2121,10 @@ client.on('interactionCreate', async (interaction) => {
             return;
         }
 
-        if (interaction.customId.startsWith('shop_')) {
-            await allCommands.handleShopInteraction(interaction);
-            return;
+        if (interaction.customId.startsWith('rolecolor_')) {
+        await shop.handleRoleColorSelect(interaction);
+        return;
         }
-
-    if (interaction.customId.startsWith('rolecolor_')) {
-    await shop.handleRoleColorSelect(interaction);
-    return;
-    }
 
         if (interaction.customId.startsWith('trade_accept_')) {
             try {

@@ -1,4 +1,34 @@
 const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
+const commandsData = require('../../commandsData.json');
+
+const categoryMeta = {
+  'Administración': { emoji: '🛡️', style: ButtonStyle.Danger, soloAdmin: true },
+  'Mundo':          { emoji: '🌿', style: ButtonStyle.Success },
+  'Social':         { emoji: '💍', style: ButtonStyle.Success },
+  'Economía':       { emoji: '💰', style: ButtonStyle.Primary },
+  'Tienda':         { emoji: '🛒', style: ButtonStyle.Primary },
+  'Crafteo':        { emoji: '⚒️', style: ButtonStyle.Primary },
+  'Minijuegos':     { emoji: '🎮', style: ButtonStyle.Primary },
+  'Apuestas':       { emoji: '🎲', style: ButtonStyle.Primary },
+  'Trading':        { emoji: '🔄', style: ButtonStyle.Primary },
+  'Subastas':       { emoji: '🔨', style: ButtonStyle.Primary },
+  'Progreso':       { emoji: '🏆', style: ButtonStyle.Primary },
+  'VIP':            { emoji: '👑', style: ButtonStyle.Secondary },
+  'Música':         { emoji: '🎵', style: ButtonStyle.Primary },
+  'Chat IA':        { emoji: '🤖', style: ButtonStyle.Primary },
+  'Imágenes IA':    { emoji: '🎨', style: ButtonStyle.Primary },
+  'NSFW':           { emoji: '🔞', style: ButtonStyle.Danger },
+  'Eventos':        { emoji: '🎉', style: ButtonStyle.Primary },
+};
+
+function agruparPorCategoria() {
+  const grupos = {};
+  for (const cmd of commandsData) {
+    if (!grupos[cmd.categoria]) grupos[cmd.categoria] = [];
+    grupos[cmd.categoria].push(cmd);
+  }
+  return grupos;
+}
 
 class AllCommands {
     constructor(economySystem, shopSystem, tradeSystem, auctionSystem, craftingSystem,  eventsSystem, bettingSystem, achievementsSystem, guildLevels, guildConfig, maintenance) {
@@ -931,7 +961,6 @@ if (cosmeticRole?.name) {
         
         if (result.eventMessage) bonuses.push(result.eventMessage);
         if (result.pickaxeMessage) bonuses.push(result.pickaxeMessage);
-        if (result.equipmentMessage) bonuses.push(result.equipmentMessage);
         if (result.itemMessage) bonuses.push(result.itemMessage);
         if (result.vipMessage) bonuses.push(result.vipMessage);
         
@@ -2483,46 +2512,6 @@ if (cosmeticRole?.name) {
         });
     }
 
-    async handleShopInteraction(interaction) {
-        const parts = interaction.customId.split('_');
-
-        if (interaction.isStringSelectMenu()) {
-            // customId: shop_category_userId
-            const userId = parts[2];
-            if (interaction.user.id !== userId) {
-                return interaction.reply({ content: '❌ Esta tienda no es tuya. Usa `>shop` para abrir la tuya.', ephemeral: true });
-            }
-
-            const category = interaction.values[0];
-            const fakeMessage = {
-                author: interaction.user,
-                guild: interaction.guild,
-                guildId: interaction.guildId,
-                reply: async (options) => await interaction.update(options)
-            };
-            await this.shop.showShop(fakeMessage, category, 1);
-
-        } else if (interaction.isButton()) {
-            // customId: shop_prev_category_page_userId  o  shop_next_category_page_userId
-            const userId = parts[parts.length - 1];
-            if (interaction.user.id !== userId) {
-                return interaction.reply({ content: '❌ Esta tienda no es tuya. Usa `>shop` para abrir la tuya.', ephemeral: true });
-            }
-
-            if (parts[1] === 'prev' || parts[1] === 'next') {
-                const category = parts[2];
-                const page = parseInt(parts[3]);
-                const fakeMessage = {
-                    author: interaction.user,
-                    guild: interaction.guild,
-                    guildId: interaction.guildId,
-                    reply: async (options) => await interaction.update(options)
-                };
-                await this.shop.showShop(fakeMessage, category, page);
-            }
-        }
-    }
-
     async giveItemCommand(message, args) {
         if (message.author.bot) return;
 
@@ -3089,6 +3078,14 @@ const commandName = command.replace('>', '');
                 case '>doctor':
                     await this.handleDoctorCure(message, args);
                     return;
+/*                case '>dungeon':
+                case '>mazmorra':
+                    await this.handleDungeon(message, args);
+                    break;
+                case '>equipo':
+                case '>gear':
+                    await this.handleEquipo(message, args);
+                    break;*/
                 case '>casar':
                 case '>marry':
                 case '>proponer':
@@ -3599,10 +3596,9 @@ if (maintenance) await this.economy.database.disableMaintenance(maintenanceId);
     } 
 
     async showHelp(message, category = 'main') {
-        const embed = new EmbedBuilder()
-            .setColor('#00BFFF')
-            .setTimestamp();
-        
+        const grupos = agruparPorCategoria();
+        const embed = new EmbedBuilder().setColor('#00BFFF').setTimestamp();
+
         if (category === 'main') {
             embed
                 .setTitle('🤖 Pibot — Centro de Ayuda')
@@ -3613,22 +3609,20 @@ if (maintenance) await this.economy.database.disableMaintenance(maintenanceId);
                     '💡 `>profesion` — elige tu clase y desbloquea bonos\n' +
                     '💡 `>recipes` — taller de crafteo con categorías'
                 )
-                .addFields(
-                    { name: '💰 Economía',      value: 'Trabajo, daily, robos, rankings',       inline: true },
-                    { name: '🌿 Mundo',          value: 'Huerto, mascotas, expediciones',        inline: true },
-                    { name: '💍 Social',         value: 'Matrimonio, mentor, mendicidad',        inline: true },
-                    { name: '🛒 Tienda',         value: 'Items, inventario, cosméticos',         inline: true },
-                    { name: '⚒️ Crafteo',        value: 'Recetas, materiales, cola de crafteo',  inline: true },
-                    { name: '🎮 Minijuegos',     value: 'Coinflip, dados, blackjack y más',      inline: true },
-                    { name: '🎲 Apuestas',       value: 'Apuestas directas entre usuarios',      inline: true },
-                    { name: '🔄 Trading',        value: 'Intercambios y subastas',               inline: true },
-                    { name: '🏆 Progreso',       value: 'Logros, misiones, niveles',             inline: true },
-                    { name: '👑 VIP',            value: 'Beneficios y comandos premium',         inline: true },
-                    { name: '🎵 Música',         value: 'Reproductor con Spotify y YouTube',     inline: true },
-                    { name: '🤖 Chat IA',        value: 'Habla con Pibot mencionándolo',         inline: true },
-                )
-                .setFooter({ text: 'Pibot • Desarrollado por chasetodie10' })
                 .setColor('#5865F2');
+
+            // Genera los campos del menú principal a partir de las categorías reales
+            for (const [nombreCat, meta] of Object.entries(categoryMeta)) {
+                if (grupos[nombreCat]) {
+                    embed.addFields({
+                        name: `${meta.emoji} ${nombreCat}`,
+                        value: `${grupos[nombreCat].length} comando(s)`,
+                        inline: true
+                    });
+                }
+            }
+
+            embed.setFooter({ text: 'Pibot • Desarrollado por chasetodie10' });
 
             const eventsEnabled = this.guildConfig
                 ? await this.guildConfig.areEventsEnabled(message.guild?.id)
@@ -3636,442 +3630,57 @@ if (maintenance) await this.economy.database.disableMaintenance(maintenanceId);
             const isAdmin = message.member?.permissions?.has('ManageGuild');
             const uid = message.author.id;
 
-            const rows = [
-                new ActionRowBuilder().addComponents(
-                    new ButtonBuilder().setCustomId(`help_economy_${uid}`).setLabel('💰 Economía').setStyle(ButtonStyle.Primary),
-                    new ButtonBuilder().setCustomId(`help_world_${uid}`).setLabel('🌿 Mundo').setStyle(ButtonStyle.Success),
-                    new ButtonBuilder().setCustomId(`help_social_${uid}`).setLabel('💍 Social').setStyle(ButtonStyle.Success),
-                    new ButtonBuilder().setCustomId(`help_shop_${uid}`).setLabel('🛒 Tienda').setStyle(ButtonStyle.Primary),
-                    new ButtonBuilder().setCustomId(`help_craft_${uid}`).setLabel('⚒️ Crafteo').setStyle(ButtonStyle.Primary),
-                ),
-                new ActionRowBuilder().addComponents(
-                    new ButtonBuilder().setCustomId(`help_games_${uid}`).setLabel('🎮 Minijuegos').setStyle(ButtonStyle.Primary),
-                    new ButtonBuilder().setCustomId(`help_betting_${uid}`).setLabel('🎲 Apuestas').setStyle(ButtonStyle.Primary),
-                    new ButtonBuilder().setCustomId(`help_trading_${uid}`).setLabel('🔄 Trading').setStyle(ButtonStyle.Primary),
-                    new ButtonBuilder().setCustomId(`help_progress_${uid}`).setLabel('🏆 Progreso').setStyle(ButtonStyle.Primary),
-                    new ButtonBuilder().setCustomId(`help_vip_${uid}`).setLabel('👑 VIP').setStyle(ButtonStyle.Secondary),
-                ),
-                new ActionRowBuilder().addComponents(
-                    new ButtonBuilder().setCustomId(`help_music_${uid}`).setLabel('🎵 Música').setStyle(ButtonStyle.Primary),
-                    new ButtonBuilder().setCustomId(`help_chatIA_${uid}`).setLabel('🤖 Chat IA').setStyle(ButtonStyle.Primary),
-                    new ButtonBuilder().setCustomId(`help_imagine_${uid}`).setLabel('🎨 Imágenes IA').setStyle(ButtonStyle.Primary),
-                    new ButtonBuilder().setCustomId(`help_nsfw_${uid}`).setLabel('🔞 NSFW').setStyle(ButtonStyle.Danger),
-                    new ButtonBuilder().setCustomId(`help_events_${uid}`).setLabel(eventsEnabled ? '🎉 Eventos' : '🔴 Eventos').setStyle(eventsEnabled ? ButtonStyle.Primary : ButtonStyle.Secondary),
-                ),
-            ];
+            // Genera los botones dinámicamente, agrupados de a 5 por fila
+            const categoriasVisibles = Object.entries(categoryMeta).filter(
+                ([nombreCat, meta]) => grupos[nombreCat] && (!meta.soloAdmin || isAdmin)
+            );
 
-            if (isAdmin) {
-                rows.push(new ActionRowBuilder().addComponents(
-                    new ButtonBuilder().setCustomId(`help_admin_${uid}`).setLabel('🛡️ Admin').setStyle(ButtonStyle.Danger)
-                ));
+            const rows = [];
+            for (let i = 0; i < categoriasVisibles.length; i += 5) {
+                const grupo = categoriasVisibles.slice(i, i + 5);
+                rows.push(
+                    new ActionRowBuilder().addComponents(
+                        grupo.map(([nombreCat, meta]) =>
+                            new ButtonBuilder()
+                                .setCustomId(`help_${nombreCat}_${uid}`)
+                                .setLabel(`${meta.emoji} ${nombreCat}`)
+                                .setStyle(meta.style)
+                        )
+                    )
+                );
             }
+
+            // Botón Dev (se mantiene aparte, no viene de commandsData.js)
             if (message.author.id === '488110147265232898') {
                 rows.push(new ActionRowBuilder().addComponents(
                     new ButtonBuilder().setCustomId(`help_dev_${uid}`).setLabel('🔧 Dev').setStyle(ButtonStyle.Danger)
                 ));
             }
 
-            await message.reply({ embeds: [embed], components: rows });
+            await message.reply({ embeds: [embed], components: rows.slice(0, 5) }); // Discord permite máx 5 filas
             return;
         }
-        
-        // CATEGORÍAS INDIVIDUALES (más cortas)
-        const categories = {
-            dev: {
-                title: '🔧 Panel de Desarrollador',
-                fields: [
-                    { name: '💰 Economía Admin', value: '─────────────────', inline: false },
-                    { name: '>addmoney @user <cant> <razón>', value: 'Dar dinero a un usuario', inline: true },
-                    { name: '>removemoney @user <cant> <razón>', value: 'Quitar dinero a un usuario', inline: true },
-                    { name: '>addxp @user <cant> <razón>', value: 'Dar XP a un usuario', inline: true },
-                    { name: '>giveitem @user <item_id> <cant>', value: 'Dar item a un usuario', inline: true },
-                    { name: '>processrefunds', value: 'Procesar reembolsos de precios', inline: true },
-                    { name: '\u200b', value: '\u200b', inline: true },
 
-                    { name: '📊 Estadísticas', value: '─────────────────', inline: false },
-                    { name: '>shopstats', value: 'Estadísticas globales de la tienda', inline: true },
-                    { name: '>eventstats', value: 'Estadísticas de eventos activos', inline: true },
-                    { name: '>debugpot', value: 'Debug del pozo semanal', inline: true },
-                    { name: '>checklimits', value: 'Debug de límites de juegos', inline: true },
-                    { name: '\u200b', value: '\u200b', inline: true },
+        // Categoría individual: genera los campos a partir de commandsData.js
+        const comandosCategoria = grupos[category];
+        if (comandosCategoria) {
+            const meta = categoryMeta[category] || { emoji: '📋' };
+            embed.setTitle(`${meta.emoji} ${category}`);
+            embed.addFields(
+                comandosCategoria.map((cmd) => ({
+                    name: cmd.sintaxis,
+                    value: cmd.descripcion,
+                    inline: true
+                }))
+            );
 
-                    { name: '🧹 Mantenimiento', value: '─────────────────', inline: false },
-                    { name: '>cleancompletedpots', value: 'Limpiar pozos completados de la DB', inline: true },
-                    { name: '>fixoldpots', value: 'Distribuir pozos antiguos sin procesar', inline: true },
-                    { name: '>detectall', value: 'Detectar logros para todos los usuarios', inline: true },
-                    { name: '\u200b', value: '\u200b', inline: true },
-                    { name: '\u200b', value: '\u200b', inline: true },
-
-                    { name: '🔧 Mantenimiento Bot', value: '─────────────────', inline: false },
-                    { name: '>setmaintenance HH:MM [mensaje]', value: 'Programar aviso de mantenimiento', inline: true },
-                    { name: '>endmaintenance', value: 'Finalizar mantenimiento y publicar changelog', inline: true },
-                    { name: '>cancelmaintenance', value: 'Cancelar mantenimiento activo', inline: true },
-                    { name: '>maintenanceteston', value: 'Activar modo test (solo usuario de prueba)', inline: true },
-                    { name: '>maintenancetestoff', value: 'Desactivar modo test', inline: true },
-                    { name: '>resetmaintenancetest', value: 'Resetear datos del usuario de prueba', inline: true },
-
-                    { name: '🤖 IA & Chat', value: '─────────────────', inline: false },
-                    { name: '>orstatus / >aistatus', value: 'Ver estado de proveedores IA', inline: true },
-                    { name: '>orcredits', value: 'Ver créditos y uso de IA', inline: true },
-                    { name: '>chatstats', value: 'Estadísticas de conversaciones', inline: true },
-                ]
-            },
-            admin: {
-                title: '🛡️ Administración',
-                fields: [
-                    { name: '⚙️ Configuración', value: '─────────────────', inline: false },
-                    { name: '>svconfig', value: 'Ver configuración actual del servidor', inline: true },
-                    { name: '>setchannel <clave> #canal', value: 'Configurar un canal\n`levelup_channel` `events_channel` `guild_levelup_channel`', inline: true },
-                    { name: '\u200b', value: '\u200b', inline: true },
-
-                    { name: '📊 Niveles del Servidor (Son diferentes a los niveles de Economía)', value: '─────────────────', inline: false },
-                    { name: '>enablelevels', value: 'Activar sistema de niveles', inline: true },
-                    { name: '>disablelevels', value: 'Desactivar sistema de niveles', inline: true },
-                    { name: '\u200b', value: '\u200b', inline: true },
-
-                    { name: '🎉 Eventos', value: '─────────────────', inline: false },
-                    { name: '>toggleevents', value: 'Activar/desactivar todos los eventos', inline: true },
-                    { name: '>toggleevent [tipo]', value: 'Activar/desactivar un tipo específico', inline: true },
-                    { name: '>seteventsrole @rol', value: 'Rol para pings de eventos', inline: true },
-                    { name: '>createevent <tipo> [min]', value: 'Crear evento manual', inline: true },
-                    { name: '>eventstats', value: 'Estadísticas de eventos', inline: true },
-                    { name: '\u200b', value: '\u200b', inline: true },
-
-                    { name: '🏷️ Niveles Servidor', value: '─────────────────', inline: false },
-                    { name: '>enablelevels', value: 'Activar sistema de niveles del servidor', inline: true },
-                    { name: '>disablelevels', value: 'Desactivar sistema de niveles del servidor', inline: true },
-                    { name: '\u200b', value: '\u200b', inline: true },
-
-                    { name: '🔨 Moderación', value: '─────────────────', inline: false },
-                    { name: '>clear [cantidad]', value: 'Borrar mensajes del canal', inline: true },
-                ]
-            },
-            world: {
-                title: '🌿 Mundo — Huerto & Mascotas',
-                fields: [
-                    { name: '🌿 Huerto', value: '─────────────────', inline: false },
-                    { name: '>huerto', value: 'Ver estado de tu huerto', inline: true },
-                    { name: '>huerto plantar <slot> <semilla>', value: 'Plantar una semilla', inline: true },
-                    { name: '>huerto cosechar <slot/todo>', value: 'Cosechar plantas listas', inline: true },
-                    { name: '>huerto fumigar <slot>', value: 'Eliminar plaga (500π)', inline: true },
-                    { name: '>huerto help', value: 'Ver ayuda completa del huerto', inline: true },
-                    { name: '\u200b', value: '\u200b', inline: true },
-
-                    { name: '🐾 Mascotas', value: '─────────────────', inline: false },
-                    { name: '>mascota', value: 'Ver tus mascotas', inline: true },
-                    { name: '>mascota incubar', value: 'Incubar un 🥚 Huevo Misterioso', inline: true },
-                    { name: '>mascota equipar <id>', value: 'Equipar mascota para bonos', inline: true },
-                    { name: '>mascota desequipar', value: 'Desequipar mascota actual', inline: true },
-                    { name: '>mascota expedicion <id> <tipo>', value: '`money` / `ingredients` / `special`', inline: true },
-                    { name: '>mascota reclamar <id>', value: 'Reclamar recompensa de expedición', inline: true },
-                    { name: '>mascota curar <id> <medicina>', value: 'Curar mascota enferma', inline: true },
-                    { name: '>mascota liberar <id>', value: 'Liberar mascota a cambio de π', inline: true },
-                    { name: '>mascota renombrar <id> <nombre>', value: 'Cambiar nombre de mascota', inline: true },
-                    { name: '>mascota help', value: 'Ver ayuda completa de mascotas', inline: true },
-                    { name: '\u200b', value: '\u200b', inline: true },
-
-                    { name: '🛒 Ítems relacionados', value: '─────────────────', inline: false },
-                    { name: '>buy common_seed', value: 'Semilla común (200π)', inline: true },
-                    { name: '>buy pet_egg', value: 'Huevo misterioso (5,000π)', inline: true },
-                    { name: '>buy pet_slot_extra', value: 'Slot extra de mascota (25,000π)', inline: true },
-                ]
-            },
-            social: {
-                title: '💍 Social — Matrimonio & Mentor',
-                fields: [
-                    { name: '💍 Matrimonio', value: '─────────────────', inline: false },
-                    { name: '>casar @usuario', value: 'Proponer matrimonio (50,000π c/u)', inline: true },
-                    { name: '>pareja', value: 'Ver estado de tu matrimonio', inline: true },
-                    { name: '>divorcio', value: 'Iniciar proceso de divorcio', inline: true },
-                    { name: '\u200b', value: '\u200b', inline: true },
-                    { name: '💰 Bonus matrimonial', value: '10% de tus ganancias van a tu pareja\n15% al mes de casados', inline: false },
-
-                    { name: '🎓 Mentor', value: '─────────────────', inline: false },
-                    { name: '>mentor', value: 'Ver tu relación de mentoría', inline: true },
-                    { name: '>mentor @usuario', value: 'Proponer mentoría (tú nv20+, él nv5-)', inline: true },
-                    { name: '\u200b', value: '\u200b', inline: true },
-                    { name: '🏅 Hitos del aprendiz', value: 'Nivel 10 → 5,000π\nNivel 15 → 15,000π\nNivel 20 → 30,000π + Mystery Box', inline: false },
-
-                    { name: '🙏 Otros', value: '─────────────────', inline: false },
-                    { name: '>pedir', value: 'Pedir dinero a 3 usuarios aleatorios', inline: true },
-                    { name: '>curar @usuario', value: 'Curar maldición (solo Doctores)', inline: true },
-                    { name: '>changelog', value: 'Ver las últimas novedades del bot', inline: true },
-                ]
-            },
-            economy: {
-                title: '💰 Economía',
-                fields: [
-                    { name: '💳 Dinero', value: '─────────────────', inline: false },
-                    { name: '>balance', value: 'Ver tu saldo y nivel', inline: true },
-                    { name: '>daily', value: 'Recompensa diaria', inline: true },
-                    { name: '>pay @user <cantidad>', value: 'Transferir dinero a alguien', inline: true },
-
-                    { name: '💼 Trabajo', value: '─────────────────', inline: false },
-                    { name: '>work [tipo]', value: 'Trabajar para ganar dinero', inline: true },
-                    { name: '>robar @user', value: 'Intentar robar dinero', inline: true },
-                    { name: '>profesion', value: 'Ver y cambiar tu profesión', inline: true },
-                    { name: '>pacto', value: 'Pacto con el diablo (cada 48h)', inline: true },
-                    { name: '>mapa', value: 'Mapa del tesoro (1% al trabajar)', inline: true },
-                    { name: '>biblioteca', value: 'Libros que mejoran tus stats', inline: true },
-                    { name: '\u200b', value: '\u200b', inline: true },
-
-                    { name: '🏆 Rankings', value: '─────────────────', inline: false },
-                    { name: '>top', value: 'Top dinero del servidor', inline: true },
-                    { name: '>top level', value: 'Top niveles del servidor', inline: true },
-                    { name: '>top global', value: 'Rankings globales', inline: true },
-                ]
-            },
-            shop: {
-                title: '🛒 Tienda',
-                fields: [
-                    { name: '🏪 Comprar', value: '─────────────────', inline: false },
-                    { name: '>shop', value: 'Ver la tienda completa', inline: true },
-                    { name: '>shop <categoría>', value: 'Filtrar por categoría\n`consumable` `permanent` `trivia` `mystery`', inline: true },
-                    { name: '>buy <item_id> [cantidad]', value: 'Comprar un item', inline: true },
-
-                    { name: '🎒 Inventario', value: '─────────────────', inline: false },
-                    { name: '>bag', value: 'Ver tu inventario', inline: true },
-                    { name: '>useitem <item_id>', value: 'Usar un item consumible', inline: true },
-                    { name: '>effects', value: 'Ver efectos activos', inline: true },
-                    { name: '>cosmeticos', value: 'Ver cosméticos equipados', inline: true },
-                    { name: '\u200b', value: '\u200b', inline: true },
-                    { name: '\u200b', value: '\u200b', inline: true },
-                ]
-            },
-            vip: {
-                title: '👑 VIP',
-                fields: [
-                    { name: '📋 Info', value: '─────────────────', inline: false },
-                    { name: '>vip', value: 'Ver tu estado VIP y beneficios', inline: true },
-                    { name: '>viphelp', value: 'Guía completa de VIP', inline: true },
-                    { name: '\u200b', value: '\u200b', inline: true },
-
-                    { name: '⚡ Comandos VIP', value: '─────────────────', inline: false },
-                    { name: '>vipwork', value: 'Trabajo exclusivo VIP', inline: true },
-                    { name: '>vipdaily', value: 'Daily mejorado VIP', inline: true },
-                    { name: '>vipgamble', value: 'Apuestas VIP', inline: true },
-                    { name: '>vipboost', value: 'Activar boost VIP', inline: true },
-                    { name: '\u200b', value: '\u200b', inline: true },
-                    { name: '\u200b', value: '\u200b', inline: true },
-                ]
-            },
-            games: {
-                title: '🎮 Minijuegos',
-                fields: [
-                    { name: '>checkstats', value: 'Ver tus estadísticas de juego', inline: true },
-                    { name: '📋 Ver Juegos', value: '─────────────────', inline: false },
-                    { name: '>games', value: 'Lista completa con límites y premios', inline: true },
-                    { name: '\u200b', value: '\u200b', inline: true },
-                    { name: '\u200b', value: '\u200b', inline: true },
-
-                    { name: '🎰 Azar', value: '─────────────────', inline: false },
-                    { name: '>coinflip <cara/cruz> <apuesta>', value: '100 – 5,000 π-b$', inline: true },
-                    { name: '>dice <tipo> <apuesta>', value: '100 – 5,000 π-b$', inline: true },
-                    { name: '>lottery <número> <apuesta>', value: '500 – 3,000 π-b$', inline: true },
-                    { name: '>slots <apuesta>', value: '100 – 8,000 π-b$', inline: true },
-                    { name: '>roulette <tipo> <apuesta>', value: '100 – 15,000 π-b$', inline: true },
-                    { name: '>vending', value: 'Máquina expendedora (10 π-b$)', inline: true },
-
-                    { name: '🃏 Cartas & Multijugador', value: '─────────────────', inline: false },
-                    { name: '>blackjack <apuesta>', value: '100 – 10,000 π-b$', inline: true },
-                    { name: '>ujoin <apuesta>', value: 'UNO — 2 a 8 jugadores', inline: true },
-                    { name: '>russian <apuesta>', value: 'Ruleta Rusa — 2 a 6 jugadores', inline: true },
-                    { name: '>horses <bot/multi> <apuesta>', value: 'Carrera de Caballos', inline: true },
-                    { name: '\u200b', value: '\u200b', inline: true },
-                    { name: '\u200b', value: '\u200b', inline: true },
-
-                    { name: '🧠 Trivia', value: '─────────────────', inline: false },
-                    { name: '>trivia [dificultad] [modo] [cat]', value: 'Trivia clásica — Gratis', inline: true },
-                    { name: '>triviasurvival start', value: 'Modo supervivencia', inline: true },
-                    { name: '>triviacategorias', value: 'Ver categorías disponibles de trivia', inline: true },
-                    { name: '>triviacomp <apuesta>', value: 'Trivia competitiva multijugador', inline: true },                    { name: '>trivialb [tipo]', value: 'Rankings de trivia', inline: true },
-                ]
-            },
-            betting: {
-                title: '🎲 Apuestas',
-                fields: [
-                    { name: '➕ Crear', value: '─────────────────', inline: false },
-                    { name: '>bet @usuario <cantidad> <descripción>', value: 'Crear una apuesta directa', inline: true },
-                    { name: '>acceptbet <id>', value: 'Aceptar apuesta pendiente', inline: true },
-                    { name: '>declinebet <id>', value: 'Rechazar apuesta', inline: true },
-
-                    { name: '⚙️ Gestionar', value: '─────────────────', inline: false },
-                    { name: '>resolvebet <id> @ganador', value: 'Resolver apuesta (declarar ganador)', inline: true },
-                    { name: '>cancelbet <id>', value: 'Cancelar y devolver apuestas', inline: true },
-                    { name: '>mybets', value: 'Ver tus apuestas activas', inline: true },
-                    { name: '>betstats [@usuario]', value: 'Estadísticas de victorias/derrotas', inline: true },
-                    { name: '\u200b', value: '\u200b', inline: true },
-                    { name: '\u200b', value: '\u200b', inline: true },
-                ]
-            },
-            trading: {
-                title: '🔄 Intercambios',
-                fields: [
-                    { name: '🤝 Iniciar', value: '─────────────────', inline: false },
-                    { name: '>trade @usuario', value: 'Iniciar intercambio con alguien', inline: true },
-                    { name: '>tradeshow', value: 'Ver intercambios activos', inline: true },
-                    { name: '\u200b', value: '\u200b', inline: true },
-
-                    { name: '➕ Ofrecer', value: '─────────────────', inline: false },
-                    { name: '>tradeadd <item_id> [cantidad]', value: 'Agregar item a tu oferta', inline: true },
-                    { name: '>trademoney <cantidad>', value: 'Agregar dinero a tu oferta', inline: true },
-                    { name: '\u200b', value: '\u200b', inline: true },
-
-                    { name: '✅ Confirmar', value: '─────────────────', inline: false },
-                    { name: '>tradeaccept', value: 'Confirmar y ejecutar intercambio', inline: true },
-                    { name: '>tradecancel', value: 'Cancelar intercambio activo', inline: true },
-                    { name: '\u200b', value: '\u200b', inline: true },
-                ]
-            },
-            auctions: {
-                title: '🔨 Subastas',
-                fields: [
-                    { name: '📦 Subastar', value: '─────────────────', inline: false },
-                    { name: '>auction <item_id> <precio> [minutos]', value: 'Poner un item en subasta', inline: true },
-                    { name: '>auctions', value: 'Ver subastas activas ahora', inline: true },
-                    { name: '\u200b', value: '\u200b', inline: true },
-
-                    { name: '💰 Pujar', value: '─────────────────', inline: false },
-                    { name: '>bid <auction_id> <cantidad>', value: 'Hacer una puja', inline: true },
-                    { name: '\u200b', value: '\u200b', inline: true },
-                    { name: '\u200b', value: '\u200b', inline: true },
-                ]
-            },
-            craft: {
-                title: '⚒️ Crafteo — Taller de Ítems',
-                fields: [
-                    { name: '📋 Ver Recetas', value: '─────────────────', inline: false },
-                    { name: '>recipes', value: 'Ver menú de recetas por categoría', inline: true },
-                    { name: '>recipes <categoría>', value: '`potion` `combat` `nature` `economy` `artesano_exclusive`', inline: true },
-                    { name: '\u200b', value: '\u200b', inline: true },
-
-                    { name: '🔨 Craftear', value: '─────────────────', inline: false },
-                    { name: '>craft <recipe_id>', value: 'Iniciar crafteo de una receta', inline: true },
-                    { name: '>queue', value: 'Ver cola de crafteos en progreso', inline: true },
-                    { name: '>cancelcraft <número>', value: 'Cancelar crafteo (recuperas 80%)', inline: true },
-
-                    { name: '🛒 Materiales en tienda', value: '─────────────────', inline: false },
-                    { name: 'fire_ember', value: '🔥 Brasa Ígnea (1,500π)', inline: true },
-                    { name: 'crystal_shard', value: '💎 Fragmento de Cristal (2,000π)', inline: true },
-                    { name: 'moon_essence', value: '🌙 Esencia Lunar (5,000π)', inline: true },
-                    { name: 'shadow_fiber', value: '🕸️ Fibra de Sombra (4,000π)', inline: true },
-                    { name: 'golden_dust', value: '✨ Polvo Dorado (10,000π)', inline: true },
-                    { name: 'dragon_scale', value: '🐉 Escama de Dragón (15,000π)', inline: true },
-                    { name: '⚗️ Artesano exclusivos', value: 'void_crystal (30,000π) • star_fragment (20,000π) • mythril_shard (25,000π)', inline: false },
-                ]
-            },
-            progress: {
-                title: '🎯 Progreso',
-                fields: [
-                    { name: '📋 Misiones', value: '─────────────────', inline: false },
-                    { name: '>missions', value: 'Ver misiones diarias activas', inline: true },
-                    { name: '>blockmissions', value: 'Silenciar notificaciones', inline: true },
-                    { name: '>unblockmissions', value: 'Activar notificaciones', inline: true },
-
-                    { name: '🏆 Logros', value: '─────────────────', inline: false },
-                    { name: '>achievements [@usuario]', value: 'Ver logros desbloqueados', inline: true },
-                    { name: '>allachievements', value: 'Ver todos los logros posibles', inline: true },
-                    { name: '>progress', value: 'Ver progreso de cada logro', inline: true },
-                    { name: '>detectachievements', value: 'Revisar logros pendientes', inline: true },
-                    { name: '\u200b', value: '\u200b', inline: true },
-                    { name: '\u200b', value: '\u200b', inline: true },
-
-                    { name: '📊 Niveles', value: '─────────────────', inline: false },
-                    { name: '>level [@usuario]', value: 'Ver nivel global', inline: true },
-                    { name: '>slevel', value: 'Ver tu nivel en este servidor', inline: true },
-                    { name: '>stop', value: 'Top 10 niveles del servidor', inline: true },
-                ]
-            },
-            events: {
-                title: '🎉 Eventos',
-                fields: [
-                    { name: '📅 Ver Eventos', value: '─────────────────', inline: false },
-                    { name: '>events', value: 'Ver eventos activos en este servidor', inline: true },
-                    { name: '\u200b', value: '\u200b', inline: true },
-                    { name: '\u200b', value: '\u200b', inline: true },
-                ]
-            },
-            chatIA: {
-                title: '🤖 Chat IA',
-                fields: [
-                    { name: '💬 Cómo chatear', value: '─────────────────', inline: false },
-                    { name: 'Mencionar al bot', value: 'Escríbele directamente con @Pibot', inline: true },
-                    { name: 'Responder un mensaje', value: 'Haz reply a cualquier mensaje del bot', inline: true },
-                    { name: '\u200b', value: '\u200b', inline: true },
-                    { name: '>chathelp', value: 'Ver todos los comandos de chat', inline: true },
-                    { name: '\u200b', value: '\u200b', inline: true },
-                    { name: '\u200b', value: '\u200b', inline: true },
-                ]
-            },
-            nsfw: {
-                title: '🔞 NSFW',
-                fields: [
-                    { name: '🔍 Buscar', value: '─────────────────', inline: false },
-                    { name: '>nsfw <categoría> <cantidad>', value: 'Buscar contenido por categoría', inline: true },
-                    { name: '>r34 <tags> <cantidad>', value: 'Buscar por tags\n`>r34 pokemon 5`', inline: true },
-                    { name: '\u200b', value: '\u200b', inline: true },
-
-                    { name: '🎞️ Formato', value: '─────────────────', inline: false },
-                    { name: '>gifs <categoría> <cantidad>', value: 'Solo GIFs animados', inline: true },
-                    { name: '>videos <categoría> <cantidad>', value: 'Solo videos MP4/WEBM', inline: true },
-                    { name: '\u200b', value: '\u200b', inline: true },
-
-                    { name: '🎲 Especiales', value: '─────────────────', inline: false },
-                    { name: '>fuck [@usuario]', value: 'Requiere mención o reply', inline: true },
-                    { name: '>fuckdetect / >fd', value: 'FuckDetect con mención o reply', inline: true },
-                    { name: '\u200b', value: '\u200b', inline: true },
-                ]
-            },
-            music: {
-                title: '🎵 Música',
-                fields: [
-                    { name: '🎧 Reproducir', value: '─────────────────', inline: false },
-                    { name: '>m play <canción/URL>', value: 'Reproducir canción o playlist', inline: true },
-                    { name: '>m search <canción>', value: 'Buscar y elegir canción', inline: true },
-                    { name: '>spsearch <canción>', value: 'Buscar en Spotify', inline: true },
-
-                    { name: '⏯️ Controles', value: '─────────────────', inline: false },
-                    { name: '>m pause / >m resume', value: 'Pausar / Reanudar', inline: true },
-                    { name: '>m skip', value: 'Saltar canción actual', inline: true },
-                    { name: '>m stop', value: 'Detener y vaciar cola', inline: true },
-                    { name: '>m queue', value: 'Ver cola de reproducción', inline: true },
-                    { name: '>m volume <0-100>', value: 'Ajustar volumen', inline: true },
-                    { name: '\u200b', value: '\u200b', inline: true },
-
-                    { name: '📋 Más comandos', value: '─────────────────', inline: false },
-                    { name: '>m help', value: 'Ver lista completa de comandos de música', inline: true },
-                    { name: '\u200b', value: '\u200b', inline: true },
-                    { name: '\u200b', value: '\u200b', inline: true },
-                ]
-            },
-            imagine: {
-                title: '🎨 Generación de Imágenes IA',
-                fields: [
-                    { name: '🖼️ Generar', value: '─────────────────', inline: false },
-                    { name: '>imagine <descripción>', value: 'Generar imagen con IA', inline: true },
-                    { name: '>img <descripción>', value: 'Alias corto de imagine', inline: true },
-                    { name: '\u200b', value: '\u200b', inline: true },
-
-                    { name: '💡 Consejos', value: '─────────────────', inline: false },
-                    { name: 'Ejemplo', value: '`>imagine un gato astronauta en la luna al estilo anime`', inline: false },
-                    { name: '⏳ Cooldown', value: '15 segundos entre imágenes', inline: true },
-                    { name: '📡 Proveedores', value: 'Pixazo → ImageGPT → ModelsLab → Cloudflare', inline: true },
-                    { name: '\u200b', value: '\u200b', inline: true },
-                ]
-            },
-        };
-        
-        const cat = categories[category];
-        if (cat) {
-            embed.setTitle(cat.title).addFields(...cat.fields);
-            
             const backButton = new ActionRowBuilder().addComponents(
                 new ButtonBuilder()
                     .setCustomId(`help_main_${message.author.id}`)
                     .setLabel('⬅️ Volver al Menú')
                     .setStyle(ButtonStyle.Secondary)
             );
-            
+
             await message.reply({ embeds: [embed], components: [backButton] });
         }
     }
@@ -4963,6 +4572,931 @@ if (maintenance) await this.economy.database.disableMaintenance(maintenanceId);
         return message.reply('❌ Subcomando inválido. Usa `>mascota help` para ver todos los comandos.');
     }
 
+    async handleDungeon(message, args) {
+        const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
+        const userId = message.author.id;
+        const sub = args[1]?.toLowerCase();
+
+        // ─── TUTORIAL ───
+        if (sub === 'tutorial') {
+            return await this.showDungeonTutorial(message, userId, false);
+        }
+
+        // ─── BESTIARIO ───
+        if (sub === 'bestiario') {
+            return await this.showBestiary(message, userId);
+        }
+
+        // ─── CONTINUAR RUN ───
+        if (sub === 'continuar') {
+            const run = await this.economy.dungeon.getRun(userId);
+            if (!run) return message.reply('❌ No tienes ninguna run activa. Usa `>dungeon entrar` para comenzar.');
+            return await this.showDungeonMap(message, userId, run);
+        }
+
+        // ─── ESCAPAR ───
+        if (sub === 'escapar') {
+            const run = await this.economy.dungeon.getRun(userId);
+            if (!run) return message.reply('❌ No tienes ninguna run activa.');
+            if (!run.boss_defeated) return message.reply('⚠️ Solo puedes escapar después de derrotar al jefe del piso.');
+            return await this.confirmEscape(message, userId, run);
+        }
+
+        // ─── STATS DE LA RUN ACTIVA ───
+        if (sub === 'run') {
+            const run = await this.economy.dungeon.getRun(userId);
+            if (!run) return message.reply('❌ No tienes ninguna run activa.');
+            const embed = new EmbedBuilder()
+                .setTitle('📊 Estado de la Run')
+                .setColor(0x5865f2)
+                .addFields(
+                    { name: '🏰 Piso', value: `${run.floor}`, inline: true },
+                    { name: '❤️ HP', value: `${run.hp}/${run.max_hp}`, inline: true },
+                    { name: '💰 Dinero', value: `${run.total_money.toLocaleString()} ${this.economy.config.currencySymbol}`, inline: true },
+                    { name: '✨ Reliquias', value: run.active_relics.length ? run.active_relics.map(r => r.name).join(', ') : 'Ninguna', inline: false },
+                    { name: '⚠️ Debuffs', value: run.active_debuffs.length ? run.active_debuffs.map(d => d.name).join(', ') : 'Ninguno', inline: false },
+                    { name: '🎒 Items temporales', value: run.temp_inventory.length ? run.temp_inventory.map(i => {
+                        const data = this.economy.equipment.DUNGEON_ITEMS[i.id];
+                        return data ? `${data.name} (Piso ${i.obtainedFloor})` : i.id;
+                    }).join('\n') : 'Ninguno', inline: false },
+                );
+            return message.reply({ embeds: [embed] });
+        }
+
+        // ─── ENTRAR ───
+        if (!sub || sub === 'entrar') {
+            const existingRun = await this.economy.dungeon.getRun(userId);
+            if (existingRun) {
+                return message.reply('⚠️ Ya tienes una run activa. Usa `>dungeon continuar` para reanudarla.');
+            }
+
+            const result = await this.economy.dungeon.startRun(userId);
+            if (!result.success) return message.reply(result.message);
+
+            if (result.firstTime) {
+                return await this.showDungeonTutorial(message, userId, true);
+            }
+
+            const run = await this.economy.dungeon.getRun(userId);
+            return await this.showDungeonMap(message, userId, run);
+        }
+
+        return message.reply('❌ Subcomandos: `entrar` `continuar` `escapar` `run` `tutorial` `bestiario`');
+    }
+
+    // ─── TUTORIAL INTERACTIVO ───
+    async showDungeonTutorial(message, userId, startAfter) {
+        const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
+
+        const pages = [
+            // Página 1 — Introducción
+            {
+                embed: new EmbedBuilder()
+                    .setTitle('⚔️ Bienvenido a la Mazmorra')
+                    .setColor(0x5865f2)
+                    .setDescription(
+                        `La mazmorra es un lugar de peligro y recompensa.\n\n` +
+                        `🏰 Explorarás **pisos infinitos** llenos de enemigos, cofres y secretos.\n` +
+                        `📈 Cada piso es más difícil que el anterior.\n` +
+                        `💀 Si mueres, pierdes todo el loot de la run.\n` +
+                        `💾 Tu progreso se guarda automáticamente.\n\n` +
+                        `*Usa \`>dungeon continuar\` para reanudar si sales de Discord.*`
+                    ),
+                interactive: false,
+            },
+            // Página 2 — Mapa (práctica)
+            {
+                embed: new EmbedBuilder()
+                    .setTitle('🗺️ El Mapa')
+                    .setColor(0x5865f2)
+                    .setDescription(
+                        `El mapa muestra las habitaciones del piso actual.\n\n` +
+                        `🚶 Tu posición actual\n` +
+                        `❓ Habitación sin explorar\n` +
+                        `✅ Habitación completada\n` +
+                        `👺 Jefe del piso (siempre al final)\n\n` +
+                        `Solo puedes moverte a habitaciones **adyacentes** a tu posición.\n` +
+                        `Las habitaciones revelan su tipo al explorarlas.\n\n` +
+                        `**¡Practica! Elige una habitación:**`
+                    ),
+                interactive: true,
+                interactiveType: 'map',
+                buttons: [
+                    { id: 'tut_map_combat', label: '⚔️ Combate', style: ButtonStyle.Primary },
+                    { id: 'tut_map_chest',  label: '📦 Cofre',   style: ButtonStyle.Success },
+                    { id: 'tut_map_rest',   label: '💊 Descanso', style: ButtonStyle.Secondary },
+                ],
+                responses: {
+                    tut_map_combat: '⚔️ **Elegiste una sala de combate.** ¡Aquí enfrentarás enemigos!',
+                    tut_map_chest:  '📦 **Elegiste un cofre.** ¡Podrías obtener dinero o items!',
+                    tut_map_rest:   '💊 **Elegiste descanso.** Recuperas HP sin riesgo.',
+                }
+            },
+            // Página 3 — Combate básico (práctica)
+            {
+                embed: new EmbedBuilder()
+                    .setTitle('⚔️ Combate — Turnos')
+                    .setColor(0xe74c3c)
+                    .setDescription(
+                        `El combate más común es por **turnos**.\n\n` +
+                        `⚔️ **Atacar** — Dañas al enemigo pero él contraataca.\n` +
+                        `🛡️ **Defender** — Reduces el daño recibido.\n` +
+                        `💨 **Esquivar** — Intentas esquivar. Si fallas, recibes daño completo.\n` +
+                        `🧪 **Poción** — Recuperas HP pero el enemigo te golpea.\n` +
+                        `🏃 **Huir** — 40% de éxito. Si fallas, el enemigo ataca.\n\n` +
+                        `**¡Practica! Un Goblin te ataca con 30 HP:**`
+                    ),
+                interactive: true,
+                interactiveType: 'combat_turns',
+                buttons: [
+                    { id: 'tut_atk',    label: '⚔️ Atacar',   style: ButtonStyle.Primary   },
+                    { id: 'tut_def',    label: '🛡️ Defender', style: ButtonStyle.Secondary },
+                    { id: 'tut_dodge',  label: '💨 Esquivar', style: ButtonStyle.Secondary },
+                    { id: 'tut_potion', label: '🧪 Poción',   style: ButtonStyle.Success   },
+                    { id: 'tut_flee',   label: '🏃 Huir',     style: ButtonStyle.Danger    },
+                ],
+                responses: {
+                    tut_atk:    '⚔️ **¡Atacaste!** Le hiciste 12 de daño al Goblin, pero él te golpeó por 5. ¡Buen intercambio!',
+                    tut_def:    '🛡️ **¡Te defendiste!** Recibiste solo 3 de daño en vez de 8. Útil cuando el enemigo es fuerte.',
+                    tut_dodge:  '💨 **¡Esquivaste!** El Goblin falló y contraatacaste por 6. ¡Pero no siempre funciona!',
+                    tut_potion: '🧪 **¡Usaste una poción!** Recuperaste 20 HP, pero el Goblin aprovechó para atacarte.',
+                    tut_flee:   '🏃 **¡Intentaste huir!** Esta vez tuviste suerte... pero no siempre es así.',
+                }
+            },
+            // Página 4 — Intención (práctica)
+            {
+                embed: new EmbedBuilder()
+                    .setTitle('🎭 Combate — Intención')
+                    .setColor(0xe74c3c)
+                    .setDescription(
+                        `Algunos enemigos revelan su **intención** antes de atacar.\n\n` +
+                        `Lee el estado del enemigo y reacciona correctamente:\n\n` +
+                        `😤 *Cargando golpe fuerte* → 🛡️ Defiéndete\n` +
+                        `🏃 *Preparando emboscada* → 💨 Esquiva\n` +
+                        `🔮 *Invocando magia* → ⚡ Contraataca\n` +
+                        `💤 *Descansando* → ⚔️ Ataca fuerte\n\n` +
+                        `Si aciertas, recibes menos daño y atacas más fuerte.\n\n` +
+                        `**¡Practica! 😤 El enemigo está cargando un golpe fuerte...**`
+                    ),
+                interactive: true,
+                interactiveType: 'combat_intent',
+                buttons: [
+                    { id: 'tut_int_defend',  label: '🛡️ Defender',    style: ButtonStyle.Secondary },
+                    { id: 'tut_int_dodge',   label: '💨 Esquivar',    style: ButtonStyle.Secondary },
+                    { id: 'tut_int_counter', label: '⚡ Contraatacar', style: ButtonStyle.Primary   },
+                    { id: 'tut_int_attack',  label: '⚔️ Atacar',      style: ButtonStyle.Primary   },
+                ],
+                responses: {
+                    tut_int_defend:  '✅ **¡Correcto!** Defendiste el golpe fuerte y recibiste mínimo daño.',
+                    tut_int_dodge:   '⚠️ **¡Casi!** Esquivar funciona mejor contra emboscadas. Recibiste algo de daño.',
+                    tut_int_counter: '❌ **¡Mal!** Contraatacar es para magia. El golpe fuerte te hizo mucho daño.',
+                    tut_int_attack:  '❌ **¡Mal!** Atacar era bueno si descansaba. Ahora recibiste daño completo.',
+                }
+            },
+            // Página 5 — Presión (práctica)
+            {
+                embed: new EmbedBuilder()
+                    .setTitle('💣 Combate — Presión')
+                    .setColor(0xe74c3c)
+                    .setDescription(
+                        `En combates de **presión**, hay un contador del 1 al 5.\n\n` +
+                        `⚠️ Cada vez que **no atacas**, el contador sube.\n` +
+                        `💥 Al llegar a **5**, el enemigo lanza un ataque devastador.\n` +
+                        `⚔️ Atacar baja el contador.\n\n` +
+                        `La estrategia es ser **agresivo** pero sin descuidar tu HP.\n\n` +
+                        `**¡Practica! Presión actual: 🔴🔴⚫⚫⚫ (2/5)**`
+                    ),
+                interactive: true,
+                interactiveType: 'combat_pressure',
+                buttons: [
+                    { id: 'tut_pres_atk', label: '⚔️ Atacar',   style: ButtonStyle.Primary   },
+                    { id: 'tut_pres_def', label: '🛡️ Defender', style: ButtonStyle.Secondary },
+                    { id: 'tut_pres_pot', label: '🧪 Poción',   style: ButtonStyle.Success   },
+                ],
+                responses: {
+                    tut_pres_atk: '✅ **¡Bien!** Atacaste y la presión bajó a 1/5. ¡Sigue así!',
+                    tut_pres_def: '⚠️ **¡Cuidado!** La presión subió a 3/5. Si no atacas, el enemigo va a explotar.',
+                    tut_pres_pot: '⚠️ **¡Cuidado!** Recuperaste HP pero la presión subió a 3/5.',
+                }
+            },
+            // Página 6 — Simon Says (práctica)
+            {
+                embed: new EmbedBuilder()
+                    .setTitle('🔵 Combate — Simon Says')
+                    .setColor(0xe74c3c)
+                    .setDescription(
+                        `Los enemigos **élite** usan Simon Says.\n\n` +
+                        `El enemigo te muestra un patrón de colores.\n` +
+                        `Debes repetirlo en el mismo orden para atacar.\n\n` +
+                        `Si te equivocas, el enemigo te golpea y el patrón se reinicia.\n` +
+                        `El patrón se hace más largo con cada turno.\n\n` +
+                        `**¡Practica! Repite el patrón: 🔴 🟡 🔵**`
+                    ),
+                interactive: true,
+                interactiveType: 'simon',
+                buttons: [
+                    { id: 'tut_simon_red',    label: '🔴', style: ButtonStyle.Danger    },
+                    { id: 'tut_simon_yellow', label: '🟡', style: ButtonStyle.Primary   },
+                    { id: 'tut_simon_blue',   label: '🔵', style: ButtonStyle.Primary   },
+                    { id: 'tut_simon_green',  label: '🟢', style: ButtonStyle.Success   },
+                ],
+                responses: {
+                    tut_simon_red:    '✅ **¡Correcto! (1/3)** Sigue con 🟡',
+                    tut_simon_yellow: '❌ **¡Incorrecto!** El primer color era 🔴. El patrón se reinicia.',
+                    tut_simon_blue:   '❌ **¡Incorrecto!** El primer color era 🔴. El patrón se reinicia.',
+                    tut_simon_green:  '❌ **¡Incorrecto!** El primer color era 🔴. El patrón se reinicia.',
+                }
+            },
+            // Página 7 — Reliquias y items
+            {
+                embed: new EmbedBuilder()
+                    .setTitle('✨ Reliquias e Items')
+                    .setColor(0x9c27b0)
+                    .setDescription(
+                        `Durante la run puedes conseguir **reliquias** e **items**.\n\n` +
+                        `**Reliquias** — Efectos pasivos que duran toda la run:\n` +
+                        `👁️ Ojo de Dragón — Revela intención del enemigo\n` +
+                        `🛡️ Escudo Ancestral — Absorbe un golpe mortal por piso\n` +
+                        `🩸 Pacto de Sangre — Cada ataque roba HP\n\n` +
+                        `**Items de dungeon** — Se guardan permanentemente si escapas:\n` +
+                        `🗡️ Armas y armaduras exclusivas que no se venden en la tienda.\n\n` +
+                        `⚠️ Si mueres, **pierdes los items temporales** pero conservas los que ya tenías equipados.`
+                    ),
+                interactive: false,
+            },
+            // Página 8 — Sistema de escape
+            {
+                embed: new EmbedBuilder()
+                    .setTitle('🏃 Escapar y Guardar')
+                    .setColor(0x4caf50)
+                    .setDescription(
+                        `Al derrotar al **jefe de cada piso**, puedes:\n\n` +
+                        `🏃 **Escapar** — Sales con todo el loot del piso guardado permanentemente.\n` +
+                        `⚔️ **Continuar** — Avanzas al siguiente piso con más dificultad y mejores recompensas.\n\n` +
+                        `💡 *Estrategia:* Si tienes poco HP o items valiosos, mejor escapa. Si vas bien, sigue.\n\n` +
+                        `💾 **Tu run se guarda automáticamente.** Si cierras Discord, usa \`>dungeon continuar\` para volver.\n\n` +
+                        `La run solo termina si:\n` +
+                        `❌ Mueres en combate\n` +
+                        `🏳️ Escapas voluntariamente`
+                    ),
+                interactive: false,
+            },
+        ];
+
+        let currentPage = 0;
+        let interactionDone = false;
+
+        const buildPageComponents = (page, interactionDone) => {
+            const rows = [];
+            const pageData = pages[page];
+
+            if (pageData.interactive && !interactionDone) {
+                const actionRow = new ActionRowBuilder().addComponents(
+                    ...pageData.buttons.map(b => new ButtonBuilder()
+                        .setCustomId(`${b.id}_${userId}`)
+                        .setLabel(b.label)
+                        .setStyle(b.style)
+                    )
+                );
+                rows.push(actionRow);
+            }
+
+            const navRow = new ActionRowBuilder().addComponents(
+                new ButtonBuilder()
+                    .setCustomId(`tut_prev_${userId}`)
+                    .setEmoji('◀️')
+                    .setStyle(ButtonStyle.Secondary)
+                    .setDisabled(page === 0),
+                new ButtonBuilder()
+                    .setCustomId(`tut_page_${userId}`)
+                    .setLabel(`${page + 1}/${pages.length}`)
+                    .setStyle(ButtonStyle.Secondary)
+                    .setDisabled(true),
+                new ButtonBuilder()
+                    .setCustomId(`tut_next_${userId}`)
+                    .setEmoji('▶️')
+                    .setStyle(ButtonStyle.Secondary)
+                    .setDisabled(page === pages.length - 1 && !pageData.interactive || (page === pages.length - 1 && interactionDone)),
+                ...(page === pages.length - 1 ? [
+                    new ButtonBuilder()
+                        .setCustomId(`tut_start_${userId}`)
+                        .setLabel(startAfter ? '🚀 ¡Entrar a la Mazmorra!' : '✅ Entendido')
+                        .setStyle(ButtonStyle.Success)
+                ] : [])
+            );
+            rows.push(navRow);
+
+            return rows;
+        };
+
+        const reply = await message.reply({
+            embeds: [pages[currentPage].embed],
+            components: buildPageComponents(currentPage, interactionDone)
+        });
+
+        const collector = reply.createMessageComponentCollector({
+            filter: i => i.user.id === userId && !i.customId.startsWith('tut_simon_yellow') && !i.customId.startsWith('tut_simon_blue'),
+            time: 300000
+        });
+
+        collector.on('collect', async interaction => {
+            await interaction.deferUpdate();
+            const customId = interaction.customId.replace(`_${userId}`, '');
+
+            // Navegación
+            if (customId === 'tut_prev') {
+                currentPage = Math.max(0, currentPage - 1);
+                interactionDone = false;
+                await reply.edit({ embeds: [pages[currentPage].embed], components: buildPageComponents(currentPage, interactionDone) });
+                return;
+            }
+
+            if (customId === 'tut_next') {
+                currentPage = Math.min(pages.length - 1, currentPage + 1);
+                interactionDone = false;
+                await reply.edit({ embeds: [pages[currentPage].embed], components: buildPageComponents(currentPage, interactionDone) });
+                return;
+            }
+
+            // Fin del tutorial
+            if (customId === 'tut_start') {
+                collector.stop('done');
+                await reply.edit({ components: [] });
+
+                // Marcar tutorial como completado
+                const user = await this.economy.getUser(userId);
+                await this.economy.updateUser(userId, {
+                    stats: { ...user.stats, dungeon_tutorial: true }
+                });
+
+                if (startAfter) {
+                    const run = await this.economy.dungeon.getRun(userId);
+                    if (run) return await this.showDungeonMap(message, userId, run);
+                }
+                return;
+            }
+
+            // Interacciones del tutorial
+            const pageData = pages[currentPage];
+            if (pageData.interactive && pageData.responses[customId]) {
+                const response = pageData.responses[customId];
+                const isCorrect = customId === 'tut_simon_red';
+
+                if (pageData.interactiveType === 'simon' && isCorrect && !interactionDone) {
+                    const responseEmbed = EmbedBuilder.from(pageData.embed)
+                        .setDescription(pageData.embed.data.description + `\n\n✅ **¡Correcto! (1/3)** Ahora presiona 🟡`);
+                    await reply.edit({ embeds: [responseEmbed], components: buildPageComponents(currentPage, false) });
+
+                    try {
+                        const filter2 = i => i.user.id === userId && i.customId === `tut_simon_yellow_${userId}`;
+                        const i2 = await reply.awaitMessageComponent({ filter: filter2, time: 15000 });
+                        await i2.deferUpdate();
+                        const responseEmbed2 = EmbedBuilder.from(pageData.embed)
+                            .setDescription(pageData.embed.data.description + `\n\n✅ **¡Correcto! (2/3)** Ahora presiona 🔵`);
+                        await reply.edit({ embeds: [responseEmbed2], components: buildPageComponents(currentPage, false) });
+
+                        const filter3 = i => i.user.id === userId && i.customId === `tut_simon_blue_${userId}`;
+                        const i3 = await reply.awaitMessageComponent({ filter: filter3, time: 15000 });
+                        await i3.deferUpdate();
+                        interactionDone = true;
+                        const finalEmbed = EmbedBuilder.from(pageData.embed)
+                            .setDescription(pageData.embed.data.description + `\n\n✅ **¡Patrón completado!** ¡Así funciona Simon Says!`);
+                        await reply.edit({ embeds: [finalEmbed], components: buildPageComponents(currentPage, true) });
+                    } catch {
+                        interactionDone = true;
+                        const timeoutEmbed = EmbedBuilder.from(pageData.embed)
+                            .setDescription(pageData.embed.data.description + `\n\n⏰ Tiempo agotado. ¡Recuerda ser rápido en combate real!`);
+                        await reply.edit({ embeds: [timeoutEmbed], components: buildPageComponents(currentPage, true) });
+                    }
+                    return;
+                }
+
+                const responseEmbed = EmbedBuilder.from(pageData.embed)
+                    .setDescription(pageData.embed.data.description + `\n\n**Resultado:** ${response}`);
+                interactionDone = true;
+                await reply.edit({
+                    embeds: [responseEmbed],
+                    components: buildPageComponents(currentPage, interactionDone)
+                });
+            }
+        });
+
+        collector.on('end', async (_, reason) => {
+            if (reason !== 'done') {
+                await reply.edit({ components: [] }).catch(() => {});
+            }
+        });
+    }
+
+    // ─── MAPA INTERACTIVO ───
+    async showDungeonMap(message, userId, run) {
+        const { ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
+
+        const embed = this.economy.dungeon.buildMapEmbed(run, { EmbedBuilder: require('discord.js').EmbedBuilder });
+        const components = this.economy.dungeon.buildRoomButtons(run, userId, { ActionRowBuilder, ButtonBuilder, ButtonStyle });
+        console.log('Botones generados:', components.length, 'rows');
+
+        // Si ya derrotó al jefe, agregar opción de escapar o continuar
+        if (run.boss_defeated) {
+            const floorRow = new ActionRowBuilder().addComponents(
+                new ButtonBuilder()
+                    .setCustomId(`dungeon_escape_${userId}`)
+                    .setLabel('Escapar con el loot')
+                    .setEmoji('🏃')
+                    .setStyle(ButtonStyle.Danger),
+                new ButtonBuilder()
+                    .setCustomId(`dungeon_nextfloor_${userId}`)
+                    .setLabel('Continuar al siguiente piso')
+                    .setEmoji('⬇️')
+                    .setStyle(ButtonStyle.Success),
+            );
+            components.push(floorRow);
+        }
+
+        const reply = await message.reply({ embeds: [embed], components });
+
+        const collector = reply.createMessageComponentCollector({
+            filter: i => i.user.id === userId,
+            time: 900000 // 15 minutos
+        });
+
+        collector.on('collect', async interaction => {
+            await interaction.deferUpdate();
+            const customId = interaction.customId;
+
+            // Entrar a habitación
+            if (customId.startsWith(`dungeon_room_${userId}_`)) {
+                const roomIndex = parseInt(customId.split('_').pop());
+                collector.stop('entering_room');
+                await reply.edit({ components: [] });
+
+                const freshRun = await this.economy.dungeon.getRun(userId);
+                if (!freshRun) return;
+
+                const result = await this.economy.dungeon.rooms.enterRoom(
+                    message, userId, roomIndex, freshRun
+                );
+
+                if (result.dead) {
+                    return message.channel.send({ content: result.message });
+                }
+
+                if (result.message) {
+                    await message.channel.send({ content: result.message });
+                }
+
+                // Mostrar mapa actualizado
+                const updatedRun = await this.economy.dungeon.getRun(userId);
+                if (updatedRun) {
+                    await this.showDungeonMap(message, userId, updatedRun);
+                }
+                return;
+            }
+
+            // Escapar
+            if (customId === `dungeon_escape_${userId}`) {
+                collector.stop('escape');
+                await reply.edit({ components: [] });
+                await this.confirmEscape(interaction, userId, run);
+                return;
+            }
+
+            // Siguiente piso
+            if (customId === `dungeon_nextfloor_${userId}`) {
+                collector.stop('next_floor');
+                await reply.edit({ components: [] });
+
+                const newFloor = await this.economy.dungeon.nextFloor(userId);
+                const newRun = await this.economy.dungeon.getRun(userId);
+
+                await message.channel.send({
+                    content: `⬇️ **Avanzas al Piso ${newFloor}**\nLa oscuridad se profundiza...`
+                });
+
+                if (newRun) {
+                    await this.showDungeonMap(message, userId, newRun);
+                }
+                return;
+            }
+        });
+
+        collector.on('end', async (_, reason) => {
+            if (reason === 'time') {
+                await reply.edit({ components: [] }).catch(() => {});
+            }
+        });
+    }
+
+    // ─── CONFIRMAR ESCAPE ───
+    async confirmEscape(message, userId, run) {
+        const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
+
+        const itemCount = run.temp_inventory.length;
+        const itemList = itemCount > 0
+            ? run.temp_inventory.map(i => {
+                const data = this.economy.equipment.DUNGEON_ITEMS[i.id];
+                return `• ${data?.name || i.id}`;
+            }).join('\n')
+            : '*Ninguno*';
+
+        const embed = new EmbedBuilder()
+            .setTitle('🏃 ¿Escapar de la Mazmorra?')
+            .setColor(0xf39c12)
+            .setDescription('Si escapas, guardarás todo lo conseguido en esta run.')
+            .addFields(
+                { name: '🏰 Piso alcanzado', value: `${run.floor}`, inline: true },
+                { name: '💰 Dinero ganado', value: `${run.total_money.toLocaleString()} ${this.economy.config.currencySymbol}`, inline: true },
+                { name: '🎒 Items conseguidos', value: itemList, inline: false },
+            )
+            .setFooter({ text: '⚠️ Esta acción no se puede deshacer.' });
+
+        const row = new ActionRowBuilder().addComponents(
+            new ButtonBuilder()
+                .setCustomId(`escape_confirm_${userId}`)
+                .setLabel('Escapar')
+                .setEmoji('🏃')
+                .setStyle(ButtonStyle.Danger),
+            new ButtonBuilder()
+                .setCustomId(`escape_cancel_${userId}`)
+                .setLabel('Continuar jugando')
+                .setEmoji('⚔️')
+                .setStyle(ButtonStyle.Secondary),
+        );
+
+        const reply = await message.reply({ embeds: [embed], components: [row] });
+
+        const collector = reply.createMessageComponentCollector({
+            filter: i => i.user.id === userId,
+            time: 30000, max: 1
+        });
+
+        collector.on('collect', async interaction => {
+            await interaction.deferUpdate();
+            await reply.edit({ components: [] });
+
+            if (interaction.customId === `escape_confirm_${userId}`) {
+                const result = await this.economy.dungeon.endRun(userId, 'escaped');
+
+                const endEmbed = new EmbedBuilder()
+                    .setTitle('🏃 ¡Escapaste de la Mazmorra!')
+                    .setColor(0x4caf50)
+                    .addFields(
+                        { name: '🏰 Piso alcanzado', value: `${result.floor}`, inline: true },
+                        { name: '💰 Dinero obtenido', value: `${result.money.toLocaleString()} ${this.economy.config.currencySymbol}`, inline: true },
+                        { name: '🎒 Items guardados', value: result.items.length > 0 ? result.items.map(i => {
+                            const data = this.economy.equipment.DUNGEON_ITEMS[i.id];
+                            return `• ${data?.name || i.id}`;
+                        }).join('\n') : '*Ninguno*', inline: false },
+                    );
+
+                await interaction.followUp({ embeds: [endEmbed] });
+            } else {
+                const freshRun = await this.economy.dungeon.getRun(userId);
+                if (freshRun) await this.showDungeonMap(interaction, userId, freshRun);
+            }
+        });
+
+        collector.on('end', async (_, reason) => {
+            if (reason === 'time') {
+                await reply.edit({ components: [] }).catch(() => {});
+            }
+        });
+    }
+
+    // ─── BESTIARIO ───
+    async showBestiary(message, userId) {
+        const { EmbedBuilder } = require('discord.js');
+        const user = await this.economy.getUser(userId);
+        const bestiary = user.stats?.bestiary || {};
+
+        if (!Object.keys(bestiary).length) {
+            return message.reply('📖 Tu bestiario está vacío. ¡Derrota jefes en la mazmorra para registrarlos!');
+        }
+
+        const embed = new EmbedBuilder()
+            .setTitle('📖 Bestiario')
+            .setColor(0x5865f2);
+
+        let desc = '';
+        for (const [bossId, data] of Object.entries(bestiary)) {
+            const bossData = this.economy.dungeon.BOSSES[bossId];
+            desc += `**${data.name}**\n`;
+            desc += `└ ${data.description}\n`;
+            desc += `└ 💀 Derrotado **${data.defeats}** ${data.defeats === 1 ? 'vez' : 'veces'}\n`;
+            desc += `└ ⚠️ Debilidad: ${data.weakness}\n`;
+            desc += `└ 📅 Primera vez: ${new Date(data.firstDefeated).toLocaleDateString()}\n\n`;
+        }
+
+        embed.setDescription(desc);
+        return message.reply({ embeds: [embed] });
+    }
+
+    async handleEquipo(message, args) {
+        const userId = message.author.id;
+        const sub = args[1]?.toLowerCase();
+
+        if (!sub || sub === 'ver') {
+            const embed = await this.economy.equipment.buildEquipEmbed(userId, { EmbedBuilder });
+            return message.reply({ embeds: [embed] });
+        }
+
+        if (sub === 'inventario' || sub === 'inv') {
+            const { ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
+            const inventory = await this.economy.equipment.getInventory(userId);
+            const equipped = await this.economy.equipment.getEquipped(userId);
+            const inDungeon = !!(await this.economy.dungeon.getRun(userId));
+            const perPage = 5;
+            const totalPages = Math.max(1, Math.ceil(inventory.length / perPage));
+            let currentPage = 0;
+            let selectedItem = null;
+
+            const buildListEmbed = (page) => {
+                const items = inventory.slice(page * perPage, (page + 1) * perPage);
+                const embed = new EmbedBuilder()
+                    .setTitle('🎒 Tu Inventario de Equipamiento')
+                    .setColor(0x5865f2);
+
+                if (!inventory.length) {
+                    embed.setDescription('No tenés ningún item.\nUsá `>shop` para comprar o entra a la dungeon.');
+                    return embed;
+                }
+
+                const typeEmojis = { weapon: '⚔️', helmet: '🪖', chest: '🛡️', boots: '👟', accessory: '💍' };
+                let desc = '';
+                for (const item of items) {
+                    const isEquipped = Object.values(equipped).some(e => e?.id === item.id);
+                    const equippedTag = isEquipped ? ' ✅' : '';
+                    const brokenTag = item.durability === 0 ? ' 💔' : '';
+                    desc += `${typeEmojis[item.type] || '❓'} **${item.name}**${equippedTag}${brokenTag}\n`;
+                }
+
+                embed
+                    .setDescription(desc)
+                    .setFooter({ text: `📦 ${inventory.length}/20 items • Página ${page + 1}/${totalPages} • Seleccioná un item` });
+
+                return embed;
+            };
+
+            const buildDetailEmbed = (item) => {
+                const stats = typeof item.stats === 'string' ? JSON.parse(item.stats) : item.stats;
+                const dungeonData = this.economy.equipment.DUNGEON_ITEMS[item.item_id];
+                const rarity = dungeonData
+                    ? this.economy.equipment.RARITY_LABELS[dungeonData.rarity]
+                    : '⬜ Común';
+                const typeLabel = this.economy.equipment.TYPE_LABELS[item.type] || item.type;
+                const sourceLabel = item.source === 'dungeon' ? '🏰 Dungeon' : '🛒 Tienda';
+                const isEquipped = Object.values(equipped).some(e => e?.id === item.id);
+
+                // Barra de durabilidad
+                const pct = item.durability / item.max_durability;
+                const filled = Math.round(pct * 8);
+                const bar = '█'.repeat(filled) + '░'.repeat(8 - filled);
+                const barColor = pct > 0.5 ? '🟩' : pct > 0.25 ? '🟨' : '🟥';
+
+                // Comparación con equipado
+                const equippedInSlot = equipped[item.type];
+                let comparisonText = '*Nada equipado en este slot*';
+                if (equippedInSlot && equippedInSlot.id !== item.id) {
+                    const eqStats = typeof equippedInSlot.stats === 'string' ? JSON.parse(equippedInSlot.stats) : equippedInSlot.stats;
+                    const allKeys = new Set([...Object.keys(stats), ...Object.keys(eqStats)]);
+                    const lines = [];
+                    for (const key of allKeys) {
+                        const curr = stats[key] || 0;
+                        const eq = eqStats[key] || 0;
+                        const diff = curr - eq;
+                        const statEmojis = { atk: '⚔️', def: '🛡️', hp: '❤️', crit: '🎯', evasion: '💨' };
+                        const emoji = statEmojis[key] || '📊';
+                        const diffText = diff > 0 ? `(+${key === 'crit' || key === 'evasion' ? Math.round(diff*100)+'%' : diff} ✅)` :
+                                        diff < 0 ? `(${key === 'crit' || key === 'evasion' ? Math.round(diff*100)+'%' : diff} ❌)` : '(=)';
+                        const valA = key === 'crit' || key === 'evasion' ? Math.round(curr*100)+'%' : curr;
+                        const valB = key === 'crit' || key === 'evasion' ? Math.round(eq*100)+'%' : eq;
+                        lines.push(`${emoji} **${key.toUpperCase()}:** ${valA} vs ${valB} ${diffText}`);
+                    }
+                    comparisonText = lines.join('\n') || '*Sin diferencias*';
+                } else if (isEquipped) {
+                    comparisonText = '✅ *Este item está equipado actualmente*';
+                }
+
+                // Precio de venta
+                let sellPrice;
+                const shopItem = this.economy.equipment.DUNGEON_ITEMS[item.item_id];
+                if (item.source === 'shop') {
+                    const rarityPrices = { common: 500, uncommon: 1500, rare: 4000, epic: 10000, legendary: 25000 };
+                    sellPrice = Math.ceil((rarityPrices[dungeonData?.rarity || 'common'] || 500) * (item.durability / item.max_durability));
+                } else {
+                    const rarityPrices = { common: 500, uncommon: 1500, rare: 4000, epic: 10000, legendary: 25000 };
+                    sellPrice = Math.ceil((rarityPrices[dungeonData?.rarity || 'common'] || 500) * (item.durability / item.max_durability));
+                }
+
+                const embed = new EmbedBuilder()
+                    .setTitle(`${item.name} ${isEquipped ? '✅' : ''}`)
+                    .setColor(this.economy.equipment.RARITY_COLORS[dungeonData?.rarity || 'common'] || 0x9e9e9e)
+                    .setDescription(
+                        `${rarity} • ${typeLabel} • ${sourceLabel}\n` +
+                        `━━━━━━━━━━━━━━━━━━━━`
+                    )
+                    .addFields(
+                        {
+                            name: '📊 Stats',
+                            value: this.economy.equipment.formatStats(stats),
+                            inline: false
+                        },
+                        {
+                            name: '🔧 Durabilidad',
+                            value: `${barColor} \`${bar}\` ${item.durability}/${item.max_durability}`,
+                            inline: false
+                        },
+                        {
+                            name: `⚖️ Comparación con equipado`,
+                            value: comparisonText,
+                            inline: false
+                        },
+                        {
+                            name: '💰 Valor de venta',
+                            value: `${sellPrice.toLocaleString()} π-b$`,
+                            inline: false
+                        }
+                    )
+                    .setFooter({ text: '🔙 Volver para regresar al inventario' });
+
+                return embed;
+            };
+
+            const buildListRows = (page) => {
+                const items = inventory.slice(page * perPage, (page + 1) * perPage);
+                const typeEmojis = { weapon: '⚔️', helmet: '🪖', chest: '🛡️', boots: '👟', accessory: '💍' };
+                const rows = [];
+
+                // Botones de selección de items
+                if (items.length) {
+                    const selectRow = new ActionRowBuilder().addComponents(
+                        ...items.map(item =>
+                            new ButtonBuilder()
+                                .setCustomId(`eq_select_${userId}_${item.id}`)
+                                .setLabel(item.name.replace(/[\u{1F000}-\u{1FFFF}]/gu, '').trim().slice(0, 20))
+                                .setEmoji(typeEmojis[item.type] || '❓')
+                                .setStyle(ButtonStyle.Secondary)
+                        )
+                    );
+                    rows.push(selectRow);
+                }
+
+                // Fila de paginación
+                const navRow = new ActionRowBuilder().addComponents(
+                    new ButtonBuilder()
+                        .setCustomId(`eq_prev_${userId}`)
+                        .setEmoji('◀️')
+                        .setStyle(ButtonStyle.Secondary)
+                        .setDisabled(page === 0),
+                    new ButtonBuilder()
+                        .setCustomId(`eq_next_${userId}`)
+                        .setEmoji('▶️')
+                        .setStyle(ButtonStyle.Secondary)
+                        .setDisabled(page === totalPages - 1)
+                );
+                rows.push(navRow);
+
+                return rows;
+            };
+
+            const buildDetailRows = (item) => {
+                const isEquipped = Object.values(equipped).some(e => e?.id === item.id);
+                const isBroken = item.durability === 0;
+                const needsRepair = item.durability < item.max_durability;
+
+                const actionRow = new ActionRowBuilder().addComponents(
+                    new ButtonBuilder()
+                        .setCustomId(`eq_toggle_${userId}_${item.id}`)
+                        .setLabel(isEquipped ? 'Desequipar' : 'Equipar')
+                        .setEmoji(isEquipped ? '❌' : '✅')
+                        .setStyle(isEquipped ? ButtonStyle.Danger : ButtonStyle.Success)
+                        .setDisabled((isBroken && !isEquipped) || inDungeon),
+                    new ButtonBuilder()
+                        .setCustomId(`eq_repair_${userId}_${item.id}`)
+                        .setLabel('Reparar')
+                        .setEmoji('🔧')
+                        .setStyle(ButtonStyle.Primary)
+                        .setDisabled(!needsRepair),
+                    new ButtonBuilder()
+                        .setCustomId(`eq_sell_${userId}_${item.id}`)
+                        .setLabel('Vender')
+                        .setEmoji('💰')
+                        .setStyle(ButtonStyle.Secondary)
+                        .setDisabled(isEquipped || inDungeon),
+                    new ButtonBuilder()
+                        .setCustomId(`eq_back_${userId}`)
+                        .setLabel('Volver')
+                        .setEmoji('🔙')
+                        .setStyle(ButtonStyle.Secondary)
+                );
+
+                return [actionRow];
+            };
+
+            const reply = await message.reply({
+                embeds: [buildListEmbed(currentPage)],
+                components: inventory.length ? buildListRows(currentPage) : []
+            });
+
+            const collector = reply.createMessageComponentCollector({
+                filter: i => i.user.id === userId,
+                time: 60000
+            });
+
+            collector.on('collect', async interaction => {
+                await interaction.deferUpdate();
+                const customId = interaction.customId;
+
+                // Paginación
+                if (customId === `eq_prev_${userId}`) {
+                    currentPage--;
+                    selectedItem = null;
+                    await reply.edit({ embeds: [buildListEmbed(currentPage)], components: buildListRows(currentPage) });
+                }
+                else if (customId === `eq_next_${userId}`) {
+                    currentPage++;
+                    selectedItem = null;
+                    await reply.edit({ embeds: [buildListEmbed(currentPage)], components: buildListRows(currentPage) });
+                }
+                // Seleccionar item
+                else if (customId.startsWith(`eq_select_${userId}_`)) {
+                    const itemId = parseInt(customId.split('_').pop());
+                    selectedItem = inventory.find(i => i.id === itemId);
+                    if (selectedItem) {
+                        await reply.edit({ embeds: [buildDetailEmbed(selectedItem)], components: buildDetailRows(selectedItem) });
+                    }
+                }
+                // Volver a la lista
+                else if (customId === `eq_back_${userId}`) {
+                    selectedItem = null;
+                    await reply.edit({ embeds: [buildListEmbed(currentPage)], components: buildListRows(currentPage) });
+                }
+                // Equipar / Desequipar
+                else if (customId.startsWith(`eq_toggle_${userId}_`)) {
+                    const itemId = parseInt(customId.split('_').pop());
+                    const item = inventory.find(i => i.id === itemId);
+                    const isEquipped = Object.values(equipped).some(e => e?.id === itemId);
+
+                    if (isEquipped) {
+                        await this.economy.equipment.unequipItem(userId, item.type);
+                    } else {
+                        await this.economy.equipment.equipItem(userId, itemId);
+                    }
+
+                    // Refrescar equipped
+                    Object.assign(equipped, await this.economy.equipment.getEquipped(userId));
+                    selectedItem = inventory.find(i => i.id === itemId);
+                    await reply.edit({ embeds: [buildDetailEmbed(selectedItem)], components: buildDetailRows(selectedItem) });
+                }
+                // Reparar
+                else if (customId.startsWith(`eq_repair_${userId}_`)) {
+                    const itemId = parseInt(customId.split('_').pop());
+                    const result = await this.economy.equipment.repairItem(userId, itemId);
+
+                    // Refrescar item en inventario
+                    const fresh = await this.economy.equipment.getInventory(userId);
+                    inventory.length = 0;
+                    fresh.forEach(i => inventory.push(i));
+                    selectedItem = inventory.find(i => i.id === itemId);
+
+                    await reply.edit({
+                        embeds: [buildDetailEmbed(selectedItem)],
+                        components: buildDetailRows(selectedItem)
+                    });
+                    await interaction.followUp({ content: result.message, ephemeral: true });
+                }
+                // Vender
+                else if (customId.startsWith(`eq_sell_${userId}_`)) {
+                    const itemId = parseInt(customId.split('_').pop());
+                    const result = await this.economy.equipment.sellItem(userId, itemId);
+
+                    // Refrescar inventario
+                    const fresh = await this.economy.equipment.getInventory(userId);
+                    inventory.length = 0;
+                    fresh.forEach(i => inventory.push(i));
+                    selectedItem = null;
+
+                    const newTotalPages = Math.max(1, Math.ceil(inventory.length / perPage));
+                    if (currentPage >= newTotalPages) currentPage = newTotalPages - 1;
+
+                    await reply.edit({
+                        embeds: [buildListEmbed(currentPage)],
+                        components: inventory.length ? buildListRows(currentPage) : []
+                    });
+                    await interaction.followUp({ content: result.message, ephemeral: true });
+                }
+            });
+
+            collector.on('end', async () => {
+                await reply.edit({ components: [] }).catch(() => {});
+            });
+
+            return;
+        }
+
+        return message.reply('❌ Subcomandos: `ver` `inventario` `comprar`');
+    }
+
     // MANEJAR interacciones de botones
     async handleHelpInteraction(interaction) {
         // Extraer categoría y userId del customId (formato: help_categoria_userId)
@@ -4979,7 +5513,7 @@ if (maintenance) await this.economy.database.disableMaintenance(maintenanceId);
             });
         }
 
-        if (category === 'admin' && !await this.checkAdminPerms({ 
+        if (categoryMeta[category]?.soloAdmin && !await this.checkAdminPerms({ 
             guild: interaction.guild, 
             author: interaction.user, 
             member: interaction.member 
@@ -4990,7 +5524,7 @@ if (maintenance) await this.economy.database.disableMaintenance(maintenanceId);
             });
         }
 
-        if (category === 'events' && this.guildConfig) {
+        if (category === 'Eventos' && this.guildConfig) {
             const enabled = await this.guildConfig.areEventsEnabled(interaction.guild?.id);
             if (!enabled) {
                 return interaction.reply({ 

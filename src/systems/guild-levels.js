@@ -143,8 +143,8 @@ class GuildLevels {
             case '>srank':
                 await this.handleRank(message);
                 break;
-            case '>stop':
-            case '>stoplevel':
+            case '>servtop':
+            case '>servtoplevel':
                 await this.handleTop(message);
                 break;
             case '>enablelevels':

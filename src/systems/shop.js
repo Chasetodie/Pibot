@@ -572,17 +572,16 @@ class ShopSystem {
             'bunny_suit_pibe12': {
                 id: 'bunny_suit_pibe12',
                 name: '🐰 Traje de Conejita de Pibe 12',
-                description: 'Un traje legendario que aumenta ganancias y suerte (se desgasta con el uso)',
+                description: 'Peto legendario exclusivo del servidor. +35 DEF, +60 HP, +8% Evasión',
                 price: 850000,
-                category: 'equipment', // CAMBIAR de 'tool' a 'equipment'
+                category: 'equipment',
                 rarity: 'legendary',
                 effect: {
-                    type: 'bunny_suit',
-                    equipmentType: 'suit', // NUEVO: tipo de equipamiento
-                    moneyMultiplier: 1.20,
-                    luckBoost: 0.15,
-                    baseDurability: 100, // CAMBIAR de 'durability' a 'baseDurability'
-                    durabilityVariation: 20 // ±20 de variación aleatoria
+                    type: 'combat_equipment',
+                    equipmentId: 'bunny_suit_pibe12',
+                    itemType: 'chest',
+                    combatStats: { def: 35, hp: 60, evasion: 0.08 },
+                    durability: 150
                 },
                 stackable: false,
                 maxStack: 1,
@@ -620,6 +619,109 @@ class ShopSystem {
                 stackable: true,
                 maxStack: 10
             },
+
+/*            // === EQUIPAMIENTO DE COMBATE ===
+            'eq_wooden_sword': {
+                id: 'eq_wooden_sword', name: '🪵 Espada de Madera',
+                description: 'Un arma básica para aventureros. +5 ATK',
+                price: 500, category: 'equipment', rarity: 'common',
+                effect: { type: 'combat_equipment', equipmentId: 'wooden_sword', itemType: 'weapon', combatStats: { atk: 5 }, durability: 80 },
+                stackable: false, maxStack: 1
+            },
+            'eq_iron_sword': {
+                id: 'eq_iron_sword', name: '⚔️ Espada de Hierro',
+                description: 'Arma sólida para explorar mazmorras. +12 ATK',
+                price: 2000, category: 'equipment', rarity: 'uncommon',
+                effect: { type: 'combat_equipment', equipmentId: 'iron_sword', itemType: 'weapon', combatStats: { atk: 12 }, durability: 120 },
+                stackable: false, maxStack: 1
+            },
+            'eq_steel_sword': {
+                id: 'eq_steel_sword', name: '🗡️ Espada de Acero',
+                description: 'Arma de calidad para aventureros experimentados. +22 ATK',
+                price: 6000, category: 'equipment', rarity: 'rare',
+                effect: { type: 'combat_equipment', equipmentId: 'steel_sword', itemType: 'weapon', combatStats: { atk: 22 }, durability: 150 },
+                stackable: false, maxStack: 1
+            },
+            'eq_war_axe': {
+                id: 'eq_war_axe', name: '🪓 Hacha de Guerra',
+                description: 'Devastadora en combate. +28 ATK',
+                price: 8000, category: 'equipment', rarity: 'rare',
+                effect: { type: 'combat_equipment', equipmentId: 'war_axe', itemType: 'weapon', combatStats: { atk: 28 }, durability: 130 },
+                stackable: false, maxStack: 1
+            },
+            // Cascos
+            'eq_cloth_helmet': {
+                id: 'eq_cloth_helmet', name: '🪖 Casco de Tela',
+                description: 'Protección básica para la cabeza. +3 DEF, +10 HP',
+                price: 400, category: 'equipment', rarity: 'common',
+                effect: { type: 'combat_equipment', equipmentId: 'cloth_helmet', itemType: 'helmet', combatStats: { def: 3, hp: 10 }, durability: 80 },
+                stackable: false, maxStack: 1
+            },
+            'eq_iron_helmet': {
+                id: 'eq_iron_helmet', name: '🪖 Casco de Hierro',
+                description: 'Casco resistente. +10 DEF, +20 HP',
+                price: 2500, category: 'equipment', rarity: 'uncommon',
+                effect: { type: 'combat_equipment', equipmentId: 'iron_helmet', itemType: 'helmet', combatStats: { def: 10, hp: 20 }, durability: 120 },
+                stackable: false, maxStack: 1
+            },
+            // Petos
+            'eq_cloth_chest': {
+                id: 'eq_cloth_chest', name: '👕 Peto de Tela',
+                description: 'Protección básica para el torso. +4 DEF, +15 HP',
+                price: 500, category: 'equipment', rarity: 'common',
+                effect: { type: 'combat_equipment', equipmentId: 'cloth_chest', itemType: 'chest', combatStats: { def: 4, hp: 15 }, durability: 80 },
+                stackable: false, maxStack: 1
+            },
+            'eq_iron_chest': {
+                id: 'eq_iron_chest', name: '🛡️ Peto de Hierro',
+                description: 'Peto robusto. +20 DEF, +40 HP',
+                price: 6000, category: 'equipment', rarity: 'rare',
+                effect: { type: 'combat_equipment', equipmentId: 'iron_chest', itemType: 'chest', combatStats: { def: 20, hp: 40 }, durability: 150 },
+                stackable: false, maxStack: 1
+            },
+            'eq_plate_chest': {
+                id: 'eq_plate_chest', name: '⚜️ Peto de Placas',
+                description: 'El mejor peto de la tienda. +30 DEF, +60 HP',
+                price: 10000, category: 'equipment', rarity: 'epic',
+                effect: { type: 'combat_equipment', equipmentId: 'plate_chest', itemType: 'chest', combatStats: { def: 30, hp: 60 }, durability: 170 },
+                stackable: false, maxStack: 1
+            },
+            // Botas
+            'eq_cloth_boots': {
+                id: 'eq_cloth_boots', name: '👟 Botas de Tela',
+                description: 'Botas básicas. +2 DEF, +5% Evasión',
+                price: 400, category: 'equipment', rarity: 'common',
+                effect: { type: 'combat_equipment', equipmentId: 'cloth_boots', itemType: 'boots', combatStats: { def: 2, evasion: 0.05 }, durability: 80 },
+                stackable: false, maxStack: 1
+            },
+            'eq_iron_boots': {
+                id: 'eq_iron_boots', name: '🥾 Botas de Hierro',
+                description: 'Botas resistentes. +8 DEF, +8% Evasión',
+                price: 3500, category: 'equipment', rarity: 'uncommon',
+                effect: { type: 'combat_equipment', equipmentId: 'iron_boots', itemType: 'boots', combatStats: { def: 8, evasion: 0.08 }, durability: 120 },
+                stackable: false, maxStack: 1
+            },
+            'eq_swift_boots': {
+                id: 'eq_swift_boots', name: '💨 Botas Veloces',
+                description: 'Máxima evasión. +5 DEF, +12% Evasión',
+                price: 5000, category: 'equipment', rarity: 'rare',
+                effect: { type: 'combat_equipment', equipmentId: 'swift_boots', itemType: 'boots', combatStats: { def: 5, evasion: 0.12 }, durability: 100 },
+                stackable: false, maxStack: 1
+            },
+            'eq_crit_amulet': {
+                id: 'eq_crit_amulet', name: '💎 Amuleto Crítico',
+                description: 'Aumenta la probabilidad de golpe crítico. +15% Crítico',
+                price: 3000, category: 'equipment', rarity: 'uncommon',
+                effect: { type: 'combat_equipment', equipmentId: 'crit_amulet', itemType: 'accessory', combatStats: { crit: 0.15 }, durability: 60 },
+                stackable: false, maxStack: 1
+            },
+            'eq_life_pendant': {
+                id: 'eq_life_pendant', name: '❤️ Colgante de Vida',
+                description: 'Aumenta tu HP máximo. +30 HP',
+                price: 4000, category: 'equipment', rarity: 'uncommon',
+                effect: { type: 'combat_equipment', equipmentId: 'life_pendant', itemType: 'accessory', combatStats: { hp: 30 }, durability: 60 },
+                stackable: false, maxStack: 1
+            },*/
 
             // === SEMILLAS ===
             'common_seed': {
@@ -1113,6 +1215,7 @@ class ShopSystem {
                 effect: { type: 'multiplier', targets: ['work'], multiplier: 1.25, duration: 7200 },
                 stackable: true,
                 maxStack: 10,
+                chestOnly: true,
             },
             'moon_potion': {
                 id: 'moon_potion',
@@ -1124,6 +1227,7 @@ class ShopSystem {
                 effect: { type: 'multiplier', targets: ['games'], multiplier: 1.20, duration: 10800 },
                 stackable: true,
                 maxStack: 5,
+                chestOnly: true,
             },
             'shadow_elixir': {
                 id: 'shadow_elixir',
@@ -1135,6 +1239,7 @@ class ShopSystem {
                 effect: { type: 'cooldown_reduction', targets: ['robbery'], reduction: 0.50, duration: 3600 },
                 stackable: true,
                 maxStack: 5,
+                chestOnly: true,
             },
             'crystal_vision': {
                 id: 'crystal_vision',
@@ -1146,6 +1251,7 @@ class ShopSystem {
                 effect: { type: 'luck_boost', targets: ['games'], boost: 0.15, duration: 7200 },
                 stackable: true,
                 maxStack: 5,
+                chestOnly: true,
             },
 /*            'battle_tonic': {
                 id: 'battle_tonic',
@@ -1157,6 +1263,7 @@ class ShopSystem {
                 effect: { type: 'battle_boost', stat: 'atk', amount: 0.30, duration: 3600 },
                 stackable: true,
                 maxStack: 5,
+                chestOnly: true,
             },
             'iron_shield_brew': {
                 id: 'iron_shield_brew',
@@ -1168,6 +1275,7 @@ class ShopSystem {
                 effect: { type: 'battle_boost', stat: 'def', amount: 0.30, duration: 3600 },
                 stackable: true,
                 maxStack: 5,
+                chestOnly: true,
             },
             'dragon_brew': {
                 id: 'dragon_brew',
@@ -1179,6 +1287,7 @@ class ShopSystem {
                 effect: { type: 'battle_boost', stat: 'both', amount: 0.50, duration: 3600 },
                 stackable: true,
                 maxStack: 3,
+                chestOnly: true,
             },*/
             'nature_boost': {
                 id: 'nature_boost',
@@ -1190,6 +1299,7 @@ class ShopSystem {
                 effect: { type: 'multiplier', targets: ['work', 'games'], multiplier: 1.20, duration: 3600 },
                 stackable: true,
                 maxStack: 5,
+                chestOnly: true,
             },
             'garden_fertilizer': {
                 id: 'garden_fertilizer',
@@ -1201,6 +1311,7 @@ class ShopSystem {
                 effect: { type: 'garden_boost', multiplier: 2.0, uses: 1 },
                 stackable: true,
                 maxStack: 3,
+                chestOnly: true,
             },
             'golden_touch': {
                 id: 'golden_touch',
@@ -1212,6 +1323,7 @@ class ShopSystem {
                 effect: { type: 'next_daily_boost', multiplier: 1.40, uses: 1 },
                 stackable: true,
                 maxStack: 3,
+                chestOnly: true,
             },
             'work_frenzy': {
                 id: 'work_frenzy',
@@ -1223,6 +1335,7 @@ class ShopSystem {
                 effect: { type: 'next_work_boost', multiplier: 3.0, uses: 1 },
                 stackable: true,
                 maxStack: 3,
+                chestOnly: true,
             },
             'shadow_contract': {
                 id: 'shadow_contract',
@@ -1234,6 +1347,7 @@ class ShopSystem {
                 effect: { type: 'sicario_discount', discount: 0.50, uses: 1 },
                 stackable: true,
                 maxStack: 2,
+                chestOnly: true,
             },
             'void_elixir': {
                 id: 'void_elixir',
@@ -1245,6 +1359,7 @@ class ShopSystem {
                 effect: { type: 'multiplier', targets: ['work', 'games'], multiplier: 2.0, duration: 3600 },
                 stackable: true,
                 maxStack: 1,
+                chestOnly: true,
             },
             'star_blessing': {
                 id: 'star_blessing',
@@ -1256,6 +1371,7 @@ class ShopSystem {
                 effect: { type: 'xp_multiplier', multiplier: 1.50, duration: 86400 },
                 stackable: true,
                 maxStack: 1,
+                chestOnly: true,
             },
             'trivia_kit': {
                 id: 'trivia_kit',
@@ -1756,166 +1872,270 @@ class ShopSystem {
     
     // === TIENDA ===
     async showShop(message, category = 'all', page = 1) {
+        const { ActionRowBuilder, ButtonBuilder, ButtonStyle, StringSelectMenuBuilder } = require('discord.js');
+        const userId = message.author.id;
         const currentGuildId = message.guild?.id || message.guildId;
-        
+
         const guildFilter = (item) => {
             if (item.guildExclusive && item.guildExclusive !== currentGuildId) return false;
             return true;
         };
 
-        let items;
-        if (category === 'all') {
-            items = Object.values(this.shopItems).filter(item => !item.chestOnly && guildFilter(item));
-        } else {
-            items = Object.values(this.shopItems).filter(item => item.category === category && !item.chestOnly && guildFilter(item));
-        }
-        
-        const itemsPerPage = 3;
-        const startIndex = (page - 1) * itemsPerPage;
-        const endIndex = startIndex + itemsPerPage;
-        const pageItems = items.slice(startIndex, endIndex);
-        const totalPages = Math.ceil(items.length / itemsPerPage);
-        
-        if (pageItems.length === 0) {
-            await message.reply('❌ No hay items en esta categoría.');
-            return;
-        }
-        
-        const embed = new EmbedBuilder()
-            .setTitle('🏪 Tienda del Servidor')
-            .setDescription(
-                `🛒 **Bienvenido a la Tienda**\n` +
-                `📄 Página ${page}/${totalPages}\n` +
-                `🏷️ Categoría: **${({
-                    all: 'Todas',
-                    consumable: 'Consumibles',
-                    permanent: 'Permanentes',
-                    cosmetic: 'Cosméticos',
-                    special: 'Especiales',
-                    equipment: 'Equipamientos',
-                    mystery: 'Cofres',
-                    seed: 'Semillas',
-                    pet: 'Mascotas',
-                    trivia: 'Trivia',
-                    tool: 'Herramientas'
-                })[category] || category}**\n\n` +
-                `💡 Usa el menú desplegable para cambiar de categoría`
-            )
-            .setColor('#FFD700')
-            .setTimestamp();
+        const CATEGORY_LABELS = {
+            all: '🛒 Todas', consumable: '🧪 Consumibles', permanent: '💎 Permanentes',
+            cosmetic: '✨ Cosméticos', special: '🎁 Especiales', equipment: '⚔️ Equipamientos',
+            mystery: '🗝️ Cofres', seed: '🌱 Semillas', pet: '🐕 Mascotas', trivia: '🧠 Trivia', 
+            ingredient: '🍃✨️ Ingredientes'
+        };
 
-        const discount = this.getWeekendDiscount();
-        
-        for (const item of pageItems) {            
-            const rarityEmoji = this.rarityEmojis[item.rarity];
+        const getItems = (cat) => cat === 'all'
+            ? Object.values(this.shopItems).filter(i => !i.chestOnly && guildFilter(i))
+            : Object.values(this.shopItems).filter(i => i.category === cat && !i.chestOnly && guildFilter(i));
 
-            let value = `${item.description}\n`;
-            value += `💰 **${item.price}**`;           
-            value += `\n\`>buy ${item.id}\``;
-            
-            embed.addFields({
-                name: `${rarityEmoji} ${item.name}`,
-                value: value,
-                inline: false // Cambiar a false para mejor lectura
-            });
-        }
-        
-        // Botones de navegación
-        const uid = message.author.id;
-        const row = new ActionRowBuilder();
-        
-        if (page > 1) {
-            row.addComponents(
-                new ButtonBuilder()
-                    .setCustomId(`shop_prev_${category}_${page - 1}_${uid}`)
-                    .setLabel('◀️ Anterior')
-                    .setStyle(ButtonStyle.Secondary)
-            );
-        }
-        
-        if (page < totalPages) {
-            row.addComponents(
-                new ButtonBuilder()
-                    .setCustomId(`shop_next_${category}_${page + 1}_${uid}`)
-                    .setLabel('Siguiente ▶️')
-                    .setStyle(ButtonStyle.Secondary)
-            );
-        }
-        
-        // Menú de categorías
-        const categoryRow = new ActionRowBuilder()
-            .addComponents(
+        const perPage = 6;
+        let currentCategory = category;
+        let currentPage = 0;
+        let selectedItem = null;
+
+        const buildListEmbed = () => {
+            const items = getItems(currentCategory);
+            const pageItems = items.slice(currentPage * perPage, (currentPage + 1) * perPage);
+            const totalPages = Math.max(1, Math.ceil(items.length / perPage));
+            const discount = this.getWeekendDiscount();
+
+            const embed = new EmbedBuilder()
+                .setTitle('🏪 Tienda del Servidor')
+                .setColor('#FFD700');
+
+            if (!pageItems.length) {
+                embed.setDescription('No hay items en esta categoría.');
+                return embed;
+            }
+
+            let desc = `**${CATEGORY_LABELS[currentCategory] || currentCategory}** • Página ${currentPage + 1}/${totalPages}\n`;
+            if (discount > 0) desc += `🎉 ¡${Math.round(discount * 100)}% OFF este fin de semana!\n`;
+            desc += `━━━━━━━━━━━━━━━━━━━━\n`;
+
+            for (const item of pageItems) {
+                const rarityEmoji = this.rarityEmojis[item.rarity] || '⬜';
+                const discountedPrice = discount > 0 ? Math.floor(item.price * (1 - discount)) : item.price;
+                const priceText = discount > 0
+                    ? `~~${item.price.toLocaleString()}~~ **${discountedPrice.toLocaleString()} π-b$**`
+                    : `**${item.price.toLocaleString()} π-b$**`;
+                desc += `${rarityEmoji} **${item.name}** — ${priceText}\n`;
+            }
+
+            embed
+                .setDescription(desc)
+                .setFooter({ text: 'Seleccioná un item del menú para ver detalles y comprar' });
+
+            return embed;
+        };
+
+        const buildDetailEmbed = (item) => {
+            const discount = this.getWeekendDiscount();
+            const discountedPrice = discount > 0 ? Math.floor(item.price * (1 - discount)) : item.price;
+            const rarityEmoji = this.rarityEmojis[item.rarity] || '⬜';
+            const rarityColors = { common: 0x9e9e9e, uncommon: 0x4caf50, rare: 0x2196f3, epic: 0x9c27b0, legendary: 0xff9800 };
+
+            let statsText = item.description;
+
+            // Info extra según categoría
+            if (item.category === 'equipment' && item.effect?.combatStats) {
+                const s = item.effect.combatStats;
+                const parts = [];
+                if (s.atk)     parts.push(`⚔️ +${s.atk} ATK`);
+                if (s.def)     parts.push(`🛡️ +${s.def} DEF`);
+                if (s.hp)      parts.push(`❤️ +${s.hp} HP`);
+                if (s.crit)    parts.push(`🎯 +${Math.round(s.crit*100)}% Crítico`);
+                if (s.evasion) parts.push(`💨 +${Math.round(s.evasion*100)}% Evasión`);
+                if (parts.length) statsText += `\n${parts.join(' • ')}`;
+                if (item.effect.durability) statsText += `\n🔧 Durabilidad: ${item.effect.durability}`;
+            }
+
+            const embed = new EmbedBuilder()
+                .setTitle(`${rarityEmoji} ${item.name}`)
+                .setColor(rarityColors[item.rarity] || 0x9e9e9e)
+                .setDescription(
+                    `━━━━━━━━━━━━━━━━━━━━\n` +
+                    `${statsText}\n` +
+                    `━━━━━━━━━━━━━━━━━━━━`
+                )
+                .addFields(
+                    {
+                        name: '💰 Precio',
+                        value: discount > 0
+                            ? `~~${item.price.toLocaleString()}~~ **${discountedPrice.toLocaleString()} π-b$** (${Math.round(discount*100)}% OFF)`
+                            : `**${discountedPrice.toLocaleString()} π-b$**`,
+                        inline: true
+                    },
+                    {
+                        name: '📦 Categoría',
+                        value: CATEGORY_LABELS[item.category] || item.category,
+                        inline: true
+                    }
+                );
+
+            if (item.stackable && item.maxStack > 1) {
+                embed.addFields({ name: '📚 Stackeable', value: `Hasta ${item.maxStack}x`, inline: true });
+            }
+
+            embed.setFooter({ text: '🔙 Volver para regresar a la lista' });
+            return embed;
+        };
+
+        const buildCategoryRow = () => new ActionRowBuilder().addComponents(
+            new StringSelectMenuBuilder()
+                .setCustomId(`shop_cat_${userId}`)
+                .setPlaceholder('📂 Selecciona una categoría')
+                .addOptions([
+                    { label: 'Todas las categorías', value: 'all', emoji: '🛒' },
+                    { label: 'Consumibles', value: 'consumable', emoji: '🧪' },
+                    { label: 'Permanentes', value: 'permanent', emoji: '💎' },
+                    { label: 'Cosméticos', value: 'cosmetic', emoji: '✨' },
+                    { label: 'Especiales', value: 'special', emoji: '🎁' },
+                    { label: 'Equipamientos', value: 'equipment', emoji: '⚔️' },
+                    { label: 'Cofres', value: 'mystery', emoji: '🗝️' },
+                    { label: 'Semillas', value: 'seed', emoji: '🌱' },
+                    { label: 'Mascotas', value: 'pet', emoji: '🐕' },
+                    { label: 'Trivia', value: 'trivia', emoji: '🧠' },
+                ])
+        );
+
+        const buildItemSelectRow = () => {
+            const items = getItems(currentCategory);
+            const pageItems = items.slice(currentPage * perPage, (currentPage + 1) * perPage);
+            if (!pageItems.length) return null;
+
+            return new ActionRowBuilder().addComponents(
                 new StringSelectMenuBuilder()
-                    .setCustomId(`shop_category_${uid}`)
-                    .setPlaceholder('Selecciona una categoría')
-                    .addOptions([
-                        {
-                            label: 'Todas las categorías',
-                            value: 'all',
-                            emoji: '🛒'
-                        },
-                        {
-                            label: 'Consumibles',
-                            value: 'consumable', 
-                            emoji: '🧪'
-                        },
-                        {
-                            label: 'Permanentes',
-                            value: 'permanent',
-                            emoji: '💎'
-                        },
-                        {
-                            label: 'Cosméticos',
-                            value: 'cosmetic',
-                            emoji: '✨'
-                        },
-                        {
-                            label: 'Especiales',
-                            value: 'special',
-                            emoji: '🎁'
-                        },
-                        {
-                            label: 'Equipamientos',
-                            value: 'equipment',
-                            emoji: '⚔️'
-                        },
-                        {
-                            label: 'Cofres',
-                            value: 'mystery',
-                            emoji: '🗝️'
-                        },
-                        {
-                            label: 'Semillas',
-                            value: 'seed',
-                            emoji: '🌱'
-                        },
-                        {
-                            label: 'Mascotas',
-                            value: 'pet',
-                            emoji: '🐕'
-                        },
-                        {
-                            label: 'Trivia',
-                            value: 'trivia',
-                            emoji: '🧠'
-                        },
-                    ])
+                    .setCustomId(`shop_item_${userId}`)
+                    .setPlaceholder('🛍️ Seleccioná un item para ver detalles')
+                    .addOptions(pageItems.map(item => ({
+                        label: item.name.replace(/[\u{1F000}-\u{1FFFF}]/gu, '').trim().slice(0, 25) || item.id,
+                        value: item.id,
+                        emoji: this.rarityEmojis[item.rarity]?.split(' ')[0] || '⬜',
+                        description: `${item.price.toLocaleString()} π-b$`
+                    })))
             );
-        
-        const components = [categoryRow];
-        if (row.components.length > 0) {
-            components.push(row);
-        }
-        
-        if (discount > 0) {
-            let discountText;
-            discountText = `\n🎉 ¡Descuento de fin de semana activo! ${Math.round(discount * 100)}% OFF en todos los items`;
-            embed.setFooter({ text: `Usa >buy <item_id> para comprar un item / Si activas un item con usos que es superior a otro, se consumirá el item que es superior.${discountText}` });
-        } else {
-            embed.setFooter({ text: 'Usa >buy <item_id> para comprar un item / Si activas un item con usos que es superior a otro, se consumirá el item que es superior.' });
-        }
-        
-        await message.reply({ embeds: [embed], components });
+        };
+
+        const buildNavRow = () => {
+            const items = getItems(currentCategory);
+            const totalPages = Math.max(1, Math.ceil(items.length / perPage));
+
+            return new ActionRowBuilder().addComponents(
+                new ButtonBuilder()
+                    .setCustomId(`shop_prev_${userId}`)
+                    .setEmoji('◀️')
+                    .setStyle(ButtonStyle.Secondary)
+                    .setDisabled(currentPage === 0),
+                new ButtonBuilder()
+                    .setCustomId(`shop_page_${userId}`)
+                    .setLabel(`${currentPage + 1}/${totalPages}`)
+                    .setStyle(ButtonStyle.Secondary)
+                    .setDisabled(true),
+                new ButtonBuilder()
+                    .setCustomId(`shop_next_${userId}`)
+                    .setEmoji('▶️')
+                    .setStyle(ButtonStyle.Secondary)
+                    .setDisabled(currentPage >= totalPages - 1)
+            );
+        };
+
+        const buildDetailActionRow = (item) => {
+            const user_balance_check = true; // se verifica al comprar
+            return new ActionRowBuilder().addComponents(
+                new ButtonBuilder()
+                    .setCustomId(`shop_buy_${userId}_${item.id}`)
+                    .setLabel('Comprar')
+                    .setEmoji('🛒')
+                    .setStyle(ButtonStyle.Success),
+                new ButtonBuilder()
+                    .setCustomId(`shop_back_${userId}`)
+                    .setLabel('Volver')
+                    .setEmoji('🔙')
+                    .setStyle(ButtonStyle.Secondary)
+            );
+        };
+
+        const buildListComponents = () => {
+            const components = [buildCategoryRow()];
+            const itemRow = buildItemSelectRow();
+            if (itemRow) components.push(itemRow);
+            components.push(buildNavRow());
+            return components;
+        };
+
+        const reply = await message.reply({
+            embeds: [buildListEmbed()],
+            components: buildListComponents()
+        });
+
+        const collector = reply.createMessageComponentCollector({
+            filter: i => i.user.id === userId,
+            time: 120000
+        });
+
+        collector.on('collect', async interaction => {
+            await interaction.deferUpdate();
+            const customId = interaction.customId;
+
+            // Cambiar categoría
+            if (customId === `shop_cat_${userId}`) {
+                currentCategory = interaction.values[0];
+                currentPage = 0;
+                selectedItem = null;
+                await reply.edit({ embeds: [buildListEmbed()], components: buildListComponents() });
+            }
+            // Seleccionar item
+            else if (customId === `shop_item_${userId}`) {
+                const itemId = interaction.values[0];
+                selectedItem = this.shopItems[itemId];
+                if (selectedItem) {
+                    await reply.edit({
+                        embeds: [buildDetailEmbed(selectedItem)],
+                        components: [buildDetailActionRow(selectedItem)]
+                    });
+                }
+            }
+            // Paginación
+            else if (customId === `shop_prev_${userId}`) {
+                currentPage--;
+                selectedItem = null;
+                await reply.edit({ embeds: [buildListEmbed()], components: buildListComponents() });
+            }
+            else if (customId === `shop_next_${userId}`) {
+                currentPage++;
+                selectedItem = null;
+                await reply.edit({ embeds: [buildListEmbed()], components: buildListComponents() });
+            }
+            // Volver a lista
+            else if (customId === `shop_back_${userId}`) {
+                selectedItem = null;
+                await reply.edit({ embeds: [buildListEmbed()], components: buildListComponents() });
+            }
+            // Comprar
+            else if (customId.startsWith(`shop_buy_${userId}_`)) {
+                const itemId = customId.replace(`shop_buy_${userId}_`, '');
+                const fakeMessage = {
+                    author: { id: userId },
+                    guild: message.guild,
+                    reply: async (content) => {
+                        if (typeof content === 'string') {
+                            await interaction.followUp({ content, ephemeral: true });
+                        } else {
+                            await interaction.followUp({ ...content, ephemeral: true });
+                        }
+                    }
+                };
+                await this.buyItem(fakeMessage, itemId, 1);
+            }
+        });
+
+        collector.on('end', async () => {
+            await reply.edit({ components: [] }).catch(() => {});
+        });
     }
     
     async hasVipAccess(userId) {
@@ -1968,10 +2188,22 @@ class ShopSystem {
         const totalCost = discountedPrice * quantity;
         
         const user = await this.economy.getUser(message.author.id);
-        
+
         if (user.balance < totalCost) {
             await message.reply(`❌ No tienes suficiente dinero. Necesitas **${totalCost.toLocaleString('es-ES')} π-b$**.`);
             return;
+        }
+
+        // Verificar límite de inventario para equipamiento de combate
+        if (item.effect?.type === 'combat_equipment') {
+            const [countRows] = await this.economy.database.pool.execute(
+                'SELECT COUNT(*) as total FROM dungeon_equipment WHERE user_id = ?',
+                [message.author.id]
+            );
+            if (countRows[0].total >= 20) {
+                await message.reply('❌ Tu inventario de equipamiento está lleno (20/20). Vende o descarta items antes de comprar más.');
+                return;
+            }
         }
         
         // Verificar límites de stack
@@ -1992,21 +2224,28 @@ class ShopSystem {
         const newBalance = user.balance - totalCost;
         const newItems = { ...userItems };
         
-        if (newItems[itemId]) {
-            newItems[itemId].quantity += quantity;
-        } else {
-            newItems[itemId] = {
-                id: itemId,
-                quantity: quantity,
-                purchaseDate: new Date().toISOString(),
-                paidPrice: item.price
-            };
+        if (item.effect?.type !== 'combat_equipment') {
+            if (newItems[itemId]) {
+                newItems[itemId].quantity += quantity;
+            } else {
+                newItems[itemId] = {
+                    id: itemId,
+                    quantity: quantity,
+                    purchaseDate: new Date().toISOString(),
+                    paidPrice: item.price
+                };
+            }
         }
-        
+
         await this.economy.updateUser(message.author.id, {
             balance: newBalance,
             items: newItems
         });
+
+        // Si es equipamiento de combate, va directo a dungeon_equipment
+        if (item.effect?.type === 'combat_equipment') {
+            await this.economy.equipment.addShopItem(message.author.id, itemId, item);
+        }
 
         await this.economy.missions.updateMissionProgress(message.author.id, 'items_bought_today', 1);
         // Actualizar estadística de gasto para misiones VIP
@@ -2031,6 +2270,10 @@ class ShopSystem {
                 embed.addFields(
                     { name: '💰 Costo Total', value: `${totalCost.toLocaleString('es-ES')} π-b$`, inline: true }
                 );
+            }
+
+            if (item.effect?.type == 'combat_equipment') {
+                embed.addFields({ name: 'Como usar?', value: 'Usa >equipo inv para verlo en tu inventario' });
             }
         
         await message.reply({ embeds: [embed] });
@@ -2246,7 +2489,7 @@ class ShopSystem {
             case 'tool':
                 return await this.applyToolEffect(userId, itemId, item);  
             case 'equipment':
-                return await this.applyEquipmentEffect(userId, itemId, item);          
+                return { success: false, message: `⚔️ El equipamiento no se usa directamente. Usa \`>equipo equipar <id>\` para equiparlo.` };
             case 'trivia':
                 return await this.applyTriviaBoost(userId, itemId, item);
             case 'special':
@@ -2717,150 +2960,6 @@ class ShopSystem {
         };
     }
 
-    // === APLICAR EFECTO DE EQUIPAMIENTO (Trajes, Armaduras, Espadas, etc.) ===
-    async applyEquipmentEffect(userId, itemId, item) {
-        const user = await this.economy.getUser(userId);
-        const userItems = user.items || {};
-        
-        // Verificar que tiene el item
-        if (!userItems[itemId] || userItems[itemId].quantity <= 0) {
-            return { success: false, message: 'No tienes este item.' };
-        }
-        
-        const activeEffects = this.parseActiveEffects(user.activeEffects);
-        
-        // Verificar si ya tiene este equipamiento activo
-        if (activeEffects[itemId] && activeEffects[itemId].length > 0) {
-            return { success: false, message: 'Ya tienes este equipamiento equipado.' };
-        }
-        
-        // CALCULAR DURABILIDAD ALEATORIA
-        const baseDurability = item.effect.baseDurability;
-        const variation = item.effect.durabilityVariation || 0;
-        
-        // Durabilidad aleatoria: base ± variation
-        const minDurability = baseDurability - variation;
-        const maxDurability = baseDurability + variation;
-        const randomDurability = Math.floor(Math.random() * (maxDurability - minDurability + 1)) + minDurability;
-        
-        // Crear efecto del equipamiento
-        const equipmentEffect = {
-            type: item.effect.type,
-            equipmentType: item.effect.equipmentType,
-            moneyMultiplier: item.effect.moneyMultiplier,
-            luckBoost: item.effect.luckBoost,
-            attackBonus: item.effect.attackBonus, // Para futuras espadas
-            defenseBonus: item.effect.defenseBonus, // Para futuras armaduras
-            maxDurability: randomDurability, // NUEVO: guardar el máximo
-            currentDurability: randomDurability,
-            appliedAt: Date.now()
-        };
-        
-        if (!activeEffects[itemId]) {
-            activeEffects[itemId] = [];
-        }
-        activeEffects[itemId].push(equipmentEffect);
-        
-        // Consumir el item del inventario
-        const newItems = { ...userItems };
-        newItems[itemId].quantity -= 1;
-        if (newItems[itemId].quantity <= 0) {
-            delete newItems[itemId];
-        }
-        
-        await this.economy.updateUser(userId, { 
-            activeEffects, 
-            items: newItems 
-        });
-        
-        return {
-            success: true,
-            message: `✅ ${item.name} equipado!\n🛡️ Durabilidad: ${randomDurability} usos\n📊 Bonus: ${item.effect.moneyMultiplier ? `+${Math.round((item.effect.moneyMultiplier - 1) * 100)}% 💰` : ''}${item.effect.luckBoost ? ` | +${Math.round(item.effect.luckBoost * 100)}% 🍀` : ''}`
-        };
-    }
-
-    // === APLICAR BONUS DE EQUIPAMIENTO Y CONSUMIR DURABILIDAD ===
-    async applyEquipmentBonus(userId, equipmentType = null) {
-        const user = await this.economy.getUser(userId);
-        const activeEffects = this.parseActiveEffects(user.activeEffects);
-
-        // ✅ AGREGAR ESTO AL INICIO
-        if (this.hasCurseActive(userId, activeEffects)) {
-            return {
-                applied: false,
-                money: 0,
-                luck: 0,
-                attack: 0,
-                defense: 0,
-                items: []
-            };
-        }
-
-        let bonusData = {
-            applied: false,
-            money: 0,
-            luck: 0,
-            attack: 0,
-            defense: 0,
-            items: []
-        };
-
-        // Buscar equipamiento activo
-        for (const [itemId, effects] of Object.entries(activeEffects)) {
-            for (const effect of effects) {
-                // Verificar que sea equipamiento
-                if (!effect.equipmentType) continue;
-                
-                // Si se especificó un tipo, filtrar por ese tipo
-                if (equipmentType && effect.equipmentType !== equipmentType) continue;
-                
-                // Verificar durabilidad
-                if (effect.currentDurability <= 0) continue;
-                
-                const item = this.shopItems[itemId];
-                if (!item) continue;
-
-                // CONSUMIR DURABILIDAD ALEATORIA (1-3)
-                const durabilityLoss = Math.floor(Math.random() * 3) + 1; // 1 a 3
-                const previousDurability = effect.currentDurability;
-                effect.currentDurability = Math.max(0, effect.currentDurability - durabilityLoss);
-                
-                // Acumular bonificaciones
-                if (effect.moneyMultiplier) bonusData.money += (effect.moneyMultiplier - 1);
-                if (effect.luckBoost) bonusData.luck += effect.luckBoost;
-                if (effect.attackBonus) bonusData.attack += effect.attackBonus;
-                if (effect.defenseBonus) bonusData.defense += effect.defenseBonus;
-                
-                bonusData.items.push({
-                    id: itemId,
-                    name: item.name,
-                    durabilityLeft: effect.currentDurability,
-                    maxDurability: effect.maxDurability,
-                    durabilityLost: durabilityLoss,
-                    wasBroken: effect.currentDurability <= 0
-                });
-                
-                // Si se rompe, remover del array
-                if (effect.currentDurability <= 0) {
-                    const effectIndex = effects.indexOf(effect);
-                    effects.splice(effectIndex, 1);
-                    
-                    if (effects.length === 0) {
-                        delete activeEffects[itemId];
-                    }
-                }
-                
-                bonusData.applied = true;
-            }
-        }
-        
-        if (bonusData.applied) {
-            await this.economy.updateUser(userId, { activeEffects });
-        }
-        
-        return bonusData;
-    }
-    
     // 3. ACTUALIZAR applyPermanentEffect() - manejar VIP como especial
     async applyPermanentEffect(userId, itemId, item) {
         const user = await this.economy.getUser(userId);

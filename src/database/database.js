@@ -400,6 +400,48 @@ class LocalDatabase {
                 )
             `);
 
+            await this.pool.execute(`
+                CREATE TABLE IF NOT EXISTS dungeon_equipment (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    user_id VARCHAR(50) NOT NULL,
+                    item_id VARCHAR(100) NOT NULL,
+                    type ENUM('weapon','helmet','chest','boots','accessory') NOT NULL,
+                    name VARCHAR(100) NOT NULL,
+                    stats JSON NOT NULL,
+                    durability INT NOT NULL DEFAULT 100,
+                    max_durability INT NOT NULL DEFAULT 100,
+                    equipped BOOLEAN DEFAULT 0,
+                    source ENUM('shop','dungeon','craft') DEFAULT 'shop',
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    INDEX idx_user_id (user_id),
+                    INDEX idx_equipped (user_id, equipped)
+                )
+            `);
+
+            await this.pool.execute(`
+                CREATE TABLE IF NOT EXISTS dungeon_runs (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    user_id VARCHAR(50) NOT NULL UNIQUE,
+                    floor INT NOT NULL DEFAULT 1,
+                    hp INT NOT NULL,
+                    max_hp INT NOT NULL,
+                    status ENUM('active','dead','escaped') NOT NULL DEFAULT 'active',
+                    rooms JSON NOT NULL,
+                    current_room INT DEFAULT NULL,
+                    completed_rooms JSON NOT NULL DEFAULT '[]',
+                    boss_defeated BOOLEAN DEFAULT 0,
+                    temp_inventory JSON NOT NULL DEFAULT '[]',
+                    active_relics JSON NOT NULL DEFAULT '[]',
+                    active_debuffs JSON NOT NULL DEFAULT '[]',
+                    floor_money INT NOT NULL DEFAULT 0,
+                    total_money INT NOT NULL DEFAULT 0,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                    INDEX idx_user_id (user_id),
+                    INDEX idx_status (status)
+                )
+            `);
+
             console.log('🗃️ Tablas MySQL inicializadas');
         } catch (error) {
             console.error('❌ Error creando tablas:', error);

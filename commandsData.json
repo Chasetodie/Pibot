@@ -1,0 +1,1042 @@
+[
+  {
+    "id": "cmd-001",
+    "nombre": "svconfig",
+    "categoria": "Administración",
+    "sintaxis": ">svconfig",
+    "descripcion": "Ver configuración actual del servidor",
+    "permisos": "Gestionar servidor"
+  },
+  {
+    "id": "cmd-002",
+    "nombre": "setchannel",
+    "categoria": "Administración",
+    "sintaxis": ">setchannel <clave> #canal",
+    "descripcion": "Configurar un canal (levelup_channel, events_channel, guild_levelup_channel)",
+    "permisos": "Gestionar servidor"
+  },
+  {
+    "id": "cmd-003",
+    "nombre": "enablelevels",
+    "categoria": "Administración",
+    "sintaxis": ">enablelevels",
+    "descripcion": "Activar sistema de niveles",
+    "permisos": "Gestionar servidor"
+  },
+  {
+    "id": "cmd-004",
+    "nombre": "disablelevels",
+    "categoria": "Administración",
+    "sintaxis": ">disablelevels",
+    "descripcion": "Desactivar sistema de niveles",
+    "permisos": "Gestionar servidor"
+  },
+  {
+    "id": "cmd-005",
+    "nombre": "toggleevents",
+    "categoria": "Administración",
+    "sintaxis": ">toggleevents",
+    "descripcion": "Activar/desactivar todos los eventos",
+    "permisos": "Gestionar servidor"
+  },
+  {
+    "id": "cmd-006",
+    "nombre": "toggleevent",
+    "categoria": "Administración",
+    "sintaxis": ">toggleevent [tipo]",
+    "descripcion": "Activar/desactivar un tipo específico",
+    "permisos": "Gestionar servidor"
+  },
+  {
+    "id": "cmd-007",
+    "nombre": "seteventsrole",
+    "categoria": "Administración",
+    "sintaxis": ">seteventsrole @rol",
+    "descripcion": "Rol para pings de eventos",
+    "permisos": "Gestionar servidor"
+  },
+  {
+    "id": "cmd-008",
+    "nombre": "createevent",
+    "categoria": "Administración",
+    "sintaxis": ">createevent <tipo> [min]",
+    "descripcion": "Crear evento manual",
+    "permisos": "Gestionar servidor"
+  },
+  {
+    "id": "cmd-009",
+    "nombre": "eventstats",
+    "categoria": "Administración",
+    "sintaxis": ">eventstats",
+    "descripcion": "Estadísticas de eventos",
+    "permisos": "Gestionar servidor"
+  },
+  {
+    "id": "cmd-010",
+    "nombre": "clear",
+    "categoria": "Administración",
+    "sintaxis": ">clear [cantidad]",
+    "descripcion": "Borrar mensajes del canal",
+    "permisos": "Gestionar servidor"
+  },
+  {
+    "id": "cmd-011",
+    "nombre": "huerto",
+    "categoria": "Mundo",
+    "sintaxis": ">huerto",
+    "descripcion": "Ver estado de tu huerto",
+    "permisos": "Ninguno"
+  },
+  {
+    "id": "cmd-012",
+    "nombre": "huerto",
+    "categoria": "Mundo",
+    "sintaxis": ">huerto plantar <slot> <semilla>",
+    "descripcion": "Plantar una semilla",
+    "permisos": "Ninguno"
+  },
+  {
+    "id": "cmd-013",
+    "nombre": "huerto",
+    "categoria": "Mundo",
+    "sintaxis": ">huerto cosechar <slot/todo>",
+    "descripcion": "Cosechar plantas listas",
+    "permisos": "Ninguno"
+  },
+  {
+    "id": "cmd-014",
+    "nombre": "huerto",
+    "categoria": "Mundo",
+    "sintaxis": ">huerto fumigar <slot>",
+    "descripcion": "Eliminar plaga (500π)",
+    "permisos": "Ninguno"
+  },
+  {
+    "id": "cmd-015",
+    "nombre": "huerto",
+    "categoria": "Mundo",
+    "sintaxis": ">huerto help",
+    "descripcion": "Ver ayuda completa del huerto",
+    "permisos": "Ninguno"
+  },
+  {
+    "id": "cmd-016",
+    "nombre": "mascota",
+    "categoria": "Mundo",
+    "sintaxis": ">mascota",
+    "descripcion": "Ver tus mascotas",
+    "permisos": "Ninguno"
+  },
+  {
+    "id": "cmd-017",
+    "nombre": "mascota",
+    "categoria": "Mundo",
+    "sintaxis": ">mascota incubar",
+    "descripcion": "Incubar un huevo misterioso",
+    "permisos": "Ninguno"
+  },
+  {
+    "id": "cmd-018",
+    "nombre": "mascota",
+    "categoria": "Mundo",
+    "sintaxis": ">mascota equipar <id>",
+    "descripcion": "Equipar mascota para bonos",
+    "permisos": "Ninguno"
+  },
+  {
+    "id": "cmd-019",
+    "nombre": "mascota",
+    "categoria": "Mundo",
+    "sintaxis": ">mascota desequipar",
+    "descripcion": "Desequipar mascota actual",
+    "permisos": "Ninguno"
+  },
+  {
+    "id": "cmd-020",
+    "nombre": "mascota",
+    "categoria": "Mundo",
+    "sintaxis": ">mascota expedicion <id> <tipo>",
+    "descripcion": "money / ingredients / special",
+    "permisos": "Ninguno"
+  },
+  {
+    "id": "cmd-021",
+    "nombre": "mascota",
+    "categoria": "Mundo",
+    "sintaxis": ">mascota reclamar <id>",
+    "descripcion": "Reclamar recompensa de expedición",
+    "permisos": "Ninguno"
+  },
+  {
+    "id": "cmd-022",
+    "nombre": "mascota",
+    "categoria": "Mundo",
+    "sintaxis": ">mascota curar <id> <medicina>",
+    "descripcion": "Curar mascota enferma",
+    "permisos": "Ninguno"
+  },
+  {
+    "id": "cmd-023",
+    "nombre": "mascota",
+    "categoria": "Mundo",
+    "sintaxis": ">mascota liberar <id>",
+    "descripcion": "Liberar mascota a cambio de π",
+    "permisos": "Ninguno"
+  },
+  {
+    "id": "cmd-024",
+    "nombre": "mascota",
+    "categoria": "Mundo",
+    "sintaxis": ">mascota renombrar <id> <nombre>",
+    "descripcion": "Cambiar nombre de mascota",
+    "permisos": "Ninguno"
+  },
+  {
+    "id": "cmd-025",
+    "nombre": "mascota",
+    "categoria": "Mundo",
+    "sintaxis": ">mascota help",
+    "descripcion": "Ver ayuda completa de mascotas",
+    "permisos": "Ninguno"
+  },
+  {
+    "id": "cmd-026",
+    "nombre": "buy",
+    "categoria": "Mundo",
+    "sintaxis": ">buy common_seed",
+    "descripcion": "Semilla común (200π)",
+    "permisos": "Ninguno"
+  },
+  {
+    "id": "cmd-027",
+    "nombre": "buy",
+    "categoria": "Mundo",
+    "sintaxis": ">buy pet_egg",
+    "descripcion": "Huevo misterioso (5,000π)",
+    "permisos": "Ninguno"
+  },
+  {
+    "id": "cmd-028",
+    "nombre": "buy",
+    "categoria": "Mundo",
+    "sintaxis": ">buy pet_slot_extra",
+    "descripcion": "Slot extra de mascota (25,000π)",
+    "permisos": "Ninguno"
+  },
+  {
+    "id": "cmd-029",
+    "nombre": "casar",
+    "categoria": "Social",
+    "sintaxis": ">casar @usuario",
+    "descripcion": "Proponer matrimonio (50,000π c/u)",
+    "permisos": "Ninguno"
+  },
+  {
+    "id": "cmd-030",
+    "nombre": "pareja",
+    "categoria": "Social",
+    "sintaxis": ">pareja",
+    "descripcion": "Ver estado de tu matrimonio",
+    "permisos": "Ninguno"
+  },
+  {
+    "id": "cmd-031",
+    "nombre": "divorcio",
+    "categoria": "Social",
+    "sintaxis": ">divorcio",
+    "descripcion": "Iniciar proceso de divorcio",
+    "permisos": "Ninguno"
+  },
+  {
+    "id": "cmd-032",
+    "nombre": "mentor",
+    "categoria": "Social",
+    "sintaxis": ">mentor",
+    "descripcion": "Ver tu relación de mentoría",
+    "permisos": "Ninguno"
+  },
+  {
+    "id": "cmd-033",
+    "nombre": "mentor",
+    "categoria": "Social",
+    "sintaxis": ">mentor @usuario",
+    "descripcion": "Proponer mentoría (tú nv20+, él nv5-)",
+    "permisos": "Ninguno"
+  },
+  {
+    "id": "cmd-034",
+    "nombre": "pedir",
+    "categoria": "Social",
+    "sintaxis": ">pedir",
+    "descripcion": "Pedir dinero a 3 usuarios aleatorios",
+    "permisos": "Ninguno"
+  },
+  {
+    "id": "cmd-035",
+    "nombre": "curar",
+    "categoria": "Social",
+    "sintaxis": ">curar @usuario",
+    "descripcion": "Curar maldición (solo Doctores)",
+    "permisos": "Ninguno"
+  },
+  {
+    "id": "cmd-036",
+    "nombre": "changelog",
+    "categoria": "Social",
+    "sintaxis": ">changelog",
+    "descripcion": "Ver las últimas novedades del bot",
+    "permisos": "Ninguno"
+  },
+  {
+    "id": "cmd-037",
+    "nombre": "balance",
+    "categoria": "Economía",
+    "sintaxis": ">balance",
+    "descripcion": "Ver tu saldo y nivel",
+    "permisos": "Ninguno"
+  },
+  {
+    "id": "cmd-038",
+    "nombre": "daily",
+    "categoria": "Economía",
+    "sintaxis": ">daily",
+    "descripcion": "Recompensa diaria",
+    "permisos": "Ninguno"
+  },
+  {
+    "id": "cmd-039",
+    "nombre": "pay",
+    "categoria": "Economía",
+    "sintaxis": ">pay @user <cantidad>",
+    "descripcion": "Transferir dinero a alguien",
+    "permisos": "Ninguno"
+  },
+  {
+    "id": "cmd-040",
+    "nombre": "work",
+    "categoria": "Economía",
+    "sintaxis": ">work [tipo]",
+    "descripcion": "Trabajar para ganar dinero",
+    "permisos": "Ninguno"
+  },
+  {
+    "id": "cmd-041",
+    "nombre": "robar",
+    "categoria": "Economía",
+    "sintaxis": ">robar @user",
+    "descripcion": "Intentar robar dinero",
+    "permisos": "Ninguno"
+  },
+  {
+    "id": "cmd-042",
+    "nombre": "profesion",
+    "categoria": "Economía",
+    "sintaxis": ">profesion",
+    "descripcion": "Ver y cambiar tu profesión",
+    "permisos": "Ninguno"
+  },
+  {
+    "id": "cmd-043",
+    "nombre": "pacto",
+    "categoria": "Economía",
+    "sintaxis": ">pacto",
+    "descripcion": "Pacto con el diablo (cada 48h)",
+    "permisos": "Ninguno"
+  },
+  {
+    "id": "cmd-044",
+    "nombre": "mapa",
+    "categoria": "Economía",
+    "sintaxis": ">mapa",
+    "descripcion": "Mapa del tesoro (1% al trabajar)",
+    "permisos": "Ninguno"
+  },
+  {
+    "id": "cmd-045",
+    "nombre": "biblioteca",
+    "categoria": "Economía",
+    "sintaxis": ">biblioteca",
+    "descripcion": "Libros que mejoran tus stats",
+    "permisos": "Ninguno"
+  },
+  {
+    "id": "cmd-046",
+    "nombre": "top",
+    "categoria": "Economía",
+    "sintaxis": ">top",
+    "descripcion": "Top dinero del servidor",
+    "permisos": "Ninguno"
+  },
+  {
+    "id": "cmd-047",
+    "nombre": "top",
+    "categoria": "Economía",
+    "sintaxis": ">top level",
+    "descripcion": "Top niveles del servidor",
+    "permisos": "Ninguno"
+  },
+  {
+    "id": "cmd-048",
+    "nombre": "top",
+    "categoria": "Economía",
+    "sintaxis": ">top global",
+    "descripcion": "Rankings globales",
+    "permisos": "Ninguno"
+  },
+  {
+    "id": "cmd-049",
+    "nombre": "shop",
+    "categoria": "Tienda",
+    "sintaxis": ">shop",
+    "descripcion": "Ver la tienda completa",
+    "permisos": "Ninguno"
+  },
+  {
+    "id": "cmd-050",
+    "nombre": "shop",
+    "categoria": "Tienda",
+    "sintaxis": ">shop <categoría>",
+    "descripcion": "Filtrar por categoría (consumable, permanent, trivia, mystery)",
+    "permisos": "Ninguno"
+  },
+  {
+    "id": "cmd-051",
+    "nombre": "buy",
+    "categoria": "Tienda",
+    "sintaxis": ">buy <item_id> [cantidad]",
+    "descripcion": "Comprar un item",
+    "permisos": "Ninguno"
+  },
+  {
+    "id": "cmd-052",
+    "nombre": "bag",
+    "categoria": "Tienda",
+    "sintaxis": ">bag",
+    "descripcion": "Ver tu inventario",
+    "permisos": "Ninguno"
+  },
+  {
+    "id": "cmd-053",
+    "nombre": "useitem",
+    "categoria": "Tienda",
+    "sintaxis": ">useitem <item_id>",
+    "descripcion": "Usar un item consumible",
+    "permisos": "Ninguno"
+  },
+  {
+    "id": "cmd-054",
+    "nombre": "effects",
+    "categoria": "Tienda",
+    "sintaxis": ">effects",
+    "descripcion": "Ver efectos activos",
+    "permisos": "Ninguno"
+  },
+  {
+    "id": "cmd-055",
+    "nombre": "cosmeticos",
+    "categoria": "Tienda",
+    "sintaxis": ">cosmeticos",
+    "descripcion": "Ver cosméticos equipados",
+    "permisos": "Ninguno"
+  },
+  {
+    "id": "cmd-056",
+    "nombre": "vip",
+    "categoria": "VIP",
+    "sintaxis": ">vip",
+    "descripcion": "Ver tu estado VIP y beneficios",
+    "permisos": "Ninguno"
+  },
+  {
+    "id": "cmd-057",
+    "nombre": "viphelp",
+    "categoria": "VIP",
+    "sintaxis": ">viphelp",
+    "descripcion": "Guía completa de VIP",
+    "permisos": "Ninguno"
+  },
+  {
+    "id": "cmd-058",
+    "nombre": "vipwork",
+    "categoria": "VIP",
+    "sintaxis": ">vipwork",
+    "descripcion": "Trabajo exclusivo VIP",
+    "permisos": "Ninguno"
+  },
+  {
+    "id": "cmd-059",
+    "nombre": "vipdaily",
+    "categoria": "VIP",
+    "sintaxis": ">vipdaily",
+    "descripcion": "Daily mejorado VIP",
+    "permisos": "Ninguno"
+  },
+  {
+    "id": "cmd-060",
+    "nombre": "vipgamble",
+    "categoria": "VIP",
+    "sintaxis": ">vipgamble",
+    "descripcion": "Apuestas VIP",
+    "permisos": "Ninguno"
+  },
+  {
+    "id": "cmd-061",
+    "nombre": "vipboost",
+    "categoria": "VIP",
+    "sintaxis": ">vipboost",
+    "descripcion": "Activar boost VIP",
+    "permisos": "Ninguno"
+  },
+  {
+    "id": "cmd-062",
+    "nombre": "checkstats",
+    "categoria": "Minijuegos",
+    "sintaxis": ">checkstats",
+    "descripcion": "Ver tus estadísticas de juego",
+    "permisos": "Ninguno"
+  },
+  {
+    "id": "cmd-063",
+    "nombre": "games",
+    "categoria": "Minijuegos",
+    "sintaxis": ">games",
+    "descripcion": "Lista completa con límites y premios",
+    "permisos": "Ninguno"
+  },
+  {
+    "id": "cmd-064",
+    "nombre": "coinflip",
+    "categoria": "Minijuegos",
+    "sintaxis": ">coinflip <cara/cruz> <apuesta>",
+    "descripcion": "100 – 5,000 π-b$",
+    "permisos": "Ninguno"
+  },
+  {
+    "id": "cmd-065",
+    "nombre": "dice",
+    "categoria": "Minijuegos",
+    "sintaxis": ">dice <tipo> <apuesta>",
+    "descripcion": "100 – 5,000 π-b$",
+    "permisos": "Ninguno"
+  },
+  {
+    "id": "cmd-066",
+    "nombre": "lottery",
+    "categoria": "Minijuegos",
+    "sintaxis": ">lottery <número> <apuesta>",
+    "descripcion": "500 – 3,000 π-b$",
+    "permisos": "Ninguno"
+  },
+  {
+    "id": "cmd-067",
+    "nombre": "slots",
+    "categoria": "Minijuegos",
+    "sintaxis": ">slots <apuesta>",
+    "descripcion": "100 – 8,000 π-b$",
+    "permisos": "Ninguno"
+  },
+  {
+    "id": "cmd-068",
+    "nombre": "roulette",
+    "categoria": "Minijuegos",
+    "sintaxis": ">roulette <tipo> <apuesta>",
+    "descripcion": "100 – 15,000 π-b$",
+    "permisos": "Ninguno"
+  },
+  {
+    "id": "cmd-069",
+    "nombre": "vending",
+    "categoria": "Minijuegos",
+    "sintaxis": ">vending",
+    "descripcion": "Máquina expendedora (10 π-b$)",
+    "permisos": "Ninguno"
+  },
+  {
+    "id": "cmd-070",
+    "nombre": "blackjack",
+    "categoria": "Minijuegos",
+    "sintaxis": ">blackjack <apuesta>",
+    "descripcion": "100 – 10,000 π-b$",
+    "permisos": "Ninguno"
+  },
+  {
+    "id": "cmd-071",
+    "nombre": "ujoin",
+    "categoria": "Minijuegos",
+    "sintaxis": ">ujoin <apuesta>",
+    "descripcion": "UNO — 2 a 8 jugadores",
+    "permisos": "Ninguno"
+  },
+  {
+    "id": "cmd-072",
+    "nombre": "russian",
+    "categoria": "Minijuegos",
+    "sintaxis": ">russian <apuesta>",
+    "descripcion": "Ruleta Rusa — 2 a 6 jugadores",
+    "permisos": "Ninguno"
+  },
+  {
+    "id": "cmd-073",
+    "nombre": "horses",
+    "categoria": "Minijuegos",
+    "sintaxis": ">horses <bot/multi> <apuesta>",
+    "descripcion": "Carrera de Caballos",
+    "permisos": "Ninguno"
+  },
+  {
+    "id": "cmd-074",
+    "nombre": "trivia",
+    "categoria": "Minijuegos",
+    "sintaxis": ">trivia [dificultad] [modo] [cat]",
+    "descripcion": "Trivia clásica — Gratis",
+    "permisos": "Ninguno"
+  },
+  {
+    "id": "cmd-075",
+    "nombre": "triviasurvival",
+    "categoria": "Minijuegos",
+    "sintaxis": ">triviasurvival start",
+    "descripcion": "Modo supervivencia",
+    "permisos": "Ninguno"
+  },
+  {
+    "id": "cmd-076",
+    "nombre": "triviacategorias",
+    "categoria": "Minijuegos",
+    "sintaxis": ">triviacategorias",
+    "descripcion": "Ver categorías disponibles de trivia",
+    "permisos": "Ninguno"
+  },
+  {
+    "id": "cmd-077",
+    "nombre": "triviacomp",
+    "categoria": "Minijuegos",
+    "sintaxis": ">triviacomp <apuesta>",
+    "descripcion": "Trivia competitiva multijugador",
+    "permisos": "Ninguno"
+  },
+  {
+    "id": "cmd-078",
+    "nombre": "trivialb",
+    "categoria": "Minijuegos",
+    "sintaxis": ">trivialb [tipo]",
+    "descripcion": "Rankings de trivia",
+    "permisos": "Ninguno"
+  },
+  {
+    "id": "cmd-079",
+    "nombre": "bet",
+    "categoria": "Apuestas",
+    "sintaxis": ">bet @usuario <cantidad> <descripción>",
+    "descripcion": "Crear una apuesta directa",
+    "permisos": "Ninguno"
+  },
+  {
+    "id": "cmd-080",
+    "nombre": "acceptbet",
+    "categoria": "Apuestas",
+    "sintaxis": ">acceptbet <id>",
+    "descripcion": "Aceptar apuesta pendiente",
+    "permisos": "Ninguno"
+  },
+  {
+    "id": "cmd-081",
+    "nombre": "declinebet",
+    "categoria": "Apuestas",
+    "sintaxis": ">declinebet <id>",
+    "descripcion": "Rechazar apuesta",
+    "permisos": "Ninguno"
+  },
+  {
+    "id": "cmd-082",
+    "nombre": "resolvebet",
+    "categoria": "Apuestas",
+    "sintaxis": ">resolvebet <id> @ganador",
+    "descripcion": "Resolver apuesta (declarar ganador)",
+    "permisos": "Ninguno"
+  },
+  {
+    "id": "cmd-083",
+    "nombre": "cancelbet",
+    "categoria": "Apuestas",
+    "sintaxis": ">cancelbet <id>",
+    "descripcion": "Cancelar y devolver apuestas",
+    "permisos": "Ninguno"
+  },
+  {
+    "id": "cmd-084",
+    "nombre": "mybets",
+    "categoria": "Apuestas",
+    "sintaxis": ">mybets",
+    "descripcion": "Ver tus apuestas activas",
+    "permisos": "Ninguno"
+  },
+  {
+    "id": "cmd-085",
+    "nombre": "betstats",
+    "categoria": "Apuestas",
+    "sintaxis": ">betstats [@usuario]",
+    "descripcion": "Estadísticas de victorias/derrotas",
+    "permisos": "Ninguno"
+  },
+  {
+    "id": "cmd-086",
+    "nombre": "trade",
+    "categoria": "Trading",
+    "sintaxis": ">trade @usuario",
+    "descripcion": "Iniciar intercambio con alguien",
+    "permisos": "Ninguno"
+  },
+  {
+    "id": "cmd-087",
+    "nombre": "tradeshow",
+    "categoria": "Trading",
+    "sintaxis": ">tradeshow",
+    "descripcion": "Ver intercambios activos",
+    "permisos": "Ninguno"
+  },
+  {
+    "id": "cmd-088",
+    "nombre": "tradeadd",
+    "categoria": "Trading",
+    "sintaxis": ">tradeadd <item_id> [cantidad]",
+    "descripcion": "Agregar item a tu oferta",
+    "permisos": "Ninguno"
+  },
+  {
+    "id": "cmd-089",
+    "nombre": "trademoney",
+    "categoria": "Trading",
+    "sintaxis": ">trademoney <cantidad>",
+    "descripcion": "Agregar dinero a tu oferta",
+    "permisos": "Ninguno"
+  },
+  {
+    "id": "cmd-090",
+    "nombre": "tradeaccept",
+    "categoria": "Trading",
+    "sintaxis": ">tradeaccept",
+    "descripcion": "Confirmar y ejecutar intercambio",
+    "permisos": "Ninguno"
+  },
+  {
+    "id": "cmd-091",
+    "nombre": "tradecancel",
+    "categoria": "Trading",
+    "sintaxis": ">tradecancel",
+    "descripcion": "Cancelar intercambio activo",
+    "permisos": "Ninguno"
+  },
+  {
+    "id": "cmd-092",
+    "nombre": "auction",
+    "categoria": "Subastas",
+    "sintaxis": ">auction <item_id> <precio> [minutos]",
+    "descripcion": "Poner un item en subasta",
+    "permisos": "Ninguno"
+  },
+  {
+    "id": "cmd-093",
+    "nombre": "auctions",
+    "categoria": "Subastas",
+    "sintaxis": ">auctions",
+    "descripcion": "Ver subastas activas ahora",
+    "permisos": "Ninguno"
+  },
+  {
+    "id": "cmd-094",
+    "nombre": "bid",
+    "categoria": "Subastas",
+    "sintaxis": ">bid <auction_id> <cantidad>",
+    "descripcion": "Hacer una puja",
+    "permisos": "Ninguno"
+  },
+  {
+    "id": "cmd-095",
+    "nombre": "recipes",
+    "categoria": "Crafteo",
+    "sintaxis": ">recipes",
+    "descripcion": "Ver menú de recetas por categoría",
+    "permisos": "Ninguno"
+  },
+  {
+    "id": "cmd-096",
+    "nombre": "recipes",
+    "categoria": "Crafteo",
+    "sintaxis": ">recipes <categoría>",
+    "descripcion": "potion / combat / nature / economy / artesano_exclusive",
+    "permisos": "Ninguno"
+  },
+  {
+    "id": "cmd-097",
+    "nombre": "craft",
+    "categoria": "Crafteo",
+    "sintaxis": ">craft <recipe_id>",
+    "descripcion": "Iniciar crafteo de una receta",
+    "permisos": "Ninguno"
+  },
+  {
+    "id": "cmd-098",
+    "nombre": "queue",
+    "categoria": "Crafteo",
+    "sintaxis": ">queue",
+    "descripcion": "Ver cola de crafteos en progreso",
+    "permisos": "Ninguno"
+  },
+  {
+    "id": "cmd-099",
+    "nombre": "cancelcraft",
+    "categoria": "Crafteo",
+    "sintaxis": ">cancelcraft <número>",
+    "descripcion": "Cancelar crafteo (recuperas 80%)",
+    "permisos": "Ninguno"
+  },
+  {
+    "id": "cmd-100",
+    "nombre": "missions",
+    "categoria": "Progreso",
+    "sintaxis": ">missions",
+    "descripcion": "Ver misiones diarias activas",
+    "permisos": "Ninguno"
+  },
+  {
+    "id": "cmd-101",
+    "nombre": "blockmissions",
+    "categoria": "Progreso",
+    "sintaxis": ">blockmissions",
+    "descripcion": "Silenciar notificaciones",
+    "permisos": "Ninguno"
+  },
+  {
+    "id": "cmd-102",
+    "nombre": "unblockmissions",
+    "categoria": "Progreso",
+    "sintaxis": ">unblockmissions",
+    "descripcion": "Activar notificaciones",
+    "permisos": "Ninguno"
+  },
+  {
+    "id": "cmd-103",
+    "nombre": "achievements",
+    "categoria": "Progreso",
+    "sintaxis": ">achievements [@usuario]",
+    "descripcion": "Ver logros desbloqueados",
+    "permisos": "Ninguno"
+  },
+  {
+    "id": "cmd-104",
+    "nombre": "allachievements",
+    "categoria": "Progreso",
+    "sintaxis": ">allachievements",
+    "descripcion": "Ver todos los logros posibles",
+    "permisos": "Ninguno"
+  },
+  {
+    "id": "cmd-105",
+    "nombre": "progress",
+    "categoria": "Progreso",
+    "sintaxis": ">progress",
+    "descripcion": "Ver progreso de cada logro",
+    "permisos": "Ninguno"
+  },
+  {
+    "id": "cmd-106",
+    "nombre": "detectachievements",
+    "categoria": "Progreso",
+    "sintaxis": ">detectachievements",
+    "descripcion": "Revisar logros pendientes",
+    "permisos": "Ninguno"
+  },
+  {
+    "id": "cmd-107",
+    "nombre": "level",
+    "categoria": "Progreso",
+    "sintaxis": ">level [@usuario]",
+    "descripcion": "Ver nivel global",
+    "permisos": "Ninguno"
+  },
+  {
+    "id": "cmd-108",
+    "nombre": "slevel",
+    "categoria": "Progreso",
+    "sintaxis": ">slevel",
+    "descripcion": "Ver tu nivel en este servidor",
+    "permisos": "Ninguno"
+  },
+  {
+    "id": "cmd-109",
+    "nombre": "servtop",
+    "categoria": "Progreso",
+    "sintaxis": ">servtop",
+    "descripcion": "Top 10 niveles del servidor",
+    "permisos": "Ninguno"
+  },
+  {
+    "id": "cmd-110",
+    "nombre": "events",
+    "categoria": "Eventos",
+    "sintaxis": ">events",
+    "descripcion": "Ver eventos activos en este servidor",
+    "permisos": "Ninguno"
+  },
+  {
+    "id": "cmd-111",
+    "nombre": "Mencionar",
+    "categoria": "Chat IA",
+    "sintaxis": "Mencionar al bot",
+    "descripcion": "Escríbele directamente con @Pibot",
+    "permisos": "Ninguno"
+  },
+  {
+    "id": "cmd-112",
+    "nombre": "Responder",
+    "categoria": "Chat IA",
+    "sintaxis": "Responder un mensaje",
+    "descripcion": "Haz reply a cualquier mensaje del bot",
+    "permisos": "Ninguno"
+  },
+  {
+    "id": "cmd-113",
+    "nombre": "chathelp",
+    "categoria": "Chat IA",
+    "sintaxis": ">chathelp",
+    "descripcion": "Ver todos los comandos de chat",
+    "permisos": "Ninguno"
+  },
+  {
+    "id": "cmd-114",
+    "nombre": "nsfw",
+    "categoria": "NSFW",
+    "sintaxis": ">nsfw <categoría> <cantidad>",
+    "descripcion": "Buscar contenido por categoría",
+    "permisos": "Ninguno"
+  },
+  {
+    "id": "cmd-115",
+    "nombre": "r34",
+    "categoria": "NSFW",
+    "sintaxis": ">r34 <tags> <cantidad>",
+    "descripcion": "Buscar por tags",
+    "permisos": "Ninguno"
+  },
+  {
+    "id": "cmd-116",
+    "nombre": "gifs",
+    "categoria": "NSFW",
+    "sintaxis": ">gifs <categoría> <cantidad>",
+    "descripcion": "Solo GIFs animados",
+    "permisos": "Ninguno"
+  },
+  {
+    "id": "cmd-117",
+    "nombre": "videos",
+    "categoria": "NSFW",
+    "sintaxis": ">videos <categoría> <cantidad>",
+    "descripcion": "Solo videos MP4/WEBM",
+    "permisos": "Ninguno"
+  },
+  {
+    "id": "cmd-118",
+    "nombre": "fuck",
+    "categoria": "NSFW",
+    "sintaxis": ">fuck [@usuario]",
+    "descripcion": "Requiere mención o reply",
+    "permisos": "Ninguno"
+  },
+  {
+    "id": "cmd-119",
+    "nombre": "fuckdetect",
+    "categoria": "NSFW",
+    "sintaxis": ">fuckdetect / >fd",
+    "descripcion": "FuckDetect con mención o reply",
+    "permisos": "Ninguno"
+  },
+  {
+    "id": "cmd-120",
+    "nombre": "m",
+    "categoria": "Música",
+    "sintaxis": ">m play <canción/URL>",
+    "descripcion": "Reproducir canción o playlist",
+    "permisos": "Ninguno"
+  },
+  {
+    "id": "cmd-121",
+    "nombre": "m",
+    "categoria": "Música",
+    "sintaxis": ">m search <canción>",
+    "descripcion": "Buscar y elegir canción",
+    "permisos": "Ninguno"
+  },
+  {
+    "id": "cmd-122",
+    "nombre": "spsearch",
+    "categoria": "Música",
+    "sintaxis": ">spsearch <canción>",
+    "descripcion": "Buscar en Spotify",
+    "permisos": "Ninguno"
+  },
+  {
+    "id": "cmd-123",
+    "nombre": "m",
+    "categoria": "Música",
+    "sintaxis": ">m pause / >m resume",
+    "descripcion": "Pausar / Reanudar",
+    "permisos": "Ninguno"
+  },
+  {
+    "id": "cmd-124",
+    "nombre": "m",
+    "categoria": "Música",
+    "sintaxis": ">m skip",
+    "descripcion": "Saltar canción actual",
+    "permisos": "Ninguno"
+  },
+  {
+    "id": "cmd-125",
+    "nombre": "m",
+    "categoria": "Música",
+    "sintaxis": ">m stop",
+    "descripcion": "Detener y vaciar cola",
+    "permisos": "Ninguno"
+  },
+  {
+    "id": "cmd-126",
+    "nombre": "m",
+    "categoria": "Música",
+    "sintaxis": ">m queue",
+    "descripcion": "Ver cola de reproducción",
+    "permisos": "Ninguno"
+  },
+  {
+    "id": "cmd-127",
+    "nombre": "m",
+    "categoria": "Música",
+    "sintaxis": ">m volume <0-100>",
+    "descripcion": "Ajustar volumen",
+    "permisos": "Ninguno"
+  },
+  {
+    "id": "cmd-128",
+    "nombre": "m",
+    "categoria": "Música",
+    "sintaxis": ">m help",
+    "descripcion": "Ver lista completa de comandos de música",
+    "permisos": "Ninguno"
+  },
+  {
+    "id": "cmd-129",
+    "nombre": "imagine",
+    "categoria": "Imágenes IA",
+    "sintaxis": ">imagine <descripción>",
+    "descripcion": "Generar imagen con IA",
+    "permisos": "Ninguno"
+  },
+  {
+    "id": "cmd-130",
+    "nombre": "img",
+    "categoria": "Imágenes IA",
+    "sintaxis": ">img <descripción>",
+    "descripcion": "Alias corto de imagine",
+    "permisos": "Ninguno"
+  }
+]

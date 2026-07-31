@@ -1,6 +1,8 @@
 require('dotenv').config();
 const LocalDatabase = require('../database/database');
 const EventsSystem = require('./events');
+const EquipmentSystem = require('./equipmentSystem');
+const DungeonSystem = require('./dungeonSystem');
 
 const richUC = new Map();
 const heavyUsersCache = new Map();
@@ -151,6 +153,9 @@ class EconomySystem {
             15: { reward: 15000, label: '🎓 Nivel 15 alcanzado' },
             20: { reward: 30000, itemId: 'mystery_box', label: '🎓 ¡Graduado! Nivel 20' },
         };
+
+        this.equipment = new EquipmentSystem(this);
+        this.dungeon = new DungeonSystem(this);
     }
 
     async initializeDatabase() {
@@ -1658,25 +1663,6 @@ class EconomySystem {
             }
         }
 
-        // Aplicar equipamiento
-        let equipmentMessage = '';
-        if (this.shop) {
-            const equipmentBonus = await this.shop.applyEquipmentBonus(userId);
-            if (equipmentBonus.applied) {
-                const extraMoney = Math.floor(finalEarnings * equipmentBonus.money);
-                finalEarnings += extraMoney;
-                for (const equip of equipmentBonus.items) {
-                    equipmentMessage += `\n${equip.wasBroken ? '💔' : '🛡️'} **${equip.name}**: `;
-                    equipmentMessage += equip.wasBroken
-                        ? `¡SE ROMPIÓ! (era ${equip.durabilityLost})`
-                        : `Durabilidad: ${equip.durabilityLeft}/${equip.maxDurability} (-${equip.durabilityLost})`;
-                }
-                if (extraMoney > 0) {
-                    equipmentMessage = `\n💰 Bonus equipamiento: +${this.formatNumber(extraMoney)} π-b$${equipmentMessage}`;
-                }
-            }
-        }
-
         // Aplicar multiplicadores de items
         let itemMessage = '';
         if (this.shop) {
@@ -1701,7 +1687,7 @@ class EconomySystem {
             }
         }
 
-        const allBonusMessages = [eventMessage, pickaxeMessage, equipmentMessage, itemMessage, vipMessage].filter(msg => msg !== '');
+        const allBonusMessages = [eventMessage, pickaxeMessage, itemMessage, vipMessage].filter(msg => msg !== '');
 
         // Drop raro del mapa del tesoro (~1%)
         let droppedMap = false;
@@ -1722,7 +1708,6 @@ class EconomySystem {
             currentStreak: this.workStreaks?.get(userId)?.streak || 0,
             eventMessage: eventMessage,
             pickaxeMessage: pickaxeMessage,
-            equipmentMessage: equipmentMessage,
             itemMessage: itemMessage,
             vipMessage: vipMessage,
             allBonusMessages: allBonusMessages,

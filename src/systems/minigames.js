@@ -792,14 +792,13 @@ class MinigamesSystem {
         return { canCoinPlay: true };
     }
 
-    formatGameBonuses(eventMessage, luckMessage, itemMessage, equipmentMessage, vipMessage, professionMessage, petMessage = '') {
+    formatGameBonuses(eventMessage, luckMessage, itemMessage, vipMessage, professionMessage, petMessage = '') {
         let bonuses = [];
         
         if (eventMessage) bonuses.push(eventMessage);
         if (luckMessage) bonuses.push(luckMessage);
         if (itemMessage) bonuses.push(itemMessage);
         if (vipMessage) bonuses.push(vipMessage);
-        if (equipmentMessage) bonuses.push(equipmentMessage);
         if (professionMessage) bonuses.push(professionMessage);
         if (petMessage) bonuses.push(petMessage);
         
@@ -974,29 +973,6 @@ class MinigamesSystem {
                 await this.shop.consumeItemUse(userId, 'games');
             }
 
-            const equipmentBonus = await this.shop.applyEquipmentBonus(userId);
-            let equipmentMessage = '';
-            
-            if (equipmentBonus.applied && equipmentBonus.money > 0) {
-                const extraMoney = Math.floor(finalEarnings * equipmentBonus.money);
-                finalEarnings += extraMoney;
-                
-                // Generar mensaje de equipamiento
-                for (const equip of equipmentBonus.items) {
-                    equipmentMessage += `\n${equip.wasBroken ? '💔' : '🛡️'} **${equip.name}**: `;
-                    
-                    if (equip.wasBroken) {
-                        equipmentMessage += `¡SE ROMPIÓ! (era ${equip.durabilityLost})`;
-                    } else {
-                        equipmentMessage += `${equip.durabilityLeft}/${equip.maxDurability} (-${equip.durabilityLost})`;
-                    }
-                }
-                
-                if (extraMoney > 0) {
-                    equipmentMessage = `💰 +${this.formatNumber(extraMoney)} π-b$ (equipamiento)${equipmentMessage}`;
-                }
-            }
-
             const userData = await this.economy.getUser(userId);
             const userLimit = this.economy.shop ? await this.economy.shop.getVipLimit(userId) : this.economy.config.maxBalance;
 
@@ -1100,7 +1076,7 @@ class MinigamesSystem {
             }
 
             // Combinar todos los mensajes
-            let allMessages = [eventMessage, luckMessage, itemMessage, equipmentBonus].filter(msg => msg !== '');
+            let allMessages = [eventMessage, luckMessage, itemMessage].filter(msg => msg !== '');
             let finalMessage = allMessages.length > 0 ? allMessages.join('\n') : 'No hay bonificaciones activas';
           
             embed.setDescription(`🎉 **¡GANASTE!**`)
@@ -1110,7 +1086,7 @@ class MinigamesSystem {
                     { name: '💰 Ganancia', value: `+${this.formatNumber(finalEarnings)} π-b$`, inline: true },
                     { name: '💸 Balance Antiguo', value: `${this.formatNumber(user.balance - finalEarnings)} π-b$`, inline: false },
                     { name: '💳 Balance Actual', value: `${this.formatNumber(user.balance)} π-b$`, inline: false },
-                    { name: '🎉 Bonificaciones', value: this.formatGameBonuses(eventMessage, luckMessage, itemMessage, equipmentMessage, '', professionMessage, petMessage), inline: false }
+                    { name: '🎉 Bonificaciones', value: this.formatGameBonuses(eventMessage, luckMessage, itemMessage, '', professionMessage, petMessage), inline: false }
                 );
 
             if (curseMoneyPenalty > 0) {
@@ -1499,29 +1475,6 @@ class MinigamesSystem {
                 await this.shop.consumeItemUse(userId, 'games');
             }
 
-            const equipmentBonus = await this.shop.applyEquipmentBonus(userId);
-            let equipmentMessage = '';
-            
-            if (equipmentBonus.applied && equipmentBonus.money > 0) {
-                const extraMoney = Math.floor(finalEarnings * equipmentBonus.money);
-                finalEarnings += extraMoney;
-                
-                // Generar mensaje de equipamiento
-                for (const equip of equipmentBonus.items) {
-                    equipmentMessage += `\n${equip.wasBroken ? '💔' : '🛡️'} **${equip.name}**: `;
-                    
-                    if (equip.wasBroken) {
-                        equipmentMessage += `¡SE ROMPIÓ! (era ${equip.durabilityLost})`;
-                    } else {
-                        equipmentMessage += `${equip.durabilityLeft}/${equip.maxDurability} (-${equip.durabilityLost})`;
-                    }
-                }
-                
-                if (extraMoney > 0) {
-                    equipmentMessage = `💰 +${this.formatNumber(extraMoney)} π-b$ (equipamiento)${equipmentMessage}`;
-                }
-            }
-
             const userData = await this.economy.getUser(userId);
             const userLimit = this.economy.shop ? await this.economy.shop.getVipLimit(userId) : this.economy.config.maxBalance;
 
@@ -1637,7 +1590,7 @@ class MinigamesSystem {
                     { name: '💰 Ganancia', value: `+${this.formatNumber(finalEarnings)} π-b$`, inline: false },
                     { name: '💸 Balance Antiguo', value: `${this.formatNumber(user.balance - finalEarnings)} π-b$`, inline: false },
                     { name: '💳 Balance Actual', value: `${this.formatNumber(user.balance)} π-b$`, inline: false },
-                    { name: '🎉 Bonificaciones', value: this.formatGameBonuses(eventMessage, luckMessage, itemMessage, equipmentMessage, '', professionMessage, petMessage), inline: false }
+                    { name: '🎉 Bonificaciones', value: this.formatGameBonuses(eventMessage, luckMessage, itemMessage, '', professionMessage, petMessage), inline: false }
                 );
 
             if (curseMoneyPenalty > 0) {
@@ -1997,29 +1950,6 @@ class MinigamesSystem {
                 await this.shop.consumeItemUse(userId, 'games');
             }
 
-            const equipmentBonus = await this.shop.applyEquipmentBonus(userId);
-            let equipmentMessage = '';
-            
-            if (equipmentBonus.applied && equipmentBonus.money > 0) {
-                const extraMoney = Math.floor(finalEarnings * equipmentBonus.money);
-                finalEarnings += extraMoney;
-                
-                // Generar mensaje de equipamiento
-                for (const equip of equipmentBonus.items) {
-                    equipmentMessage += `\n${equip.wasBroken ? '💔' : '🛡️'} **${equip.name}**: `;
-                    
-                    if (equip.wasBroken) {
-                        equipmentMessage += `¡SE ROMPIÓ! (era ${equip.durabilityLost})`;
-                    } else {
-                        equipmentMessage += `${equip.durabilityLeft}/${equip.maxDurability} (-${equip.durabilityLost})`;
-                    }
-                }
-                
-                if (extraMoney > 0) {
-                    equipmentMessage = `💰 +${this.formatNumber(extraMoney)} π-b$ (equipamiento)${equipmentMessage}`;
-                }
-            }
-
             const userData = await this.economy.getUser(userId);
             const userLimit = this.economy.shop ? await this.economy.shop.getVipLimit(userId) : this.economy.config.maxBalance;
 
@@ -2148,7 +2078,7 @@ class MinigamesSystem {
                     { name: '🤑 Ganancia Total', value: `+${this.formatNumber(finalEarnings)} π-b$`, inline: true },
                     { name: '💸 Balance Anterior', value: `${this.formatNumber(user.balance - finalEarnings)} π-b$`, inline: false },
                     { name: '💳 Balance Actual', value: `${this.formatNumber(user.balance)} π-b$ 🚀`, inline: false },
-                    { name: '🎉 Bonificaciones', value: this.formatGameBonuses(eventMessage, luckMessage, itemMessage, equipmentMessage, '', professionMessage, petMessage), inline: false }
+                    { name: '🎉 Bonificaciones', value: this.formatGameBonuses(eventMessage, luckMessage, itemMessage, '', professionMessage, petMessage), inline: false }
                 );
 
             if (curseMoneyPenalty > 0) {
@@ -2808,8 +2738,6 @@ const userId = gameState.userId;
 
         let addResult;
         let userData;
-        const equipmentBonus = await this.shop.applyEquipmentBonus(userId);
-        let equipmentMessage = '';        
         const activeEffects = this.shop.parseActiveEffects(user.activeEffects);
         let hasProtected = false;
         let protectionMessage = '';
@@ -2880,26 +2808,6 @@ const userId = gameState.userId;
                             .setDescription(`**${evo.name}** pasó de Forma ${evo.oldForm} a **Forma ${evo.newForm}**!`)
                             .setColor('#FFD700')]
                     }).catch(() => {});
-                }
-
-                if (equipmentBonus.applied && equipmentBonus.money > 0) {
-                    const extraMoney = Math.floor(finalEarnings * equipmentBonus.money);
-                    finalEarnings += extraMoney;
-                    
-                    // Generar mensaje de equipamiento
-                    for (const equip of equipmentBonus.items) {
-                        equipmentMessage += `\n${equip.wasBroken ? '💔' : '🛡️'} **${equip.name}**: `;
-                        
-                        if (equip.wasBroken) {
-                            equipmentMessage += `¡SE ROMPIÓ! (era ${equip.durabilityLost})`;
-                        } else {
-                            equipmentMessage += `${equip.durabilityLeft}/${equip.maxDurability} (-${equip.durabilityLost})`;
-                        }
-                    }
-                    
-                    if (extraMoney > 0) {
-                        equipmentMessage = `💰 +${this.formatNumber(extraMoney)} π-b$ (equipamiento)${equipmentMessage}`;
-                    }
                 }
 
                 await this.economy.database.incrementGameLimit(userId, gameType);
@@ -3008,26 +2916,6 @@ const userId = gameState.userId;
                             .setDescription(`**${evo.name}** pasó de Forma ${evo.oldForm} a **Forma ${evo.newForm}**!`)
                             .setColor('#FFD700')]
                     }).catch(() => {});
-                }
-
-                if (equipmentBonus.applied && equipmentBonus.money > 0) {
-                    const extraMoney = Math.floor(finalEarnings * equipmentBonus.money);
-                    finalEarnings += extraMoney;
-                    
-                    // Generar mensaje de equipamiento
-                    for (const equip of equipmentBonus.items) {
-                        equipmentMessage += `\n${equip.wasBroken ? '💔' : '🛡️'} **${equip.name}**: `;
-                        
-                        if (equip.wasBroken) {
-                            equipmentMessage += `¡SE ROMPIÓ! (era ${equip.durabilityLost})`;
-                        } else {
-                            equipmentMessage += `${equip.durabilityLeft}/${equip.maxDurability} (-${equip.durabilityLost})`;
-                        }
-                    }
-                    
-                    if (extraMoney > 0) {
-                        equipmentMessage = `💰 +${this.formatNumber(extraMoney)} π-b$ (equipamiento)${equipmentMessage}`;
-                    }
                 }
 
                 await this.economy.database.incrementGameLimit(userId, gameType);
@@ -3313,7 +3201,7 @@ const userId = gameState.userId;
             embed.addFields(
                 { name: '💰 Ganancia', value: `+${this.formatNumber(profit)} π-b$`, inline: true },
                 { name: '💳 Balance Actual', value: `${this.formatNumber(user.balance)} π-b$`, inline: true },
-                { name: '🎉 Bonificaciones', value: this.formatGameBonuses(eventMessage, '', itemMessage, equipmentMessage, '', professionMessage, petMessage), inline: false }
+                { name: '🎉 Bonificaciones', value: this.formatGameBonuses(eventMessage, '', itemMessage, '', professionMessage, petMessage), inline: false }
             );
         } else if (profit < 0) {
             embed.addFields(
@@ -3681,29 +3569,6 @@ const userId = gameState.userId;
                 await this.shop.consumeItemUse(userId, 'games');
             }
 
-            const equipmentBonus = await this.shop.applyEquipmentBonus(userId);
-            let equipmentMessage = '';
-            
-            if (equipmentBonus.applied && equipmentBonus.money > 0) {
-                const extraMoney = Math.floor(finalEarnings * equipmentBonus.money);
-                finalEarnings += extraMoney;
-                
-                // Generar mensaje de equipamiento
-                for (const equip of equipmentBonus.items) {
-                    equipmentMessage += `\n${equip.wasBroken ? '💔' : '🛡️'} **${equip.name}**: `;
-                    
-                    if (equip.wasBroken) {
-                        equipmentMessage += `¡SE ROMPIÓ! (era ${equip.durabilityLost})`;
-                    } else {
-                        equipmentMessage += `${equip.durabilityLeft}/${equip.maxDurability} (-${equip.durabilityLost})`;
-                    }
-                }
-                
-                if (extraMoney > 0) {
-                    equipmentMessage = `💰 +${this.formatNumber(extraMoney)} π-b$ (equipamiento)${equipmentMessage}`;
-                }
-            }
-
             const userData = await this.economy.getUser(userId);
             const userLimit = this.economy.shop ? await this.economy.shop.getVipLimit(userId) : this.economy.config.maxBalance;
 
@@ -3824,7 +3689,7 @@ const userId = gameState.userId;
                     { name: '🤑 Ganancia Total', value: `+${this.formatNumber(finalEarnings)} π-b$`, inline: true },
                     { name: '💸 Balance Anterior', value: `${this.formatNumber(user.balance - finalEarnings)} π-b$`, inline: false },
                     { name: '💳 Balance Actual', value: `${this.formatNumber(user.balance)} π-b$ 🚀`, inline: false },
-                    { name: '🎉 Bonificaciones', value: this.formatGameBonuses(eventMessage, luckMessage, itemMessage, equipmentMessage, '', professionMessage, petMessage), inline: false }
+                    { name: '🎉 Bonificaciones', value: this.formatGameBonuses(eventMessage, luckMessage, itemMessage, '', professionMessage, petMessage), inline: false }
                 );
     
             // Mensaje especial para números exactos
@@ -4459,30 +4324,7 @@ const userId = gameState.userId;
                 }
                 await this.shop.consumeItemUse(userId, 'games');
             }
-
-            const equipmentBonus = await this.shop.applyEquipmentBonus(userId);
-            let equipmentMessage = '';
-            
-            if (equipmentBonus.applied && equipmentBonus.money > 0) {
-                const extraMoney = Math.floor(finalEarnings * equipmentBonus.money);
-                finalEarnings += extraMoney;
-                
-                // Generar mensaje de equipamiento
-                for (const equip of equipmentBonus.items) {
-                    equipmentMessage += `\n${equip.wasBroken ? '💔' : '🛡️'} **${equip.name}**: `;
-                    
-                    if (equip.wasBroken) {
-                        equipmentMessage += `¡SE ROMPIÓ! (era ${equip.durabilityLost})`;
-                    } else {
-                        equipmentMessage += `${equip.durabilityLeft}/${equip.maxDurability} (-${equip.durabilityLost})`;
-                    }
-                }
-                
-                if (extraMoney > 0) {
-                    equipmentMessage = `💰 +${this.formatNumber(extraMoney)} π-b$ (equipamiento)${equipmentMessage}`;
-                }
-            }
-            
+           
             // LÍMITE DE BALANCE
             const userData = await this.economy.getUser(userId);
             const userLimit = this.economy.shop ? await this.economy.shop.getVipLimit(userId) : this.economy.config.maxBalance;
@@ -4588,7 +4430,7 @@ const userId = gameState.userId;
                 .addFields(
                     { name: '💰 Ganancia', value: `+${this.formatNumber(finalEarnings - betAmount)} π-b$`, inline: true },
                     { name: '💳 Balance Actual', value: `${this.formatNumber(userData.balance)} π-b$`, inline: true },
-                    { name: '🎉 Bonificaciones', value: this.formatGameBonuses(eventMessage, luckMessage, itemMessage, equipmentMessage, '', professionMessage, petMessage), inline: false }
+                    { name: '🎉 Bonificaciones', value: this.formatGameBonuses(eventMessage, luckMessage, itemMessage, '', professionMessage, petMessage), inline: false }
                 );
             
             if (curseMoneyPenalty > 0) {
@@ -9004,7 +8846,7 @@ const userId = gameState.userId;
         let finalEarnings = winnings;
         let eventMessage = '';
 
-        const eventBonus = await this.applyEventEffects(userId, winnings, 'minigames', message.guild?.id);
+        const eventBonus = await this.applyEventEffects(winnerId, winnings, 'minigames', message.guild?.id);
         finalEarnings = eventBonus.finalAmount; // sin let — usa la variable del scope exterior
         eventMessage = eventBonus.eventMessage; // asignar el mensaje
 
@@ -9779,28 +9621,6 @@ const userId = gameState.userId;
                 await this.shop.consumeItemUse(userId, 'games');
             }
 
-            const equipmentBonus = await this.shop.applyEquipmentBonus(userId);
-            let equipmentMessage = '';
-            
-            if (equipmentBonus.applied && equipmentBonus.money > 0) {
-                const extraMoney = Math.floor(finalEarnings * equipmentBonus.money);
-                finalEarnings += extraMoney;
-                
-                for (const equip of equipmentBonus.items) {
-                    equipmentMessage += `\n${equip.wasBroken ? '💔' : '🛡️'} **${equip.name}**: `;
-                    
-                    if (equip.wasBroken) {
-                        equipmentMessage += `¡SE ROMPIÓ! (era ${equip.durabilityLost})`;
-                    } else {
-                        equipmentMessage += `${equip.durabilityLeft}/${equip.maxDurability} (-${equip.durabilityLost})`;
-                    }
-                }
-                
-                if (extraMoney > 0) {
-                    equipmentMessage = `💰 +${this.formatNumber(extraMoney)} π-b$ (equipamiento)${equipmentMessage}`;
-                }
-            }
-
             const userData = await this.economy.getUser(userId);
             const userLimit = this.economy.shop ? await this.economy.shop.getVipLimit(userId) : this.economy.config.maxBalance;
 
@@ -9871,7 +9691,7 @@ const userId = gameState.userId;
                 .addFields(
                     { name: '💰 Ganancia', value: `+${this.formatNumber(finalEarnings)} π-b$`, inline: true },
                     { name: '💳 Balance Actual', value: `${this.formatNumber(userData.balance)} π-b$`, inline: true },
-                    { name: '🎉 Bonificaciones', value: this.formatGameBonuses(eventMessage, '', itemMessage, equipmentMessage, '', '', petMessage), inline: false }
+                    { name: '🎉 Bonificaciones', value: this.formatGameBonuses(eventMessage, '', itemMessage, '', '', petMessage), inline: false }
                 );
 
             if (curseMoneyPenalty > 0) {
@@ -12613,7 +12433,7 @@ await gameMessage.edit({ embeds: [questionEmbed], components });
                         await message.reply('❌ No estás en ninguna partida activa');
                     }
                     break;
-                case 'uleave':
+                case '>uleave':
                     await this.handleLeaveUno(message, args);
                     break;
                 case '>ucancel':
@@ -12641,12 +12461,12 @@ await gameMessage.edit({ embeds: [questionEmbed], components });
                         await message.reply('❌ No estás en ninguna partida de UNO activa');
                     }
                     break;
-                case 'uvariant':
+                case '>uvariant':
                     if (game) await this.minigames.handleUnoVariant(message, args, game);
                     else await message.reply('❌ No hay partida activa');
                     break;
 
-                case 'ujumpin':
+                case '>ujumpin':
                     if (game) await this.minigames.handleJumpIn(message, args, game);
                     break;
                 case '>potcontribute':

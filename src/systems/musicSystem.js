@@ -34,18 +34,18 @@ class MusicSystem {
                 auth: 'https://dsc.gg/ajidevserver',
                 secure: false
             },
-            {
+/*            {
                 name: 'TriniumHost',
                 url: 'lavalink.triniumhost.com:4333',
                 auth: 'free',
                 secure: false
             },
-            {
+/*            {
                 name: 'Kasawa',
                 url: 'lava.kasawa.pro:2333',
                 auth: 'youshallnotpass',
                 secure: false
-            },
+            },*/
             {
                 name: 'Serenetia',
                 url: 'lavalinkv4.serenetia.com:80',
