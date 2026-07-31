@@ -12,7 +12,9 @@ export default function Leaderboard() {
     setCargando(true);
     setError(null);
 
-    fetch(`${API_URL}?type=${tipo}`)
+    fetch(`${API_URL}?type=${tipo}`, {
+      headers: { 'ngrok-skip-browser-warning': 'true' }
+    })
       .then((res) => {
         if (!res.ok) throw new Error("Respuesta no válida del servidor");
         return res.json();

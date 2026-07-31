@@ -5,7 +5,7 @@ const rateLimit = require('express-rate-limit');
 const ORIGENES_PERMITIDOS = [
   'http://localhost:5173',
   'http://localhost:4173',
-  'https://chasetodie.github.io/Pibot/', // <-- descomenta y completa cuando publiques
+  'https://chasetodie.github.io',
 ];
 
 // ── Caché simple en memoria ──
@@ -129,8 +129,20 @@ function iniciarApiServer(client, economy, port) {
     }
   });
 
-  app.listen(port, () => {
+  app.listen(port, async () => {
     console.log(`🌐 API de Pibot corriendo en el puerto ${port} (caché + rate limit activos)`);
+
+    try {
+      const ngrok = require('@ngrok/ngrok');
+      const listener = await ngrok.connect({
+        addr: port,
+        authtoken: process.env.NGROK_AUTHTOKEN,
+        domain: process.env.NGROK_DOMAIN, // ej: algo-random-123.ngrok-free.app
+      });
+      console.log(`🔒 Túnel HTTPS activo en: ${listener.url()}`);
+    } catch (err) {
+      console.error('❌ No se pudo iniciar el túnel de ngrok:', err.message);
+    }
   });
 }
 

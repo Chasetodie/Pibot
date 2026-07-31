@@ -4,7 +4,9 @@ export default function Hero() {
   const [stats, setStats] = useState(null);
 
   useEffect(() => {
-    fetch(`${import.meta.env.VITE_API_BASE_URL}/api/stats`)
+      fetch(`${import.meta.env.VITE_API_BASE_URL}/api/stats`, {
+        headers: { 'ngrok-skip-browser-warning': 'true' }
+      })
       .then((res) => res.json())
       .then(setStats)
       .catch(() => setStats(null)); // si falla, simplemente no se muestra la franja

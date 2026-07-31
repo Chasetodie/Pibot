@@ -10,6 +10,7 @@
     "node": "20.x"
   },
   "dependencies": {
+    "@ngrok/ngrok": "^1.7.0",
     "@supabase/supabase-js": "^2.55.0",
     "axios": "^1.13.4",
     "cheerio": "^1.2.0",
