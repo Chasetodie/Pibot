@@ -6,7 +6,7 @@ export default function Features() {
       numero: "I",
       Icono: Compass,
       titulo: "Un Mundo Entero",
-      descripcion: "Economía, mazmorras, mascotas, matrimonio y crafteo — no es un bot con un truco, es un ecosistema completo."
+      descripcion: "Economía, mazmorras, mascotas, matrimonio y crafteo. No soy un bot con un truco, soy un ecosistema completo."
     },
     {
       numero: "II",
@@ -24,7 +24,7 @@ export default function Features() {
       numero: "IV",
       Icono: MessageCircle,
       titulo: "Habla de Verdad",
-      descripcion: "Pibot no solo ejecuta comandos — puedes conversar con su IA como con alguien más del server."
+      descripcion: "No solo ejecuto comandos, puedes conversar conmigo como si fuera un miembro más del server."
     }
   ];
 
@@ -32,10 +32,10 @@ export default function Features() {
     <section id="caracteristicas" className="py-20 px-6 max-w-6xl mx-auto">
       <div className="text-center mb-16">
         <h2 className="text-3xl md:text-5xl font-display font-black text-white mb-4">
-          ¿Por qué elegir nuestro bot?
+          ¿Por qué quisieras elegirme como tu bot?
         </h2>
         <p className="text-pibot-text-muted text-lg max-w-xl mx-auto">
-          4 razones principales por las que las comunidades prefieren usar nuestra herramienta.
+          4 razones principales por las que las comunidades prefieren usar mis herramientas.
         </p>
       </div>
 

@@ -15,8 +15,8 @@ export default function Navbar() {
       <div className="hidden md:flex items-center gap-8 text-slate-300 font-medium">
         <a href="#inicio" className="hover:text-pibot-pink transition-colors">Inicio</a>
         <a href="#caracteristicas" className="hover:text-pibot-pink transition-colors">Características</a>
+        <a href="#leaderboard" className="hover:text-pibot-pink transition-colors">Ranking</a>
         <a href="#comandos" className="hover:text-pibot-pink transition-colors">Comandos</a>
-        <a href="#soporte" className="hover:text-pibot-pink transition-colors">Soporte</a>
       </div>
 
       {/* Botón rápido */}

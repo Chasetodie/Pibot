@@ -43,7 +43,7 @@ export default function Commands() {
           Comandos
         </h2>
         <p className="text-pibot-text-muted text-lg max-w-xl mx-auto">
-          Todo lo que Pibot puede hacer por tu servidor, en un solo lugar.
+          Todo lo que puedo hacer por tu servidor, en un solo lugar.
         </p>
       </div>
 

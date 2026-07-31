@@ -16,16 +16,19 @@ export default function Hero() {
     <section id="inicio" className="relative isolate overflow-hidden pt-20 pb-16 px-6 text-center max-w-5xl mx-auto">
       {/* Banner de fondo (la ilustración de Pibot, muy tenue, con desvanecido radial) */}
       <div
-        className="absolute inset-0 bg-cover bg-[left_9000%] -z-20"
+        className="absolute inset-0 bg-cover bg-[left_200%] -z-20"
         style={{
           backgroundImage: `url('${import.meta.env.BASE_URL}pibot-banner.png')`,
           opacity: 0.22,
           maskImage: 'radial-gradient(ellipse 65% 55% at 50% 28%, black 35%, transparent 90%)',
           WebkitMaskImage: 'radial-gradient(ellipse 65% 55% at 50% 28%, black 35%, transparent 90%)',
-        }}
+        }} 
       />
       {/* Luz de fondo acorde a la estética */}
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-pibot-pink-dark/20 rounded-full blur-3xl -z-10" />
+
+      {/* Cortina oscura para que el texto se lea sin importar el banner */}
+      <div className="absolute inset-x-0 top-[180px] md:top-[220px] h-[320px] md:h-[380px] mx-auto max-w-2xl bg-pibot-bg/55 blur-2xl -z-[5]" />
 
       {/* Avatar del Bot */}
       <div className="relative inline-block mb-8">
@@ -38,9 +41,12 @@ export default function Hero() {
       {/* Presentación & Descripción Corta */}
       <h1 className="text-4xl md:text-6xl font-display font-normal text-white tracking-wide leading-tight mb-6">
       La energía que tu servidor{" "}
-      <span className="bg-gradient-to-r from-pibot-pink to-pibot-red bg-clip-text text-transparent">
-          no sabía que necesitaba
-      </span>
+        <span className="relative inline-block">
+          <span className="bg-gradient-to-r from-pibot-pink to-pibot-red bg-clip-text text-transparent drop-shadow-[0_3px_10px_rgba(0,0,0,0.9)]">
+            no sabía que necesitaba
+          </span>
+          <span className="absolute -bottom-1 left-0 right-0 h-px bg-gradient-to-r from-transparent via-pibot-gold/70 to-transparent" />
+        </span>
       </h1>
 
       <p className="text-pibot-text-muted text-lg md:text-xl max-w-2xl mx-auto mb-10 leading-relaxed">
@@ -55,7 +61,7 @@ export default function Hero() {
           rel="noreferrer"
           className="w-full sm:w-auto bg-pibot-pink-dark hover:bg-pibot-pink text-white font-bold text-lg px-8 py-4 rounded-xl transition-all shadow-xl shadow-pibot-pink-dark/30 hover:scale-105 active:scale-95 flex items-center justify-center gap-2"
         >
-          <span></span> Añadir a Discord
+          <span></span> Agrégame a tu Server
         </a>
         <a
           href="https://discord.com/users/488110147265232898"

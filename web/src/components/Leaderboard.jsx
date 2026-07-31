@@ -44,7 +44,7 @@ export default function Leaderboard() {
           Ranking Global
         </h2>
         <p className="text-pibot-text-muted text-lg max-w-xl mx-auto">
-          Los usuarios más destacados de Pibot, en tiempo real.
+          Los usuarios más destacados, en tiempo real.
         </p>
       </div>
 
