@@ -16,7 +16,7 @@ export default function Hero() {
       <div
         className="absolute inset-0 bg-cover bg-center -z-20"
         style={{
-          backgroundImage: "url('/pibot-banner.png')",
+          backgroundImage: `url('${import.meta.env.BASE_URL}pibot-banner.png')`,
           opacity: 0.22,
           maskImage: 'radial-gradient(ellipse 65% 55% at 50% 28%, black 35%, transparent 85%)',
           WebkitMaskImage: 'radial-gradient(ellipse 65% 55% at 50% 28%, black 35%, transparent 85%)',
@@ -28,7 +28,7 @@ export default function Hero() {
       {/* Avatar del Bot */}
       <div className="relative inline-block mb-8">
         <div className="w-32 h-32 md:w-40 md:h-40 rounded-full bg-gradient-to-tr from-pibot-gold via-pibot-pink to-pibot-red p-[3px] shadow-2xl shadow-black/60">
-        <img src="/pibot-avatar.png" alt="Pibot" className="w-full h-full rounded-full object-cover" />
+        <img src={`${import.meta.env.BASE_URL}pibot-avatar.png`} alt="Pibot" className="w-full h-full rounded-full object-cover" />
         </div>
         <span className="absolute bottom-2 right-2 bg-emerald-500 w-6 h-6 rounded-full border-4 border-slate-950" title="Bot Online"></span>
       </div>

@@ -98,7 +98,7 @@ export default function Leaderboard() {
               </span>
 
               <img
-                src={j.avatarUrl || "/pibot-avatar.png"}
+                src={j.avatarUrl || `${import.meta.env.BASE_URL}pibot-avatar.png`}
                 alt={j.username}
                 className="w-10 h-10 rounded-full border border-pibot-panel-hover object-cover shrink-0"
               />

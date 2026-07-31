@@ -4,7 +4,7 @@ export default function Navbar() {
       {/* Logo / Nombre del Bot */}
       <div className="flex items-center gap-3">
         <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-pibot-pink shadow-lg shadow-pibot-pink-dark/30">
-        <img src="/pibot-avatar.png" alt="Pibot" className="w-full h-full object-cover" />
+        <img src={`${import.meta.env.BASE_URL}pibot-avatar.png`} alt="Pibot" className="w-full h-full object-cover" />
         </div>
         <span className="text-xl font-display font-bold text-white tracking-wide">
         Pibot
