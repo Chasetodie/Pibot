@@ -1093,6 +1093,8 @@ client.once('ready', async () => {
     
     // Establecer guilds y arrancar eventos automáticos
     const guildsArray = [...client.guilds.cache.values()];
+    console.log('📋 Servidores actuales:');
+    guildsArray.forEach(g => console.log(`- ${g.name} (${g.id})`));
     if (guildsArray.length > 0) {
         events.setGuild(guildsArray[0]);
     }
