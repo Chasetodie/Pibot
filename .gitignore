@@ -1,6 +1,7 @@
 # Credenciales
 .env
 .env.testing
+.env.development
 
 # Archivos del sistema
 node_modules/

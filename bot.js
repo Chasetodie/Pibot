@@ -1061,7 +1061,7 @@ client.once('ready', async () => {
     await auctions.loadActiveAuctions(client);
     await chatbot.initChatTables();
     console.log('🤖 Sistema de ChatBot inicializado');
-    iniciarApiServer(client, economy, 20329);
+    iniciarApiServer(client, economy, guildConfig, 20329);
 
     client.user.setPresence({
         activities: [{
@@ -1094,7 +1094,9 @@ client.once('ready', async () => {
     // Establecer guilds y arrancar eventos automáticos
     const guildsArray = [...client.guilds.cache.values()];
     console.log('📋 Servidores actuales:');
-    guildsArray.forEach(g => console.log(`- ${g.name} (${g.id})`));
+    guildsArray.forEach(g => {
+        console.log(`- ${g.name} (${g.id}) | miembros: ${g.memberCount} | dueño: ${g.ownerId} | bot unido: ${g.joinedAt}`);
+    });
     if (guildsArray.length > 0) {
         events.setGuild(guildsArray[0]);
     }

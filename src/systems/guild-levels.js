@@ -147,7 +147,7 @@ class GuildLevels {
             case '>servtoplevel':
                 await this.handleTop(message);
                 break;
-            case '>enablelevels':
+/*            case '>enablelevels':
                 await this.handleToggle(message, true);
                 break;
             case '>disablelevels':
@@ -155,7 +155,7 @@ class GuildLevels {
                 break;
             case '>ssetlevelchannel':
                 await this.handleSetChannel(message);
-                break;
+                break;*/
         }
     }
 

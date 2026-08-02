@@ -74,7 +74,19 @@ export default function Leaderboard() {
 
       {/* Estados de carga / error */}
       {cargando && (
-        <p className="text-center text-pibot-text-muted py-10">Cargando ranking...</p>
+        <div className="flex flex-col gap-3">
+          {[1, 2, 3, 4, 5].map(i => (
+            <div
+              key={i}
+              className="flex items-center gap-4 bg-pibot-panel/60 border border-pibot-panel-hover rounded-xl px-4 py-3"
+            >
+              <div className="w-8 h-5 bg-pibot-panel-hover rounded animate-pulse shrink-0" />
+              <div className="w-10 h-10 rounded-full bg-pibot-panel-hover animate-pulse shrink-0" />
+              <div className="flex-1 h-4 bg-pibot-panel-hover rounded animate-pulse" />
+              <div className="w-20 h-4 bg-pibot-panel-hover rounded animate-pulse shrink-0" />
+            </div>
+          ))}
+        </div>
       )}
 
       {!cargando && error && (

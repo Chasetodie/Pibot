@@ -15,6 +15,52 @@
   --font-accent: 'Cormorant Garamond', serif;
   --font-body: 'Manrope', sans-serif;
   --font-mono: 'JetBrains Mono', monospace;
+  --gradient-radial: radial-gradient(circle, var(--tw-gradient-stops));
+}
+
+@keyframes deslizar-arriba {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes flotar-humo {
+  0%, 100% {
+    transform: translate(0, 0) scale(1);
+  }
+  50% {
+    transform: translate(3%, -2%) scale(1.05);
+  }
+}
+
+@keyframes flotar-fondo {
+  0%, 100% {
+    transform: scale(1.25) translate(0, 0);
+  }
+  50% {
+    transform: scale(1.3) translate(-1.5%, 1%);
+  }
+}
+
+.fondo-animado {
+  animation: flotar-fondo 30s ease-in-out infinite;
+}
+
+.capa-humo {
+  animation: flotar-humo 18s ease-in-out infinite;
+}
+
+.capa-humo-lenta {
+  animation: flotar-humo 24s ease-in-out infinite reverse;
+}
+
+.animar-entrada {
+  animation: deslizar-arriba 0.3s ease-out;
 }
 
 body {

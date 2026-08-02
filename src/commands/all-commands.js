@@ -2854,24 +2854,25 @@ if (cosmeticRole?.name) {
 
         const embed = new EmbedBuilder()
             .setTitle('⚙️ Configuración actual del servidor')
-            .setColor('#00BFFF');
+            .setColor('#00BFFF')
+            .setThumbnail(message.guild.iconURL({ dynamic: true }))
+            .setDescription('**[🖥️ Configura todo desde el Dashboard Web →](https://chasetodie.github.io/Pibot/dashboard)**')
+            .setFooter({ text: `${message.guild.name} • Usa >dashboard para más info`, iconURL: message.guild.iconURL({ dynamic: true }) })
+            .setTimestamp();
 
         if (Object.keys(config).length === 0) {
-            embed.setDescription('No hay nada configurado aún. Usa `>setchannel help` para ver cómo hacerlo.');
+            embed.addFields({ name: '📋 Estado', value: 'Nada configurado aún. Usa el Dashboard Web para empezar.' });
         } else {
-            // Claves que son canales
             const channelKeys = ['levelup_channel', 'events_channel', 'welcome_channel'];
-            // Claves que son roles  
             const roleKeys = ['events_role'];
-            // Claves internas que NO mostrar
             const hiddenKeys = ['events_globally_enabled', 'guild_levels_enabled', 'guild_levelup_channel'];
 
-            const visibleConfig = Object.entries(config).filter(([k]) => 
-                !k.startsWith('event_disabled_') && !hiddenKeys.includes(k)
+            const visibleConfig = Object.entries(config).filter(([k, v]) => 
+                v && !k.startsWith('event_disabled_') && !hiddenKeys.includes(k)
             );
 
             if (visibleConfig.length === 0) {
-                embed.setDescription('No hay nada configurado aún. Usa `>setconfig help` para ver cómo hacerlo.');
+                embed.addFields({ name: '📋 Estado', value: 'Nada configurado aún. Usa el Dashboard Web para empezar.' });
             } else {
                 embed.addFields(visibleConfig.map(([k, v]) => ({
                     name: labels[k] || k,
@@ -2880,11 +2881,10 @@ if (cosmeticRole?.name) {
                 })));
             }
 
-            // Agregar estado de eventos al final
             const globallyEnabled = await this.guildConfig.areEventsEnabled(message.guild.id);
             embed.addFields({
                 name: '🎉 Eventos',
-                value: globallyEnabled ? '🟢 Habilitados (`>toggleevents` para cambiar)' : '🔴 Deshabilitados (`>toggleevents` para activar)',
+                value: globallyEnabled ? '🟢 Habilitados' : '🔴 Deshabilitados',
                 inline: false
             });
 
@@ -2893,8 +2893,8 @@ if (cosmeticRole?.name) {
             embed.addFields({
                 name: '📊 Niveles del Servidor',
                 value: [
-                    levelsEnabled ? '🟢 Activos (`>disablelevels` para desactivar)' : '🔴 Inactivos (`>enablelevels` para activar)',
-                    levelChannel ? `📣 Canal de anuncios: <#${levelChannel}>` : '📣 Sin canal configurado (`>ssetlevelchannel #canal`)'
+                    levelsEnabled ? '🟢 Activos' : '🔴 Inactivos',
+                    levelChannel ? `📣 Canal: <#${levelChannel}>` : '📣 Sin canal configurado'
                 ].join('\n'),
                 inline: false
             });
@@ -2983,13 +2983,13 @@ const commandName = command.replace('>', '');
 
         try {
             switch (command) {        
-                case '>setchannel':
+/*                case '>setchannel':
                     await this.handleSetConfig(message, args);
-                    break;
+                    break;*/
                 case '>svconfig':
                     await this.handleShowConfig(message);
                     break;
-                case '>seteventsrole':
+/*                case '>seteventsrole':
                     await this.handleSetEventsRole(message, args);
                     break;
                 case '>toggleevent':
@@ -2997,7 +2997,7 @@ const commandName = command.replace('>', '');
                     break;
                 case '>toggleevents':
                     await this.handleToggleAllEvents(message);
-                    break;
+                    break;*/
                 case '>balance':
                 case '>bal':
                 case '>money':

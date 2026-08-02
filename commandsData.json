@@ -4,59 +4,11 @@
     "nombre": "svconfig",
     "categoria": "Administración",
     "sintaxis": ">svconfig",
-    "descripcion": "Ver configuración actual del servidor",
+    "descripcion": "Ver configuración actual del servidor y acceder al Dashboard Web",
     "permisos": "Gestionar servidor"
   },
   {
     "id": "cmd-002",
-    "nombre": "setchannel",
-    "categoria": "Administración",
-    "sintaxis": ">setchannel <clave> #canal",
-    "descripcion": "Configurar un canal (levelup_channel, events_channel, guild_levelup_channel)",
-    "permisos": "Gestionar servidor"
-  },
-  {
-    "id": "cmd-003",
-    "nombre": "enablelevels",
-    "categoria": "Administración",
-    "sintaxis": ">enablelevels",
-    "descripcion": "Activar sistema de niveles",
-    "permisos": "Gestionar servidor"
-  },
-  {
-    "id": "cmd-004",
-    "nombre": "disablelevels",
-    "categoria": "Administración",
-    "sintaxis": ">disablelevels",
-    "descripcion": "Desactivar sistema de niveles",
-    "permisos": "Gestionar servidor"
-  },
-  {
-    "id": "cmd-005",
-    "nombre": "toggleevents",
-    "categoria": "Administración",
-    "sintaxis": ">toggleevents",
-    "descripcion": "Activar/desactivar todos los eventos",
-    "permisos": "Gestionar servidor"
-  },
-  {
-    "id": "cmd-006",
-    "nombre": "toggleevent",
-    "categoria": "Administración",
-    "sintaxis": ">toggleevent [tipo]",
-    "descripcion": "Activar/desactivar un tipo específico",
-    "permisos": "Gestionar servidor"
-  },
-  {
-    "id": "cmd-007",
-    "nombre": "seteventsrole",
-    "categoria": "Administración",
-    "sintaxis": ">seteventsrole @rol",
-    "descripcion": "Rol para pings de eventos",
-    "permisos": "Gestionar servidor"
-  },
-  {
-    "id": "cmd-008",
     "nombre": "createevent",
     "categoria": "Administración",
     "sintaxis": ">createevent <tipo> [min]",
@@ -64,7 +16,7 @@
     "permisos": "Gestionar servidor"
   },
   {
-    "id": "cmd-009",
+    "id": "cmd-003",
     "nombre": "eventstats",
     "categoria": "Administración",
     "sintaxis": ">eventstats",
@@ -72,7 +24,7 @@
     "permisos": "Gestionar servidor"
   },
   {
-    "id": "cmd-010",
+    "id": "cmd-004",
     "nombre": "clear",
     "categoria": "Administración",
     "sintaxis": ">clear [cantidad]",
@@ -80,7 +32,7 @@
     "permisos": "Gestionar servidor"
   },
   {
-    "id": "cmd-011",
+    "id": "cmd-005",
     "nombre": "huerto",
     "categoria": "Mundo",
     "sintaxis": ">huerto",
@@ -88,7 +40,7 @@
     "permisos": "Ninguno"
   },
   {
-    "id": "cmd-012",
+    "id": "cmd-006",
     "nombre": "huerto",
     "categoria": "Mundo",
     "sintaxis": ">huerto plantar <slot> <semilla>",
@@ -96,7 +48,7 @@
     "permisos": "Ninguno"
   },
   {
-    "id": "cmd-013",
+    "id": "cmd-007",
     "nombre": "huerto",
     "categoria": "Mundo",
     "sintaxis": ">huerto cosechar <slot/todo>",
@@ -104,7 +56,7 @@
     "permisos": "Ninguno"
   },
   {
-    "id": "cmd-014",
+    "id": "cmd-008",
     "nombre": "huerto",
     "categoria": "Mundo",
     "sintaxis": ">huerto fumigar <slot>",
@@ -112,7 +64,7 @@
     "permisos": "Ninguno"
   },
   {
-    "id": "cmd-015",
+    "id": "cmd-009",
     "nombre": "huerto",
     "categoria": "Mundo",
     "sintaxis": ">huerto help",
@@ -120,7 +72,7 @@
     "permisos": "Ninguno"
   },
   {
-    "id": "cmd-016",
+    "id": "cmd-010",
     "nombre": "mascota",
     "categoria": "Mundo",
     "sintaxis": ">mascota",
@@ -128,7 +80,7 @@
     "permisos": "Ninguno"
   },
   {
-    "id": "cmd-017",
+    "id": "cmd-011",
     "nombre": "mascota",
     "categoria": "Mundo",
     "sintaxis": ">mascota incubar",
@@ -136,7 +88,7 @@
     "permisos": "Ninguno"
   },
   {
-    "id": "cmd-018",
+    "id": "cmd-012",
     "nombre": "mascota",
     "categoria": "Mundo",
     "sintaxis": ">mascota equipar <id>",
@@ -144,7 +96,7 @@
     "permisos": "Ninguno"
   },
   {
-    "id": "cmd-019",
+    "id": "cmd-013",
     "nombre": "mascota",
     "categoria": "Mundo",
     "sintaxis": ">mascota desequipar",
@@ -152,7 +104,7 @@
     "permisos": "Ninguno"
   },
   {
-    "id": "cmd-020",
+    "id": "cmd-014",
     "nombre": "mascota",
     "categoria": "Mundo",
     "sintaxis": ">mascota expedicion <id> <tipo>",
@@ -160,7 +112,7 @@
     "permisos": "Ninguno"
   },
   {
-    "id": "cmd-021",
+    "id": "cmd-015",
     "nombre": "mascota",
     "categoria": "Mundo",
     "sintaxis": ">mascota reclamar <id>",
@@ -168,7 +120,7 @@
     "permisos": "Ninguno"
   },
   {
-    "id": "cmd-022",
+    "id": "cmd-016",
     "nombre": "mascota",
     "categoria": "Mundo",
     "sintaxis": ">mascota curar <id> <medicina>",
@@ -176,7 +128,7 @@
     "permisos": "Ninguno"
   },
   {
-    "id": "cmd-023",
+    "id": "cmd-017",
     "nombre": "mascota",
     "categoria": "Mundo",
     "sintaxis": ">mascota liberar <id>",
@@ -184,7 +136,7 @@
     "permisos": "Ninguno"
   },
   {
-    "id": "cmd-024",
+    "id": "cmd-018",
     "nombre": "mascota",
     "categoria": "Mundo",
     "sintaxis": ">mascota renombrar <id> <nombre>",
@@ -192,7 +144,7 @@
     "permisos": "Ninguno"
   },
   {
-    "id": "cmd-025",
+    "id": "cmd-019",
     "nombre": "mascota",
     "categoria": "Mundo",
     "sintaxis": ">mascota help",
@@ -200,7 +152,7 @@
     "permisos": "Ninguno"
   },
   {
-    "id": "cmd-026",
+    "id": "cmd-020",
     "nombre": "buy",
     "categoria": "Mundo",
     "sintaxis": ">buy common_seed",
@@ -208,7 +160,7 @@
     "permisos": "Ninguno"
   },
   {
-    "id": "cmd-027",
+    "id": "cmd-021",
     "nombre": "buy",
     "categoria": "Mundo",
     "sintaxis": ">buy pet_egg",
@@ -216,7 +168,7 @@
     "permisos": "Ninguno"
   },
   {
-    "id": "cmd-028",
+    "id": "cmd-022",
     "nombre": "buy",
     "categoria": "Mundo",
     "sintaxis": ">buy pet_slot_extra",
@@ -224,7 +176,7 @@
     "permisos": "Ninguno"
   },
   {
-    "id": "cmd-029",
+    "id": "cmd-023",
     "nombre": "casar",
     "categoria": "Social",
     "sintaxis": ">casar @usuario",
@@ -232,7 +184,7 @@
     "permisos": "Ninguno"
   },
   {
-    "id": "cmd-030",
+    "id": "cmd-024",
     "nombre": "pareja",
     "categoria": "Social",
     "sintaxis": ">pareja",
@@ -240,7 +192,7 @@
     "permisos": "Ninguno"
   },
   {
-    "id": "cmd-031",
+    "id": "cmd-025",
     "nombre": "divorcio",
     "categoria": "Social",
     "sintaxis": ">divorcio",
@@ -248,7 +200,7 @@
     "permisos": "Ninguno"
   },
   {
-    "id": "cmd-032",
+    "id": "cmd-026",
     "nombre": "mentor",
     "categoria": "Social",
     "sintaxis": ">mentor",
@@ -256,7 +208,7 @@
     "permisos": "Ninguno"
   },
   {
-    "id": "cmd-033",
+    "id": "cmd-027",
     "nombre": "mentor",
     "categoria": "Social",
     "sintaxis": ">mentor @usuario",
@@ -264,7 +216,7 @@
     "permisos": "Ninguno"
   },
   {
-    "id": "cmd-034",
+    "id": "cmd-028",
     "nombre": "pedir",
     "categoria": "Social",
     "sintaxis": ">pedir",
@@ -272,7 +224,7 @@
     "permisos": "Ninguno"
   },
   {
-    "id": "cmd-035",
+    "id": "cmd-029",
     "nombre": "curar",
     "categoria": "Social",
     "sintaxis": ">curar @usuario",
@@ -280,7 +232,7 @@
     "permisos": "Ninguno"
   },
   {
-    "id": "cmd-036",
+    "id": "cmd-030",
     "nombre": "changelog",
     "categoria": "Social",
     "sintaxis": ">changelog",
@@ -288,7 +240,7 @@
     "permisos": "Ninguno"
   },
   {
-    "id": "cmd-037",
+    "id": "cmd-031",
     "nombre": "balance",
     "categoria": "Economía",
     "sintaxis": ">balance",
@@ -296,7 +248,7 @@
     "permisos": "Ninguno"
   },
   {
-    "id": "cmd-038",
+    "id": "cmd-032",
     "nombre": "daily",
     "categoria": "Economía",
     "sintaxis": ">daily",
@@ -304,7 +256,7 @@
     "permisos": "Ninguno"
   },
   {
-    "id": "cmd-039",
+    "id": "cmd-033",
     "nombre": "pay",
     "categoria": "Economía",
     "sintaxis": ">pay @user <cantidad>",
@@ -312,7 +264,7 @@
     "permisos": "Ninguno"
   },
   {
-    "id": "cmd-040",
+    "id": "cmd-034",
     "nombre": "work",
     "categoria": "Economía",
     "sintaxis": ">work [tipo]",
@@ -320,7 +272,7 @@
     "permisos": "Ninguno"
   },
   {
-    "id": "cmd-041",
+    "id": "cmd-035",
     "nombre": "robar",
     "categoria": "Economía",
     "sintaxis": ">robar @user",
@@ -328,7 +280,7 @@
     "permisos": "Ninguno"
   },
   {
-    "id": "cmd-042",
+    "id": "cmd-036",
     "nombre": "profesion",
     "categoria": "Economía",
     "sintaxis": ">profesion",
@@ -336,7 +288,7 @@
     "permisos": "Ninguno"
   },
   {
-    "id": "cmd-043",
+    "id": "cmd-037",
     "nombre": "pacto",
     "categoria": "Economía",
     "sintaxis": ">pacto",
@@ -344,7 +296,7 @@
     "permisos": "Ninguno"
   },
   {
-    "id": "cmd-044",
+    "id": "cmd-038",
     "nombre": "mapa",
     "categoria": "Economía",
     "sintaxis": ">mapa",
@@ -352,7 +304,7 @@
     "permisos": "Ninguno"
   },
   {
-    "id": "cmd-045",
+    "id": "cmd-039",
     "nombre": "biblioteca",
     "categoria": "Economía",
     "sintaxis": ">biblioteca",
@@ -360,7 +312,7 @@
     "permisos": "Ninguno"
   },
   {
-    "id": "cmd-046",
+    "id": "cmd-040",
     "nombre": "top",
     "categoria": "Economía",
     "sintaxis": ">top",
@@ -368,7 +320,7 @@
     "permisos": "Ninguno"
   },
   {
-    "id": "cmd-047",
+    "id": "cmd-041",
     "nombre": "top",
     "categoria": "Economía",
     "sintaxis": ">top level",
@@ -376,7 +328,7 @@
     "permisos": "Ninguno"
   },
   {
-    "id": "cmd-048",
+    "id": "cmd-042",
     "nombre": "top",
     "categoria": "Economía",
     "sintaxis": ">top global",
@@ -384,7 +336,7 @@
     "permisos": "Ninguno"
   },
   {
-    "id": "cmd-049",
+    "id": "cmd-043",
     "nombre": "shop",
     "categoria": "Tienda",
     "sintaxis": ">shop",
@@ -392,7 +344,7 @@
     "permisos": "Ninguno"
   },
   {
-    "id": "cmd-050",
+    "id": "cmd-044",
     "nombre": "shop",
     "categoria": "Tienda",
     "sintaxis": ">shop <categoría>",
@@ -400,7 +352,7 @@
     "permisos": "Ninguno"
   },
   {
-    "id": "cmd-051",
+    "id": "cmd-045",
     "nombre": "buy",
     "categoria": "Tienda",
     "sintaxis": ">buy <item_id> [cantidad]",
@@ -408,7 +360,7 @@
     "permisos": "Ninguno"
   },
   {
-    "id": "cmd-052",
+    "id": "cmd-046",
     "nombre": "bag",
     "categoria": "Tienda",
     "sintaxis": ">bag",
@@ -416,7 +368,7 @@
     "permisos": "Ninguno"
   },
   {
-    "id": "cmd-053",
+    "id": "cmd-047",
     "nombre": "useitem",
     "categoria": "Tienda",
     "sintaxis": ">useitem <item_id>",
@@ -424,7 +376,7 @@
     "permisos": "Ninguno"
   },
   {
-    "id": "cmd-054",
+    "id": "cmd-048",
     "nombre": "effects",
     "categoria": "Tienda",
     "sintaxis": ">effects",
@@ -432,7 +384,7 @@
     "permisos": "Ninguno"
   },
   {
-    "id": "cmd-055",
+    "id": "cmd-049",
     "nombre": "cosmeticos",
     "categoria": "Tienda",
     "sintaxis": ">cosmeticos",
@@ -440,7 +392,7 @@
     "permisos": "Ninguno"
   },
   {
-    "id": "cmd-056",
+    "id": "cmd-050",
     "nombre": "vip",
     "categoria": "VIP",
     "sintaxis": ">vip",
@@ -448,7 +400,7 @@
     "permisos": "Ninguno"
   },
   {
-    "id": "cmd-057",
+    "id": "cmd-051",
     "nombre": "viphelp",
     "categoria": "VIP",
     "sintaxis": ">viphelp",
@@ -456,7 +408,7 @@
     "permisos": "Ninguno"
   },
   {
-    "id": "cmd-058",
+    "id": "cmd-052",
     "nombre": "vipwork",
     "categoria": "VIP",
     "sintaxis": ">vipwork",
@@ -464,7 +416,7 @@
     "permisos": "Ninguno"
   },
   {
-    "id": "cmd-059",
+    "id": "cmd-053",
     "nombre": "vipdaily",
     "categoria": "VIP",
     "sintaxis": ">vipdaily",
@@ -472,7 +424,7 @@
     "permisos": "Ninguno"
   },
   {
-    "id": "cmd-060",
+    "id": "cmd-054",
     "nombre": "vipgamble",
     "categoria": "VIP",
     "sintaxis": ">vipgamble",
@@ -480,7 +432,7 @@
     "permisos": "Ninguno"
   },
   {
-    "id": "cmd-061",
+    "id": "cmd-055",
     "nombre": "vipboost",
     "categoria": "VIP",
     "sintaxis": ">vipboost",
@@ -488,7 +440,7 @@
     "permisos": "Ninguno"
   },
   {
-    "id": "cmd-062",
+    "id": "cmd-056",
     "nombre": "checkstats",
     "categoria": "Minijuegos",
     "sintaxis": ">checkstats",
@@ -496,7 +448,7 @@
     "permisos": "Ninguno"
   },
   {
-    "id": "cmd-063",
+    "id": "cmd-057",
     "nombre": "games",
     "categoria": "Minijuegos",
     "sintaxis": ">games",
@@ -504,7 +456,7 @@
     "permisos": "Ninguno"
   },
   {
-    "id": "cmd-064",
+    "id": "cmd-058",
     "nombre": "coinflip",
     "categoria": "Minijuegos",
     "sintaxis": ">coinflip <cara/cruz> <apuesta>",
@@ -512,7 +464,7 @@
     "permisos": "Ninguno"
   },
   {
-    "id": "cmd-065",
+    "id": "cmd-059",
     "nombre": "dice",
     "categoria": "Minijuegos",
     "sintaxis": ">dice <tipo> <apuesta>",
@@ -520,7 +472,7 @@
     "permisos": "Ninguno"
   },
   {
-    "id": "cmd-066",
+    "id": "cmd-060",
     "nombre": "lottery",
     "categoria": "Minijuegos",
     "sintaxis": ">lottery <número> <apuesta>",
@@ -528,7 +480,7 @@
     "permisos": "Ninguno"
   },
   {
-    "id": "cmd-067",
+    "id": "cmd-061",
     "nombre": "slots",
     "categoria": "Minijuegos",
     "sintaxis": ">slots <apuesta>",
@@ -536,7 +488,7 @@
     "permisos": "Ninguno"
   },
   {
-    "id": "cmd-068",
+    "id": "cmd-062",
     "nombre": "roulette",
     "categoria": "Minijuegos",
     "sintaxis": ">roulette <tipo> <apuesta>",
@@ -544,7 +496,7 @@
     "permisos": "Ninguno"
   },
   {
-    "id": "cmd-069",
+    "id": "cmd-063",
     "nombre": "vending",
     "categoria": "Minijuegos",
     "sintaxis": ">vending",
@@ -552,7 +504,7 @@
     "permisos": "Ninguno"
   },
   {
-    "id": "cmd-070",
+    "id": "cmd-064",
     "nombre": "blackjack",
     "categoria": "Minijuegos",
     "sintaxis": ">blackjack <apuesta>",
@@ -560,7 +512,7 @@
     "permisos": "Ninguno"
   },
   {
-    "id": "cmd-071",
+    "id": "cmd-065",
     "nombre": "ujoin",
     "categoria": "Minijuegos",
     "sintaxis": ">ujoin <apuesta>",
@@ -568,7 +520,7 @@
     "permisos": "Ninguno"
   },
   {
-    "id": "cmd-072",
+    "id": "cmd-066",
     "nombre": "russian",
     "categoria": "Minijuegos",
     "sintaxis": ">russian <apuesta>",
@@ -576,7 +528,7 @@
     "permisos": "Ninguno"
   },
   {
-    "id": "cmd-073",
+    "id": "cmd-067",
     "nombre": "horses",
     "categoria": "Minijuegos",
     "sintaxis": ">horses <bot/multi> <apuesta>",
@@ -584,7 +536,7 @@
     "permisos": "Ninguno"
   },
   {
-    "id": "cmd-074",
+    "id": "cmd-068",
     "nombre": "trivia",
     "categoria": "Minijuegos",
     "sintaxis": ">trivia [dificultad] [modo] [cat]",
@@ -592,7 +544,7 @@
     "permisos": "Ninguno"
   },
   {
-    "id": "cmd-075",
+    "id": "cmd-069",
     "nombre": "triviasurvival",
     "categoria": "Minijuegos",
     "sintaxis": ">triviasurvival start",
@@ -600,7 +552,7 @@
     "permisos": "Ninguno"
   },
   {
-    "id": "cmd-076",
+    "id": "cmd-070",
     "nombre": "triviacategorias",
     "categoria": "Minijuegos",
     "sintaxis": ">triviacategorias",
@@ -608,7 +560,7 @@
     "permisos": "Ninguno"
   },
   {
-    "id": "cmd-077",
+    "id": "cmd-071",
     "nombre": "triviacomp",
     "categoria": "Minijuegos",
     "sintaxis": ">triviacomp <apuesta>",
@@ -616,7 +568,7 @@
     "permisos": "Ninguno"
   },
   {
-    "id": "cmd-078",
+    "id": "cmd-072",
     "nombre": "trivialb",
     "categoria": "Minijuegos",
     "sintaxis": ">trivialb [tipo]",
@@ -624,7 +576,7 @@
     "permisos": "Ninguno"
   },
   {
-    "id": "cmd-079",
+    "id": "cmd-073",
     "nombre": "bet",
     "categoria": "Apuestas",
     "sintaxis": ">bet @usuario <cantidad> <descripción>",
@@ -632,7 +584,7 @@
     "permisos": "Ninguno"
   },
   {
-    "id": "cmd-080",
+    "id": "cmd-074",
     "nombre": "acceptbet",
     "categoria": "Apuestas",
     "sintaxis": ">acceptbet <id>",
@@ -640,7 +592,7 @@
     "permisos": "Ninguno"
   },
   {
-    "id": "cmd-081",
+    "id": "cmd-075",
     "nombre": "declinebet",
     "categoria": "Apuestas",
     "sintaxis": ">declinebet <id>",
@@ -648,7 +600,7 @@
     "permisos": "Ninguno"
   },
   {
-    "id": "cmd-082",
+    "id": "cmd-076",
     "nombre": "resolvebet",
     "categoria": "Apuestas",
     "sintaxis": ">resolvebet <id> @ganador",
@@ -656,7 +608,7 @@
     "permisos": "Ninguno"
   },
   {
-    "id": "cmd-083",
+    "id": "cmd-077",
     "nombre": "cancelbet",
     "categoria": "Apuestas",
     "sintaxis": ">cancelbet <id>",
@@ -664,7 +616,7 @@
     "permisos": "Ninguno"
   },
   {
-    "id": "cmd-084",
+    "id": "cmd-078",
     "nombre": "mybets",
     "categoria": "Apuestas",
     "sintaxis": ">mybets",
@@ -672,7 +624,7 @@
     "permisos": "Ninguno"
   },
   {
-    "id": "cmd-085",
+    "id": "cmd-079",
     "nombre": "betstats",
     "categoria": "Apuestas",
     "sintaxis": ">betstats [@usuario]",
@@ -680,7 +632,7 @@
     "permisos": "Ninguno"
   },
   {
-    "id": "cmd-086",
+    "id": "cmd-080",
     "nombre": "trade",
     "categoria": "Trading",
     "sintaxis": ">trade @usuario",
@@ -688,7 +640,7 @@
     "permisos": "Ninguno"
   },
   {
-    "id": "cmd-087",
+    "id": "cmd-081",
     "nombre": "tradeshow",
     "categoria": "Trading",
     "sintaxis": ">tradeshow",
@@ -696,7 +648,7 @@
     "permisos": "Ninguno"
   },
   {
-    "id": "cmd-088",
+    "id": "cmd-082",
     "nombre": "tradeadd",
     "categoria": "Trading",
     "sintaxis": ">tradeadd <item_id> [cantidad]",
@@ -704,7 +656,7 @@
     "permisos": "Ninguno"
   },
   {
-    "id": "cmd-089",
+    "id": "cmd-083",
     "nombre": "trademoney",
     "categoria": "Trading",
     "sintaxis": ">trademoney <cantidad>",
@@ -712,7 +664,7 @@
     "permisos": "Ninguno"
   },
   {
-    "id": "cmd-090",
+    "id": "cmd-084",
     "nombre": "tradeaccept",
     "categoria": "Trading",
     "sintaxis": ">tradeaccept",
@@ -720,7 +672,7 @@
     "permisos": "Ninguno"
   },
   {
-    "id": "cmd-091",
+    "id": "cmd-085",
     "nombre": "tradecancel",
     "categoria": "Trading",
     "sintaxis": ">tradecancel",
@@ -728,7 +680,7 @@
     "permisos": "Ninguno"
   },
   {
-    "id": "cmd-092",
+    "id": "cmd-086",
     "nombre": "auction",
     "categoria": "Subastas",
     "sintaxis": ">auction <item_id> <precio> [minutos]",
@@ -736,7 +688,7 @@
     "permisos": "Ninguno"
   },
   {
-    "id": "cmd-093",
+    "id": "cmd-087",
     "nombre": "auctions",
     "categoria": "Subastas",
     "sintaxis": ">auctions",
@@ -744,7 +696,7 @@
     "permisos": "Ninguno"
   },
   {
-    "id": "cmd-094",
+    "id": "cmd-088",
     "nombre": "bid",
     "categoria": "Subastas",
     "sintaxis": ">bid <auction_id> <cantidad>",
@@ -752,7 +704,7 @@
     "permisos": "Ninguno"
   },
   {
-    "id": "cmd-095",
+    "id": "cmd-089",
     "nombre": "recipes",
     "categoria": "Crafteo",
     "sintaxis": ">recipes",
@@ -760,7 +712,7 @@
     "permisos": "Ninguno"
   },
   {
-    "id": "cmd-096",
+    "id": "cmd-090",
     "nombre": "recipes",
     "categoria": "Crafteo",
     "sintaxis": ">recipes <categoría>",
@@ -768,7 +720,7 @@
     "permisos": "Ninguno"
   },
   {
-    "id": "cmd-097",
+    "id": "cmd-091",
     "nombre": "craft",
     "categoria": "Crafteo",
     "sintaxis": ">craft <recipe_id>",
@@ -776,7 +728,7 @@
     "permisos": "Ninguno"
   },
   {
-    "id": "cmd-098",
+    "id": "cmd-092",
     "nombre": "queue",
     "categoria": "Crafteo",
     "sintaxis": ">queue",
@@ -784,7 +736,7 @@
     "permisos": "Ninguno"
   },
   {
-    "id": "cmd-099",
+    "id": "cmd-093",
     "nombre": "cancelcraft",
     "categoria": "Crafteo",
     "sintaxis": ">cancelcraft <número>",
@@ -792,7 +744,7 @@
     "permisos": "Ninguno"
   },
   {
-    "id": "cmd-100",
+    "id": "cmd-094",
     "nombre": "missions",
     "categoria": "Progreso",
     "sintaxis": ">missions",
@@ -800,7 +752,7 @@
     "permisos": "Ninguno"
   },
   {
-    "id": "cmd-101",
+    "id": "cmd-095",
     "nombre": "blockmissions",
     "categoria": "Progreso",
     "sintaxis": ">blockmissions",
@@ -808,7 +760,7 @@
     "permisos": "Ninguno"
   },
   {
-    "id": "cmd-102",
+    "id": "cmd-096",
     "nombre": "unblockmissions",
     "categoria": "Progreso",
     "sintaxis": ">unblockmissions",
@@ -816,7 +768,7 @@
     "permisos": "Ninguno"
   },
   {
-    "id": "cmd-103",
+    "id": "cmd-097",
     "nombre": "achievements",
     "categoria": "Progreso",
     "sintaxis": ">achievements [@usuario]",
@@ -824,7 +776,7 @@
     "permisos": "Ninguno"
   },
   {
-    "id": "cmd-104",
+    "id": "cmd-098",
     "nombre": "allachievements",
     "categoria": "Progreso",
     "sintaxis": ">allachievements",
@@ -832,7 +784,7 @@
     "permisos": "Ninguno"
   },
   {
-    "id": "cmd-105",
+    "id": "cmd-099",
     "nombre": "progress",
     "categoria": "Progreso",
     "sintaxis": ">progress",
@@ -840,7 +792,7 @@
     "permisos": "Ninguno"
   },
   {
-    "id": "cmd-106",
+    "id": "cmd-100",
     "nombre": "detectachievements",
     "categoria": "Progreso",
     "sintaxis": ">detectachievements",
@@ -848,7 +800,7 @@
     "permisos": "Ninguno"
   },
   {
-    "id": "cmd-107",
+    "id": "cmd-101",
     "nombre": "level",
     "categoria": "Progreso",
     "sintaxis": ">level [@usuario]",
@@ -856,7 +808,7 @@
     "permisos": "Ninguno"
   },
   {
-    "id": "cmd-108",
+    "id": "cmd-102",
     "nombre": "slevel",
     "categoria": "Progreso",
     "sintaxis": ">slevel",
@@ -864,7 +816,7 @@
     "permisos": "Ninguno"
   },
   {
-    "id": "cmd-109",
+    "id": "cmd-103",
     "nombre": "servtop",
     "categoria": "Progreso",
     "sintaxis": ">servtop",
@@ -872,7 +824,7 @@
     "permisos": "Ninguno"
   },
   {
-    "id": "cmd-110",
+    "id": "cmd-104",
     "nombre": "events",
     "categoria": "Eventos",
     "sintaxis": ">events",
@@ -880,7 +832,7 @@
     "permisos": "Ninguno"
   },
   {
-    "id": "cmd-111",
+    "id": "cmd-105",
     "nombre": "Mencionar",
     "categoria": "Chat IA",
     "sintaxis": "Mencionar al bot",
@@ -888,7 +840,7 @@
     "permisos": "Ninguno"
   },
   {
-    "id": "cmd-112",
+    "id": "cmd-106",
     "nombre": "Responder",
     "categoria": "Chat IA",
     "sintaxis": "Responder un mensaje",
@@ -896,7 +848,7 @@
     "permisos": "Ninguno"
   },
   {
-    "id": "cmd-113",
+    "id": "cmd-107",
     "nombre": "chathelp",
     "categoria": "Chat IA",
     "sintaxis": ">chathelp",
@@ -904,7 +856,7 @@
     "permisos": "Ninguno"
   },
   {
-    "id": "cmd-114",
+    "id": "cmd-108",
     "nombre": "nsfw",
     "categoria": "NSFW",
     "sintaxis": ">nsfw <categoría> <cantidad>",
@@ -912,7 +864,7 @@
     "permisos": "Ninguno"
   },
   {
-    "id": "cmd-115",
+    "id": "cmd-109",
     "nombre": "r34",
     "categoria": "NSFW",
     "sintaxis": ">r34 <tags> <cantidad>",
@@ -920,7 +872,7 @@
     "permisos": "Ninguno"
   },
   {
-    "id": "cmd-116",
+    "id": "cmd-110",
     "nombre": "gifs",
     "categoria": "NSFW",
     "sintaxis": ">gifs <categoría> <cantidad>",
@@ -928,7 +880,7 @@
     "permisos": "Ninguno"
   },
   {
-    "id": "cmd-117",
+    "id": "cmd-111",
     "nombre": "videos",
     "categoria": "NSFW",
     "sintaxis": ">videos <categoría> <cantidad>",
@@ -936,7 +888,7 @@
     "permisos": "Ninguno"
   },
   {
-    "id": "cmd-118",
+    "id": "cmd-112",
     "nombre": "fuck",
     "categoria": "NSFW",
     "sintaxis": ">fuck [@usuario]",
@@ -944,7 +896,7 @@
     "permisos": "Ninguno"
   },
   {
-    "id": "cmd-119",
+    "id": "cmd-113",
     "nombre": "fuckdetect",
     "categoria": "NSFW",
     "sintaxis": ">fuckdetect / >fd",
@@ -952,7 +904,7 @@
     "permisos": "Ninguno"
   },
   {
-    "id": "cmd-120",
+    "id": "cmd-114",
     "nombre": "m",
     "categoria": "Música",
     "sintaxis": ">m play <canción/URL>",
@@ -960,7 +912,7 @@
     "permisos": "Ninguno"
   },
   {
-    "id": "cmd-121",
+    "id": "cmd-115",
     "nombre": "m",
     "categoria": "Música",
     "sintaxis": ">m search <canción>",
@@ -968,7 +920,7 @@
     "permisos": "Ninguno"
   },
   {
-    "id": "cmd-122",
+    "id": "cmd-116",
     "nombre": "spsearch",
     "categoria": "Música",
     "sintaxis": ">spsearch <canción>",
@@ -976,7 +928,7 @@
     "permisos": "Ninguno"
   },
   {
-    "id": "cmd-123",
+    "id": "cmd-117",
     "nombre": "m",
     "categoria": "Música",
     "sintaxis": ">m pause / >m resume",
@@ -984,7 +936,7 @@
     "permisos": "Ninguno"
   },
   {
-    "id": "cmd-124",
+    "id": "cmd-118",
     "nombre": "m",
     "categoria": "Música",
     "sintaxis": ">m skip",
@@ -992,7 +944,7 @@
     "permisos": "Ninguno"
   },
   {
-    "id": "cmd-125",
+    "id": "cmd-119",
     "nombre": "m",
     "categoria": "Música",
     "sintaxis": ">m stop",
@@ -1000,7 +952,7 @@
     "permisos": "Ninguno"
   },
   {
-    "id": "cmd-126",
+    "id": "cmd-120",
     "nombre": "m",
     "categoria": "Música",
     "sintaxis": ">m queue",
@@ -1008,7 +960,7 @@
     "permisos": "Ninguno"
   },
   {
-    "id": "cmd-127",
+    "id": "cmd-121",
     "nombre": "m",
     "categoria": "Música",
     "sintaxis": ">m volume <0-100>",
@@ -1016,7 +968,7 @@
     "permisos": "Ninguno"
   },
   {
-    "id": "cmd-128",
+    "id": "cmd-122",
     "nombre": "m",
     "categoria": "Música",
     "sintaxis": ">m help",
@@ -1024,7 +976,7 @@
     "permisos": "Ninguno"
   },
   {
-    "id": "cmd-129",
+    "id": "cmd-123",
     "nombre": "imagine",
     "categoria": "Imágenes IA",
     "sintaxis": ">imagine <descripción>",
@@ -1032,7 +984,7 @@
     "permisos": "Ninguno"
   },
   {
-    "id": "cmd-130",
+    "id": "cmd-124",
     "nombre": "img",
     "categoria": "Imágenes IA",
     "sintaxis": ">img <descripción>",
