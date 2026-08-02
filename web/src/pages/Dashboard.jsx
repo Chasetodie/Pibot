@@ -6,12 +6,13 @@ export default function Dashboard() {
   const [guilds, setGuilds] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [busqueda, setBusqueda] = useState('');
   const navigate = useNavigate();
 
   useEffect(() => {
     const token = localStorage.getItem('pibot_token');
     if (!token) {
-      navigate('/');
+      navigate('/404', { replace: true });
       return;
     }
 
@@ -22,7 +23,7 @@ export default function Dashboard() {
         if (res.status === 401) {
           localStorage.removeItem('pibot_token');
           localStorage.removeItem('pibot_user');
-          navigate('/');
+          navigate('/404', { replace: true });
           return null;
         }
         return res.json();
@@ -32,6 +33,10 @@ export default function Dashboard() {
       .finally(() => setLoading(false));
   }, []);
 
+  const guildsFiltrados = guilds.filter(g =>
+    g.name.toLowerCase().includes(busqueda.toLowerCase())
+  );
+
   if (loading) {
     return (
       <div className="min-h-screen relative overflow-hidden">
@@ -39,7 +44,7 @@ export default function Dashboard() {
         <div className="relative px-6 sm:px-8 py-16 max-w-5xl mx-auto">
           <div className="h-10 w-64 bg-pibot-panel-hover rounded animate-pulse mb-2" />
           <div className="h-5 w-80 bg-pibot-panel-hover rounded animate-pulse mb-12" />
-  
+
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-5">
             {[1, 2, 3, 4, 5, 6].map(i => (
               <div key={i} className="flex flex-col items-center gap-3 p-7 bg-pibot-panel/60 backdrop-blur-md rounded-2xl border border-pibot-panel-hover">
@@ -66,16 +71,32 @@ export default function Dashboard() {
       <DashboardBackground />
 
       <div className="relative px-6 sm:px-8 py-16 max-w-5xl mx-auto">
-        <h1 className="text-4xl font-display font-bold text-white mb-2">Tus Servidores</h1>
-        <p className="text-slate-400 mb-12">Elige un servidor para configurarme.</p>
+        <h1 className="text-4xl font-display font-bold text-white mb-2 drop-shadow-lg">Tus Servidores</h1>
+        <p className="text-slate-200 mb-8 drop-shadow-md">Elige un servidor para configurar Pibot.</p>
 
-        {guilds.length === 0 ? (
+        {guilds.length > 0 && (
+          <div className="relative mb-8 max-w-md">
+            <input
+              type="text"
+              value={busqueda}
+              onChange={e => setBusqueda(e.target.value)}
+              placeholder="Buscar servidor..."
+              className="w-full bg-pibot-panel/60 backdrop-blur-md border border-pibot-panel-hover rounded-xl px-4 py-3 text-slate-200 focus:outline-none focus:border-pibot-pink focus:ring-1 focus:ring-pibot-pink transition-colors"
+            />
+          </div>
+        )}
+
+        {guildsFiltrados.length === 0 ? (
           <div className="bg-pibot-panel/60 backdrop-blur-md border border-pibot-panel-hover rounded-2xl p-10 text-center">
-            <p className="text-slate-400">No eres administrador de ningún servidor donde esté Pibot.</p>
+            <p className="text-slate-300">
+              {guilds.length === 0
+                ? 'No eres administrador de ningún servidor donde esté Pibot.'
+                : 'No se encontró ningún servidor con ese nombre.'}
+            </p>
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-5">
-            {guilds.map(g => (
+            {guildsFiltrados.map(g => (
               <button
                 type="button"
                 key={g.id}
@@ -100,7 +121,7 @@ export default function Dashboard() {
                   {g.name}
                 </span>
 
-                <span className="text-xs text-pibot-gold opacity-0 group-hover:opacity-100 transition-opacity">
+                <span className="text-xs text-pibot-pink opacity-0 group-hover:opacity-100 transition-opacity">
                   Configurar →
                 </span>
               </button>

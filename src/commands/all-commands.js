@@ -2989,6 +2989,18 @@ const commandName = command.replace('>', '');
                 case '>svconfig':
                     await this.handleShowConfig(message);
                     break;
+                case '>dashboard':
+                    const embedDashboard = new EmbedBuilder()
+                        .setTitle('🖥️ Dashboard Web de Pibot')
+                        .setDescription('Configura todo lo del bot en este servidor desde un solo lugar, sin comandos.')
+                        .setColor('#00BFFF')
+                        .addFields({
+                            name: '🔗 Accede aquí',
+                            value: '[chasetodie.github.io/Pibot/dashboard](https://chasetodie.github.io/Pibot/dashboard)',
+                            inline: false
+                        });
+                    await message.reply({ embeds: [embedDashboard] });
+                    break;
 /*                case '>seteventsrole':
                     await this.handleSetEventsRole(message, args);
                     break;

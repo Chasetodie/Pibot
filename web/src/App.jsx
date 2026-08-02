@@ -43,6 +43,8 @@ export default function App() {
           <Route path="/auth/callback" element={<AuthCallback />} />
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/dashboard/:guildId" element={<GuildDashboard />} />
+          <Route path="/404" element={<NotFound />} />
+          <Route path="/sin-acceso" element={<NotFound tipo="denegado" />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </main>

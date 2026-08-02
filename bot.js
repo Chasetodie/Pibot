@@ -1041,10 +1041,10 @@ const rest = new REST({ version: '10' }).setToken(process.env.TOKEN);
 
     console.log(`🔧 Registrando slash commands para ${process.env.GUILD_ID}...`);
     
-    await rest.put(
+/*    await rest.put(
       Routes.applicationGuildCommands(process.env.CLIENT_ID, process.env.GUILD_ID),
       { body: commands }
-    );
+    );*/
     console.log('✅ Slash command registrado!');
   } catch (error) {
     console.error('❌ Error registrando slash commands:', error);
@@ -1232,7 +1232,7 @@ client.on('guildCreate', async (guild) => {
                 { name: '🎯 Misiones y Logros', value: 'Sistema de progresión con recompensas', inline: true },
                 { name: '🎉 Eventos', value: 'Eventos automáticos con bonificaciones', inline: true },
                 { name: '🤖 Chat IA', value: 'Habla con Pibot respondiéndole mensajes', inline: true },
-                { name: '⚙️ Configuración inicial', value: 'Un admin debe usar `>setconfig` para configurar los canales del bot en este servidor.\nEjemplo: `>setconfig levelup_channel #canal-de-niveles`', inline: false },
+                { name: '⚙️ Configuración inicial', value: 'Un admin puede configurar todo desde el [Dashboard Web](https://chasetodie.github.io/Pibot/dashboard), o usar `>svconfig` para ver el estado actual.', inline: false },
                 { name: '📖 Comandos', value: 'Usa `>help` para ver todos los comandos disponibles.', inline: false }
             )
             .setFooter({ text: 'Pi-Bot • Usa >help para empezar' })

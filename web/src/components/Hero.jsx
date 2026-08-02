@@ -1,7 +1,11 @@
 import { useState, useEffect } from "react";
+import { useContador } from '../hooks/useContador';
 
 export default function Hero() {
   const [stats, setStats] = useState(null);
+  const servidoresAnimado = useContador(stats?.servidores);
+  const usuariosAnimado = useContador(stats?.usuariosRegistrados);
+  const dineroAnimado = useContador(stats?.dineroEnCirculacion);
 
   useEffect(() => {
       fetch(`${import.meta.env.VITE_API_BASE_URL}/api/stats`, {
@@ -69,7 +73,7 @@ export default function Hero() {
           rel="noreferrer"
           className="w-full sm:w-auto bg-pibot-panel hover:bg-pibot-panel-hover text-pibot-text font-bold text-lg px-8 py-4 rounded-xl border border-pibot-panel-hover transition-all hover:scale-105 active:scale-95 flex items-center justify-center gap-2"
         >
-          <span></span> ¿Dudas o Sugerencias? Contacta con mi desarrollador
+          <span></span> ¿Bugs o Sugerencias? Contacta con mi desarrollador
         </a>
       </div>
 
@@ -77,16 +81,16 @@ export default function Hero() {
       {stats && (
         <div className="flex flex-wrap items-center justify-center gap-x-10 gap-y-3 mt-12 text-sm">
           <div className="text-center">
-            <p className="font-display text-2xl text-pibot-gold">{stats.servidores}</p>
+            <p className="font-display text-2xl text-pibot-gold">{servidoresAnimado}</p>
             <p className="text-pibot-text-muted">Servidores</p>
           </div>
           <div className="text-center">
-            <p className="font-display text-2xl text-pibot-gold">{stats.usuariosRegistrados}</p>
+            <p className="font-display text-2xl text-pibot-gold">{usuariosAnimado}</p>
             <p className="text-pibot-text-muted">Usuarios registrados</p>
           </div>
           <div className="text-center">
             <p className="font-display text-2xl text-pibot-gold">
-              {stats.dineroEnCirculacion.toLocaleString("es-ES")}
+              {dineroAnimado.toLocaleString("es-ES")}
             </p>
             <p className="text-pibot-text-muted">π-b$ en circulación</p>
           </div>

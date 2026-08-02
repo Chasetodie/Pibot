@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import DashboardBackground from '../components/DashboardBackground';
 import Toast from '../components/Toast';
+import PreviaEmbed from '../components/PreviaEmbed';
 
 function Seccion({ titulo, children }) {
   return (
@@ -72,11 +73,18 @@ export default function GuildDashboard() {
   const [mensaje, setMensaje] = useState(null);
   const [mostrarBarra, setMostrarBarra] = useState(false);
   const [barraSaliendo, setBarraSaliendo] = useState(false);
+  const [copiado, setCopiado] = useState(false);
+
+  function copiarId() {
+    navigator.clipboard.writeText(guildId);
+    setCopiado(true);
+    setTimeout(() => setCopiado(false), 1500);
+  }
 
   useEffect(() => {
     const token = localStorage.getItem('pibot_token');
     if (!token) {
-      navigate('/');
+      navigate('/404', { replace: true });
       return;
     }
 
@@ -87,13 +95,17 @@ export default function GuildDashboard() {
       fetch(`${base}/api/guild-config/${guildId}`, { headers }),
       fetch(`${base}/api/guild-info/${guildId}`, { headers })
     ])
-      .then(async ([resConfig, resInfo]) => {
-        if (resConfig.status === 401 || resConfig.status === 403) {
-          navigate('/dashboard');
-          return null;
-        }
-        return Promise.all([resConfig.json(), resInfo.json()]);
-      })
+        .then(async ([resConfig, resInfo]) => {
+          if (resConfig.status === 401) {
+            navigate('/404', { replace: true });
+            return null;
+          }
+          if (resConfig.status === 403) {
+            navigate('/404', { replace: true });
+            return null;
+          }
+          return Promise.all([resConfig.json(), resInfo.json()]);
+        })
       .then(data => {
         if (data) {
           setConfig(data[0]);
@@ -195,6 +207,35 @@ export default function GuildDashboard() {
 
       <h1 className="text-3xl font-display font-bold text-white mb-1 drop-shadow-lg">Configuración del servidor</h1>
       <p className="text-slate-200 mb-10 drop-shadow-md">Ajusta cómo me comporto en este servidor.</p>
+      <button
+        type="button"
+        onClick={copiarId}
+        className="text-slate-300 hover:text-pibot-pink text-sm font-mono mb-10 transition-colors inline-flex items-center gap-1.5 whitespace-nowrap drop-shadow-md"
+      >
+        <span>ID: {guildId}</span>
+        <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+        </svg>
+        {copiado && <span className="text-emerald-400 whitespace-nowrap">¡Copiado!</span>}
+      </button>
+
+
+      <Seccion titulo="Economía">
+        <Selector
+          titulo="Canal de niveles (Economía)"
+          descripcion="Dónde se anuncian las subidas de nivel del sistema general del bot"
+          valor={valorActual('levelup_channel')}
+          onCambiar={v => marcarCambio('levelup_channel', v)}
+          opciones={info.canales}
+          prefijo="#"
+        />
+        <div className="px-5 pb-5">
+          <PreviaEmbed
+            tipo="niveles"
+            canalNombre={info.canales.find(c => c.id === valorActual('levelup_channel'))?.name}
+          />
+        </div>
+      </Seccion>
 
       <Seccion titulo="Niveles">
         <Toggle
@@ -203,6 +244,20 @@ export default function GuildDashboard() {
           activo={valorActual('guild_levels_enabled') === 'true'}
           onCambiar={() => marcarCambio('guild_levels_enabled', valorActual('guild_levels_enabled') === 'true' ? 'false' : 'true')}
         />
+        <Selector
+          titulo="Canal de niveles (Servidor)"
+          descripcion="Dónde se anuncian las subidas de nivel del ranking exclusivo de este servidor"
+          valor={valorActual('guild_levelup_channel')}
+          onCambiar={v => marcarCambio('guild_levelup_channel', v)}
+          opciones={info.canales}
+          prefijo="#"
+        />
+        <div className="px-5 pb-5">
+          <PreviaEmbed
+            tipo="niveles"
+            canalNombre={info.canales.find(c => c.id === valorActual('guild_levelup_channel'))?.name}
+          />
+        </div>
       </Seccion>
 
       <Seccion titulo="Eventos">
@@ -220,25 +275,6 @@ export default function GuildDashboard() {
           opciones={info.roles}
           prefijo="@"
         />
-      </Seccion>
-
-      <Seccion titulo="Canales">
-        <Selector
-          titulo="Canal de niveles (Economía)"
-          descripcion="Dónde se anuncian las subidas de nivel del sistema general del bot"
-          valor={valorActual('levelup_channel')}
-          onCambiar={v => marcarCambio('levelup_channel', v)}
-          opciones={info.canales}
-          prefijo="#"
-        />
-        <Selector
-          titulo="Canal de niveles (Servidor)"
-          descripcion="Dónde se anuncian las subidas de nivel del ranking exclusivo de este servidor"
-          valor={valorActual('guild_levelup_channel')}
-          onCambiar={v => marcarCambio('guild_levelup_channel', v)}
-          opciones={info.canales}
-          prefijo="#"
-        />
         <Selector
           titulo="Canal de eventos"
           descripcion="Dónde se anuncian los eventos automáticos"
@@ -247,6 +283,13 @@ export default function GuildDashboard() {
           opciones={info.canales}
           prefijo="#"
         />
+        <div className="px-5 pb-5">
+          <PreviaEmbed
+            tipo="evento"
+            rolNombre={info.roles.find(r => r.id === valorActual('events_role'))?.name}
+            canalNombre={info.canales.find(c => c.id === valorActual('events_channel'))?.name}
+          />
+        </div>
       </Seccion>
 
       <Toast mensaje={mensaje} />
