@@ -27,30 +27,65 @@ class MusicSystem {
 */
 
         const nodes = [
-            // Sin SSL
             {
                 name: 'Lavalink-Public',
                 url: 'lavalink.serenetia.com:80',
                 auth: 'https://dsc.gg/ajidevserver',
                 secure: false
             },
-/*            {
+            {
+                name: 'Serenetia',
+                url: 'lavalinkv4.serenetia.com:80',
+                auth: 'https://dsc.gg/ajidevserver',
+                secure: false
+            },
+            {
                 name: 'TriniumHost',
                 url: 'lavalink.triniumhost.com:4333',
                 auth: 'free',
                 secure: false
             },
-/*            {
-                name: 'Kasawa',
-                url: 'lava.kasawa.pro:2333',
+            {
+                name: 'AjieDev-EU',
+                url: 'lava-v4.ajieblogs.eu.org:443',
+                auth: 'https://dsc.gg/ajidevserver',
+                secure: true
+            },
+            {
+                name: 'DevamOP-India',
+                url: 'lavalink.devamop.in:443',
+                auth: 'DevamOP',
+                secure: true
+            },
+            {
+                name: 'Jirayu',
+                url: 'lavalink.jirayu.net:13592',
                 auth: 'youshallnotpass',
                 secure: false
-            },*/
+            },
             {
-                name: 'Serenetia',
-                url: 'lavalinkv4.serenetia.com:80',
-                auth: 'https://seretia.link/discord',
+                name: 'NyxBot-SG',
+                url: 'sg1-nodelink.nyxbot.app:3000',
+                auth: 'nyxbot.app/support',
                 secure: false
+            },
+            {
+                name: 'HeavenCloud',
+                url: '89.106.84.59:4000',
+                auth: 'heavencloud.in',
+                secure: false
+            },
+            {
+                name: 'Lavalink.devamop.in',
+                url: 'lavalink.devamop.in:443',
+                auth: 'DevamOP',
+                secure: true
+            },
+            {
+                name: 'Lavalink v4 EU',
+                url: 'lava-v4.ajieblogs.eu.org:443',
+                auth: 'https://dsc.gg/ajidevserver',
+                secure: true
             },
         ];
 
@@ -67,7 +102,8 @@ class MusicSystem {
                 },
             },
             new Connectors.DiscordJS(this.client),
-            nodes
+            nodes,
+            { moveOnDisconnect: true, resumeByLibrary: true, reconnectTries: 5, reconnectInterval: 5 }
         );
 
         this.client.kazagumo = this.kazagumo;
@@ -79,38 +115,22 @@ class MusicSystem {
         });
 
         this.kazagumo.shoukaku.on('error', (name, error) => {
-            console.error(`❌ Error en nodo ${name}: ${error.message}`);
+            if (!this.failedNodes.has(name)) {
+                console.error(`❌ Error en nodo ${name}: ${error.message}`);
+            }
             this.failedNodes.add(name);
         });
 
-/*        this.kazagumo.shoukaku.on('close', (name, code, reason) => {
-            console.warn(`⚠️ Nodo ${name} cerrado. Código: ${code}`);
+        this.kazagumo.shoukaku.on('close', (name, code, reason) => {
+            if (!this.failedNodes.has(name)) {
+                console.warn(`⚠️ Nodo ${name} cerrado. Código: ${code}`);
+            }
             this.failedNodes.add(name);
-        });*/
+        });
 
-        this.kazagumo.shoukaku.on('disconnect', async (name, count) => {
-            console.warn(`⚠️ Nodo ${name} desconectado. Reconectando en 10 segundos...`);
+        this.kazagumo.shoukaku.on('disconnect', (name, count) => {
+            console.warn(`⚠️ Nodo ${name} desconectado. Shoukaku intentará reconectar solo (moveOnDisconnect activo).`);
             this.failedNodes.add(name);
-            
-            // Evitar múltiples intentos simultáneos
-            if (this.reconnecting?.has(name)) return;
-            if (!this.reconnecting) this.reconnecting = new Set();
-            this.reconnecting.add(name);
-
-            setTimeout(async () => {
-                try {
-                    const nodeConfig = this.nodeList.find(n => n.name === name);
-                    if (nodeConfig) {
-                        await this.kazagumo.shoukaku.addNode(nodeConfig);
-                        console.log(`✅ Nodo ${name} reconectado!`);
-                        this.failedNodes.delete(name);
-                    }
-                } catch (e) {
-                    console.error(`❌ Reconexión fallida para ${name}:`, e.message);
-                } finally {
-                    this.reconnecting.delete(name);
-                }
-            }, 10000);
         });
 
         this.setupEventListeners();
@@ -145,6 +165,8 @@ class MusicSystem {
 
     setupEventListeners() {
         this.kazagumo.on('playerStart', (player, track) => {
+            console.log(`🎵 Reproduciendo "${track.title}" en el servidor ${player.guild?.name || player.guildId} usando el nodo [${player.shoukaku?.node?.name || player.node?.name}]`);
+            
             const embed = new EmbedBuilder()
                 .setTitle('🎵 Reproduciendo Ahora')
                 .setDescription(`**${track.title}**\nDuración: ${this.formatTime(track.length)}`)
@@ -741,7 +763,11 @@ class MusicSystem {
                         player.queue.add(result.tracks[0]);
                         if (!player.playing && !player.paused) {
                             await new Promise(r => setTimeout(r, 500));
-                            player.play();
+                            try {
+                                await player.play();
+                            } catch (e) {
+                                console.error('Error al iniciar reproducción:', e.message);
+                            }
                         }
 
                         const addedEmbed = new EmbedBuilder()
@@ -871,7 +897,11 @@ class MusicSystem {
                     player.queue.add(selected);
                     if (!player.playing && !player.paused) {
                         await new Promise(r => setTimeout(r, 500));
-                        player.play();
+                        try {
+                            await player.play();
+                        } catch (e) {
+                            console.error('Error al iniciar reproducción:', e.message);
+                        }
                     }
 
                     const addedEmbed = new EmbedBuilder()
@@ -1111,7 +1141,11 @@ class MusicSystem {
 
             if (!player.playing && !player.paused) {
                 await new Promise(resolve => setTimeout(resolve, 500));
-                player.play();
+                try {
+                    await player.play();
+                } catch (e) {
+                    console.error('Error al iniciar reproducción:', e.message);
+                }
             }
 
             await message.channel.send({ embeds: [embed] });
@@ -1366,7 +1400,11 @@ class MusicSystem {
         
         if (current) newPlayer.queue.add(current);
         newPlayer.queue.add(queue);
-        newPlayer.play();
+        try {
+            await newPlayer.play();
+        } catch (e) {
+            console.error('Error al iniciar reproducción:', e.message);
+        }
         
         await message.reply('✅ Player reiniciado correctamente.');
     }

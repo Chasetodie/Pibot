@@ -2856,7 +2856,7 @@ if (cosmeticRole?.name) {
             .setTitle('⚙️ Configuración actual del servidor')
             .setColor('#00BFFF')
             .setThumbnail(message.guild.iconURL({ dynamic: true }))
-            .setDescription('**[🖥️ Configura todo desde el Dashboard Web →](https://chasetodie.github.io/Pibot/dashboard)**')
+            .setDescription('**[🖥️ Configura todo desde el Dashboard Web →](https://chasetodie.github.io/Pibot/)**')
             .setFooter({ text: `${message.guild.name} • Usa >dashboard para más info`, iconURL: message.guild.iconURL({ dynamic: true }) })
             .setTimestamp();
 
@@ -2996,7 +2996,7 @@ const commandName = command.replace('>', '');
                         .setColor('#00BFFF')
                         .addFields({
                             name: '🔗 Accede aquí',
-                            value: '[chasetodie.github.io/Pibot/dashboard](https://chasetodie.github.io/Pibot/dashboard)',
+                            value: '[chasetodie.github.io/Pibot/](https://chasetodie.github.io/Pibot/)',
                             inline: false
                         });
                     await message.reply({ embeds: [embedDashboard] });

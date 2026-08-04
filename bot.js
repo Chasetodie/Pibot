@@ -112,22 +112,6 @@ setTimeout(async () => {
     console.log('✅ Sistemas de eventos listo');
 }, 2000);
 
-// Keepalive para Lavalink
-setInterval(async () => {
-    try {
-        const response = await fetch('http://http://160.191.77.60:7555/version', {
-            headers: { 'Authorization': 'ichangethepasscauseimdumb' }
-        });
-        if (response.ok) {
-            console.log('✅ Lavalink keepalive OK');
-        } else {
-            console.log('⚠️ Lavalink keepalive falló:', response.status);
-        }
-    } catch (err) {
-        console.log('⚠️ Lavalink keepalive error:', err.message);
-    }
-}, 4 * 60 * 1000); // cada 4 minutos
-
 setInterval(async () => {
     await economy.database.cleanExpiredTreasureMaps();
     
@@ -1232,7 +1216,7 @@ client.on('guildCreate', async (guild) => {
                 { name: '🎯 Misiones y Logros', value: 'Sistema de progresión con recompensas', inline: true },
                 { name: '🎉 Eventos', value: 'Eventos automáticos con bonificaciones', inline: true },
                 { name: '🤖 Chat IA', value: 'Habla con Pibot respondiéndole mensajes', inline: true },
-                { name: '⚙️ Configuración inicial', value: 'Un admin puede configurar todo desde el [Dashboard Web](https://chasetodie.github.io/Pibot/dashboard), o usar `>svconfig` para ver el estado actual.', inline: false },
+                { name: '⚙️ Configuración inicial', value: 'Un admin puede configurar todo desde el [Dashboard Web](https://chasetodie.github.io/Pibot/), o usar `>svconfig` para ver el estado actual.', inline: false },
                 { name: '📖 Comandos', value: 'Usa `>help` para ver todos los comandos disponibles.', inline: false }
             )
             .setFooter({ text: 'Pi-Bot • Usa >help para empezar' })

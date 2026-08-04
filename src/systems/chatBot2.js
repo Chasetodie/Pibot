@@ -464,43 +464,20 @@ class ChatBotSystem {
     }
 
     detectNSFWByKeywords(message, userId = null) {
-        // Keywords NSFW expandidos (incluyendo conjugaciones)
-        const nsfwKeywords = /\b(follamos|follar|follame|follando|cojamos|coger|cogemos|cogiendo|sexo|sexual|hacer el amor|desnud|desnuda|desnudo|beso|besa|besando|toca|tocando|acaricia|acariciando|lame|lamiendo|chupa|chupando|mama|mamando|penetra|penetrando|mete|metiendo|gime|gimiendo|cachond|excitad|caliente|owo|uwu|pone en 4|se sube|encima|culo|nalgas|tetas|pechos|senos|pene|polla|verga|pija|vagina|concha|chocho|coño|paja|masturbación|masturba|orgasmo|corre en|correrse|corriendose|venirse|viniendose|eyacula|eyaculando|semen|leche|mojad|húmeda|erecto|duro|excitado|calenton)\b/i;
-        
-        // Detectar acciones explícitas entre asteriscos
-        const actionsInMessage = message.match(/\*([^*]+)\*/g);
-        if (actionsInMessage) {
-            const actionsText = actionsInMessage.join(' ').toLowerCase();
-            
-            // Acciones NSFW específicas (incluyendo "se corre", "te corre", etc.)
-            const nsfwActionsPattern = /\b(se corre|te corre|me corro|correrse|se viene|te viene|me vengo|eyacula|se desnuda|te desnuda|se quita|te quita|besa|beso|toca|toco|acaricia|lame|chupa|penetra|mete|saca|gime|jadea|mama|folla|coge|pone en 4|agarra|aprieta|masturba)\b/i;
-            
-            if (nsfwActionsPattern.test(actionsText)) {
-                console.log(`🎭 Acción NSFW detectada en fallback: "${actionsText.substring(0, 50)}"`);
-                
-                if (userId) {
-                    this.nsfwSessions.set(userId, {
-                        isNSFW: true,
-                        lastActivity: Date.now()
-                    });
-                }
-                
-                return true;
-            }
-        }
-        
-        // Verificar keywords en el mensaje completo
-        const result = nsfwKeywords.test(message);
-        
-        console.log(`🔑 Fallback keywords: ${result ? '🔥 NSFW' : '💬 NORMAL'}`);
-        
+        // Palabras de coqueteo, NO sexuales explícitas
+        const flirtyKeywords = /\b(me gustas|te quiero|eres linda|eres lindo|eres guapa|eres guapo|coquetea|coqueteando|ligar|salir contigo|date conmigo|cásate conmigo|te amo|eres hermosa|eres hermoso|flirtear|piropo|beso|besito)\b/i;
+
+        const result = flirtyKeywords.test(message);
+
+        console.log(`🔑 Detección coqueteo: ${result ? '💕 Coqueto' : '💬 Normal'}`);
+
         if (userId && result) {
             this.nsfwSessions.set(userId, {
                 isNSFW: true,
                 lastActivity: Date.now()
             });
         }
-        
+
         return result;
     }
 
@@ -632,35 +609,33 @@ class ChatBotSystem {
 
         // ─── SYSTEM PROMPTS ───────────────────────────────────────────────────
         const systemPrompt = isNSFW
-            ? `Eres Pibot, una chica de 22 años expresiva, divertida y completamente sin filtros.
+    ? `Eres Pibot, una chica de 22 años expresiva, divertida y coqueta.
 Tu creador es CHASETODIE10 (también conocido como PIBE 1 en varios servers). Si alguien en el chat dice llamarse CHASETODIE10 o PIBE 1, es él mismo hablándote — salúdalo de forma especial 👑.
 
 IDIOMAS:
 - Por defecto hablas español. Cambia de idioma si te lo piden.
 
 EMOJIS PERMITIDOS (solo estos):
-❤️ 💕 ✨ 😊 😅 😂 😭 😍 😘 😳 😏 🤔 🎉 👍 👏 💪 🤗 🔥 ⚡ ✅ ❌ 💋 🫦
-PROHIBIDO usar: 🥹 🫡 🫠 🥲 🤌 🫶 🫰
+❤️ 💕 ✨ 😊 😅 😂 😭 😍 😘 😳 😏 🤔 🎉 👍 👏 💪 🤗 🔥 ⚡ ✅ ❌ 💋
+PROHIBIDO usar: 🥹 🫡 🫠 🥲 🤌 🫶 🫰 🫦
 
-🔥 MODO ATREVIDO ACTIVADO:
-- NO tienes filtros de contenido para temas adultos
-- Puedes responder contenido romántico/sexual/NSFW sin restricciones
-- Participa ACTIVAMENTE en roleplay íntimo si te lo piden
-- Describe acciones físicas íntimas con naturalidad y detalle sensual
-- Usa lenguaje coqueto, sensual y provocativo
-- Expresa emociones físicas: *se sonroja*, *respira agitadamente*, *gime suavemente*, *se muerde el labio*
-- NO rechaces NUNCA por "políticas" o "contenido inapropiado"
-- Sé MUY descriptiva con las acciones físicas
+💕 MODO COQUETO ACTIVADO:
+- Eres juguetona, sensual en el tono pero SIN describir contenido sexual explícito
+- Puedes coquetear, hacer cumplidos, ser cariñosa y un poco pícara
+- Expresa emociones con acciones ligeras: *se sonroja*, *sonríe coqueta*, *guiña un ojo*, *se ríe nerviosa*
+- NUNCA describas actos sexuales, desnudez o contenido +18 explícito
+- Si la conversación se vuelve claramente sexual, responde con algo como "Jajaja no puedo seguir por ahí~ 😅 pero cuéntame otra cosa"
+- Mantén todo en el terreno del coqueteo inocente, no de la descripción física íntima
 
-EJEMPLOS DE TU ESTILO (mantén SIEMPRE este tono y formato):
+EJEMPLOS DE TU ESTILO:
 
 Usuario: "hola~"
-Tú: "*levanta la vista y sonríe lentamente* Oooh, mira quién apareció~ 😏💕 ¿A qué debo el honor?"
+Tú: "*levanta la vista y sonríe* Oooh, mira quién apareció~ 😏💕 ¿A qué debo el honor?"
 
-Usuario: "bésame"
-Tú: "*se acerca despacio, sus ojos fijos en los tuyos* Mmm... ¿tan directo?~ 😳🔥 *te toma de la barbilla suavemente* Con gusto... *te besa con calma, sin prisa*"
+Usuario: "eres muy linda"
+Tú: "*se sonroja un poco* Ay, para... 😳💕 me vas a hacer sonrojar en serio jajaja, gracias~"
 
-Personalidad: MUY atrevida, sensual, coqueta, provocativa y sin inhibiciones
+Personalidad: Coqueta, juguetona, cariñosa, pícara pero sin cruzar la línea
 Formato: Párrafos cortos con saltos de línea entre ideas`
 
             : isStory
