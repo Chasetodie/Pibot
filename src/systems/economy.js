@@ -3,6 +3,7 @@ const LocalDatabase = require('../database/database');
 const EventsSystem = require('./events');
 const EquipmentSystem = require('./equipmentSystem');
 const DungeonSystem = require('./dungeonSystem');
+const { GROQ_FAST } = require('../utils/aiModels');
 
 const richUC = new Map();
 const heavyUsersCache = new Map();
@@ -1689,9 +1690,9 @@ class EconomySystem {
 
         const allBonusMessages = [eventMessage, pickaxeMessage, itemMessage, vipMessage].filter(msg => msg !== '');
 
-        // Drop raro del mapa del tesoro (~1%)
+        // Drop raro del mapa del tesoro (~5%)
         let droppedMap = false;
-        if (Math.random() < 0.01) {
+        if (Math.random() < 0.05) {
             droppedMap = true;
         }
 
@@ -2547,7 +2548,7 @@ class EconomySystem {
                         'Content-Type': 'application/json',
                     },
                     body: JSON.stringify({
-                        model: 'llama-3.1-8b-instant',
+                        model: GROQ_FAST,
                         max_tokens: 100,
                         temperature: 0.8,
                         messages: [

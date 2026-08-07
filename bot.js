@@ -454,14 +454,6 @@ async function sendLevelUpSafe(message, xpResult, channel) {
     }
 }
 
-app.listen(PORT, '0.0.0.0', () => {
-    console.log(`🌐 Servidor web corriendo en puerto ${PORT} en todas las interfaces`);
-    console.log(`🔗 URLs disponibles:`);
-    console.log(`   - Salud: http://0.0.0.0:${PORT}/health`);
-    console.log(`   - Principal: http://0.0.0.0:${PORT}/`);
-    console.log(`   - Admin: http://0.0.0.0:${PORT}/admin`);
-});
-
 const commands = [
 
     // ── ECONOMÍA ─────────────────────────────────────────────
@@ -1017,19 +1009,19 @@ const rest = new REST({ version: '10' }).setToken(process.env.TOKEN);
 
 (async () => {
   try {
-    // ✅ VERIFICAR QUE ESTAS VARIABLES EXISTAN
-    if (!process.env.CLIENT_ID || !process.env.GUILD_ID) {
-      console.error('❌ CLIENT_ID o GUILD_ID no definidos en variables de entorno');
+    if (!process.env.CLIENT_ID) {
+      console.error('❌ CLIENT_ID no definido en variables de entorno');
       return;
     }
 
-    console.log(`🔧 Registrando slash commands para ${process.env.GUILD_ID}...`);
-    
-/*    await rest.put(
-      Routes.applicationGuildCommands(process.env.CLIENT_ID, process.env.GUILD_ID),
+    console.log(`🔧 Registrando ${commands.length} slash commands globalmente...`);
+
+    await rest.put(
+      Routes.applicationCommands(process.env.CLIENT_ID), // 👈 sin GUILD_ID = global
       { body: commands }
-    );*/
-    console.log('✅ Slash command registrado!');
+    );
+
+    console.log('✅ Slash commands registrados globalmente!');
   } catch (error) {
     console.error('❌ Error registrando slash commands:', error);
   }
@@ -1047,14 +1039,7 @@ client.once('ready', async () => {
     console.log('🤖 Sistema de ChatBot inicializado');
     iniciarApiServer(client, economy, guildConfig, 20329);
 
-    client.user.setPresence({
-        activities: [{
-            type: ActivityType.Custom,
-            name: 'custom',
-            state: '💬 Escríbeme o usa >help — siempre estoy aquí 🤖',
-        }],
-        status: 'online'
-    });
+    setPibotPresence();
     
     setInterval(() => {
         const used = process.memoryUsage();
@@ -1091,6 +1076,17 @@ client.once('ready', async () => {
     // Iniciar loop de eventos automáticos (faltaba llamarlo)
     events.startEventLoop();
 });
+
+// Se reafirma si el bot se reconecta al gateway
+client.on('shardResume', () => {
+    setPibotPresence();
+});
+
+client.on('shardReady', () => {
+    setPibotPresence();
+});
+
+setInterval(setPibotPresence, 30 * 60 * 1000);
 
 client.on('guildMemberRemove', async (member) => {
     try {
@@ -2305,6 +2301,17 @@ client.on('interactionCreate', async (interaction) => {
         }
     }
 });
+
+function setPibotPresence() {
+    client.user.setPresence({
+        activities: [{
+            type: ActivityType.Custom,
+            name: 'custom',
+            state: '🖤 Escríbeme o usa >help — siempre en las sombras 🥀',
+        }],
+        status: 'online'
+    });
+}
 
 const userLastProcessed = new Map();
 const THROTTLE_TIME = 2000;

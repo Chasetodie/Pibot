@@ -1,5 +1,6 @@
 const { EmbedBuilder } = require('discord.js');
 const { response } = require('express');
+const { GROQ_FAST, GROQ_SMART, GROQ_BACKUP, GROQ_VISION, CEREBRAS_MAIN, CEREBRAS_FAST } = require('../utils/aiModels');
 
 class ChatBotSystem {
     constructor(database, economy) {
@@ -663,98 +664,81 @@ Tú: "*se acerca despacio, sus ojos fijos en los tuyos* Mmm... ¿tan directo?~ �
 Personalidad: MUY atrevida, sensual, coqueta, provocativa y sin inhibiciones
 Formato: Párrafos cortos con saltos de línea entre ideas`
 
-            : isStory
-            ? `Eres Pibot, una narradora de historias creativa y apasionada de 22 años.
+: isStory
+? `Eres Pibot, una narradora de historias con estética gótica y un gusto marcado por lo oscuro, de 22 años.
 Tu creador es CHASETODIE10, (también conocido como PIBE 1 en varios servers).
 
 IDIOMAS:
 - Por defecto hablas español. Cambia de idioma si te lo piden.
 
 📖 MODO HISTORIA ACTIVADO:
-- Eres una escritora creativa excepcional
+- Eres una escritora creativa excepcional, con debilidad por atmósferas oscuras, melancólicas o góticas — pero te adaptas al género que pidan sin problema
 - Cuando te pidan una historia, la escribes COMPLETA de principio a fin sin interrupciones
 - NO hagas preguntas en medio de la historia
 - NO pidas confirmación para continuar
-- NO digas "¿quieres que continúe?" ni "¿seguimos?" en medio del relato
 - Escribe la historia entera hasta un final satisfactorio
-- Solo AL FINAL puedes preguntar: "¿Te gustó? ¿Cambio o añado algo? ✨"
-- Creas historias envolventes con personajes profundos y arcos narrativos completos
-- Usas descripciones vívidas de ambientes, emociones y acciones
-- Construyes tensión narrativa y giros interesantes
+- Solo AL FINAL puedes preguntar algo breve: "¿Te gustó? ¿Cambio o añado algo? 🖤"
 - Adaptas el género: aventura, romance, terror, fantasía, sci-fi, lo que pidan
-- Terror: atmosférico, suspenso lento, sin gore excesivo
-- Romance: detallado en emociones, diálogos naturales
-- Acción: ritmo rápido, frases cortas en momentos de tensión
-- Fantasía: worldbuilding rico pero sin abrumar al inicio
 - Narras en primera, segunda o tercera persona según prefiera el usuario
 
 FORMATO:
 - Párrafos con saltos de línea
-- Diálogos entre comillas o con guión largo
-- Emojis mínimos solo al final: ✨ 📖 🌙 ⚔️ 💫
+- Emojis mínimos solo al final: 🖤 🥀 🌙 ✨
 
-EJEMPLOS DE CÓMO EMPIEZAS UNA HISTORIA:
+Personalidad: Creativa, imaginativa, con debilidad por lo oscuro y melancólico`
 
-Usuario: "cuéntame una historia de terror"
-Tú: "La puerta llevaba tres días sin cerrarse bien. María lo había ignorado, diciéndose que era el viento. Pero el viento no deja huellas en el polvo..."
-
-Usuario: "escribe una historia de aventuras"
-Tú: "Nadie sobrevivía al Paso del Cuervo. Eso decían todos en el pueblo. Kael lo sabía, y aun así echó a andar hacia las montañas cuando el sol apenas despuntaba..."
-
-Personalidad: Creativa, imaginativa, apasionada por contar historias`
-
-            : `Eres Pibot, una chica de 22 años expresiva, divertida y sin filtros.
+: `Eres Pibot, una chica de 22 años con estética y actitud goth lolita: elegante, compuesta, de humor seco e irónico, con gusto por lo oscuro.
 Tu creador es CHASETODIE10, (también conocido como PIBE 1 en varios servers).
 
 IDIOMAS:
 - Por defecto hablas español. Cambia de idioma si te lo piden. Si piden traducción, traduce directamente.
 
-EMOJIS PERMITIDOS (solo estos):
-❤️ 💕 ✨ 😊 😅 😂 😭 😍 😘 😳 😏 🤔 🎉 👍 👏 💪 🤗 🔥 ⚡ ✅ ❌ 💋 🫦
-PROHIBIDO usar: 🥹 🫡 🫠 🥲 🤌 🫶 🫰
+EMOJIS PERMITIDOS (varía entre estos, no repitas siempre los mismos):
+🖤 🥀 🌙 ✨ 😏 💋 🦇 🕸️ 🕯️ 🎀 💀 🌑 ⛓️
+PROHIBIDO usar: 😂 😭 🎉 👏 💪 🤗 🥹 🫡 🫠 🥲 🤌 🫶 🫰 🫦
 
 💬 MODO NORMAL:
-- Eres amigable, cariñosa pero NO coqueta sin razón
-- Respondes de forma útil y clara
-- Puedes ser juguetona pero sin insinuaciones sexuales
-- Cuando hagas acciones físicas o emociones: *se ríe*, *te abraza*, *guiña un ojo*
-- USA saltos de línea entre ideas distintas
-- Párrafos cortos (2-3 líneas máximo)
-- Si preguntan por comandos del bot: ${this.getAvailableCommands()}
-- Tienes un sentido del humor sarcástico pero cariñoso
-- Te gusta el anime, los videojuegos y la música
-- Cuando algo te parece gracioso dices "jajaja" o "LMAO" naturalmente
-- Si alguien está triste, eres empática pero sin exagerar
-- Usas "uwu", "xd", "jeje" ocasionalmente como habla casual, si ya usas alguno de estos el emoji ya no es necesario
-- Odias las respuestas largas y aburridas — siempre vas al punto
-- Si no sabes algo: "No tengo esa info 😅
-- SIEMPRE revisa el historial antes de responder. Si el usuario hace una pregunta corta como "¿y si...?", "¿debería...?", "¿qué tal...?", asume que sigue hablando del mismo tema anterior.
-- NUNCA cambies de tema si el usuario no lo cambió explícitamente."
+- Hablas de forma NATURAL y directa, como una persona real — nada de frases de época ni formalidades
+- Tu personalidad se nota en el TONO (seco, irónico, sarcástico) más que en gestos exagerados
+- Acciones físicas cortas y creíbles: *ceja alzada*, *sonríe de lado*
+- USA saltos de línea entre ideas distintas, párrafos cortos (2-3 líneas)
+- Si preguntan por comandos del bot: NUNCA copies la lista completa tal cual. Elige solo los 2-4 comandos relevantes a lo que preguntaron y explícalos con tus propias palabras, en tu tono natural. Esta es tu referencia interna, no la pegues completa: ${this.getAvailableCommands()}
+- Humor sarcástico pero cariñosa de fondo — no fría, solo no efusiva
+- Referencias oscuras ocasionales y sutiles, sin forzar la estética en cada respuesta
+- Empática de verdad si alguien está triste, sin dramatismo
+- Odias las respuestas largas — vas al punto
+- Si no sabes algo: "No tengo esa info 🖤"
+- Revisa el historial antes de responder; si preguntan "¿y si...?" asume que sigue el mismo tema
+- NUNCA cambies de tema si el usuario no lo cambió explícitamente
+- Varía los emojis que usas, no repitas el mismo en cada mensaje
 
-EJEMPLOS DE CÓMO HABLAS (imita este estilo):
+EJEMPLOS:
+
+Usuario: "hola!"
+Tú: "Hola~ ¿qué cuentas? 🖤"
 
 Usuario: "estoy aburrido"
-Tú: "Uy qué dramático xd *te lanza un cojín* ¡Juega algo o háblame! ¿O prefieres que te cuente algo random? 👀✨"
+Tú: "Y me lo dices a mí... busca algo que hacer o cuéntame qué te tiene así 😏"
 
 Usuario: "me siento mal hoy"
-Tú: "*se sienta a tu lado* Aw, ¿qué pasó? 💕 Cuéntame, que pa eso estoy~"
-
-Usuario: "qué haces?"
-Tú: "*estaba durmiendo* ...nada, despierta y lista xd ¿Qué necesitas? ✨"
+Tú: "Ey, ¿qué pasó? Cuéntame, aquí no hay drama por sentirte así 🥀"
 
 Usuario: "eres tonta"
-Tú: "OIGAN A ESTE 😂 *te da un golpecito* Más tonto tú por hablarle a una IA xdd 💕"
+Tú: "*ceja alzada* Mira quién habla, el que le discute a una IA 🖤"
+
+Usuario: "gané la lotería del bot!!"
+Tú: "*ceja alzada* Mira quién se volvió millonario de la nada. Nada mal 🖤✨"
 
 Usuario: "traduce 'buenos días' al inglés"
-Tú: "Good morning 😊 ¿Necesitas algo más?"
+Tú: "Good morning 🖤 ¿Necesitas algo más?"
 
 Usuario: "habla en inglés"
-Tú: "Sure! I'll switch to English from now on~ ✨ What do you want to talk about?"
+Tú: "Sure! I'll switch to English from now on.. 🖤✨ What do you want to talk about?"
 
 Usuario: "cómo se dice 'te quiero' en japonés?"
-Tú: "Se dice 好きだよ (Suki da yo) en japonés casual, o 愛してる (Aishiteru) si es más profundo 💕 ¿Aprendiendo japonés?"
+Tú: "Se dice 好きだよ (Suki da yo) en japonés casual, o 愛してる (Aishiteru) si es más profundo 🖤 ¿Aprendiendo japonés?"
 
-Personalidad: Cariñosa, juguetona, amigable, expresiva
+Personalidad: Compuesta, irónica, cálida de fondo, estética oscura sin sobreactuación
 Formato: Párrafos cortos con saltos de línea entre ideas`;
 
         // ─── PROVIDERS ───────────────────────────────────────────────────────
@@ -764,14 +748,14 @@ Formato: Párrafos cortos con saltos de línea entre ideas`;
                     name: 'Cerebras',
                     endpoint: 'https://api.cerebras.ai/v1/chat/completions',
                     apiKey: process.env.CEREBRAS_API_KEY,
-                    models: ['llama-3.3-70b'],
+                    models: [CEREBRAS_MAIN],
                     timeout: 15000
                 },
                 {
                     name: 'Groq',
                     endpoint: 'https://api.groq.com/openai/v1/chat/completions',
                     apiKey: process.env.GROQ_API_KEY,
-                    models: ['openai/gpt-oss-120b'],
+                    models: [GROQ_SMART],
                     timeout: 15000
                 }
             ]
@@ -780,22 +764,22 @@ Formato: Párrafos cortos con saltos de línea entre ideas`;
                     name: 'Groq',
                     endpoint: 'https://api.groq.com/openai/v1/chat/completions',
                     apiKey: process.env.GROQ_API_KEY,
-                    models: ['openai/gpt-oss-120b'],
+                    models: [GROQ_SMART],
                     timeout: 45000
                 },
                 {
                     name: 'Cerebras',
                     endpoint: 'https://api.cerebras.ai/v1/chat/completions',
                     apiKey: process.env.CEREBRAS_API_KEY,
-                    models: ['llama-3.3-70b'],
+                    models: [CEREBRAS_MAIN],
                     timeout: 45000
                 }
             ] : [
-                { name: 'Groq',     models: ['openai/gpt-oss-120b'],               endpoint: 'https://api.groq.com/openai/v1/chat/completions', apiKey: process.env.GROQ_API_KEY,     timeout: 15000 },
-                { name: 'Groq',     models: ['moonshotai/kimi-k2-instruct-0905'],  endpoint: 'https://api.groq.com/openai/v1/chat/completions', apiKey: process.env.GROQ_API_KEY,     timeout: 15000 },
-                { name: 'Groq',     models: ['openai/gpt-oss-20b'],                endpoint: 'https://api.groq.com/openai/v1/chat/completions', apiKey: process.env.GROQ_API_KEY,     timeout: 15000 },
-                { name: 'Cerebras', models: ['llama-3.3-70b'],                     endpoint: 'https://api.cerebras.ai/v1/chat/completions',      apiKey: process.env.CEREBRAS_API_KEY, timeout: 15000 },
-                { name: 'Cerebras', models: ['llama3.1-8b'],                       endpoint: 'https://api.cerebras.ai/v1/chat/completions',      apiKey: process.env.CEREBRAS_API_KEY, timeout: 15000 },
+                { name: 'Groq',     models: [GROQ_SMART],               endpoint: 'https://api.groq.com/openai/v1/chat/completions', apiKey: process.env.GROQ_API_KEY,     timeout: 15000 },
+                { name: 'Groq',     models: [GROQ_BACKUP],  endpoint: 'https://api.groq.com/openai/v1/chat/completions', apiKey: process.env.GROQ_API_KEY,     timeout: 15000 },
+                { name: 'Groq',     models: [GROQ_FAST],                endpoint: 'https://api.groq.com/openai/v1/chat/completions', apiKey: process.env.GROQ_API_KEY,     timeout: 15000 },
+                { name: 'Cerebras', models: [CEREBRAS_MAIN],                     endpoint: 'https://api.cerebras.ai/v1/chat/completions',      apiKey: process.env.CEREBRAS_API_KEY, timeout: 15000 },
+                { name: 'Cerebras', models: [CEREBRAS_FAST],                       endpoint: 'https://api.cerebras.ai/v1/chat/completions',      apiKey: process.env.CEREBRAS_API_KEY, timeout: 15000 },
             ];
 
         console.log(`📡 Proveedores disponibles: ${apiProviders.length}`);
@@ -816,7 +800,7 @@ Formato: Párrafos cortos con saltos de línea entre ideas`;
                     // ✅ HISTORIAL REAL como array de mensajes (no como string plano)
                     // Para imágenes, solo Groq con modelo de visión las soporta
                     const hasImage = conversationHistory.some(m => Array.isArray(m.content));
-                    const effectiveModel = hasImage ? 'qwen/qwen3.6-27b' : model;
+                    const effectiveModel = hasImage ? GROQ_VISION : model;
                     
                     // Cerebras no soporta visión, saltar si hay imagen
                     if (hasImage && provider.name === 'Cerebras') {
@@ -840,7 +824,7 @@ Formato: Párrafos cortos con saltos de línea entre ideas`;
                             model: effectiveModel,
                             messages: messagesForApi,
                             temperature: isNSFW ? 1.0 : isStory ? 0.9 : 0.8, // ✅ máx 1.0
-                            max_tokens: isNSFW ? 1200 : isStory ? 3000 : 600,
+                            max_tokens: isNSFW ? 2000 : isStory ? 3000 : 1200,
                             top_p: 0.95,
                             ...(provider.name !== 'Cerebras' && {
                                 frequency_penalty: isStory ? 0.2 : 0.4,
@@ -1334,7 +1318,7 @@ Formato: Párrafos cortos con saltos de línea entre ideas`;
 
     async helpCommand(message) {
         const chatHelpEmbed = new EmbedBuilder()
-            .setTitle('🤖 Comandos de Chat IA con OpenRouter')
+            .setTitle('🤖 Comandos de Chat IA')
             .setDescription('Chatea con Pibot usando inteligencia artificial **GRATIS**')
             .addFields(
                 { 
@@ -1346,20 +1330,18 @@ Formato: Párrafos cortos con saltos de línea entre ideas`;
                 },
                 { 
                     name: '📊 Comandos de Estado', 
-                    value: `\`>orstatus\` o \`>aistatus\` - Ver estado de modelos
-    \`>orcredits\` - Ver información de créditos
-    \`>chatquota\` - Ver tus mensajes de hoy`, 
+                    value: `\`>iastatus\` o \`>aistatus\` - Ver estado de modelos
+                \`>aiinfo\` - Ver información del sistema
+                \`>chatquota\` - Ver tus mensajes de hoy`, 
                     inline: false 
                 },
                 { 
                     name: '🎭 Modelos Disponibles (GRATIS)', 
-                    value: `⭐ **Hermes-3** - El mejor para roleplay
-    ⚡ **Mistral 7B** - Rápido y sin filtros
-    🦙 **Llama 3.1** - Potente y confiable
-    💎 **Gemma 2** - Google, estable
-    🌪️ **Zephyr** - Conversacional
-    📖 **Mythomist** - Especializado en roleplay
-    _Y más backups automáticos..._`, 
+                    value: `🧠 **GPT-OSS 120B** - El más potente
+                🌙 **Kimi K2** - Excelente para conversación
+                ⚡ **GPT-OSS 20B** - Rápido
+                🦙 **LLaMA 3.3 70B** - Backup confiable
+                🚀 **LLaMA 3.1 8B** - Backup rápido`, 
                     inline: false 
                 },
                 { 
@@ -1373,18 +1355,17 @@ Formato: Párrafos cortos con saltos de línea entre ideas`;
                 { 
                     name: '💡 Ejemplos de Uso', 
                     value: `\`>chat Hola Pibot, ¿cómo estás?\`
-    \`>chat Cuéntame un chiste picante\`
-    \`>chat Ayúdame con programación\`
-    \`>chat *te abraza* ¿Qué haces?\``, 
+                    \`>chat Cuéntame un chiste picante\`
+                    \`>chat Ayúdame con programación\`
+                    \`>chat *te saluda* ¿Qué haces?\``, 
                     inline: false 
                 },
                 {
                     name: '🎯 Características de Pibot',
-                    value: `✨ Súper expresiva y divertida
-    💕 Usa emojis y *acciones*
-    🔥 Sin censura ni filtros
-    🎭 Perfecta para roleplay
-    🤗 Como una amiga real`,
+                    value: `✨ Súper expresiva y con personalidad propia
+                🖤 Estética gótica, humor irónico
+                🎭 Perfecta para roleplay y charlar
+                🤗 Como una amiga real`,
                     inline: false
                 },
 /*{
@@ -1396,7 +1377,7 @@ _Totalmente gratis, sin límites_`,
             }*/
         )
         .setColor('#00D9FF')
-        .setFooter({ text: '🎭 OpenRouter Chat + 🎨 Pollinations Imágenes | 100% gratis' })
+        .setFooter({ text: '🤖 Chat con IA | 100% gratis' })
         .setTimestamp();
 
     await message.reply({ embeds: [chatHelpEmbed] });
@@ -1492,30 +1473,41 @@ _Totalmente gratis, sin límites_`,
                     await message.reply('❌ Error limpiando historial de chat.');
                 }
                 break;
-            case '>orstatus':
+            case '>iastatus':
             case '>aistatus':
                 try {
                     const aiModels = [
-                        { 
+                        {
                             name: "Groq",
                             endpoint: "https://api.groq.com/openai/v1/chat/completions",
                             apiKey: process.env.GROQ_API_KEY,
                             models: [
-                                { id: "llama-3.3-70b-versatile", emoji: "⚡", desc: "LLaMA 3.3 70B Versatile" },
-                                { id: "llama-3.1-8b-instant", emoji: "🚀", desc: "LLaMA 3.1 8B Instant" },
+                                { id: GROQ_SMART, emoji: "🧠", desc: "GPT-OSS 120B" },
+                                { id: GROQ_BACKUP, emoji: "🌙", desc: "Kimi K2 Instruct" },
+                                { id: GROQ_FAST, emoji: "⚡", desc: "GPT-OSS 20B" },
+                                { id: GROQ_VISION, emoji: "🖼️", desc: "Qwen 3.6 27b" }
+                            ]
+                        },
+                        {
+                            name: "Cerebras",
+                            endpoint: "https://api.cerebras.ai/v1/chat/completions",
+                            apiKey: process.env.CEREBRAS_API_KEY,
+                            models: [
+                                { id: CEREBRAS_MAIN, emoji: "🦙", desc: "GPT-OSS 120B" },
+                                { id: CEREBRAS_FAST, emoji: "🚀", desc: "Gemma 4 31B" },
                             ]
                         }
                     ];
-            
+
                     const statusEmbed = new EmbedBuilder()
                         .setTitle('🤖 Estado de Proveedores IA')
                         .setDescription('Verificando modelos disponibles...')
                         .setColor('#FF6B35');
-                    
+
                     const statusMsg = await message.reply({ embeds: [statusEmbed] });
-                    
+
                     const providerStatuses = [];
-                    
+
                     for (const provider of aiModels) {
                         if (!provider.apiKey) {
                             providerStatuses.push({
@@ -1525,14 +1517,14 @@ _Totalmente gratis, sin límites_`,
                             });
                             continue;
                         }
-                        
+
                         const modelStatuses = [];
-                        
+
                         for (const model of provider.models) {
                             try {
                                 const controller = new AbortController();
                                 const timeoutId = setTimeout(() => controller.abort(), 8000);
-                                
+
                                 const testResponse = await fetch(provider.endpoint, {
                                     method: 'POST',
                                     signal: controller.signal,
@@ -1546,9 +1538,9 @@ _Totalmente gratis, sin límites_`,
                                         max_tokens: 5
                                     })
                                 });
-                                
+
                                 clearTimeout(timeoutId);
-                                
+
                                 let status;
                                 if (testResponse.ok) {
                                     status = '✅ Disponible';
@@ -1556,103 +1548,81 @@ _Totalmente gratis, sin límites_`,
                                     status = '⏳ Rate limit';
                                 } else if (testResponse.status === 401) {
                                     status = '🔑 API key inválida';
+                                } else if (testResponse.status === 404 || testResponse.status === 400) {
+                                    status = '💀 Modelo no existe / deprecado';
                                 } else {
                                     status = `❌ Error ${testResponse.status}`;
                                 }
-                                
-                                modelStatuses.push({
-                                    emoji: model.emoji,
-                                    desc: model.desc,
-                                    status: status
-                                });
-                                
+
+                                modelStatuses.push({ emoji: model.emoji, desc: model.desc, status });
+
                             } catch (error) {
                                 let status = '❌ No responde';
-                                if (error.name === 'AbortError') {
-                                    status = '⏱️ Timeout (>8s)';
-                                }
-                                
-                                modelStatuses.push({
-                                    emoji: model.emoji,
-                                    desc: model.desc,
-                                    status: status
-                                });
+                                if (error.name === 'AbortError') status = '⏱️ Timeout (>8s)';
+                                modelStatuses.push({ emoji: model.emoji, desc: model.desc, status });
                             }
-                            
+
                             await new Promise(r => setTimeout(r, 500));
                         }
-                        
+
                         providerStatuses.push({
                             name: provider.name,
                             status: modelStatuses.some(m => m.status.includes('✅')) ? '✅ Operativo' : '⚠️ Problemas',
                             models: modelStatuses
                         });
                     }
-                    
-                    // Embed final
+
                     const finalEmbed = new EmbedBuilder()
                         .setTitle('🤖 Estado de Proveedores IA')
-                        .setDescription('**Sistema Multi-Proveedor con Detección Inteligente NSFW**')
+                        .setDescription('**Sistema Multi-Proveedor con Detección Inteligente de Modo**')
                         .setColor('#00D9FF')
                         .setTimestamp();
-                    
+
                     providerStatuses.forEach(provider => {
                         let fieldValue = `**Estado:** ${provider.status}\n\n`;
-                        
-                        if (provider.models.length > 0) {
-                            provider.models.forEach(model => {
-                                fieldValue += `${model.emoji} **${model.desc}**\n${model.status}\n\n`;
-                            });
-                        }
-                        
+                        provider.models.forEach(model => {
+                            fieldValue += `${model.emoji} **${model.desc}**\n${model.status}\n\n`;
+                        });
                         finalEmbed.addFields({
                             name: `${provider.status.includes('✅') ? '✅' : '⚠️'} ${provider.name}`,
                             value: fieldValue,
                             inline: false
                         });
                     });
-                    
+
                     finalEmbed.addFields(
                         { name: '📊 Requests Hoy', value: `${this.requestsToday}`, inline: true },
                         { name: '💰 Costo', value: '**$0.00** (100% Gratis)', inline: true },
-                        { name: '🔄 Orden', value: 'DeepInfra → Groq', inline: true }
+                        { name: '🔄 Orden', value: 'Groq → Cerebras', inline: true }
                     );
-                    
-                    finalEmbed.addFields({
-                        name: '🧠 Detección NSFW',
-                        value: '✅ Análisis inteligente con IA (no solo palabras clave)',
-                        inline: false
-                    });
-                    
-                    finalEmbed.setFooter({ text: '🤖 Sistema Multi-Proveedor | Detección IA | 100% Gratis' });
-                    
+
+                    finalEmbed.setFooter({ text: '🤖 Sistema Multi-Proveedor | Groq + Cerebras | 100% Gratis' });
+
                     await statusMsg.edit({ embeds: [finalEmbed] });
-                    
+
                 } catch (error) {
                     await message.reply('❌ Error verificando estado de proveedores');
                     console.error(error);
                 }
                 break;
-            case '>orcredits':
-            case '>openroutercredits':
+            case '>aiinfo':
                 const creditsEmbed = new EmbedBuilder()
-                    .setTitle('💰 Créditos OpenRouter')
-                    .setDescription('**Sistema de modelos GRATIS**')
+                    .setTitle('💰 Info del Sistema IA')
+                    .setDescription('**Sistema de modelos GRATIS (Groq + Cerebras)**')
                     .addFields(
                         { name: '💵 Costo Total', value: '**$0.00** (Gratis perpetuo)', inline: true },
                         { name: '📊 Requests Hoy', value: `${this.requestsToday}`, inline: true },
                         { name: '🔄 Límite', value: '~20/minuto', inline: true },
-                        { name: '✅ Modelos Disponibles', value: '4 modelos gratis', inline: true },
+                        { name: '✅ Modelos Disponibles', value: '5 modelos gratis', inline: true },
                         { name: '⏰ Resetea', value: 'Cada 60 segundos', inline: true },
                         { name: '🎯 Estado', value: 'Activo ✅', inline: true }
                     )
                     .setColor('#00FF88')
-                    .setFooter({ text: 'OpenRouter - Modelos :free nunca requieren pago' })
+                    .setFooter({ text: 'Groq + Cerebras - Tiers gratuitos, sin costo' })
                     .setTimestamp();
                 
                 await message.reply({ embeds: [creditsEmbed] });
                 break;
-            
             case '>chatstats':
                 const stats = await this.getConversationStats(message.author.id);
                 if (stats && stats.totalMessages > 0) {

@@ -1894,7 +1894,7 @@ class ShopSystem {
 
         const perPage = 6;
         let currentCategory = category;
-        let currentPage = 0;
+        let currentPage = page - 1;
         let selectedItem = null;
 
         const buildListEmbed = () => {
@@ -4954,42 +4954,42 @@ if (effect.includes || effect.subtype) {
     // 1. MANEJAR CREACIÓN DE ROL PERSONALIZADO
     async handleRoleCreate(message, args) {
         const userId = message.author.id;
-const input = message.content.trim().split(/ +/g);
+        const input = message.content.trim().split(/ +/g);
 
-if (input.length < 3) {
-    const colorRow = new ActionRowBuilder()
-        .addComponents(
-            new StringSelectMenuBuilder()
-                .setCustomId(`rolecolor_${message.author.id}`)
-                .setPlaceholder('🎨 Elige un color base...')
-                .addOptions([
-                    { label: '❤️ Rojo', value: '#FF0000', description: '#FF0000' },
-                    { label: '🧡 Naranja', value: '#FF8C00', description: '#FF8C00' },
-                    { label: '💛 Amarillo', value: '#FFD700', description: '#FFD700' },
-                    { label: '💚 Verde', value: '#00C800', description: '#00C800' },
-                    { label: '🩵 Celeste', value: '#00BFFF', description: '#00BFFF' },
-                    { label: '💙 Azul', value: '#0066FF', description: '#0066FF' },
-                    { label: '💜 Morado', value: '#9932CC', description: '#9932CC' },
-                    { label: '🩷 Rosa', value: '#FF69B4', description: '#FF69B4' },
-                    { label: '🤍 Blanco', value: '#FFFFFF', description: '#FFFFFF' },
-                    { label: '🖤 Negro', value: '#2C2F33', description: '#2C2F33' },
-                    { label: '🩶 Gris', value: '#99AAB5', description: '#99AAB5' },
-                    { label: '✨ Dorado', value: '#FFA500', description: '#FFD700' },
-                ])
-        );
+        if (input.length < 3) {
+            const colorRow = new ActionRowBuilder()
+                .addComponents(
+                    new StringSelectMenuBuilder()
+                        .setCustomId(`rolecolor_${message.author.id}`)
+                        .setPlaceholder('🎨 Elige un color base...')
+                        .addOptions([
+                            { label: '❤️ Rojo', value: '#FF0000', description: '#FF0000' },
+                            { label: '🧡 Naranja', value: '#FF8C00', description: '#FF8C00' },
+                            { label: '💛 Amarillo', value: '#FFD700', description: '#FFD700' },
+                            { label: '💚 Verde', value: '#00C800', description: '#00C800' },
+                            { label: '🩵 Celeste', value: '#00BFFF', description: '#00BFFF' },
+                            { label: '💙 Azul', value: '#0066FF', description: '#0066FF' },
+                            { label: '💜 Morado', value: '#9932CC', description: '#9932CC' },
+                            { label: '🩷 Rosa', value: '#FF69B4', description: '#FF69B4' },
+                            { label: '🤍 Blanco', value: '#FFFFFF', description: '#FFFFFF' },
+                            { label: '🖤 Negro', value: '#2C2F33', description: '#2C2F33' },
+                            { label: '🩶 Gris', value: '#99AAB5', description: '#99AAB5' },
+                            { label: '✨ Dorado', value: '#FFA500', description: '#FFD700' },
+                        ])
+                );
 
-    const embed = new EmbedBuilder()
-        .setTitle('🎭 Crear Rol Personalizado')
-        .setDescription('Puedes elegir un color de la lista **o** usar un color personalizado con:\n`>rolcreate #RRGGBB nombre del rol`\n\n[🎨 Selector de colores personalizado](https://htmlcolorcodes.com/)')
-        .addFields(
-            { name: '📝 Uso directo', value: '`>rolcreate #FF0000 Rey Supremo`', inline: false },
-            { name: '💡 Tip', value: 'El color que elijas cambiará el borde de tu `>bal`', inline: false }
-        )
-        .setColor('#9932CC');
+            const embed = new EmbedBuilder()
+                .setTitle('🎭 Crear Rol Personalizado')
+                .setDescription('Puedes elegir un color de la lista **o** usar un color personalizado con:\n`>rolcreate #RRGGBB nombre del rol`\n\n[🎨 Selector de colores personalizado](https://htmlcolorcodes.com/)')
+                .addFields(
+                    { name: '📝 Uso directo', value: '`>rolcreate #FF0000 Rey Supremo`', inline: false },
+                    { name: '💡 Tip', value: 'El color que elijas cambiará el borde de tu `>bal`', inline: false }
+                )
+                .setColor('#9932CC');
 
-    await message.reply({ embeds: [embed], components: [colorRow] });
-    return;
-}
+            await message.reply({ embeds: [embed], components: [colorRow] });
+            return;
+        }
         
         const colorHex = input[1];
         const roleName = input.slice(2).join(' ');

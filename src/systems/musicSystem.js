@@ -11,6 +11,22 @@ class MusicSystem {
         this.playThrottle = new Map();
         this.nodeList = [];
         this.failedNodes = new Set();
+        this.skipVotes = new Map(); // guildId -> { trackId, voters: Set<userId> }
+        this.spotifyCapableNodes = new Set();
+
+        setInterval(async () => {
+            for (const [name, node] of this.kazagumo.shoukaku.nodes) {
+                if (node.state === 2 /* CONNECTED */ && !this.failedNodes.has(name)) {
+                    const nodeConfig = this.nodeList.find(n => n.name === name);
+                    if (nodeConfig) {
+                        const hasSpotify = await this.checkNodeSpotifyCapability(nodeConfig);
+                        if (hasSpotify) this.spotifyCapableNodes.add(name);
+                        else this.spotifyCapableNodes.delete(name);
+                    }
+                }
+            }
+        }, 10 * 60 * 1000); // cada 10 minutos
+
         this.initialize();
     }
 
@@ -75,18 +91,6 @@ class MusicSystem {
                 auth: 'heavencloud.in',
                 secure: false
             },
-            {
-                name: 'Lavalink.devamop.in',
-                url: 'lavalink.devamop.in:443',
-                auth: 'DevamOP',
-                secure: true
-            },
-            {
-                name: 'Lavalink v4 EU',
-                url: 'lava-v4.ajieblogs.eu.org:443',
-                auth: 'https://dsc.gg/ajidevserver',
-                secure: true
-            },
         ];
 
         this.nodeList = nodes;
@@ -109,9 +113,20 @@ class MusicSystem {
         this.client.kazagumo = this.kazagumo;
 
         // Acceder a shoukaku DESPUÉS de que kazagumo lo inicialice
-        this.kazagumo.shoukaku.on('ready', (name) => {
-            console.log(`✅ Nodo [${name}] conectado!`);
+        this.kazagumo.shoukaku.on('ready', async (name) => {
+            console.log(`✅ Nodo ${name} listo!`);
             this.failedNodes.delete(name);
+
+            const nodeConfig = this.nodeList.find(n => n.name === name);
+            if (nodeConfig) {
+                const hasSpotify = await this.checkNodeSpotifyCapability(nodeConfig);
+                if (hasSpotify) {
+                    this.spotifyCapableNodes.add(name);
+                    console.log(`🎧 Nodo ${name} tiene soporte de Spotify`);
+                } else {
+                    this.spotifyCapableNodes.delete(name);
+                }
+            }
         });
 
         this.kazagumo.shoukaku.on('error', (name, error) => {
@@ -165,6 +180,8 @@ class MusicSystem {
 
     setupEventListeners() {
         this.kazagumo.on('playerStart', (player, track) => {
+            this.skipVotes.delete(player.guildId);
+            
             console.log(`🎵 Reproduciendo "${track.title}" en el servidor ${player.guild?.name || player.guildId} usando el nodo [${player.shoukaku?.node?.name || player.node?.name}]`);
             
             const embed = new EmbedBuilder()
@@ -427,7 +444,33 @@ class MusicSystem {
         }
     }
 
+    async checkNodeSpotifyCapability(nodeConfig) {
+        try {
+            const protocol = nodeConfig.secure ? 'https' : 'http';
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 5000);
+
+            const response = await fetch(`${protocol}://${nodeConfig.url}/v4/info`, {
+                headers: { 'Authorization': nodeConfig.auth },
+                signal: controller.signal
+            });
+            clearTimeout(timeoutId);
+
+            if (!response.ok) return false;
+
+            const data = await response.json();
+            const sourceManagers = data.sourceManagers || [];
+            return sourceManagers.includes('spotify');
+        } catch (error) {
+            return false;
+        }
+    }
+
     async spotifySearchCommand(message, args, member, channel, guild, author) {
+        if (this.spotifyCapableNodes.size === 0) {
+            return message.reply('⚠️ Ningún servidor de música disponible tiene soporte de Spotify ahora mismo. Intenta con búsqueda normal (YouTube) o vuelve a intentar en unos minutos.');
+        }
+
         const query = args.slice(2).join(' ').trim();
         if (!query) return message.reply('❌ Escribe algo para buscar.\nEjemplo: `>m spsearch la lagartija`');
 
@@ -704,6 +747,13 @@ class MusicSystem {
 
             // ─── SPOTIFY SEARCH ───────────────────────────────
             if (customId.startsWith('msp_') || customId.startsWith('mspplay_') || customId.startsWith('mspback_')) {
+                if (this.spotifyCapableNodes.size === 0) {
+                    return interaction.reply({ 
+                        content: '⚠️ Ningún servidor de música disponible tiene soporte de Spotify ahora mismo. Intenta con búsqueda normal (YouTube) o vuelve a intentar en unos minutos.', 
+                        ephemeral: true 
+                    });
+                }
+
                 const session = this.spotifySearchSessions?.get(`${userId}_${guildId}`);
                 if (!session) return interaction.editReply({ content: '❌ Sesión expirada.', embeds: [], components: [] });
 
@@ -749,6 +799,7 @@ class MusicSystem {
                                         textId: interaction.channelId,
                                         voiceId: voiceChannel.id,
                                         shardId: interaction.guild.shardId || 0,
+                                        nodeName: this.spotifyCapableNodes.size > 0 ? [...this.spotifyCapableNodes][0] : undefined,
                                     });
                                     break;
                                 } catch (playerErr) {
@@ -1022,8 +1073,18 @@ class MusicSystem {
         let query = args.slice(2).join(' ');
         await message.reply({ content: `🔍 Buscando... \`${query}\`` });
 
+        const isSpotifyQuery = /^(https?:\/\/)?(open\.)?spotify\.com\/|^spotify:/i.test(query);
+
+        if (isSpotifyQuery && this.spotifyCapableNodes.size === 0) {
+            return message.reply('⚠️ Ningún servidor de música disponible tiene soporte de Spotify ahora mismo. Intenta con un link de YouTube o busca por nombre, o vuelve a intentar en unos minutos.');
+        }
+
         try {
             let player = this.kazagumo.getPlayer(guild.id);
+
+            if (player && isSpotifyQuery && !this.spotifyCapableNodes.has(player.node?.name)) {
+                return message.reply('⚠️ El servidor de música actual no tiene soporte de Spotify. Termina la canción actual o usa `>m stop` y vuelve a intentar con Spotify.');
+            }
 
             if (!player) {
                 let bestNode = this.getBestNode();
@@ -1044,6 +1105,9 @@ class MusicSystem {
                             textId: channel.id,
                             voiceId: voiceChannel.id,
                             shardId: guild.shardId || 0,
+                            nodeName: isSpotifyQuery && this.spotifyCapableNodes.size > 0 
+                                ? [...this.spotifyCapableNodes][0] 
+                                : undefined,
                         });
                         break;
                     } catch (playerErr) {
@@ -1190,6 +1254,11 @@ class MusicSystem {
         const player = this.kazagumo.getPlayer(guild.id);
         if (!player) return message.reply('❌ No hay música reproduciéndose.');
 
+        const voiceChannel = member.voice.channel;
+        if (!voiceChannel) {
+            return message.reply('❌ Debes estar en un canal de voz para usar este comando.');
+        }
+
         const amount = parseInt(args[2]) || 1;
         if (amount < 1) return message.reply('❌ La cantidad debe ser mayor a 0.');
 
@@ -1198,14 +1267,60 @@ class MusicSystem {
             return message.reply(`❌ Solo hay ${totalDisponible} canciones disponibles para saltar.`);
         }
 
-        const voiceChannel = member.voice.channel;
-        if (!voiceChannel) {
-            return message.reply('❌ Debes estar en un canal de voz para usar este comando.');
-        }
-
         const currentTrack = player.queue.current;
 
-        // Eliminar canciones extra de la cola antes de skipear
+        // Saltar varias canciones de golpe: solo quien la pidió o con permiso de mover canales
+        if (amount > 1) {
+            const isRequester = currentTrack.requester?.id === member.id;
+            const canManage = member.permissions.has('MoveMembers');
+            if (!isRequester && !canManage) {
+                return message.reply('❌ Solo quien pidió la canción actual (o un mod) puede saltar varias de golpe. Usa `>music skip` de a una.');
+            }
+            return this.executeSkip(message, player, guild, amount, currentTrack);
+        }
+
+        // Skip de 1 canción: quien la pidió, salta directo
+        if (currentTrack.requester?.id === member.id) {
+            return this.executeSkip(message, player, guild, 1, currentTrack);
+        }
+
+        // Contar personas reales en el VC (sin bots)
+        const membersInVC = voiceChannel.members.filter(m => !m.user.bot);
+        const totalMembers = membersInVC.size;
+
+        // Con 1-2 personas en el VC, no tiene sentido votar
+        if (totalMembers <= 2) {
+            return this.executeSkip(message, player, guild, 1, currentTrack);
+        }
+
+        const requiredVotes = Math.ceil(totalMembers / 2);
+
+        let voteData = this.skipVotes.get(guild.id);
+        if (!voteData || voteData.trackId !== currentTrack.identifier) {
+            voteData = { trackId: currentTrack.identifier, voters: new Set() };
+            this.skipVotes.set(guild.id, voteData);
+        }
+
+        if (voteData.voters.has(member.id)) {
+            return message.reply(`🗳️ Ya votaste para saltar esta canción. Votos: **${voteData.voters.size}/${requiredVotes}**`);
+        }
+
+        voteData.voters.add(member.id);
+
+        if (voteData.voters.size >= requiredVotes) {
+            this.skipVotes.delete(guild.id);
+            return this.executeSkip(message, player, guild, 1, currentTrack, true);
+        }
+
+        const embed = new EmbedBuilder()
+            .setTitle('🗳️ Votación para saltar')
+            .setDescription(`**${member.displayName}** votó para saltar **${currentTrack.title}**\nVotos: **${voteData.voters.size}/${requiredVotes}**`)
+            .setColor('#FFA500');
+
+        await message.reply({ embeds: [embed] });
+    }
+
+    async executeSkip(message, player, guild, amount, currentTrack, wasVoted = false) {
         for (let i = 0; i < amount - 1; i++) {
             player.queue.splice(0, 1);
         }
@@ -1214,7 +1329,7 @@ class MusicSystem {
         const embed = new EmbedBuilder()
             .setTitle('⏭️ Canciones Saltadas')
             .setDescription(amount === 1
-                ? `**${currentTrack.title}** ha sido saltada.`
+                ? `**${currentTrack.title}** ha sido saltada.${wasVoted ? ' (por votación)' : ''}`
                 : `Se saltaron **${amount}** canciones.`)
             .setColor('#FFA500');
 

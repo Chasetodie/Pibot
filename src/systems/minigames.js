@@ -4,6 +4,7 @@ const path = require('path');
 const EventsSystem = require('./events');
 const { PlayerState } = require('kazagumo');
 const { findPackageJSON } = require('module');
+const { GROQ_FAST, GROQ_SMART } = require('../utils/aiModels');
 
 // Colores y tipos de cartas UNO
 const UNO_COLORS = ['red', 'yellow', 'green', 'blue'];
@@ -12030,7 +12031,7 @@ await gameMessage.edit({ embeds: [questionEmbed], components });
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({
-                    model: 'llama-3.3-70b-versatile',
+                    model: GROQ_SMART,
                     messages: [
                         { 
                             role: 'system', 
@@ -12124,7 +12125,7 @@ await gameMessage.edit({ embeds: [questionEmbed], components });
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({
-                    model: 'llama-3.1-8b-instant',
+                    model: GROQ_FAST,
                     messages: [
                         { 
                             role: 'system', 

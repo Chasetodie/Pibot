@@ -1,4 +1,5 @@
 const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
+const { GROQ_FAST } = require('../utils/aiModels');
 
 class WorkMinigames {
     constructor() {
@@ -70,7 +71,7 @@ class WorkMinigames {
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({
-                    model: 'llama-3.1-8b-instant',
+                    model: GROQ_FAST,
                     max_tokens: 300,
                     temperature: 0.9,
                     messages: [
