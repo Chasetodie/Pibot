@@ -38,7 +38,7 @@ class MusicSystem {
                     this.kazagumo.shoukaku.addNode(nodeConfig);
                 }
             }
-        }, 60000); // cada 1 minuto
+        }, 5 * 60 * 1000); // cada 5 minuto
 
         this.initialize();
     }
@@ -350,7 +350,7 @@ class MusicSystem {
                 console.warn('⚠️ Lavalink no pudo resolver la URL del anuncio:', audioUrl);
                 return;
             }
-            
+
             player.queue.unshift(result.tracks[0]);
             await player.skip();
         } catch (err) {
