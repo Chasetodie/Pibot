@@ -245,7 +245,7 @@ class MusicSystem {
                 if (channel) channel.send({ embeds: [embed] });
             }
 
-            try {
+/*            try {
                 const ttsEnabled = await this.guildConfig.isTtsAnnounceEnabled(player.guildId);
                 if (ttsEnabled) {
                     const isFirstOfSession = !this.announcedSession.has(player.guildId);
@@ -270,7 +270,7 @@ class MusicSystem {
                 }
             } catch (err) {
                 console.error('Error en anuncio TTS:', err.message);
-            }            
+            }            */
         });
 
         this.kazagumo.on('playerEmpty', (player) => {
@@ -335,7 +335,7 @@ class MusicSystem {
         return `${minutes}:${seconds.toString().padStart(2, '0')}`;
     }
 
-    async announceTrack(player, track, type) {
+/*    async announceTrack(player, track, type) {
         try {
             const tituloLimpio = limpiarTitulo(track.title);
             const text = type === 'first'
@@ -356,7 +356,7 @@ class MusicSystem {
         } catch (err) {
             console.error('Error en anuncio TTS:', err.message);
         }
-    }
+    }*/
 
     async processCommand(message) {
         if (message.author.bot) return;
