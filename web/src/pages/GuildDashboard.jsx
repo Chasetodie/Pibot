@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import DashboardBackground from '../components/DashboardBackground';
 import Toast from '../components/Toast';
 import PreviaEmbed from '../components/PreviaEmbed';
+import { cerrarSesion } from '../utils/auth';
 
 function Seccion({ titulo, children }) {
   return (
@@ -97,6 +98,7 @@ export default function GuildDashboard() {
     ])
         .then(async ([resConfig, resInfo]) => {
           if (resConfig.status === 401) {
+            cerrarSesion();
             navigate('/404', { replace: true });
             return null;
           }
@@ -290,6 +292,15 @@ export default function GuildDashboard() {
             canalNombre={info.canales.find(c => c.id === valorActual('events_channel'))?.name}
           />
         </div>
+      </Seccion>
+
+      <Seccion titulo="Música">
+        <Toggle
+          titulo="Anuncios hablados"
+          descripcion="El bot anuncia por voz la primera y última canción de la cola"
+          activo={valorActual('tts_announce_enabled') === 'true'}
+          onCambiar={() => marcarCambio('tts_announce_enabled', valorActual('tts_announce_enabled') === 'true' ? 'false' : 'true')}
+        />
       </Seccion>
 
       <Toast mensaje={mensaje} />

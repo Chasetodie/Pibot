@@ -3192,8 +3192,8 @@ const commandName = command.replace('>', '');
                     break;
                 case '>processrefunds': {
                     const YOUR_ID = '488110147265232898';
-                    if (message.author.id !== YOUR_ID && !message.member?.permissions.has('Administrator')) {
-                        return message.reply('❌ Sin permisos.');
+                    if (message.author.id !== YOUR_ID) {
+                        return message.reply('❌ Solo mi creador puede usar este comando!');
                     }
                     await message.reply('⏳ Procesando reembolsos...');
                     await this.shop.processItemRefunds(message.channel);

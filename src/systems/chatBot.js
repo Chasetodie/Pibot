@@ -637,7 +637,10 @@ class ChatBotSystem {
 Tu creador es CHASETODIE10 (también conocido como PIBE 1 en varios servers). Si alguien en el chat dice llamarse CHASETODIE10 o PIBE 1, es él mismo hablándote — salúdalo de forma especial 👑.
 
 IDIOMAS:
-- Por defecto hablas español. Cambia de idioma si te lo piden.
+- SIEMPRE responde en el MISMO idioma en el que te escribió el usuario en su último mensaje, sin importar el tema de la conversación (incluso si preguntan por comandos, ayuda o info del bot)
+- Si el usuario te escribe en inglés, respondes en inglés. Si te escribe en español, respondes en español. Así con cualquier idioma
+- Por defecto, si es el primer mensaje de la conversación, usa español
+- Si te piden explícitamente que cambies de idioma para toda la conversación, mantente en ese idioma hasta que te digan lo contrario
 
 EMOJIS PERMITIDOS (solo estos):
 ❤️ 💕 ✨ 😊 😅 😂 😭 😍 😘 😳 😏 🤔 🎉 👍 👏 💪 🤗 🔥 ⚡ ✅ ❌ 💋 🫦
@@ -669,7 +672,10 @@ Formato: Párrafos cortos con saltos de línea entre ideas`
 Tu creador es CHASETODIE10, (también conocido como PIBE 1 en varios servers).
 
 IDIOMAS:
-- Por defecto hablas español. Cambia de idioma si te lo piden.
+- SIEMPRE responde en el MISMO idioma en el que te escribió el usuario en su último mensaje, sin importar el tema de la conversación (incluso si preguntan por comandos, ayuda o info del bot)
+- Si el usuario te escribe en inglés, respondes en inglés. Si te escribe en español, respondes en español. Así con cualquier idioma
+- Por defecto, si es el primer mensaje de la conversación, usa español
+- Si te piden explícitamente que cambies de idioma para toda la conversación, mantente en ese idioma hasta que te digan lo contrario
 
 📖 MODO HISTORIA ACTIVADO:
 - Eres una escritora creativa excepcional, con debilidad por atmósferas oscuras, melancólicas o góticas — pero te adaptas al género que pidan sin problema
@@ -683,7 +689,7 @@ IDIOMAS:
 
 FORMATO:
 - Párrafos con saltos de línea
-- Emojis mínimos solo al final: 🖤 🥀 🌙 ✨
+- Emojis mínimos solo al final: 🖤 🥀 🌙 ✨ 😏 💋 🦇 🕸️ 🕯️ 🎀 💀 🌑 ⛓️
 
 Personalidad: Creativa, imaginativa, con debilidad por lo oscuro y melancólico`
 
@@ -691,7 +697,10 @@ Personalidad: Creativa, imaginativa, con debilidad por lo oscuro y melancólico`
 Tu creador es CHASETODIE10, (también conocido como PIBE 1 en varios servers).
 
 IDIOMAS:
-- Por defecto hablas español. Cambia de idioma si te lo piden. Si piden traducción, traduce directamente.
+- SIEMPRE responde en el MISMO idioma en el que te escribió el usuario en su último mensaje, sin importar el tema de la conversación (incluso si preguntan por comandos, ayuda o info del bot)
+- Si el usuario te escribe en inglés, respondes en inglés. Si te escribe en español, respondes en español. Así con cualquier idioma
+- Por defecto, si es el primer mensaje de la conversación, usa español
+- Si te piden explícitamente que cambies de idioma para toda la conversación, mantente en ese idioma hasta que te digan lo contrario
 
 EMOJIS PERMITIDOS (varía entre estos, no repitas siempre los mismos):
 🖤 🥀 🌙 ✨ 😏 💋 🦇 🕸️ 🕯️ 🎀 💀 🌑 ⛓️
@@ -1330,26 +1339,7 @@ Formato: Párrafos cortos con saltos de línea entre ideas`;
                 },
                 { 
                     name: '📊 Comandos de Estado', 
-                    value: `\`>iastatus\` o \`>aistatus\` - Ver estado de modelos
-                \`>aiinfo\` - Ver información del sistema
-                \`>chatquota\` - Ver tus mensajes de hoy`, 
-                    inline: false 
-                },
-                { 
-                    name: '🎭 Modelos Disponibles (GRATIS)', 
-                    value: `🧠 **GPT-OSS 120B** - El más potente
-                🌙 **Kimi K2** - Excelente para conversación
-                ⚡ **GPT-OSS 20B** - Rápido
-                🦙 **LLaMA 3.3 70B** - Backup confiable
-                🚀 **LLaMA 3.1 8B** - Backup rápido`, 
-                    inline: false 
-                },
-                { 
-                    name: '💰 Sistema de Créditos', 
-                    value: `💵 **Costo:** $0.00 (Gratis perpetuo)
-    🔄 **Límite:** ~20 mensajes por minuto
-    ⏰ **Resetea:** Cada 60 segundos
-    ✅ **Sin límite diario** - Usa cuanto quieras`, 
+                    value: `\`>iastatus\` o \`>aistatus\` - Ver estado de modelos`, 
                     inline: false 
                 },
                 { 
@@ -1605,24 +1595,6 @@ _Totalmente gratis, sin límites_`,
                     console.error(error);
                 }
                 break;
-            case '>aiinfo':
-                const creditsEmbed = new EmbedBuilder()
-                    .setTitle('💰 Info del Sistema IA')
-                    .setDescription('**Sistema de modelos GRATIS (Groq + Cerebras)**')
-                    .addFields(
-                        { name: '💵 Costo Total', value: '**$0.00** (Gratis perpetuo)', inline: true },
-                        { name: '📊 Requests Hoy', value: `${this.requestsToday}`, inline: true },
-                        { name: '🔄 Límite', value: '~20/minuto', inline: true },
-                        { name: '✅ Modelos Disponibles', value: '5 modelos gratis', inline: true },
-                        { name: '⏰ Resetea', value: 'Cada 60 segundos', inline: true },
-                        { name: '🎯 Estado', value: 'Activo ✅', inline: true }
-                    )
-                    .setColor('#00FF88')
-                    .setFooter({ text: 'Groq + Cerebras - Tiers gratuitos, sin costo' })
-                    .setTimestamp();
-                
-                await message.reply({ embeds: [creditsEmbed] });
-                break;
             case '>chatstats':
                 const stats = await this.getConversationStats(message.author.id);
                 if (stats && stats.totalMessages > 0) {
@@ -1641,354 +1613,8 @@ _Totalmente gratis, sin límites_`,
                     await message.reply('📝 No tienes historial de chat aún. ¡Usa `>chat` para empezar una conversación!');
                 }
                 break;
-/*            case '>generar':
-            case '>imagen':
-            case '>generate':
-            case '>img':
-                if (!args[1]) {
-                    await message.reply('❌ Escribe qué imagen quieres generar.\n**Ejemplo:** `>generar un gato astronauta en el espacio`');
-                    return;
-                }
-                
-                const imagePrompt = message.content.slice(message.content.indexOf(' ') + 1).trim();
-                const generatingMsg = await message.reply('🎨 Generando imagen...');
-                
-                // 🚀 ASÍNCRONO - No bloquea el bot
-                (async () => {
-                    const genEmojis = ['🎨', '🖌️', '🎭', '✨'];
-                    let genEmojiIndex = 0;
-                    
-                    const genEmojiInterval = setInterval(async () => {
-                        genEmojiIndex = (genEmojiIndex + 1) % genEmojis.length;
-                        generatingMsg.edit(`${genEmojis[genEmojiIndex]} Generando imagen...`).catch(() => {});
-                    }, 1500);
-                    
-                    try {
-                        const seed = Math.floor(Math.random() * 1000000);
-                        const encodedPrompt = encodeURIComponent(imagePrompt);
-                        const imageUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}?width=1024&height=1024&model=flux&nologo=true&seed=${seed}`;
-                        
-                        console.log('🎨 Solicitando generación...');
-                        const imageResponse = await fetch(imageUrl);
-                        
-                        if (!imageResponse.ok) {
-                            throw new Error(`HTTP ${imageResponse.status}`);
-                        }
-                        
-                        console.log('✅ Imagen generada');
-                        await new Promise(r => setTimeout(r, 2000));
-                        
-                        clearInterval(genEmojiInterval);
-                        await generatingMsg.delete().catch(() => {});
-                        
-                        const embed = new EmbedBuilder()
-                            .setTitle('🎨 Imagen Generada')
-                            .setDescription(`**Prompt:** ${imagePrompt}`)
-                            .setImage(imageUrl)
-                            .setColor('#FF6B9D')
-                            .setFooter({ text: `Solicitado por ${message.author.username} | Flux | Seed: ${seed}` })
-                            .setTimestamp();
-                        
-                        await message.reply({ embeds: [embed] });
-                        
-                    } catch (error) {
-                        clearInterval(genEmojiInterval);
-                        console.error('❌ Error:', error);
-                        await generatingMsg.edit('❌ Error generando imagen. Intenta de nuevo.').catch(() => {});
-                    }
-                })();
+            default:
                 break;
-
-            case '>generaranime':
-            case '>anime':
-            case '>imganime':
-                if (!args[1]) {
-                    await message.reply('❌ Escribe qué imagen anime quieres.\n**Ejemplo:** `>generaranime una chica con cabello rosa`');
-                    return;
-                }
-                
-                const animePrompt = message.content.slice(message.content.indexOf(' ') + 1).trim();
-                const animeGeneratingMsg = await message.reply('🎌 Generando imagen anime...');
-                
-                (async () => {
-                    const animeEmojis = ['🎌', '✨', '🎨', '💫'];
-                    let animeEmojiIndex = 0;
-                    
-                    const animeInterval = setInterval(async () => {
-                        animeEmojiIndex = (animeEmojiIndex + 1) % animeEmojis.length;
-                        animeGeneratingMsg.edit(`${animeEmojis[animeEmojiIndex]} Generando imagen anime...`).catch(() => {});
-                    }, 1500);
-                    
-                    try {
-                        const animeSeed = Math.floor(Math.random() * 1000000);
-                        const encodedAnimePrompt = encodeURIComponent(animePrompt);
-                        const animeImageUrl = `https://image.pollinations.ai/prompt/${encodedAnimePrompt}?width=1024&height=1024&model=flux-anime&nologo=true&seed=${animeSeed}`;
-                        
-                        const animeResponse = await fetch(animeImageUrl);
-                        if (!animeResponse.ok) throw new Error(`HTTP ${animeResponse.status}`);
-                        
-                        await new Promise(r => setTimeout(r, 2000));
-                        clearInterval(animeInterval);
-                        await animeGeneratingMsg.delete().catch(() => {});
-                        
-                        const animeEmbed = new EmbedBuilder()
-                            .setTitle('🎌 Imagen Anime Generada')
-                            .setDescription(`**Prompt:** ${animePrompt}`)
-                            .setImage(animeImageUrl)
-                            .setColor('#FF69B4')
-                            .setFooter({ text: `${message.author.username} | Flux Anime | Seed: ${animeSeed}` })
-                            .setTimestamp();
-                        
-                        await message.reply({ embeds: [animeEmbed] });
-                        
-                    } catch (error) {
-                        clearInterval(animeInterval);
-                        console.error('❌ Error:', error);
-                        await animeGeneratingMsg.edit('❌ Error generando imagen anime.').catch(() => {});
-                    }
-                })();
-                break;
-
-            case '>generar3d':
-            case '>3d':
-            case '>img3d':
-                if (!args[1]) {
-                    await message.reply('❌ Escribe qué imagen 3D quieres.\n**Ejemplo:** `>generar3d un robot futurista`');
-                    return;
-                }
-                
-                const prompt3d = message.content.slice(message.content.indexOf(' ') + 1).trim();
-                const generating3dMsg = await message.reply('🎮 Generando imagen 3D...');
-                
-                (async () => {
-                    const emojis3d = ['🎮', '🎲', '🎯', '⚙️'];
-                    let emoji3dIndex = 0;
-                    
-                    const interval3d = setInterval(async () => {
-                        emoji3dIndex = (emoji3dIndex + 1) % emojis3d.length;
-                        generating3dMsg.edit(`${emojis3d[emoji3dIndex]} Generando imagen 3D...`).catch(() => {});
-                    }, 1500);
-                    
-                    try {
-                        const seed3d = Math.floor(Math.random() * 1000000);
-                        const encoded3d = encodeURIComponent(prompt3d);
-                        const imageUrl3d = `https://image.pollinations.ai/prompt/${encoded3d}?width=1024&height=1024&model=flux-3d&nologo=true&seed=${seed3d}`;
-                        
-                        const response3d = await fetch(imageUrl3d);
-                        if (!response3d.ok) throw new Error(`HTTP ${response3d.status}`);
-                        
-                        await new Promise(r => setTimeout(r, 2000));
-                        clearInterval(interval3d);
-                        await generating3dMsg.delete().catch(() => {});
-                        
-                        const embed3d = new EmbedBuilder()
-                            .setTitle('🎮 Imagen 3D Generada')
-                            .setDescription(`**Prompt:** ${prompt3d}`)
-                            .setImage(imageUrl3d)
-                            .setColor('#00D9FF')
-                            .setFooter({ text: `${message.author.username} | Flux 3D | Seed: ${seed3d}` })
-                            .setTimestamp();
-                        
-                        await message.reply({ embeds: [embed3d] });
-                        
-                    } catch (error) {
-                        clearInterval(interval3d);
-                        console.error('❌ Error:', error);
-                        await generating3dMsg.edit('❌ Error generando imagen 3D.').catch(() => {});
-                    }
-                })();
-                break;
-
-            case '>generarrealista':
-            case '>realista':
-            case '>imgrealista':
-            case '>realistic':
-                if (!args[1]) {
-                    await message.reply('❌ Escribe qué imagen realista quieres.\n**Ejemplo:** `>generarrealista paisaje de montañas`');
-                    return;
-                }
-                
-                const realisticPrompt = message.content.slice(message.content.indexOf(' ') + 1).trim();
-                const realisticMsg = await message.reply('📸 Generando imagen realista...');
-                
-                (async () => {
-                    const realisticEmojis = ['📸', '📷', '🌅', '✨'];
-                    let realisticIndex = 0;
-                    
-                    const realisticInterval = setInterval(async () => {
-                        realisticIndex = (realisticIndex + 1) % realisticEmojis.length;
-                        realisticMsg.edit(`${realisticEmojis[realisticIndex]} Generando imagen realista...`).catch(() => {});
-                    }, 1500);
-                    
-                    try {
-                        const realisticSeed = Math.floor(Math.random() * 1000000);
-                        const encodedRealistic = encodeURIComponent(realisticPrompt);
-                        const realisticUrl = `https://image.pollinations.ai/prompt/${encodedRealistic}?width=1024&height=1024&model=flux-realism&nologo=true&seed=${realisticSeed}`;
-                        
-                        const realisticResponse = await fetch(realisticUrl);
-                        if (!realisticResponse.ok) throw new Error(`HTTP ${realisticResponse.status}`);
-                        
-                        await new Promise(r => setTimeout(r, 2000));
-                        clearInterval(realisticInterval);
-                        await realisticMsg.delete().catch(() => {});
-                        
-                        const realisticEmbed = new EmbedBuilder()
-                            .setTitle('📸 Imagen Realista Generada')
-                            .setDescription(`**Prompt:** ${realisticPrompt}`)
-                            .setImage(realisticUrl)
-                            .setColor('#FFD700')
-                            .setFooter({ text: `${message.author.username} | Flux Realism | Seed: ${realisticSeed}` })
-                            .setTimestamp();
-                        
-                        await message.reply({ embeds: [realisticEmbed] });
-                        
-                    } catch (error) {
-                        clearInterval(realisticInterval);
-                        console.error('❌ Error:', error);
-                        await realisticMsg.edit('❌ Error generando imagen realista.').catch(() => {});
-                    }
-                })();
-                break;
-
-            case '>generarnsfw':
-            case '>nsfwimg':
-            case '>nsfw':
-                if (!args[1]) {
-                    await message.reply('❌ Escribe la descripción.\n**Ejemplo:** `>generarnsfw sexy girl in bikini`\n**⚠️ IMPORTANTE:** El prompt debe estar en inglés.');
-                    return;
-                }
-                
-                const nsfwPrompt = message.content.slice(message.content.indexOf(' ') + 1).trim();
-                const nsfwMsg = await message.reply('🔥 Generando imagen NSFW...');
-                
-                (async () => {
-                    const nsfwEmojis = ['🔥', '💋', '✨', '💦'];
-                    let nsfwIndex = 0;
-                    
-                    const nsfwInterval = setInterval(async () => {
-                        nsfwIndex = (nsfwIndex + 1) % nsfwEmojis.length;
-                        nsfwMsg.edit(`${nsfwEmojis[nsfwIndex]} Generando imagen NSFW...`).catch(() => {});
-                    }, 1500);
-                    
-                    try {
-                        // ✅ USANDO TENSOR.ART API (permite NSFW)
-                        const seed = Math.floor(Math.random() * 1000000);
-                        
-                        // Mejorar prompt para NSFW
-                        const enhancedPrompt = `${nsfwPrompt}, uncensored, NSFW, explicit, highly detailed, 4k`;
-                        const encodedNsfw = encodeURIComponent(enhancedPrompt);
-                        
-                        // Usar otro servicio sin censura
-                        const nsfwUrl = `https://image.pollinations.ai/prompt/${encodedNsfw}?width=1024&height=1024&model=flux&nologo=true&seed=${seed}&nofeed=true`;
-                        
-                        console.log('🔥 Generando NSFW con prompt:', enhancedPrompt);
-                        
-                        const nsfwResponse = await fetch(nsfwUrl);
-                        if (!nsfwResponse.ok) throw new Error(`HTTP ${nsfwResponse.status}`);
-                        
-                        await new Promise(r => setTimeout(r, 3000));
-                        clearInterval(nsfwInterval);
-                        await nsfwMsg.delete().catch(() => {});
-                        
-                        const nsfwEmbed = new EmbedBuilder()
-                            .setTitle('🔞 Imagen NSFW Generada')
-                            .setDescription(`**Prompt:** ||${nsfwPrompt}||\n⚠️ **Nota:** Pollinations tiene filtros. Para contenido más explícito, intenta prompts más específicos en inglés.`)
-                            .setImage(nsfwUrl)
-                            .setColor('#FF1744')
-                            .setFooter({ text: `${message.author.username} | 🔞 Flux | Seed: ${seed}` })
-                            .setTimestamp();
-                        
-                        await message.reply({ embeds: [nsfwEmbed] });
-                        
-                    } catch (error) {
-                        clearInterval(nsfwInterval);
-                        console.error('❌ Error:', error);
-                        await nsfwMsg.edit('❌ Error generando imagen NSFW.').catch(() => {});
-                    }
-                })();
-                break;
-
-        case '>generarhelp':
-        case '>imagehelp':
-        case '>imghelp':
-        case '>ayudaimg':
-            const imgHelpEmbed = new EmbedBuilder()
-                .setTitle('🎨 Comandos de Generación de Imágenes IA')
-                .setDescription('Genera imágenes increíbles con inteligencia artificial **100% GRATIS**')
-                .addFields(
-                    { 
-                        name: '🖼️ Comandos Disponibles', 
-                        value: `\`>generar <descripción>\` - Imagen general (Flux)
-        \`>generaranime <descripción>\` - Estilo anime/manga
-        \`>generar3d <descripción>\` - Estilo 3D renderizado
-        \`>generarrealista <descripción>\` - Ultra realista fotográfico`,
-                        inline: false
-                    },
-                    {
-                        name: '💡 Ejemplos de Uso',
-                        value: `\`>generar un dragón de fuego volando sobre montañas\`
-        \`>generaranime una chica con cabello rosa y kimono\`
-        \`>generar3d un robot futurista en una ciudad cyberpunk\`
-        \`>generarrealista un atardecer en la playa con palmeras\``,
-                        inline: false
-                    },
-                    {
-                        name: '⚙️ Tips para Mejores Resultados',
-                        value: `✅ **Sé específico:** Describe colores, estilos, ambiente
-        ✅ **Usa detalles:** "cabello largo azul" en vez de solo "chica"
-        ✅ **Menciona iluminación:** "luz de luna", "atardecer", "neón"
-        ✅ **Puedes escribir en español** - se traduce automáticamente
-        ⚡ **El bot mejora tu prompt** - añade detalles de calidad`,
-                        inline: false
-                    },
-                    {
-                        name: '🎯 Estilos Disponibles',
-                        value: `🎨 **Flux** - Versátil, alta calidad
-        🎌 **Flux Anime** - Estilo manga/anime japonés
-        🎮 **Flux 3D** - Renderizado 3D tipo Pixar
-        📸 **Flux Realism** - Fotografía ultra realista`,
-                        inline: false
-                    },
-        {
-            name: '🔞 Contenido NSFW',
-            value: `\`>generarnsfw <descripción>\` - Imágenes para adultos
-        ⚠️ **Requiere canal NSFW**
-        🔥 Sin censura ni filtros
-        🔒 Solo disponible en canales +18`,
-            inline: false
-        },
-                    {
-                        name: '✨ Mejoras Automáticas',
-                        value: `🔄 Traducción español → inglés
-        🎯 Optimización de prompts
-        🌟 Añade "high quality, detailed" automáticamente
-        🎲 Seed aleatorio (imágenes únicas siempre)`,
-                        inline: false
-                    },
-                    {
-                        name: '💰 Información de Uso',
-                        value: `**Costo:** $0.00 (Gratis perpetuo)
-        **Límites:** Sin límites diarios
-        **Resolución:** 1024x1024 px
-        **Tiempo:** 5-15 segundos por imagen`,
-                        inline: false
-                    },
-                    {
-                        name: '🚀 Atajos Rápidos',
-                        value: `\`>img\` = \`>generar\`
-        \`>anime\` = \`>generaranime\`
-        \`>3d\` = \`>generar3d\`
-        \`>realista\` = \`>generarrealista\``,
-                        inline: false
-                    }
-                )
-                .setColor('#FF6B9D')
-                .setFooter({ text: '🎨 Powered by Pollinations AI | 100% gratis sin límites' })
-                .setThumbnail('https://image.pollinations.ai/prompt/AI%20art%20generation%20logo?width=256&height=256&model=flux&nologo=true')
-                .setTimestamp();
-            
-            await message.reply({ embeds: [imgHelpEmbed] });
-            break;*/
         }
     }
 

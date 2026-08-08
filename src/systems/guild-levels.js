@@ -147,21 +147,12 @@ class GuildLevels {
             case '>servtoplevel':
                 await this.handleTop(message);
                 break;
-/*            case '>enablelevels':
-                await this.handleToggle(message, true);
-                break;
-            case '>disablelevels':
-                await this.handleToggle(message, false);
-                break;
-            case '>ssetlevelchannel':
-                await this.handleSetChannel(message);
-                break;*/
         }
     }
 
     async handleRank(message) {
         const guildId = message.guild.id;
-        if (!await this.isEnabled(guildId)) return message.reply('❌ El sistema de niveles del servidor no está activado. Un admin puede activarlo con `>enablelevels`.');
+        if (!await this.isEnabled(guildId)) return message.reply('❌ El sistema de niveles del servidor no está activado. Un admin puede activarlo en mi página. Usa `>dashboard`.');
 
         const { EmbedBuilder } = require('discord.js');
         const userId = message.author.id;
@@ -213,30 +204,6 @@ class GuildLevels {
             .setFooter({ text: 'Usa >slevel para ver tu rango' });
 
         await loadingMsg.edit({ content: '', embeds: [embed] });
-    }
-
-    async handleToggle(message, enable) {
-        if (!message.member?.permissions.has('Administrator')) return message.reply('❌ Necesitas permisos de administrador.');
-        const { EmbedBuilder } = require('discord.js');
-
-        await this.setEnabled(message.guild.id, enable);
-
-        const embed = new EmbedBuilder()
-            .setTitle(enable ? '✅ Niveles del servidor activados' : '❌ Niveles del servidor desactivados')
-            .setDescription(enable
-                ? 'Los miembros ganarán XP al chatear.\nUsa `>ssetlevelchannel #canal` para configurar dónde anunciar los level ups.'
-                : 'Los datos existentes se conservan. Puedes reactivarlo con `>enablelevels`.')
-            .setColor(enable ? '#00FF00' : '#FF0000');
-
-        await message.reply({ embeds: [embed] });
-    }
-
-    async handleSetChannel(message) {
-        if (!message.member?.permissions.has('Administrator')) return message.reply('❌ Necesitas permisos de administrador.');
-        const channel = message.mentions.channels.first();
-        if (!channel) return message.reply('❌ Usa: `>ssetlevelchannel #canal`');
-        await this.guildConfig.set(message.guild.id, 'guild_levelup_channel', channel.id);
-        await message.reply(`✅ Los level ups del servidor se anunciarán en ${channel}`);
     }
 }
 

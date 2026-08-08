@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import DashboardBackground from '../components/DashboardBackground';
+import { cerrarSesion } from '../utils/auth';
 
 export default function Dashboard() {
   const [guilds, setGuilds] = useState([]);
@@ -21,8 +22,7 @@ export default function Dashboard() {
     })
       .then(res => {
         if (res.status === 401) {
-          localStorage.removeItem('pibot_token');
-          localStorage.removeItem('pibot_user');
+          cerrarSesion();
           navigate('/404', { replace: true });
           return null;
         }

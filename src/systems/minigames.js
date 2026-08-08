@@ -5382,7 +5382,7 @@ const userId = gameState.userId;
         for (const [playerId, player] of Object.entries(game.players)) {
             if (playerId !== 'bot') {
                 await this.economy.addMoney(playerId, player.bet, 'horserace_refund');
-                this.applyMarriageBonusMinigame(playerId, player.bet, false, message).catch(() => {});
+//                this.applyMarriageBonusMinigame(playerId, player.bet, false, message).catch(() => {}); DINERO GRATIS XDDDD
             }
         }
         
@@ -6694,16 +6694,16 @@ const userId = gameState.userId;
         
         // Si no hay argumentos suficientes, mostrar ayuda
         if (args.length < 2) {
-            const variantsList = Object.entries(this.config.uno.variants)
+/*            const variantsList = Object.entries(this.config.uno.variants)
                 .map(([key, v]) => `${v.emoji} **${v.name}** — ${v.description}`)
-                .join('\n');
+                .join('\n');*/
             const embed = new EmbedBuilder()
                 .setTitle('🎴 UNO — Juego de Cartas')
                 .setDescription('> El primero en quedarse sin cartas gana el **90%** del pot. Estrategia y suerte.')
                 .addFields(
                     { name: '📝 Uso', value: '`>ujoin <cantidad>` — Crear o unirse\n`>ustart` — Iniciar (creador)\n`>uleave` — Abandonar', inline: false },
                     { name: '🎮 Durante el juego', value: '`>uplay <color> <número>` — Jugar carta\n`>upickup` — Robar carta\n`>uhand` — Ver tu mano\n`>sayuno` — ¡UNO! (al tener 1 carta)\n`>ucallout` — Acusar a alguien de no decir UNO', inline: false },
-                    { name: '🃏 Variantes', value: variantsList, inline: false },
+//                    { name: '🃏 Variantes', value: variantsList, inline: false },
                     { name: '👥 Jugadores', value: `**Mín:** ${this.config.uno.minPlayers}\n**Máx:** ${this.config.uno.maxPlayers}`, inline: true },
                     { name: '💰 Apuesta', value: `**Mín:** ${this.formatNumber(this.config.uno.minBet)} π-b$\n**Máx:** ${this.formatNumber(this.config.uno.maxBet)} π-b$`, inline: true },
                     { name: '⏱️ Turno', value: '**10 minutos** — si no jugás, sos expulsado', inline: true }
@@ -6717,7 +6717,7 @@ const userId = gameState.userId;
         let variant = 'classic';
 
         // Si hay un tercer argumento, es la variante
-        if (args.length >= 3) {
+/*        if (args.length >= 3) {
             const requestedVariant = args[2].toLowerCase();
             
             // Mapear nombres alternativos a las variantes reales
@@ -6741,7 +6741,7 @@ const userId = gameState.userId;
                 await message.reply(`❌ Variante "${args[2]}" no existe.\n**Disponibles:** ${availableVariants}\n**Aliases:** classic, nomercy, flip, house`);
                 return;
             }
-        }
+        }*/
 
         // Validar cantidad de apuesta
         if (isNaN(betAmount) || betAmount < this.config.uno.minBet || betAmount > this.config.uno.maxBet) {
@@ -6781,7 +6781,7 @@ const userId = gameState.userId;
         }
     }
 
-    async handleUnoVariant(message, args, game) {
+/*    async handleUnoVariant(message, args, game) {
         const userId = message.author.id;
         
         // Solo el creador puede cambiar la variante
@@ -6818,7 +6818,7 @@ const userId = gameState.userId;
         await this.updateUnoGameInDB(game);
         
         await message.reply(`✅ Variante cambiada a: ${variant.emoji} **${variant.name}**\n*${variant.description}*`);
-    }
+    }*/
 
     async createUnoGame(message, userId, betAmount, channelId, variant='classic') {
         const gameKey = `uno_${channelId}`;
@@ -8316,7 +8316,7 @@ const userId = gameState.userId;
     }
 
     // Agregar listener de botones para jump-in
-    async handleJumpInAttempt(message, cardIndex, game) {
+/*    async handleJumpInAttempt(message, cardIndex, game) {
         const userId = message.author.id;
         const player = game.players.find(p => p.id === userId);
         
@@ -8341,7 +8341,7 @@ const userId = gameState.userId;
         } else {
             await message.reply('❌ Solo puedes hacer jump-in con una carta idéntica');
         }
-    }
+    }*/
 
     async handleStackableCard(game, message, drawAmount) {
         const currentPlayer = game.players[game.current_player_index];
@@ -8589,7 +8589,7 @@ const userId = gameState.userId;
         this.startTurnTimer(game, message);
     }
 
-    async handleJumpIn(game, userId, card) {
+/*    async handleJumpIn(game, userId, card) {
         if (!game.variant_config.rules.jumpIn) return false;
         
         // Verificar que la carta sea idéntica (mismo color y valor)
@@ -8601,7 +8601,7 @@ const userId = gameState.userId;
             return true;
         }
         return false;
-    }
+    }*/
 
     parseColor(colorInput) {
         if (!colorInput) return null;
@@ -11308,7 +11308,7 @@ await gameMessage.edit({ embeds: [questionEmbed], components });
         }
         
         // Mostrar ayuda
-        if (!args[1] || args[1] === 'help' || args[1] === 'info') {
+        if (!args[1]) {
             const embed = new EmbedBuilder()
                 .setTitle('⚔️ Trivia Competitiva — Multijugador')
                 .setDescription('> Todos reciben las **mismas preguntas**. El que más puntos acumule gana el pot.')
@@ -12271,15 +12271,21 @@ await gameMessage.edit({ embeds: [questionEmbed], components });
 
         try {
             switch (command) {
-            case '>limits':
-            case '>limites':
-            case '>mylimits':
-                await this.showMyLimits(message);
-                break;
+                case '>limits':
+                case '>limites':
+                case '>mylimits':
+                    await this.showMyLimits(message);
+                    break;
                 case '>checklimits':
-                    const userId = message.author.id;
+                    if (!isOwner) {
+                        await message.reply('❌ Solo mi creador puede usar este comando.');
+                        return;
+                    }
+                    
+                    const userId = args[1] || message.author.id;
+                    const targetUser = message.mentions.members.first();
                     const debugEmbed = new EmbedBuilder()
-                        .setTitle('🔍 Estado de Límites')
+                        .setTitle(`🔍 Estado de Límites - **${targetUser?.displayName || message.author.displayName}**`)
                         .setColor('#00FF00');
                     
                     for (const [gameType, config] of Object.entries(this.dailyLimits)) {
@@ -12377,13 +12383,13 @@ await gameMessage.edit({ embeds: [questionEmbed], components });
                     const gameKey = `russian_${message.channel.id}`;
                     await this.handleShoot(message, gameKey);
                     break;
-                case '>startrussian': // ← NUEVO COMANDO
+                case '>startrussian':
                 case '>iniciarrussian':
                     await this.handleStartRussian(message);
                     break;
                 case '>cancelrussian':
                 case '>cancelarrussian':
-                    await this.handleCancelRussian(message, args);
+                    await this.handleCancelRussian(message);
                     break;
                 case '>ujoin':
                     await this.handleUno(message, args);
@@ -12435,7 +12441,7 @@ await gameMessage.edit({ embeds: [questionEmbed], components });
                     }
                     break;
                 case '>uleave':
-                    await this.handleLeaveUno(message, args);
+                    await this.handleLeaveUno(message);
                     break;
                 case '>ucancel':
                     const cancelGame = this.activeGames.get(`uno_${message.channel.id}`);
@@ -12462,14 +12468,14 @@ await gameMessage.edit({ embeds: [questionEmbed], components });
                         await message.reply('❌ No estás en ninguna partida de UNO activa');
                     }
                     break;
-                case '>uvariant':
+/*                case '>uvariant':
                     if (game) await this.minigames.handleUnoVariant(message, args, game);
                     else await message.reply('❌ No hay partida activa');
-                    break;
+                    break;*/
 
-                case '>ujumpin':
+/*                case '>ujumpin':
                     if (game) await this.minigames.handleJumpIn(message, args, game);
-                    break;
+                    break;*/
                 case '>potcontribute':
                 case '>contribute':
                     await this.handlePotContribute(message, args);
@@ -12499,8 +12505,8 @@ await gameMessage.edit({ embeds: [questionEmbed], components });
                     await message.reply({ embeds: [embed] });
                     break;
                 case '>debugpot':
-                    if (!isOwner && !isAdmin) {
-                        await message.reply('❌ Solo administradores');
+                    if (!isOwner || !isAdmin) {
+                        await message.reply('❌ Solo los administradores y mi creador pueden usar este comando!');
                         return;
                     }
                     
@@ -12585,7 +12591,7 @@ await gameMessage.edit({ embeds: [questionEmbed], components });
                     break;
                 case '>cleancompletedpots':
                     if (!isOwner && !isAdmin) {
-                        await message.reply('❌ Solo administradores');
+                        await message.reply('❌ Solo los administradores y mi creador pueden usar este comando!');
                         return;
                     }
                     
@@ -12633,7 +12639,7 @@ await gameMessage.edit({ embeds: [questionEmbed], components });
                     break;
                 case '>fixoldpots':
                     if (!isOwner && !isAdmin) {
-                        await message.reply('❌ Solo administradores');
+                        await message.reply('❌ Solo los administradores y mi creador pueden usar este comando!');
                         return;
                     }
                     

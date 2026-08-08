@@ -1,5 +1,6 @@
 const express = require('express');
 const cors = require('cors');
+const path = require('path');
 const rateLimit = require('express-rate-limit');
 const jwt = require('jsonwebtoken');
 
@@ -9,9 +10,6 @@ const ORIGENES_PERMITIDOS = [
   'https://chasetodie.github.io',
 ];
 
-// ── Caché simple en memoria ──
-// Guarda el resultado y hace que, dentro del tiempo de vida (TTL),
-// las siguientes peticiones reciban la copia guardada en vez de re-consultar todo.
 const cache = new Map();
 
 function obtenerDeCache(key, ttlMs) {
@@ -25,7 +23,6 @@ function guardarEnCache(key, data) {
   cache.set(key, { data, timestamp: Date.now() });
 }
 
-// Middleware: verifica que venga un JWT válido y que el usuario sea admin del servidor solicitado
 function verificarAdminDelServidor(req, res, next) {
   const authHeader = req.headers.authorization; // formato esperado: "Bearer <token>"
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -48,7 +45,6 @@ function verificarAdminDelServidor(req, res, next) {
     return res.status(403).json({ error: 'No tienes permisos de administrador en este servidor' });
   }
 
-  // Guardamos el payload por si el endpoint lo necesita después
   req.usuario = payload;
   next();
 }
@@ -66,7 +62,8 @@ function iniciarApiServer(client, economy, guildConfig, port) {
     }
   }));
 
-  // Límite general: máximo 30 peticiones por minuto, por IP, para toda la API
+  app.use('/tts', express.static(path.join(__dirname, 'tts_output')));
+
   const limitador = rateLimit({
     windowMs: 60 * 1000,
     max: 30,
@@ -76,7 +73,6 @@ function iniciarApiServer(client, economy, guildConfig, port) {
   });
   app.use('/api/', limitador);
 
-  // ── /api/leaderboard ──
   app.get('/api/leaderboard', async (req, res) => {
     try {
       const tipo = req.query.type === 'level' ? 'level' : 'money';
@@ -107,7 +103,6 @@ function iniciarApiServer(client, economy, guildConfig, port) {
             username = discordUser.displayName ?? discordUser.globalName ?? discordUser.username;
             avatarUrl = discordUser.displayAvatarURL({ extension: 'png', size: 128 });
           } catch {
-            // usuario no resoluble, se queda con los valores por defecto
           }
 
           return {
@@ -131,7 +126,6 @@ function iniciarApiServer(client, economy, guildConfig, port) {
     }
   });
 
-  // ── /api/stats ──
   app.get('/api/stats', async (req, res) => {
     try {
       const cacheKey = 'stats-globales';
@@ -162,14 +156,14 @@ function iniciarApiServer(client, economy, guildConfig, port) {
     try {
       const { guildId } = req.params;
 
-      // Ajustamos según lo que ya vimos que existe en guildConfig
       const claves = [
         'levelup_channel',
         'events_channel',
         'events_role',
         'guild_levelup_channel',
         'guild_levels_enabled',
-        'events_globally_enabled'
+        'events_globally_enabled',
+        'tts_announce_enabled'
       ];
 
       const config = {};
@@ -189,14 +183,14 @@ function iniciarApiServer(client, economy, guildConfig, port) {
       const { guildId } = req.params;
       const cambios = req.body;
 
-      // Solo permitimos escribir estas claves, nada más (evita que alguien mande cualquier cosa)
       const clavesPermitidas = [
         'levelup_channel',
         'events_channel',
         'events_role',
         'guild_levelup_channel',
         'guild_levels_enabled',
-        'events_globally_enabled'
+        'events_globally_enabled',
+        'tts_announce_enabled'
       ];
 
       const entradas = Object.entries(cambios).filter(([clave]) => clavesPermitidas.includes(clave));
@@ -220,7 +214,6 @@ function iniciarApiServer(client, economy, guildConfig, port) {
     }
   });
 
-  // Devuelve los servidores del usuario donde es admin Y donde está Pibot
   app.get('/api/my-guilds', async (req, res) => {
     try {
       const authHeader = req.headers.authorization;
@@ -271,13 +264,11 @@ function iniciarApiServer(client, economy, guildConfig, port) {
     }
   });
 
-  // Intercambia el "code" de Discord por info del usuario + un JWT propio
   app.post('/api/auth/discord', express.json(), async (req, res) => {
     try {
       const { code } = req.body;
       if (!code) return res.status(400).json({ error: 'Falta el code' });
 
-      // 1. Intercambiar el code por un access_token de Discord
       const tokenResponse = await fetch('https://discord.com/api/oauth2/token', {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -298,25 +289,21 @@ function iniciarApiServer(client, economy, guildConfig, port) {
 
       const tokenData = await tokenResponse.json();
 
-      // 2. Con el access_token, pedirle a Discord quién es el usuario
       const userResponse = await fetch('https://discord.com/api/users/@me', {
         headers: { Authorization: `Bearer ${tokenData.access_token}` }
       });
       const user = await userResponse.json();
 
-      // 3. Y en qué servidores está (para filtrar dónde es admin)
       const guildsResponse = await fetch('https://discord.com/api/users/@me/guilds', {
         headers: { Authorization: `Bearer ${tokenData.access_token}` }
       });
       const allGuilds = await guildsResponse.json();
 
-      // Filtrar solo los servidores donde el usuario tiene permiso de Administrador (bit 0x8)
       const ADMIN_PERM = 0x8;
       const adminGuilds = allGuilds
         .filter(g => (BigInt(g.permissions) & BigInt(ADMIN_PERM)) === BigInt(ADMIN_PERM))
         .map(g => ({ id: g.id, name: g.name, icon: g.icon }));
 
-      // 4. Crear nuestro propio "carnet" (JWT) con lo esencial, válido por 7 días
       const ourToken = jwt.sign(
         { userId: user.id, username: user.username, avatar: user.avatar, adminGuilds },
         process.env.JWT_SECRET,

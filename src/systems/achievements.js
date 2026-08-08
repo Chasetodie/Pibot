@@ -1022,11 +1022,6 @@ class AchievementsSystem {
         await this.showUserAchievements(message, targetUser);
     }
 
-    // NUEVO: Comando para mostrar todos los logros
-    async handleAllAchievements(message) {
-        await this.showAllAchievements(message);
-    }
-
     // NUEVO: Comando para detectar logros existentes
     async handleDetectAchievements(message) {
         const userId = message.author.id;
@@ -1052,7 +1047,7 @@ class AchievementsSystem {
         const YOUR_ID = '488110147265232898';
         const isOwner = message.author.id === YOUR_ID;
         const isAdmin = message.member?.permissions.has('Administrator');
-        if (!isOwner && !isAdmin) {
+        if (!isOwner || !isAdmin) {
             await message.reply('❌ Solo los administradores pueden usar este comando.');
             return;
         }
@@ -1404,10 +1399,6 @@ class AchievementsSystem {
         }
     }
 
-    async handleProgressAchievements(message) {
-        await this.showProgressAchievements(message);
-    }
-
     // Mostrar progreso de todos los logros (con paginación por rareza)
     async showProgressAchievements(message, rarityPage = 0) {
         const userId = message.author.id;
@@ -1514,15 +1505,12 @@ class AchievementsSystem {
    
     // NUEVO: Procesador de comandos
     async processCommand(message) {
-        // Verificar ingresos pasivos pendientes
         await this.economy.checkPendingPassiveIncome(message.author.id);
         await this.economy.shop.checkAndNotifyExpiredItems(message.author.id, message);
 
         const args = message.content.toLowerCase().split(' ');
         const command = args[0];
         await this.economy.missions.updateMissionProgress(message.author.id, 'commands_used');
-/*const commandName = command.replace('>', '');
-        await this.economy.missions.updateMissionProgress(message.author.id, 'unique_commands_used', commandName);*/
 
         try {
             switch (command) {
@@ -1535,12 +1523,12 @@ class AchievementsSystem {
                 case '>allachievements':
                 case '>alllogros':
                 case '>todoslogros':
-                    await this.handleAllAchievements(message);
+                    await this.showAllAchievements(message);
                     break;
-                case '>progress':              // ← NUEVO
-                case '>progreso':              // ← NUEVO
-                case '>progressachievements':  // ← NUEVO
-                    await this.handleProgressAchievements(message);
+                case '>progress':
+                case '>progreso':
+                case '>progressachievements':
+                    await this.showProgressAchievements(message);
                     break;
 
                 case '>detectachievements':
@@ -1554,7 +1542,6 @@ class AchievementsSystem {
                     break;
                 
                 default:
-                    // No es un comando de achievements
                     break;
             }
         } catch (error) {

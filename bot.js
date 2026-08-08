@@ -79,9 +79,6 @@ const shop = new ShopSystem(economy);
 //Crear instancia del sistema de Minijuegos
 const minigames = new MinigamesSystem(economy, shop, client);
 
-const music = new MusicSystem(client);
-client.musicSystem = music;
-
 const imageGen = new ImageGenSystem();
 
 const nsfw = new NSFWSystem();
@@ -96,6 +93,9 @@ const chatbot = new ChatBotSystem(database, economy);
 const guildConfig = new GuildConfig(database);
 
 const guildLevels = new GuildLevels(database, guildConfig);
+
+const music = new MusicSystem(client, guildConfig);
+client.musicSystem = music;
 
 //const thingsShop = new ThingsShop();
 

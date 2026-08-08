@@ -78,15 +78,15 @@ class ImageGenSystem {
                     continue;
                 }
 
-const arrayBuffer = await res.arrayBuffer();
-if (!arrayBuffer || arrayBuffer.byteLength < 100) {
-    console.warn(`☁️ Cloudflare [${model}]: buffer vacío`);
-    continue;
-}
-// Convertir correctamente a Buffer de Node.js
-const buffer = Buffer.from(new Uint8Array(arrayBuffer));
-console.log(`✅ Cloudflare éxito con ${model} | tamaño: ${buffer.length} bytes`);
-return { buffer, type: 'buffer' };
+                const arrayBuffer = await res.arrayBuffer();
+                if (!arrayBuffer || arrayBuffer.byteLength < 100) {
+                    console.warn(`☁️ Cloudflare [${model}]: buffer vacío`);
+                    continue;
+                }
+                // Convertir correctamente a Buffer de Node.js
+                const buffer = Buffer.from(new Uint8Array(arrayBuffer));
+                console.log(`✅ Cloudflare éxito con ${model} | tamaño: ${buffer.length} bytes`);
+                return { buffer, type: 'buffer' };
             } catch (e) {
                 console.warn(`☁️ Cloudflare [${model}] error: ${e.message}`);
             }

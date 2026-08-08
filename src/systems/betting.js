@@ -18,7 +18,7 @@ class BettingSystem {
 
     async getBet(betId) {
         try {
-            const bet = await this.db.getBet(betId); // ✅ USAR MÉTODO ESPECÍFICO
+            const bet = await this.db.getBet(betId);
             return bet;
         } catch (error) {
             console.error('❌ Error obteniendo apuesta:', error);
@@ -28,7 +28,7 @@ class BettingSystem {
 
     async createBetInDB(betId, betData) {
         try {
-            const result = await this.db.createBet(betData); // ✅ USAR MÉTODO ESPECÍFICO
+            const result = await this.db.createBet(betData);
             console.log(`🎲 Nueva apuesta creada en MySQL: ${betId}`);
             return result;
         } catch (error) {
@@ -50,7 +50,7 @@ class BettingSystem {
 
     async getUserActiveBets(userId) {
         try {
-            const bets = await this.db.getUserBets(userId); // ✅ USAR MÉTODO ESPECÍFICO
+            const bets = await this.db.getUserBets(userId);
             return bets;
         } catch (error) {
             console.error('❌ Error obteniendo apuestas del usuario:', error);
@@ -66,7 +66,6 @@ class BettingSystem {
 
             if (!rows || rows.length === 0) return {};
 
-            // Convertir array a objeto con ID como key
             const betsObject = {};
             rows.forEach(bet => {
                 betsObject[bet.id] = bet;
@@ -81,7 +80,7 @@ class BettingSystem {
 
     async deleteBet(betId) {
         try {
-            await this.db.deleteBet(betId); // ✅ USAR MÉTODO ESPECÍFICO
+            await this.db.deleteBet(betId);
             console.log(`🗑️ Apuesta ${betId} eliminada de MySQL`);
         } catch (error) {
             console.error('❌ Error eliminando apuesta:', error);
@@ -89,7 +88,6 @@ class BettingSystem {
         }
     }
 
-    // ✅ CORREGIDO: Generar ID único para apuesta
     generateBetId(challengerId, opponentId) {
         const sorted = [challengerId, opponentId].sort().join('-');
 
@@ -102,7 +100,6 @@ class BettingSystem {
         return `BET-${Math.abs(hash).toString(36).substring(0, 6).toUpperCase()}`;
     }
 
-    // ✅ CORREGIDO: Crear apuesta
     async createBet(message, args) {
         const userId = message.author.id;
         const user = await this.economy.getUser(userId);
@@ -135,7 +132,6 @@ class BettingSystem {
             return;
         }
 
-        // ✅ CORREGIDO: Verificar apuestas activas del usuario
         const userActiveBets = await this.getUserActiveBets(userId);
         if (userActiveBets.length >= this.config.maxActiveBets) {
             await message.reply(`❌ Ya tienes ${this.config.maxActiveBets} apuestas activas. Espera a que se resuelvan.`);
@@ -148,7 +144,6 @@ class BettingSystem {
             return;
         }
 
-        // ✅ CORREGIDO: Generar ID único
         const betId = this.generateBetId(userId, targetUser.id);
         
         const betData = {
@@ -162,7 +157,6 @@ class BettingSystem {
             channel_id: message.channel.id
         };
 
-        // ✅ CORREGIDO: Crear la apuesta en la base de datos
         await this.createBetInDB(betId, betData);
 
         const embed = new EmbedBuilder()
@@ -185,18 +179,15 @@ class BettingSystem {
             embeds: [embed]
         });
 
-        // Al hacer una apuesta
         if (this.economy.missions) {
             await this.economy.missions.updateMissionProgress(userId, 'money_bet', betData.amount);
         }
 
-        // ✅ CORREGIDO: Configurar expiración
         setTimeout(async () => {
             await this.expireBet(message, betId);
         }, this.config.betTimeout);
     }
 
-    // ✅ CORREGIDO: Aceptar apuesta
     async acceptBet(message) {
         const challengerUser = message.mentions.users.first();
         const opponentId = message.author.id;
@@ -217,7 +208,6 @@ class BettingSystem {
         }
         
         try {
-            // ✅ BUSCAR APUESTA ESPECÍFICA
             const [rows] = await this.db.pool.execute(`
                 SELECT * FROM bets 
                 WHERE challenger = ? AND opponent = ? AND status = 'pending'
@@ -228,7 +218,7 @@ class BettingSystem {
                 return;
             }
 
-            const bet = await this.db.getBet(rows[0].id); // ✅ USAR MÉTODO ESPECÍFICO
+            const bet = await this.db.getBet(rows[0].id);
             if (!bet) {
                 await message.reply('❌ No se pudo encontrar la apuesta.');
                 return;
@@ -284,7 +274,6 @@ class BettingSystem {
         }
     }
 
-    // ✅ CORREGIDO: Rechazar apuesta
     async declineBet(message) {
         const challengerUser = message.mentions.users.first();
         const opponentId = message.author.id;
@@ -305,7 +294,7 @@ class BettingSystem {
                 return;
             }
 
-            const bet = await this.db.getBet(rows[0].id); // ✅ USAR MÉTODO ESPECÍFICO
+            const bet = await this.db.getBet(rows[0].id);
             await this.deleteBet(bet.id);
         
             const embed = new EmbedBuilder()
@@ -322,7 +311,6 @@ class BettingSystem {
         }
     }
 
-    // ✅ CORREGIDO: Resolver apuesta
     async resolveBet(message, betId, winner) {
         const bet = await this.getBet(betId);
         
@@ -348,7 +336,6 @@ class BettingSystem {
         const winnerId = winner === 'challenger' ? bet.challenger : bet.opponent;
         const loserId = winner === 'challenger' ? bet.opponent : bet.challenger;
 
-        // Dar premio al ganador
         const winnerData = await this.economy.getUser(winnerId);
         if (winnerData.balance + winnerAmount > this.economy.config.maxBalance) {
             const spaceLeft = this.economy.config.maxBalance - winnerData.balance;
@@ -356,10 +343,8 @@ class BettingSystem {
         }
         await this.economy.addMoney(winnerId, winnerAmount, 'bet_win');
         
-        // Actualizar estadísticas
         await this.updateBetStats(winnerId, loserId, bet.amount);
 
-        // Si gana la apuesta
         if (this.economy.missions) {
             await this.economy.missions.updateMissionProgress(winnerId, 'bet_won');
         }
@@ -381,7 +366,6 @@ class BettingSystem {
         await message.reply({ embeds: [embed] });
     }
 
-    // ✅ CORREGIDO: Cancelar apuesta
     async cancelBet(message, betId) {
         const bet = await this.getBet(betId);
 
@@ -397,7 +381,6 @@ class BettingSystem {
             return message.reply('❌ Solo los participantes pueden cancelar esta apuesta.');
         }
 
-        // Devolver dinero a ambos participantes
         await this.economy.addMoney(bet.challenger, bet.amount, 'bet_refund');
         await this.economy.addMoney(bet.opponent, bet.amount, 'bet_refund');
 
@@ -414,7 +397,6 @@ class BettingSystem {
         await message.reply({ embeds: [embed] });
     }
 
-    // ✅ CORREGIDO: Expirar apuesta
     async expireBet(message, betId) {
         const bet = await this.getBet(betId);
 
@@ -425,7 +407,6 @@ class BettingSystem {
         console.log(`🕒 Apuesta ${betId} expiró`);
     }
 
-    // ✅ CORREGIDO: Mostrar apuestas activas
     async showActiveBets(message) {
         const userBets = await this.getUserActiveBets(message.author.id);
 
@@ -445,7 +426,6 @@ class BettingSystem {
             const role = isChallenger ? 'Retador' : 'Oponente';
             let statusText = bet.status === 'pending' ? '⏳ Esperando respuesta' : '🔴 Activa - Esperando resolución';
 
-            // ✅ OBTENER NOMBRE DEL USUARIO
             let opponentName = 'Usuario desconocido';
             try {
                 const opponentUser = await message.client.users.fetch(opponentId);
@@ -465,7 +445,6 @@ class BettingSystem {
         await message.reply({ embeds: [embed] });
     }
 
-    // Mostrar estadísticas de apuestas
     async showBetStats(message, targetUser = null) {
         const userId = targetUser ? targetUser.id : message.author.id;
         const displayName = targetUser ? targetUser.displayName : message.author.displayName;
@@ -475,7 +454,6 @@ class BettingSystem {
         const totalBets = stats.wins + stats.losses;
         const winRate = totalBets > 0 ? (((stats.wins || 0) / totalBets) * 100).toFixed(1) : 0;
 
-        // Avatar
         const avatarUrl = targetUser ? targetUser.displayAvatarURL({ dynamic: true }) : message.author.displayAvatarURL({ dynamic: true });
         
         const embed = new EmbedBuilder()
@@ -495,7 +473,6 @@ class BettingSystem {
         await message.reply({ embeds: [embed] });
     }
 
-    // Actualizar estadísticas de apuestas
     async updateBetStats(winnerId, loserId, amount) {
         const winner = await this.economy.getUser(winnerId);
         const loser = await this.economy.getUser(loserId);
@@ -506,7 +483,7 @@ class BettingSystem {
         const winAmount = amount * 2 - Math.floor(amount * 2 * this.config.houseFee);
 
         const updateDataWinner = {
-            bet_stats: { // ✅ CAMBIO: snake_case y estructura completa
+            bet_stats: {
                 wins: (winner.bet_stats.wins || 0) + 1,
                 losses: (winner.bet_stats.losses || 0),
                 total_won: (winner.bet_stats.total_won || 0) + winAmount,
@@ -516,7 +493,7 @@ class BettingSystem {
         }
         
         const updateDataLoser = {
-            bet_stats: { // ✅ CAMBIO: snake_case y estructura completa
+            bet_stats: {
                 wins: (loser.bet_stats.wins || 0),
                 losses: (loser.bet_stats.losses || 0) + 1,
                 total_won: (loser.bet_stats.total_won || 0),
@@ -529,7 +506,6 @@ class BettingSystem {
         await this.economy.updateUser(loserId, updateDataLoser);
     }
 
-    // Utilidad: formatear números
     formatNumber(num) {
         return num.toLocaleString('es-ES');
     }

@@ -1,0 +1,195 @@
+shop.js {
+    >shop, >tienda (parametros: categoria:String = opc, pagina:Integer = opc)
+    >buy, >comprar (parametros: id_item:String = oblig, cantidad:Integer = opc)
+    >bag, >inventario, >inv (parametros: usuario:String = opc)
+    >useitem, >usar, >use (parametros: id_item:String = oblig)
+    >throw, >lanzar (parametros: usuario:String = oblig)
+    >efectos, >effects (sin parametros)
+    >removeeffect, >quitarefecto (parametros: id_item:String = oblig)
+    >autoworkerbal, >autoworker, >awbal (sin parametros)
+    >cosmetics, >cosmeticos (sin parametros)
+    >setnickname (parametros: apodo:String = oblig)
+    >rolcreate, createrol (parametros: color:Hexadecimal = oblig, nombre_rol:String = oblig)
+    >vip, >vipdashboard (sin parametros)
+    >vipwork, >vipgamble, >vipboost, >vipdaily (sin parametros)
+    >viphelp, >helpvip, >comandosvip (sin parametros)
+}
+
+nsfw.js {
+    >r34 (parametros: tag:String = opc, cantidad:Integer = opc)
+    >nsfw (parametros: tag:String = opc, cantidad:Integer = opc)
+    >videos (parametros: tag:String = opc, cantidad:Integer = opc)
+    >fuck (parametros: user:String = oblig)
+    >fuckdetect, >fd (parametros: user:String = oblig)
+}
+
+musicSystem.js {
+    >m play, >m p (parametros: url-cancion:String = oblig)
+    >m stop, >m leave, >m disconnect (sin parametros)
+    >m skip, >m s (parametros: cantidadSaltos:Integer = opc)
+    >m pause (sin parametros)
+    >m resume, >m unpause (sin parametros)
+    >m queue, >m q (parametros: pagina:Integer = opc)
+    >m nowplaying, >m np (sin parametros)
+    >m ytsearch, >m ys (parametros: nombreCancion:String = oblig)
+    >m spsearch, >m ss (parametros: nombreCancion:String = oblig)
+    >m lyrics, >m letra (parametros: cancion:String = oblig)
+    >m fix, >m restart (sin parametros)
+    >m seek, >m adelantar, >m forward
+    >m volume, >m vol (parametros: volumen:Integer = oblig)
+    >m loop, >m repeat (parametros: tipo:String = opc)
+    >m shuffle (sin parametros)
+    >m clear (sin parametros)
+}
+
+missions.js {
+    >missions, >misiones, >dailymissions (parametros: usuario:String = opc)
+    >blockmissions, >bloquearnotifs (sin parametros)
+    >unblockmissions, >desbloquearnotifs (sin parametros)
+}
+
+imageGen.js {
+    >imagine, >img (parametros: prompt:String = oblig)
+}
+
+guild-levels.js {
+    >slevel, >srank (sin parametros)
+    >servtop, >servtoplevel (sin parametros)
+}
+
+chatBot.js {
+    >chathelp, >ayudachat (sin parametros)
+    >chat (parametros: prompt:String = oblig)
+    >clearchat (sin parametros)
+    >orstatus, >aistatus (sin parametros)
+    >chatstats (sin parametros)
+}
+
+achievements.js {
+    >achievements, >logros, >ach (parametros: user:String = opc)
+    >allachievements, >alllogros, >todoslogros (sin parametros)
+    >progress, >progreso, >progressachievements (parametros: rareza:String = opc) //Tocaria agregar ese parametro xd
+    >detectachievements, >detectlogros, >detect (sin parametros)
+    >detectall (sin parametros)
+}
+
+minigames.js {
+    >limits, >limites, >mylimits (sin parametros)
+    >checklimits (parametros: user:String = opc)
+    >coinflip, >cf, >coin (parametros: tipoOpcion:String = oblig, dineroApostar:Integer = oblig)
+    >dice, >dado, >d (parametros: tipoOpcion:String = oblig, dineroApostar:Integer = oblig)
+    >lottery, >loteria, >lotto (parametros: numero:Integer = oblig, dineroApostar:Integer = oblig)
+    >blackjack, >bj, >21 (parametros: dineroApostar:Integer = oblig)
+    >roulette, >ruleta, >wheel (parametros: tipoOpcion:String = oblig, dineroApostar:Integer = oblig)
+    >slots, >tragaperras, >slot (parametros: dineroApostar:Integer = oblig)
+    >horserace, >horses, >caballos (parametros: tipoJuego:String = oblig, dineroApostar:Integer = oblig)
+    >joinrace, >unirsecaballo (sin parametros)
+    >startrace, >iniciarcarrera (sin parametros)
+    >cancelrace, >cancelarcarrera (sin parametros)
+    >vending, >vendingmachine, >maquina (sin parametros)
+    >russian, >rr, >ruleta-rusa (parametros: dineroApostar:Integer = oblig)
+    >shoot, >disparar (sin parametros)
+    >startrussian, >iniciarrussian (sin parametros)
+    >cancelrussian, >cancelarrussian (sin parametros)
+    >ujoin (parametros: dineroApostar:Integer = oblig)
+    >uplay (parametros: color:String = oblig, valor:String = oblig, comandoExtra:String = opc)
+    >upickup (sin parametros)
+    >ushowhand, >uhand (sin parametros)
+    >ustart (sin parametros)
+    >utable (sin parametros)
+    >uleave (sin parametros)
+    >ucancel (sin parametros)
+    >sayuno!, >sayuno (sin parametros)
+    >ucallout (sin parametros)
+//    >uvariant
+//    >ujumpin
+    >potcontribute, >contribute (parametros: tipoContribucion:String = oblig, contribucion:String = oblig)
+    >potcontents, >potstatus, >holethings (sin parametros)
+    >checkstats (sin parametros)
+    >debugpot (sin parametros)
+    >cleancompletedpots (sin parametros)
+    >fixoldpots (sin parametros)
+    >trivia (parametros: dificultad:String = oblig, modo:String = opc, categoria:String = opc)
+    >triviasurvival, >triviasurv, >survival (parametros: start?) Este parametro es necesario para empezar XD, pero de ahi no sirve pa nada mas
+    >triviamultiplayer, >triviamulti, >triviam (parametros: dineroApostar:Integer = oblig)
+    >jointrivia, >jt (sin parametros)
+    >starttrivia, >st (sin parametros)
+    >canceltrivia, >ct (sin parametros)
+    >trivialb (parametros: categoria:String = opc, tipoRanking:String = opc)
+    >triviacategorias, >triviacategories, >triviacat (sin parametros)
+    >games, >minigames, >juegos (sin parametros)
+}
+
+all-commands.js {
+    >svconfig (sin parametros)
+    >dashboard (sin parametros)
+    >balance, >bal, >money (parametros: user:String = opc)
+    >daily (sin parametros)
+    >level, >lvl, >rank (parametros: user:String = opc)
+    >pay, >transfer (parametros: user:String = oblig, dinero:Integer = oblig)
+    >top, >leaderboard, >lb (parametros: categoria:String = opc, tipoRanking:String = opc)
+    >work, >job (parametros: trabajo:String = opc) si no se escribe nada, muestra los trabajos
+    >robar, >rob (parametros: user:String = oblig)
+    >pacto (sin parametros)
+    >mapa (sin parametros)
+    >excavar (parametros: userOrCanal:String = oblig)
+    >biblioteca, >libreria (parametros: subcomando:String = opc, idLibro:String = opc) si no escribe nada se muestra el catalogo de libros, y solo si selecciona la opcion de comprar funciona la id
+    >sicario, >hire (parametros: user:String = oblig)
+    >profesion, >profesión, >clase, >profesiones, >prof (parametros: nombreProfesion:String = opc) si no se escribe nada, muestra las profesiones
+    >pedir, >mendigar (sin parametros)
+    >rachas, >racha, >presencia (sin parametros)
+    >huerto, >garden, >granja (parametros: subcomando:String = opc, slot:Integer = opc, semilla:String = opc) si no se escribe nada muestra el huerto, y los otros 2 parametros aparecen segun el subcomando
+    >mascota, >pet, >mascotas (parametros: subcomando:String = opc, id:Integer = opc, mascota:String = opc) si no se escribe nada muestra las mascotas, y los otros 2 parametros aparecen segun el subcomando
+    >curar, >cure, >doctor (parametros: user:String = opc) si se nombra a un user, se aplica al user, caso contrario se aplica en si mismo
+    >casar, >marry, >proponer (parametros: user:String = oblig)
+    >divorcio, >divorce (sin parametros)
+    >pareja, >matrimonio, >esposo, >esposa (sin parametros)
+    >mentor (parametros: user:String = oblig)
+    >addmoney, >givemoney, >givem, >addm (parametros: user:String = oblig, cantidad:Integer = oblig, razon:String = opc)
+    >removemoney, >removem (parametros: user:String = oblig, cantidad:Integer = oblig, razon:String = opc)
+    >addxp (parametros: user:String = oblig, cantidad:Integer = oblig, razon:String = opc)
+    >bet, >apuesta (parametros: user:String = oblig, cantidad:Integer = oblig, razon:String = opc)
+    >acceptbet (parametros: user:String = oblig)
+    >declinebet (parametros: user:String = oblig)
+    >resolvebet (parametros: idApuesta:String = oblig, opcionGanador:String = oblig)
+    >cancelbet (parametros: idApuesta:String = oblig)
+    >mybets, >misapuestas (sin parametros)
+    >betstats, >estadisticasapuestas (parametros: user:String = opc)
+    >events (sin parametros)
+    >createevent (parametros: tipo:String = oblig, duracionMinutos:Int = opc)
+    >processrefunds (sin paramaetros)
+    >changelog, >cambios, >updates (sin parametros)
+//    >eventstats
+    >trade
+    >tradeadd
+    >trademoney
+    >tradeaccept
+    >tradecancel
+    >tradeshow, >tradever
+    >auction, >auctions
+    >bid
+    >auctionshow, >showsubastas
+    >recipes
+    >craft
+    >queue, >craftqueue
+    >cancelcraft
+    >giveitem
+    >shopstats
+    >clear
+    >hola
+    >maintenanceteston
+    >maintenancetestoff
+    >resetmaintenancetest
+    >setmaintenance
+    >endmaintenance
+    >cancelmaintenance
+}
+
+
+
+    const token = localStorage.getItem('pibot_token');
+    if (!token) {
+        EL TOKEN EXPIRA, PERO AUN ME SIGUE SALIENDO EN LA PARTE DEL NAVBAR COMO SI SIGUIERA ABIERTA
+        ADEMAS NO PODEMOS HACER QUE CUANDO EL ADMIN VUELVA A LA PAGINA SE REINICIE SU TIEMPO DE LOGIN?
+        OSEA QUE SI ES EL ULTIMO DIA, PERO VUELVE A ENTRAR, SE LE HAGAN 3 OTRA VEZ? HAGAMOS DE UNA VEZ
+        LA OPCION ESA DE ACTUALIZACION EN TIEMPO REAL, Y ASI LO PONEMOS EN 7 DIAS, PORFA

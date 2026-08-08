@@ -143,6 +143,15 @@ class GuildConfig {
     async setRateLimit(guildId, adminId, commandType, data) {
         await this.set(guildId, `ratelimit_${adminId}_${commandType}`, JSON.stringify(data));
     }
+
+    async isTtsAnnounceEnabled(guildId) {
+        const val = await this.get(guildId, 'tts_announce_enabled');
+        return val === 'true';
+    }
+
+    async setTtsAnnounceEnabled(guildId, enabled) {
+        await this.set(guildId, 'tts_announce_enabled', enabled ? 'true' : 'false');
+    }
 }
 
 module.exports = GuildConfig;

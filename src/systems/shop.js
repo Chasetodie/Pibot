@@ -5301,47 +5301,47 @@ if (effect.includes || effect.subtype) {
         }
     }
 
-async applyTriviaBoost(userId, itemId, item) {
-    const user = await this.economy.getUser(userId);
-    const activeEffects = this.parseActiveEffects(user.activeEffects);
+    async applyTriviaBoost(userId, itemId, item) {
+        const user = await this.economy.getUser(userId);
+        const activeEffects = this.parseActiveEffects(user.activeEffects);
 
-    // Verificar si ya tiene uno activo
-    if (activeEffects[itemId]) {
-        return { 
-            success: false, 
-            message: '⚠️ Ya tienes un boost de trivia activo. Úsalo primero antes de activar otro.' 
+        // Verificar si ya tiene uno activo
+        if (activeEffects[itemId]) {
+            return { 
+                success: false, 
+                message: '⚠️ Ya tienes un boost de trivia activo. Úsalo primero antes de activar otro.' 
+            };
+        }
+
+        activeEffects[itemId] = [{
+            itemId: itemId,
+            subtype: item.effect.subtype || itemId,
+            includes: item.effect.includes || [item.effect.type],
+            uses: item.effect.uses || 1,
+            usesLeft: item.effect.uses || 1,
+            appliedAt: Date.now()
+        }];
+
+        await this.economy.updateUser(userId, {
+            activeEffects: JSON.stringify(activeEffects)
+        });
+        this.economy.database.userCache.delete(userId);
+
+        const includesList = (item.effect.includes || [item.effect.type])
+            .map(i => ({
+                extra_time: '⏳ Tiempo extra',
+                skip_question: '⏭️ Saltar pregunta',
+                eliminate_wrong: '👥 Eliminar incorrectas',
+                wrong_shield: '🛡️ Escudo de error',
+                double_reward: '💰 Doble recompensa'
+            })[i] || i)
+            .join('\n');
+
+        return {
+            success: true,
+            message: `¡Item activado con éxito!\n\n**Beneficios:**\n${includesList}\n\n🎮 **Usos:** ${item.effect.uses || 1}\n\n> ⚠️ Se aplicará automáticamente al iniciar tu próxima trivia.`
         };
     }
-
-activeEffects[itemId] = [{
-    itemId: itemId,
-    subtype: item.effect.subtype || itemId,
-    includes: item.effect.includes || [item.effect.type],
-    uses: item.effect.uses || 1,
-    usesLeft: item.effect.uses || 1,
-    appliedAt: Date.now()
-}];
-
-    await this.economy.updateUser(userId, {
-        activeEffects: JSON.stringify(activeEffects)
-    });
-    this.economy.database.userCache.delete(userId);
-
-    const includesList = (item.effect.includes || [item.effect.type])
-        .map(i => ({
-            extra_time: '⏳ Tiempo extra',
-            skip_question: '⏭️ Saltar pregunta',
-            eliminate_wrong: '👥 Eliminar incorrectas',
-            wrong_shield: '🛡️ Escudo de error',
-            double_reward: '💰 Doble recompensa'
-        })[i] || i)
-        .join('\n');
-
-    return {
-        success: true,
-message: `¡Item activado con éxito!\n\n**Beneficios:**\n${includesList}\n\n🎮 **Usos:** ${item.effect.uses || 1}\n\n> ⚠️ Se aplicará automáticamente al iniciar tu próxima trivia.`
-    };
-}
 
     async processItemRefunds(notifyChannel = null) {
         console.log('💸 Iniciando proceso de reembolsos...');

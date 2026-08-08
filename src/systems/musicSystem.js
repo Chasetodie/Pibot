@@ -1,18 +1,21 @@
 const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 const { Connectors } = require('shoukaku');
 const { Kazagumo, Plugins } = require('kazagumo');
+const { generateAnnouncementAudio, limpiarTitulo } = require('./ttsAnnounce');
 
 class MusicSystem {
-    constructor(client) {
+    constructor(client, guildConfig) {
         this.client = client;
+        this.guildConfig = guildConfig;
         this.kazagumo = null;
         this.playerTimeouts = new Map();
         this.maxSongDuration = 7200000;
         this.playThrottle = new Map();
         this.nodeList = [];
         this.failedNodes = new Set();
-        this.skipVotes = new Map(); // guildId -> { trackId, voters: Set<userId> }
+        this.skipVotes = new Map();
         this.spotifyCapableNodes = new Set();
+        this.announcedSession = new Set();
 
         setInterval(async () => {
             for (const [name, node] of this.kazagumo.shoukaku.nodes) {
@@ -26,6 +29,16 @@ class MusicSystem {
                 }
             }
         }, 10 * 60 * 1000); // cada 10 minutos
+
+        setInterval(() => {
+            for (const nodeName of this.failedNodes) {
+                const nodeConfig = this.nodeList.find(n => n.name === nodeName);
+                if (nodeConfig) {
+                    console.log(`🔄 Reintentando conexión al nodo caído: ${nodeName}`);
+                    this.kazagumo.shoukaku.addNode(nodeConfig);
+                }
+            }
+        }, 60000); // cada 1 minuto
 
         this.initialize();
     }
@@ -57,9 +70,9 @@ class MusicSystem {
             },
             {
                 name: 'TriniumHost',
-                url: 'lavalink.triniumhost.com:4333',
+                url: 'lavalink-v4.triniumhost.com:443',
                 auth: 'free',
-                secure: false
+                secure: true
             },
             {
                 name: 'AjieDev-EU',
@@ -89,6 +102,42 @@ class MusicSystem {
                 name: 'HeavenCloud',
                 url: '89.106.84.59:4000',
                 auth: 'heavencloud.in',
+                secure: false
+            },
+            {
+                name: 'HeavenCloud-443',
+                url: 'lavalink.heavencloud.in:443',
+                auth: 'heavencloud',
+                secure: true
+            },
+            {
+                name: 'HeavenCloud-IN',
+                url: 'in1.heavencloud.in:443',
+                auth: 'heavencloud',
+                secure: true
+            },
+            {
+                name: 'MilloHost',
+                url: 'lava-v4.millohost.my.id:443',
+                auth: 'https://discord.gg/mjS5J2K3ep',
+                secure: true
+            },
+            {
+                name: 'KasawaPro',
+                url: 'lava2.kasawa.pro:2334',
+                auth: 'youshallnotpass',
+                secure: false
+            },
+            {
+                name: 'Serenetia443',
+                url: 'lavalinkv4.serenetia.com:443',
+                auth: 'https://seretia.link/discord',
+                secure: true
+            },
+            {
+                name: 'Serenetia',
+                url: 'lavalinkv4.serenetia.com:80',
+                auth: 'https://seretia.link/discord',
                 secure: false
             },
         ];
@@ -179,7 +228,7 @@ class MusicSystem {
     }
 
     setupEventListeners() {
-        this.kazagumo.on('playerStart', (player, track) => {
+        this.kazagumo.on('playerStart', async (player, track) => {
             this.skipVotes.delete(player.guildId);
             
             console.log(`🎵 Reproduciendo "${track.title}" en el servidor ${player.guild?.name || player.guildId} usando el nodo [${player.shoukaku?.node?.name || player.node?.name}]`);
@@ -195,6 +244,33 @@ class MusicSystem {
                 const channel = this.client.channels.cache.get(player.textId);
                 if (channel) channel.send({ embeds: [embed] });
             }
+
+            try {
+                const ttsEnabled = await this.guildConfig.isTtsAnnounceEnabled(player.guildId);
+                if (ttsEnabled) {
+                    const isFirstOfSession = !this.announcedSession.has(player.guildId);
+                    const isLastInQueue = player.queue.size === 0;
+
+                    if (isFirstOfSession || isLastInQueue) {
+                        this.announcedSession.add(player.guildId);
+                        const text = isFirstOfSession
+                            ? `Empezando con ${track.title}`
+                            : `Última canción: ${track.title}`;
+
+                        const audioUrl = await generateAnnouncementAudio(text);
+                        const result = await this.kazagumo.search(audioUrl, { requester: this.client.user });
+                        if (!result?.tracks?.length) {
+                            console.warn('⚠️ Lavalink no pudo resolver la URL del anuncio:', audioUrl);
+                            return;
+                        }
+
+                        player.queue.unshift(result.tracks[0]);
+                        await player.skip(); // corta la actual, arranca el anuncio, y al terminar sigue la cola normal
+                    }
+                }
+            } catch (err) {
+                console.error('Error en anuncio TTS:', err.message);
+            }            
         });
 
         this.kazagumo.on('playerEmpty', (player) => {
@@ -227,9 +303,9 @@ class MusicSystem {
 
         this.kazagumo.on('playerDestroy', (player) => {
             this.clearPlayerTimeout(player.guildId);
+            this.announcedSession.delete(player.guildId);
         });
 
-        // AGREGAR ESTO:
         this.kazagumo.on('playerResumed', (player) => {
             console.log(`🔄 Player resumido en ${player.guildId}`);
         });
@@ -257,6 +333,29 @@ class MusicSystem {
         const minutes = Math.floor(ms / 60000);
         const seconds = Math.floor((ms % 60000) / 1000);
         return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+    }
+
+    async announceTrack(player, track, type) {
+        try {
+            const tituloLimpio = limpiarTitulo(track.title);
+            const text = type === 'first'
+                ? `Empezando con ${tituloLimpio}`
+                : `Última canción: ${tituloLimpio}`;
+
+            const audioUrl = await generateAnnouncementAudio(text);
+            if (!audioUrl) return;
+
+            const result = await this.kazagumo.search(audioUrl, { requester: this.client.user });
+            if (!result?.tracks?.length) {
+                console.warn('⚠️ Lavalink no pudo resolver la URL del anuncio:', audioUrl);
+                return;
+            }
+            
+            player.queue.unshift(result.tracks[0]);
+            await player.skip();
+        } catch (err) {
+            console.error('Error en anuncio TTS:', err.message);
+        }
     }
 
     async processCommand(message) {

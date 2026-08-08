@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { isTokenExpired, cerrarSesion } from '../utils/auth';
 
 export default function Navbar() {
   const navigate = useNavigate();
@@ -15,7 +16,17 @@ export default function Navbar() {
   useEffect(() => {
     function cargarUsuario() {
       const stored = localStorage.getItem('pibot_user');
-      setUser(stored ? JSON.parse(stored) : null);
+      const token = localStorage.getItem('pibot_token');
+
+      if (stored && token && !isTokenExpired(token)) {
+        setUser(JSON.parse(stored));
+      } else if (stored || token) {
+        // había algo guardado pero el token venció → limpiar
+        cerrarSesion();
+        setUser(null);
+      } else {
+        setUser(null);
+      }
     }
     cargarUsuario();
     window.addEventListener('pibot-auth-changed', cargarUsuario);
@@ -23,9 +34,7 @@ export default function Navbar() {
   }, []);
 
   function handleLogout() {
-    localStorage.removeItem('pibot_token');
-    localStorage.removeItem('pibot_user');
-    window.dispatchEvent(new Event('pibot-auth-changed'));
+    cerrarSesion();
     setUser(null);
     navigate('/');
   }
