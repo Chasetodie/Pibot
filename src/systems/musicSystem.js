@@ -123,12 +123,6 @@ class MusicSystem {
                 secure: true
             },
             {
-                name: 'KasawaPro',
-                url: 'lava2.kasawa.pro:2334',
-                auth: 'youshallnotpass',
-                secure: false
-            },
-            {
                 name: 'Serenetia443',
                 url: 'lavalinkv4.serenetia.com:443',
                 auth: 'https://seretia.link/discord',
