@@ -7,7 +7,7 @@ const jwt = require('jsonwebtoken');
 const ORIGENES_PERMITIDOS = [
   'http://localhost:5173',
   'http://localhost:4173',
-  'https://chasetodie.github.io',
+  'https://pibot.is-a.dev',
 ];
 
 const cache = new Map();
@@ -163,7 +163,6 @@ function iniciarApiServer(client, economy, guildConfig, port) {
         'guild_levelup_channel',
         'guild_levels_enabled',
         'events_globally_enabled',
-        'tts_announce_enabled'
       ];
 
       const config = {};
@@ -190,7 +189,6 @@ function iniciarApiServer(client, economy, guildConfig, port) {
         'guild_levelup_channel',
         'guild_levels_enabled',
         'events_globally_enabled',
-        'tts_announce_enabled'
       ];
 
       const entradas = Object.entries(cambios).filter(([clave]) => clavesPermitidas.includes(clave));
