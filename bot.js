@@ -28,6 +28,7 @@ const GuildConfig = require('./src/systems/guild-config.js');
 const ImageGenSystem = require('./src/systems/imageGen.js');
 const GuildLevels = require('./src/systems/guild-levels.js');
 const MaintenanceSystem = require('./src/systems/maintenance.js')
+const ToolsSystem = require('./src/systems/toolsSystem.js');
 //const ThingsShop = require('./things-shop');
 //require('./admin-panel')(app); // Pasar el servidor express existente
 const {
@@ -88,14 +89,16 @@ database.startCacheCleanup();
 
 const maintenance = new MaintenanceSystem(database);
 
-const chatbot = new ChatBotSystem(database, economy);
+const music = new MusicSystem(client);
+client.musicSystem = music;
+
+const tools = new ToolsSystem(music);
+
+const chatbot = new ChatBotSystem(client, database, economy, music, tools);
 
 const guildConfig = new GuildConfig(database);
 
 const guildLevels = new GuildLevels(database, guildConfig);
-
-const music = new MusicSystem(client, guildConfig);
-client.musicSystem = music;
 
 //const thingsShop = new ThingsShop();
 
@@ -227,10 +230,6 @@ setInterval(async () => {
     } catch (e) { console.error('❌ Error checker mascotas:', e.message); }
 }, 12 * 60 * 60 * 1000);
 
-/*setInterval(async () => {
-    await economy.database.backup(); // Crear backup cada 6 horas
-}, 6 * 60 * 60 * 1000);*/
-
 const betting = new BettingSystem(economy);
 
 const trades = new TradeSystem(shop);
@@ -239,9 +238,7 @@ const auctions = new AuctionSystem(shop);
 
 const crafting = new CraftingSystem(shop, client);
 
-// Instancia del sistema de comandos mejorados
-const allCommands = new AllCommands(economy, shop, trades, auctions, crafting, events, betting, achievements, guildLevels, guildConfig, maintenance);
-//allCommands.maintenance = maintenance;
+const allCommands = new AllCommands(economy, shop, trades, auctions, crafting, events, betting, achievements, guildLevels, guildConfig, maintenance, tools);
 
 economy.achievements = achievements;
 minigames.achievements = achievements;
@@ -455,7 +452,6 @@ async function sendLevelUpSafe(message, xpResult, channel) {
 }
 
 const commands = [
-
     // ── ECONOMÍA ─────────────────────────────────────────────
     new SlashCommandBuilder()
         .setName('balance')
@@ -610,81 +606,48 @@ const commands = [
 
     // ── TIENDA ────────────────────────────────────────────────
     new SlashCommandBuilder()
-        .setName('shop')
-        .setDescription('Ver la tienda')
-        .addStringOption(o => o.setName('categoria').setDescription('Categoría a ver').setRequired(false)
-            .addChoices(
-                { name: '🧪 Consumibles', value: 'consumable' },
-                { name: '💎 Permanentes', value: 'permanent' },
-                { name: '✨ Cosméticos', value: 'cosmetic' },
-                { name: '🎁 Especiales', value: 'special'},
-                { name: '⚔️ Equipamiento', value: 'equipment' },
-                { name: '🗝️ Cofres', value: 'mystery' },
-                { name: '🌱 Semillas', value: 'seed' },
-                { name: '🐕 Mascotas', value: 'pet' },
-                { name: '🧠 Trivia', value: 'trivia' }
-            )),
-
-    new SlashCommandBuilder()
-        .setName('buy')
-        .setDescription('Comprar un item de la tienda')
-        .addStringOption(o => o.setName('item').setDescription('ID del item').setRequired(true))
-        .addIntegerOption(o => o.setName('cantidad').setDescription('Cantidad (default: 1)').setRequired(false).setMinValue(1)),
-
-    new SlashCommandBuilder()
-        .setName('bag')
-        .setDescription('Ver tu inventario')
-        .addUserOption(o => o.setName('usuario').setDescription('Ver inventario de otro usuario').setRequired(false)),
-
-    new SlashCommandBuilder()
-        .setName('useitem')
-        .setDescription('Usar un item de tu inventario')
-        .addStringOption(o => o.setName('item').setDescription('ID del item').setRequired(true)),
-
-    new SlashCommandBuilder()
-        .setName('lanzar')
-        .setDescription('Lanzar una maldición a alguien')
-        .addUserOption(o => o.setName('usuario').setDescription('Objetivo').setRequired(true)),
-
-    new SlashCommandBuilder()
-        .setName('efectos')
-        .setDescription('Ver tus efectos activos'),
-
-    new SlashCommandBuilder()
-        .setName('quitarefecto')
-        .setDescription('Quitar un efecto permanente')
-        .addStringOption(o => o.setName('item').setDescription('ID del item').setRequired(true)),
-
-    new SlashCommandBuilder()
-        .setName('autoworker')
-        .setDescription('Ver el estado de tu auto-worker'),
-
-    new SlashCommandBuilder()
-        .setName('cosmeticos')
-        .setDescription('Ver tus cosméticos activos'),
-
-    new SlashCommandBuilder()
-        .setName('setnickname')
-        .setDescription('Cambiar tu apodo cosmético')
-        .addStringOption(o => o.setName('apodo').setDescription('Tu nuevo apodo').setRequired(true).setMaxLength(20)),
-
-    new SlashCommandBuilder()
-        .setName('rolcreate')
-        .setDescription('Crear tu rol personalizado')
-        .addStringOption(o => o.setName('color').setDescription('Color hex, ej: #FF0000 (vacío = ver menú)').setRequired(false))
-        .addStringOption(o => o.setName('nombre').setDescription('Nombre del rol').setRequired(false)),
-
-    new SlashCommandBuilder()
-        .setName('vip')
-        .setDescription('Ver info y beneficios VIP'),
-
-    new SlashCommandBuilder()
-        .setName('vipwork')
-        .setDescription('Activar bonus VIP de trabajo'),
-
-    new SlashCommandBuilder()
-        .setName('viphelp')
-        .setDescription('Ver todos los comandos VIP'),
+        .setName('tienda')
+        .setDescription('Comandos de la tienda')
+        .addSubcommand(sub => sub.setName('ver').setDescription('Ver la tienda')
+            .addStringOption(o => o.setName('categoria').setDescription('Categoría a ver').setRequired(false)
+                .addChoices(
+                    { name: '🧪 Consumibles', value: 'consumable' },
+                    { name: '💎 Permanentes', value: 'permanent' },
+                    { name: '✨ Cosméticos', value: 'cosmetic' },
+                    { name: '🎁 Especiales', value: 'special'},
+                    { name: '⚔️ Equipamiento', value: 'equipment' },
+                    { name: '🗝️ Cofres', value: 'mystery' },
+                    { name: '🌱 Semillas', value: 'seed' },
+                    { name: '🐕 Mascotas', value: 'pet' },
+                    { name: '🧠 Trivia', value: 'trivia' }
+                ))
+            .addIntegerOption(o => o.setName('pagina').setDescription('Página a ver').setRequired(false).setMinValue(1)))
+        .addSubcommand(sub => sub.setName('comprar').setDescription('Comprar un item de la tienda')
+            .addStringOption(o => o.setName('item').setDescription('ID del item').setRequired(true))
+            .addIntegerOption(o => o.setName('cantidad').setDescription('Cantidad (default: 1)').setRequired(false).setMinValue(1)))
+        .addSubcommand(sub => sub.setName('inventario').setDescription('Ver tu inventario')
+            .addUserOption(o => o.setName('usuario').setDescription('Ver inventario de otro usuario').setRequired(false)))
+        .addSubcommand(sub => sub.setName('usar').setDescription('Usar un item de tu inventario')
+            .addStringOption(o => o.setName('item').setDescription('ID del item').setRequired(true)))
+        .addSubcommand(sub => sub.setName('lanzar').setDescription('Lanzar una maldición a alguien')
+            .addUserOption(o => o.setName('usuario').setDescription('Objetivo').setRequired(true)))
+        .addSubcommand(sub => sub.setName('efectos').setDescription('Ver tus efectos activos'))
+        .addSubcommand(sub => sub.setName('quitarefecto').setDescription('Quitar un efecto permanente')
+            .addStringOption(o => o.setName('item').setDescription('ID del item').setRequired(true)))
+        .addSubcommand(sub => sub.setName('autoworker').setDescription('Ver el estado de tu auto-worker'))
+        .addSubcommand(sub => sub.setName('cosmeticos').setDescription('Ver tus cosméticos activos'))
+        .addSubcommand(sub => sub.setName('setnickname').setDescription('Cambiar tu apodo cosmético')
+            .addStringOption(o => o.setName('apodo').setDescription('Tu nuevo apodo').setRequired(true).setMaxLength(20)))
+        .addSubcommand(sub => sub.setName('rolcreate').setDescription('Crear tu rol personalizado')
+            .addStringOption(o => o.setName('color').setDescription('Color hex, ej: #FF0000').setRequired(true))
+            .addStringOption(o => o.setName('nombre').setDescription('Nombre del rol').setRequired(true)))
+        .addSubcommandGroup(group => group.setName('vip').setDescription('Sistema VIP')
+            .addSubcommand(sub => sub.setName('dashboard').setDescription('Ver info y beneficios VIP'))
+            .addSubcommand(sub => sub.setName('work').setDescription('Bonus VIP de trabajo'))
+            .addSubcommand(sub => sub.setName('gamble').setDescription('Bonus VIP de apuestas'))
+            .addSubcommand(sub => sub.setName('boost').setDescription('Boost VIP'))
+            .addSubcommand(sub => sub.setName('daily').setDescription('Bonus VIP diario'))
+            .addSubcommand(sub => sub.setName('help').setDescription('Ayuda de comandos VIP'))),
 
     // ── MINIJUEGOS ────────────────────────────────────────────
     new SlashCommandBuilder()
@@ -700,8 +663,8 @@ const commands = [
     new SlashCommandBuilder()
         .setName('dice')
         .setDescription('Jugar a los dados')
-        .addIntegerOption(o => o.setName('apuesta').setDescription('Cantidad a apostar').setRequired(true).setMinValue(1))
-        .addIntegerOption(o => o.setName('numero').setDescription('Número a predecir (1-6)').setRequired(false).setMinValue(1).setMaxValue(6)),
+        .addStringOption(o => o.setName('prediccion').setDescription('alto, bajo o un número del 1 al 6').setRequired(true))
+        .addIntegerOption(o => o.setName('apuesta').setDescription('Cantidad a apostar').setRequired(true).setMinValue(1)),
 
     new SlashCommandBuilder()
         .setName('blackjack')
@@ -727,14 +690,19 @@ const commands = [
     new SlashCommandBuilder()
         .setName('horserace')
         .setDescription('Carrera de caballos')
-        .addStringOption(o => o.setName('accion').setDescription('Qué hacer').setRequired(false)
+        .addStringOption(o => o.setName('accion').setDescription('Qué hacer').setRequired(true)
             .addChoices(
                 { name: '🐴 Crear carrera', value: 'crear' },
-                { name: '🏇 Unirse', value: 'join' },
-                { name: '🏁 Iniciar', value: 'start' },
-                { name: '❌ Cancelar', value: 'cancel' }
+                { name: '🏇 Unirse a carrera', value: 'join' },
+                { name: '🏁 Iniciar carrera', value: 'start' },
+                { name: '❌ Cancelar carrera', value: 'cancel' }
             ))
-        .addIntegerOption(o => o.setName('apuesta').setDescription('Cantidad a apostar').setRequired(false).setMinValue(1)),
+        .addStringOption(o => o.setName('modo').setDescription('Jugar contra el bot o multijugador (solo al crear)').setRequired(false)
+            .addChoices(
+                { name: '🤖 vs Bot', value: 'bot' },
+                { name: '👥 Multijugador', value: 'multi' }
+            ))
+        .addIntegerOption(o => o.setName('apuesta').setDescription('Cantidad a apostar (crear o unirse)').setRequired(false).setMinValue(1)),
 
     new SlashCommandBuilder()
         .setName('vending')
@@ -811,7 +779,7 @@ const commands = [
                 { name: '🔴 Difícil', value: 'hard' }
             ))
         .addStringOption(o => o.setName('categoria').setDescription('Categoría (ej: anime, historia)').setRequired(false))
-        .addIntegerOption(o => o.setName('rondas').setDescription('Rondas para modo multi').setRequired(false).setMinValue(1).setMaxValue(20)),
+        .addIntegerOption(o => o.setName('apuesta').setDescription('Cantidad a apostar (solo para multi)').setRequired(false).setMinValue(0)),
 
     // /apuesta agrupa: bet, acceptbet, declinebet, mybets, betstats, resolvebet, cancelbet
     new SlashCommandBuilder()
@@ -880,66 +848,87 @@ const commands = [
         .addIntegerOption(o => o.setName('cantidad').setDescription('Cantidad a craftear o nº a cancelar').setRequired(false).setMinValue(1))
         .addStringOption(o => o.setName('categoria').setDescription('Categoría de recetas').setRequired(false)),
 
-    // /logros agrupa: achievements, allachievements, progress, detectachievements, missions, blockmissions, unblockmissions
+    // /logros agrupa: achievements, allachievements, progress, detectachievements
     new SlashCommandBuilder()
         .setName('logros')
-        .setDescription('Logros, misiones y progreso')
+        .setDescription('Logros y progreso')
+        .addSubcommand(sub => sub.setName('logros').setDescription('Ver tus logros')
+            .addUserOption(o => o.setName('usuario').setDescription('Ver logros de otro usuario').setRequired(false)))
+        .addSubcommand(sub => sub.setName('todos').setDescription('Ver todos los logros disponibles'))
+        .addSubcommand(sub => sub.setName('progreso').setDescription('Ver tu progreso de logros')
+            .addStringOption(o => o.setName('rareza').setDescription('Filtrar por rareza').setRequired(false)
+                .addChoices(
+                    { name: '🟡 Legendario', value: 'legendary' },
+                    { name: '🟣 Épico', value: 'epic' },
+                    { name: '🔵 Raro', value: 'rare' },
+                    { name: '🟢 No común', value: 'uncommon' },
+                    { name: '⚪ Común', value: 'common' }
+                )))
+        .addSubcommand(sub => sub.setName('detectar').setDescription('Detectar logros pendientes'))
+        .addSubcommand(sub => sub.setName('detectall').setDescription('Detectar logros de todos los miembros')),
+
+    // /misiones agrupa: missions, blockmissions, unblockmissions
+    new SlashCommandBuilder()
+        .setName('misiones')
+        .setDescription('Misiones')
         .addStringOption(o => o.setName('accion').setDescription('Qué ver').setRequired(false)
             .addChoices(
-                { name: '🏆 Mis logros', value: 'logros' },
-                { name: '📋 Todos los logros', value: 'todos' },
-                { name: '📈 Progreso', value: 'progreso' },
-                { name: '🔍 Detectar logros', value: 'detectar' },
-                { name: '📅 Misiones', value: 'misiones' },
-                { name: '🔕 Silenciar notifs', value: 'silenciar' },
-                { name: '🔔 Activar notifs', value: 'activar' }
-            )),
-
-    // /chat agrupa: chat, clearchat, chathelp
-    new SlashCommandBuilder()
-        .setName('chat')
-        .setDescription('Chat con IA')
-        .addStringOption(o => o.setName('accion').setDescription('Qué hacer').setRequired(false)
-            .addChoices(
-                { name: '💬 Enviar mensaje', value: 'mensaje' },
-                { name: '🗑️ Borrar historial', value: 'limpiar' },
-                { name: '❓ Ayuda', value: 'ayuda' }
+                { name: '📅 Ver Misiones', value: 'misiones' },
+                { name: '🔕 Silenciar notificaciones', value: 'silenciar' },
+                { name: '🔔 Activar notificaciones', value: 'activar' }
             ))
-        .addStringOption(o => o.setName('mensaje').setDescription('Tu mensaje (para chatear)').setRequired(false)),
+        .addUserOption(o => o.setName('usuario').setDescription('Ver misiones de otro usuario').setRequired(false)),
+
+    // /chat agrupa: chat, clearchat, chathelp, orstatus, chatstats
+    new SlashCommandBuilder()
+        .setName('chatbot')
+        .setDescription('Comandos del chat con IA')
+        .addSubcommand(sub => sub.setName('chat').setDescription('Hablar con la IA')
+            .addStringOption(o => o.setName('prompt').setDescription('Qué quieres decirle').setRequired(true)))
+        .addSubcommand(sub => sub.setName('clear').setDescription('Limpiar el historial de chat'))
+        .addSubcommand(sub => sub.setName('status').setDescription('Ver el estado de la IA'))
+        .addSubcommand(sub => sub.setName('stats').setDescription('Ver estadísticas del chat'))
+        .addSubcommand(sub => sub.setName('help').setDescription('Ver ayuda del chat')),
 
     // /m agrupa todos los comandos de música
     new SlashCommandBuilder()
         .setName('music')
         .setDescription('Comandos de música')
-        .addStringOption(o => o.setName('accion').setDescription('Qué hacer').setRequired(true)
-            .addChoices(
-                { name: '▶️ Reproducir', value: 'play' },
-                { name: '⏹️ Detener', value: 'stop' },
-                { name: '⏭️ Saltar', value: 'skip' },
-                { name: '⏸️ Pausar', value: 'pause' },
-                { name: '▶️ Reanudar', value: 'resume' },
-                { name: '📋 Cola', value: 'queue' },
-                { name: '🎵 Sonando ahora', value: 'np' },
-                { name: '🔍 Buscar YouTube', value: 'ytsearch' },
-                { name: '🔍 Buscar Spotify', value: 'spsearch' },
-                { name: '📝 Letra', value: 'lyrics' },
-                { name: '🔧 Reparar', value: 'fix' },
-                { name: '⏩ Adelantar', value: 'seek' },
-                { name: '🔊 Volumen', value: 'volume' },
-                { name: '🔁 Repetir', value: 'loop' },
-                { name: '🔀 Mezclar', value: 'shuffle' },
-                { name: '🗑️ Limpiar cola', value: 'clear' }
-            ))
-        .addStringOption(o => o.setName('query').setDescription('Canción/búsqueda/tiempo (según acción)').setRequired(false))
-        .addIntegerOption(o => o.setName('numero').setDescription('Número (para volumen 0-100, skip N, etc.)').setRequired(false)),
+        .addSubcommand(sub => sub.setName('play').setDescription('Reproducir una canción')
+            .addStringOption(o => o.setName('url').setDescription('URL o nombre de la canción').setRequired(true)))
+        .addSubcommand(sub => sub.setName('stop').setDescription('Detener y salir del canal'))
+        .addSubcommand(sub => sub.setName('skip').setDescription('Saltar canción(es)')
+            .addIntegerOption(o => o.setName('cantidad').setDescription('Cantidad de saltos').setRequired(false).setMinValue(1)))
+        .addSubcommand(sub => sub.setName('pause').setDescription('Pausar la música'))
+        .addSubcommand(sub => sub.setName('resume').setDescription('Reanudar la música'))
+        .addSubcommand(sub => sub.setName('queue').setDescription('Ver la cola de reproducción')
+            .addIntegerOption(o => o.setName('pagina').setDescription('Página a ver').setRequired(false).setMinValue(1)))
+        .addSubcommand(sub => sub.setName('nowplaying').setDescription('Ver qué está sonando ahora'))
+        .addSubcommand(sub => sub.setName('ytsearch').setDescription('Buscar en YouTube')
+            .addStringOption(o => o.setName('nombre').setDescription('Nombre de la canción').setRequired(true)))
+        .addSubcommand(sub => sub.setName('spsearch').setDescription('Buscar en Spotify')
+            .addStringOption(o => o.setName('nombre').setDescription('Nombre de la canción').setRequired(true)))
+        .addSubcommand(sub => sub.setName('lyrics').setDescription('Ver la letra de una canción')
+            .addStringOption(o => o.setName('cancion').setDescription('Nombre de la canción').setRequired(true)))
+        .addSubcommand(sub => sub.setName('fix').setDescription('Reparar/reiniciar el reproductor'))
+        .addSubcommand(sub => sub.setName('seek').setDescription('Adelantar/retroceder en la canción')
+            .addStringOption(o => o.setName('tiempo').setDescription('Tiempo, ej: 1:30').setRequired(false)))
+        .addSubcommand(sub => sub.setName('volume').setDescription('Cambiar el volumen')
+            .addIntegerOption(o => o.setName('numero').setDescription('Volumen (0-100)').setRequired(true).setMinValue(0).setMaxValue(100)))
+        .addSubcommand(sub => sub.setName('loop').setDescription('Activar/cambiar modo de repetición')
+            .addStringOption(o => o.setName('tipo').setDescription('Tipo de repetición').setRequired(false)
+                .addChoices(
+                    { name: '🔁 Repetir canción', value: 'track' },
+                    { name: '🔁 Repite cola', value: 'queue' },
+                    { name: '❌ Sin loop', value: 'off' }
+                )))
+        .addSubcommand(sub => sub.setName('shuffle').setDescription('Mezclar la cola'))
+        .addSubcommand(sub => sub.setName('clear').setDescription('Limpiar la cola'))
+        .addSubcommand(sub => sub.setName('help').setDescription('Obtener ayuda sobre los comandos de musica'))
+        .addSubcommand(sub => sub.setName('changenode').setDescription('Forzar reconexión al mejor nodo de música'))
+        .addSubcommand(sub => sub.setName('statusnode').setDescription('Ver el estado de todos los nodos')),
 
     // ── NSFW ──────────────────────────────────────────────────
-    new SlashCommandBuilder()
-        .setName('r34')
-        .setDescription('Rule34 (solo canales NSFW)')
-        .addStringOption(o => o.setName('tags').setDescription('Tags a buscar').setRequired(false))
-        .addIntegerOption(o => o.setName('cantidad').setDescription('Cantidad (default: 20)').setRequired(false).setMinValue(1).setMaxValue(20)),
-
     new SlashCommandBuilder()
         .setName('nsfw')
         .setDescription('Imágenes NSFW (solo canales NSFW)')
@@ -985,7 +974,12 @@ const commands = [
     new SlashCommandBuilder()
         .setName('potcontribute')
         .setDescription('Contribuir al pozo semanal')
-        .addIntegerOption(o => o.setName('cantidad').setDescription('Cantidad a contribuir').setRequired(true).setMinValue(1)),
+        .addStringOption(o => o.setName('tipo').setDescription('Qué vas a donar').setRequired(true)
+            .addChoices(
+                { name: '💰 Dinero', value: 'money' },
+                { name: '📦 Item', value: 'item' }
+            ))
+        .addStringOption(o => o.setName('valor').setDescription('Cantidad de dinero o ID del item').setRequired(true)), // <-- CAMBIADO
 
     new SlashCommandBuilder()
         .setName('potstatus')
@@ -1017,7 +1011,7 @@ const rest = new REST({ version: '10' }).setToken(process.env.TOKEN);
     console.log(`🔧 Registrando ${commands.length} slash commands globalmente...`);
 
     await rest.put(
-      Routes.applicationCommands(process.env.CLIENT_ID), // 👈 sin GUILD_ID = global
+      Routes.applicationCommands(process.env.CLIENT_ID),
       { body: commands }
     );
 
@@ -1037,7 +1031,8 @@ client.once('ready', async () => {
     await auctions.loadActiveAuctions(client);
     await chatbot.initChatTables();
     console.log('🤖 Sistema de ChatBot inicializado');
-    iniciarApiServer(client, economy, guildConfig, 20329);
+    const apiPort = process.env.PORT || process.env.SERVER_PORT || 20329;
+    iniciarApiServer(client, economy, guildConfig, apiPort);
 
     setPibotPresence();
     
@@ -1212,7 +1207,7 @@ client.on('guildCreate', async (guild) => {
                 { name: '🎯 Misiones y Logros', value: 'Sistema de progresión con recompensas', inline: true },
                 { name: '🎉 Eventos', value: 'Eventos automáticos con bonificaciones', inline: true },
                 { name: '🤖 Chat IA', value: 'Habla con Pibot respondiéndole mensajes', inline: true },
-                { name: '⚙️ Configuración inicial', value: 'Un admin puede configurar todo desde el [Dashboard Web](https://chasetodie.github.io/Pibot/), o usar `>svconfig` para ver el estado actual.', inline: false },
+                { name: '⚙️ Configuración inicial', value: 'Un admin puede configurar todo desde el [Dashboard Web](https://pibot.is-a.dev/), o usar `>svconfig` para ver el estado actual.', inline: false },
                 { name: '📖 Comandos', value: 'Usa `>help` para ver todos los comandos disponibles.', inline: false }
             )
             .setFooter({ text: 'Pi-Bot • Usa >help para empezar' })
@@ -1287,6 +1282,8 @@ client.on('interactionCreate', async (interaction) => {
     if (interaction.isChatInputCommand()) {
         const cmd = interaction.commandName;
  
+        let yaRespondioUnaVez = false;
+
         const fakeMessage = {
             author:   interaction.user,
             member:   interaction.member,
@@ -1301,10 +1298,19 @@ client.on('interactionCreate', async (interaction) => {
             },
             content: `>${cmd}`,
             reply: async (data) => {
-                if (interaction.replied || interaction.deferred) {
-                    return interaction.editReply(data).catch(() => {});
+                try {
+                    if (!yaRespondioUnaVez) {
+                        yaRespondioUnaVez = true;
+                        if (interaction.replied || interaction.deferred) {
+                            return await interaction.editReply(data);
+                        }
+                        return await interaction.reply(data);
+                    }
+                    return await interaction.followUp(data);
+                } catch (e) {
+                    console.error('⚠️ Error en fakeMessage.reply:', e.message);
+                    return null;
                 }
-                return interaction.reply(data).catch(() => {});
             }
         };
         fakeMessage.mentions.users.first    = () => fakeMessage.mentions.users.values().next().value   || null;
@@ -1459,80 +1465,67 @@ client.on('interactionCreate', async (interaction) => {
                 }
  
                 // ── TIENDA ────────────────────────────────────
-                case 'shop': {
-                    const cat = interaction.options.getString('categoria') || '';
-                    fakeMessage.content = `>shop ${cat}`.trim();
+                case 'tienda': {
+                    const group = interaction.options.getSubcommandGroup(false);
+                    const sub = interaction.options.getSubcommand();
+
+                    // Grupo VIP
+                    if (group === 'vip') {
+                        const vipMap = { dashboard: 'vip', work: 'vipwork', gamble: 'vipgamble', boost: 'vipboost', daily: 'vipdaily', help: 'viphelp' };
+                        fakeMessage.content = `>${vipMap[sub]}`;
+                        await shop.processCommand(fakeMessage);
+                        break;
+                    }
+
+                    const subMap = {
+                        ver: 'shop', comprar: 'buy', inventario: 'bag', usar: 'useitem',
+                        lanzar: 'lanzar', efectos: 'efectos', quitarefecto: 'removeeffect',
+                        autoworker: 'autoworker', cosmeticos: 'cosmetics',
+                        setnickname: 'setnickname', rolcreate: 'rolcreate'
+                    };
+                    const cmd = subMap[sub];
+
+                    let arg = '';
+                    switch (sub) {
+                        case 'ver': {
+                            const cat = interaction.options.getString('categoria') || 'all';
+                            const pag = interaction.options.getInteger('pagina') || 1;
+                            arg = `${cat} ${pag}`;
+                            break;
+                        }
+                        case 'comprar': {
+                            const item = interaction.options.getString('item');
+                            const cant = interaction.options.getInteger('cantidad');
+                            arg = `${item}${cant ? ` ${cant}` : ''}`;
+                            break;
+                        }
+                        case 'inventario': {
+                            const t = interaction.options.getMember('usuario');
+                            if (t) { addMember(t); arg = `<@${t.id}>`; }
+                            break;
+                        }
+                        case 'usar':
+                        case 'quitarefecto':
+                            arg = interaction.options.getString('item');
+                            break;
+                        case 'lanzar': {
+                            const t = interaction.options.getMember('usuario');
+                            addMember(t);
+                            arg = `<@${t.id}>`;
+                            break;
+                        }
+                        case 'setnickname':
+                            arg = interaction.options.getString('apodo');
+                            break;
+                        case 'rolcreate':
+                            arg = `${interaction.options.getString('color')} ${interaction.options.getString('nombre')}`;
+                            break;
+                    }
+
+                    fakeMessage.content = `>${cmd}${arg ? ` ${arg}` : ''}`;
                     await shop.processCommand(fakeMessage);
                     break;
                 }
-                case 'buy': {
-                    const item = interaction.options.getString('item');
-                    const cant = interaction.options.getInteger('cantidad') || 1;
-                    fakeMessage.content = `>buy ${item} ${cant}`;
-                    await shop.processCommand(fakeMessage);
-                    break;
-                }
-                case 'bag': {
-                    const t = interaction.options.getMember('usuario');
-                    if (t) addMember(t);
-                    fakeMessage.content = '>bag';
-                    await shop.processCommand(fakeMessage);
-                    break;
-                }
-                case 'useitem': {
-                    fakeMessage.content = `>useitem ${interaction.options.getString('item')}`;
-                    await shop.processCommand(fakeMessage);
-                    break;
-                }
-                case 'lanzar': {
-                    const t = interaction.options.getUser('usuario');
-                    addUser(t);
-                    fakeMessage.content = `>lanzar <@${t.id}>`;
-                    await shop.processCommand(fakeMessage);
-                    break;
-                }
-                case 'efectos':
-                    fakeMessage.content = '>efectos';
-                    await shop.processCommand(fakeMessage);
-                    break;
-                case 'quitarefecto': {
-                    fakeMessage.content = `>quitarefecto ${interaction.options.getString('item')}`;
-                    await shop.processCommand(fakeMessage);
-                    break;
-                }
-                case 'autoworker':
-                    fakeMessage.content = '>autoworker';
-                    await shop.processCommand(fakeMessage);
-                    break;
-                case 'cosmeticos':
-                    fakeMessage.content = '>cosmetics';
-                    await shop.processCommand(fakeMessage);
-                    break;
-                case 'setnickname': {
-                    const apodo = interaction.options.getString('apodo');
-                    fakeMessage.content = `>setnickname ${apodo}`;
-                    await shop.processCommand(fakeMessage);
-                    break;
-                }
-                case 'rolcreate': {
-                    const color  = interaction.options.getString('color')  || '';
-                    const nombre = interaction.options.getString('nombre') || '';
-                    fakeMessage.content = `>rolcreate ${color} ${nombre}`.trim();
-                    await shop.processCommand(fakeMessage);
-                    break;
-                }
-                case 'vip':
-                    fakeMessage.content = '>vip';
-                    await shop.processCommand(fakeMessage);
-                    break;
-                case 'vipwork':
-                    fakeMessage.content = '>vipwork';
-                    await shop.processCommand(fakeMessage);
-                    break;
-                case 'viphelp':
-                    fakeMessage.content = '>viphelp';
-                    await shop.processCommand(fakeMessage);
-                    break;
  
                 // ── MINIJUEGOS ────────────────────────────────
                 case 'coinflip': {
@@ -1543,9 +1536,9 @@ client.on('interactionCreate', async (interaction) => {
                     break;
                 }
                 case 'dice': {
+                    const prediccion = interaction.options.getString('prediccion');
                     const apuesta = interaction.options.getInteger('apuesta');
-                    const numero  = interaction.options.getInteger('numero') || '';
-                    fakeMessage.content = `>dice ${apuesta} ${numero}`.trim();
+                    fakeMessage.content = `>dice ${prediccion} ${apuesta}`;
                     await minigames.processCommand(fakeMessage);
                     break;
                 }
@@ -1572,18 +1565,23 @@ client.on('interactionCreate', async (interaction) => {
                     break;
                 }
                 case 'horserace': {
-                    const accion  = interaction.options.getString('accion') || '';
+                    const accion = interaction.options.getString('accion');
+                    const modo = interaction.options.getString('modo');
                     const apuesta = interaction.options.getInteger('apuesta') || '';
-                    if (accion === 'join') {
+                    
+                    if (accion === 'crear') {
+                        if (!modo || apuesta === '') {
+                            return interaction.editReply('❌ Para crear una carrera, debes especificar el **modo** (vs Bot o Multijugador) y la **apuesta**.');
+                        }
+                        fakeMessage.content = `>horses ${modo} ${apuesta}`;
+                    } else if (accion === 'join') {
                         fakeMessage.content = `>joinrace ${apuesta}`.trim();
                     } else if (accion === 'start') {
-                        fakeMessage.content = '>startrace';
+                        fakeMessage.content = `>startrace`;
                     } else if (accion === 'cancel') {
-                        fakeMessage.content = '>cancelrace';
-                    } else {
-                        // 'crear' o vacío = crear carrera
-                        fakeMessage.content = `>horserace ${apuesta}`.trim();
+                        fakeMessage.content = `>cancelrace`;
                     }
+                    
                     await minigames.processCommand(fakeMessage);
                     break;
                 }
@@ -1639,8 +1637,8 @@ client.on('interactionCreate', async (interaction) => {
                     const cat   = interaction.options.getString('categoria')  || '';
                     const rondas = interaction.options.getInteger('rondas')   || '';
                     switch (modo) {
-                        case 'survival': fakeMessage.content = '>triviasurvival'; break;
-                        case 'multi':    fakeMessage.content = `>triviamulti ${rondas}`.trim(); break;
+                        case 'survival': fakeMessage.content = '>triviasurvival start'; break;
+                        case 'multi':    fakeMessage.content = `>triviamultiplayer ${interaction.options.getInteger('apuesta') || 0}`.trim(); break;
                         case 'join':     fakeMessage.content = '>jointrivia'; break;
                         case 'start':    fakeMessage.content = '>starttrivia'; break;
                         case 'cancel':   fakeMessage.content = '>canceltrivia'; break;
@@ -1763,13 +1761,33 @@ client.on('interactionCreate', async (interaction) => {
  
                 // ── MISIONES Y LOGROS ─────────────────────────
                 case 'logros': {
-                    const accion = interaction.options.getString('accion') || 'logros';
+                    const sub = interaction.options.getSubcommand();
+                    const subMap = { logros: 'achievements', todos: 'allachievements', progreso: 'progress', detectar: 'detectachievements', detectall: 'detectall' };
+                    const cmd = subMap[sub];
+
+                    let arg = '';
+                    if (sub === 'logros') {
+                        const t = interaction.options.getMember('usuario');
+                        if (t) { addMember(t); arg = `<@${t.id}>`; }
+                    } else if (sub === 'progreso') {
+                        const rarezaStr = interaction.options.getString('rareza');
+                        const mapRarezas = { 'legendary': 0, 'epic': 1, 'rare': 2, 'uncommon': 3, 'common': 4 };
+                        arg = rarezaStr !== null ? mapRarezas[rarezaStr] : 0;
+                    }
+
+                    fakeMessage.content = `>${cmd}${arg ? ` ${arg}` : ''}`;
+                    await achievements.processCommand(fakeMessage);
+                    break;
+                }
+
+                case 'misiones': {
+                    const accion = interaction.options.getString('accion') || 'misiones';
+                    const t = interaction.options.getMember('usuario');
+                    let arg = '';
+                    if (t) { addMember(t); arg = `<@${t.id}>`; }
+
                     switch (accion) {
-                        case 'logros':   fakeMessage.content = '>achievements';      await achievements.processCommand(fakeMessage); break;
-                        case 'todos':    fakeMessage.content = '>allachievements';   await achievements.processCommand(fakeMessage); break;
-                        case 'progreso': fakeMessage.content = '>progress';          await achievements.processCommand(fakeMessage); break;
-                        case 'detectar': fakeMessage.content = '>detectachievements'; await achievements.processCommand(fakeMessage); break;
-                        case 'misiones': fakeMessage.content = '>missions';          await missions.processCommand(fakeMessage); break;
+                        case 'misiones': fakeMessage.content = `>missions ${arg}`.trim(); await missions.processCommand(fakeMessage); break;
                         case 'silenciar': fakeMessage.content = '>blockmissions';    await missions.processCommand(fakeMessage); break;
                         case 'activar':  fakeMessage.content = '>unblockmissions';   await missions.processCommand(fakeMessage); break;
                     }
@@ -1787,46 +1805,53 @@ client.on('interactionCreate', async (interaction) => {
  
                 // ── MÚSICA ────────────────────────────────────
                 case 'music': {
-                    const accion = interaction.options.getString('accion');
-                    const query  = interaction.options.getString('query') || '';
-                    const numero = interaction.options.getInteger('numero') || '';
-                    // Mapear acciones del choice al subcomando real
+                    const sub = interaction.options.getSubcommand();
                     const subMap = {
-                        'play': 'play', 'stop': 'stop', 'skip': 'skip',
-                        'pause': 'pause', 'resume': 'resume', 'queue': 'queue',
-                        'np': 'nowplaying', 'ytsearch': 'ytsearch', 'spsearch': 'spsearch',
-                        'lyrics': 'lyrics', 'fix': 'fix', 'seek': 'seek',
-                        'volume': 'volume', 'loop': 'loop', 'shuffle': 'shuffle', 'clear': 'clear'
+                        play: 'play', stop: 'stop', skip: 'skip', pause: 'pause',
+                        resume: 'resume', queue: 'queue', nowplaying: 'nowplaying',
+                        ytsearch: 'ytsearch', spsearch: 'spsearch', lyrics: 'letra',
+                        fix: 'fix', seek: 'seek', volume: 'volume', loop: 'loop',
+                        shuffle: 'shuffle', clear: 'clear', help: 'help',
+                        changenode: 'changenode', statusnode: 'statusnode' 
                     };
-                    const sub = subMap[accion] || accion;
-                    // Para volume y skip el número va en query si no hay query
-                    const param = query || numero || '';
-                    fakeMessage.content = `>m ${sub} ${param}`.trim();
+                    const cmd = subMap[sub];
+
+                    let arg = '';
+                    switch (sub) {
+                        case 'play':     arg = interaction.options.getString('url'); break;
+                        case 'skip':     arg = interaction.options.getInteger('cantidad') ?? ''; break;
+                        case 'queue':    arg = interaction.options.getInteger('pagina') ?? ''; break;
+                        case 'ytsearch': arg = interaction.options.getString('nombre'); break;
+                        case 'spsearch': arg = interaction.options.getString('nombre'); break;
+                        case 'lyrics':   arg = interaction.options.getString('cancion'); break;
+                        case 'seek':     arg = interaction.options.getString('tiempo') ?? ''; break;
+                        case 'volume':   arg = interaction.options.getInteger('numero'); break;
+                        case 'loop':     arg = interaction.options.getString('tipo') ?? ''; break;
+                        case 'node':     arg = ''; break;
+                    }
+
+                    fakeMessage.content = `>m ${cmd}${arg !== '' ? ` ${arg}` : ''}`;
                     await music.processCommand(fakeMessage);
                     break;
                 }
  
                 // ── CHAT IA ───────────────────────────────────
-                case 'chat': {
-                    const accion  = interaction.options.getString('accion')  || 'mensaje';
-                    const mensaje = interaction.options.getString('mensaje') || '';
-                    switch (accion) {
-                        case 'mensaje': fakeMessage.content = `>chat ${mensaje}`; break;
-                        case 'limpiar': fakeMessage.content = '>clearchat'; break;
-                        case 'ayuda':   fakeMessage.content = '>chathelp'; break;
-                    }
+                case 'chatbot': {
+                    const sub = interaction.options.getSubcommand();
+                    const subMap = {
+                        chat: 'chat', clear: 'clearchat', status: 'iastatus',
+                        stats: 'chatstats', help: 'chathelp'
+                    };
+                    const cmd = subMap[sub];
+
+                    const arg = sub === 'chat' ? interaction.options.getString('prompt') : '';
+
+                    fakeMessage.content = `>${cmd}${arg ? ` ${arg}` : ''}`;
                     await chatbot.processCommand(fakeMessage);
                     break;
                 }
  
                 // ── NSFW ──────────────────────────────────────
-                case 'r34': {
-                    const tags = interaction.options.getString('tags')       || '';
-                    const cant = interaction.options.getInteger('cantidad')  || '';
-                    fakeMessage.content = `>r34 ${tags} ${cant}`.trim();
-                    await nsfw.processCommand(fakeMessage);
-                    break;
-                }
                 case 'nsfw': {
                     const tags = interaction.options.getString('tags')      || '';
                     const cant = interaction.options.getInteger('cantidad') || '';
@@ -1871,7 +1896,9 @@ client.on('interactionCreate', async (interaction) => {
  
                 // ── POZO SEMANAL ──────────────────────────────
                 case 'potcontribute': {
-                    fakeMessage.content = `>potcontribute ${interaction.options.getInteger('cantidad')}`;
+                    const tipo = interaction.options.getString('tipo');
+                    const valor = interaction.options.getString('valor');
+                    fakeMessage.content = `>potcontribute ${tipo} ${valor}`;
                     await minigames.processCommand(fakeMessage);
                     break;
                 }
@@ -1988,9 +2015,15 @@ client.on('interactionCreate', async (interaction) => {
         }
 
         // Botones de búsqueda de música
-        if (interaction.customId?.startsWith('msearch_') || interaction.customId?.startsWith('mplay_') || 
-            interaction.customId?.startsWith('mback_') || interaction.customId?.startsWith('msp_') || 
-            interaction.customId?.startsWith('mspplay_') || interaction.customId?.startsWith('mspback_')) {
+        if (
+            interaction.customId?.startsWith('msearch_') ||
+            interaction.customId?.startsWith('mplay_') ||
+            interaction.customId?.startsWith('mback_') ||
+            interaction.customId?.startsWith('msp_') ||
+            interaction.customId?.startsWith('mspplay_') ||
+            interaction.customId?.startsWith('mspback_') ||
+            interaction.customId?.startsWith('mq_')   // ← agregado
+        ) {
             client.musicSystem.handleSearchInteraction(interaction).catch(e => {
                 console.error('handleSearchInteraction error:', e.message);
             });
@@ -2501,15 +2534,13 @@ client.on('messageCreate', async (message) => {
         return;
     }
     
-    // Ignorar @everyone y @here
     if (message.mentions.everyone) return;
 
-    // CHATBOT - Solo cuando mencionen al bot
-    if (message.mentions.has(message.client.user)) {
-        // ✅ ENVIAR MENSAJE INMEDIATO Y PROCESAR EN SEGUNDO PLANO
+    // CHATBOT - Cuando mencionen al bot O le hagan reply a un mensaje suyo
+    const esReplyAlBot = message.mentions.repliedUser?.id === message.client.user.id;
+    if (message.mentions.has(message.client.user) || esReplyAlBot) {
         const processingMsg = await message.reply('⚙️ Pibot está pensando...');
         
-        // 🚀 PROCESAR DE FORMA ASÍNCRONA (no bloquea el bot)
         (async () => {
             const emojis = ['⏳', '⌛', '🔄', '⚙️'];
             let emojiIndex = 0;
@@ -2523,20 +2554,16 @@ client.on('messageCreate', async (message) => {
                 let botContext = null;
                 let repliedToMessage = null;
 
-                // Detectar si está respondiendo a un mensaje
                 if (message.reference) {
                     try {
                         const repliedMessage = await message.channel.messages.fetch(message.reference.messageId);
 
-                        // Si responde a un mensaje del bot
                         if (repliedMessage.author.id === message.client.user.id) {
                             const repliedContent = repliedMessage.content.toLowerCase();
                             const repliedEmbed = repliedMessage.embeds[0];
 
-                            // Guardar contenido del mensaje
                             repliedToMessage = repliedMessage.content || repliedEmbed?.description || '';
 
-                            // Detectar tipo de juego/comando
                             if (repliedContent.includes('coinflip') || repliedEmbed?.title?.toLowerCase().includes('coinflip')) {
                                 botContext = 'El usuario acaba de jugar coinflip y está reaccionando al resultado';
                             } else if (repliedContent.includes('dice') || repliedEmbed?.title?.toLowerCase().includes('dados')) {
@@ -2558,12 +2585,10 @@ client.on('messageCreate', async (message) => {
                     }
                 }
 
-                // Procesar mensaje con contexto Y mensaje referenciado
                 const cleanMessage = message.content
                     .replace(/<@!?\d+>/g, '')
                     .trim();
 
-                // Detectar si hay imagen adjunta
                 let imageBase64 = null;
                 let imageMimeType = null;
 
@@ -2589,17 +2614,15 @@ client.on('messageCreate', async (message) => {
                     botContext,
                     repliedToMessage,
                     imageBase64,
-                    imageMimeType
+                    imageMimeType,
+                    message
                 );
 
-                // Detener animación
                 clearInterval(emojiInterval);
                 
-                // Borrar mensaje de "pensando" y enviar respuesta nueva
                 await processingMsg.delete().catch(() => {});
                 
                 if (result.success) {
-                    // Dividir mensajes largos si es necesario
                     if (result.response.length > 2000) {
                         const chunks = result.response.match(/[\s\S]{1,1900}/g) || [];
                         for (const chunk of chunks) {
@@ -2617,12 +2640,9 @@ client.on('messageCreate', async (message) => {
                 console.error('❌ Error en chatbot:', error);
                 await processingMsg.edit('❌ Ups, tuve un problema procesando tu mensaje.').catch(() => {});
             }
-        })(); // ← Ejecutar inmediatamente pero sin esperar
-        
-        // ✅ El bot continúa ejecutándose sin bloquearse
+        })();
     }
     
-    // Verificar memoria antes de procesar
     const memoryUsage = process.memoryUsage();
     const memoryMB = Math.round(memoryUsage.heapUsed / 1024 / 1024);
     
@@ -2633,22 +2653,27 @@ client.on('messageCreate', async (message) => {
         return;
     }
     
-    // Verificar cooldown ESTRICTO
     const lastProcessed = userCooldowns.get(userId);
     if (lastProcessed && (now - lastProcessed) < CONFIG.XP_COOLDOWN) {
-        return; // Ignorar completamente
+        return;
+    }
+
+    if (userCooldowns.size > CONFIG.MAX_CACHE_SIZE) {
+        const cutoff = now - (CONFIG.XP_COOLDOWN * 2);
+        for (const [id, timestamp] of userCooldowns.entries()) {
+            if (timestamp < cutoff) {
+                userCooldowns.delete(id);
+            }
+        }
     }
     
-    // Solo en servidores y con cooldown
     if (message.guild) {
         userCooldowns.set(userId, now);
         
-        // Añadir a cola de procesamiento por lotes
         messageBatch.push({ message, userId, now });
         
-        // Limitar tamaño de cola
         if (messageBatch.length > CONFIG.BATCH_SIZE * 3) {
-            messageBatch.shift(); // Eliminar el más antiguo
+            messageBatch.shift();
         }
     }
 });
@@ -2718,7 +2743,7 @@ setInterval(() => {
         aggressiveCleanup();
     }
     
-}, 30000); // Cada 30 segundos
+}, 30000);
 
 process.on('unhandledRejection', async (error) => {
     console.error(error);
@@ -2737,7 +2762,6 @@ process.on('uncaughtException', async (error) => {
     }, 2000);
 });
 
-// COMANDO DE EMERGENCIA PARA ADMINS
 process.on('SIGUSR1', () => {
     console.log('📊 Estado de emergencia:');
     console.log(`- Memoria: ${Math.round(process.memoryUsage().heapUsed / 1024 / 1024)}MB`);
@@ -2755,7 +2779,6 @@ console.log(`📋 Configuración:
 - Tamaño lote: ${CONFIG.BATCH_SIZE}
 `);
 
-// Proceso de cierre limpio
 process.on('SIGINT', () => {
     console.log('\n🔄 Cerrando bot...');
 
@@ -2767,7 +2790,6 @@ process.on('SIGINT', () => {
     process.exit(0);
 });
 
-// En bot.js, donde tienes client.login()
 async function loginWithRetry(maxRetries = 3) {
     for (let i = 0; i < maxRetries; i++) {
         try {
@@ -2788,31 +2810,4 @@ async function loginWithRetry(maxRetries = 3) {
     process.exit(1);
 }
 
-// Usar esta función en lugar de client.login() directo
 loginWithRetry();
-
-/*// Iniciar el bot
-client.login(process.env.TOKEN).then(() => {
-    console.log('🚀 Proceso de login iniciado...');
-}).catch(error => {
-    console.error('❌ Error en el login:', error);
-});*/
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

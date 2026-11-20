@@ -263,12 +263,6 @@ export default function GuildDashboard() {
       </Seccion>
 
       <Seccion titulo="Eventos">
-        <Toggle
-          titulo="Eventos automáticos"
-          descripcion="Activa o desactiva los eventos globales del servidor"
-          activo={valorActual('events_globally_enabled') === 'true'}
-          onCambiar={() => marcarCambio('events_globally_enabled', valorActual('events_globally_enabled') === 'true' ? 'false' : 'true')}
-        />
         <Selector
           titulo="Rol de eventos"
           descripcion="Rol que se menciona cuando ocurre un evento"
@@ -292,15 +286,6 @@ export default function GuildDashboard() {
             canalNombre={info.canales.find(c => c.id === valorActual('events_channel'))?.name}
           />
         </div>
-      </Seccion>
-
-      <Seccion titulo="Música">
-        <Toggle
-          titulo="Anuncios hablados"
-          descripcion="El bot anuncia por voz la primera y última canción de la cola"
-          activo={valorActual('tts_announce_enabled') === 'true'}
-          onCambiar={() => marcarCambio('tts_announce_enabled', valorActual('tts_announce_enabled') === 'true' ? 'false' : 'true')}
-        />
       </Seccion>
 
       <Toast mensaje={mensaje} />

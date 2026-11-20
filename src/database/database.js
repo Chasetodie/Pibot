@@ -1,6 +1,4 @@
 const mysql = require('mysql2/promise');
-const path = require('path');
-const fs = require('fs');
 
 class LocalDatabase {
     constructor() {
@@ -10,11 +8,11 @@ class LocalDatabase {
         this.MAX_CACHE_SIZE = 500;
         this.init();
 
-        // Limpieza automática cada 24 horas
         setInterval(() => {
             this.cleanOldGameLimits();
             this.cleanOldNotifications();
             this.cleanupExpiredRecords();
+            this.cleanOldServerEvents();
         }, 24 * 60 * 60 * 1000);
     }
 
@@ -40,7 +38,6 @@ class LocalDatabase {
 
     async initTables() {
         try {
-            // Tabla de usuarios principal - JSON cambiado a TEXT
             await this.pool.execute(`
                 CREATE TABLE IF NOT EXISTS users (
                     id VARCHAR(255) PRIMARY KEY,
@@ -187,7 +184,6 @@ class LocalDatabase {
                 )
             `);
 
-            // Tabla para trades
             await this.pool.execute(`
                 CREATE TABLE IF NOT EXISTS trades (
                     id VARCHAR(255) PRIMARY KEY,
@@ -214,7 +210,6 @@ class LocalDatabase {
                 );
             `);
 
-            // Tabla para apuestas
             await this.pool.execute(`
                 CREATE TABLE IF NOT EXISTS bets (
                     id VARCHAR(255) PRIMARY KEY,
@@ -244,7 +239,6 @@ class LocalDatabase {
                 )
             `);
 
-            // Tabla para partidas UNO
             await this.pool.execute(`
                 CREATE TABLE IF NOT EXISTS uno_games (
                     id VARCHAR(255) PRIMARY KEY,
@@ -280,7 +274,6 @@ class LocalDatabase {
                 )
             `);
 
-            // Tabla para subastas
             await this.pool.execute(`
                 CREATE TABLE IF NOT EXISTS auctions (
                     id VARCHAR(255) PRIMARY KEY,
@@ -297,7 +290,6 @@ class LocalDatabase {
                 )
             `);
 
-            // Agregar después de la tabla de auctions
             await this.pool.execute(`
                 CREATE TABLE IF NOT EXISTS crafting_queue (
                     id VARCHAR(255) PRIMARY KEY,
@@ -312,7 +304,6 @@ class LocalDatabase {
                 )
             `);
 
-            // Tabla para conversaciones de chat
             await this.pool.execute(`
                 CREATE TABLE IF NOT EXISTS chat_conversations (
                     id INT AUTO_INCREMENT PRIMARY KEY,
@@ -325,7 +316,6 @@ class LocalDatabase {
                 )
             `);
 
-            // Tabla para pozo semanal - NUEVO DISEÑO
             await this.pool.execute(`
                 CREATE TABLE IF NOT EXISTS weekly_pot (
                     week_start BIGINT PRIMARY KEY,
@@ -339,7 +329,6 @@ class LocalDatabase {
                 )
             `);
 
-            // Tabla para contribuciones individuales
             await this.pool.execute(`
                 CREATE TABLE IF NOT EXISTS pot_contributions (
                     id INT AUTO_INCREMENT PRIMARY KEY,
@@ -355,7 +344,6 @@ class LocalDatabase {
                 )
             `);
 
-            // Tabla para contadores globales del servidor
             await this.pool.execute(`
                 CREATE TABLE IF NOT EXISTS server_counters (
                     id VARCHAR(50) PRIMARY KEY,
@@ -364,14 +352,12 @@ class LocalDatabase {
                 )
             `);
 
-            // Inicializar contadores si no existen
             await this.pool.execute(`
                 INSERT IGNORE INTO server_counters (id, value) VALUES 
                 ('pibe_counter', 0),
                 ('piba_counter', 0)
             `);
 
-            // ✅ AGREGAR ESTA TABLA:
             await this.pool.execute(`
                 CREATE TABLE IF NOT EXISTS daily_game_limits (
                     user_id VARCHAR(255) NOT NULL,
@@ -385,7 +371,6 @@ class LocalDatabase {
                 )
             `);
             
-            // ✅ AGREGAR TABLA DE NOTIFICACIONES:
             await this.pool.execute(`
                 CREATE TABLE IF NOT EXISTS limit_notifications (
                     id INT AUTO_INCREMENT PRIMARY KEY,
@@ -478,10 +463,21 @@ class LocalDatabase {
     }
 
     async setChangelog(maintenanceId, changes) {
-        await this.pool.execute(
-            'UPDATE maintenance SET changelog = ? WHERE id = ?',
-            [JSON.stringify(changes), maintenanceId]
+        const json = JSON.stringify(changes);
+        
+        if (maintenanceId && maintenanceId > 0) {
+            const [result] = await this.pool.execute(
+                'UPDATE maintenance SET changelog = ? WHERE id = ?',
+                [json, maintenanceId]
+            );
+            if (result.affectedRows > 0) return maintenanceId;
+        }
+        
+        const [insertResult] = await this.pool.execute(
+            'INSERT INTO maintenance (active, scheduled_at, message, changelog, created_at) VALUES (FALSE, ?, NULL, ?, ?)',
+            [Date.now(), json, Date.now()]
         );
+        return insertResult.insertId;
     }
 
     async getUserMaintenanceData(userId) {
@@ -512,7 +508,6 @@ class LocalDatabase {
             const today = new Date().toISOString().split('T')[0];
             const now = Date.now();
             
-            // ✅ LIMPIAR REGISTROS ANTIGUOS DEL USUARIO (antes de ayer)
             const yesterday = new Date();
             yesterday.setDate(yesterday.getDate() - 1);
             const yesterdayDate = yesterday.toISOString().split('T')[0];
@@ -528,7 +523,6 @@ class LocalDatabase {
             );
             
             if (rows.length === 0) {
-                // Primera jugada del día
                 const cycleReset = now + (cycleHours * 60 * 60 * 1000);
                 
                 await this.pool.execute(`
@@ -541,9 +535,7 @@ class LocalDatabase {
             
             const record = rows[0];
                     
-            // Verificar si el ciclo expiró
             if (now >= record.cycle_reset) {
-                // Reset del ciclo
                 const newCycleReset = now + (cycleHours * 60 * 60 * 1000);
                 
                 await this.pool.execute(`
@@ -568,7 +560,6 @@ class LocalDatabase {
 
     async cleanOldGameLimits() {
         try {
-            // Mantener solo HOY y AYER
             const today = new Date().toISOString().split('T')[0];
             
             const yesterday = new Date();
@@ -611,13 +602,11 @@ class LocalDatabase {
 
     async createLimitNotification(userId, gameType, channelId, notifyAt) {
         try {
-            // Eliminar notificaciones pendientes anteriores del mismo juego
             await this.pool.execute(
                 'DELETE FROM limit_notifications WHERE user_id = ? AND game_type = ? AND notified = 0',
                 [userId, gameType]
             );
             
-            // Crear nueva notificación
             await this.pool.execute(`
                 INSERT INTO limit_notifications (user_id, game_type, channel_id, notify_at)
                 VALUES (?, ?, ?, ?)
@@ -670,7 +659,6 @@ class LocalDatabase {
         }
     }
 
-    // Obtener contador
     async getCounter(counterId) {
         try {
             const [rows] = await this.pool.execute(
@@ -684,7 +672,6 @@ class LocalDatabase {
         }
     }
 
-    // Incrementar contador y devolver nuevo valor
     async incrementCounter(counterId) {
         try {
             await this.pool.execute(
@@ -704,7 +691,6 @@ class LocalDatabase {
         }
     }
 
-    // Decrementar contador (para cuando alguien sale del servidor)
     async decrementCounter(counterId) {
         try {
             await this.pool.execute(
@@ -724,17 +710,14 @@ class LocalDatabase {
         }
     }
 
-    // Métodos para Weekly Pot - NUEVO SISTEMA
     async getCurrentWeeklyPot() {
         try {
             const weekStart = this.getWeekStart();
             
-            // Crear pozo si no existe
             await this.pool.execute(`
                 INSERT IGNORE INTO weekly_pot (week_start) VALUES (?)
             `, [weekStart]);
             
-            // Obtener pozo actual
             const [rows] = await this.pool.execute(`
                 SELECT * FROM weekly_pot WHERE week_start = ? AND status = 'active'
             `, [weekStart]);
@@ -748,13 +731,11 @@ class LocalDatabase {
 
     async addPotContribution(weekStart, userId, type, amount = 0, itemId = null, itemName = null) {
         try {
-            // Insertar contribución
             await this.pool.execute(`
                 INSERT INTO pot_contributions (week_start, user_id, contribution_type, amount, item_id, item_name)
                 VALUES (?, ?, ?, ?, ?, ?)
             `, [weekStart, userId, type, amount, itemId, itemName]);
             
-            // Actualizar totales en weekly_pot
             if (type === 'money') {
                 await this.pool.execute(`
                     UPDATE weekly_pot 
@@ -856,17 +837,16 @@ class LocalDatabase {
 
     getWeekStart() {
         const now = new Date();
-        const dayOfWeek = now.getDay(); // 0 = domingo, 1 = lunes, etc.
+        const dayOfWeek = now.getDay();
         const daysToMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
         
         const monday = new Date(now);
         monday.setDate(now.getDate() - daysToMonday);
-        monday.setHours(0, 0, 0, 0); // Medianoche del lunes
+        monday.setHours(0, 0, 0, 0);
         
         return monday.getTime();
     }
 
-    // En LocalDatabase, agregar este método:
     async getCraftById(craftId) {
         try {
             const [rows] = await this.pool.execute(
@@ -893,7 +873,6 @@ class LocalDatabase {
         }
     }
 
-    // Métodos para Crafting System
     async getCraftingQueue(userId) {
         try {
             const [rows] = await this.pool.execute(
@@ -958,7 +937,6 @@ class LocalDatabase {
 
     safeJsonParse(jsonString, defaultValue = {}) {
         try {
-            // Si no es string o está vacío, devolver defaultValue
             if (typeof jsonString !== 'string' || jsonString.trim() === '') {
                 return defaultValue;
             }
@@ -989,7 +967,6 @@ class LocalDatabase {
 
             if (rows.length > 0) {
                 const user = rows[0];
-                // Parsear campos JSON de manera segura
                 user.items = this.safeJsonParse(user.items || '{}', {});
                 user.stats = this.safeJsonParse(user.stats || '{}', {});
                 user.bet_stats = this.safeJsonParse(user.bet_stats || '{}', {});
@@ -999,13 +976,11 @@ class LocalDatabase {
                 user.cosmetic_nickname = user.cosmetic_nickname || null;
                 user.cosmetic_role = user.cosmetic_role ? this.safeJsonParse(user.cosmetic_role, null) : null;
                 
-                // Guardar en caché antes de retornar
                 this.userCache.set(userId, {
-                    data: user, // o newUser
+                    data: user,
                     timestamp: Date.now()
                 });
                 
-                // Limpiar caché si es muy grande
                 if (this.userCache.size > this.MAX_CACHE_SIZE) {
                     const oldest = [...this.userCache.entries()]
                         .sort((a, b) => a[1].timestamp - b[1].timestamp)[0];
@@ -1189,13 +1164,11 @@ class LocalDatabase {
                 null
             ]);
 
-            // Guardar en caché antes de retornar
             this.userCache.set(userId, {
                 data: newUser, // o newUser
                 timestamp: Date.now()
             });
                 
-            // Limpiar caché si es muy grande
             if (this.userCache.size > this.MAX_CACHE_SIZE) {
                 const oldest = [...this.userCache.entries()]
                     .sort((a, b) => a[1].timestamp - b[1].timestamp)[0];
@@ -1227,7 +1200,6 @@ class LocalDatabase {
 
     async updateUser(userId, updateData) {
         try {
-            // Primero obtener el usuario actual
             const currentUser = await this.getUser(userId);
             
             const sets = [];
@@ -1236,21 +1208,16 @@ class LocalDatabase {
             for (const [key, value] of Object.entries(updateData)) {
                 sets.push(`${key} = ?`);
                 
-                // Para objetos, hacer merge con datos existentes
                 if (typeof value === 'object' && value !== null) {
                     let finalValue;
                     
-                    // Si es daily_stats, hacer merge
                     if (key === 'daily_stats' && currentUser.daily_stats) {
                         finalValue = { ...currentUser.daily_stats, ...value };
                     } 
-                    // Si es stats, hacer merge
                     else if (key === 'stats' && currentUser.stats) {
                         finalValue = { ...currentUser.stats, ...value };
                     }
-                    // En el bloque de merge, agregar:
                     else if (key === 'passiveIncomeStats' && currentUser.passiveIncomeStats) {
-                        // Parse si es string
                         let currentStats = currentUser.passiveIncomeStats;
                         if (typeof currentStats === 'string') {
                             try {
@@ -1261,7 +1228,6 @@ class LocalDatabase {
                         }
                         finalValue = { ...currentStats, ...value };
                     }
-                    // Otros objetos, usar el valor tal como viene
                     else {
                         finalValue = value;
                     }
@@ -1280,14 +1246,19 @@ class LocalDatabase {
 
             const cached = this.userCache.get(userId);
             if (cached) {
-                // También hacer merge en caché
                 if (updateData.daily_stats && cached.data.daily_stats) {
                     cached.data.daily_stats = { ...cached.data.daily_stats, ...updateData.daily_stats };
                 }
                 if (updateData.stats && cached.data.stats) {
                     cached.data.stats = { ...cached.data.stats, ...updateData.stats };
                 }
-                Object.assign(cached.data, updateData);
+                if (updateData.passiveIncomeStats && cached.data.passiveIncomeStats) {
+                    cached.data.passiveIncomeStats = { ...cached.data.passiveIncomeStats, ...updateData.passiveIncomeStats };
+                }
+
+                const { stats, daily_stats, passiveIncomeStats, ...rest } = updateData;
+                Object.assign(cached.data, rest);
+                
                 cached.timestamp = Date.now();
             }
             
@@ -1311,26 +1282,23 @@ class LocalDatabase {
             }
             
             console.log(`🧹 Database cache: ${cleaned} usuarios limpiados, ${this.userCache.size} restantes`);
-        }, 10 * 60 * 1000); // Cada 10 minutos
+        }, 10 * 60 * 1000);
     }
 
     async cleanupExpiredRecords() {
         try {
             const now = Date.now();
 
-            // Limpiar treasure_maps completados o expirados
             const [tmResult] = await this.pool.execute(
                 'DELETE FROM treasure_maps WHERE completed = 1 OR expires_at <= ?',
                 [now]
             );
 
-            // Limpiar crafting_queue completados o con completes_at muy viejo (+1 día de margen)
             const [cqResult] = await this.pool.execute(
                 'DELETE FROM crafting_queue WHERE status IN (?, ?)',
                 ['completed', 'cancelled']
             );
 
-            // Limpiar weekly_pot, conservando los 2 más recientes completados
             const [wpResult] = await this.pool.execute(`
                 DELETE FROM weekly_pot 
                 WHERE status = 'completed'
@@ -1350,13 +1318,12 @@ class LocalDatabase {
         }
     }
 
-    async getAllUsers() {
+    async getAllUsers(limit = null) {
         try {
-            // CAMBIAR: No cargar TODOS los usuarios de una vez
-            // const [rows] = await this.pool.execute('SELECT * FROM users');
+            const query = limit ? 'SELECT * FROM users LIMIT ?' : 'SELECT * FROM users';
+            const params = limit ? [limit] : [];
             
-            // POR: Usar paginación
-            const [rows] = await this.pool.execute('SELECT * FROM users LIMIT 100');
+            const [rows] = await this.pool.execute(query, params);
             
             return rows.map(row => {
                 row.items = this.safeJsonParse(row.items, {});
@@ -1411,30 +1378,19 @@ class LocalDatabase {
         }
     }
 
-    // Trivia - Top Perfectas
     async getTriviaLeaderboard(limit = 10) {
         try {
-            const [rows] = await this.pool.execute(
-                'SELECT id, stats FROM users'
-            );
+            const [rows] = await this.pool.execute(`
+                SELECT id, JSON_EXTRACT(stats, '$.trivia_perfect') as trivia_perfect 
+                FROM users 
+                WHERE JSON_EXTRACT(stats, '$.trivia_perfect') > 0 
+                ORDER BY trivia_perfect DESC LIMIT ?
+            `, [limit]);
 
-            const users = rows.map(row => {
-                let stats = {};
-                try {
-                    stats = JSON.parse(row.stats || '{}');
-                } catch {}
-
-                return {
-                    userId: row.id,
-                    trivia_perfect: parseInt(stats.trivia_perfect) || 0
-                };
-            });
-
-            return users
-                .filter(u => u.trivia_perfect > 0)
-                .sort((a, b) => b.trivia_perfect - a.trivia_perfect)
-                .slice(0, limit);
-
+            return rows.map(row => ({
+                userId: row.id,
+                trivia_perfect: Number(row.trivia_perfect) || 0
+            }));
         } catch (error) {
             console.error('❌ Error obteniendo ranking de trivia perfectas:', error);
             return [];
@@ -1470,7 +1426,6 @@ class LocalDatabase {
         }
     }
 
-    // Trivia - Top Accuracy
     async getTriviaAccuracyLeaderboard(limit = 10) {
         try {
             const [rows] = await this.pool.execute(
@@ -1514,7 +1469,6 @@ class LocalDatabase {
         }
     }
 
-    // Trivia - Top Played
     async getTriviaPlayedLeaderboard(limit = 10) {
         try {
             const [rows] = await this.pool.execute(
@@ -1544,12 +1498,10 @@ class LocalDatabase {
         }
     }
 
-    // Obtener usuarios activos recientemente
     async getRecentActiveUsers(timeframe = 86400000) {
         try {
             const cutoffTime = Date.now() - timeframe;
             
-            // ✅ ARREGLO: Query para MySQL
             const [rows] = await this.pool.execute(`
                 SELECT DISTINCT id 
                 FROM users 
@@ -1560,18 +1512,16 @@ class LocalDatabase {
                 LIMIT 100
             `, [cutoffTime, cutoffTime, cutoffTime, cutoffTime]);
             
-            // ✅ ARREGLO: Filtrar undefined/null
             return rows
                 .map(u => u.id)
                 .filter(id => id !== null && id !== undefined && id !== '');
                 
         } catch (error) {
             console.error('❌ Error obteniendo usuarios activos:', error);
-            return []; // Retornar array vacío en caso de error
+            return [];
         }
     }   
 
-    // Métodos para shop_items
     async getShopItems() {
         try {
             const [rows] = await this.pool.execute(
@@ -1656,7 +1606,6 @@ class LocalDatabase {
         }
     }
 
-    // Métodos para trades
     async createTrade(tradeData) {
         try {
             await this.pool.execute(`
@@ -1756,9 +1705,6 @@ class LocalDatabase {
         }
     }
 
-    // IMPORTANTE: Los siguientes métodos siguen usando sintaxis SQLite (this.pool.run, this.pool.get, this.pool.all)
-    // Necesitan ser convertidos a MySQL syntax con this.pool.execute()
-
     async getRussianGame(gameId) {
         try {
             const [rows] = await this.pool.execute(
@@ -1795,7 +1741,7 @@ class LocalDatabase {
                 gameData.bullet_position,
                 gameData.current_shot,
                 gameData.pot,
-                gameData.processing || 'true'
+                gameData.processing ?? 'true'
             ]);
             
             return { id: gameId };
@@ -1847,7 +1793,6 @@ class LocalDatabase {
         }
     }
 
-    // Métodos para Russian Roulette
     async getActiveRussianGames() {
         try {
             const [rows] = await this.pool.execute(
@@ -1864,7 +1809,6 @@ class LocalDatabase {
         }
     }
 
-    // Métodos para UNO
     async createUnoGame(gameId, gameData) {
         try {
             await this.pool.execute(`
@@ -1931,7 +1875,6 @@ class LocalDatabase {
         }
     }
 
-    // CAMBIAR getActiveAuctions() para que devuelva todos los campos:
     async getActiveAuctions() {
         try {
             const [rows] = await this.pool.execute(
@@ -1971,7 +1914,6 @@ class LocalDatabase {
             );
             
             return rows.map(row => {
-                // Parsear JSON fields si es necesario
                 row.initiator_offer = this.safeJsonParse(row.initiator_offer, []);
                 row.target_offer = this.safeJsonParse(row.target_offer, []);
                 return row;
@@ -1982,7 +1924,23 @@ class LocalDatabase {
         }
     }
 
-    // Cerrar conexión
+    async cleanOldServerEvents() {
+        try {
+            const sevenDaysAgo = Date.now() - (7 * 24 * 60 * 60 * 1000);
+            
+            const [result] = await this.pool.execute(
+                'DELETE FROM server_events WHERE end_time < ?',
+                [sevenDaysAgo]
+            );
+            
+            if (result.affectedRows > 0) {
+                console.log(`🧹 Limpiados ${result.affectedRows} eventos antiguos`);
+            }
+        } catch (error) {
+            console.error('Error limpiando eventos antiguos:', error);
+        }
+    }
+
     async close() {
         if (this.pool) {
             try {
@@ -1994,10 +1952,8 @@ class LocalDatabase {
         }
     }
 
-    // Backup de la base de datos
     async backup() {
         try {
-            // Para MySQL, hacer backup de datos específicos
             const backupData = {
                 users: await this.getAllUsers(),
                 timestamp: new Date().toISOString()
@@ -2014,7 +1970,6 @@ class LocalDatabase {
         }
     }
 
-    // Métodos específicos para eventos - CORREGIDO para MySQL
     async createServerEvent(eventData) {
         try {
             await this.pool.execute(`
@@ -2078,7 +2033,7 @@ class LocalDatabase {
                 challenger: row.challenger,
                 opponent: row.opponent,
                 amount: row.amount,
-                description: this.safeJsonParse(row.amount, {}).bet_description || 'Sin descripción',
+                description: this.safeJsonParse(row.description, {}).bet_description || 'Sin descripción',
                 status: row.status,
                 expires_at: row.expires_at,
                 channel_id: row.channel_id
@@ -2098,7 +2053,7 @@ class LocalDatabase {
 
             if (rows.length > 0) {
                 const bet = rows[0];
-                bet.description = this.safeJsonParse(bet.amount, {}).bet_description || 'Sin descripción';
+                bet.description = this.safeJsonParse(bet.description, {}).bet_description || 'Sin descripción';
                 return bet;
             }
             return null;
@@ -2122,7 +2077,6 @@ class LocalDatabase {
         }
     }
 
-    // Método para obtener conexión (para el panel web)
     getConnection() {
         return this.pool;
     }
@@ -2152,12 +2106,10 @@ class LocalDatabase {
     }
 
     async cleanExpiredContracts() {
-        // Primero desactivar los expirados
         await this.pool.execute(
             'UPDATE contracts SET active = 0 WHERE expires_at <= ? AND active = 1',
             [Date.now()]
         );
-        // Luego borrar físicamente los inactivos de más de 24h
         await this.pool.execute(
             'DELETE FROM contracts WHERE active = 0 AND expires_at <= ?',
             [Date.now() - 24 * 60 * 60 * 1000]
@@ -2260,7 +2212,6 @@ class LocalDatabase {
         return rows[0] || null;
     }
 
-    // ===== MARRIAGE METHODS =====
     async getMarriage(userId) {
         const [rows] = await this.pool.execute(
             'SELECT * FROM marriages WHERE (user1_id = ? OR user2_id = ?) AND status = "active" LIMIT 1',
@@ -2286,7 +2237,6 @@ class LocalDatabase {
             'UPDATE marriages SET status = "divorced", last_marriage_change = ? WHERE id = ?',
             [Date.now(), marriageId]
         );
-        // Guardar cooldown en el usuario
         await this.pool.execute(
             'UPDATE users SET stats = JSON_SET(COALESCE(stats, "{}"), "$.lastDivorce", ?) WHERE id = ?',
             [Date.now(), userId]
@@ -2309,7 +2259,6 @@ class LocalDatabase {
         );
     }
 
-    // ===== MENTORSHIP METHODS =====
     async getMentorship(userId) {
         const [rows] = await this.pool.execute(
             'SELECT * FROM mentorships WHERE (mentor_id = ? OR apprentice_id = ?) AND status = "active" LIMIT 1',
@@ -2340,7 +2289,6 @@ class LocalDatabase {
         );
     }
 
-    // ===== GARDEN METHODS =====
     async getGarden(userId) {
         const [rows] = await this.pool.execute('SELECT * FROM gardens WHERE user_id = ?', [userId]);
         if (!rows[0]) {
@@ -2379,7 +2327,6 @@ class LocalDatabase {
         });
     }
 
-    // ===== PET METHODS =====
     async createPet(userId, name, rarity) {
         const [result] = await this.pool.execute(
             'INSERT INTO pets (user_id, name, rarity, created_at) VALUES (?, ?, ?, ?)',
@@ -2419,7 +2366,6 @@ class LocalDatabase {
     }
 
     async getAllPetsForPlague() {
-        // Mascotas vivas con dueño activo en últimos 7 días
         const [rows] = await this.pool.execute('SELECT p.* FROM pets p');
         return rows;
     }

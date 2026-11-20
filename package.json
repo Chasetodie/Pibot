@@ -17,6 +17,7 @@
     "cors": "^2.8.6",
     "discord.js": "^14.14.1",
     "dotenv": "^16.3.1",
+    "duck-duck-scrape": "^2.2.7",
     "edge-tts-universal": "^1.4.0",
     "emoji-regex": "^10.5.0",
     "express": "^4.21.2",
@@ -24,9 +25,9 @@
     "genius-lyrics": "^4.4.7",
     "genius-lyrics-api": "^3.2.1",
     "jsonwebtoken": "^9.0.3",
-    "kazagumo": "^3.2.0",
+    "kazagumo": "^3.4.3",
     "mysql2": "^3.14.3",
-    "shoukaku": "^4.1.0",
+    "shoukaku": "^4.3.0",
     "xml2js": "^0.6.2"
   }
 }

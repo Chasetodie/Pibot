@@ -9,15 +9,12 @@ class MissionsSystem {
 
         this.lastResetDay = null;
         
-        // ✅ AGREGAR: Caché para misiones
         this.missionsCache = new Map();
         this.MAX_CACHE_SIZE = 500;
         this.cacheTimeout = 10 * 60 * 1000; // 10 minutos
 
-        // ✅ AGREGAR: Rate limiting para updateMissionProgress
         this.updateCooldowns = new Map();
         
-        // Todas las misiones disponibles
         this.availableMissions = {
             // Misiones de mensajes
             'send_messages_10': {
@@ -396,7 +393,6 @@ class MissionsSystem {
             }*/
         };
         
-        // Colores por rareza
         this.rarityColors = {
             'common': '#FFFFFF',
             'uncommon': '#1EFF00',
@@ -405,7 +401,6 @@ class MissionsSystem {
             'legendary': '#FF6600'
         };
         
-        // Emojis por rareza
         this.rarityEmojis = {
             'common': '⚪',
             'uncommon': '🟢',
@@ -417,43 +412,34 @@ class MissionsSystem {
         setInterval(() => {
             const now = Date.now();
             for (const [key, timestamp] of this.updateCooldowns.entries()) {
-                if (now - timestamp > 60000) { // Limpiar después de 1 minuto
+                if (now - timestamp > 60000) {
                     this.updateCooldowns.delete(key);
                 }
             }
         }, 60000);
 
-        // Iniciar sistema de reset automático
         this.startDailyReset();
         
-        // Limpiar caché periódicamente
         this.startCacheCleanup();
     }
 
-    // Función helper para obtener fecha/hora de Ecuador
     getEcuadorTime() {
         const now = new Date();
         return new Date(now.toLocaleString("en-US", {timeZone: "America/Guayaquil"}));
     }
     
-    // Generar misiones del día (se ejecuta automáticamente a las 12 PM)
-    async generateDailyMissions() {
+    async generateDailyMissions(userId) {
         const allMissions = Object.values(this.availableMissions);
 
-        // Al inicio del método, después de obtener allMissions
-        const userId = arguments[0]; // Necesitas pasar userId al método
         const isVip = await this.economy.shop.hasActiveVip(userId);
 
         let availableMissionsForUser = allMissions;
         if (isVip.hasVip) {
-            // VIPs pueden obtener tanto misiones normales como VIP
             availableMissionsForUser = allMissions;
         } else {
-            // No-VIPs solo obtienen misiones normales
             availableMissionsForUser = allMissions.filter(m => !m.vipOnly);
         }
         
-        // Asegurar que al menos una misión de cada rareza esté presente
         const missionsByRarity = {
             common: allMissions.filter(m => m.rarity === 'common'),
             uncommon: allMissions.filter(m => m.rarity === 'uncommon'),
@@ -464,11 +450,9 @@ class MissionsSystem {
         const selectedMissions = [];
         const usedMissionIds = new Set();
         
-        // Función auxiliar para seleccionar misión sin repetir
         const selectUniqueMission = (missionsArray) => {
             const availableMissions = missionsArray.filter(m => !usedMissionIds.has(m.id));
             if (availableMissions.length === 0) {
-                // Si no hay misiones disponibles en esta rareza, tomar de cualquier rareza
                 const allAvailable = allMissions.filter(m => !usedMissionIds.has(m.id));
                 if (allAvailable.length === 0) return null;
                 return allAvailable[Math.floor(Math.random() * allAvailable.length)];
@@ -476,7 +460,6 @@ class MissionsSystem {
             return availableMissions[Math.floor(Math.random() * availableMissions.length)];
         };
         
-        // Seleccionar misiones por rareza: 1 common, 2 uncommon, 1 rare, 1 epic
         const rarityPlan = [
             { rarity: 'common', count: 1 },
             { rarity: 'uncommon', count: 2 },
@@ -494,7 +477,6 @@ class MissionsSystem {
             }
         }
         
-        // Si no llegamos a 5 misiones, completar con misiones aleatorias
         while (selectedMissions.length < 5) {
             const availableMissions = allMissions.filter(m => !usedMissionIds.has(m.id));
             if (availableMissions.length === 0) break; // No hay más misiones disponibles
@@ -504,7 +486,6 @@ class MissionsSystem {
             usedMissionIds.add(randomMission.id);
         }
         
-        // Convertir a formato requerido
         return selectedMissions.map(mission => ({
             id: mission.id,
             completed: false
@@ -515,10 +496,8 @@ class MissionsSystem {
         return missionsArray[Math.floor(Math.random() * missionsArray.length)];
     }
     
-    // Obtener el día actual en formato YYYY-MM-DD
     getCurrentDay() {
         const ecuadorTime = this.getEcuadorTime();
-        // Usar getFullYear, getMonth, getDate en lugar de toISOString
         const year = ecuadorTime.getFullYear();
         const month = String(ecuadorTime.getMonth() + 1).padStart(2, '0');
         const day = String(ecuadorTime.getDate()).padStart(2, '0');
@@ -531,12 +510,9 @@ class MissionsSystem {
         return !lastResetDate || lastResetDate !== today;
     }
 
-    // Agregar esta función después de getCurrentDay()
     resetDailyFlag(user) {
-        const now = new Date();
-        const ecuadorTime = new Date(now.getTime() - (5 * 60 * 60 * 1000));
-        const today = ecuadorTime.toISOString().split('T')[0];
-        const currentHour = ecuadorTime.getHours();
+        const today = this.getCurrentDay();
+        const currentHour = this.getEcuadorTime().getHours();
         
         if (user.daily_missions_date !== today) {
             return { missions_reset_today: false };
@@ -544,22 +520,19 @@ class MissionsSystem {
         return {};
     }
     
-    // Verificar si es hora de resetear misiones (12 PM)
     shouldResetMissions(user) {
         const today = this.getCurrentDay();
         const userLastReset = user.daily_missions_date;
                
-        // Si es diferente día, necesita reset
         const needsReset = !userLastReset || userLastReset !== today;
         
         return needsReset;
     }
 
     startDailyReset() {
-        // Verificar cada minuto si es medianoche en Ecuador
         setInterval(() => {
             this.checkAndResetAllMissions();
-        }, 30000); // 30 segundos en lugar de 60
+        }, 30000);
         
         console.log('🕛 Sistema de reset automático iniciado');
     }
@@ -585,29 +558,24 @@ class MissionsSystem {
         }
     }
     
-    // Inicializar misiones diarias para un usuario
     async initializeDailyMissions(userId) {
         const cacheKey = `missions_${userId}`;
         const cached = this.missionsCache.get(cacheKey);
         const now = Date.now();
         
-        // Si hay caché válido, usar eso
         if (cached && (now - cached.timestamp) < this.cacheTimeout) {
-            // Pero también verificar si es un nuevo día
             const user = cached.data;
             if (!this.shouldResetMissions(user)) {
                 return user.daily_missions || {};
             }
         }
         
-        // Si no hay caché, obtener de DB normalmente
         const user = await this.economy.getUser(userId);
 
         console.log(`👤 User ${userId} - Last reset: ${user.daily_missions_date}`);
         console.log(`📅 Current day: ${this.getCurrentDay()}`);
         console.log(`🔄 Should reset: ${this.shouldResetMissions(user)}`);
 
-        // Resetear bandera si es necesario
         const flagReset = this.resetDailyFlag(user);
         if (Object.keys(flagReset).length > 0) {
             await this.economy.updateUser(userId, flagReset);
@@ -650,7 +618,7 @@ class MissionsSystem {
                     vip_commands_used: 0,
                     consecutive_wins: 0,
                     consecutive_losses: 0,
-                    starting_balance: user.balance, // ← NUEVO: guardar balance inicial del día
+                    starting_balance: user.balance,
                     balance_milestone_today: 0,
                     items_bought_today: 0,
                     money_received_today: 0,
@@ -660,7 +628,6 @@ class MissionsSystem {
             
             await this.economy.updateUser(userId, updateData);
 
-            // Actualizar caché
             const updatedUser = { ...user, ...updateData };
             this.missionsCache.set(cacheKey, {
                 data: updatedUser,
@@ -684,14 +651,12 @@ class MissionsSystem {
         setInterval(() => {
             const now = Date.now();
             
-            // Limpiar por tiempo
             for (const [key, cached] of this.missionsCache) {
                 if (now - cached.timestamp > this.cacheTimeout) {
                     this.missionsCache.delete(key);
                 }
             }
             
-            // Limpiar por tamaño si excede el límite
             if (this.missionsCache.size > this.MAX_CACHE_SIZE) {
                 const entries = Array.from(this.missionsCache.entries());
                 const toDelete = entries
@@ -714,9 +679,7 @@ class MissionsSystem {
         return regex.test(text) || discordEmojiRegex.test(text);
     }   
     
-    // Actualizar progreso de misiones
     async updateMissionProgress(userId, actionType, value, maxChecks = 3, checkedInSession = new Set()) {        
-        // Solo aplicar cooldown para acciones muy frecuentes
         if (actionType === 'message' || actionType === 'commands_used' || actionType === 'xp_gained_today') {
             const cooldownKey = `mission_update_${userId}_${actionType}`;
             if (this.updateCooldowns.has(cooldownKey)) {
@@ -733,12 +696,10 @@ class MissionsSystem {
 
         const now = Date.now();
 
-        // Siempre obtener datos frescos para evitar problemas de caché
         await this.initializeDailyMissions(userId);
         const freshUser = await this.economy.getUser(userId);
         user = freshUser;
 
-        // Actualizar caché inmediatamente
         this.missionsCache.set(cacheKey, {
             data: user,
             timestamp: now
@@ -756,17 +717,14 @@ class MissionsSystem {
 
         updateData.daily_stats = { ...user.daily_stats };
         
-        // Actualizar estadísticas diarias según el tipo de acción
         switch (actionType) {
             case 'message':
                 updateData.daily_stats.messages_today = (user.daily_stats.messages_today || 0) + 1;
                 
-                // Verificar emojis más específicamente
                 if (value && this.containsRealEmoji(value)) {
                     updateData.daily_stats.emoji_messages = (user.daily_stats.emoji_messages || 0) + 1;
                 }
 
-                // Agregar hora actual para misión de active_hours
                 const currentHour = new Date().getHours();
                 const activeHours = user.daily_stats.active_hours_today || [];
                 if (!activeHours.includes(currentHour)) {
@@ -821,7 +779,6 @@ class MissionsSystem {
             case 'commands_used':
                 updateData.daily_stats.commands_used = (user.daily_stats.commands_used || 0) + 1;
                 break;
-            // 📦 Subastas
             case 'auctions_created_today':
                 updateData.daily_stats.auctions_created_today = (user.daily_stats.auctions_created_today || 0) + 1;
                 break;
@@ -830,7 +787,6 @@ class MissionsSystem {
                 updateData.daily_stats.auctions_won_today = (user.daily_stats.auctions_won_today || 0) + 1;
                 break;
 
-            // ⚒️ Crafteo
             case 'items_crafted_today':
                 updateData.daily_stats.items_crafted_today = (user.daily_stats.items_crafted_today || 0) + 1;
                 break;    
@@ -841,29 +797,19 @@ class MissionsSystem {
                 updateData.daily_stats.vip_commands_used = (user.daily_stats.vip_commands_used || 0) + 1;
                 break;
             case 'consecutive_win':
-                // Incrementar racha de victorias, resetear derrotas
                 updateData.daily_stats.consecutive_wins = (user.daily_stats.consecutive_wins || 0) + 1;
                 updateData.daily_stats.consecutive_losses = 0;
                 break;
                 
             case 'consecutive_loss':
-                // Incrementar racha de derrotas, resetear victorias  
                 updateData.daily_stats.consecutive_losses = (user.daily_stats.consecutive_losses || 0) + 1;
                 updateData.daily_stats.consecutive_wins = 0;
                 break;
             case 'unique_commands_used':
-                // Trackear comandos únicos
                 const uniqueCommands = updateData.daily_stats.unique_commands || new Set();
-                uniqueCommands.add(value); // value = nombre del comando
+                uniqueCommands.add(value);
                 updateData.daily_stats.unique_commands = Array.from(uniqueCommands);
                 break;
-
-            /*case 'unique_transfers':
-                // Trackear usuarios únicos a los que transferiste
-                const uniqueTransfers = updateData.daily_stats.unique_transfers || new Set();
-                uniqueTransfers.add(value); // value = userId del receptor
-                updateData.daily_stats.unique_transfers = Array.from(uniqueTransfers);
-                break;*/
 
             case 'money_received_today':
                 updateData.daily_stats.money_received_today = (user.daily_stats.money_received_today || 0) + value;
@@ -884,15 +830,15 @@ class MissionsSystem {
                 updateData.daily_stats.unique_channels = Array.from(uniqueChannels);
                 break;
 
-            case 'balance_milestone_today':
+            case 'balance_milestone_today': {
                 const startBalance = user.daily_stats.starting_balance ?? 0;
-                const freshUser = await this.economy.getUser(userId);
-                const currentGain = Math.max(0, freshUser.balance - startBalance);
+                const freshUserBalance = await this.economy.getUser(userId);
+                const currentGain = Math.max(0, freshUserBalance.balance - startBalance);
                 updateData.daily_stats.balance_milestone_today = currentGain;
                 break;
+            }
 
             case 'trinity_complete':
-                // Verificar si completó las 3 cosas
                 const hasDaily = user.daily_stats.daily_claimed_today;
                 const hasWork = (user.daily_stats.work_today || 0) > 0;
                 const hasGame = (user.daily_stats.games_today || 0) > 0;
@@ -903,7 +849,8 @@ class MissionsSystem {
                 break;
         }
        
-        // Verificar progreso de cada misión
+        user.daily_stats = { ...user.daily_stats, ...updateData.daily_stats };
+
         for (const [missionId, status] of Object.entries(user.daily_missions)) {
             if (status === 'completed' || checkedInSession.has(missionId)) continue;
             
@@ -913,7 +860,6 @@ class MissionsSystem {
             const currentProgress = this.getCurrentProgress(user, mission);
  
             if (currentProgress >= mission.target && !updateData.daily_missions?.[missionId]) {
-                // Marcar como verificado en esta sesion
                 checkedInSession.add(missionId);
 
                 if (!updateData.daily_missions) {
@@ -923,10 +869,8 @@ class MissionsSystem {
                 updateData.daily_missions[missionId] = 'completed';
                 user.daily_missions[missionId] = 'completed';
 
-
                 completedMissions.push(missionId);
                 
-                // Dar recompensas
                 if (mission.reward.money && user.balance < this.economy.config.maxBalance) {
                     let finalEarnings = mission.reward.money;
                     let eventMessage = '';
@@ -967,20 +911,20 @@ class MissionsSystem {
                     finalEarnings = addResult.actualAmount;
                     
                     updateData.stats = {
-                        ...user.stats,
+                        ...(updateData.stats || user.stats),
+                        totalEarned: (user.stats.totalEarned || 0) + finalEarnings,
                         message_missions: eventMessage
                     };
                 }
                 else if (mission.reward.money && user.balance >= this.economy.config.maxBalance) {
                     updateData.stats = {
-                        ...user.stats,
+                        ...(updateData.stats || user.stats),
                         message_missions: '💰 **Límite de balance alcanzado** - Solo se otorgó XP'
                     }
                 }
             }
         }
                 
-        // Agregar XP por separado para las misiones completadas
         for (const missionId of completedMissions) {
             const mission = this.availableMissions[missionId];
             if (mission.reward.xp) {
@@ -989,17 +933,17 @@ class MissionsSystem {
                 
                 for (const event of this.events.getActiveEvents()) {
                     if (event.type === 'double_xp') {
-                        finalXp = mission.reward.xp * 2; // Exactamente x2
+                        finalXp = mission.reward.xp * 2;
                         eventMessage2 = `\n⚡ **Doble XP** (+${finalXp - mission.reward.xp} XP)`;
                         break;
                     }
                     else if (event.type === 'fever_time') {
-                        finalXp = Math.floor(mission.reward.xp * 1.5); // x1.5
+                        finalXp = Math.floor(mission.reward.xp * 1.5);
                         eventMessage2 = `\n🔥 **Tiempo Fiebre** (+${finalXp - mission.reward.xp} XP)`;
                         break;
                     }
                     else if (event.type === 'server_anniversary') {
-                        finalXp = Math.floor(mission.reward.xp * 3); // x3
+                        finalXp = Math.floor(mission.reward.xp * 3);
                         eventMessage2 = `\n🎉 **Aniversario del Servidor** (+${finalXp - mission.reward.xp} XP)`;
                         break;
                     }
@@ -1007,20 +951,18 @@ class MissionsSystem {
                 await this.economy.addXp(userId, finalXp);
 
                 updateData.stats = {
-                    ...user.stats,
+                    ...(updateData.stats || user.stats),
                     message_missions2: eventMessage2
                 };
             }
         }
 
-        // Actualizar base de datos
         await this.economy.updateUser(userId, updateData);   
         user = { ...user, ...updateData };
         if (updateData.daily_stats) {
             user.daily_stats = { ...user.daily_stats, ...updateData.daily_stats };
         }
         
-        // Actualizar caché con los nuevos datos
         const updatedUser = { ...user, ...updateData};
         this.missionsCache.set(cacheKey, {
             data: updatedUser,
@@ -1030,7 +972,6 @@ class MissionsSystem {
         return completedMissions;
     }
     
-    // Obtener progreso actual de una misión
     getCurrentProgress(user, mission) {
         const stats = user.daily_stats || {};
         
@@ -1080,7 +1021,7 @@ class MissionsSystem {
             case 'vip_commands_used':
                 return stats.vip_commands_used || 0;
             case 'consecutive_wins':
-                return stats.consecutive_wins || 0; // Esto necesitarás implementarlo aparte
+                return stats.consecutive_wins || 0;
             case 'unique_commands_used':
                 const commands = stats.unique_commands || [];
                 return Array.isArray(commands) ? commands.length : 0;
@@ -1116,19 +1057,9 @@ class MissionsSystem {
     }
 
     async checkTrinityCompletion(userId) {
-        const user = await this.economy.getUser(userId);
-        const stats = user.daily_stats || {};
-        
-        const hasDaily = stats.daily_claimed_today === true;
-        const hasWork = (stats.work_today || 0) > 0;
-        const hasGame = (stats.games_today || 0) > 0;
-        
-        // ✅ Siempre disparar para actualizar el progreso parcial
-        const completedMissions = await this.updateMissionProgress(userId, 'trinity_complete');
-        return completedMissions;
+        return await this.updateMissionProgress(userId, 'trinity_complete');
     }
     
-    // Mostrar misiones del usuario
     async showUserMissions(message, targetUser = null) {
         const userId = targetUser ? targetUser.id : message.author.id;
         const displayName = targetUser ? targetUser.displayName : message.author.displayName;
@@ -1205,7 +1136,6 @@ class MissionsSystem {
         await message.reply({ embeds: [embed] });
     }
 
-    // ✅ NUEVA FUNCIÓN: Calcular tiempo hasta el próximo reset
     getTimeUntilMissionReset() {
         const ecuadorTime = this.getEcuadorTime();
         const hoursUntilMidnight = 23 - ecuadorTime.getHours();
@@ -1214,7 +1144,6 @@ class MissionsSystem {
         return `${hoursUntilMidnight}h ${minutesUntilMidnight}m`;
     }
     
-    // Crear barra de progreso
     createProgressBar(current, max, length = 8) {
         const percentage = Math.max(0, Math.min(1, current / max));
         const filledLength = Math.floor(percentage * length);
@@ -1296,17 +1225,13 @@ class MissionsSystem {
         }
     }
     
-    // Procesador de comandos
     async processCommand(message) {
-        // Verificar ingresos pasivos pendientes
         await this.economy.checkPendingPassiveIncome(message.author.id);
         await this.economy.shop.checkAndNotifyExpiredItems(message.author.id, message);
 
         const args = message.content.toLowerCase().split(' ');
         const command = args[0];
         await this.updateMissionProgress(message.author.id, 'commands_used');
-/*const commandName = command.replace('>', '');
-        await this.economy.missions.updateMissionProgress(message.author.id, 'unique_commands_used', commandName);*/
         
         try {
             switch (command) {
@@ -1336,7 +1261,6 @@ class MissionsSystem {
         }
     }
         
-    // Método para conectar eventos
     connectEventsSystem(eventsSystem) {
         this.events = eventsSystem;
         console.log('🎮 Sistema de eventos conectado a misiones');

@@ -1,5 +1,4 @@
 const { EmbedBuilder, ActionRowBuilder, StringSelectMenuBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
-const heavyUsersCache = new Map();
 
 class ShopSystem {
     constructor(economySystem) {
@@ -1872,7 +1871,6 @@ class ShopSystem {
     
     // === TIENDA ===
     async showShop(message, category = 'all', page = 1) {
-        const { ActionRowBuilder, ButtonBuilder, ButtonStyle, StringSelectMenuBuilder } = require('discord.js');
         const userId = message.author.id;
         const currentGuildId = message.guild?.id || message.guildId;
 
@@ -2155,7 +2153,7 @@ class ShopSystem {
         if (this.economy.events) {
             for (const event of this.economy.events.getActiveEvents()) {
                 if (event.type === 'week_end') {
-                    return 0.1; // 20% de descuento
+                    return 0.2; // 20% de descuento
                 }
             }
         }
@@ -2184,7 +2182,7 @@ class ShopSystem {
         // Calcular precio con descuento
         const discount = this.getWeekendDiscount();
         const originalPrice = item.price;
-        const discountedPrice = Math.floor(originalPrice * (1 - discount));
+        const discountedPrice = discount > 0 ? Math.floor(originalPrice * (1 - discount)) : originalPrice;
         const totalCost = discountedPrice * quantity;
         
         const user = await this.economy.getUser(message.author.id);
@@ -2349,7 +2347,6 @@ class ShopSystem {
             { name: '📊 Items Únicos', value: `${Object.keys(userItems).length}`, inline: true }
         );
         
-        // ✅ ARREGLO: Usar getEquippedCosmetics en lugar de getCosmeticsDisplay
         const equippedCosmetics = await this.getEquippedCosmetics(userId);
         if (equippedCosmetics.length > 0) {
             let cosmeticsText = '';
@@ -2696,49 +2693,35 @@ class ShopSystem {
         };
     }
 
-    // 5. NUEVA FUNCIÓN: Mostrar cosméticos equipados en perfil
     async getCosmeticsDisplay(userId) {
-        const user = await this.economy.getUser(userId);
+        const equippedCosmetics = await this.getEquippedCosmetics(userId);
         
-        // ✅ ARREGLO: Manejar cosmetics como string
-        let cosmetics = user.cosmetics || {};
-        
-        if (typeof cosmetics === 'string') {
-            try {
-                cosmetics = JSON.parse(cosmetics);
-            } catch (error) {
-                cosmetics = {};
-            }
-        }
-        
-        if (typeof cosmetics !== 'object' || Object.keys(cosmetics).length === 0) {
-            return { hasCosmetics: false, display: 'No tienes cosméticos equipados.' }; // ✅ Nunca string vacío
+        if (equippedCosmetics.length === 0) {
+            return { hasCosmetics: false, display: 'No tienes cosméticos equipados.' };
         }
         
         let display = '';
-        
-        for (const [itemId, cosmeticData] of Object.entries(cosmetics)) {
-            const item = this.shopItems[itemId];
+        for (const cosmetic of equippedCosmetics) {
+            const item = this.shopItems[cosmetic.id];
             if (!item) continue;
             
             const emojiMatch = item.name.match(/[\u{1F600}-\u{1F64F}]|[\u{1F300}-\u{1F5FF}]|[\u{1F680}-\u{1F6FF}]|[\u{1F1E0}-\u{1F1FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]/u);
             const emoji = emojiMatch ? emojiMatch[0] : '✨';
             
             const rarityEmoji = this.rarityEmojis[item.rarity] || '⚪';
-            const equippedDate = new Date(cosmeticData.obtainedAt).toLocaleDateString('es-ES');
+            const equippedDate = new Date(cosmetic.obtainedAt).toLocaleDateString('es-ES');
             
             display += `${rarityEmoji} ${emoji} **${item.name}**\n`;
-            display += `├ **ID:** \`${itemId}\`\n`;
+            display += `├ **ID:** \`${cosmetic.id}\`\n`;
             display += `└ Equipado el: ${equippedDate}\n\n`;
         }
         
         return { 
             hasCosmetics: true, 
-            display: display.trim() || 'Error cargando cosméticos.' // ✅ Fallback si está vacío
+            display: display.trim() || 'Error cargando cosméticos.' 
         };
     }
 
-    // 6. FUNCIÓN AUXILIAR: Obtener emoji del cosmético
     getCosmeticEmoji(cosmeticId) {
         const emojiMap = {
             'golden_trophy': '🏆',
@@ -3237,33 +3220,6 @@ class ShopSystem {
         };
     }
 
-    // Después del método setCustomNickname(), AGREGAR:
-    async showVipStatus(message) {
-        const userId = message.author.id;
-        const vipStatus = await this.hasActiveVip(userId);
-        
-        if (!vipStatus.hasVip) {
-            await message.reply('❌ No tienes membresía VIP activa. ¡Compra una en la tienda!');
-            return;
-        }
-        
-        const timeLeft = vipStatus.timeLeft;
-        const days = Math.floor(timeLeft / (24 * 60 * 60 * 1000));
-        const hours = Math.floor((timeLeft % (24 * 60 * 60 * 1000)) / (60 * 60 * 1000));
-        
-        const embed = new EmbedBuilder()
-            .setTitle('👑 Estado VIP')
-            .setDescription(`¡Tienes membresía **${vipStatus.tier}** activa!`)
-            .addFields(
-                { name: '⏰ Tiempo Restante', value: `${days} días, ${hours} horas`, inline: true },
-                { name: '🎁 Beneficios Activos', value: '• Sin cooldowns\n• Ganancias x2\n• +20% suerte\n• Comandos exclusivos', inline: false }
-            )
-            .setColor('#FFD700')
-            .setTimestamp();
-        
-        await message.reply({ embeds: [embed] });
-    }
-
     async getSuccessBoost(userId, action) {
         const user = await this.economy.getUser(userId);        
         const activeEffects = this.parseActiveEffects(user.activeEffects);        
@@ -3299,24 +3255,14 @@ class ShopSystem {
             }
         }
         
-        return Math.min(totalBoost, 0.95); // Máximo 95% boost
+        return Math.min(totalBoost, 0.95);
     }
        
-    // 1. ACTUALIZAR getActiveMultipliers() - agregar casos para nuevos tipos
     async getActiveMultipliers(userId, action) {
-        let user = heavyUsersCache.get(userId);
-        if (!user) {
-            user = await this.economy.getUser(userId);
-            const itemCount = Object.keys(user.items || {}).length;
-            if (itemCount > 5) {
-                heavyUsersCache.set(userId, user);
-                setTimeout(() => heavyUsersCache.delete(userId), 300000);
-            }
-        }
+        const user = await this.economy.getUser(userId);
         
         const activeEffects = this.parseActiveEffects(user.activeEffects);
 
-        // ✅ VERIFICAR ESTO ESTÉ AL INICIO, ANTES DE TODO
         const curse = activeEffects['death_hand_curse'];
         if (curse && curse.length > 0 && curse[0].expiresAt > Date.now()) {
             return {

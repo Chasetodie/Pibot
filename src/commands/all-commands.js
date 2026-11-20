@@ -1,5 +1,6 @@
 const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 const commandsData = require('../../commandsData.json');
+const path = require('path');
 
 const categoryMeta = {
   'Administración': { emoji: '🛡️', style: ButtonStyle.Danger, soloAdmin: true },
@@ -31,7 +32,7 @@ function agruparPorCategoria() {
 }
 
 class AllCommands {
-    constructor(economySystem, shopSystem, tradeSystem, auctionSystem, craftingSystem,  eventsSystem, bettingSystem, achievementsSystem, guildLevels, guildConfig, maintenance) {
+    constructor(economySystem, shopSystem, tradeSystem, auctionSystem, craftingSystem,  eventsSystem, bettingSystem, achievementsSystem, guildLevels, guildConfig, maintenance, toolsSystem) {
         this.economy = economySystem;
         this.shop = shopSystem;
         this.trades = tradeSystem;
@@ -43,6 +44,7 @@ class AllCommands {
         this.guildLevels = guildLevels;
         this.guildConfig = guildConfig;
         this.maintenance = maintenance;
+        this.tools = toolsSystem;
         const WorkMinigames = require('../systems/work-minigames');
         this.workMinigames = new WorkMinigames();
         const RobMinigameHandler = require('../systems/rob-minigame-handler');
@@ -955,18 +957,7 @@ if (cosmeticRole?.name) {
             }
         }
     }
-
-    formatAllBonuses(result) {
-        let bonuses = [];
-        
-        if (result.eventMessage) bonuses.push(result.eventMessage);
-        if (result.pickaxeMessage) bonuses.push(result.pickaxeMessage);
-        if (result.itemMessage) bonuses.push(result.itemMessage);
-        if (result.vipMessage) bonuses.push(result.vipMessage);
-        
-        return bonuses.length > 0 ? bonuses.join('\n') : 'No hay bonificaciones activas';
-    }
-    
+   
     async handlePedir(message) {
         const userId = message.author.id;
         const user = await this.economy.getUser(userId);
@@ -1425,7 +1416,6 @@ if (cosmeticRole?.name) {
         const userId = message.author.id;
         const user = await this.economy.getUser(userId);
 
-        // Verificar cooldown antes de mostrar confirmación
         const lastPacto = user.last_pacto || 0;
         const cooldownLeft = this.economy.pactoConfig.cooldown - (Date.now() - lastPacto);
         if (cooldownLeft > 0) {
@@ -1450,15 +1440,14 @@ if (cosmeticRole?.name) {
             });
         }
 
-        const half = Math.floor(user.balance * 0.30);
+        const half = Math.floor(user.balance * 0.50);
 
-        // Embed de confirmación
         const confirmEmbed = new EmbedBuilder()
             .setColor('#8B0000')
             .setTitle('😈 Pacto con el Diablo')
             .setDescription(
                 `*El diablo te ofrece un trato...*\n\n` +
-                `Apuestas el 30% de tu balance:\n` +
+                `Apuestas el 50% de tu balance:\n` +
                 `**${this.formatNumber(half)} ${this.economy.config.currencySymbol}**\n\n` +
                 `🟢 **50%** — Ganas y recibes el doble\n` +
                 `🔴 **50%** — Pierdes esa mitad para siempre\n\n` +
@@ -1499,7 +1488,6 @@ if (cosmeticRole?.name) {
                 return;
             }
 
-            // Ejecutar pacto
             const result = await this.economy.doPacto(userId);
 
             if (!result.success) {
@@ -1552,7 +1540,6 @@ if (cosmeticRole?.name) {
         const user = await this.economy.getUser(userId);
         const profKey = args[1]?.toLowerCase();
 
-        // Sin args → mostrar lista de profesiones
         if (!profKey) {
             const currentProf = user.profession ? this.economy.PROFESSIONS[user.profession] : null;
             const pages = [
@@ -2605,8 +2592,7 @@ if (cosmeticRole?.name) {
     async shopStatsCommand(message) {
         const YOUR_ID = '488110147265232898';
         const isOwner = message.author.id === YOUR_ID;
-        const isAdmin = message.member?.permissions.has('Administrator');
-        if (!isOwner && !isAdmin) {
+        if (!isOwner) {
             await message.reply('❌ No tienes permisos para usar este comando.');
             return;
         }
@@ -2661,23 +2647,7 @@ if (cosmeticRole?.name) {
                 value: topItems.join('\n'), 
                 inline: false 
             });
-        }
-        
-        if (!isOwner) {
-            try {
-                const owner = await message.client.users.fetch(YOUR_ID);
-                const logEmbed = new EmbedBuilder()
-                    .setTitle('🚨 Log Admin - Shop Stats')
-                    .setDescription(`Se usó \`>shopstats\` en **${message.guild.name}**`)
-                    .addFields(
-                        { name: '👤 Admin', value: `${message.author} (${message.author.tag})`, inline: true },
-                        { name: '🖥️ Servidor', value: message.guild.name, inline: true }
-                    )
-                    .setColor('#FF9900')
-                    .setTimestamp();
-                await (await owner.createDM()).send({ embeds: [logEmbed] });
-            } catch {}
-        }
+        }     
 
         await message.reply({ embeds: [embed] });
     }
@@ -2800,42 +2770,6 @@ if (cosmeticRole?.name) {
         return true;
     }
 
-    async handleSetConfig(message, args) {
-        if (!await this.checkAdminPerms(message)) {
-            return message.reply('❌ Necesitas tener permisos de administrador para usar este comando.');
-        }
-        if (!this.guildConfig) {
-            return message.reply('❌ Sistema de configuración no disponible.');
-        }
-
-        const validKeys = {
-            'levelup_channel': '📈 Canal de subida de nivel',
-            'events_channel': '🎉 Canal de anuncios de eventos',
-            'guild_levelup_channel': '📊 Niveles del servidor — anuncios de level up local'
-        };
-
-        const subkey = args[1];
-        if (!subkey || subkey === 'help' || !validKeys[subkey]) {
-            const embed = new EmbedBuilder()
-                .setTitle('⚙️ Configuración del Servidor')
-                .setColor('#FFA500')
-                .setDescription('Usa `>setchannel <clave> #canal` para configurar cada función.\n\n**Claves disponibles:**')
-                .addFields(Object.entries(validKeys).map(([k, v]) => ({ name: `\`${k}\``, value: v, inline: true })))
-                .addFields({ name: '📝 Ejemplo', value: '`>setchannel levelup_channel #niveles`', inline: false });
-            return message.reply({ embeds: [embed] });
-        }
-
-        const channel = message.mentions.channels.first();
-        if (!channel) {
-            return message.reply('❌ Debes mencionar un canal. Ejemplo: `>setchannel levelup_channel #canal`');
-        }
-
-        const existing = await this.guildConfig.get(message.guild.id, subkey);
-        await this.guildConfig.set(message.guild.id, subkey, channel.id);
-        const action = existing ? 'actualizado' : 'configurado';
-        return message.reply(`✅ **${validKeys[subkey]}** ${action} como ${channel}.`);
-    }
-
     async handleShowConfig(message) {
         if (!await this.checkAdminPerms(message)) {
             return message.reply('❌ Necesitas tener permisos de administrador para usar este comando.');
@@ -2856,7 +2790,7 @@ if (cosmeticRole?.name) {
             .setTitle('⚙️ Configuración actual del servidor')
             .setColor('#00BFFF')
             .setThumbnail(message.guild.iconURL({ dynamic: true }))
-            .setDescription('**[🖥️ Configura todo desde el Dashboard Web →](https://chasetodie.github.io/Pibot/)**')
+            .setDescription('**[🖥️ Configura todo desde el Dashboard Web →](https://pibot.is-a.dev/)**')
             .setFooter({ text: `${message.guild.name} • Usa >dashboard para más info`, iconURL: message.guild.iconURL({ dynamic: true }) })
             .setTimestamp();
 
@@ -2865,7 +2799,7 @@ if (cosmeticRole?.name) {
         } else {
             const channelKeys = ['levelup_channel', 'events_channel', 'welcome_channel'];
             const roleKeys = ['events_role'];
-            const hiddenKeys = ['events_globally_enabled', 'guild_levels_enabled', 'guild_levelup_channel'];
+            const hiddenKeys = ['guild_levels_enabled', 'guild_levelup_channel'];
 
             const visibleConfig = Object.entries(config).filter(([k, v]) => 
                 v && !k.startsWith('event_disabled_') && !hiddenKeys.includes(k)
@@ -2880,13 +2814,6 @@ if (cosmeticRole?.name) {
                     inline: true
                 })));
             }
-
-            const globallyEnabled = await this.guildConfig.areEventsEnabled(message.guild.id);
-            embed.addFields({
-                name: '🎉 Eventos',
-                value: globallyEnabled ? '🟢 Habilitados' : '🔴 Deshabilitados',
-                inline: false
-            });
 
             const levelsEnabled = this.guildLevels ? await this.guildLevels.isEnabled(message.guild.id) : false;
             const levelChannel = await this.guildConfig.get(message.guild.id, 'guild_levelup_channel');
@@ -2903,66 +2830,37 @@ if (cosmeticRole?.name) {
         return message.reply({ embeds: [embed] });
     }
 
-    async handleSetEventsRole(message, args) {
-        if (!await this.checkAdminPerms(message)) {
-            return message.reply('❌ Necesitas tener permisos de administrador para usar este comando.');
-        }
-        const role = message.mentions.roles.first();
-        if (!role) {
-            return message.reply('❌ Debes mencionar un rol. Ejemplo: `>seteventsrole @Eventos`');
-        }
-        const existingRole = await this.guildConfig.getEventsRole(message.guild.id);
-        await this.guildConfig.setEventsRole(message.guild.id, role.id);
-        const actionRole = existingRole ? 'actualizado' : 'configurado';
-        return message.reply(`✅ Rol de eventos ${actionRole} como ${role}. Se usará para pings en anuncios de eventos.`);
-    }
+    async ttsCommand(message, args) {
+        const texto = args.join(' ').trim().slice(4);
 
-    async handleToggleEvent(message, args) {
-        if (!await this.checkAdminPerms(message)) {
-            return message.reply('❌ Necesitas tener permisos de administrador para usar este comando.');
-        }
-        if (!this.guildConfig) return message.reply('❌ Sistema de configuración no disponible.');
-
-        const eventType = args[1];
-        const availableTypes = Object.keys(this.events.eventTypes);
-
-        if (!eventType || !availableTypes.includes(eventType)) {
-            const disabledEvents = await this.guildConfig.getDisabledEvents(message.guild.id);
-            const embed = new EmbedBuilder()
-                .setTitle('🔧 Habilitar/Deshabilitar Eventos')
-                .setColor('#FFA500')
-                .setDescription('Usa `>toggleevent <tipo>` para activar o desactivar un tipo de evento.')
-                .addFields(
-                    { name: '🎮 Eventos disponibles', value: availableTypes.map(t => {
-                        const ev = this.events.eventTypes[t];
-                        const disabled = disabledEvents.includes(t);
-                        return `${disabled ? '🔴' : '🟢'} \`${t}\` — ${ev.name}`;
-                    }).join('\n'), inline: false },
-                    { name: '💡 Ejemplo', value: '`>toggleevent market_crash` — Desactiva/activa la Crisis del Mercado', inline: false }
-                );
-            return message.reply({ embeds: [embed] });
+        if (!texto) {
+            return message.reply('❌ Escribe algo para que lo diga. Ejemplo: `>tts hola a todos`');
         }
 
-        const currentlyEnabled = await this.guildConfig.isEventEnabled(message.guild.id, eventType);
-        await this.guildConfig.setEventEnabled(message.guild.id, eventType, !currentlyEnabled);
-        const ev = this.events.eventTypes[eventType];
-        const status = currentlyEnabled ? '🔴 deshabilitado' : '🟢 habilitado';
-        return message.reply(`✅ Evento **${ev.emoji} ${ev.name}** ahora está **${status}** en este servidor.`);
-    }
-
-    async handleToggleAllEvents(message) {
-        if (!await this.checkAdminPerms(message)) {
-            return message.reply('❌ Necesitas tener permisos de administrador para usar este comando.');
+        if (texto.length > 2000) {
+            return message.reply('❌ Máximo 2000 caracteres por mensaje.');
         }
-        if (!this.guildConfig) return message.reply('❌ Sistema de configuración no disponible.');
 
-        const currentlyEnabled = await this.guildConfig.areEventsEnabled(message.guild.id);
-        const isFirst = await this.guildConfig.setEventsGloballyEnabled(message.guild.id, !currentlyEnabled);
+        const cargando = await message.reply('🎙️ Generando audio...');
 
-        if (!currentlyEnabled) {
-            return message.reply('✅ **Eventos habilitados** en este servidor. Los eventos automáticos y manuales ya están activos.');
-        } else {
-            return message.reply('🔴 **Eventos deshabilitados** en este servidor. No se crearán eventos automáticos ni manuales hasta que los reactives con `>toggleevents`.');
+        try {
+            const audioUrl = await this.tools.generateAudio(texto);
+            if (!audioUrl) {
+                return cargando.edit('❌ No se pudo generar el audio, intenta de nuevo.');
+            }
+
+            const nombreArchivo = audioUrl.split('/').pop();
+            const rutaLocal = path.join(__dirname, '..', '..', 'tts_output', nombreArchivo);
+
+            const nombreVisible = this.tools.armarNombreVisible(texto);
+
+            await message.channel.send({
+                files: [{ attachment: rutaLocal, name: nombreVisible }]
+            });
+            await cargando.delete();
+        } catch (err) {
+            console.error('Error en comando >tts:', err.message);
+            await cargando.edit('❌ Ocurrió un error generando el audio.');
         }
     }
 
@@ -2983,9 +2881,6 @@ const commandName = command.replace('>', '');
 
         try {
             switch (command) {        
-/*                case '>setchannel':
-                    await this.handleSetConfig(message, args);
-                    break;*/
                 case '>svconfig':
                     await this.handleShowConfig(message);
                     break;
@@ -2996,20 +2891,11 @@ const commandName = command.replace('>', '');
                         .setColor('#00BFFF')
                         .addFields({
                             name: '🔗 Accede aquí',
-                            value: '[chasetodie.github.io/Pibot/](https://chasetodie.github.io/Pibot/)',
+                            value: '[pibot.is-a.dev](https://pibot.is-a.dev/)',
                             inline: false
                         });
                     await message.reply({ embeds: [embedDashboard] });
                     break;
-/*                case '>seteventsrole':
-                    await this.handleSetEventsRole(message, args);
-                    break;
-                case '>toggleevent':
-                    await this.handleToggleEvent(message, args);
-                    break;
-                case '>toggleevents':
-                    await this.handleToggleAllEvents(message);
-                    break;*/
                 case '>balance':
                 case '>bal':
                 case '>money':
@@ -3161,6 +3047,11 @@ const commandName = command.replace('>', '');
                     await this.events.showActiveEvents(message);
                     break;
                 case '>createevent':
+                    if (message.author.id !== '488110147265232898') {
+                        await message.reply('❌ Solo mi creador puede crear eventos manuales. Los eventos automáticos se generan solos.');
+                        return;
+                    }
+
                     if (!args[1]) {
                         const availableTypes = Object.keys(this.events.eventTypes);
                         const embed = new EmbedBuilder()
@@ -3181,13 +3072,6 @@ const commandName = command.replace('>', '');
                     }
                     const eventType = args[1];
                     const duration = args[2] ? parseInt(args[2]) : null;
-                    // Verificar si eventos están habilitados en este server
-                    if (this.guildConfig) {
-                        const globallyEnabled = await this.guildConfig.areEventsEnabled(message.guild.id);
-                        if (!globallyEnabled) {
-                            return message.reply('❌ Los eventos están deshabilitados en este servidor. Usa `>toggleevents` para activarlos primero.');
-                        }
-                    }
                     await this.events.createManualEvent(message, eventType, duration);
                     break;
                 case '>processrefunds': {
@@ -3199,13 +3083,13 @@ const commandName = command.replace('>', '');
                     await this.shop.processItemRefunds(message.channel);
                     break;
                 }
+                case '>tts':
+                    await this.ttsCommand(message, args);
+                    break;
                 case '>changelog':
                 case '>cambios':
                 case '>updates':
                     await this.maintenance.showChangelog(message);
-                    break;
-                case '>eventstats':
-                    await this.events.showEventStats(message);
                     break;
                 case '>trade':
                     if (!message.mentions.users.size) {
@@ -3452,26 +3336,37 @@ const commandName = command.replace('>', '');
                     }
 
                     const [hours, minutes] = timeArg.split(':').map(Number);
-                    const scheduled = new Date();
+                    const now = new Date();
+                    // Calcular el offset en ms entre UTC y Ecuador (-5h)
+                    const ecuadorOffsetMs = -5 * 60 * 60 * 1000;
+                    const nowEcuador = new Date(now.getTime() + ecuadorOffsetMs);
 
-                    // Ajustar a UTC-5 (Ecuador)
-                    const utcOffset = -5;
-                    scheduled.setUTCHours(hours - utcOffset, minutes, 0, 0);
+                    // Construir la fecha objetivo en hora Ecuador
+                    const scheduledEcuador = new Date(nowEcuador);
+                    scheduledEcuador.setUTCHours(hours, minutes, 0, 0);
 
-                    if (scheduled.getTime() <= Date.now()) {
-                        scheduled.setDate(scheduled.getDate() + 1);
+                    // Si ya pasó (o es ahora), sumar un día
+                    if (scheduledEcuador.getTime() <= nowEcuador.getTime()) {
+                        scheduledEcuador.setUTCDate(scheduledEcuador.getUTCDate() + 1);
                     }
 
+                    // Convertir de vuelta a UTC para guardar en DB
+                    const scheduledUTC = new Date(scheduledEcuador.getTime() - ecuadorOffsetMs);
+
+                    await this.economy.database.pool.execute(
+                        'UPDATE maintenance SET active = FALSE WHERE active = TRUE'
+                    );
+
                     const maintenanceMsg = args.slice(2).join(' ') || null;
-                    const maintenanceId = await this.economy.database.setMaintenance(scheduled.getTime(), maintenanceMsg);
+                    const maintenanceId = await this.economy.database.setMaintenance(scheduledUTC.getTime(), maintenanceMsg);
                     this.maintenance.invalidateCache();
 
                     const embed = new EmbedBuilder()
                         .setTitle('🔧 Mantenimiento Programado')
                         .setDescription(
                             `✅ Mantenimiento activado\n\n` +
-                            `📅 Hora: <t:${Math.floor(scheduled.getTime() / 1000)}:f>\n` +
-                            `⏰ En: <t:${Math.floor(scheduled.getTime() / 1000)}:R>\n` +
+                            `📅 Hora: <t:${Math.floor(scheduledUTC.getTime() / 1000)}:f>\n` +
+                            `⏰ En: <t:${Math.floor(scheduledUTC.getTime() / 1000)}:R>\n` +
                             `🆔 ID: ${maintenanceId}\n\n` +
                             `${maintenanceMsg ? `📝 Mensaje: ${maintenanceMsg}` : '💡 Sin mensaje adicional'}`
                         )
@@ -3485,9 +3380,9 @@ const commandName = command.replace('>', '');
                 case '>endmaintenance': {
                     if (message.author.id !== '488110147265232898') return;
 
-const maintenance = await this.economy.database.getActiveMaintenance();
-const maintenanceId = maintenance?.id || null;
-if (maintenance) await this.economy.database.disableMaintenance(maintenanceId);
+                    const maintenance = await this.economy.database.getActiveMaintenance();
+                    const maintenanceId = maintenance?.id || null;
+                    if (maintenance) await this.economy.database.disableMaintenance(maintenanceId);
 
                     // Leer changelog.json automáticamente
                     let changes = {};
@@ -5564,6 +5459,7 @@ if (maintenance) await this.economy.database.disableMaintenance(maintenanceId);
                     { name: '>addxp @user <cant> <razón>', value: 'Dar XP a un usuario', inline: true },
                     { name: '>giveitem @user <item_id> <cant>', value: 'Dar item a un usuario', inline: true },
                     { name: '>processrefunds', value: 'Procesar reembolsos de precios', inline: true },
+                    
                     { name: '\u200b', value: '\u200b', inline: true },
 
                     { name: '📊 Estadísticas', value: '─────────────────', inline: false },
@@ -5598,6 +5494,9 @@ if (maintenance) await this.economy.database.disableMaintenance(maintenanceId);
                     { name: '>orstatus / >aistatus', value: 'Ver estado de proveedores IA', inline: true },
                     { name: '>orcredits', value: 'Ver créditos y uso de IA', inline: true },
                     { name: '>chatstats', value: 'Estadísticas de conversaciones', inline: true },
+
+                    { name: ' Eventos', value: '─────────────────', inline: false },
+                    { name: '>createevent <tipo> [min]', value: 'Crear evento manual', inline: true },
                 );
 
             return interaction.reply({

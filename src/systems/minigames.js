@@ -6,7 +6,6 @@ const { PlayerState } = require('kazagumo');
 const { findPackageJSON } = require('module');
 const { GROQ_FAST, GROQ_SMART } = require('../utils/aiModels');
 
-// Colores y tipos de cartas UNO
 const UNO_COLORS = ['red', 'yellow', 'green', 'blue'];
 const UNO_NUMBERS = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'];
 const UNO_DARK_COLORS = ['pink', 'teal', 'orange', 'purple']; // Lado oscuro
@@ -26,46 +25,47 @@ class MinigamesSystem {
         this.shop = shopSystem;
         this.client = client;
         this.events = null;
-        this.activeGames = new Map(); // Para manejar juegos en progreso
+        this.missions = null;
+        this.achievements = null;
+        this.activeGames = new Map();
         this.cooldownCache = new Map();
         this.minigamesCache = new Map();
         this.MAX_CACHE_SIZE = 500;
         this.cacheTimeout = 10 * 60 * 1000;
-        this.recentTriviaQuestions = new Map(); // ← AGREGAR ESTO
+        this.recentTriviaQuestions = new Map();
 
         this.potConfig = {
             minMoney: 100,
             maxMoney: 50000,
             maxItemsPerUser: 3,
-            weekDuration: 7 * 24 * 60 * 60 * 1000 // 7 dias en ms
+            weekDuration: 7 * 24 * 60 * 60 * 1000
         };
 
-        // ✅ AGREGAR ESTO (configuración de límites):
         this.dailyLimits = {
             lottery: {
-                perCycle: 3,        // 3 partidas por ciclo
-                cycleHours: 4,      // Cada 4 horas
-                maxDaily: 18        // Máximo 18 al día (3 × 6 ciclos)
+                perCycle: 3,
+                cycleHours: 4,
+                maxDaily: 18
             },
             blackjack: {
-                perCycle: 15,       // 15 partidas por ciclo
-                cycleHours: 4,      // Cada 4 horas
-                maxDaily: 90        // Máximo 90 al día (15 × 6 ciclos)
+                perCycle: 15,
+                cycleHours: 4,
+                maxDaily: 90
             },
             roulette: {
-                perCycle: 8,        // 8 partidas por ciclo
-                cycleHours: 4,      // Cada 4 horas
-                maxDaily: 48        // Máximo 48 al día (8 × 6 ciclos)
+                perCycle: 8,
+                cycleHours: 4,
+                maxDaily: 48
             },
             slots: {
-                perCycle: 10,       // 10 partidas por ciclo
-                cycleHours: 4,      // Cada 4 horas
-                maxDaily: 60        // Máximo 60 al día (10 × 6 ciclos)
+                perCycle: 10,
+                cycleHours: 4,
+                maxDaily: 60
             },
             horses: {
-                perCycle: 4,       // 10 partidas por ciclo
-                cycleHours: 4,      // Cada 4 horas
-                maxDaily: 40        // Máximo 60 al día (10 × 6 ciclos)
+                perCycle: 4,
+                cycleHours: 4,
+                maxDaily: 40
             },
         };
 
@@ -73,12 +73,10 @@ class MinigamesSystem {
             this.checkWeeklyPotExpiry();
         }, 60 * 60 * 1000);
 
-        // Limpiar registros de límites antiguos cada 1 hora
         setInterval(async () => {
             await this.economy.database.cleanOldGameLimits();
-        }, 60 * 60 * 1000); // 1 hora
+        }, 60 * 60 * 1000);
 
-        // Ejecutar limpieza al iniciar (después de 10 segundos)
         setTimeout(async () => {
             console.log('🧹 Ejecutando limpieza inicial de límites...');
             const deleted = await this.economy.database.cleanOldGameLimits();
@@ -89,22 +87,21 @@ class MinigamesSystem {
             this.startNotificationChecker();
         }, 5000);
         
-        // Configuración de minijuegos
         this.config = {
             coinflip: {
-                minBet: 100,            // Cambiar de 50 a 100
-                maxBet: 5000,           // Cambiar de 10000 a 5000
-                cooldown: 30000,        // Cambiar de 15000 a 30000 (30 segundos)
-                winMultiplier: 1.85     // Cambiar de 1.95 a 1.85
+                minBet: 100,
+                maxBet: 5000,
+                cooldown: 30000,
+                winMultiplier: 1.90
             },
             dice: {
-                minBet: 100,            // Cambiar de 50 a 100
-                maxBet: 5000,           // Cambiar de 10000 a 5000
-                cooldown: 45000,        // Cambiar de 30000 a 45000 (45 segundos)
+                minBet: 100,
+                maxBet: 5000,
+                cooldown: 45000,
                 payouts: {
-                    exact: 4.0,         // Cambiar de 4.8 a 4.0
-                    high: 1.85,         // Cambiar de 1.9 a 1.85
-                    low: 1.85           // Cambiar de 1.9 a 1.85
+                    exact: 4.5,
+                    high: 1.90,
+                    low: 1.90
                 }
             },
             guess: {
@@ -120,38 +117,38 @@ class MinigamesSystem {
             },
             lottery: {
                 minBet: 500,
-                maxBet: 3000,           // Cambiar de 5000 a 3000
-                cooldown: 300000,      // Cambiar de 900000 a 1800000 (30 minutos)
-                winMultiplier: 75,      // Cambiar de 100 a 75
+                maxBet: 3000,
+                cooldown: 300000,
+                winMultiplier: 85,
                 minNumber: 1,
                 maxNumber: 100
             },
             blackjack: {
                 minBet: 100,
-                maxBet: 10000,          // Cambiar de 15000 a 10000
-                cooldown: 30000,       // Cambiar de 90000 a 120000 (2 minutos)
-                blackjackMultiplier: 2.3, // Cambiar de 2.5 a 2.3
-                winMultiplier: 1.9      // Cambiar de 2 a 1.9
+                maxBet: 10000,
+                cooldown: 30000,
+                blackjackMultiplier: 2.5,
+                winMultiplier: 2.0
             },
             roulette: {
                 minBet: 100,
-                maxBet: 15000,          // Cambiar de 20000 a 15000
-                cooldown: 20000,        // Cambiar de 45000 a 60000 (1 minuto)
+                maxBet: 15000,
+                cooldown: 20000,
                 payouts: {
-                    straight: 32,       // Cambiar de 35 a 32
-                    red: 1.85,          // Cambiar de 1.95 a 1.85
-                    black: 1.85,        // Cambiar de 1.95 a 1.85
-                    green: 34,          // Cambiar de 37 a 34
-                    odd: 1.85,          // Cambiar de 1.95 a 1.85
-                    even: 1.85,         // Cambiar de 1.95 a 1.85
-                    low: 1.85,          // Cambiar de 1.95 a 1.85
-                    high: 1.85,         // Cambiar de 1.95 a 1.85
-                    dozen1: 2.7,        // Cambiar de 2.9 a 2.7
-                    dozen2: 2.7,        // Cambiar de 2.9 a 2.7
-                    dozen3: 2.7,        // Cambiar de 2.9 a 2.7
-                    column1: 2.7,       // Cambiar de 2.9 a 2.7
-                    column2: 2.7,       // Cambiar de 2.9 a 2.7
-                    column3: 2.7        // Cambiar de 2.9 a 2.7
+                    straight: 34,
+                    red: 1.90,
+                    black: 1.90,
+                    green: 35,
+                    odd: 1.90,
+                    even: 1.90,
+                    low: 1.90,
+                    high: 1.90,
+                    dozen1: 2.8,
+                    dozen2: 2.8,
+                    dozen3: 2.8,
+                    column1: 2.8,
+                    column2: 2.8,
+                    column3: 2.8
                 }
             },
             slots: {
@@ -179,9 +176,9 @@ class MinigamesSystem {
                 raceDistance: 100, // Distancia total de la carrera
                 updateInterval: 500, // Actualizar cada 500ms
                 payouts: {
-                    first: 3.0,   // 1er lugar: x3
-                    second: 1.8,  // 2do lugar: x1.8
-                    third: 1.2    // 3er lugar: x1.2
+                    first: 2.5,   // 1er lugar: x2.5
+                    second: 1.5,  // 2do lugar: x1.5
+                    third: 1.0    // 3er lugar: x1.0
                 },
                 botMode: {
                     botWinChance: 0.45, // 45% de que el bot gane
@@ -233,7 +230,7 @@ class MinigamesSystem {
                 minBet: 10,
                 maxBet: 10,        // Fijo en 10
                 cooldown: 900000,  // 15 minutos (15 * 60 * 1000)
-                winAmount: 40,
+                winAmount: 35,
                 failChance: 0.55   // 55% de fallo
             },
             russianRoulette: {
@@ -306,7 +303,7 @@ class MinigamesSystem {
             }
         };
         
-        this.cooldowns = new Map(); // Para cooldowns por usuario
+        this.cooldowns = new Map();
     }
 
     async showMyLimits(message) {
@@ -402,51 +399,46 @@ class MinigamesSystem {
     }
 
     async calculateLuck(userId, guildId = null) {
-        // ✅ Verificar si está maldito antes de mostrar boosts
         const user = await this.economy.getUser(userId);
         const activeEffects = this.shop.parseActiveEffects(user.activeEffects);
         const isCursed = this.shop.hasCurseActive(userId, activeEffects);
 
-        const effects = await this.shop.getActiveMultipliers(userId, 'games');
-
         let totalLuckBonus = 0;
         let luckMessages = [];
-        
-        // 1. Items de suerte (máximo +8%)
-        if (this.shop) {
+
+        // 1. Items de suerte (directo, sin reducción)
+        if (this.shop && !isCursed) {
             const luckBoost = await this.shop.getActiveMultipliers(userId, 'games');
-            if (luckBoost.luckBoost !== 0) { // ← Cambiar de > 0 a !== 0
-                const itemBonus = Math.min(Math.abs(luckBoost.luckBoost) * 0.4, 0.08);
-                
-                if (!isCursed && luckBoost.luckBoost > 0) {
-                    totalLuckBonus += itemBonus;
-                    luckMessages.push(`🍀 **Boost de Suerte** (+${Math.round(itemBonus * 100)}%)`);
-                } else if (isCursed && luckBoost.luckBoost < 0) {
-                    totalLuckBonus += luckBoost.luckBoost; // ← Ya es negativo
-                    luckMessages.push(`☠️ **Maldición Activa** (${Math.round(luckBoost.luckBoost * 100)}%)`);
+            if (luckBoost.luckBoost !== 0) {
+                // Si es maldición, es negativo; si es item, positivo.
+                totalLuckBonus += luckBoost.luckBoost;
+                const pct = Math.round(luckBoost.luckBoost * 100);
+                if (pct > 0) {
+                    luckMessages.push(`🍀 **Items Activos** (+${pct}%)`);
+                } else if (pct < 0) {
+                    luckMessages.push(`☠️ **Maldición** (${pct}%)`);
                 }
             }
         }
-        
+
         // 2. Eventos de suerte (+10%)
         const eventLuck = await this.applyEventEffects(userId, 0, 'luck', guildId);
         if (eventLuck.luckBonus > 0) {
             totalLuckBonus += eventLuck.luckBonus;
             luckMessages.push(`${eventLuck.eventMessage} (+10%)`);
         }
-        
+
         // 3. VIP suerte (máximo +7%)
-        if (this.shop) {
+        if (this.shop && !isCursed) {
             const vipMultipliers = await this.shop.getVipMultipliers(userId, 'games');
             if (vipMultipliers.luckBoost > 0) {
-                const vipBonus = Math.min(vipMultipliers.luckBoost * 0.35, 0.07);
-                totalLuckBonus += vipBonus;
-                luckMessages.push(`💎 **Boost VIP** (+${Math.round(vipBonus * 100)}%)`);
+                totalLuckBonus += vipMultipliers.luckBoost;
+                luckMessages.push(`💎 **Boost VIP** (+${Math.round(vipMultipliers.luckBoost * 100)}%)`);
             }
         }
-        
+
         return {
-            luckBonus: totalLuckBonus,
+            luckBonus: Math.max(-0.5, Math.min(totalLuckBonus, 0.20)), // Cap entre -50% y +20%
             luckMessage: luckMessages.join('\n')
         };
     }
@@ -454,38 +446,26 @@ class MinigamesSystem {
     async applyLuckToGame(baseChance, userId, gameType, guildId = null) {
         const luck = await this.calculateLuck(userId, guildId);
         
-        // Límites de bonus según juego
+        // Límite de bonus de suerte según el juego
         const maxBonusByGame = {
-            'lottery': 0.05,           // +5% máximo
-            'roulette_straight': 0.08, // +8% máximo
-            'dice_exact': 0.10,        // +10% máximo
-            'coinflip': 0.12,          // +12% máximo
-            'dice_highlow': 0.12,      // +12% máximo
-            'roulette_color': 0.10,    // +10% máximo
-            'slots': 0.12,             // +12% máximo para slots
+            'lottery': 0.05,           // +5% máx
+            'roulette_straight': 0.08, // +8% máx
+            'dice_exact': 0.10,        // +10% máx
+            'coinflip': 0.12,          // +12% máx
+            'dice_highlow': 0.12,      // +12% máx
+            'roulette_color': 0.10,    // +10% máx
+            'slots': 0.12,             // +12% máx
             'default': 0.15
         };
         
         const maxBonus = maxBonusByGame[gameType] || maxBonusByGame['default'];
         const rawBonus = luck.luckBoost;
-        const cappedBonus = Math.max(-0.50, Math.min(rawBonus, maxBonus)); // ← Limitar entre -50% y +max%
         
-        // Límite absoluto de probabilidad de ganar
-        const maxWinChance = {
-            'lottery': 0.06,           // 6% máximo
-            'roulette_straight': 0.12, // 12% máximo
-            'dice_exact': 0.28,        // 28% máximo
-            'coinflip': 0.62,          // 62% máximo
-            'dice_highlow': 0.62,      // 62% máximo
-            'roulette_color': 0.58,    // 58% máximo
-            'slots': 0.25,             // 25% máximo de ganar en slots
-            'default': 0.65
-        };
+        // Limitar entre -50% y +maxBonus
+        const cappedBonus = Math.max(-0.50, Math.min(rawBonus, maxBonus));
         
-        const finalChance = Math.min(
-            Math.max(0, baseChance + cappedBonus), 
-            maxWinChance[gameType] || maxWinChance['default']
-        );
+        // La probabilidad final (base + suerte, sin pasar de 95%)
+        const finalChance = Math.min(Math.max(0, baseChance + cappedBonus), 0.95);
         
         return {
             winChance: finalChance,
@@ -850,7 +830,7 @@ class MinigamesSystem {
                     { name: '📝 Uso', value: '`>coinflip <cara/cruz> <cantidad>`', inline: false },
                     { name: '💡 Ejemplos', value: '`>coinflip cara 500`\n`>coinflip cruz 1000`', inline: false },
                     { name: '💰 Apuesta', value: `**Mín:** ${this.formatNumber(this.config.coinflip.minBet)} π-b$\n**Máx:** ${this.formatNumber(this.config.coinflip.maxBet)} π-b$`, inline: true },
-                    { name: '🏆 Ganancia', value: '**x1.85** tu apuesta\n50% de probabilidad', inline: true },
+                    { name: '🏆 Ganancia', value: '**x1.90** tu apuesta\n50% de probabilidad', inline: true },
                     { name: '⏱️ Cooldown', value: '**30 segundos**', inline: true }
                 )
                 .setColor('#FFD700')
@@ -910,16 +890,16 @@ class MinigamesSystem {
         let won = baseWon;
         let luckMessage = '';
         
-        if (!baseWon) {
-            // Si perdió naturalmente, la suerte puede salvarlo
+        if (baseWon) {
+            luckMessage = luckCalc.luckMessage;
+        } else {
             const luckRoll = Math.random();
-            if (luckRoll < luckCalc.winChance - 0.5) { // Solo el bonus de suerte
+            if (luckRoll < (luckCalc.winChance - 0.5)) { 
                 won = true;
                 luckMessage = luckCalc.luckMessage + '\n🪙 ¡La suerte cambió el resultado!';
+            } else {
+                luckMessage = luckCalc.luckMessage;
             }
-        } else {
-            // Si ganó naturalmente, mostrar suerte disponible
-            luckMessage = luckCalc.luckMessage;
         }
 
         // Establecer cooldown
@@ -1085,8 +1065,8 @@ class MinigamesSystem {
                     { name: '🪙 Resultado', value: result === 'cara' ? '🟡 Cara' : '⚪ Cruz', inline: true },
                     { name: '🎯 Tu Elección', value: normalizedChoice === 'cara' ? '🟡 Cara' : '⚪ Cruz', inline: true },
                     { name: '💰 Ganancia', value: `+${this.formatNumber(finalEarnings)} π-b$`, inline: true },
-                    { name: '💸 Balance Antiguo', value: `${this.formatNumber(user.balance - finalEarnings)} π-b$`, inline: false },
-                    { name: '💳 Balance Actual', value: `${this.formatNumber(user.balance)} π-b$`, inline: false },
+                    { name: '💸 Balance Antiguo', value: `${this.formatNumber(userData.balance - finalEarnings)} π-b$`, inline: false },
+                    { name: '💳 Balance Actual', value: `${this.formatNumber(userData.balance)} π-b$`, inline: false },
                     { name: '🎉 Bonificaciones', value: this.formatGameBonuses(eventMessage, luckMessage, itemMessage, '', professionMessage, petMessage), inline: false }
                 );
 
@@ -1213,8 +1193,8 @@ class MinigamesSystem {
             } else {
                 embed.addFields(
                     { name: '💸 Perdiste', value: `${this.formatNumber(moneyBeforeLost)} π-b$`, inline: true },
-                    { name: '💸 Balance Antiguo', value: `${this.formatNumber(user.balance + moneyBeforeLost)} π-b$`, inline: false },
-                    { name: '💳 Balance Actual', value: `${this.formatNumber(user.balance)} π-b$`, inline: false },
+                    { name: '💸 Balance Antiguo', value: `${this.formatNumber(userData.balance + moneyBeforeLost)} π-b$`, inline: false },
+                    { name: '💳 Balance Actual', value: `${this.formatNumber(userData.balance)} π-b$`, inline: false },
                     { name: '⚔️ Profesiones', value: this.formatGameBonuses('', '', '', '', '', professionMessage), inline: false }
                 );
             }
@@ -1295,9 +1275,9 @@ class MinigamesSystem {
                     {
                         name: '🎯 Tipos de Apuesta',
                         value: [
-                            '`alto` — Sale 4, 5 o 6 → **x1.85**',
-                            '`bajo` — Sale 1, 2 o 3 → **x1.85**',
-                            '`1` a `6` — Número exacto → **x4.0**'
+                            '`alto` — Sale 4, 5 o 6 → **x1.90**',
+                            '`bajo` — Sale 1, 2 o 3 → **x1.90**',
+                            '`1` a `6` — Número exacto → **x4.5**'
                         ].join('\n'),
                         inline: false
                     },
@@ -1369,7 +1349,6 @@ class MinigamesSystem {
             if (baseWon) {
                 won = true;
             } else {
-                // Aplicar suerte solo si perdió
                 const luckCalc = await this.applyLuckToGame(0, userId, gameType, message.guild?.id);
                 won = Math.random() < luckCalc.winChance;
                 if (won) {
@@ -1455,6 +1434,10 @@ class MinigamesSystem {
         let eventMessage = '';
         
         if (won) {
+            if (luckMessage && luckMessage.includes('suerte te salvó')) {
+                await message.reply('🍀 **¡La suerte estuvo de tu lado!** Tu ítem activo evitó tu derrota.');
+            }
+
             await this.economy.missions.updateMissionProgress(userId, 'consecutive_win');
             await this.economy.missions.updateMissionProgress(userId, 'game_won');
 
@@ -1589,8 +1572,8 @@ class MinigamesSystem {
                 .addFields(
                     { name: '💰 Multiplicador', value: `x${multiplier}`, inline: true },
                     { name: '💰 Ganancia', value: `+${this.formatNumber(finalEarnings)} π-b$`, inline: false },
-                    { name: '💸 Balance Antiguo', value: `${this.formatNumber(user.balance - finalEarnings)} π-b$`, inline: false },
-                    { name: '💳 Balance Actual', value: `${this.formatNumber(user.balance)} π-b$`, inline: false },
+                    { name: '💸 Balance Antiguo', value: `${this.formatNumber(userData.balance - finalEarnings)} π-b$`, inline: false },
+                    { name: '💳 Balance Actual', value: `${this.formatNumber(userData.balance)} π-b$`, inline: false },
                     { name: '🎉 Bonificaciones', value: this.formatGameBonuses(eventMessage, luckMessage, itemMessage, '', professionMessage, petMessage), inline: false }
                 );
 
@@ -1708,8 +1691,8 @@ class MinigamesSystem {
             embed.setDescription(`💸 **Perdiste...**`)
                 .addFields(
                     { name: '💰 Dinero Apostado', value: `${this.formatNumber(moneyBeforeLost)} π-b$`, inline: false },
-                    { name: '💸 Balance Antiguo', value: `${this.formatNumber(user.balance + moneyBeforeLost)} π-b$`, inline: false },
-                    { name: '💳 Balance Actual', value: `${this.formatNumber(user.balance)} π-b$`, inline: false },
+                    { name: '💸 Balance Antiguo', value: `${this.formatNumber(userData.balance + moneyBeforeLost)} π-b$`, inline: false },
+                    { name: '💳 Balance Actual', value: `${this.formatNumber(userData.balance)} π-b$`, inline: false },
                     { name: '⚔️ Profesiones', value: this.formatGameBonuses('', '', '', '', '', professionMessage), inline: false }
                 );
         }
@@ -2323,7 +2306,7 @@ class MinigamesSystem {
                     },
                     {
                         name: '🏆 Ganancias',
-                        value: '**Victoria normal:** x1.9\n**Blackjack natural (21 en 2 cartas):** x2.3',
+                        value: '**Victoria normal:** x2.0\n**Blackjack natural (21 en 2 cartas):** x2.5',
                         inline: false
                     },
                     {
@@ -2514,7 +2497,7 @@ const userId = gameState.userId;
             return;
         }
     
-        if (interaction) {
+        if (interaction && !interaction.deferred && !interaction.replied) {
             await interaction.deferUpdate();
         }
     
@@ -3058,7 +3041,6 @@ const userId = gameState.userId;
 
                 profit = -moneyBeforeLost;
 
-                // ✅ Aplicar protección o pérdida
                 if (hasProtected) {
                     if (messageOrInteraction?.followUp) {
                         await messageOrInteraction.followUp({ content: protectionMessage, ephemeral: false });
@@ -3072,7 +3054,6 @@ const userId = gameState.userId;
                 }
 
 
-                // *** NUEVO: ACTUALIZAR ESTADÍSTICAS DE ACHIEVEMENTS ***
                 if (this.achievements) {
                     await this.achievements.updateStats(userId, 'game_played');
                     await this.achievements.updateStats(userId, 'game_lost');
@@ -3085,7 +3066,6 @@ const userId = gameState.userId;
                 await this.economy.database.incrementGameLimit(userId, gameType);
                 await this.economy.missions.updateMissionProgress(userId, 'consecutive_loss');
                 
-                // 1️⃣ CONDÓN: 100% garantizado, 1 uso
                 if (activeEffects['condon_pibe2']) {
                     for (let i = activeEffects['condon_pibe2'].length - 1; i >= 0; i--) {
                         const effect = activeEffects['condon_pibe2'][i];
@@ -3107,7 +3087,6 @@ const userId = gameState.userId;
                     }
                 }
                 
-                // 2️⃣ FORTUNE SHIELD: 80% probabilidad
                 if (!hasProtected && activeEffects['fortune_shield']) {
                     for (const effect of activeEffects['fortune_shield']) {
                         if (effect.type === 'protection' && effect.expiresAt > Date.now()) {
@@ -3123,7 +3102,6 @@ const userId = gameState.userId;
                     }
                 }
                 
-                // 3️⃣ HEALTH POTION: 40% probabilidad
                 if (!hasProtected && activeEffects['health_potion']) {
                     for (const effect of activeEffects['health_potion']) {
                         if (effect.type === 'penalty_protection' && effect.expiresAt > Date.now()) {
@@ -3152,7 +3130,6 @@ const userId = gameState.userId;
 
                 profit = -moneyBeforeLost;
 
-                // ✅ Aplicar protección o pérdida
                 if (hasProtected) {
                     if (messageOrInteraction?.followUp) {
                         await messageOrInteraction.followUp({ content: protectionMessage, ephemeral: false });
@@ -3165,7 +3142,6 @@ const userId = gameState.userId;
                     this.applyMarriageBonusMinigame(userId, moneyBeforeLost, true, messageOrInteraction).catch(() => {});
                 }
 
-                // *** NUEVO: ACTUALIZAR ESTADÍSTICAS DE ACHIEVEMENTS ***
                 if (this.achievements) {
                     await this.achievements.updateStats(userId, 'game_played');
                     await this.achievements.updateStats(userId, 'game_lost');
@@ -3230,18 +3206,15 @@ const userId = gameState.userId;
     
         embed.setTimestamp(); 
     
-        // Enviar resultado
         if (!messageOrInteraction) {
-            // Timeout automático - buscar el canal y editar el mensaje directamente
-            try {
-                const gameChannel = await this.economy.database.pool.execute
-                    ? null : null; // No tenemos referencia al canal aquí
-                // El timeout solo hace stand, el resultado igual se muestra vía editReply del mensaje guardado
-            } catch {}
-        } else if (messageOrInteraction.editReply) {
-            await messageOrInteraction.editReply({ embeds: [embed], components: [] });
-        } else if (messageOrInteraction.reply) {
-            await messageOrInteraction.reply({ embeds: [embed] });
+            return; 
+        } 
+        
+        if (messageOrInteraction.editReply) {
+            await messageOrInteraction.editReply({ embeds: [embed], components: [] }).catch(() => {});
+        } 
+        else if (messageOrInteraction.reply) {
+            await messageOrInteraction.reply({ embeds: [embed] }).catch(() => {});
         }
 
         if (addResult && addResult.hitLimit) {
@@ -3409,13 +3382,13 @@ const userId = gameState.userId;
                     {
                         name: '🎯 Tipos de Apuesta',
                         value: [
-                            '**Número exacto** `0-36` → **x32**',
-                            '**Verde** `verde` → **x34**',
-                            '**Color** `rojo` / `negro` → **x1.85**',
-                            '**Paridad** `par` / `impar` → **x1.85**',
-                            '**Rango** `alto` (19-36) / `bajo` (1-18) → **x1.85**',
-                            '**Docena** `1era` / `2da` / `3era` → **x2.7**',
-                            '**Columna** `col1` / `col2` / `col3` → **x2.7**'
+                            '**Número exacto** `0-36` → **x34**',
+                            '**Verde** `verde` → **x35**',
+                            '**Color** `rojo` / `negro` → **x1.90**',
+                            '**Paridad** `par` / `impar` → **x1.90**',
+                            '**Rango** `alto` (19-36) / `bajo` (1-18) → **x1.90**',
+                            '**Docena** `1era` / `2da` / `3era` → **x2.8**',
+                            '**Columna** `col1` / `col2` / `col3` → **x2.8**'
                         ].join('\n'),
                         inline: false
                     },
@@ -4602,7 +4575,7 @@ const userId = gameState.userId;
                     },
                     {
                         name: '🏆 Premios',
-                        value: '🥇 **1er lugar** — x3.0\n🥈 **2do lugar** — x1.8\n🥉 **3er lugar** — x1.2',
+                        value: '🥇 **1er lugar** — x2.5\n🥈 **2do lugar** — x1.5\n🥉 **3er lugar** — x1.0',
                         inline: true
                     },
                     {
@@ -5439,14 +5412,11 @@ const userId = gameState.userId;
         }, this.config.horseRace.updateInterval);
     }
 
-    getRandomSpeed() {
-        // ✅ VELOCIDAD ENTRE 0.8 Y 2.5 POR UPDATE
+    getRandomSpeed(luckBonus = 0) {
         const baseSpeed = 0.8 + Math.random() * 1.7;
-        
-        // Retornar función que varía la velocidad ligeramente cada vez
+        const luckMultiplier = 1 + luckBonus; // 1.10 = +10%
         return () => {
-            // Variación de ±20% de la velocidad base
-            const variation = baseSpeed * (0.8 + Math.random() * 0.4);
+            const variation = baseSpeed * (0.8 + Math.random() * 0.4) * luckMultiplier;
             return variation;
         };
     }
@@ -6632,7 +6602,8 @@ const userId = gameState.userId;
             
             console.log(`🔄 Cargadas ${data.length} partidas de ruleta rusa`);
         } catch (error) {
-            console.error('⚠️ Error cargando partidas:', error);
+            console.error('❌ Error cargando partidas (Russian/UNO):', error.message);
+            console.error('Stack:', error.stack); // Para saber exactamente qué línea falló
         }
     }
     
@@ -9060,7 +9031,8 @@ const userId = gameState.userId;
 
             console.log(`Loaded ${data.length} active UNO games`);
         } catch (error) {
-            console.error('Error connecting to database:', error);
+            console.error('❌ Error cargando partidas (Russian/UNO):', error.message);
+            console.error('Stack:', error.stack); // Para saber exactamente qué línea falló
         }
     }
 
@@ -9542,7 +9514,7 @@ const userId = gameState.userId;
                 .addFields(
                     { name: '🎮 Uso', value: '`>vending`', inline: false },
                     { name: '💰 Costo', value: '**10** π-b$ fijo', inline: true },
-                    { name: '🏆 Premio', value: '**40** π-b$', inline: true },
+                    { name: '🏆 Premio', value: '**35** π-b$', inline: true },
                     { name: '📊 Probabilidad', value: '**55%** de ganar', inline: true },
                     { name: '⏱️ Cooldown', value: '**15 minutos**', inline: true }
                 )
@@ -10135,7 +10107,7 @@ const userId = gameState.userId;
             console.log(`💾 Cache actualizado para ${difficulty}/${categoryName}: ${combinedQuestions.length} preguntas guardadas`);
 
             // Traducir preguntas
-            const questions = await Promise.all(data.results.map(async (q) => {
+            const questions = await Promise.all(selectedQuestions.map(async (q) => {
                 // Decodificar primero
                 const decodedQuestion = this.decodeHTML(q.question);
                 const decodedCorrect = this.decodeHTML(q.correct_answer);
@@ -10277,7 +10249,6 @@ const userId = gameState.userId;
                             .setStyle(q.answers[1] === 'Verdadero' ? ButtonStyle.Success : ButtonStyle.Danger)
                     );
                 } else {
-                    // Botones para Multiple Choice
                     letters.forEach((letter, index) => {
                         buttons.addComponents(
                             new ButtonBuilder()
@@ -10288,64 +10259,50 @@ const userId = gameState.userId;
                     });
                 }
 
-                // Botón de pista (solo si quedan pistas y NO es easy ni True/False)
                 const canUseHint = hintsRemaining > 0 && 
                                 difficulty !== 'easy' && 
                                 !q.isTrueFalse;
                 
-const extraButtons = new ActionRowBuilder();
+                const extraButtons = new ActionRowBuilder();
 
-if (canUseHint) {
-    extraButtons.addComponents(
-        new ButtonBuilder()
-            .setCustomId('trivia_hint')
-            .setLabel(`💡 Pista (${hintsRemaining})`)
-            .setStyle(ButtonStyle.Secondary)
-    );
-}
-if (triviaSkipsLeft > 0 && !isTrueFalse) {
-    extraButtons.addComponents(
-        new ButtonBuilder()
-            .setCustomId('trivia_skip')
-            .setLabel(`⏭️ Saltar (${triviaSkipsLeft})`)
-            .setStyle(ButtonStyle.Secondary)
-    );
-}
-if (triviaEliminatesLeft > 0 && !isTrueFalse) {
-    extraButtons.addComponents(
-        new ButtonBuilder()
-            .setCustomId('trivia_eliminate')
-            .setLabel(`👥 Público (${triviaEliminatesLeft})`)
-            .setStyle(ButtonStyle.Primary)
-    );
-}
+                if (canUseHint) {
+                    extraButtons.addComponents(
+                        new ButtonBuilder()
+                            .setCustomId('trivia_hint')
+                            .setLabel(`💡 Pista (${hintsRemaining})`)
+                            .setStyle(ButtonStyle.Secondary)
+                    );
+                }
+                if (triviaSkipsLeft > 0 && !isTrueFalse) {
+                    extraButtons.addComponents(
+                        new ButtonBuilder()
+                            .setCustomId('trivia_skip')
+                            .setLabel(`⏭️ Saltar (${triviaSkipsLeft})`)
+                            .setStyle(ButtonStyle.Secondary)
+                    );
+                }
+                if (triviaEliminatesLeft > 0 && !isTrueFalse) {
+                    extraButtons.addComponents(
+                        new ButtonBuilder()
+                            .setCustomId('trivia_eliminate')
+                            .setLabel(`👥 Público (${triviaEliminatesLeft})`)
+                            .setStyle(ButtonStyle.Primary)
+                    );
+                }
 
-// Quitar los addComponents de hint/skip/eliminate que están arriba (líneas 9962-9987)
-const components = extraButtons.components.length > 0 ? [buttons, extraButtons] : [buttons];
-await gameMessage.edit({ embeds: [questionEmbed], components });
+                const components = extraButtons.components.length > 0 ? [buttons, extraButtons] : [buttons];
+                await gameMessage.edit({ embeds: [questionEmbed], components });
 				
-                // Timeout para esta pregunta
-                const timeoutPromise = new Promise((resolve) => {
-                    setTimeout(() => resolve('timeout'), effectiveTriviaTime);
-                });
-
-                // Esperar respuesta del usuario
                 const filter = (i) => i.user.id === userId && i.customId.startsWith('trivia_');
 
                 let answered = false;
                 while (!answered) {
-                    const collectorPromise = gameMessage.awaitMessageComponent({ 
+                    const result = await gameMessage.awaitMessageComponent({ 
                         filter, 
-                        time: effectiveTriviaTime + 5000 // +5 segundos de gracia
-                    }).catch((error) => {
-                        console.log('⚠️ Collector error:', error.message);
-                        return null;
-                    });
+                        time: effectiveTriviaTime
+                    }).catch(() => null);
 
-                    const result = await Promise.race([timeoutPromise, collectorPromise]);
-
-                    if (result === 'timeout' || !result) {
-                        // Timeout - Mostrar respuesta correcta
+                    if (!result) {
                         const timeoutEmbed = new EmbedBuilder()
                             .setTitle('⏰ ¡Se acabó el tiempo!')
                             .setDescription(
@@ -10358,7 +10315,6 @@ await gameMessage.edit({ embeds: [questionEmbed], components });
                         await gameMessage.edit({ embeds: [timeoutEmbed], components: [] });
                         await new Promise(resolve => setTimeout(resolve, 5000));
 
-                        // Guardar resultado
                         questionResults.push({
                             question: q.question.length > 100 ? q.question.substring(0, 97) + '...' : q.question,
                             userAnswer: null,
@@ -10366,19 +10322,13 @@ await gameMessage.edit({ embeds: [questionEmbed], components });
                             correct: false
                         });
 
-                        try {
-                            await gameMessage.delete();
-                        } catch (error) {
-                            console.log('No se pudo borrar el mensaje:', error.message);
-                        }
+                        try { await gameMessage.delete(); } catch (error) {}
 
                         currentQuestion++;
                         usedHintThisQuestion = false;
                         
                         if (currentQuestion < questions.length) {
-                            const loadingEmbed = new EmbedBuilder()
-                                .setDescription('⏳ Preparando siguiente pregunta...')
-                                .setColor('#9932CC');
+                            const loadingEmbed = new EmbedBuilder().setDescription('⏳ Preparando siguiente pregunta...').setColor('#9932CC');
                             gameMessage = await message.channel.send({ embeds: [loadingEmbed] });
                             await showQuestion();
                         } else {
@@ -11315,7 +11265,7 @@ await gameMessage.edit({ embeds: [questionEmbed], components });
                 .addFields(
                     {
                         name: '📝 Comandos',
-                        value: '`>triviacomp <apuesta>` — Crear partida\n`>jointrivia` — Unirse a partida activa\n`>starttrivia` — Iniciar (solo creador)\n`>canceltrivia` — Cancelar (solo creador)',
+                        value: '`>triviamulti <apuesta>` — Crear partida\n`>jointrivia` — Unirse a partida activa\n`>starttrivia` — Iniciar (solo creador)\n`>canceltrivia` — Cancelar (solo creador)',
                         inline: false
                     },
                     {
@@ -11989,9 +11939,6 @@ await gameMessage.edit({ embeds: [questionEmbed], components });
         await message.reply({ embeds: [embed] });
     }
 
-    /**
-     * Traducir pregunta de trivia con contexto mejorado
-     */
     async translateTriviaQuestion(question, answers, correctAnswer) {
         try {
             const controller = new AbortController();
@@ -12011,10 +11958,10 @@ await gameMessage.edit({ embeds: [questionEmbed], components });
     PREGUNTA: ${question}
 
     RESPUESTAS:
-    1. ${answers[0]} ${answers[0] === correctAnswer ? '(CORRECTA)' : ''}
-    2. ${answers[1]} ${answers[1] === correctAnswer ? '(CORRECTA)' : ''}
-    3. ${answers[2]} ${answers[2] === correctAnswer ? '(CORRECTA)' : ''}
-    4. ${answers[3]} ${answers[3] === correctAnswer ? '(CORRECTA)' : ''}
+    1. ${answers[0]}
+    2. ${answers[1]}
+    3. ${answers[2]}
+    4. ${answers[3]}
 
     IMPORTANTE: Responde EXACTAMENTE en este formato (sin agregar texto extra, explicaciones ni markdown):
     PREGUNTA: [traducción natural de la pregunta]
@@ -12057,10 +12004,10 @@ await gameMessage.edit({ embeds: [questionEmbed], components });
                 // Parsear la respuesta
                 const lines = content.split('\n').filter(line => line.trim());
                 const translatedQuestion = lines.find(l => l.startsWith('PREGUNTA:'))?.replace('PREGUNTA:', '').trim();
-                const r1 = lines.find(l => l.startsWith('R1:'))?.replace('R1:', '').trim();
-                const r2 = lines.find(l => l.startsWith('R2:'))?.replace('R2:', '').trim();
-                const r3 = lines.find(l => l.startsWith('R3:'))?.replace('R3:', '').trim();
-                const r4 = lines.find(l => l.startsWith('R4:'))?.replace('R4:', '').trim();
+                const r1 = lines.find(l => l.startsWith('R1:'))?.replace('R1:', '').replace(/\(CORRECTA\)/gi, '').trim();
+                const r2 = lines.find(l => l.startsWith('R2:'))?.replace('R2:', '').replace(/\(CORRECTA\)/gi, '').trim();
+                const r3 = lines.find(l => l.startsWith('R3:'))?.replace('R3:', '').replace(/\(CORRECTA\)/gi, '').trim();
+                const r4 = lines.find(l => l.startsWith('R4:'))?.replace('R4:', '').replace(/\(CORRECTA\)/gi, '').trim();
                 
                 if (translatedQuestion && r1 && r2 && r3 && r4) {
                     console.log('✅ Traducción parseada exitosamente');
@@ -12085,10 +12032,10 @@ await gameMessage.edit({ embeds: [questionEmbed], components });
                     return {
                         question: qMatch[1].trim(),
                         answers: [
-                            r1Match[1].trim(),
-                            r2Match[1].trim(),
-                            r3Match[1].trim(),
-                            r4Match[1].trim()
+                            r1Match[1].replace(/\(CORRECTA\)/gi, '').trim(),
+                            r2Match[1].replace(/\(CORRECTA\)/gi, '').trim(),
+                            r3Match[1].replace(/\(CORRECTA\)/gi, '').trim(),
+                            r4Match[1].replace(/\(CORRECTA\)/gi, '').trim()
                         ]
                     };
                 }
@@ -12256,15 +12203,12 @@ await gameMessage.edit({ embeds: [questionEmbed], components });
     }
 
     async processCommand(message) {
-        // Verificar ingresos pasivos pendientes
         await this.economy.checkPendingPassiveIncome(message.author.id);
         await this.economy.shop.checkAndNotifyExpiredItems(message.author.id, message);
 
         const args = message.content.toLowerCase().split(' ');
         const command = args[0];
         await this.economy.missions.updateMissionProgress(message.author.id, 'commands_used');
-/*const commandName = command.replace('>', '');
-        await this.economy.missions.updateMissionProgress(message.author.id, 'unique_commands_used', commandName);*/
         const YOUR_ID = '488110147265232898';
         const isOwner = message.author.id === YOUR_ID;
         const isAdmin = message.member?.permissions.has('Administrator');
@@ -12416,7 +12360,6 @@ await gameMessage.edit({ embeds: [questionEmbed], components });
                     const player = handGame.players.find(p => p.id === message.author.id);
                     if (handGame && handGame.phase === 'playing') {
                         await this.sendHandAsEphemeral(message, player);
-                        // Reaccionar al mensaje para confirmar (sin texto en canal)
                         await message.react('✅');
                     } else {
                         await message.reply('❌ No estás en ninguna partida de UNO activa');
@@ -12426,7 +12369,7 @@ await gameMessage.edit({ embeds: [questionEmbed], components });
                     const startGame = this.activeGames.get(`uno_${message.channel.id}`);
                     if (startGame && startGame.phase === 'waiting' && startGame.creator_id === message.author.id) {
                         await this.startUnoGame(startGame, message);
-                    } else if (game.creator_id !== message.author.id) {
+                    } else if (startGame && startGame.creator_id !== message.author.id) {
                         await message.reply('❌ Solo el creador puede iniciar la partida');
                     } else {
                         await message.reply('❌ No estás en ninguna partida de UNO activa');
@@ -12511,15 +12454,12 @@ await gameMessage.edit({ embeds: [questionEmbed], components });
                     }
                     
                     try {
-                        // Obtener el pozo actual
                         const currentPot = await this.economy.database.getCurrentWeeklyPot();
                         
-                        // Contar pozos completados
                         const [completedPots] = await this.economy.database.pool.execute(`
                             SELECT COUNT(*) as count FROM weekly_pot WHERE status = 'completed'
                         `);
                         
-                        // Contar contribuciones huérfanas (sin pozo activo)
                         const [orphanContribs] = await this.economy.database.pool.execute(`
                             SELECT COUNT(*) as count FROM pot_contributions pc
                             LEFT JOIN weekly_pot wp ON pc.week_start = wp.week_start
@@ -12557,7 +12497,6 @@ await gameMessage.edit({ embeds: [questionEmbed], components });
                             );
                         }
                         
-                        // ✅ AGREGAR INFO DE BASURA EN DB
                         embed.addFields(
                             { name: '🗑️ Pozos completados en DB', value: `${completedPots[0].count}`, inline: true },
                             { name: '👻 Contribuciones huérfanas', value: `${orphanContribs[0].count}`, inline: true }
@@ -12598,14 +12537,12 @@ await gameMessage.edit({ embeds: [questionEmbed], components });
                     try {
                         await message.reply('🔍 Buscando pozos completados antiguos...');
                         
-                        // Eliminar contribuciones de pozos completados
                         const [contribResult] = await this.economy.database.pool.execute(`
                             DELETE pc FROM pot_contributions pc
                             INNER JOIN weekly_pot wp ON pc.week_start = wp.week_start
                             WHERE wp.status = 'completed'
                         `);
                         
-                        // Eliminar pozos completados
                         const [potResult] = await this.economy.database.pool.execute(`
                             DELETE FROM weekly_pot WHERE status = 'completed'
                         `);
@@ -12646,7 +12583,6 @@ await gameMessage.edit({ embeds: [questionEmbed], components });
                     try {
                         await message.reply('🔍 Buscando pozos antiguos sin distribuir...');
                         
-                        // Obtener el pozo actual
                         const currentPot = await this.economy.database.getCurrentWeeklyPot();
                         
                         if (!currentPot) {
@@ -12654,8 +12590,6 @@ await gameMessage.edit({ embeds: [questionEmbed], components });
                             return;
                         }
                         
-                        // Verificar si hay pozos antiguos activos
-                        // (Necesitarás agregar este método en database.js - te lo doy abajo)
                         const oldPots = await this.economy.database.getOldActivePots(currentPot.week_start);
                         
                         if (oldPots.length === 0) {
@@ -12674,7 +12608,6 @@ await gameMessage.edit({ embeds: [questionEmbed], components });
                                 await this.distributePot(oldPot);
                                 distributed++;
                                 
-                                // Esperar 1 segundo entre distribuciones
                                 await new Promise(resolve => setTimeout(resolve, 1000));
                                 
                             } catch (error) {
@@ -12750,7 +12683,6 @@ await gameMessage.edit({ embeds: [questionEmbed], components });
                     await this.showGamesList(message);
                     break;
                 default:
-                    // No es un comando de minijuegos
                     break;
             }
         } catch (error) {
@@ -12759,28 +12691,27 @@ await gameMessage.edit({ embeds: [questionEmbed], components });
         }
     }
 
-    // Mostrar lista de juegos disponibles
     async showGamesList(message) {
         const embed = new EmbedBuilder()
             .setTitle('🎮 Minijuegos — π-b Bot')
             .setDescription('> Usa los comandos para jugar y ganar **π-b Coins**.\n> Cooldowns reducibles con items VIP y eventos.')
             .setColor('#9932CC')
             .addFields(
-                { name: '🪙 Coinflip', value: '`>coinflip <cara/cruz> <apuesta>`\n💰 100–5,000 π-b$ · 🏆 x1.85 · ⏱️ 30s', inline: false },
-                { name: '🎲 Dados', value: '`>dice <1-6/alto/bajo> <apuesta>`\n💰 100–5,000 π-b$ · 🏆 x1.85 (alto/bajo) · x4.0 (exacto) · ⏱️ 45s', inline: false },
-                { name: '🎰 Lotería', value: '`>lottery <número 1-100> <apuesta>`\n💰 500–3,000 π-b$ · 🏆 x75 si aciertas · ⏱️ 30 min', inline: false },
-                { name: '♠️ Blackjack', value: '`>blackjack <apuesta>`\n💰 100–10,000 π-b$ · 🏆 x1.9 · x2.3 con BJ natural · ⏱️ 30s', inline: false },
-                { name: '🎡 Ruleta', value: '`>roulette <tipo> <apuesta>`\n💰 100–15,000 π-b$ · 🏆 x1.85 (color) hasta x32 (número) · ⏱️ 20s', inline: false },
+                { name: '🪙 Coinflip', value: '`>coinflip <cara/cruz> <apuesta>`\n💰 100–5,000 π-b$ · 🏆 x1.90 · ⏱️ 30s', inline: false },
+                { name: '🎲 Dados', value: '`>dice <1-6/alto/bajo> <apuesta>`\n💰 100–5,000 π-b$ · 🏆 x1.90 (alto/bajo) · x4.5 (exacto) · ⏱️ 45s', inline: false },
+                { name: '🎰 Lotería', value: '`>lottery <número 1-100> <apuesta>`\n💰 500–3,000 π-b$ · 🏆 x85 si aciertas · ⏱️ 30 min', inline: false },
+                { name: '♠️ Blackjack', value: '`>blackjack <apuesta>`\n💰 100–10,000 π-b$ · 🏆 x2.0 · x2.5 con BJ natural · ⏱️ 30s', inline: false },
+                { name: '🎡 Ruleta', value: '`>roulette <tipo> <apuesta>`\n💰 100–15,000 π-b$ · 🏆 x1.90 (color) hasta x34 (número) · ⏱️ 20s', inline: false },
                 { name: '🎰 Tragaperras', value: '`>slots <apuesta>`\n💰 100–8,000 π-b$ · 🏆 x2.5 hasta x50 💎 · ⏱️ 1 min', inline: false },
-                { name: '🥤 Máquina Expendedora', value: '`>vending`\n💰 Costo: 10 π-b$ · 🏆 40 π-b$ (55% de probabilidad) · ⏱️ 15 min', inline: false },
+                { name: '🥤 Máquina Expendedora', value: '`>vending`\n💰 Costo: 10 π-b$ · 🏆 35 π-b$ (55% de probabilidad) · ⏱️ 15 min', inline: false },
                 { name: '🔫 Ruleta Rusa', value: '`>russian <apuesta>` · `>startrussian` · `>shoot`\n💰 300–5,000 π-b$ · 👥 2-6 jugadores · 🏆 Ganador lleva 80% del pot', inline: false },
-                { name: '🐎 Carrera de Caballos', value: '`>horses bot <apuesta>` — vs Bot\n`>horses multi <apuesta>` · `>joinrace` · `>startrace`\n💰 (Bot: 200–5,000 π-b$) - (Multiplayer: 100–10,000 π-b$) · 🥇x3.0 🥈x1.8 🥉x1.2 · ⚡ Puedes doblar hasta el 75% de la carrera', inline: false },
+                { name: '🐎 Carrera de Caballos', value: '`>horses bot <apuesta>` — vs Bot\n`>horses multi <apuesta>` · `>joinrace` · `>startrace`\n💰 (Bot: 200–5,000 π-b$) - (Multiplayer: 100–10,000 π-b$) · 🥇x2.5 🥈x1.5 🥉x1.0 · ⚡ Puedes doblar hasta el 75% de la carrera', inline: false },
                 { name: '🎴 UNO Multiplayer', value: '`>ujoin <apuesta>` · `>ustart` · `>uplay <color> <número>`\n`>upickup` robar · `>uhand` ver mano · `>sayuno` ¡UNO!\n💰 150–10,000 π-b$ · 👥 2-8 jugadores · 🏆 Ganador lleva 90% del pot', inline: false },
                 { name: '🕳️ Pozo Semanal', value: '`>potcontribute money/item <valor>` · `>holethings`\n💰 100–50,000 π-b$ · Máx 3 items/usuario · 🎁 Distribución aleatoria semanal', inline: false },
                 { name: '─── 🧠 Trivia ───', value: '\u200b', inline: false },
                 { name: '📖 Trivia Clásica', value: '`>trivia [easy/medium/hard] [modo] [categoría]`\n🎁 Gratis · 5 preguntas · 🏆 hasta 1,000 π-b$ + 80 XP · ⏱️ 1 min', inline: false },
                 { name: '💀 Trivia Survival', value: '`>triviasurvival [easy/medium/hard] [categoría]`\n🎁 Gratis · 🏆 100 π-b$ + 10 XP por pregunta · ⏱️ 5 min', inline: false },
-                { name: '🏆 Trivia Competitiva', value: '`>triviacomp [dificultad] [apuesta]` · `>jointrivia` · `>starttrivia`\n💰 0–5,000 π-b$ · 👥 2-6 jugadores · 🏆 Ganador lleva 85% del pot · ⏱️ 3 min', inline: false },
+                { name: '🏆 Trivia Competitiva', value: '`>triviamulti [dificultad] [apuesta]` · `>jointrivia` · `>starttrivia`\n💰 0–5,000 π-b$ · 👥 2-6 jugadores · 🏆 Ganador lleva 85% del pot · ⏱️ 3 min', inline: false },
                 { name: '📊 Rankings', value: '`>trivialb` · `>trivialb perfect/accuracy/played` · `>trivialb <tipo> global`', inline: false },
                 { name: '🔮 Próximamente', value: '• Poker  • Memory Game  • Wordle Musical  • Cine Quiz  • Anagramas', inline: false },
             )
@@ -12790,7 +12721,6 @@ await gameMessage.edit({ embeds: [questionEmbed], components });
         await message.reply({ embeds: [embed] });
     }
 
-    // Método para conectar eventos
     connectEventsSystem(eventsSystem) {
         this.events = eventsSystem;
         console.log('🎮 Sistema de eventos conectado a minijuegos');

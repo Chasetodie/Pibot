@@ -5,9 +5,11 @@ class MaintenanceSystem {
         this.database = database;
         this.cache = { maintenance: null, changelog: null, lastCheck: 0 };
         this.CACHE_TTL = 30000;
-        // Barrera en memoria para evitar doble envío en la misma sesión
         this.notifiedMaintenance = new Set();
         this.notifiedChangelog = new Set();
+
+        this.testMode = false;
+        this.testUserId = null;
     }
 
     async getStatus() {
@@ -32,10 +34,8 @@ class MaintenanceSystem {
         const { maintenance, changelog } = await this.getStatus();
         const now = Date.now();
 
-        // — MANTENIMIENTO —
         if (maintenance) {
             if (now >= maintenance.scheduled_at) {
-                // Ya pasó la hora, desactivar
                 await this.database.disableMaintenance(maintenance.id);
                 this.invalidateCache();
             } else {
@@ -43,11 +43,9 @@ class MaintenanceSystem {
                 if (!this.notifiedMaintenance.has(cacheKey)) {
                     const userData = await this.database.getUserMaintenanceData(userId);
 
-                    // seeMaintenance: true significa que YA vio este ID
                     const alreadySeen = userData.idMaintenance === maintenance.id && userData.seeMaintenance === true;
 
                     if (!alreadySeen) {
-                        // Marcar ANTES de enviar para evitar race conditions
                         userData.idMaintenance = maintenance.id;
                         userData.seeMaintenance = true;
                         await this.database.updateUserMaintenanceData(userId, userData);
@@ -72,24 +70,41 @@ class MaintenanceSystem {
             }
         }
 
-        // — CHANGELOG —
         if (changelog) {
             const cacheKey = `${userId}_${changelog.id}`;
             if (!this.notifiedChangelog.has(cacheKey)) {
                 const userData = await this.database.getUserMaintenanceData(userId);
 
+                if (userData.idChangelog === undefined) {
+                    userData.idChangelog = changelog.id;
+                    userData.seeChangelog = true;
+                    await this.database.updateUserMaintenanceData(userId, userData);
+                    this.notifiedChangelog.add(cacheKey);
+                    return;
+                }
+
                 const alreadySeen = userData.idChangelog === changelog.id && userData.seeChangelog === true;
 
                 if (!alreadySeen) {
-                    // Marcar ANTES de enviar
                     userData.idChangelog = changelog.id;
                     userData.seeChangelog = true;
                     await this.database.updateUserMaintenanceData(userId, userData);
                     this.notifiedChangelog.add(cacheKey);
 
-                    const changes = typeof changelog.changelog === 'string'
-                        ? JSON.parse(changelog.changelog)
-                        : changelog.changelog;
+                    let changes;
+                    try {
+                        changes = typeof changelog.changelog === 'string'
+                            ? JSON.parse(changelog.changelog)
+                            : changelog.changelog;
+                    } catch (error) {
+                        console.error('❌ Changelog corrupto:', error.message);
+                        return channel.send({
+                            embeds: [new EmbedBuilder()
+                                .setTitle('❌ Error')
+                                .setDescription('El changelog está corrupto. Contacta al desarrollador.')
+                                .setColor('#FF0000')]
+                        }).catch(() => {});
+                    }
 
                     const embed = new EmbedBuilder()
                         .setTitle('✨ ¡Pibot fue actualizado!')
@@ -127,9 +142,28 @@ class MaintenanceSystem {
             });
         }
 
-        const changes = typeof changelog.changelog === 'string'
-            ? JSON.parse(changelog.changelog)
-            : changelog.changelog;
+        const userId = message.author.id;
+        const userData = await this.database.getUserMaintenanceData(userId);
+        if (userData.idChangelog !== changelog.id) {
+            userData.idChangelog = changelog.id;
+            userData.seeChangelog = true;
+            await this.database.updateUserMaintenanceData(userId, userData);
+        }
+
+        let changes;
+        try {
+            changes = typeof changelog.changelog === 'string'
+                ? JSON.parse(changelog.changelog)
+                : changelog.changelog;
+        } catch (error) {
+            console.error('❌ Changelog corrupto:', error.message);
+            return message.reply({
+                embeds: [new EmbedBuilder()
+                    .setTitle('❌ Error')
+                    .setDescription('El changelog está corrupto. Contacta al desarrollador.')
+                    .setColor('#FF0000')]
+            });
+        }
 
         const embed = new EmbedBuilder()
             .setTitle('✨ Último Changelog de Pibot')
@@ -145,7 +179,7 @@ class MaintenanceSystem {
             });
         }
 
-        embed.setFooter({ text: '¿Encontraste un bug? Contáctate con chasetodie10' });
+        embed.setFooter({ text: '¿Encontraste un bug? Contacta a chasetodie10' });
         return message.reply({ embeds: [embed] });
     }
 }

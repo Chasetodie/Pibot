@@ -1,5 +1,5 @@
 shop.js {
-    >shop, >tienda (parametros: categoria:String = opc, pagina:Integer = opc)
+    >shop, >tienda (parametros: categoria:String = opc, pagina:Integer = opc) si ingreso la pagina, la categoria se queda en nada xd
     >buy, >comprar (parametros: id_item:String = oblig, cantidad:Integer = opc)
     >bag, >inventario, >inv (parametros: usuario:String = opc)
     >useitem, >usar, >use (parametros: id_item:String = oblig)
@@ -16,40 +16,39 @@ shop.js {
 }
 
 nsfw.js {
-    >r34 (parametros: tag:String = opc, cantidad:Integer = opc)
-    >nsfw (parametros: tag:String = opc, cantidad:Integer = opc)
-    >videos (parametros: tag:String = opc, cantidad:Integer = opc)
-    >fuck (parametros: user:String = oblig)
-    >fuckdetect, >fd (parametros: user:String = oblig)
++    >nsfw (parametros: tag:String = opc, cantidad:Integer = opc)
++    >videos (parametros: tag:String = opc, cantidad:Integer = opc)
++    >fuck (parametros: user:String = oblig)
++    >fuckdetect, >fd (parametros: user:String = oblig)
 }
 
 musicSystem.js {
-    >m play, >m p (parametros: url-cancion:String = oblig)
-    >m stop, >m leave, >m disconnect (sin parametros)
-    >m skip, >m s (parametros: cantidadSaltos:Integer = opc)
-    >m pause (sin parametros)
-    >m resume, >m unpause (sin parametros)
-    >m queue, >m q (parametros: pagina:Integer = opc)
-    >m nowplaying, >m np (sin parametros)
-    >m ytsearch, >m ys (parametros: nombreCancion:String = oblig)
-    >m spsearch, >m ss (parametros: nombreCancion:String = oblig)
-    >m lyrics, >m letra (parametros: cancion:String = oblig)
-    >m fix, >m restart (sin parametros)
-    >m seek, >m adelantar, >m forward
-    >m volume, >m vol (parametros: volumen:Integer = oblig)
-    >m loop, >m repeat (parametros: tipo:String = opc)
-    >m shuffle (sin parametros)
-    >m clear (sin parametros)
++    >m play, >m p (parametros: url-cancion:String = oblig)
++    >m stop, >m leave, >m disconnect (sin parametros)
++    >m skip, >m s (parametros: cantidadSaltos:Integer = opc)
++    >m pause (sin parametros)
++    >m resume, >m unpause (sin parametros)
++    >m queue, >m q (parametros: pagina:Integer = opc)
++    >m nowplaying, >m np (sin parametros)
++    >m ytsearch, >m ys (parametros: nombreCancion:String = oblig)
++    >m spsearch, >m ss (parametros: nombreCancion:String = oblig)
++    >m lyrics, >m letra (parametros: cancion:String = oblig)
++    >m fix, >m restart (sin parametros)
++    >m seek, >m adelantar, >m forward
++    >m volume, >m vol (parametros: volumen:Integer = oblig)
++    >m loop, >m repeat (parametros: tipo:String = opc) LISTA
++    >m shuffle (sin parametros)
++    >m clear (sin parametros)
 }
 
 missions.js {
-    >missions, >misiones, >dailymissions (parametros: usuario:String = opc)
-    >blockmissions, >bloquearnotifs (sin parametros)
-    >unblockmissions, >desbloquearnotifs (sin parametros)
++    >missions, >misiones, >dailymissions (parametros: usuario:String = opc)
++    >blockmissions, >bloquearnotifs (sin parametros)
++    >unblockmissions, >desbloquearnotifs (sin parametros)
 }
 
 imageGen.js {
-    >imagine, >img (parametros: prompt:String = oblig)
++    >imagine, >img (parametros: prompt:String = oblig)
 }
 
 guild-levels.js {
@@ -58,19 +57,18 @@ guild-levels.js {
 }
 
 chatBot.js {
-    >chathelp, >ayudachat (sin parametros)
-    >chat (parametros: prompt:String = oblig)
-    >clearchat (sin parametros)
-    >orstatus, >aistatus (sin parametros)
-    >chatstats (sin parametros)
++    >chathelp, >ayudachat (sin parametros)
++    >chat (parametros: prompt:String = oblig)
++    >clearchat (sin parametros)
++    >orstatus, >aistatus (sin parametros)
++    >chatstats (sin parametros)
 }
 
 achievements.js {
-    >achievements, >logros, >ach (parametros: user:String = opc)
-    >allachievements, >alllogros, >todoslogros (sin parametros)
-    >progress, >progreso, >progressachievements (parametros: rareza:String = opc) //Tocaria agregar ese parametro xd
-    >detectachievements, >detectlogros, >detect (sin parametros)
-    >detectall (sin parametros)
++    >achievements, >logros, >ach (parametros: user:String = opc)
++    >allachievements, >alllogros, >todoslogros (sin parametros)
++    >progress, >progreso, >progressachievements (parametros: rareza:String = opc)
++    >detectachievements, >detectlogros, >detect (sin parametros)
 }
 
 minigames.js {
@@ -125,7 +123,7 @@ all-commands.js {
     >dashboard (sin parametros)
     >balance, >bal, >money (parametros: user:String = opc)
     >daily (sin parametros)
-    >level, >lvl, >rank (parametros: user:String = opc)
++    >level, >lvl, >rank (parametros: user:String = opc)
     >pay, >transfer (parametros: user:String = oblig, dinero:Integer = oblig)
     >top, >leaderboard, >lb (parametros: categoria:String = opc, tipoRanking:String = opc)
     >work, >job (parametros: trabajo:String = opc) si no se escribe nada, muestra los trabajos
@@ -157,39 +155,28 @@ all-commands.js {
     >betstats, >estadisticasapuestas (parametros: user:String = opc)
     >events (sin parametros)
     >createevent (parametros: tipo:String = oblig, duracionMinutos:Int = opc)
-    >processrefunds (sin paramaetros)
     >changelog, >cambios, >updates (sin parametros)
-//    >eventstats
-    >trade
-    >tradeadd
-    >trademoney
-    >tradeaccept
-    >tradecancel
-    >tradeshow, >tradever
-    >auction, >auctions
-    >bid
-    >auctionshow, >showsubastas
-    >recipes
-    >craft
-    >queue, >craftqueue
-    >cancelcraft
-    >giveitem
-    >shopstats
-    >clear
-    >hola
-    >maintenanceteston
-    >maintenancetestoff
-    >resetmaintenancetest
-    >setmaintenance
-    >endmaintenance
-    >cancelmaintenance
+    >trade (parametros: user:String = oblig)
+    >tradeadd (parametros: id:String = oblig, cantidad:Integer = oblig)
+    >trademoney (parametros: cantidad:Integer = oblig)
+    >tradeaccept (sin parametros)
+    >tradecancel (sin parametros)
+    >tradeshow, >tradever (sin parametros)
+    >auction, >auctions (parametros: id:String = oblig, duracionMinutos:Integer = oblig)
+    >bid (parametros: id:String = oblig, cantidad:Integer = oblig)
+    >auctionshow, >showsubastas (sin parametros)
+    >recipes (sin parametros)
+    >craft (parametros: id:String = oblig)
+    >queue, >craftqueue (sin parametros)
+    >cancelcraft (parametros: numeroCrafteo:Integer = oblig)
+    >giveitem (parametros: user:String = oblig, idItem:String = oblig, cant:Integer = opc)
+    >clear (parametros: cant:Integer = oblig)
+    >hola (sin parametros)
+    >tts (parametros: texto:String = oblig)
 }
 
 
 
-    const token = localStorage.getItem('pibot_token');
-    if (!token) {
-        EL TOKEN EXPIRA, PERO AUN ME SIGUE SALIENDO EN LA PARTE DEL NAVBAR COMO SI SIGUIERA ABIERTA
         ADEMAS NO PODEMOS HACER QUE CUANDO EL ADMIN VUELVA A LA PAGINA SE REINICIE SU TIEMPO DE LOGIN?
         OSEA QUE SI ES EL ULTIMO DIA, PERO VUELVE A ENTRAR, SE LE HAGAN 3 OTRA VEZ? HAGAMOS DE UNA VEZ
         LA OPCION ESA DE ACTUALIZACION EN TIEMPO REAL, Y ASI LO PONEMOS EN 7 DIAS, PORFA

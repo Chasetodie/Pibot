@@ -9,14 +9,13 @@ class EventsSystem {
         this.db = null;
         this.initializeDatabase();
         
-        this.activeEvents = new Map(); // Map<guildId, {eventId: event}>
+        this.activeEvents = new Map();
         this.guild = null;
 
         this.eventCache = new Map();
         this.MAX_CACHE_SIZE = 500;
         this.cacheTimeout = 10 * 60 * 1000;
         
-        // Definir tipos de eventos disponibles
         this.eventTypes = {
             'double_xp': {
                 name: '⚡ Doble XP',
@@ -24,8 +23,8 @@ class EventsSystem {
                 emoji: '⚡',
                 color: '#FFD700',
                 multiplier: { xp: 1.25 },
-                minDuration: 1800000, // 30 minutos
-                maxDuration: 7200000  // 2 horas
+                minDuration: 1800000,
+                maxDuration: 7200000
             },
             'money_rain': {
                 name: '💰 Lluvia de Dinero',
@@ -33,8 +32,8 @@ class EventsSystem {
                 emoji: '💰',
                 color: '#00FF00',
                 multiplier: { work: 1.2, daily: 1.3, rewards: 1.2 },
-                minDuration: 3600000, // 1 hora
-                maxDuration: 14400000 // 4 horas
+                minDuration: 3600000,
+                maxDuration: 14400000
             },
             'lucky_hour': {
                 name: '🍀 Hora de la Suerte',
@@ -42,8 +41,8 @@ class EventsSystem {
                 emoji: '🍀',
                 color: '#32CD32',
                 multiplier: { luck: 1.3 },
-                minDuration: 300000, // 30 minutos
-                maxDuration: 600000  // 10 minutos
+                minDuration: 300000,
+                maxDuration: 600000
             },
             'fever_time': {
                 name: '🔥 Tiempo Fiebre',
@@ -58,8 +57,8 @@ class EventsSystem {
                     minigames: 1.25,
                     rewards: 1.3
                 },
-                minDuration: 600000, // 10 minutos
-                maxDuration: 1200000 // 20 minutos
+                minDuration: 600000,
+                maxDuration: 1200000
             },
             'charity_event': {
                 name: '❤️ Evento de Caridad',
@@ -69,8 +68,8 @@ class EventsSystem {
                 multiplier: {
                     transfer_bonus: 0.45
                 },
-                minDuration: 600000,  // 10 minutos
-                maxDuration: 900000, // 15 minutos
+                minDuration: 600000,
+                maxDuration: 900000,
                 special: true
             },
             'treasure_hunt': {
@@ -78,8 +77,8 @@ class EventsSystem {
                 description: 'Encuentra tesoros ocultos en tus actividades',
                 emoji: '🗺️',
                 color: '#DAA520',
-                minDuration: 3600000,  // 1 hora
-                maxDuration: 10800000, // 3 horas
+                minDuration: 3600000,
+                maxDuration: 10800000,
                 special: true
             },
             'market_crash': {
@@ -94,8 +93,8 @@ class EventsSystem {
                     minigames: 1.2,
                     rewards: 0.8
                 },
-                minDuration: 3600000, // 1 hora
-                maxDuration: 7200000, // 2 hora
+                minDuration: 3600000,
+                maxDuration: 7200000,
                 negative: true
             },
             'week_end': {
@@ -106,8 +105,8 @@ class EventsSystem {
                 multiplier: { 
                     items: 0.1,
                 },
-                minDuration: 172800000, // 48 horas
-                maxDuration: 172800000 // 48 horas
+                minDuration: 172800000,
+                maxDuration: 172800000
             },
             'server_anniversary': {
                 name: '🎉 Aniversario del Servidor',
@@ -122,25 +121,23 @@ class EventsSystem {
                     minigames: 1.5,
                     rewards: 1.5
                 },
-                minDuration: 3600000, // 1 hora
-                maxDuration: 14400000, // 4 horas
+                minDuration: 3600000,
+                maxDuration: 14400000,
                 special: true,
                 rare: true
             }
         };
         
         this.eventProbabilities = {
-            'double_xp': 0.08,      // era 0.15 (15%)
-            'money_rain': 0.06,     // era 0.12 (12%)
-            'lucky_hour': 0.005,    // era 0.01 (1%)
-            'fever_time': 0.05,     // era 0.11 (11%)
-            'charity_event': 0.01,  // era 0.02 (2%)
-            'treasure_hunt': 0.03,  // era 0.07 (7%)
-            'market_crash': 0.04    // era 0.10 (10%)
-            //'server_anniversary': 0.01 // 1% (muy raro)
+            'double_xp': 0.08,      
+            'money_rain': 0.06,     
+            'lucky_hour': 0.005,    
+            'fever_time': 0.05,     
+            'charity_event': 0.01,  
+            'treasure_hunt': 0.03,  
+            'market_crash': 0.04    
         };
         
-        // Iniciar sistema después del delay
         setTimeout(() => {
             this.startEventLoop();
             this.cleanExpiredEvents();
@@ -154,9 +151,7 @@ class EventsSystem {
         return this.activeEvents.get(guildId);
     }
 
-    // ✅ AGREGAR: Inicializar base de datos
     async initializeDatabase() {
-        // Esperar a que economy esté listo
             setTimeout(async () => {
                 if (this.economy && this.economy.database) {
                     this.db = this.economy.database;
@@ -168,68 +163,56 @@ class EventsSystem {
             }, 5000);
     }
 
-    // En EventsSystem, agregar esta función
     getEcuadorTime() {
         const now = new Date();
         return new Date(now.toLocaleString("en-US", {timeZone: "America/Guayaquil"}));
     }
 
-    // Función para verificar si es viernes 00:00
     checkWeekendStart() {
         const ecuadorTime = this.getEcuadorTime();
-        const dayOfWeek = ecuadorTime.getDay(); // 0=Domingo, 1=Lunes, ..., 5=Viernes, 6=Sábado
+        const dayOfWeek = ecuadorTime.getDay();
         const hour = ecuadorTime.getHours();
         const minute = ecuadorTime.getMinutes();
         
-        // Viernes (5) a las 00:00-00:59
         return dayOfWeek === 5 && hour === 0 && minute < 30;
     }
 
-    // Función para verificar si es domingo 23:30 (para terminar el evento)
     checkWeekendEnd() {
         const ecuadorTime = this.getEcuadorTime();
         const dayOfWeek = ecuadorTime.getDay();
         const hour = ecuadorTime.getHours();
         const minute = ecuadorTime.getMinutes();
         
-        // Domingo (0) a las 23:30-23:59 (para terminar antes de lunes)
         return dayOfWeek === 0 && hour === 23 && minute >= 30;
     }
 
-    // Modificar startEventLoop para incluir verificación de fin de semana
-    startEventLoop() {
-        // Verificar fin de semana cada 30 minutos
-        setInterval(async () => {
-            await this.checkWeekendEvents();
-        }, 30 * 60 * 1000); // 30 minutos
-        
-        // Resto del código existente...
-    }
-
-    // Nueva función para manejar eventos de fin de semana
     async checkWeekendEvents() {
-        const hasWeekendEvent = this.hasActiveEvent('week_end');
+        const targetGuild = this.guild || (this.client ? this.client.guilds.cache.first() : null);
+        if (!targetGuild) return;
+
+        const hasWeekendEvent = this.hasActiveEvent('week_end', targetGuild.id);
         
         if (this.checkWeekendStart() && !hasWeekendEvent) {
-            // Iniciar evento de fin de semana
-            const weekendDuration = 2 * 24 * 60 * 60 * 1000; // 48 horas exactas
+            const weekendDuration = 2 * 24 * 60 * 60 * 1000; 
             await this.createEvent('week_end', weekendDuration);
-            console.log('🎉 Evento de fin de semana iniciado automáticamente');
+            console.log(`🎉 Evento de fin de semana iniciado (Global)`);
         }
         
         if (this.checkWeekendEnd() && hasWeekendEvent) {
-            // Terminar evento de fin de semana manualmente
             const weekendEvent = hasWeekendEvent;
-            weekendEvent.endTime = Date.now(); // Forzar fin inmediato
+            weekendEvent.endTime = Date.now();
+            
+            await this.saveEvent(weekendEvent.id, weekendEvent);
             await this.deleteEvent(weekendEvent.id);
-            delete this.activeEvents[weekendEvent.id];
-            const guild = this.client?.guilds.cache.get(weekendEvent.guild_id) || this.guild;
-            await this.announceEvent(weekendEvent, 'expired', guild);
-            console.log('🏁 Evento de fin de semana terminado automáticamente');
+            
+            const guildEvents = this.getGuildEvents(targetGuild.id);
+            delete guildEvents[weekendEvent.id];
+            
+            await this.announceEvent(weekendEvent, 'expired', targetGuild);
+            console.log(`🏁 Evento de fin de semana terminado (Global)`);
         }
     }
     
-    // QUITAR todo el bloque de Supabase y REEMPLAZAR por:
     async loadEvents() {
         if (!this.db) {
             console.log('⚠️ Base de datos no disponible para cargar eventos');
@@ -242,7 +225,7 @@ class EventsSystem {
                 [new Date().toISOString()]
             );
             
-            this.activeEvents = new Map(); // ← Mantener como Map
+            this.activeEvents = new Map();
 
             if (rows && rows.length > 0) {
                 rows.forEach(event => {
@@ -269,7 +252,6 @@ class EventsSystem {
         }
     }
 
-    // ✅ REEMPLAZAR: saveEvent() para SQLite
     async saveEvent(eventId, eventData) {
         if (!this.db) {
             console.log('⚠️ Base de datos no disponible, evento no guardado:', eventId);
@@ -277,14 +259,12 @@ class EventsSystem {
         }
         
         try {
-            // PRIMERO: Verificar si existe
             const [existing] = await this.db.pool.execute(
                 'SELECT id FROM server_events WHERE id = ?',
                 [eventId]
             );
             
             if (existing.length > 0) {
-                // ACTUALIZAR evento existente (incluyendo estadísticas)
                 await this.db.pool.execute(`
                     UPDATE server_events SET 
                         participant_count = ?, 
@@ -296,7 +276,6 @@ class EventsSystem {
                     eventId
                 ]);
             } else {
-                // CREAR nuevo evento
                 const mappedData = {
                     id: eventData.id,
                     type: eventData.type,
@@ -314,7 +293,7 @@ class EventsSystem {
                     triggered_by: eventData.triggeredBy || null,
                     participant_count: eventData.participantCount || 0,
                     stats: eventData.stats || {},
-                    guild_id: this.guild?.id
+                    guild_id: eventData.guildId || this.guild?.id
                 };
                 
                 await this.db.createServerEvent(mappedData);
@@ -326,7 +305,6 @@ class EventsSystem {
         }
     }
     
-    // ✅ REEMPLAZAR: deleteEvent() para SQLite
     async deleteEvent(eventId) {
         if (!this.db) {
             console.log('⚠️ Base de datos no disponible, evento no eliminado:', eventId);
@@ -344,23 +322,36 @@ class EventsSystem {
         }
     }
 
-    // Iniciar el loop de eventos automáticos
     startEventLoop() {
-        // Verificar cada hora si crear nuevos eventos
+        setInterval(async () => {
+            await this.checkWeekendEvents();
+        }, 30 * 60 * 1000); 
+        
         setInterval(async () => {
             await this.tryCreateRandomEvent();
             console.log('🔄 Verificando eventos automáticos...');
-        }, 2 * 60 * 60 * 1000); // 2 horas
+        }, 2 * 60 * 60 * 1000); 
 
-        // Limpiar eventos expirados cada 1 minutos
         setInterval(async () => {
             await this.cleanExpiredEvents();
-        }, 60000); // 1 minuto
+        }, 60000); 
+
+        setInterval(async () => {
+            let savedCount = 0;
+            for (const [guildId, guildEvents] of this.activeEvents.entries()) {
+                for (const event of Object.values(guildEvents)) {
+                    await this.saveEvent(event.id, event);
+                    savedCount++;
+                }
+            }
+            if (savedCount > 0) {
+                console.log(`💾 Estadísticas de ${savedCount} eventos guardadas en DB (Batch)`);
+            }
+        }, 15 * 60 * 1000); 
 
         console.log('🔄 Sistema de eventos iniciado');
     }
 
-    // ✅ OPTIMIZACIÓN: Caché para reducir consultas
     getCachedEventData(key) {
         const cached = this.eventCache.get(key);
         const now = Date.now();
@@ -382,14 +373,12 @@ class EventsSystem {
         setInterval(() => {
             const now = Date.now();
             
-            // Limpiar por tiempo
             for (const [key, cached] of this.eventCache) {
                 if (now - cached.timestamp > this.cacheTimeout) {
                     this.eventCache.delete(key);
                 }
             }
             
-            // Limpiar por tamaño si excede el límite
             if (this.eventCache.size > this.MAX_CACHE_SIZE) {
                 const entries = Array.from(this.eventCache.entries());
                 const toDelete = entries
@@ -405,76 +394,45 @@ class EventsSystem {
         }, 10 * 60 * 1000);
     }
     
-    // Intentar crear un evento aleatorio
     async tryCreateRandomEvent() {
-        // Si el bot está en varios servidores, iterar por cada uno
-        const guildsToCheck = this.client?.guilds?.cache?.values 
-            ? [...this.client.guilds.cache.values()]
-            : (this.guild ? [this.guild] : []);
+        const targetGuild = this.guild || (this.client ? this.client.guilds.cache.first() : null);
+        if (!targetGuild) return;
 
-        for (const guild of guildsToCheck) {
-            // Verificar que eventos estén habilitados en este servidor
-            if (this.guildConfig) {
-                const enabled = await this.guildConfig.areEventsEnabled(guild.id);
-                if (!enabled) continue;
+        const guildEvents = this.getGuildEvents(targetGuild.id);
+        const activeCount = Object.values(guildEvents).filter(e => e.endTime > Date.now()).length;
+        if (activeCount >= 3) return;
+
+        const totalProbability = Object.values(this.eventProbabilities).reduce((sum, p) => sum + p, 0);
+        const randomValue = Math.random();
+        if (randomValue > totalProbability) return;
+
+        let cumulativeProbability = 0;
+        let selectedEventType = null;
+        for (const [eventType, probability] of Object.entries(this.eventProbabilities)) {
+            cumulativeProbability += probability;
+            if (randomValue <= cumulativeProbability) {
+                selectedEventType = eventType;
+                break;
             }
+        }
 
-            // No crear si ya hay 3 activos en este guild
-            const guildEvents = this.getGuildEvents(guild.id);
-            const activeCount = Object.values(guildEvents).filter(e => e.endTime > Date.now()).length;
-            if (activeCount >= 3) continue;
-
-            const totalProbability = Object.values(this.eventProbabilities).reduce((sum, p) => sum + p, 0);
-            const randomValue = Math.random();
-            if (randomValue > totalProbability) continue;
-
-            let cumulativeProbability = 0;
-            let selectedEventType = null;
-            for (const [eventType, probability] of Object.entries(this.eventProbabilities)) {
-                cumulativeProbability += probability;
-                if (randomValue <= cumulativeProbability) {
-                    selectedEventType = eventType;
-                    break;
-                }
-            }
-
-            if (selectedEventType) {
-                // Setear guild temporalmente para que createEvent funcione bien
-                const originalGuild = this.guild;
-                this.guild = guild;
-                await this.createEvent(selectedEventType);
-                this.guild = originalGuild;
-                console.log(`🎲 Evento automático intentado en ${guild.name}`);
-            }
+        if (selectedEventType) {
+            await this.createEvent(selectedEventType);
+            console.log(`🎲 Evento global automático creado en ${targetGuild.name}`);
         }
     }
 
-    // Crear un evento específico
     async createEvent(eventType, customDuration = null, triggeredBy = null) {
         const eventData = this.eventTypes[eventType];
         if (!eventData) return false;
-
-        // Verificar si está habilitado en este servidor
-        if (this.guildConfig && this.guild) {
-            const enabled = await this.guildConfig.isEventEnabled(this.guild.id, eventType);
-            if (!enabled) {
-                console.log(`⚠️ Evento ${eventType} deshabilitado en este servidor`);
-                return false;
-            }
-        }
-
-        // Verificar si los eventos están habilitados globalmente en este servidor
-        if (this.guildConfig && this.guild) {
-            const globallyEnabled = await this.guildConfig.areEventsEnabled(this.guild.id);
-            if (!globallyEnabled) {
-                console.log(`⚠️ Eventos deshabilitados globalmente en ${this.guild.name}`);
-                return false;
-            }
-        }
-        
-        // Verificar si ya hay un evento del mismo tipo activo
-        for (const [id, event] of Object.entries(this.activeEvents)) {            if (event.type === eventType && event.endTime > Date.now()) {
-                return false; // Ya hay uno activo
+       
+        const targetGuildId = this.guild?.id;
+        if (targetGuildId) {
+            const guildEvents = this.getGuildEvents(targetGuildId);
+            for (const event of Object.values(guildEvents)) {
+                if (event.type === eventType && event.endTime > Date.now()) {
+                    return false;
+                }
             }
         }
         
@@ -485,6 +443,7 @@ class EventsSystem {
         const event = {
             id: eventId,
             type: eventType,
+            guildId: targetGuildId,
             name: eventData.name,
             description: eventData.description,
             emoji: eventData.emoji,
@@ -503,13 +462,12 @@ class EventsSystem {
                 workJobsAffected: 0,
                 dailiesAffected: 0,
                 gamesAffected: 0,
-                treasuresFound: 0,           // ✨ NUEVO
-                totalTreasureValue: 0,       // ✨ NUEVO  
-                totalXpGiven: 0              // ✨ NUEVO
+                treasuresFound: 0,
+                totalTreasureValue: 0,
+                totalXpGiven: 0
             }
         };
         
-        const targetGuildId = this.guild?.id;
         if (targetGuildId) {
             const guildEvents = this.getGuildEvents(targetGuildId);
             guildEvents[eventId] = event;
@@ -517,29 +475,24 @@ class EventsSystem {
         await this.saveEvent(eventId, event);
         
         console.log(`🎉 Evento creado: ${eventData.name} (${this.formatTime(duration)})`);
-        console.log(`triggeredBy: ${triggeredBy}, guild: ${this.guild ? 'disponible' : 'no disponible'}`); // ← Agregar esta línea
         if (!triggeredBy) {
-            console.log('Enviando anuncio de evento automático...'); // ← Y esta también
             await this.announceEvent(event, 'created');
         }
 
         return event;
     }
 
-    // Agregar este método en la clase EventsSystem
     setGuild(guild) {
-        this.guild = guild; // Mantener referencia del guild "principal" para compatibilidad
+        this.guild = guild;
         console.log(`🏠 Guild establecido para eventos: ${guild.name}`);
     }
 
-    // Obtener duración aleatoria para un evento
     getRandomDuration(eventData) {
         const min = eventData.minDuration;
         const max = eventData.maxDuration;
         return Math.floor(Math.random() * (max - min + 1)) + min;
     }
 
-    // Verificar si hay un evento activo de cierto tipo
     hasActiveEvent(eventType, guildId = null) {
         const targetId = guildId || this.guild?.id;
         if (!targetId) return null;
@@ -552,29 +505,27 @@ class EventsSystem {
         return null;
     }
 
-    // Obtener todos los eventos activos
     getActiveEvents(guildId = null) {
         const now = Date.now();
-        const targetId = guildId || this.guild?.id;
+        const targetId = this.guild?.id; 
         if (!targetId) return [];
         const guildEvents = this.getGuildEvents(targetId);
         return Object.values(guildEvents).filter(event => event.endTime > now);
     }
 
-    // ✅ OPTIMIZACIÓN: Rate limiting para aplicar modificadores
     async applyXpModifiers(userId, baseXp, context = 'message', guildId = null) {
-        // Caché para evitar recálculos constantes
         const cacheKey = `xp_${context}_${baseXp}`;
         const cached = this.getCachedEventData(cacheKey);
         
+        const targetGuildId = this.guild?.id; 
+        const guildEvents = this.getGuildEvents(targetGuildId);
+        
         if (cached) {
-            // Solo actualizar estadísticas si hay eventos aplicados
             if (cached.appliedEvents.length > 0) {
                 for (const cachedEvent of cached.appliedEvents) {
-                    const realEvent = this.activeEvents[cachedEvent.id];
+                    const realEvent = guildEvents[cachedEvent.id];
                     if (realEvent) {
                         realEvent.stats.messagesAffected = (realEvent.stats.messagesAffected || 0) + 1;
-                        await this.saveEvent(realEvent.id, realEvent);
                     }
                 }
             }
@@ -586,11 +537,9 @@ class EventsSystem {
             };
         }
 
-        // Calcular modificadores normalmente si no está en caché
         let finalXp = baseXp;
         let appliedEvents = [];
         
-        const targetGuildId = guildId || this.guild?.id;
         for (const event of this.getActiveEvents(targetGuildId)) {
             if (event.multipliers.xp) {
                 switch (event.type) {
@@ -616,24 +565,12 @@ class EventsSystem {
             }
         }
         
-        // Guardar en caché
         this.setCachedEventData(cacheKey, { finalXp, appliedEvents });
         
-        // Batch update de estadísticas
         if (appliedEvents.length > 0) {
-            const updates = appliedEvents.map(event => ({
-                eventId: event.id,
-                stats: {
-                    ...event.stats,
-                    messagesAffected: (event.stats.messagesAffected || 0) + 1
-                }
-            }));
-            
-            // Actualizar inmediatamente en memoria y base de datos
             for (const event of appliedEvents) {
                 event.stats.messagesAffected = (event.stats.messagesAffected || 0) + 1;
-                this.activeEvents[event.id] = event;
-                await this.saveEvent(event.id, event);
+                guildEvents[event.id] = event;
             }
         }
         
@@ -644,7 +581,6 @@ class EventsSystem {
         };
     }
 
-    // Aplicar modificadores de eventos a dinero (trabajo/daily)
     async applyMoneyModifiers(userId, baseAmount, context = 'work', guildId = null) {
         let finalAmount = baseAmount;
         let appliedEvents = [];
@@ -653,10 +589,11 @@ class EventsSystem {
         let bonus = 0;
         let loss = 0;     
         
-        const targetGuildId = guildId || this.guild?.id;
+        const targetGuildId = this.guild?.id;
+        const guildEvents = this.getGuildEvents(targetGuildId);
+        
         for (const event of this.getActiveEvents(targetGuildId)) {
-            if (event.multipliers.work || event.multipliers.daily || event.multipliers.minigames)  // Verificar si hay modificadores de dinero
-            {
+            if (event.multipliers.work || event.multipliers.daily || event.multipliers.minigames) {
                 if(event.multipliers.work && context === 'work') {
                     multiplier = event.multipliers.work;
                 }
@@ -669,54 +606,39 @@ class EventsSystem {
 
                 switch (event.type) {
                     case 'money_rain':
-                        finalAmount = Math.floor(baseAmount * multiplier); // x1.5
+                        finalAmount = Math.floor(baseAmount * multiplier);
                         bonus = finalAmount - baseAmount;
                         eventMessage = `\n💰 **${event.name}** te dio +${bonus} π-b$ extra!`;
- 
                         appliedEvents.push(event);                
-                        // Actualizar estadísticas
                         if (context === 'work') event.stats.workJobsAffected++;
                         else if (context === 'daily') event.stats.dailiesAffected++;
-
                         break;
                     case 'fever_time':
-                        finalAmount = Math.floor(baseAmount * multiplier); // x1.3
+                        finalAmount = Math.floor(baseAmount * multiplier);
                         bonus = finalAmount - baseAmount;
                         eventMessage = `\n🔥 **${event.name}** te dio +${bonus} π-b$ extra!`;
-                        
                         appliedEvents.push(event);
-                        
-                        // Actualizar estadísticas
                         if (context === 'work') event.stats.workJobsAffected++;
                         else if (context === 'daily') event.stats.dailiesAffected++;
                         else if (context == 'minigames') event.stats.gamesAffected++;
-                                                
                         break;
                     case 'market_crash':
-                        finalAmount = Math.floor(baseAmount * multiplier); // x0.7
+                        finalAmount = Math.floor(baseAmount * multiplier);
                         loss = baseAmount - finalAmount;
                         eventMessage = `\n📉 **${event.name}** redujo tus ganancias en ${loss} π-b$`;
-
                         appliedEvents.push(event);
-                        
-                        // Actualizar estadísticas
                         if (context === 'work') event.stats.workJobsAffected++;
                         else if (context === 'daily') event.stats.dailiesAffected++;
                         else if (context == 'minigames') event.stats.gamesAffected++;
-
                         break;                        
                     case 'server_anniversary':
-                        finalAmount = Math.floor(baseAmount * multiplier); // x2
+                        finalAmount = Math.floor(baseAmount * multiplier);
                         bonus = finalAmount - baseAmount;
                         eventMessage = `\n🎉 **${event.name}** ¡Mega bonus de +${bonus} π-b$!`;
-
                         appliedEvents.push(event);
-                        
-                        // Actualizar estadísticas
                         if (context === 'work') event.stats.workJobsAffected++;
                         else if (context === 'daily') event.stats.dailiesAffected++;
                         else if (context == 'minigames') event.stats.gamesAffected++;
-
                         break;
                     default:
                         break;
@@ -726,9 +648,7 @@ class EventsSystem {
         
         if (appliedEvents.length > 0) {
             for (const event of appliedEvents) {
-                // Actualizar el evento en memoria también
-                this.activeEvents[event.id] = event;
-                await this.saveEvent(event.id, event);
+                guildEvents[event.id] = event;
             }
         }
         
@@ -740,12 +660,12 @@ class EventsSystem {
         };
     }
 
-    // Aplicar modificadores a cooldowns
-    applyCooldownModifiers(baseCooldown) {
+    applyCooldownModifiers(baseCooldown, guildId = null) {
         let finalCooldown = baseCooldown;
         let appliedEvents = [];
+        const targetGuildId = guildId || this.guild?.id;
         
-        for (const event of this.getActiveEvents(message.guild?.id)) {
+        for (const event of this.getActiveEvents(targetGuildId)) {
             if (event.multipliers.cooldown) {
                 finalCooldown = Math.floor(finalCooldown * event.multipliers.cooldown);
                 appliedEvents.push(event);
@@ -759,14 +679,12 @@ class EventsSystem {
         };
     }
 
-    // Verificar eventos especiales para contextos específicos
     async checkSpecialEvents(userId, context, message, data = {}) {
         let rewards = [];
         let appliedEvents = [];
         
         for (const event of this.getActiveEvents(message.guild?.id)) {
-            if (event.type === 'treasure_hunt' && Math.random() < 0.05) { // 15% chance
-                // DIFERENTES TIPOS DE TESORO
+            if (event.type === 'treasure_hunt' && Math.random() < 0.05) {
                 const treasureType = Math.random();
                 let treasureReward = 0;
                 let xpBonus = 0;
@@ -774,23 +692,19 @@ class EventsSystem {
                 let rewardType = 'money';
                 
                 if (treasureType < 0.55) {
-                    // 55% - Tesoro de dinero normal
-                    treasureReward = Math.floor(Math.random() * 800) + 200; // 200-1000
+                    treasureReward = Math.floor(Math.random() * 800) + 200;
                     treasureDescription = `Cofre de monedas: ${treasureReward} π-b$`;
                     rewardType = 'money';
                 } else if (treasureType < 0.70) {
-                    // 15% - Tesoro de dinero premium
-                    treasureReward = Math.floor(Math.random() * 1500) + 500; // 500-2000
+                    treasureReward = Math.floor(Math.random() * 1500) + 500;
                     treasureDescription = `Cofre dorado: ${treasureReward} π-b$`;
                     rewardType = 'premium_money';
                 } else {
-                    // 30% - Tesoro de XP
-                    xpBonus = Math.floor(Math.random() * 400) + 200; // 200-600 XP
+                    xpBonus = Math.floor(Math.random() * 400) + 200;
                     treasureDescription = `Pergamino ancestral: +${xpBonus} XP`;
                     rewardType = 'xp';
                 }
                 
-                // Dar recompensas
                 if (treasureReward > 0) {
                     await this.economy.addMoney(userId, treasureReward, 'treasure_found');
                 }
@@ -807,7 +721,6 @@ class EventsSystem {
                     event: event
                 });
                 
-                // Estadísticas mejoradas
                 event.stats.gamesAffected++;
                 event.stats.treasuresFound = (event.stats.treasuresFound || 0) + 1;
                 event.stats.totalTreasureValue = (event.stats.totalTreasureValue || 0) + treasureReward;
@@ -816,29 +729,11 @@ class EventsSystem {
                 }
             }
         }
-        
-        if (appliedEvents.length > 0) {
-            for (const event of appliedEvents) {
-                await this.saveEvent(event.id, event);
-            }
-        }
-        
+               
         return rewards;
     }
 
-    // Mostrar eventos activos
     async showActiveEvents(message) {
-        if (this.guildConfig) {
-            const enabled = await this.guildConfig.areEventsEnabled(message.guild?.id);
-            if (!enabled) {
-                const embed = new EmbedBuilder()
-                    .setTitle('🔴 Eventos Deshabilitados')
-                    .setDescription('Los eventos no están habilitados en este servidor.\n\nUn administrador puede activarlos con `>toggleevents`.')
-                    .setColor('#FF0000');
-                return message.reply({ embeds: [embed] });
-            }
-        }
-
         const activeEvents = this.getActiveEvents(message.guild?.id);
         
         if (activeEvents.length === 0) {
@@ -883,26 +778,14 @@ class EventsSystem {
         await message.reply({ embeds: [embed] });
     }
 
-    // Crear evento manual (admin)
     async createManualEvent(message, eventType, duration = null) {
-        if (!message.member?.permissions.has('Administrator')) {
-            await message.reply('❌ Solo administradores pueden crear eventos manuales.');
+        const OWNER_ID = '488110147265232898';
+        if (message.author.id !== OWNER_ID) {
+            await message.reply('❌ Solo mi creador puede crear eventos manuales. Los eventos automáticos se generan solos.');
             return;
         }
 
-        if (this.guildConfig) {
-            const enabled = await this.guildConfig.areEventsEnabled(message.guild?.id);
-            if (!enabled) {
-                const embed = new EmbedBuilder()
-                    .setTitle('🔴 Eventos Deshabilitados')
-                    .setDescription('Los eventos no están habilitados en este servidor.\n\nUn administrador puede activarlos con `>toggleevents`.')
-                    .setColor('#FF0000');
-                return message.reply({ embeds: [embed] });
-            }
-        }
-
         const originalGuild = this.guild;
-        this.guild = message.guild; // Usar el guild donde se ejecutó el comando
         
         if (!this.eventTypes[eventType]) {
             const availableTypes = Object.keys(this.eventTypes).join(', ');
@@ -910,7 +793,7 @@ class EventsSystem {
             return;
         }
         
-        const customDuration = duration ? duration * 60000 : null; // Convertir minutos a ms
+        const customDuration = duration ? duration * 60000 : null;
         const event = await this.createEvent(eventType, customDuration, message.author.id);
         
         if (!event) {
@@ -935,7 +818,6 @@ class EventsSystem {
         this.guild = originalGuild;
     }
 
-    // Limpiar eventos expirados
     async cleanExpiredEvents() {
         const now = Date.now();
         let cleaned = 0;
@@ -946,23 +828,25 @@ class EventsSystem {
         }
 
         for (const [guildId, guildEvents] of this.activeEvents.entries()) {
-    if (!guildEvents || typeof guildEvents !== 'object') continue;
-    for (const [eventId, event] of Object.entries(guildEvents)) {
-        if (event.endTime <= now) {
-            delete guildEvents[eventId];
-            await this.deleteEvent(eventId);
-            // Obtener el guild del cliente y pasarlo
-            const guild = this.client?.guilds.cache.get(guildId) || this.guild;
-            await this.announceEvent(event, 'expired', guild);
-            cleaned++;
-            console.log(`🧹 Evento expirado limpiado: ${event.name} (guild: ${guildId})`);
+            if (!guildEvents || typeof guildEvents !== 'object') continue;
+            
+            for (const [eventId, event] of Object.entries(guildEvents)) {
+                if (event.endTime <= now) {
+                    await this.saveEvent(eventId, event); 
+                    
+                    delete guildEvents[eventId];
+                    await this.deleteEvent(eventId);
+                    
+                    const guild = this.client?.guilds.cache.get(guildId) || this.guild;
+                    await this.announceEvent(event, 'expired', guild);
+                    
+                    cleaned++;
+                    console.log(`🧹 Evento expirado limpiado: ${event.name} (guild: ${guildId})`);
+                }
+            }
         }
     }
-        }
 
-    }
-
-    // Obtener nombre legible del multiplicador
     getMultiplierName(type) {
         const names = {
             'xp': 'XP',
@@ -975,7 +859,6 @@ class EventsSystem {
         return names[type] || type;
     }
 
-    // Formatear tiempo
     formatTime(ms) {
         const hours = Math.floor(ms / (1000 * 60 * 60));
         const minutes = Math.floor((ms % (1000 * 60 * 60)) / (1000 * 60));
@@ -987,142 +870,65 @@ class EventsSystem {
         }
     }
 
-    // Formatear números
     formatNumber(num) {
         return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
     }
 
-    // Mostrar estadísticas de eventos
-    async showEventStats(message) {
-        if (!message.member?.permissions.has('Administrator')) {
-            await message.reply('❌ Solo administradores pueden ver estadísticas de eventos.');
-            return;
-        }
-        
-        const activeEvents = this.getActiveEvents(message.guild?.id);
-        
-        if (activeEvents.length === 0) {
-            await message.reply('❌ No hay eventos activos para mostrar estadísticas.');
-            return;
-        }
-        
-        const embed = new EmbedBuilder()
-            .setTitle('📊 Estadísticas de Eventos')
-            .setColor('#9932CC')
-            .setTimestamp();
-        
-        for (const event of activeEvents) {
-            const stats = event.stats;
-            const totalInteractions = stats.messagesAffected + stats.workJobsAffected + 
-                                    stats.dailiesAffected + stats.gamesAffected;
-            
-            let statsText = `**Interacciones totales:** ${totalInteractions}\n` +
-                            `• Mensajes: ${stats.messagesAffected}\n` +
-                            `• Trabajos: ${stats.workJobsAffected}\n` +
-                            `• Dailies: ${stats.dailiesAffected}\n` +
-                            `• Juegos: ${stats.gamesAffected}`;
-            
-            // ✨ ESTADÍSTICAS ESPECIALES PARA TREASURE HUNT
-            if (event.type === 'treasure_hunt') {
-                statsText += `\n**🗺️ Tesoros:**\n` +
-                             `• Encontrados: ${stats.treasuresFound || 0}\n` +
-                             `• Valor total: ${stats.totalTreasureValue || 0} π-b$`;
-                if (stats.totalXpGiven > 0) {
-                    statsText += `\n• XP dado: ${stats.totalXpGiven}`;
-                }
-            }
-            
-            embed.addFields({
-                name: `${event.emoji} ${event.name}`,
-                value: statsText,
-                inline: true
-            });
-        }
-        
-        await message.reply({ embeds: [embed] });
-    }
-
-    // Anunciar eventos en canal específico
     async announceEvent(event, action, passedGuild = null) {
-        console.log(`📢 Intentando anunciar evento: ${event.name}, action: ${action}`);
+        console.log(`📢 Anunciando evento global: ${event.name}, action: ${action}`);
 
-        let targetGuild = passedGuild || this.guild;
+        const guilds = this.client ? [...this.client.guilds.cache.values()] : (this.guild ? [this.guild] : []);
 
-        // Si no hay guild, intentar obtenerlo del cliente usando todos los guilds
-        if (!targetGuild && this.client) {
-            targetGuild = this.client.guilds.cache.first();
-        }
-
-        if (!targetGuild) {
-            console.log('⚠️ No se pudo obtener el guild para anunciar evento');
-            return;
-        }
-
-        // Obtener canal configurado dinámicamente, o el canal del sistema como fallback
-        let channelId = null;
-        if (this.guildConfig) {
-            channelId = await this.guildConfig.get(targetGuild.id, 'events_channel');
-        }
-        if (!channelId) {
-            channelId = this.announcementChannelId; // fallback al hardcodeado si existe
-        }
-        if (!channelId) {
-            console.log('⚠️ No hay canal de eventos configurado para este servidor');
-            return;
-        }
-
-        try {
-            const channel = await targetGuild.channels.fetch(channelId);
-            if (!channel) return;
-            
-            // Obtener rol dinámico
-            let eventsRoleId = null;
+        for (const guild of guilds) {
+            let channelId = null;
             if (this.guildConfig) {
-                eventsRoleId = await this.guildConfig.getEventsRole(targetGuild.id);
+                channelId = await this.guildConfig.get(guild.id, 'events_channel');
             }
-            let embed;
-            let shouldPing = false;
             
-            if (action === 'created') {
-                embed = new EmbedBuilder()
-                    .setTitle(`${event.emoji} ¡Nuevo Evento Activo!`)
-                    .setDescription(`**${event.name}**\n\n${event.description}`)
-                    .setColor(event.color)
-                    .addFields({
-                        name: '⏰ Duración',
-                        value: this.formatTime(event.duration),
-                        inline: true
-                    })
-                    .setTimestamp();
+            if (!channelId) continue;
+
+            try {
+                const channel = await guild.channels.fetch(channelId);
+                if (!channel) continue;
                 
-                shouldPing = true; // Ping solo al crear
+                let eventsRoleId = null;
+                if (this.guildConfig) {
+                    eventsRoleId = await this.guildConfig.getEventsRole(guild.id);
+                }
                 
-            } else if (action === 'expired') {
-                const stats = event.stats;
-                const totalInteractions = stats.messagesAffected + stats.workJobsAffected + 
-                                        stats.dailiesAffected + stats.gamesAffected;
+                let embed;
+                let shouldPing = false;
                 
-                embed = new EmbedBuilder()
-                    .setTitle(`${event.emoji} Evento Finalizado`)
-                    .setDescription(`**${event.name}** ha terminado.\n\n¡Gracias por participar!`)
-                    .setColor('#808080')
-                    .addFields({
-                        name: '📊 Participación Total',
-                        value: `${totalInteractions} interacciones`,
-                        inline: true
-                    })
-                    .setTimestamp();
-                
-                shouldPing = false; // Sin ping al expirar
+                if (action === 'created') {
+                    embed = new EmbedBuilder()
+                        .setTitle(`${event.emoji} ¡Nuevo Evento Global Activo!`)
+                        .setDescription(`**${event.name}**\n\n${event.description}`)
+                        .setColor(event.color)
+                        .addFields({ name: '⏰ Duración', value: this.formatTime(event.duration), inline: true })
+                        .setTimestamp();
+                    shouldPing = true;               
+                } else if (action === 'expired') {
+                    const stats = event.stats;
+                    const totalInteractions = stats.messagesAffected + stats.workJobsAffected + 
+                                            stats.dailiesAffected + stats.gamesAffected;
+                    
+                    embed = new EmbedBuilder()
+                        .setTitle(`${event.emoji} Evento Global Finalizado`)
+                        .setDescription(`**${event.name}** ha terminado.\n\n¡Gracias por participar!`)
+                        .setColor('#808080')
+                        .addFields({ name: '📊 Participación Total', value: `${totalInteractions} interacciones`, inline: true })
+                        .setTimestamp();
+                    shouldPing = false;
+                }
+                            
+                await channel.send({
+                    content: shouldPing && eventsRoleId ? `<@&${eventsRoleId}>` : '',
+                    embeds: [embed],
+                    allowedMentions: shouldPing ? { parse: ['roles'] } : { parse: [] }
+                });
+            } catch (error) {
+                console.error(`❌ Error enviando anuncio en ${guild.name}:`, error.message);
             }
-                        
-            await channel.send({
-                content: shouldPing && eventsRoleId ? `<@&${eventsRoleId}>` : '',
-                embeds: [embed],
-                allowedMentions: shouldPing ? { parse: ['roles'] } : { parse: [] }
-            });
-        } catch (error) {
-            console.error('❌ Error enviando anuncio de evento:', error);
         }
     }
 }

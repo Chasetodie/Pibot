@@ -2,8 +2,8 @@
 class GuildConfig {
     constructor(database) {
         this.db = database;
-        this.cache = new Map(); // guildId -> { data, lastSaved }
-        this.SAVE_INTERVAL = 5000; // 5 segundos de throttle para escrituras
+        this.cache = new Map();
+        this.SAVE_INTERVAL = 5000;
     }
 
     async initTable() {
@@ -21,7 +21,6 @@ class GuildConfig {
         }
     }
 
-    // Leer todo el JSON del servidor (con caché)
     async _getData(guildId) {
         if (!guildId) return {};
         const cached = this.cache.get(guildId);
@@ -41,7 +40,6 @@ class GuildConfig {
         }
     }
 
-    // Guardar con throttle
     async _saveData(guildId, data, force = false) {
         const cached = this.cache.get(guildId);
         const now = Date.now();
@@ -61,7 +59,6 @@ class GuildConfig {
         }
     }
 
-    // API pública — igual que antes
     async get(guildId, key) {
         if (!guildId || !key) return null;
         const data = await this._getData(guildId);
@@ -80,7 +77,6 @@ class GuildConfig {
         return await this._getData(guildId);
     }
 
-    // Flush para cierre del bot
     async flushAll() {
         for (const [guildId, { data }] of this.cache.entries()) {
             try {
@@ -96,41 +92,12 @@ class GuildConfig {
         console.log('✅ GuildConfig: datos guardados en DB');
     }
 
-    // Métodos específicos — igual que antes, usan get/set internamente
     async getEventsRole(guildId) {
         return await this.get(guildId, 'events_role');
     }
 
     async setEventsRole(guildId, roleId) {
         return await this.set(guildId, 'events_role', roleId);
-    }
-
-    async isEventEnabled(guildId, eventType) {
-        const data = await this._getData(guildId);
-        return data[`event_disabled_${eventType}`] !== 'true';
-    }
-
-    async setEventEnabled(guildId, eventType, enabled) {
-        await this.set(guildId, `event_disabled_${eventType}`, enabled ? 'false' : 'true');
-    }
-
-    async getDisabledEvents(guildId) {
-        const data = await this._getData(guildId);
-        return Object.entries(data)
-            .filter(([k, v]) => k.startsWith('event_disabled_') && v === 'true')
-            .map(([k]) => k.replace('event_disabled_', ''));
-    }
-
-    async areEventsEnabled(guildId) {
-        const val = await this.get(guildId, 'events_globally_enabled');
-        return val === 'true';
-    }
-
-    async setEventsGloballyEnabled(guildId, enabled) {
-        const existing = await this.get(guildId, 'events_globally_enabled');
-        const wasNull = existing === null;
-        await this.set(guildId, 'events_globally_enabled', enabled ? 'true' : 'false');
-        return wasNull;
     }
 
     async getRateLimit(guildId, adminId, commandType) {
@@ -142,15 +109,6 @@ class GuildConfig {
 
     async setRateLimit(guildId, adminId, commandType, data) {
         await this.set(guildId, `ratelimit_${adminId}_${commandType}`, JSON.stringify(data));
-    }
-
-    async isTtsAnnounceEnabled(guildId) {
-        const val = await this.get(guildId, 'tts_announce_enabled');
-        return val === 'true';
-    }
-
-    async setTtsAnnounceEnabled(guildId, enabled) {
-        await this.set(guildId, 'tts_announce_enabled', enabled ? 'true' : 'false');
     }
 }
 

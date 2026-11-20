@@ -224,23 +224,6 @@ class NSFWSystem {
     // COMANDOS
     // ─────────────────────────────────────────────
 
-    async handleR34(message, args) {
-        if (!this.isNSFWChannel(message.channel))
-            return message.reply('🔞 Este comando solo funciona en canales NSFW.');
-
-        const { tags, count } = this.parseArgs(args, 'hentai', 20);
-        console.log(`[R34] tags="${tags}" count=${count}`);
-
-        await message.channel.sendTyping();
-
-        const results = await this.getRule34(tags, count);
-
-        if (results.length === 0)
-            return message.reply(`❌ No se encontraron resultados para: \`${tags.replace(/\+/g, ' ')}\`\n💡 Intenta con otros tags`);
-
-        await this.sendBatchReply(message, results, '🔞 Rule34.xxx', tags);
-    }
-
     async handleNSFW(message, args) {
         if (!this.isNSFWChannel(message.channel))
             return message.reply('🔞 Este comando solo funciona en canales NSFW.');
@@ -450,7 +433,6 @@ class NSFWSystem {
 
         try {
             switch (command) {
-                case '>r34':      await this.handleR34(message, args); break;
                 case '>nsfw':     await this.handleNSFW(message, args); break;
                 case '>videos':   await this.handleVideos(message, args); break;
                 case '>fuck':     await this.handleFuck(message, args); break;

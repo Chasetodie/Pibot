@@ -1,147 +1,124 @@
 const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 const { Connectors } = require('shoukaku');
 const { Kazagumo, Plugins } = require('kazagumo');
-const { generateAnnouncementAudio, limpiarTitulo } = require('./ttsAnnounce');
+const https = require('https');
+const http = require('http');
 
 class MusicSystem {
-    constructor(client, guildConfig) {
+    constructor(client) {
         this.client = client;
-        this.guildConfig = guildConfig;
         this.kazagumo = null;
         this.playerTimeouts = new Map();
-        this.maxSongDuration = 7200000;
-        this.playThrottle = new Map();
-        this.nodeList = [];
         this.failedNodes = new Set();
         this.skipVotes = new Map();
-        this.spotifyCapableNodes = new Set();
-        this.announcedSession = new Set();
-
-        setInterval(async () => {
-            for (const [name, node] of this.kazagumo.shoukaku.nodes) {
-                if (node.state === 2 /* CONNECTED */ && !this.failedNodes.has(name)) {
-                    const nodeConfig = this.nodeList.find(n => n.name === name);
-                    if (nodeConfig) {
-                        const hasSpotify = await this.checkNodeSpotifyCapability(nodeConfig);
-                        if (hasSpotify) this.spotifyCapableNodes.add(name);
-                        else this.spotifyCapableNodes.delete(name);
-                    }
-                }
-            }
-        }, 10 * 60 * 1000); // cada 10 minutos
-
-        setInterval(() => {
-            for (const nodeName of this.failedNodes) {
-                const nodeConfig = this.nodeList.find(n => n.name === nodeName);
-                if (nodeConfig) {
-                    console.log(`🔄 Reintentando conexión al nodo caído: ${nodeName}`);
-                    this.kazagumo.shoukaku.addNode(nodeConfig);
-                }
-            }
-        }, 5 * 60 * 1000); // cada 5 minuto
+        this.metadataNode = 'Lavalink95';
+        this.searchSessions = new Map();
+        this.spotifySearchSessions = new Map();
+        this.queuePages = new Map();
+        this.failedNodesSince = new Map();
 
         this.initialize();
+
+        // Limpieza periódica de sesiones de búsqueda
+        setInterval(() => {
+            const now = Date.now();
+            for (const [key, session] of this.searchSessions.entries()) {
+                if (now - session.timestamp > 60000) this.searchSessions.delete(key);
+            }
+            for (const [key, session] of this.spotifySearchSessions.entries()) {
+                if (now - session.timestamp > 60000) this.spotifySearchSessions.delete(key);
+            }
+            for (const [key, page] of this.queuePages.entries()) {
+                if (now - page.timestamp > 60000) this.queuePages.delete(key);
+            }
+        }, 60000);
     }
 
     initialize() {
-/* RIP LAVALINK95-2
         const nodes = [
-            {
-                name: 'Lavalink95-2',
-                url: '160.191.77.60:8281',
-                auth: process.env.LAVAPASS,
-                secure: false
+            { 
+                name: 'Vinster', 
+                url: 'freelavalinkvinster.in:443', 
+                auth: 'youshallnotpass', 
+                secure: true 
+            },
+            { 
+                name: 'Jirayu', 
+                url: 'lavalink.jirayu.net:443', 
+                auth: 'youshallnotpass', 
+                secure: true 
+            },
+            { 
+                name: 'Serenetia-SSL', 
+                url: 'lavalinkv4.serenetia.com:443', 
+                auth: 'https://seretia.link/discord', 
+                secure: true 
+            },
+            { 
+                name: 'Nazha', 
+                url: 'lavalink.nazha.online:443', 
+                auth: 'nazhafreelava', 
+                secure: true 
+            },
+            { 
+                name: 'TriniumHost', 
+                url: 'lavalink-v4.triniumhost.com:443', 
+                auth: 'free', 
+                secure: true 
+            },
+            { 
+                name: 'AneFaiz', 
+                url: 'lava-v4.millohost.my.id:443', 
+                auth: 'https://discord.gg/mjS5J2K3ep', 
+                secure: true 
+            },
+            { 
+                name: 'G3V', 
+                url: 'lava.g3v.co.uk:9008', 
+                auth: 'lavalinklol', 
+                secure: false 
+            },
+            { 
+                name: 'Nexcloud (Kartik)', 
+                url: 'n3.nexcloud.in:2026', 
+                auth: 'nexcloud', 
+                secure: false 
+            },
+            { 
+                name: 'NyxBot (Tapao)', 
+                url: 'sg1-nodelink.nyxbot.app:3000', 
+                auth: 'nyxbot.app/support', 
+                secure: false 
+            },
+            { 
+                name: 'Serenetia-NoSSL', 
+                url: 'lavalinkv4.serenetia.com:80', 
+                auth: 'https://seretia.link/discord', 
+                secure: false 
+            },
+            { 
+                name: 'GDjkhp-NoSSL', 
+                url: 'nodelink.gdjkhp.com:3000', 
+                auth: 'youshallnotpass', 
+                secure: false 
+            },
+            { 
+                name: 'HeavenCloud', 
+                url: 'free-lava.heavencloud.in:4000', 
+                auth: 'heavencloud.in', 
+                secure: false 
+            },
+            { 
+                name: 'Lavalink95', 
+                url: 'fr-one.enzonic.com:26026', 
+                auth: process.env.LAVAPASS, 
+                secure: false 
             }
         ];
-*/
-
-        const nodes = [
-            {
-                name: 'Lavalink-Public',
-                url: 'lavalink.serenetia.com:80',
-                auth: 'https://dsc.gg/ajidevserver',
-                secure: false
-            },
-            {
-                name: 'Serenetia',
-                url: 'lavalinkv4.serenetia.com:80',
-                auth: 'https://dsc.gg/ajidevserver',
-                secure: false
-            },
-            {
-                name: 'TriniumHost',
-                url: 'lavalink-v4.triniumhost.com:443',
-                auth: 'free',
-                secure: true
-            },
-            {
-                name: 'AjieDev-EU',
-                url: 'lava-v4.ajieblogs.eu.org:443',
-                auth: 'https://dsc.gg/ajidevserver',
-                secure: true
-            },
-            {
-                name: 'DevamOP-India',
-                url: 'lavalink.devamop.in:443',
-                auth: 'DevamOP',
-                secure: true
-            },
-            {
-                name: 'Jirayu',
-                url: 'lavalink.jirayu.net:13592',
-                auth: 'youshallnotpass',
-                secure: false
-            },
-            {
-                name: 'NyxBot-SG',
-                url: 'sg1-nodelink.nyxbot.app:3000',
-                auth: 'nyxbot.app/support',
-                secure: false
-            },
-            {
-                name: 'HeavenCloud',
-                url: '89.106.84.59:4000',
-                auth: 'heavencloud.in',
-                secure: false
-            },
-            {
-                name: 'HeavenCloud-443',
-                url: 'lavalink.heavencloud.in:443',
-                auth: 'heavencloud',
-                secure: true
-            },
-            {
-                name: 'HeavenCloud-IN',
-                url: 'in1.heavencloud.in:443',
-                auth: 'heavencloud',
-                secure: true
-            },
-            {
-                name: 'MilloHost',
-                url: 'lava-v4.millohost.my.id:443',
-                auth: 'https://discord.gg/mjS5J2K3ep',
-                secure: true
-            },
-            {
-                name: 'Serenetia443',
-                url: 'lavalinkv4.serenetia.com:443',
-                auth: 'https://seretia.link/discord',
-                secure: true
-            },
-            {
-                name: 'Serenetia',
-                url: 'lavalinkv4.serenetia.com:80',
-                auth: 'https://seretia.link/discord',
-                secure: false
-            },
-        ];
-
-        this.nodeList = nodes;
-        this.failedNodes = new Set();
 
         this.kazagumo = new Kazagumo(
             {
-                defaultSearchEngine: 'ytsearch',
+                defaultSearchEngine: 'youtube',
                 plugins: [new Plugins.PlayerMoved(this.client)],
                 send: (guildId, payload) => {
                     const guild = this.client.guilds.cache.get(guildId);
@@ -150,82 +127,102 @@ class MusicSystem {
             },
             new Connectors.DiscordJS(this.client),
             nodes,
-            { moveOnDisconnect: true, resumeByLibrary: true, reconnectTries: 5, reconnectInterval: 5 }
+            { moveOnDisconnect: false, resumeByLibrary: false, reconnectTries: 5, reconnectInterval: 5 }
         );
 
         this.client.kazagumo = this.kazagumo;
 
-        // Acceder a shoukaku DESPUÉS de que kazagumo lo inicialice
-        this.kazagumo.shoukaku.on('ready', async (name) => {
-            console.log(`✅ Nodo ${name} listo!`);
-            this.failedNodes.delete(name);
-
-            const nodeConfig = this.nodeList.find(n => n.name === name);
-            if (nodeConfig) {
-                const hasSpotify = await this.checkNodeSpotifyCapability(nodeConfig);
-                if (hasSpotify) {
-                    this.spotifyCapableNodes.add(name);
-                    console.log(`🎧 Nodo ${name} tiene soporte de Spotify`);
-                } else {
-                    this.spotifyCapableNodes.delete(name);
+        const shoukakuConnector = this.kazagumo.shoukaku.connector;
+        if (shoukakuConnector?.raw) {
+            const originalConnectorRaw = shoukakuConnector.raw.bind(shoukakuConnector);
+            shoukakuConnector.raw = (packet) => {
+                if (packet?.t === 'VOICE_SERVER_UPDATE' && packet?.d) {
+                    console.log(`[Voice] SERVER_UPDATE guild=${packet.d.guild_id} endpoint=${packet.d.endpoint} token=${packet.d.token ? 'sí' : 'NO'}`);
                 }
-            }
+                if (packet?.t === 'VOICE_STATE_UPDATE' && packet?.d?.user_id === this.client.user?.id) {
+                    console.log(`[Voice] STATE_UPDATE canal=${packet.d.channel_id} session_id=${packet.d.session_id ? 'sí' : 'NO'}`);
+                }
+
+                if (packet?.t === 'VOICE_SERVER_UPDATE' && packet?.d && typeof packet.d.endpoint === 'string') {
+                    const original = packet.d.endpoint;
+                    const normalized = original.trim()
+                        .replace(/^wss?:\/\//i, '')
+                        .replace(/^https?:\/\//i, '')
+                        .replace(/\/+$/, '');
+
+                    if (normalized !== original) {
+                        console.log(`[Voice] Endpoint normalizado: ${original} -> ${normalized}`);
+                        packet.d.endpoint = normalized;
+                    }
+                }
+                return originalConnectorRaw(packet);
+            };
+        }
+
+        this.kazagumo.shoukaku.on('ready', (name, resumed) => {
+            console.log(`✅ Nodo ${name} listo! (resumed: ${resumed})`);
+            this.failedNodes.delete(name);
+            this.failedNodesSince.delete(name);
         });
 
         this.kazagumo.shoukaku.on('error', (name, error) => {
-            if (!this.failedNodes.has(name)) {
-                console.error(`❌ Error en nodo ${name}: ${error.message}`);
+            const msg = error?.message || String(error);
+            if (msg.includes('ENOTFOUND') || msg.includes('ETIMEDOUT') || msg.includes('ECONNREFUSED')) {
+                console.log(`🔇 Nodo ${name} está offline (Error de red)`);
+            } else {
+                console.error(`❌ Error en nodo ${name}:`, msg);
             }
+            if (!this.failedNodes.has(name)) this.failedNodesSince.set(name, Date.now());
             this.failedNodes.add(name);
         });
 
         this.kazagumo.shoukaku.on('close', (name, code, reason) => {
-            if (!this.failedNodes.has(name)) {
-                console.warn(`⚠️ Nodo ${name} cerrado. Código: ${code}`);
+            if (code === 1006 || String(reason).includes('before a connection')) {
+                console.log(`🔇 Nodo ${name} cerró antes de conectar`);
+            } else {
+                console.warn(`⚠️ Nodo ${name} cerrado. Código: ${code} Razón: ${reason || 'ninguna'}`);
             }
+            if (!this.failedNodes.has(name)) this.failedNodesSince.set(name, Date.now());
             this.failedNodes.add(name);
         });
 
         this.kazagumo.shoukaku.on('disconnect', (name, count) => {
-            console.warn(`⚠️ Nodo ${name} desconectado. Shoukaku intentará reconectar solo (moveOnDisconnect activo).`);
-            this.failedNodes.add(name);
+            console.warn(`🔌 Nodo ${name} desconectado (${count} players afectados)`);
         });
 
-        this.setupEventListeners();
-    }
-
-    getBestNode() {
-        // Acceder a shoukaku.nodes directamente como Map
-        const nodes = this.kazagumo.shoukaku.nodes;
-        if (!nodes || nodes.size === 0) return null;
-
-        for (const [name, node] of nodes) {
-            // En Shoukaku 4.x el estado conectado es el string 'CONNECTED' o valor 1
-            const state = node.state;
-            const isConnected = state === 1 || state === 'CONNECTED' || 
-                            node.ws?.readyState === 1;
-            if (isConnected && !this.failedNodes.has(name)) {
-                return name;
+        const ensureNodes = () => {
+            const sk = this.kazagumo.shoukaku;
+            if (!sk.id && this.client.user) sk.id = this.client.user.id;
+            for (const n of nodes) {
+                if (!sk.nodes.has(n.name)) {
+                    console.log(`[Music] Registrando nodo ${n.name} manualmente`);
+                    sk.addNode(n);
+                }
             }
-        }
-        return null;
-    }
+            console.log('[Music] Nodos registrados:', [...sk.nodes.keys()].join(', ') || 'ninguno');
+        };
 
-    async waitForNode(timeoutMs = 10000) {
-        // Esperar hasta que haya al menos un nodo conectado
-        const start = Date.now();
-        while (Date.now() - start < timeoutMs) {
-            if (this.getBestNode()) return true;
-            await new Promise(r => setTimeout(r, 500));
+        if (this.client.isReady()) ensureNodes();
+        else {
+            this.client.once('ready', ensureNodes);
+            this.client.once('clientReady', ensureNodes);
         }
-        return false;
+
+        this.setupEventListeners();
+        this.setupFailover();
+        this.setupNodeWatchdog(nodes);
     }
 
     setupEventListeners() {
         this.kazagumo.on('playerStart', async (player, track) => {
             this.skipVotes.delete(player.guildId);
-            
-            console.log(`🎵 Reproduciendo "${track.title}" en el servidor ${player.guild?.name || player.guildId} usando el nodo [${player.shoukaku?.node?.name || player.node?.name}]`);
+
+            if (!track) {
+                console.warn(`[Music] playerStart sin track en ${player.guildId}. Ignorando.`);
+                return;
+            }
+
+            console.log(`🎵 Reproduciendo "${track.title}" en ${player.guild?.name || player.guildId}`);
             
             const embed = new EmbedBuilder()
                 .setTitle('🎵 Reproduciendo Ahora')
@@ -236,78 +233,85 @@ class MusicSystem {
 
             if (player.textId) {
                 const channel = this.client.channels.cache.get(player.textId);
-                if (channel) channel.send({ embeds: [embed] });
+                if (channel) channel.send({ embeds: [embed] }).catch(() => {});
             }
-
-/*            try {
-                const ttsEnabled = await this.guildConfig.isTtsAnnounceEnabled(player.guildId);
-                if (ttsEnabled) {
-                    const isFirstOfSession = !this.announcedSession.has(player.guildId);
-                    const isLastInQueue = player.queue.size === 0;
-
-                    if (isFirstOfSession || isLastInQueue) {
-                        this.announcedSession.add(player.guildId);
-                        const text = isFirstOfSession
-                            ? `Empezando con ${track.title}`
-                            : `Última canción: ${track.title}`;
-
-                        const audioUrl = await generateAnnouncementAudio(text);
-                        const result = await this.kazagumo.search(audioUrl, { requester: this.client.user });
-                        if (!result?.tracks?.length) {
-                            console.warn('⚠️ Lavalink no pudo resolver la URL del anuncio:', audioUrl);
-                            return;
-                        }
-
-                        player.queue.unshift(result.tracks[0]);
-                        await player.skip(); // corta la actual, arranca el anuncio, y al terminar sigue la cola normal
-                    }
-                }
-            } catch (err) {
-                console.error('Error en anuncio TTS:', err.message);
-            }            */
         });
 
         this.kazagumo.on('playerEmpty', (player) => {
-            console.log(`🎵 Cola vacía en ${player.guildId}`);
-            
+            if (this.failingOver && this.failingOver.has(player.guildId)) {
+                console.log(`[Music] playerEmpty ignorado por failover en ${player.guildId}`);
+                return;
+            }
+
+            const node = this.kazagumo.shoukaku.nodes.get(player.shoukaku?.node?.name);
+            if (!node) {
+                console.log(`[Music] playerEmpty ignorado por nodo muerto en ${player.guildId}`);
+                return;
+            }
+
             if (player.textId) {
                 const channel = this.client.channels.cache.get(player.textId);
                 if (channel) {
-                    const embed = new EmbedBuilder()
-                        .setTitle('✅ Cola Terminada')
-                        .setDescription('Se han reproducido todas las canciones.')
-                        .setColor('#00FF00')
-                        .setFooter({ text: 'El bot se desconectará en 5 minutos si no hay más música.' });
-                    channel.send({ embeds: [embed] });
+                    const embed = new EmbedBuilder().setTitle('✅ Cola Terminada').setDescription('Se han reproducido todas las canciones.').setColor('#00FF00');
+                    channel.send({ embeds: [embed] }).catch(() => {});
                 }
             }
-
             this.setPlayerTimeout(player.guildId, () => {
                 if (player.queue.size === 0 && !player.playing) {
-                    player.destroy();
+                    this.forceDestroyPlayer(player.guildId);
                     const channel = this.client.channels.cache.get(player.textId);
-                    if (channel) channel.send('⏹️ Desconectado por inactividad.');
+                    if (channel) channel.send('⏹️ Desconectado por inactividad.').catch(() => {});
                 }
-            }, 300000);
+            }, 300000); // 5 min
         });
 
-        this.kazagumo.on('playerEnd', (player) => {
-            console.log(`🎵 Canción terminada en ${player.guildId} | Cola restante: ${player.queue.size}`);
-        });
+        this.kazagumo.on('playerDestroy', (player) => this.clearPlayerTimeout(player.guildId));
+    }
 
-        this.kazagumo.on('playerDestroy', (player) => {
-            this.clearPlayerTimeout(player.guildId);
-            this.announcedSession.delete(player.guildId);
-        });
+    setupNodeWatchdog(nodesConfig) {
+        const FAILED_COOLDOWN = 3 * 60 * 1000;
 
-        this.kazagumo.on('playerResumed', (player) => {
-            console.log(`🔄 Player resumido en ${player.guildId}`);
-        });
-        
-        this.kazagumo.on('playerMoved', (player, oldChannel, newChannel) => {
-            console.log(`🔄 Bot movido de canal`);
-            player.pause(false); // Forzar resume
-        });
+        setInterval(async () => {
+            const sk = this.kazagumo?.shoukaku;
+            if (!sk || !this.client.isReady()) return;
+
+            for (const config of nodesConfig) {
+                const existing = sk.nodes.get(config.name);
+
+                if (!existing) {
+                    console.log(`[Watchdog] Re-agregando nodo eliminado: ${config.name}`);
+                    this.failedNodes.delete(config.name);
+                    this.failedNodesSince.delete(config.name);
+                    try {
+                        sk.addNode(config);
+                    } catch (e) {
+                        console.warn(`[Watchdog] addNode(${config.name}) falló:`, e.message);
+                    }
+                    continue;
+                }
+
+                const isUp = existing.state === 1 || existing.state === 'CONNECTED';
+                if (!isUp && this.failedNodes.has(config.name)) {
+                    const since = this.failedNodesSince.get(config.name) || 0;
+                    if (Date.now() - since > FAILED_COOLDOWN) {
+                        console.log(`[Watchdog] Reintentando conexión a ${config.name} (cooldown expirado)`);
+                        this.failedNodes.delete(config.name);
+                        this.failedNodesSince.delete(config.name);
+                        try {
+                            if (typeof existing.connect === 'function') {
+                                await existing.connect();
+                            } else if (typeof sk.reconnect === 'function') {
+                                await sk.reconnect(config.name);
+                            }
+                        } catch (e) {
+                            console.warn(`[Watchdog] reconnect(${config.name}) falló:`, e.message);
+                            this.failedNodes.add(config.name);
+                            this.failedNodesSince.set(config.name, Date.now());
+                        }
+                    }
+                }
+            }
+        }, 60 * 1000);
     }
 
     setPlayerTimeout(guildId, callback, delay) {
@@ -323,213 +327,452 @@ class MusicSystem {
         }
     }
 
-    formatTime(ms) {
-        const minutes = Math.floor(ms / 60000);
-        const seconds = Math.floor((ms % 60000) / 1000);
-        return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+    async forceDestroyPlayer(guildId) {
+        try {
+            const player = this.kazagumo.getPlayer(guildId);
+            if (player) await player.destroy().catch(() => {}); 
+        } catch (e) {}
+        
+        this.kazagumo.players.delete(guildId);
+        if (this.kazagumo.shoukaku) {
+            this.kazagumo.shoukaku.players.delete(guildId);
+        }
+        this.clearPlayerTimeout(guildId);
     }
 
-/*    async announceTrack(player, track, type) {
-        try {
-            const tituloLimpio = limpiarTitulo(track.title);
-            const text = type === 'first'
-                ? `Empezando con ${tituloLimpio}`
-                : `Última canción: ${tituloLimpio}`;
+    formatTime(ms) {
+        if (!ms || ms <= 0 || !Number.isFinite(ms)) return '0:00';
+        const totalSec = Math.floor(ms / 1000);
+        const h = Math.floor(totalSec / 3600);
+        const m = Math.floor((totalSec % 3600) / 60);
+        const s = totalSec % 60;
+        if (h > 0) {
+            return `${h}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+        }
+        return `${m}:${s.toString().padStart(2, '0')}`;
+    }
 
-            const audioUrl = await generateAnnouncementAudio(text);
-            if (!audioUrl) return;
+    async searchWithTimeout(query, options, timeoutMs = 10000) {
+        return Promise.race([
+            this.kazagumo.search(query, options),
+            new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout: El nodo tardó demasiado en responder')), timeoutMs))
+        ]);
+    }
 
-            const result = await this.kazagumo.search(audioUrl, { requester: this.client.user });
-            if (!result?.tracks?.length) {
-                console.warn('⚠️ Lavalink no pudo resolver la URL del anuncio:', audioUrl);
+    getBestNode() {
+        for (const [name, node] of this.kazagumo.shoukaku.nodes) {
+            if (name === this.metadataNode) continue;
+            const isConnected = node.state === 1 || node.state === 'CONNECTED';
+            if (isConnected && !this.failedNodes.has(name)) {
+                return name;
+            }
+        }
+        return undefined;
+    }
+
+    getSpotifyNodeCandidates() {
+        const isUp = (n) => n && (n.state === 1 || n.state === 'CONNECTED');
+        const names = [];
+        if (isUp(this.kazagumo.shoukaku.nodes.get(this.metadataNode))) names.push(this.metadataNode);
+        for (const [name, node] of this.kazagumo.shoukaku.nodes) {
+            if (name === this.metadataNode) continue;
+            if (isUp(node) && !this.failedNodes.has(name)) names.push(name);
+        }
+        return names;
+    }
+
+    setupFailover() {
+        this.failingOver = new Set();
+        this.failover = new Map();
+
+        this.kazagumo.on('playerStart', (player) => this.failover.delete(player.guildId));
+
+        this.kazagumo.on('playerException', async (player, data) => {
+            const guildId = player.guildId;
+            if (this.failingOver.has(guildId)) return;
+
+            const track = player.queue.current;
+            if (!track) return;
+
+            const currentNode = player.shoukaku?.node?.name;
+            let state = this.failover.get(guildId);
+            if (!state || state.id !== track.identifier) {
+                state = { id: track.identifier, tried: new Set() };
+                this.failover.set(guildId, state);
+            }
+            if (currentNode) state.tried.add(currentNode);
+
+            console.warn(`[Failover] "${track.title}" falló en ${currentNode}: ${data?.exception?.message || 'error desconocido'}`);
+
+            const channel = this.client.channels.cache.get(player.textId);
+            const nextNode = state.tried.size >= 3 ? undefined : this.getPlayableNodes().find(n => !state.tried.has(n));
+
+            if (!nextNode) {
+                this.failover.delete(guildId);
+                if (channel) channel.send(`❌ No pude reproducir **${track.title}** en ningún nodo. La salto.`).catch(() => {});
                 return;
             }
 
-            player.queue.unshift(result.tracks[0]);
-            await player.skip();
-        } catch (err) {
-            console.error('Error en anuncio TTS:', err.message);
+            this.failingOver.add(guildId);
+            const queue = [...player.queue];
+            const saved = {
+                position: player.position || 0,
+                volume: player.volume,
+                loop: player.loop,
+                paused: player.paused,
+                textId: player.textId,
+                voiceId: player.voiceId,
+                shardId: this.client.guilds.cache.get(guildId)?.shardId || 0
+            };
+
+            try {
+                if (channel) channel.send(`⚠️ Falló en \`${currentNode}\`, reintentando en \`${nextNode}\`...`).catch(() => {});
+                await this.forceDestroyPlayer(guildId);
+
+                const newPlayer = await this.kazagumo.createPlayer({
+                    guildId,
+                    textId: saved.textId,
+                    voiceId: saved.voiceId,
+                    shardId: saved.shardId,
+                    nodeName: nextNode
+                });
+                await newPlayer.setVolume(saved.volume).catch(() => {});
+                newPlayer.setLoop(saved.loop);
+                await newPlayer.play(track, { replaceCurrent: true, position: saved.position, paused: saved.paused });
+                if (queue.length) newPlayer.queue.add(queue);
+            } catch (e) {
+                console.error('[Failover] Error moviendo la canción a otro nodo:', e?.message || e);
+                this.failover.delete(guildId);
+                try {
+                    const backup = await this.kazagumo.createPlayer({
+                        guildId,
+                        textId: saved.textId,
+                        voiceId: saved.voiceId,
+                        shardId: saved.shardId,
+                        nodeName: this.getBestNode()
+                    });
+                    backup.queue.add([track, ...queue]);
+                } catch {}
+                if (channel) channel.send('❌ No pude mover la canción a otro nodo. La cola quedó guardada; prueba `>m fix`.').catch(() => {});
+            } finally {
+                this.failingOver.delete(guildId);
+            }
+        });
+        this.kazagumo.shoukaku.on('disconnect', async (name, count) => {
+            console.warn(`🔌 Nodo ${name} desconectado (${count} players afectados). Forzando failover...`);
+            
+            for (const player of this.kazagumo.players.values()) {
+                if (player.shoukaku?.node?.name === name && !this.failingOver.has(player.guildId)) {
+                    console.log(`[Failover] Moviendo player de ${player.guildId} por caída de nodo...`);
+                    this.kazagumo.emit('playerException', player, { 
+                        exception: { message: 'Nodo desconectado abruptamente' } 
+                    });
+                }
+            }
+        });
+    }
+
+    getPlayableNodes(excludeName) {
+        const names = [];
+        for (const [name, node] of this.kazagumo.shoukaku.nodes) {
+            if (name === this.metadataNode || name === excludeName) continue;
+            const isConnected = node.state === 1 || node.state === 'CONNECTED';
+            if (isConnected && !this.failedNodes.has(name)) names.push(name);
         }
-    }*/
+        return names;
+    }
+
+    waitForPlayback(guildId, timeoutMs = 8000) {
+        return new Promise((resolve) => {
+            const finish = (ok) => {
+                clearTimeout(timer);
+                this.kazagumo.off('playerStart', onStart);
+                this.kazagumo.off('playerException', onFail);
+                this.kazagumo.off('playerStuck', onFail);
+                this.kazagumo.off('playerResolveError', onFail);
+                resolve(ok);
+            };
+            const onStart = (player) => { if (player.guildId === guildId) finish(true); };
+            const onFail = (player) => { if (player.guildId === guildId) finish(false); };
+            const timer = setTimeout(() => finish(false), timeoutMs);
+            this.kazagumo.on('playerStart', onStart);
+            this.kazagumo.on('playerException', onFail);
+            this.kazagumo.on('playerStuck', onFail);
+            this.kazagumo.on('playerResolveError', onFail);
+        });
+    }
+
+    async recreatePlayer(message, guild, member, forceDifferent = false) {
+        const player = this.kazagumo.getPlayer(guild.id);
+        if (!player) return message.reply('❌ No hay música reproduciéndose.');
+        if (!member.voice.channel) return message.reply('❌ Debes estar en un canal de voz.');
+
+        const oldNode = player.shoukaku?.node?.name;
+        const candidates = this.getPlayableNodes(forceDifferent ? oldNode : undefined).slice(0, 3);
+        if (!candidates.length) {
+            return message.reply(forceDifferent ? '❌ No hay otro nodo disponible ahora mismo.' : '❌ No hay nodos disponibles ahora mismo.');
+        }
+
+        const loading = await message.reply('🔄 Reiniciando el reproductor...');
+
+        const current = player.queue.current;
+        const queue = [...player.queue];
+        const saved = {
+            position: player.position || 0,
+            volume: player.volume,
+            loop: player.loop,
+            paused: player.paused
+        };
+
+        const buildPlayer = async (nodeName) => {
+            const options = {
+                guildId: guild.id,
+                textId: message.channel.id,
+                voiceId: member.voice.channel.id,
+                shardId: guild.shardId || 0,
+                nodeName
+            };
+            const p = await this.kazagumo.createPlayer(options);
+            await p.setVolume(saved.volume).catch(() => {});
+            p.setLoop(saved.loop);
+            return p;
+        };
+
+        this.failingOver.add(guild.id);
+
+        try {
+            await player.destroy();
+
+            for (const nodeName of candidates) {
+                try {
+                    console.log(`[Music] Recreando player: ${oldNode || '?'} -> ${nodeName}`);
+                    const newPlayer = await buildPlayer(nodeName);
+
+                    if (!current) {
+                        if (queue.length) newPlayer.queue.add(queue);
+                        if (newPlayer.queue.totalSize) await newPlayer.play();
+                        return loading.edit(`✅ Reproductor reiniciado en: \`${nodeName}\``);
+                    }
+
+                    const waiter = this.waitForPlayback(guild.id);
+                    await newPlayer.play(current, { replaceCurrent: true, position: saved.position, paused: saved.paused });
+                    const started = await waiter;
+
+                    if (queue.length) newPlayer.queue.add(queue);
+
+                    if (started) {
+                        return loading.edit(`✅ Reproductor reiniciado en: \`${nodeName}\` (posición ${this.formatTime(saved.position)})`);
+                    }
+                    console.warn(`[Music] ${nodeName} no pudo reproducir, probando otro nodo...`);
+                } catch (err) {
+                    console.error(`[Music] Falló en ${nodeName}:`, err?.message || err);
+                }
+                await this.kazagumo.getPlayer(guild.id)?.destroy().catch(() => {});
+            }
+
+            const restored = await buildPlayer(candidates[0]);
+            if (current) restored.queue.add(current);
+            if (queue.length) restored.queue.add(queue);
+            return loading.edit('⚠️ Ningún nodo pudo reproducir la canción. La cola quedó guardada; prueba `>m fix` más tarde.');
+        } catch (e) {
+            console.error('Error en recreatePlayer:', e);
+            return loading.edit('❌ Error al reiniciar el reproductor. Revisa la consola.');
+        } finally {
+            this.failingOver.delete(guild.id);
+        }
+    }
+
+    async reloadNodes(message, guild, member) {
+        return this.recreatePlayer(message, guild, member, true);
+    }
 
     async processCommand(message) {
         if (message.author.bot) return;
-
         const args = message.content.split(' ');
         const command = args[0].toLowerCase();
 
-        // Comandos de música
         if (['>', '>m', '>musica', '>music'].includes(command)) {
-            if (!args[1]) {
-                await this.showMusicHelp(message);
-                return;
-            }
-
-/*const commandName = command.replace('>', '');
-        await this.economy.missions.updateMissionProgress(message.author.id, 'unique_commands_used', commandName);*/
-
+            if (!args[1]) return this.showMusicHelp(message);
             const subcommand = args[1];
             const { member, channel, guild, author } = message;
 
             try {
                 switch (subcommand) {
-                    case 'play':
-                    case 'p':
-                        await this.playCommand(message, args, member, channel, guild, author);
-                        break;
-                    
-                    case 'stop':
-                    case 'leave':
-                    case 'disconnect':
-                        await this.stopCommand(message, guild, member);
-                        break;
-                    
-                    case 'skip':
-                    case 's':
-                        await this.skipCommand(message, args, guild, member);
-                        break;
-                    
-                    case 'pause':
-                        await this.pauseCommand(message, guild, member);
-                        break;
-                    
-                    case 'resume':
-                    case 'unpause':
-                        await this.resumeCommand(message, guild, member);
-                        break;
-                    
-                    case 'queue':
-                    case 'q':
-                        await this.queueCommand(message, args, guild);
-                        break;
-                    
-                    case 'nowplaying':
-                    case 'np':
-                        await this.nowPlayingCommand(message, guild);
-                        break;
-
-                    case 'ytsearch':
-                    case 'ys':
-                        await this.searchCommand(message, args, member, channel, guild, author, 'ytsearch');
-                        break;
-                    case 'spsearch':
-                    case 'ss':
-                        await this.spotifySearchCommand(message, args, member, channel, guild, author);
-                        break;
-                    case 'lyrics':
-                    case 'letra':
-                        await this.lyricsCommand(message, args);
-                        break;
-
-                    case 'fix':
-                    case 'restart':
-                        await this.fixPlayerCommand(message, guild, member);
-                        break;
-                    case 'seek':
-                    case 'adelantar':
-                    case 'forward':
-                        await this.seekCommand(message, args, guild, member);
-                        break;
-                    
-                    case 'volume':
-                    case 'vol':
-                        await this.volumeCommand(message, args, guild, member);
-                        break;
-                    
-                    case 'loop':
-                    case 'repeat':
-                        await this.loopCommand(message, args, guild, member);
-                        break;
-                    
-                    case 'shuffle':
-                        await this.shuffleCommand(message, guild, member);
-                        break;
-                    
-                    case 'clear':
-                        await this.clearQueueCommand(message, guild, member);
-                        break;
-                    
-                    default:
-                        await this.showMusicHelp(message);
-                        break;
+                    case 'play': case 'p': return await this.playCommand(message, args, member, channel, guild, author);
+                    case 'stop': case 'leave': return await this.stopCommand(message, guild, member);
+                    case 'skip': case 's': return await this.skipCommand(message, args, guild, member);
+                    case 'pause': return await this.pauseCommand(message, guild, member);
+                    case 'resume': case 'unpause': return await this.resumeCommand(message, guild, member);
+                    case 'queue': case 'q': return await this.queueCommand(message, args, guild);
+                    case 'nowplaying': case 'np': return await this.nowPlayingCommand(message, guild);
+                    case 'ytsearch': case 'ys': return await this.searchCommand(message, args, member, channel, guild, author, 'youtube');
+                    case 'spsearch': case 'ss': return await this.spotifySearchCommand(message, args, member, channel, guild, author);
+                    case 'lyrics': case 'letra': return await this.lyricsCommand(message, args);
+                    case 'fix': case 'restart': return await this.fixPlayerCommand(message, guild, member);
+                    case 'seek': case 'adelantar': return await this.seekCommand(message, args, guild, member);
+                    case 'volume': case 'vol': return await this.volumeCommand(message, args, guild, member);
+                    case 'loop': case 'repeat': return await this.loopCommand(message, args, guild, member);
+                    case 'shuffle': return await this.shuffleCommand(message, guild, member);
+                    case 'clear': return await this.clearQueueCommand(message, guild, member);
+                    case 'changenode': case 'reloadnode': return await this.reloadNodes(message, guild, member);
+                    case 'statusnode': case 'statusnodos': return await this.nodesCommand(message, guild);
+                    default: return await this.showMusicHelp(message);
                 }
             } catch (error) {
                 console.error('Error en comando de música:', error);
-                await message.reply('❌ Ocurrió un error ejecutando el comando de música.');
+                await message.reply('❌ Ocurrió un error ejecutando el comando de música.').catch(() => {});
             }
+        }
+    }
+
+    async playCommand(message, args, member, channel, guild, author) {
+        const voiceChannel = member.voice.channel;
+        if (!voiceChannel) return message.reply('❌ Debes estar en un canal de voz.');
+        if (!args[2]) return message.reply('❌ Proporciona el nombre de la canción.');
+
+        let query = args.slice(2).join(' ');
+        const loadingMsg = await message.reply(`🔍 Buscando... \`${query}\``);
+
+        try {
+            let player = this.kazagumo.getPlayer(guild.id);
+            
+            if (player && !this.kazagumo.shoukaku.nodes.get(player.shoukaku?.node?.name)) {
+                console.log(`[Music] Player zombi detectado en ${guild.id}. Destruyendo...`);
+                await this.forceDestroyPlayer(guild.id);
+                player = null;
+            }
+
+            if (!player) {
+                let bestNode = this.getBestNode();
+                let waited = 0;
+                while (!bestNode && waited < 10000) { // Esperar hasta 10 segundos
+                    console.log(`[Music] Esperando nodo... (${waited / 1000}s)`);
+                    await new Promise(r => setTimeout(r, 1000));
+                    bestNode = this.getBestNode();
+                    waited += 1000;
+                }
+
+                for (let attempt = 1; attempt <= 3; attempt++) {
+                    try {
+                        const finalNode = bestNode || this.getBestNode();
+                        console.log(`[Music] Creando player en nodo: ${finalNode || 'Automático'}`);
+                        
+                        const options = {
+                            guildId: guild.id,
+                            textId: channel.id,
+                            voiceId: voiceChannel.id,
+                            shardId: guild.shardId || 0
+                        };
+                        
+                        if (finalNode) options.nodeName = finalNode;
+
+                        player = await this.kazagumo.createPlayer(options);
+                        break;
+                    } catch (err) {
+                        console.error(`[play] createPlayer falló (intento ${attempt}):`, err?.status, err?.message);
+                        try { await this.kazagumo.getPlayer(guild.id)?.destroy(); } catch {}
+                        if (attempt === 3) throw err;
+                        await new Promise(r => setTimeout(r, 2000));
+                    }
+                }
+            }
+
+            this.clearPlayerTimeout(guild.id);
+
+            let result;
+            for (let attempt = 1; attempt <= 3; attempt++) {
+                try {
+                    const bestNode = this.getBestNode();                    
+                    const searchOpts = { requester: author };
+                    if (bestNode) searchOpts.nodeName = bestNode;
+
+                    result = await this.searchWithTimeout(query, searchOpts);
+                    break;
+                } catch (err) {
+                    console.error(`[play] Búsqueda falló (intento ${attempt}):`, err.message);
+                    if (attempt === 3) throw err;
+                    await new Promise(r => setTimeout(r, 1000 * attempt));
+                }
+            }
+
+            if (!result || !result.tracks.length) return loadingMsg.edit('❌ No se encontraron resultados.');
+
+            if (result.type === 'PLAYLIST') {
+                player.queue.add(result.tracks);
+                await loadingMsg.edit({
+                    embeds: [new EmbedBuilder().setTitle('📂 Playlist Agregada')
+                        .setDescription(`**${result.playlistName}**\n${result.tracks.length} canciones agregadas`)
+                        .setColor('#00FF00')]
+                });
+            } else {
+                player.queue.add(result.tracks[0]);
+                await loadingMsg.edit({
+                    embeds: [new EmbedBuilder().setTitle('🎵 Canción Agregada')
+                        .setDescription(`**${result.tracks[0].title}**\nDuración: ${this.formatTime(result.tracks[0].length)}`)
+                        .setThumbnail(result.tracks[0].thumbnail || null)
+                        .setColor('#00FF00')]
+                });
+            }
+
+            if (!player.playing && !player.paused) {
+                try {
+                    await player.play();
+                } catch (e) {
+                    console.error('Error al iniciar play:', e.message);
+                    await loadingMsg.edit('❌ Se agregó la canción, pero el servidor de música falló al intentar reproducirla. Intenta usar `>m fix` o elige otra canción.');
+                }
+            }
+        } catch (error) {
+            console.error('Error en play command:', error);
+            await loadingMsg.edit('❌ Ocurrió un error al reproducir la música.');
         }
     }
 
     async searchCommand(message, args, member, channel, guild, author, engine) {
         const query = args.slice(2).join(' ').trim();
-        if (!query) {
-            const prefix = engine === 'ytsearch' ? 'ytsearch' : 'spsearch';
-            return message.reply(`❌ Escribe algo para buscar.\nEjemplo: \`>m ${prefix} la lagartija\``);
-        }
+        if (!query) return message.reply(`❌ Escribe algo para buscar.\nEjemplo: \`>m ytsearch la lagartija\``);
 
         const loadingMsg = await message.reply(`🔍 Buscando **${query}**...`);
 
         try {
-            const result = await this.kazagumo.search(query, { requester: author, engine });
-
-            if (!result || !result.tracks.length) {
-                return loadingMsg.edit('❌ No se encontraron resultados.');
+            let result;
+            for (let attempt = 1; attempt <= 3; attempt++) {
+                try {
+                    const bestNode = this.getBestNode();                    
+                    console.log(`[Music] >m ytsearch intentando usar el nodo: ${bestNode || 'Automático'}`);
+                    const searchOpts = { requester: author, engine };
+                    if (bestNode) searchOpts.nodeName = bestNode;
+                    
+                    result = await this.searchWithTimeout(query, searchOpts);
+                    break;
+                } catch (err) {
+                    console.error(`[${engine}] Búsqueda falló (intento ${attempt}):`, err.message);
+                    if (attempt === 3) throw err;
+                    await new Promise(r => setTimeout(r, 1000 * attempt));
+                }
             }
+            if (!result || !result.tracks.length) return loadingMsg.edit('❌ No se encontraron resultados.');
 
             const tracks = result.tracks.slice(0, 7);
-            const platform = engine === 'ytsearch' ? '🎬 YouTube' : '🟢 Spotify';
-
             const embed = new EmbedBuilder()
-                .setTitle(`${platform} — Resultados para "${query}"`)
-                .setColor(engine === 'ytsearch' ? '#FF0000' : '#1DB954')
-                .setDescription(
-                    tracks.map((t, i) => {
-                        const duration = this.formatTime(t.length);
-                        const source = engine === 'spsearch' 
-                            ? `🟢 ${t.author || 'Desconocido'}`
-                            : `🎬 ${t.author || 'Desconocido'}`;
-                        return `\`${i + 1}.\` **${t.title}**\n└ ${duration} • ${source}`;
-                    }).join('\n\n')
-                )
-                .setFooter({ text: 'Selecciona una canción para ver detalles o reproducir' })
-                .setTimestamp();
+                .setTitle(`🎬 ${engine === 'spsearch:' ? 'Spotify' : 'YouTube'} — Resultados para "${query}"`)
+                .setColor('#FF0000')
+                .setDescription(tracks.map((t, i) => `\`${i + 1}.\` **${t.title}**\n└ ${this.formatTime(t.length)} • ${t.author || 'Desconocido'}`).join('\n\n'))
+                .setFooter({ text: 'Selecciona una canción para ver detalles o reproducir' });
 
             const row1 = new ActionRowBuilder().addComponents(
-                tracks.slice(0, 4).map((_, i) =>
-                    new ButtonBuilder()
-                        .setCustomId(`msearch_${i}_${message.author.id}_${guild.id}`)
-                        .setLabel(`${i + 1}`)
-                        .setStyle(ButtonStyle.Primary)
-                )
+                tracks.slice(0, 4).map((_, i) => new ButtonBuilder().setCustomId(`msearch_${i}_${message.author.id}_${guild.id}`).setLabel(`${i + 1}`).setStyle(ButtonStyle.Primary))
             );
             const row2 = new ActionRowBuilder().addComponents([
-                ...tracks.slice(4).map((_, i) =>
-                    new ButtonBuilder()
-                        .setCustomId(`msearch_${i + 4}_${message.author.id}_${guild.id}`)
-                        .setLabel(`${i + 5}`)
-                        .setStyle(ButtonStyle.Primary)
-                ),
-                new ButtonBuilder()
-                    .setCustomId(`msearch_cancel_${message.author.id}_${guild.id}`)
-                    .setLabel('❌ Cancelar')
-                    .setStyle(ButtonStyle.Danger)
+                ...tracks.slice(4).map((_, i) => new ButtonBuilder().setCustomId(`msearch_${i + 4}_${message.author.id}_${guild.id}`).setLabel(`${i + 5}`).setStyle(ButtonStyle.Primary)),
+                new ButtonBuilder().setCustomId(`msearch_cancel_${message.author.id}_${guild.id}`).setLabel('❌ Cancelar').setStyle(ButtonStyle.Danger)
             ]);
 
             const searchMsg = await loadingMsg.edit({ content: '', embeds: [embed], components: [row1, row2] });
 
-            // Solo guardar sesión — handleSearchInteraction maneja TODO
-            if (!this.searchSessions) this.searchSessions = new Map();
             this.searchSessions.set(`${message.author.id}_${guild.id}`, {
-                tracks, member, channel, guild, author, engine, embed, row1, row2
+                tracks, member, channel, guild, author, engine, embed, row1, row2, timestamp: Date.now()
             });
-
-            // Auto-limpiar después de 60s
-            setTimeout(() => {
-                if (this.searchSessions?.has(`${message.author.id}_${guild.id}`)) {
-                    this.searchSessions.delete(`${message.author.id}_${guild.id}`);
-                    searchMsg.edit({ components: [] }).catch(() => {});
-                }
-            }, 60000);
 
         } catch (error) {
             console.error('Error en searchCommand:', error);
@@ -537,479 +780,192 @@ class MusicSystem {
         }
     }
 
-    async checkNodeSpotifyCapability(nodeConfig) {
-        try {
-            const protocol = nodeConfig.secure ? 'https' : 'http';
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 5000);
-
-            const response = await fetch(`${protocol}://${nodeConfig.url}/v4/info`, {
-                headers: { 'Authorization': nodeConfig.auth },
-                signal: controller.signal
-            });
-            clearTimeout(timeoutId);
-
-            if (!response.ok) return false;
-
-            const data = await response.json();
-            const sourceManagers = data.sourceManagers || [];
-            return sourceManagers.includes('spotify');
-        } catch (error) {
-            return false;
-        }
-    }
-
     async spotifySearchCommand(message, args, member, channel, guild, author) {
-        if (this.spotifyCapableNodes.size === 0) {
-            return message.reply('⚠️ Ningún servidor de música disponible tiene soporte de Spotify ahora mismo. Intenta con búsqueda normal (YouTube) o vuelve a intentar en unos minutos.');
-        }
-
         const query = args.slice(2).join(' ').trim();
         if (!query) return message.reply('❌ Escribe algo para buscar.\nEjemplo: `>m spsearch la lagartija`');
 
         const loadingMsg = await message.reply(`🔍 Buscando en Spotify **${query}**...`);
 
         try {
-            const searchRes = await fetch(
-                `https://api.deezer.com/search?q=${encodeURIComponent(query)}&limit=7`,
-                { signal: AbortSignal.timeout(8000) }
-            );
-            const searchData = await searchRes.json();
-            const rawTracks = searchData.data;
+            let result = null;
+            const candidates = this.getSpotifyNodeCandidates().slice(0, 3);
+            if (!candidates.length) return loadingMsg.edit('❌ No hay nodos disponibles ahora mismo. Intenta en unos segundos.');
 
-            if (!rawTracks || rawTracks.length === 0) {
-                return loadingMsg.edit('❌ No se encontraron resultados en Spotify.');
+            for (const nodeName of candidates) {
+                try {
+                    console.log(`[Music] >m spsearch intentando en nodo: ${nodeName}`);
+                    const res = await this.searchWithTimeout(query, { requester: author, source: 'spsearch:', nodeName }, 6000);
+                    if (res && res.tracks && res.tracks.length) { result = res; break; }
+                    console.warn(`[spsearch] ${nodeName} no devolvió resultados`);
+                } catch (err) {
+                    console.error(`[spsearch] ${nodeName} falló:`, err.message);
+                }
             }
+            
+            if (!result || !result.tracks.length) return loadingMsg.edit('❌ No pude buscar en Spotify ahora mismo (el servidor de Spotify no responde). Usa `>m play` o `>m ytsearch`.');
 
-            // Normalizar formato Deezer → formato compatible con el resto del código
-            const tracks = rawTracks.map(t => ({
-                name: t.title,
-                artists: [{ name: t.artist.name }],
-                album: {
-                    name: t.album.title,
-                    images: [{ url: t.album.cover_medium }],
-                    release_date: null
-                },
-                duration_ms: t.duration * 1000,
-                external_urls: { spotify: `${t.title} ${t.artist.name}` } // usado para buscar en Lavalink
-            }));
-
+            const tracks = result.tracks.slice(0, 7);
             const embed = new EmbedBuilder()
                 .setTitle(`🟢 Spotify — Resultados para "${query}"`)
                 .setColor('#1DB954')
-                .setDescription(
-                    tracks.map((t, i) => {
-                        const duration = this.formatTime(t.duration_ms);
-                        const artists = t.artists.map(a => a.name).join(', ');
-                        return `\`${i + 1}.\` **${t.name}**\n└ ${duration} • ${artists} • ${t.album.name}`;
-                    }).join('\n\n')
-                )
-                .setThumbnail(tracks[0]?.album?.images?.[0]?.url || null)
-                .setFooter({ text: 'Selecciona una canción para ver detalles o reproducir' })
-                .setTimestamp();
+                .setDescription(tracks.map((t, i) => `\`${i + 1}.\` **${t.title}**\n└ ${this.formatTime(t.length)} • ${t.author || 'Desconocido'}`).join('\n\n'))
+                .setThumbnail(tracks[0]?.thumbnail || null)
+                .setFooter({ text: 'Selecciona una canción para ver detalles o reproducir' });
 
             const row1 = new ActionRowBuilder().addComponents(
-                tracks.slice(0, 4).map((_, i) =>
-                    new ButtonBuilder()
-                        .setCustomId(`msp_${i}_${message.author.id}_${guild.id}`)
-                        .setLabel(`${i + 1}`)
-                        .setStyle(ButtonStyle.Success)
-                )
+                tracks.slice(0, 4).map((_, i) => new ButtonBuilder().setCustomId(`msp_${i}_${message.author.id}_${guild.id}`).setLabel(`${i + 1}`).setStyle(ButtonStyle.Success))
             );
             const row2 = new ActionRowBuilder().addComponents([
-                ...tracks.slice(4).map((_, i) =>
-                    new ButtonBuilder()
-                        .setCustomId(`msp_${i + 4}_${message.author.id}_${guild.id}`)
-                        .setLabel(`${i + 5}`)
-                        .setStyle(ButtonStyle.Success)
-                ),
-                new ButtonBuilder()
-                    .setCustomId(`msp_cancel_${message.author.id}_${guild.id}`)
-                    .setLabel('❌ Cancelar')
-                    .setStyle(ButtonStyle.Danger)
+                ...tracks.slice(4).map((_, i) => new ButtonBuilder().setCustomId(`msp_${i + 4}_${message.author.id}_${guild.id}`).setLabel(`${i + 5}`).setStyle(ButtonStyle.Success)),
+                new ButtonBuilder().setCustomId(`msp_cancel_${message.author.id}_${guild.id}`).setLabel('❌ Cancelar').setStyle(ButtonStyle.Danger)
             ]);
 
-            const searchMsg = await loadingMsg.edit({ content: '', embeds: [embed], components: [row1, row2] });
+            await loadingMsg.edit({ content: '', embeds: [embed], components: [row1, row2] });
 
-            if (!this.spotifySearchSessions) this.spotifySearchSessions = new Map();
             this.spotifySearchSessions.set(`${message.author.id}_${guild.id}`, {
-                tracks, member, channel, guild, author, embed, row1, row2
+                tracks, member, channel, guild, author, embed, row1, row2, timestamp: Date.now()
             });
-
-            setTimeout(() => {
-                if (this.spotifySearchSessions?.has(`${message.author.id}_${guild.id}`)) {
-                    this.spotifySearchSessions.delete(`${message.author.id}_${guild.id}`);
-                    searchMsg.edit({ components: [] }).catch(() => {});
-                }
-            }, 60000);
 
         } catch (error) {
             console.error('Error en spotifySearchCommand:', error);
-            await loadingMsg.edit('❌ Error al buscar en Spotify. Intenta más tarde.');
+            await loadingMsg.edit('❌ Error al buscar en Spotify. Asegúrate de que tu Lavalink propio tenga configurado el plugin de Spotify.');
         }
-    }
-
-    // ─── LYRICS COMMAND ───────────────────────────────────────────────────────────
-    async lyricsCommand(message, args) {
-        const query = args.slice(2).join(' ').trim();
-        if (!query) {
-            return message.reply('❌ Escribe el nombre de la canción.\nEjemplo: `>m lyrics la lagartija`');
-        }
-
-        const loadingMsg = await message.reply(`🔍 Buscando letra de **${query}**...`);
-
-        let lyrics = null;
-        let source = null;
-
-        // ── lrclib ──
-        try {
-            console.log('🎵 Buscando en lrclib...');
-            const lrclibRes = await fetch(
-                `https://lrclib.net/api/search?q=${encodeURIComponent(query)}`,
-                { signal: AbortSignal.timeout(8000) }
-            );
-            console.log('lrclib status:', lrclibRes.status);
-
-            if (lrclibRes.ok) {
-                const results = await lrclibRes.json();
-                console.log('lrclib resultados:', results.length);
-
-                if (results.length > 0) {
-                    const song = results[0];
-                    console.log('lrclib canción:', song.trackName, '-', song.artistName);
-
-                    const rawLyrics = song.plainLyrics || song.syncedLyrics;
-                    if (rawLyrics && rawLyrics.length > 50) {
-                        lyrics = rawLyrics.replace(/\[\d+:\d+\.\d+\]/g, '').trim();
-                        source = `lrclib — ${song.trackName} (${song.artistName})`;
-                    }
-                }
-            }
-        } catch (e) {
-            console.warn('lrclib falló:', e.message);
-        }
-
-        if (!lyrics) {
-            return loadingMsg.edit(
-                `❌ No se encontró la letra.\n` +
-                `Intenta con el formato: \`>m lyrics Artista - Canción\`\n` +
-                `Ejemplo: \`>m lyrics Gorillaz - Clint Eastwood\``
-            );
-        }
-
-        // Dividir por líneas para no cortar palabras
-        const lines = lyrics.split('\n');
-        const chunks = [];
-        let currentChunk = '';
-
-        for (const line of lines) {
-            if ((currentChunk + '\n' + line).length > 1900) {
-                if (currentChunk) chunks.push(currentChunk.trim());
-                currentChunk = line;
-            } else {
-                currentChunk += (currentChunk ? '\n' : '') + line;
-            }
-        }
-        if (currentChunk) chunks.push(currentChunk.trim());
-
-        // ── Metadata con Deezer (reemplaza Spotify, sin token ni Premium) ──
-        let songThumbnail = null;
-        let songTitle = query;
-        let songArtist = null;
-
-        try {
-            const deezerRes = await fetch(
-                `https://api.deezer.com/search?q=${encodeURIComponent(query)}&limit=1`,
-                { signal: AbortSignal.timeout(5000) }
-            );
-            const deezerData = await deezerRes.json();
-            const track = deezerData.data?.[0];
-            if (track) {
-                songThumbnail = track.album?.cover_medium || null;
-                songTitle = track.title;
-                songArtist = track.artist.name;
-            }
-        } catch (e) {
-            console.warn('Deezer metadata falló:', e.message);
-        }
-
-        const embed = new EmbedBuilder()
-            .setTitle(`🎵 ${songTitle}`)
-            .setDescription(chunks[0] + '\n\u200b')
-            .setColor('#9932CC')
-            .setThumbnail(songThumbnail)
-            .setTimestamp();
-
-        if (songArtist) embed.addFields({ name: '👤 Artista', value: songArtist, inline: true });
-        embed.addFields({ name: '📖 Fuente', value: source, inline: true });
-        if (chunks.length > 1) embed.setFooter({ text: `Página 1/${chunks.length}` });
-
-        if (chunks.length === 1) {
-            return loadingMsg.edit({ content: '', embeds: [embed] });
-        }
-
-        // Paginación si la letra es larga
-        let currentPage = 0;
-        const navRow = new ActionRowBuilder().addComponents(
-            new ButtonBuilder()
-                .setCustomId(`lyrics_prev_${message.author.id}`)
-                .setLabel('⬅️')
-                .setStyle(ButtonStyle.Secondary)
-                .setDisabled(true),
-            new ButtonBuilder()
-                .setCustomId(`lyrics_next_${message.author.id}`)
-                .setLabel('➡️')
-                .setStyle(ButtonStyle.Secondary)
-                .setDisabled(chunks.length <= 1)
-        );
-
-        const lyricsMsg = await loadingMsg.edit({ content: '', embeds: [embed], components: [navRow] });
-
-        const collector = lyricsMsg.createMessageComponentCollector({
-            filter: i => i.user.id === message.author.id,
-            time: 120000
-        });
-
-        collector.on('collect', async interaction => {
-            await interaction.deferUpdate();
-            if (interaction.customId.startsWith('lyrics_next')) currentPage++;
-            if (interaction.customId.startsWith('lyrics_prev')) currentPage--;
-
-            const pageEmbed = new EmbedBuilder()
-                .setTitle(`🎵 ${songTitle}`)
-                .setDescription(chunks[currentPage] + '\n\u200b')
-                .setColor('#9932CC')
-                .setThumbnail(songThumbnail)
-                .setTimestamp();
-
-            if (songArtist) pageEmbed.addFields({ name: '👤 Artista', value: songArtist, inline: true });
-            pageEmbed.addFields({ name: '📖 Fuente', value: source, inline: true });
-            pageEmbed.setFooter({ text: `Página ${currentPage + 1}/${chunks.length}` });
-
-            const updatedRow = new ActionRowBuilder().addComponents(
-                new ButtonBuilder()
-                    .setCustomId(`lyrics_prev_${message.author.id}`)
-                    .setLabel('⬅️')
-                    .setStyle(ButtonStyle.Secondary)
-                    .setDisabled(currentPage === 0),
-                new ButtonBuilder()
-                    .setCustomId(`lyrics_next_${message.author.id}`)
-                    .setLabel('➡️')
-                    .setStyle(ButtonStyle.Secondary)
-                    .setDisabled(currentPage === chunks.length - 1)
-            );
-
-            await lyricsMsg.edit({ embeds: [pageEmbed], components: [updatedRow] });
-        });
-
-        collector.on('end', () => {
-            lyricsMsg.edit({ components: [] }).catch(() => {});
-        });
     }
 
     async handleSearchInteraction(interaction) {
         try {
-            try {
-                await interaction.deferUpdate();
-            } catch (deferErr) {
-                console.warn('deferUpdate falló:', deferErr.message);
-                return;
-            }
-
+            await interaction.deferUpdate().catch(() => {});
+            
             const customId = interaction.customId;
             const parts = customId.split('_');
 
-            // Detectar posición correcta de userId según el tipo de botón
             let userId, guildId;
             if (customId.startsWith('mback_') || customId.startsWith('mspback_')) {
-                // mback_userId_guildId
-                userId = parts[1];
-                guildId = parts[2];
+                userId = parts[1]; guildId = parts[2];
             } else {
-                // msearch_0_userId_guildId / mplay_0_userId_guildId / msp_0_userId_guildId
-                userId = parts[2];
-                guildId = parts[3];
+                userId = parts[2]; guildId = parts[3];
             }
 
-            if (interaction.user.id !== userId) {
-                return interaction.followUp({ 
-                    content: '❌ Este menú no es tuyo.', 
-                    ephemeral: true 
-                });
-            }
+            if (interaction.user.id !== userId) return interaction.followUp({ content: '❌ Este menú no es tuyo.', ephemeral: true });
 
-            // ─── SPOTIFY SEARCH ───────────────────────────────
-            if (customId.startsWith('msp_') || customId.startsWith('mspplay_') || customId.startsWith('mspback_')) {
-                if (this.spotifyCapableNodes.size === 0) {
-                    return interaction.reply({ 
-                        content: '⚠️ Ningún servidor de música disponible tiene soporte de Spotify ahora mismo. Intenta con búsqueda normal (YouTube) o vuelve a intentar en unos minutos.', 
-                        ephemeral: true 
-                    });
-                }
-
-                const session = this.spotifySearchSessions?.get(`${userId}_${guildId}`);
+            if (customId.startsWith('mq_')) {
+                const session = this.queuePages.get(`${userId}_${guildId}`);
                 if (!session) return interaction.editReply({ content: '❌ Sesión expirada.', embeds: [], components: [] });
 
-                if (customId.startsWith('msp_') && customId.includes('cancel')) {
+                if (customId.startsWith('mq_close_')) {
+                    this.queuePages.delete(`${userId}_${guildId}`);
+                    return interaction.editReply({ content: '❌ Vista cerrada.', embeds: [], components: [] });
+                }
+
+                const player = this.kazagumo.getPlayer(guildId);
+                if (!player || !player.queue.current) {
+                    this.queuePages.delete(`${userId}_${guildId}`);
+                    return interaction.editReply({ content: '❌ No hay música reproduciéndose.', embeds: [], components: [] });
+                }
+
+                let newPage = session.page;
+                if (customId.startsWith('mq_prev_')) newPage--;
+                if (customId.startsWith('mq_next_')) newPage++;
+
+                const current = player.queue.current;
+                const songs = player.queue.slice(0, player.queue.size);
+                const totalPages = Math.max(1, Math.ceil(songs.length / session.songsPerPage));
+                newPage = Math.min(Math.max(1, newPage), totalPages);
+
+                const { embed } = this.buildQueueEmbed(player, songs, current, newPage, session.songsPerPage, interaction.user);
+
+                session.page = newPage;
+                session.songs = songs;
+                session.current = current;
+                session.timestamp = Date.now();
+
+                const row = new ActionRowBuilder().addComponents(
+                    new ButtonBuilder().setCustomId(`mq_prev_${userId}_${guildId}`).setEmoji('⏮️').setStyle(ButtonStyle.Secondary).setDisabled(newPage <= 1),
+                    new ButtonBuilder().setCustomId(`mq_close_${userId}_${guildId}`).setEmoji('❌').setStyle(ButtonStyle.Danger),
+                    new ButtonBuilder().setCustomId(`mq_next_${userId}_${guildId}`).setEmoji('⏭️').setStyle(ButtonStyle.Secondary).setDisabled(newPage >= totalPages),
+                );
+
+                return interaction.editReply({ embeds: [embed], components: totalPages > 1 ? [row] : [] });
+            }
+            
+            try {
+                const disabledRows = interaction.message.components.map(row => {
+                    const builder = ActionRowBuilder.from(row);
+                    builder.components.forEach(c => c.setDisabled(true));
+                    return builder;
+                });
+                await interaction.message.edit({ components: disabledRows });
+            } catch (e) {
+            }
+
+            if (customId.startsWith('msp_') || customId.startsWith('mspplay_') || customId.startsWith('mspback_')) {
+                const session = this.spotifySearchSessions.get(`${userId}_${guildId}`);
+                if (!session) return interaction.editReply({ content: '❌ Sesión expirada.', embeds: [], components: [] });
+
+                if (customId.includes('cancel')) {
                     this.spotifySearchSessions.delete(`${userId}_${guildId}`);
                     return interaction.editReply({ content: '❌ Búsqueda cancelada.', embeds: [], components: [] });
                 }
-
-                if (customId.startsWith('mspback_')) {
-                    return interaction.editReply({ embeds: [session.embed], components: [session.row1, session.row2] });
-                }
+                if (customId.startsWith('mspback_')) return interaction.editReply({ embeds: [session.embed], components: [session.row1, session.row2] });
 
                 if (customId.startsWith('mspplay_')) {
                     const index = parseInt(parts[1]);
-                    const track = session.tracks[index];
+                    const selected = session.tracks[index];
                     const voiceChannel = interaction.member.voice.channel;
                     if (!voiceChannel) return interaction.editReply({ content: '❌ Debes estar en un canal de voz.', embeds: [], components: [] });
 
-                    try {
-                        const searchQuery = `${track.name} ${track.artists[0].name}`;
-
-                        // Retry hasta 3 veces si hay AbortError
-                        let result = null;
-                        for (let attempt = 1; attempt <= 3; attempt++) {
-                            try {
-                                result = await this.kazagumo.search(searchQuery, { requester: session.author, engine: 'ytsearch' });
-                                break;
-                            } catch (searchErr) {
-                                if (attempt === 3) throw searchErr;
-                                console.log(`⚠️ spsearch intento ${attempt} fallido, reintentando...`);
-                                await new Promise(r => setTimeout(r, 1000 * attempt));
-                            }
-                        }
-
-                        if (!result || !result.tracks.length) return interaction.editReply({ content: '❌ No se pudo cargar la canción.', embeds: [], components: [] });
-
-                        let player = this.kazagumo.getPlayer(guildId);
-                        if (!player) {
-                            for (let attempt = 1; attempt <= 3; attempt++) {
-                                try {
-                                    player = await this.kazagumo.createPlayer({
-                                        guildId,
-                                        textId: interaction.channelId,
-                                        voiceId: voiceChannel.id,
-                                        shardId: interaction.guild.shardId || 0,
-                                        nodeName: this.spotifyCapableNodes.size > 0 ? [...this.spotifyCapableNodes][0] : undefined,
-                                    });
-                                    break;
-                                } catch (playerErr) {
-                                    if (attempt === 3) throw playerErr;
-                                    console.log(`⚠️ createPlayer intento ${attempt} fallido, reintentando...`);
-                                    await new Promise(r => setTimeout(r, 1000 * attempt));
-                                }
-                            }
-                        }
-
-                        this.clearPlayerTimeout(guildId);
-                        player.queue.add(result.tracks[0]);
-                        if (!player.playing && !player.paused) {
-                            await new Promise(r => setTimeout(r, 500));
-                            try {
-                                await player.play();
-                            } catch (e) {
-                                console.error('Error al iniciar reproducción:', e.message);
-                            }
-                        }
-
-                        const addedEmbed = new EmbedBuilder()
-                            .setTitle('✅ Canción Agregada')
-                            .setDescription(`**${track.name}**\nDuración: ${this.formatTime(track.duration_ms)}`)
-                            .setThumbnail(track.album?.images?.[0]?.url || null)
-                            .setColor('#1DB954');
-
-                        this.spotifySearchSessions.delete(`${userId}_${guildId}`);
-                        return interaction.editReply({ content: '', embeds: [addedEmbed], components: [] });
-                    } catch (e) {
-                        console.error('Error en spsearch play:', e.message);
-                        const errMsg = e.name === 'AbortError' 
-                            ? '❌ El servidor de música tardó demasiado. Intenta de nuevo.' 
-                            : `❌ Error al reproducir: ${e.message}`;
-                        return interaction.editReply({ content: errMsg, embeds: [], components: [] });
+                    let player = this.kazagumo.getPlayer(guildId);
+                    if (!player) {
+                        const bestNode = this.getBestNode();
+                        const options = { guildId, textId: interaction.channelId, voiceId: voiceChannel.id, shardId: interaction.guild.shardId || 0 };
+                        if (bestNode) options.nodeName = bestNode;
+                        player = await this.kazagumo.createPlayer(options);
                     }
+
+                    this.clearPlayerTimeout(guildId);
+                    const playNode = this.getBestNode();
+                    const found = await this.searchWithTimeout(
+                        `${selected.title} ${selected.author || ''}`.trim(),
+                        { requester: session.author, ...(playNode ? { nodeName: playNode } : {}) }
+                    ).catch(() => null);
+                    if (!found || !found.tracks.length) {
+                        return interaction.editReply({ content: '❌ No encontré esa canción para reproducir.', embeds: [], components: [] });
+                    }
+                    player.queue.add(found.tracks[0]);
+                    if (!player.playing && !player.paused) await player.play().catch(() => {});
+
+                    this.spotifySearchSessions.delete(`${userId}_${guildId}`);
+                    return interaction.editReply({ content: '', embeds: [new EmbedBuilder().setTitle('✅ Canción Agregada').setDescription(`**${selected.title}**`).setColor('#1DB954')], components: [] });
                 }
 
-                // msp_ con número — mostrar detalles
                 const index = parseInt(parts[1]);
                 const track = session.tracks[index];
-                const artists = track.artists.map(a => a.name).join(', ');
-
                 const detailEmbed = new EmbedBuilder()
                     .setTitle('🟢 Canción de Spotify')
                     .setColor('#1DB954')
-                    .setThumbnail(track.album?.images?.[0]?.url || null)
+                    .setThumbnail(track.thumbnail || null)
                     .addFields(
-                        { name: '🎵 Título', value: track.name, inline: false },
-                        { name: '👤 Artista', value: artists, inline: true },
-                        { name: '💿 Álbum', value: track.album.name, inline: true },
-                        { name: '⏱️ Duración', value: this.formatTime(track.duration_ms), inline: true },
-                        { name: '📅 Lanzamiento', value: track.album.release_date || 'Desconocido', inline: true },
-                    )
-                    .setTimestamp();
+                        { name: '🎵 Título', value: track.title || 'Desconocido', inline: false },
+                        { name: '👤 Artista', value: track.author || 'Desconocido', inline: true },
+                        { name: '⏱️ Duración', value: this.formatTime(track.length), inline: true }
+                    );
 
                 const playRow = new ActionRowBuilder().addComponents(
-                    new ButtonBuilder()
-                        .setCustomId(`mspplay_${index}_${userId}_${guildId}`)
-                        .setLabel('▶️ Reproducir')
-                        .setStyle(ButtonStyle.Success),
-                    new ButtonBuilder()
-                        .setCustomId(`mspback_${userId}_${guildId}`)
-                        .setLabel('⬅️ Volver')
-                        .setStyle(ButtonStyle.Secondary),
-                    new ButtonBuilder()
-                        .setCustomId(`msp_cancel_${userId}_${guildId}`)
-                        .setLabel('❌ Cerrar')
-                        .setStyle(ButtonStyle.Danger)
+                    new ButtonBuilder().setCustomId(`mspplay_${index}_${userId}_${guildId}`).setLabel('▶️ Reproducir').setStyle(ButtonStyle.Success),
+                    new ButtonBuilder().setCustomId(`mspback_${userId}_${guildId}`).setLabel('⬅️ Volver').setStyle(ButtonStyle.Secondary),
+                    new ButtonBuilder().setCustomId(`msp_cancel_${userId}_${guildId}`).setLabel('❌ Cerrar').setStyle(ButtonStyle.Danger)
                 );
-
                 return interaction.editReply({ embeds: [detailEmbed], components: [playRow] });
             }
 
-            // ─── YOUTUBE SEARCH ───────────────────────────────
-            const session = this.searchSessions?.get(`${userId}_${guildId}`);
-            if (!session) return interaction.editReply({ content: '❌ La sesión expiró. Busca de nuevo.', embeds: [], components: [] });
+            const session = this.searchSessions.get(`${userId}_${guildId}`);
+            if (!session) return interaction.editReply({ content: '❌ Sesión expirada.', embeds: [], components: [] });
 
-            if (customId.startsWith('msearch_cancel')) {
+            if (customId.includes('cancel')) {
                 this.searchSessions.delete(`${userId}_${guildId}`);
                 return interaction.editReply({ content: '❌ Búsqueda cancelada.', embeds: [], components: [] });
             }
-
-            if (customId.startsWith('msearch_')) {
-                const index = parseInt(parts[1]);
-                const selected = session.tracks[index];
-
-                const detailEmbed = new EmbedBuilder()
-                    .setTitle('🎵 Detalles de la Canción')
-                    .setColor('#9932CC')
-                    .setThumbnail(selected.thumbnail || null)
-                    .addFields(
-                        { name: '🎵 Título', value: selected.title, inline: false },
-                        { name: '👤 Artista', value: selected.author || 'Desconocido', inline: true },
-                        { name: '⏱️ Duración', value: this.formatTime(selected.length), inline: true },
-                        { name: '📡 Plataforma', value: session.engine === 'ytsearch' ? '🎬 YouTube' : '🟢 Spotify', inline: true },
-                        { name: '🔗 URL', value: selected.uri || 'No disponible', inline: false }
-                    )
-                    .setTimestamp();
-
-                const playRow = new ActionRowBuilder().addComponents(
-                    new ButtonBuilder()
-                        .setCustomId(`mplay_${index}_${userId}_${guildId}`)
-                        .setLabel('▶️ Reproducir')
-                        .setStyle(ButtonStyle.Success),
-                    new ButtonBuilder()
-                        .setCustomId(`mback_${userId}_${guildId}`)
-                        .setLabel('⬅️ Volver')
-                        .setStyle(ButtonStyle.Secondary),
-                    new ButtonBuilder()
-                        .setCustomId(`msearch_cancel_${userId}_${guildId}`)
-                        .setLabel('❌ Cerrar')
-                        .setStyle(ButtonStyle.Danger)
-                );
-
-                return interaction.editReply({ embeds: [detailEmbed], components: [playRow] });
-            }
+            if (customId.startsWith('mback_')) return interaction.editReply({ embeds: [session.embed], components: [session.row1, session.row2] });
 
             if (customId.startsWith('mplay_')) {
                 const index = parseInt(parts[1]);
@@ -1017,376 +973,77 @@ class MusicSystem {
                 const voiceChannel = interaction.member.voice.channel;
                 if (!voiceChannel) return interaction.editReply({ content: '❌ Debes estar en un canal de voz.', embeds: [], components: [] });
 
-                try {
-                    let player = this.kazagumo.getPlayer(guildId);
-                    if (!player) {
-                        for (let attempt = 1; attempt <= 3; attempt++) {
-                            try {
-                                player = await this.kazagumo.createPlayer({
-                                    guildId,
-                                    textId: interaction.channelId,
-                                    voiceId: voiceChannel.id,
-                                    shardId: interaction.guild.shardId || 0,
-                                });
-                                break;
-                            } catch (playerErr) {
-                                if (attempt === 3) throw playerErr;
-                                console.log(`⚠️ createPlayer intento ${attempt} fallido, reintentando...`);
-                                await new Promise(r => setTimeout(r, 1000 * attempt));
-                            }
-                        }
-                    }
-
-                    this.clearPlayerTimeout(guildId);
-                    player.queue.add(selected);
-                    if (!player.playing && !player.paused) {
-                        await new Promise(r => setTimeout(r, 500));
-                        try {
-                            await player.play();
-                        } catch (e) {
-                            console.error('Error al iniciar reproducción:', e.message);
-                        }
-                    }
-
-                    const addedEmbed = new EmbedBuilder()
-                        .setTitle('✅ Canción Agregada')
-                        .setDescription(`**${selected.title}**\nDuración: ${this.formatTime(selected.length)}`)
-                        .setThumbnail(selected.thumbnail || null)
-                        .setColor('#00FF00');
-
-                    this.searchSessions.delete(`${userId}_${guildId}`);
-                    return interaction.editReply({ content: '', embeds: [addedEmbed], components: [] });
-                } catch (e) {
-                    console.error('Error en mplay:', e.message);
-                    const errMsg = e.name === 'AbortError'
-                        ? '❌ El servidor de música tardó demasiado. Intenta de nuevo.'
-                        : `❌ Error al reproducir: ${e.message}`;
-                    return interaction.editReply({ content: errMsg, embeds: [], components: [] });
+                let player = this.kazagumo.getPlayer(guildId);
+                if (!player) {
+                    const bestNode = this.getBestNode();
+                    const options = { guildId, textId: interaction.channelId, voiceId: voiceChannel.id, shardId: interaction.guild.shardId || 0 };
+                    if (bestNode) options.nodeName = bestNode;
+                    player = await this.kazagumo.createPlayer(options);
                 }
+
+                this.clearPlayerTimeout(guildId);
+                player.queue.add(selected);
+                if (!player.playing && !player.paused) await player.play().catch(() => {});
+
+                this.searchSessions.delete(`${userId}_${guildId}`);
+                return interaction.editReply({ content: '', embeds: [new EmbedBuilder().setTitle('✅ Canción Agregada').setDescription(`**${selected.title}**`).setColor('#00FF00')], components: [] });
             }
 
-            if (customId.startsWith('mback_')) {
-                const tracks = session.tracks;
-                const platform = session.engine === 'ytsearch' ? '🎬 YouTube' : '🟢 Spotify';
+            if (customId.startsWith('msearch_')) {
+                const index = parseInt(parts[1]);
+                const selected = session.tracks[index];
+                const detailEmbed = new EmbedBuilder()
+                    .setTitle('🎵 Detalles de la Canción')
+                    .setColor('#9932CC')
+                    .setThumbnail(selected.thumbnail || null)
+                    .addFields(
+                        { name: '🎵 Título', value: selected.title, inline: false },
+                        { name: '👤 Artista', value: selected.author || 'Desconocido', inline: true },
+                        { name: '⏱️ Duración', value: this.formatTime(selected.length), inline: true }
+                    );
 
-                const embed = new EmbedBuilder()
-                    .setTitle(`${platform} — Resultados`)
-                    .setColor(session.engine === 'ytsearch' ? '#FF0000' : '#1DB954')
-                    .setDescription(
-                        tracks.map((t, i) =>
-                            `\`${i + 1}.\` **${t.title}**\n└ ${this.formatTime(t.length)} • ${t.author || 'Desconocido'}`
-                        ).join('\n\n')
-                    )
-                    .setFooter({ text: 'Selecciona una canción' });
-
-                const row1 = new ActionRowBuilder().addComponents(
-                    tracks.slice(0, 4).map((_, i) =>
-                        new ButtonBuilder()
-                            .setCustomId(`msearch_${i}_${userId}_${guildId}`)
-                            .setLabel(`${i + 1}`)
-                            .setStyle(ButtonStyle.Primary)
-                    )
+                const playRow = new ActionRowBuilder().addComponents(
+                    new ButtonBuilder().setCustomId(`mplay_${index}_${userId}_${guildId}`).setLabel('▶️ Reproducir').setStyle(ButtonStyle.Success),
+                    new ButtonBuilder().setCustomId(`mback_${userId}_${guildId}`).setLabel('⬅️ Volver').setStyle(ButtonStyle.Secondary),
+                    new ButtonBuilder().setCustomId(`msearch_cancel_${userId}_${guildId}`).setLabel('❌ Cerrar').setStyle(ButtonStyle.Danger)
                 );
-                const row2 = new ActionRowBuilder().addComponents([
-                    ...tracks.slice(4).map((_, i) =>
-                        new ButtonBuilder()
-                            .setCustomId(`msearch_${i + 4}_${userId}_${guildId}`)
-                            .setLabel(`${i + 5}`)
-                            .setStyle(ButtonStyle.Primary)
-                    ),
-                    new ButtonBuilder()
-                        .setCustomId(`msearch_cancel_${userId}_${guildId}`)
-                        .setLabel('❌ Cancelar')
-                        .setStyle(ButtonStyle.Danger)
-                ]);
-
-                return interaction.editReply({ embeds: [embed], components: [row1, row2] });
+                return interaction.editReply({ embeds: [detailEmbed], components: [playRow] });
             }
 
         } catch (e) {
             console.error('Error en handleSearchInteraction:', e);
-            try {
-                await interaction.editReply({ content: '❌ Error procesando la interacción.', embeds: [], components: [] });
-            } catch (_) {}
-        }
-    }
-
-    async getSpotifyPlaylistThumbnail(spotifyUrl) {
-        try {
-            // Intentar obtener el nombre de la playlist desde la URL
-            // Formato: https://open.spotify.com/playlist/37i9dQZF1DXcBWIGoYBM5M
-            const match = spotifyUrl.match(/playlist\/([a-zA-Z0-9]+)/);
-            if (!match) return null;
-
-            // Primero intentamos buscar en Deezer por el ID — a veces coinciden
-            // con playlists editoriales populares
-            const byId = await fetch(
-                `https://api.deezer.com/playlist/${match[1]}`,
-                { signal: AbortSignal.timeout(4000) }
-            );
-            const idData = await byId.json();
-            if (idData.picture_medium && !idData.error) {
-                return idData.picture_medium;
-            }
-
-            // Si no encontró por ID, intentar con la URL directa de Kazagumo
-            // para obtener el nombre de la playlist y buscarlo en Deezer
-            const result = await this.kazagumo.search(spotifyUrl, { requester: null });
-            const playlistName = result?.playlistName;
-            if (!playlistName) return null;
-
-            const searchRes = await fetch(
-                `https://api.deezer.com/search/playlist?q=${encodeURIComponent(playlistName)}&limit=1`,
-                { signal: AbortSignal.timeout(4000) }
-            );
-            const searchData = await searchRes.json();
-            return searchData.data?.[0]?.picture_medium || null;
-
-        } catch (e) {
-            return null;
-        }
-    }
-
-    async playCommand(message, args, member, channel, guild, author) {
-        const lastPlay = this.playThrottle.get(guild.id) || 0;
-        if (Date.now() - lastPlay < 2000) {
-            return message.reply('⏳ Espera un momento antes de agregar más canciones.');
-        }
-        this.playThrottle.set(guild.id, Date.now());
-
-        const voiceChannel = member.voice.channel;
-        if (!voiceChannel) {
-            return message.reply('❌ Debes estar en un canal de voz para usar este comando.');
-        }
-
-        if (!args[2]) {
-            return message.reply('❌ Proporciona el nombre de la canción.\nEjemplo: `>music play despacito`');
-        }
-
-        let query = args.slice(2).join(' ');
-        await message.reply({ content: `🔍 Buscando... \`${query}\`` });
-
-        const isSpotifyQuery = /^(https?:\/\/)?(open\.)?spotify\.com\/|^spotify:/i.test(query);
-
-        if (isSpotifyQuery && this.spotifyCapableNodes.size === 0) {
-            return message.reply('⚠️ Ningún servidor de música disponible tiene soporte de Spotify ahora mismo. Intenta con un link de YouTube o busca por nombre, o vuelve a intentar en unos minutos.');
-        }
-
-        try {
-            let player = this.kazagumo.getPlayer(guild.id);
-
-            if (player && isSpotifyQuery && !this.spotifyCapableNodes.has(player.node?.name)) {
-                return message.reply('⚠️ El servidor de música actual no tiene soporte de Spotify. Termina la canción actual o usa `>m stop` y vuelve a intentar con Spotify.');
-            }
-
-            if (!player) {
-                let bestNode = this.getBestNode();
-                if (!bestNode) {
-                    await message.reply('⏳ Conectando al servidor de música, espera un momento...');
-                    const connected = await this.waitForNode(10000);
-                    if (!connected) {
-                        return message.channel.send('❌ No se pudo conectar a ningún servidor de música. Intenta más tarde.');
-                    }
-                    bestNode = this.getBestNode();
-                }
-
-                // Retry createPlayer hasta 3 veces
-                for (let attempt = 1; attempt <= 3; attempt++) {
-                    try {
-                        player = await this.kazagumo.createPlayer({
-                            guildId: guild.id,
-                            textId: channel.id,
-                            voiceId: voiceChannel.id,
-                            shardId: guild.shardId || 0,
-                            nodeName: isSpotifyQuery && this.spotifyCapableNodes.size > 0 
-                                ? [...this.spotifyCapableNodes][0] 
-                                : undefined,
-                        });
-                        break;
-                    } catch (playerErr) {
-                        if (attempt === 3) throw playerErr;
-                        console.log(`⚠️ createPlayer intento ${attempt} fallido, reintentando...`);
-                        await new Promise(r => setTimeout(r, 1000 * attempt));
-                    }
-                }
-            }
-
-            this.clearPlayerTimeout(guild.id);
-
-            // Limpiar URLs de Spotify
-            if (query.includes('spotify.com')) {
-                query = query.replace('/intl-es/', '/').split('?')[0];
-            }
-
-            // Limpiar URLs de YouTube — solo limpiar si es video solo (sin lista)
-            if (query.includes('youtube.com') || query.includes('youtu.be')) {
-                const urlObj = new URL(query);
-                const videoId = urlObj.searchParams.get('v');
-                const listId = urlObj.searchParams.get('list');
-                const startRadio = urlObj.searchParams.get('start_radio');
-
-                if (videoId && listId && !startRadio) {
-                    // Tiene video Y playlist real → dejar la URL como está para cargar la playlist completa
-                    // no hacer nada
-                } else if (videoId && (startRadio || !listId)) {
-                    // Es un video solo o una radio automática → limpiar a solo el video
-                    query = `https://www.youtube.com/watch?v=${videoId}`;
-                }
-            }
-
-            let searchQuery = query;
-            let searchEngine = 'ytsearch';
-
-            if (searchQuery.startsWith('http')) {
-                searchEngine = null;
-            } else if (searchQuery.startsWith('spsearch:')) {
-                searchEngine = 'spsearch';
-                searchQuery = searchQuery.slice(9);
-            } else if (searchQuery.startsWith('scsearch:')) {
-                searchEngine = 'scsearch';
-                searchQuery = searchQuery.slice(9);
-            }
-
-            // Retry kazagumo.search hasta 3 veces
-            let result = null;
-            for (let attempt = 1; attempt <= 3; attempt++) {
-                try {
-                    result = await this.kazagumo.search(
-                        searchQuery,
-                        searchEngine
-                            ? { requester: author, engine: searchEngine }
-                            : { requester: author }
-                    );
-                    break;
-                } catch (searchErr) {
-                    if (attempt === 3) throw searchErr;
-                    console.log(`⚠️ kazagumo.search intento ${attempt} fallido, reintentando...`);
-                    await new Promise(r => setTimeout(r, 1000 * attempt));
-                }
-            }
-
-            if (!result || !result.tracks.length) {
-                return message.reply('❌ No se encontraron resultados para tu búsqueda.');
-            }
-
-            const track = result.tracks[0];
-            if (track.length > this.maxSongDuration) {
-                return message.reply('❌ La canción es muy larga (máximo 2 horas).');
-            }
-
-            const embed = new EmbedBuilder()
-                .setColor('#00FF00')
-                .setTimestamp();
-
-            if (result.type === 'PLAYLIST') {
-                player.queue.add(result.tracks);
-
-                let playlistThumb = result.tracks.find(t => t.thumbnail)?.thumbnail || null;
-                if (searchQuery.includes('spotify.com/playlist')) {
-                    playlistThumb = await this.getSpotifyPlaylistThumbnail(searchQuery) || playlistThumb;
-                }
-
-                embed.setTitle('📂 Playlist Agregada')
-                    .setDescription(`**${result.playlistName}**\n${result.tracks.length} canciones agregadas`)
-                    .setThumbnail(playlistThumb);
-            } else {
-                player.queue.add(track);
-                embed.setTitle('🎵 Canción Agregada a la Cola')
-                    .setDescription(`**${track.title}**\nDuración: ${this.formatTime(track.length)}`)
-                    .setThumbnail(track.thumbnail || null);
-            }
-
-            if (!player.playing && !player.paused) {
-                await new Promise(resolve => setTimeout(resolve, 500));
-                try {
-                    await player.play();
-                } catch (e) {
-                    console.error('Error al iniciar reproducción:', e.message);
-                }
-            }
-
-            await message.channel.send({ embeds: [embed] });
-
-        } catch (error) {
-            console.error('Error en play command:', error);
-
-            if (error.name === 'AbortError' || error instanceof DOMException) {
-                return message.reply('❌ El servidor de música tardó demasiado en responder. Intenta de nuevo en unos segundos.');
-            }
-            if (error.status === 429) {
-                return message.reply('⏳ El servidor de música está sobrecargado. Intenta en unos segundos.');
-            }
-            await message.reply('❌ Ocurrió un error al reproducir la música.');
+            interaction.editReply({ content: '❌ Error procesando la interacción.', embeds: [], components: [] }).catch(() => {});
         }
     }
 
     async stopCommand(message, guild, member) {
         const player = this.kazagumo.getPlayer(guild.id);
-
-        if (!player) {
-            return message.reply('❌ No hay música reproduciéndose.');
-        }
-
-        const voiceChannel = member.voice.channel;
-        if (!voiceChannel) {
-            return message.reply('❌ Debes estar en un canal de voz para usar este comando.');
-        }
-
+        if (!player) return message.reply('❌ No hay música reproduciéndose.');
+        if (!member.voice.channel) return message.reply('❌ Debes estar en un canal de voz.');
         await player.destroy();
         this.clearPlayerTimeout(guild.id);
-
-        const embed = new EmbedBuilder()
-            .setTitle('⏹️ Música Detenida')
-            .setDescription('La música se ha detenido y el bot se ha desconectado del canal de voz.')
-            .setColor('#FF0000');
-
-        await message.reply({ embeds: [embed] });
+        await message.reply({ embeds: [new EmbedBuilder().setTitle('⏹️ Música Detenida').setDescription('El bot se ha desconectado.').setColor('#FF0000')] });
     }
 
     async skipCommand(message, args, guild, member) {
         const player = this.kazagumo.getPlayer(guild.id);
         if (!player) return message.reply('❌ No hay música reproduciéndose.');
-
-        const voiceChannel = member.voice.channel;
-        if (!voiceChannel) {
-            return message.reply('❌ Debes estar en un canal de voz para usar este comando.');
-        }
+        if (!member.voice.channel) return message.reply('❌ Debes estar en un canal de voz.');
 
         const amount = parseInt(args[2]) || 1;
-        if (amount < 1) return message.reply('❌ La cantidad debe ser mayor a 0.');
-
-        const totalDisponible = player.queue.size + 1;
-        if (amount > totalDisponible) {
-            return message.reply(`❌ Solo hay ${totalDisponible} canciones disponibles para saltar.`);
-        }
-
         const currentTrack = player.queue.current;
 
-        // Saltar varias canciones de golpe: solo quien la pidió o con permiso de mover canales
-        if (amount > 1) {
-            const isRequester = currentTrack.requester?.id === member.id;
-            const canManage = member.permissions.has('MoveMembers');
-            if (!isRequester && !canManage) {
-                return message.reply('❌ Solo quien pidió la canción actual (o un mod) puede saltar varias de golpe. Usa `>music skip` de a una.');
-            }
-            return this.executeSkip(message, player, guild, amount, currentTrack);
+        if (currentTrack.requester?.id === member.id || member.permissions.has('MoveMembers')) {
+            for (let i = 0; i < amount - 1; i++) player.queue.splice(0, 1);
+            player.skip();
+            return message.reply({ embeds: [new EmbedBuilder().setTitle('⏭️ Saltada').setDescription(`Se saltaron ${amount} canciones.`).setColor('#FFA500')] });
         }
 
-        // Skip de 1 canción: quien la pidió, salta directo
-        if (currentTrack.requester?.id === member.id) {
-            return this.executeSkip(message, player, guild, 1, currentTrack);
+        const membersInVC = member.voice.channel.members.filter(m => !m.user.bot).size;
+        if (membersInVC <= 2) {
+            player.skip();
+            return message.reply({ embeds: [new EmbedBuilder().setTitle('⏭️ Saltada').setDescription('Saltada automáticamente (pocos oyentes).').setColor('#FFA500')] });
         }
-
-        // Contar personas reales en el VC (sin bots)
-        const membersInVC = voiceChannel.members.filter(m => !m.user.bot);
-        const totalMembers = membersInVC.size;
-
-        // Con 1-2 personas en el VC, no tiene sentido votar
-        if (totalMembers <= 2) {
-            return this.executeSkip(message, player, guild, 1, currentTrack);
-        }
-
-        const requiredVotes = Math.ceil(totalMembers / 2);
 
         let voteData = this.skipVotes.get(guild.id);
         if (!voteData || voteData.trackId !== currentTrack.identifier) {
@@ -1394,485 +1051,447 @@ class MusicSystem {
             this.skipVotes.set(guild.id, voteData);
         }
 
-        if (voteData.voters.has(member.id)) {
-            return message.reply(`🗳️ Ya votaste para saltar esta canción. Votos: **${voteData.voters.size}/${requiredVotes}**`);
-        }
-
+        if (voteData.voters.has(member.id)) return message.reply(`🗳️ Ya votaste. Votos: **${voteData.voters.size}/${Math.ceil(membersInVC / 2)}**`);
         voteData.voters.add(member.id);
 
-        if (voteData.voters.size >= requiredVotes) {
+        if (voteData.voters.size >= Math.ceil(membersInVC / 2)) {
             this.skipVotes.delete(guild.id);
-            return this.executeSkip(message, player, guild, 1, currentTrack, true);
+            player.skip();
+            return message.reply({ embeds: [new EmbedBuilder().setTitle('⏭️ Saltada').setDescription('Saltada por votación.').setColor('#FFA500')] });
         }
 
-        const embed = new EmbedBuilder()
-            .setTitle('🗳️ Votación para saltar')
-            .setDescription(`**${member.displayName}** votó para saltar **${currentTrack.title}**\nVotos: **${voteData.voters.size}/${requiredVotes}**`)
-            .setColor('#FFA500');
-
-        await message.reply({ embeds: [embed] });
-    }
-
-    async executeSkip(message, player, guild, amount, currentTrack, wasVoted = false) {
-        for (let i = 0; i < amount - 1; i++) {
-            player.queue.splice(0, 1);
-        }
-        player.skip();
-
-        const embed = new EmbedBuilder()
-            .setTitle('⏭️ Canciones Saltadas')
-            .setDescription(amount === 1
-                ? `**${currentTrack.title}** ha sido saltada.${wasVoted ? ' (por votación)' : ''}`
-                : `Se saltaron **${amount}** canciones.`)
-            .setColor('#FFA500');
-
-        await message.reply({ embeds: [embed] });
+        await message.reply({ embeds: [new EmbedBuilder().setTitle('🗳️ Voto Registrado').setDescription(`Votos: **${voteData.voters.size}/${Math.ceil(membersInVC / 2)}**`).setColor('#FFA500')] });
     }
 
     async pauseCommand(message, guild, member) {
         const player = this.kazagumo.getPlayer(guild.id);
-
-        if (!player) {
-            return message.reply('❌ No hay música reproduciéndose.');
-        }
-
-        if (player.paused) {
-            return message.reply('❌ La música ya está pausada.');
-        }
-
-        const voiceChannel = member.voice.channel;
-        if (!voiceChannel) {
-            return message.reply('❌ Debes estar en un canal de voz para usar este comando.');
-        }
-
+        if (!player || player.paused) return message.reply('❌ No hay música o ya está pausada.');
+        if (!member.voice.channel) return message.reply('❌ Debes estar en un canal de voz.');
         player.pause(true);
-
-        const embed = new EmbedBuilder()
-            .setTitle('⏸️ Música Pausada')
-            .setDescription('La música ha sido pausada.')
-            .setColor('#FFA500');
-
-        await message.reply({ embeds: [embed] });
+        await message.reply({ embeds: [new EmbedBuilder().setTitle('⏸️ Pausada').setColor('#FFA500')] });
     }
 
     async resumeCommand(message, guild, member) {
         const player = this.kazagumo.getPlayer(guild.id);
-        
-        if (!player) {
-            return message.reply('❌ No hay música reproduciéndose.');
-        }
-        
-        if (!player.paused) {
-            return message.reply('❌ La música no está pausada.');
-        }
-        
-        const voiceChannel = member.voice.channel;
-        if (!voiceChannel) {
-            return message.reply('❌ Debes estar en un canal de voz para usar este comando.');
-        }
-
+        if (!player || !player.paused) return message.reply('❌ No hay música pausada.');
+        if (!member.voice.channel) return message.reply('❌ Debes estar en un canal de voz.');
         player.pause(false);
-        player.setVolume(player.volume); // "Kick" al player
-        
-        const embed = new EmbedBuilder()
-            .setTitle('▶️ Música Reanudada')
-            .setDescription('La música ha sido reanudada.')
-            .setColor('#00FF00');
-        
-        await message.reply({ embeds: [embed] });
+        await message.reply({ embeds: [new EmbedBuilder().setTitle('▶️ Reanudada').setColor('#00FF00')] });
     }
 
-    async queueCommand(message, args, guild) {
-        const player = this.kazagumo.getPlayer(guild.id);
-        if (!player || !player.queue.current) {
-            return message.reply('❌ No hay música en la cola.');
-        }
-
-        const current = player.queue.current;
-        const songs = player.queue.slice(0, player.queue.size);
+    buildQueueEmbed(player, songs, current, page, songsPerPage, author) {
         const totalSongs = songs.length;
-        const songsPerPage = 10;
         const totalPages = Math.max(1, Math.ceil(totalSongs / songsPerPage));
-
-        let page = parseInt(args[2]) || 1;
         if (page < 1) page = 1;
         if (page > totalPages) page = totalPages;
 
         const start = (page - 1) * songsPerPage;
         const pageSongs = songs.slice(start, start + songsPerPage);
 
-        let description = `**🎵 Reproduciendo Ahora:**\n${current.title} (${this.formatTime(current.length)})\n\n`;
+        const truncate = (str, max) => (str.length > max ? str.slice(0, max - 1) + '…' : str);
+        const fmt = (ms) => this.formatTime(ms);
+
+        const progressBar = (pos, total) => {
+            const size = 12;
+            if (!total || total <= 0) return '🔴 **EN VIVO**';
+            const filled = Math.min(size, Math.round((pos / total) * size));
+            return '▬'.repeat(filled) + '🔘' + '▬'.repeat(Math.max(0, size - filled - 1));
+        };
+
+        const loopEmoji =
+            player.loop === 'none' ? '➡️ Off'
+            : player.loop === 'track' ? '🔂 Canción'
+            : '🔁 Cola';
+
+        const totalDuration = songs.reduce((acc, t) => acc + (t.length || 0), 0) + (current.length || 0);
+
+        const embed = new EmbedBuilder()
+            .setColor('#0099FF')
+            .setTitle('📋 Cola de Reproducción')
+            .setThumbnail(current.thumbnail || null)
+            .setFooter({
+                text: `Página ${page}/${totalPages} • ${author.username}`,
+                iconURL: author.displayAvatarURL({ dynamic: true }),
+            })
+            .setTimestamp();
+
+        embed.addFields({
+            name: '🎵 Reproduciendo Ahora',
+            value: [
+                `**${truncate(current.title, 60)}**`,
+                progressBar(player.position, current.length),
+                `\`${fmt(player.position)} / ${fmt(current.length)}\` • 👤 ${current.requester?.username || 'Desconocido'}`,
+            ].join('\n'),
+            inline: false,
+        });
+
+        const node = player.shoukaku?.node;
+        const nodeName = node?.name || 'Desconocido';
+        const nodeState = node?.state;
+        const nodeEmoji = (nodeState === 1 || nodeState === 'CONNECTED') ? '🟢' : '🔴';
+
+        embed.addFields({
+            name: '🖥️ Servidor de Música',
+            value: `${nodeEmoji} \`${nodeName}\``,
+            inline: false,
+        });
 
         if (totalSongs === 0) {
-            description += '**📋 En Cola:** Vacía';
+            embed.addFields({
+                name: '⏳ Próximas Canciones',
+                value: '*La cola está vacía, usa `>m play <canción>` para agregar más.*',
+                inline: false,
+            });
         } else {
-            description += `**📋 En Cola — ${totalSongs} canciones:**\n`;
-            pageSongs.forEach((track, i) => {
-                description += `\`${start + i + 1}.\` ${track.title} (${this.formatTime(track.length)})\n`;
+            const list = pageSongs.map((t, i) =>
+                `\`${(start + i + 1).toString().padStart(2, '0')}.\` ${truncate(t.title, 48)} \`[${fmt(t.length)}]\``
+            ).join('\n');
+            embed.addFields({
+                name: `⏳ Próximas Canciones (${totalSongs})`,
+                value: list,
+                inline: false,
             });
         }
 
-        const embed = new EmbedBuilder()
-            .setTitle('📋 Cola de Reproducción')
-            .setDescription(description)
-            .setColor('#0099FF')
-            .setFooter({ text: `Página ${page}/${totalPages} • >m queue <página> para navegar` })
-            .setTimestamp();
+        embed.addFields(
+            { name: '🔊 Volumen', value: `\`${player.volume}%\``, inline: true },
+            { name: '🔄 Loop', value: loopEmoji, inline: true },
+            { name: '⏱️ Total', value: `\`${fmt(totalDuration)}\``, inline: true }
+        );
 
-        await message.reply({ embeds: [embed] });
+        return { embed, page, totalPages };
+    }
+
+    async queueCommand(message, args, guild) {
+        const player = this.kazagumo.getPlayer(guild.id);
+        if (!player || !player.queue.current) return message.reply('❌ No hay música en la cola.');
+
+        const current = player.queue.current;
+        const songs = player.queue.slice(0, player.queue.size);
+        const songsPerPage = 10;
+        let page = parseInt(args[2]) || 1;
+
+        const { embed, totalPages } = this.buildQueueEmbed(player, songs, current, page, songsPerPage, message.author);
+
+        const sessionKey = `${message.author.id}_${guild.id}`;
+        this.queuePages.set(sessionKey, {
+            player, songs, current, page, totalPages, songsPerPage, timestamp: Date.now(),
+        });
+
+        let components = [];
+        if (totalPages > 1) {
+            const row = new ActionRowBuilder().addComponents(
+                new ButtonBuilder().setCustomId(`mq_prev_${message.author.id}_${guild.id}`).setEmoji('⏮️').setStyle(ButtonStyle.Secondary).setDisabled(page <= 1),
+                new ButtonBuilder().setCustomId(`mq_close_${message.author.id}_${guild.id}`).setEmoji('❌').setStyle(ButtonStyle.Danger),
+                new ButtonBuilder().setCustomId(`mq_next_${message.author.id}_${guild.id}`).setEmoji('⏭️').setStyle(ButtonStyle.Secondary).setDisabled(page >= totalPages),
+            );
+            components.push(row);
+        }
+
+        await message.reply({ embeds: [embed], components });
+    }
+
+    async nodesCommand(message, guild) {
+        const allNodes = [...this.kazagumo.shoukaku.nodes.values()];
+        if (!allNodes.length) return message.reply('❌ No hay nodos registrados.');
+
+        const processingMsg = await message.reply('⚙️ Cargando estado de los nodos...');
+        const emojis = ['⏳', '⌛', '🔄', '⚙️'];
+        let emojiIndex = 0;
+        
+        const emojiInterval = setInterval(() => {
+            emojiIndex = (emojiIndex + 1) % emojis.length;
+            processingMsg.edit(`${emojis[emojiIndex]} Cargando estado de los nodos...`).catch(() => {});
+        }, 1500);
+
+        try {
+            const isUp = (n) => n?.state === 1 || n?.state === 'CONNECTED';
+            const isMetadata = (n) => n.name === this.metadataNode;
+
+            const measurePing = async (node) => {
+                const direct = node?.ping ?? node?.stats?.ping;
+                if (typeof direct === 'number' && direct > 0) return direct;
+
+                try {
+                    let raw = String(node?.url || '');
+                    raw = raw.replace(/^(wss?|https?):\/\//i, '');
+                    raw = raw.replace(/\/v4\/websocket\/?$/i, '');
+                    raw = raw.replace(/\/+$/, '');
+                    if (!raw) return null;
+
+                    const portMatch = raw.match(/:(\d+)$/);
+                    const port = portMatch ? parseInt(portMatch[1]) : null;
+                    const useHttps = !!node.secure || port === 443;
+                    let hostPort = raw;
+                    if (useHttps && port === 443) hostPort = raw.replace(/:443$/, '');
+
+                    const proto = useHttps ? 'https' : 'http';
+                    const endpoints = [`${proto}://${hostPort}/version`, `${proto}://${hostPort}/v4/info`];
+
+                    for (const url of endpoints) {
+                        const ping = await new Promise((resolve) => {
+                            const mod = useHttps ? https : http;
+                            const start = Date.now();
+                            
+                            const req = mod.get(url, {
+                                headers: {
+                                    'Authorization': node.auth || '',
+                                    'User-Agent': 'Mozilla/5.0 (compatible; Pibot/1.0)',
+                                    'Accept': 'application/json',
+                                },
+                                rejectUnauthorized: false,
+                                timeout: 3000,
+                            }, (res) => {
+                                res.resume();
+                                if (res.statusCode >= 200 && res.statusCode < 300) resolve(Date.now() - start);
+                                else resolve(null);
+                            });
+                            
+                            req.on('error', () => resolve(null));
+                            req.on('timeout', () => { req.destroy(); resolve(null); });
+                        });
+
+                        if (ping !== null) return ping;
+                    }
+                    return null;
+                } catch {
+                    return null;
+                }
+            };
+
+            const getPlayers = (n) => {
+                const s = n?.stats;
+                if (!s || typeof s.players !== 'number' || typeof s.playingPlayers !== 'number') return null;
+                return { total: s.players, playing: s.playingPlayers };
+            };
+
+            const pingMap = new Map();
+            await Promise.all(
+                allNodes.filter(n => isUp(n) && !isMetadata(n)).map(async (n) => pingMap.set(n.name, await measurePing(n)))
+            );
+
+            const player = this.kazagumo.getPlayer(guild.id);
+            const currentPlayerNode = player?.shoukaku?.node?.name;
+
+            const upNodes = allNodes.filter(isUp).sort((a, b) => {
+                const aMeta = isMetadata(a);
+                const bMeta = isMetadata(b);
+                if (aMeta !== bMeta) return aMeta ? 1 : -1;
+                return (pingMap.get(a.name) ?? 99999) - (pingMap.get(b.name) ?? 99999);
+            });
+            const downNodes = allNodes.filter(n => !isUp(n));
+
+            const nonMetadataUp = upNodes.filter(n => !isMetadata(n));
+            const fastest = nonMetadataUp.reduce((best, n) => {
+                const p = pingMap.get(n.name);
+                if (p == null) return best;
+                if (!best || p < best.ping) return { name: n.name, ping: p };
+                return best;
+            }, null);
+
+            const embed = new EmbedBuilder()
+                .setTitle('🖥️ Estado de los Nodos')
+                .setColor(upNodes.length > 0 ? '#00FF00' : '#FF0000')
+                .setFooter({ text: `Total: ${allNodes.length} • Online: ${upNodes.length} • Offline: ${downNodes.length}` })
+                .setTimestamp();
+
+            if (upNodes.length > 0) {
+                const list = upNodes.map(n => {
+                    const tags = [];
+                    if (n.name === currentPlayerNode) tags.push('🎵 *aquí*');
+                    if (isMetadata(n)) tags.push('⚙️ *metadata*');
+
+                    const parts = [];
+                    if (tags.length) parts.push(tags.join(' · '));
+
+                    if (!isMetadata(n)) {
+                        const ping = pingMap.get(n.name);
+                        if (ping != null) parts.push(`\`${ping}ms\``);
+                        const players = getPlayers(n);
+                        if (players) parts.push(`👥 \`${players.playing}/${players.total}\``);
+                    }
+
+                    const crown = fastest && n.name === fastest.name ? '🏆 ' : '';
+                    return `${crown}🟢 **${n.name}**${parts.length ? ' — ' + parts.join(' · ') : ''}`;
+                }).join('\n');
+                embed.addFields({ name: `✅ Conectados (${upNodes.length})`, value: list, inline: false });
+            }
+
+            if (downNodes.length > 0) {
+                const list = downNodes.map(n => {
+                    const failed = this.failedNodes.has(n.name);
+                    return `🔴 **${n.name}**${failed ? ' *(fallando)*' : ''}`;
+                }).join('\n');
+                embed.addFields({ name: `❌ Caídos (${downNodes.length})`, value: list, inline: false });
+            }
+
+            if (currentPlayerNode) {
+                embed.addFields({ name: '🎵 Tu Reproductor', value: `Corriendo en: \`${currentPlayerNode}\``, inline: false });
+            }
+
+            clearInterval(emojiInterval);
+            await processingMsg.edit({ content: '', embeds: [embed] });
+        } catch (error) {
+            clearInterval(emojiInterval);
+            console.error('❌ Error en nodesCommand:', error);
+            await processingMsg.edit('❌ Ocurrió un error al cargar el estado de los nodos.').catch(() => {});
+        }
     }
 
     async nowPlayingCommand(message, guild) {
         const player = this.kazagumo.getPlayer(guild.id);
-
-        if (!player || !player.queue.current) {
-            return message.reply('❌ No hay música reproduciéndose.');
-        }
-
+        if (!player || !player.queue.current) return message.reply('❌ No hay música reproduciéndose.');
         const track = player.queue.current;
-        const position = player.position;
-        const duration = track.length;
-
-        const embed = new EmbedBuilder()
-            .setTitle('🎵 Reproduciendo Ahora')
-            .setDescription(`**${track.title}**`)
-            .setThumbnail(track.thumbnail || null)
-            .addFields(
-                { name: '⏱️ Duración', value: this.formatTime(duration), inline: true },
-                { name: '📍 Posición', value: this.formatTime(position), inline: true },
-                { name: '🔊 Volumen', value: `${player.volume}%`, inline: true },
-                { name: '🔄 Loop', value: player.loop || 'Desactivado', inline: true },
-                { name: '👤 Solicitado por', value: track.requester.tag, inline: true }
-            )
-            .setColor('#00FF00')
-            .setTimestamp();
-
-        await message.reply({ embeds: [embed] });
+        await message.reply({ embeds: [new EmbedBuilder().setTitle('🎵 Reproduciendo Ahora').setDescription(`**${track.title}**`).setThumbnail(track.thumbnail || null).addFields({ name: '⏱️ Duración', value: this.formatTime(track.length), inline: true }, { name: '📍 Posición', value: this.formatTime(player.position), inline: true }, { name: '🔊 Volumen', value: `${player.volume}%`, inline: true }).setColor('#00FF00')] });
     }
 
     async volumeCommand(message, args, guild, member) {
         const player = this.kazagumo.getPlayer(guild.id);
+        if (!player) return message.reply('❌ No hay música reproduciéndose.');
 
-        if (!player) {
-            return message.reply('❌ No hay música reproduciéndose.');
+        if (!this.kazagumo.shoukaku.nodes.get(player.shoukaku?.node?.name)) {
+            await this.forceDestroyPlayer(guild.id);
+            return message.reply('❌ El reproductor se desconectó (Nodo caído). Ya limpié la memoria, prueba `>m play` de nuevo.');
         }
 
-        if (!args[2]) {
-            return message.reply(`🔊 Volumen actual: **${player.volume}%**\nUsa \`>music volume <1-100>\` para cambiar el volumen.`);
-        }
-
-        const voiceChannel = member.voice.channel;
-        if (!voiceChannel) {
-            return message.reply('❌ Debes estar en un canal de voz para usar este comando.');
-        }
-
+        if (!args[2]) return message.reply(`🔊 Volumen actual: **${player.volume}%**`);
+        if (!member.voice.channel) return message.reply('❌ Debes estar en un canal de voz.');
         const volume = parseInt(args[2]);
-
-        if (isNaN(volume) || volume < 1 || volume > 100) {
-            return message.reply('❌ El volumen debe ser un número entre 1 y 100.');
-        }
-
+        if (isNaN(volume) || volume < 1 || volume > 100) return message.reply('❌ El volumen debe ser entre 1 y 100.');
         player.setVolume(volume);
-
-        const embed = new EmbedBuilder()
-            .setTitle('🔊 Volumen Cambiado')
-            .setDescription(`Volumen establecido a **${volume}%**`)
-            .setColor('#0099FF');
-
-        await message.reply({ embeds: [embed] });
-    }
-
-    async fixPlayerCommand(message, guild, member) {
-        const player = this.kazagumo.getPlayer(guild.id);
-        
-        if (!player) {
-            return message.reply('❌ No hay música reproduciéndose.');
-        }
-
-        const voiceChannel = member.voice.channel;
-        if (!voiceChannel) {
-            return message.reply('❌ Debes estar en un canal de voz para usar este comando.');
-        }
-        
-        const queue = [...player.queue];
-        const current = player.queue.current;
-        
-        await player.destroy();
-        
-        // Recrear player
-        const newPlayer = await this.kazagumo.createPlayer({
-            guildId: guild.id,
-            textId: message.channel.id,
-            voiceId: message.member.voice.channel.id
-        });
-        
-        if (current) newPlayer.queue.add(current);
-        newPlayer.queue.add(queue);
-        try {
-            await newPlayer.play();
-        } catch (e) {
-            console.error('Error al iniciar reproducción:', e.message);
-        }
-        
-        await message.reply('✅ Player reiniciado correctamente.');
-    }
-
-    async seekCommand(message, args, guild, member) {
-        const player = this.kazagumo.getPlayer(guild.id);
-        
-        if (!player || !player.queue.current) {
-            return message.reply('❌ No hay música reproduciéndose.');
-        }
-        
-        if (!args[2]) {
-            return message.reply('❌ Especifica el tiempo.\nEjemplos:\n• `>m seek 1:30` (1 min 30 seg)\n• `>m seek 30` (30 segundos)\n• `>m seek +30` (adelantar 30 seg)\n• `>m seek -15` (retroceder 15 seg)');
-        }
-
-        const voiceChannel = member.voice.channel;
-        if (!voiceChannel) {
-            return message.reply('❌ Debes estar en un canal de voz para usar este comando.');
-        }
-        
-        const input = args[2];
-        const currentPosition = player.position;
-        const duration = player.queue.current.length;
-        let targetPosition;
-        
-        // Formato: +30 o -30 (relativo)
-        if (input.startsWith('+') || input.startsWith('-')) {
-            const seconds = parseInt(input) * 1000;
-            targetPosition = currentPosition + seconds;
-        }
-        // Formato: 1:30 (minutos:segundos)
-        else if (input.includes(':')) {
-            const [min, sec] = input.split(':').map(Number);
-            targetPosition = (min * 60 + sec) * 1000;
-        }
-        // Formato: 30 (segundos absolutos)
-        else {
-            targetPosition = parseInt(input) * 1000;
-        }
-        
-        // Validar límites
-        if (targetPosition < 0) {
-            return message.reply('❌ No puedes retroceder antes del inicio.');
-        }
-
-        if (targetPosition > duration) {
-            return message.reply('❌ El tiempo especificado excede la duración de la canción.');
-        }
-
-        // CAMBIAR AQUÍ:
-        player.seek(targetPosition);
-
-        const embed = new EmbedBuilder()
-            .setTitle('⏩ Posición Cambiada')
-            .setDescription(`Posición: **${this.formatTime(targetPosition)}** / ${this.formatTime(duration)}`)
-            .setColor('#0099FF');
-        
-        await message.reply({ embeds: [embed] });
+        await message.reply({ embeds: [new EmbedBuilder().setTitle('🔊 Volumen').setDescription(`Volumen a **${volume}%**`).setColor('#0099FF')] });
     }
 
     async loopCommand(message, args, guild, member) {
         const player = this.kazagumo.getPlayer(guild.id);
-
-        if (!player) {
-            return message.reply('❌ No hay música reproduciéndose.');
-        }
-
-        const voiceChannel = member.voice.channel;
-        if (!voiceChannel) {
-            return message.reply('❌ Debes estar en un canal de voz para usar este comando.');
-        }
-
-        const loopMode = args[2] ? args[2].toLowerCase() : null;
-        let newLoop;
-
-        switch (loopMode) {
+        if (!player) return message.reply('❌ No hay música reproduciéndose.');
+        if (!member.voice.channel) return message.reply('❌ Debes estar en un canal de voz.');
+        let newLoop = args[2]?.toLowerCase();
+        if (newLoop === 'off') newLoop = 'none';
+        if (!['track', 'queue', 'none'].includes(newLoop)) newLoop = player.loop === 'none' ? 'track' : 'none';
+        player.setLoop(newLoop);
+        switch (newLoop) {
             case 'track':
-            case 'cancion':
-                newLoop = 'track';
+                newLoop = 'Repetir Canción';
                 break;
             case 'queue':
-            case 'cola':
-                newLoop = 'queue';
+                newLoop = 'Repetir Cola';
                 break;
-            case 'off':
-            case 'disable':
-            case 'desactivar':
-                newLoop = 'none';
+            case 'none':
+                newLoop = 'Sin Repetición';
                 break;
             default:
-                // Toggle entre none y track
-                newLoop = player.loop === 'none' ? 'track' : 'none';
-                break;
+                newLoop = 'Modo Desconocido';
         }
-
-        player.setLoop(newLoop);
-
-        const loopText = {
-            'none': 'Desactivado',
-            'track': 'Canción Actual',
-            'queue': 'Cola Completa'
-        };
-
-        const embed = new EmbedBuilder()
-            .setTitle('🔄 Modo Loop Cambiado')
-            .setDescription(`Loop establecido a: **${loopText[newLoop]}**`)
-            .setColor('#0099FF');
-
-        await message.reply({ embeds: [embed] });
+        await message.reply({ embeds: [new EmbedBuilder().setTitle('🔄 Loop').setDescription(`Modo: **${newLoop}**`).setColor('#0099FF')] });
     }
 
     async shuffleCommand(message, guild, member) {
         const player = this.kazagumo.getPlayer(guild.id);
-
-        if (!player) {
-            return message.reply('❌ No hay música reproduciéndose.');
-        }
-
-        if (player.queue.size < 2) {
-            return message.reply('❌ Necesitas al menos 2 canciones en la cola para mezclar.');
-        }
-
-        const voiceChannel = member.voice.channel;
-        if (!voiceChannel) {
-            return message.reply('❌ Debes estar en un canal de voz para usar este comando.');
-        }
-
+        if (!player || player.queue.size < 2) return message.reply('❌ No hay suficientes canciones para mezclar.');
+        if (!member.voice.channel) return message.reply('❌ Debes estar en un canal de voz.');
         player.queue.shuffle();
-
-        const embed = new EmbedBuilder()
-            .setTitle('🔀 Cola Mezclada')
-            .setDescription(`Se han mezclado **${player.queue.size}** canciones en la cola.`)
-            .setColor('#0099FF');
-
-        await message.reply({ embeds: [embed] });
+        await message.reply({ embeds: [new EmbedBuilder().setTitle('🔀 Mezclada').setDescription(`Se mezclaron **${player.queue.size}** canciones.`).setColor('#0099FF')] });
     }
 
     async clearQueueCommand(message, guild, member) {
         const player = this.kazagumo.getPlayer(guild.id);
-
-        if (!player) {
-            return message.reply('❌ No hay música reproduciéndose.');
-        }
-
-        if (player.queue.size === 0) {
-            return message.reply('❌ La cola ya está vacía.');
-        }
-
-        const voiceChannel = member.voice.channel;
-        if (!voiceChannel) {
-            return message.reply('❌ Debes estar en un canal de voz para usar este comando.');
-        }
-
-        const clearedCount = player.queue.size;
+        if (!player || player.queue.size === 0) return message.reply('❌ La cola ya está vacía.');
+        if (!member.voice.channel) return message.reply('❌ Debes estar en un canal de voz.');
+        const count = player.queue.size;
         player.queue.clear();
+        await message.reply({ embeds: [new EmbedBuilder().setTitle('🗑️ Limpiada').setDescription(`Se eliminaron **${count}** canciones.`).setColor('#FF0000')] });
+    }
 
-        const embed = new EmbedBuilder()
-            .setTitle('🗑️ Cola Limpiada')
-            .setDescription(`Se han eliminado **${clearedCount}** canciones de la cola.`)
-            .setColor('#FF0000');
+    async fixPlayerCommand(message, guild, member) {
+        return this.recreatePlayer(message, guild, member, false);
+    }
 
-        await message.reply({ embeds: [embed] });
+    async seekCommand(message, args, guild, member) {
+        const player = this.kazagumo.getPlayer(guild.id);
+        if (!player || !player.queue.current) return message.reply('❌ No hay música reproduciéndose.');
+        if (!args[2]) return message.reply('❌ Especifica el tiempo (ej: `1:30` o `+30`).');
+        if (!member.voice.channel) return message.reply('❌ Debes estar en un canal de voz.');
+        const input = args[2]; let target = 0;
+        if (input.startsWith('+') || input.startsWith('-')) target = player.position + (parseInt(input) * 1000);
+        else if (input.includes(':')) { const [min, sec] = input.split(':').map(Number); target = (min * 60 + sec) * 1000; }
+        else target = parseInt(input) * 1000;
+        if (isNaN(target)) return message.reply('❌ Tiempo inválido. Ejemplo: `1:30` o `+30`.');
+        if (target < 0 || target > player.queue.current.length) return message.reply('❌ Tiempo fuera de los límites.');
+        player.seek(target);
+        await message.reply({ embeds: [new EmbedBuilder().setTitle('⏩ Adelantado').setDescription(`Posición: **${this.formatTime(target)}**`).setColor('#0099FF')] });
+    }
+
+    async lyricsCommand(message, args) {
+        const query = args.slice(2).join(' ').trim();
+        if (!query) return message.reply('❌ Escribe el nombre de la canción.');
+        const loadingMsg = await message.reply(`🔍 Buscando letra de **${query}**...`);
+
+        try {
+            const lrclibRes = await fetch(`https://lrclib.net/api/search?q=${encodeURIComponent(query)}`, { signal: AbortSignal.timeout(8000) });
+            if (lrclibRes.ok) {
+                const results = await lrclibRes.json();
+                if (results.length > 0) {
+                    const song = results[0];
+                    let lyrics = song.plainLyrics || song.syncedLyrics;
+                    if (lyrics) {
+                        lyrics = lyrics.replace(/\[\d+:\d+\.\d+\]/g, '').trim();
+                        const lines = lyrics.split('\n'); const chunks = []; let currentChunk = '';
+                        for (const line of lines) {
+                            if ((currentChunk + '\n' + line).length > 1900) { if (currentChunk) chunks.push(currentChunk.trim()); currentChunk = line; } 
+                            else currentChunk += (currentChunk ? '\n' : '') + line;
+                        }
+                        if (currentChunk) chunks.push(currentChunk.trim());
+                        
+                        const embed = new EmbedBuilder().setTitle(`🎵 ${song.trackName}`).setDescription(chunks[0] + '\n\u200b').setColor('#9932CC').addFields({ name: '👤 Artista', value: song.artistName, inline: true }, { name: '📖 Fuente', value: 'lrclib', inline: true });
+                        if (chunks.length > 1) embed.setFooter({ text: `Página 1/${chunks.length}` });
+                        
+                        return loadingMsg.edit({ content: '', embeds: [embed] });
+                    }
+                }
+            }
+            await loadingMsg.edit(`❌ No se encontró la letra.\nIntenta con: \`>m lyrics Artista - Canción\``);
+        } catch (e) {
+            await loadingMsg.edit('❌ Error buscando la letra.');
+        }
     }
 
     async showMusicHelp(message) {
         const embed = new EmbedBuilder()
             .setTitle('🎵 Sistema de Música')
             .setColor('#9932CC')
-            .setDescription('Reproduce música de YouTube y Spotify')
+            .setDescription('Usa `>m <comando>` para controlar la música.\nDebes estar en un canal de voz.')
             .addFields(
+                { 
+                    name: '▶️ Reproducción', 
+                    value: '`>m play <canción/URL>`\n`>m ytsearch <canción>`\n`>m spsearch <canción>`\n`>m lyrics <artista - canción>`', 
+                    inline: true 
+                },
+                { 
+                    name: '⏯️ Controles', 
+                    value: '`>m pause` / `>m resume`\n`>m skip [cantidad]`\n`>m stop`', 
+                    inline: true 
+                },
+                { 
+                    name: '⚙️ Ajustes', 
+                    value: '`>m volume <1-100>`\n`>m loop <track/queue/off>`\n`>m seek <tiempo>`', 
+                    inline: true 
+                },
+                { 
+                    name: '📋 Cola', 
+                    value: '`>m queue [página]`\n`>m shuffle`\n`>m clear`', 
+                    inline: true 
+                },
                 {
-                    name: '▶️ Reproducir',
-                    value: '`>m play <canción/URL>`\n`>m p <canción>`',
+                    name: '🛠️ Herramientas',
+                    value:
+                        '`>m fix` (Reiniciar player)\n' +
+                        '`>m changenode` (Cambiar de servidor)\n' +
+                        '`>m statusnode` (Ver estado de nodos)',
                     inline: true
                 },
-                {
-                    name: '⏭️ Saltar',
-                    value: '`>m skip`\n`>m s`',
-                    inline: true
-                },
-                {
-                    name: '⏸️ Pausar/Reanudar',
-                    value: '`>m pause`\n`>m resume`',
-                    inline: true
-                },
-                {
-                    name: '⏹️ Detener',
-                    value: '`>m stop`\n`>m leave`',
-                    inline: true
-                },
-                {
-                    name: '📋 Cola',
-                    value: '`>m queue`\n`>m q`',
-                    inline: true
-                },
-                {
-                    name: '🎵 Reproduciendo',
-                    value: '`>m nowplaying`\n`>m np`',
-                    inline: true
-                },
-                {
-                    name: '🔊 Volumen',
-                    value: '`>m volume <1-100>`\n`>m vol <1-100>`',
-                    inline: true
-                },
-                {
-                    name: '🔁 Loop',
-                    value: '`>m loop song` — Repite canción\n`>m loop queue` — Repite cola\n`>m loop off` — Sin loop',
-                    inline: true
-                },
-                {
-                    name: '🔀 Shuffle',
-                    value: '`>m shuffle` — Mezclar cola',
-                    inline: true
-                },
-                {
-                    name: '🗑️ Limpiar cola',
-                    value: '`>m clear` — Vaciar cola',
-                    inline: true
-                },
-                {
-                    name: '🔧 Arreglar',
-                    value: '`>m fix` — Reiniciar player',
-                    inline: true
-                },
-                {
-                    name: '🎬 Buscar YouTube',
-                    value: '`>m ytsearch <canción>` — Ver resultados y reproducir\n`>m ys <canción>`',
-                    inline: true
-                },
-                {
-                    name: '🟢 Buscar Spotify',
-                    value: '`>m spsearch <canción>` — Ver resultados y reproducir\n`>m ss <canción>`',
-                    inline: true
-                },
-                {
-                    name: '🎵 Letra',
-                    value: '`>m lyrics <canción>` — Ver letra\n`>m letra artista - canción`',
-                    inline: true
-                },
-                {
-                    name: '📱 Plataformas soportadas',
-                    value: '🎵 YouTube\n🟢 Spotify',
-                    inline: false
-                },
-                {
-                    name: '💡 Ejemplos',
-                    value: [
-                        '`>m play bad guy` — Busca en YouTube',
-                        '`>m spsearch nombre canción — Buscar en Spotify',
-                        '`>m play https://youtube.com/watch?v=...` — Link YouTube',
-                        '`>m play ` - Link Playlist YouTube',
-                        '`>m ytsearch la lagartija` — Buscar en YouTube con selección',
-                        '`>m lyrics Gorillaz - Clint Eastwood` — Ver letra de canción',
-                    ].join('\n'),
-                    inline: false
-                }
             )
-            .setFooter({ text: 'Debes estar en un canal de voz para usar estos comandos' })
-            .setTimestamp();
+            .setFooter({ text: 'Pibot Music • Servidores públicos (pueden fallar)' });
 
         await message.reply({ embeds: [embed] });
     }

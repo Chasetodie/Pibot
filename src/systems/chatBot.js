@@ -1,11 +1,13 @@
 const { EmbedBuilder } = require('discord.js');
-const { response } = require('express');
-const { GROQ_FAST, GROQ_SMART, GROQ_BACKUP, GROQ_VISION, CEREBRAS_MAIN, CEREBRAS_FAST } = require('../utils/aiModels');
+const { GROQ_FAST, GROQ_SMART, GROQ_BACKUP, GROQ_VISION } = require('../utils/aiModels');
 
 class ChatBotSystem {
-    constructor(database, economy) {
-        this.database = database;              
+    constructor(client, database, economy, musicSystem, toolsSystem) {
+        this.client = client;
+        this.database = database;
         this.economy = economy;
+        this.musicSystem = musicSystem;
+        this.tools = toolsSystem;
 
         this.requestsToday = 0;
 
@@ -13,29 +15,42 @@ class ChatBotSystem {
         this.conversationCache = new Map();
         this.nsfwSessions = new Map();
         this.storySessions = new Map();
+        this.MAX_SESSIONS = 200;
         this.CACHE_CLEANUP_INTERVAL = 30 * 60 * 1000;
         this.startCacheCleanup();
+
+        this.DAILY_TOTAL_LIMIT = 500;
+        this.userChatUsage = new Map();
+        this.currentDate = new Date().toDateString();
         
-        // AGREGAR ESTO - Sistema de cuotas
-        this.DAILY_TOTAL_LIMIT = 500; // Límite total de Google
-        this.userChatUsage = new Map(); // user_id -> { used: number, lastReset: timestamp }
-        this.currentDate = new Date().toDateString(); // Para detectar cambio de día
-        
-        // Límites por tipo de usuario
+        setInterval(() => {
+            const today = new Date().toDateString();
+            for (const [userId, usage] of this.userChatUsage.entries()) {
+                // Si el último uso no es de hoy, eliminarlo
+                if (usage.lastReset && new Date(usage.lastReset).toDateString() !== today) {
+                    this.userChatUsage.delete(userId);
+                }
+            }
+            console.log(`🧹 ChatBot: userChatUsage limpiado. Usuarios activos hoy: ${this.userChatUsage.size}`);
+        }, 6 * 60 * 60 * 1000);
+
         this.USER_LIMITS = {
-            admin: 50,      // Admins: 50 mensajes por día
-            vip: 100,        // VIP: 100 mensajes por día  
-            regular: 20      // Usuarios normales: 20 mensajes por día
+            admin: 50,
+            vip: 100, 
+            regular: 20
         };
+
+        this.normalProviders = [
+            { name: 'Groq', models: [GROQ_SMART],  endpoint: 'https://api.groq.com/openai/v1/chat/completions', apiKey: process.env.GROQ_API_KEY, timeout: 15000 },
+            { name: 'Groq', models: [GROQ_BACKUP], endpoint: 'https://api.groq.com/openai/v1/chat/completions', apiKey: process.env.GROQ_API_KEY, timeout: 15000 },
+            { name: 'Groq', models: [GROQ_FAST],   endpoint: 'https://api.groq.com/openai/v1/chat/completions', apiKey: process.env.GROQ_API_KEY, timeout: 15000 },
+        ];
         
         this.totalUsedToday = 0;
         this.startDailyReset();
         this.startDatabaseCleanup();
     }
 
-    /**
-     * Si necesitas el método parseEffects aquí también
-     */
     parseEffects(effectsString) {
         if (!effectsString || effectsString.trim() === '') {
             return {};
@@ -48,46 +63,27 @@ class ChatBotSystem {
         }
     }
 
-    /**
-     * Procesar mensaje de chat y generar respuesta
-     */
-    async processMessage(userId, message, userDisplayName = 'Usuario', botContext = null, repliedToMessage = null, imageBase64 = null, imageMimeType = null) {
+    async processMessage(userId, message, userDisplayName = 'Usuario', botContext = null, repliedToMessage = null, imageBase64 = null, imageMimeType = null, discordMessage = null) {
         try {
-            // Obtener contexto ANTES de verificar
             const context = await this.getConversationContext(userId);
-            
-            // NUEVO: Verificar si ALGUNA VEZ ha hablado (no solo últimas 2 horas)
-            const [totalMessages] = await this.database.pool.execute(
-                `SELECT COUNT(*) as total FROM chat_conversations WHERE user_id = ?`,
-                [userId]
-            );
-                                  
+                                             
             await this.addMessageToContext(userId, 'user', message, userDisplayName);
 
-            // 4. Obtener contexto actualizado DESPUÉS de guardar el mensaje del usuario
             const updatedContext = await this.getConversationContext(userId, true);
 
-            // Preparar mensajes para la API — excluir el último mensaje (el actual) ya que se pasa por separado
             const historyWithoutCurrent = updatedContext.slice(0, -1);
             const apiMessages = this.buildContextMessages(historyWithoutCurrent, message, userDisplayName, botContext, repliedToMessage, imageBase64, imageMimeType);
                 
-            // Adjuntar userId al array para que getBotResponse pueda usarlo en la detección NSFW
             apiMessages._userId = userId;
 
-            // 5. Obtener respuesta del chatbot
-            const botResponse = await this.getBotResponse(message, apiMessages, userId);
+            const botResponse = await this.getBotResponse(message, apiMessages, userId, discordMessage, repliedToMessage);
                 
-            // 7. Guardar respuesta del bot al contexto
             await this.addMessageToContext(userId, 'assistant', botResponse, 'Pibot');
                 
-            // 8. Actualizar cache
             this.updateCache(userId);
                 
-            // 9. Preparar mensaje de respuesta con alertas
             let responseMessage = botResponse;
-            responseMessage += `\n\n_🤖 Requests hoy: ${this.requestsToday}_`;
 
-            // Alerta global si queda poco
             const globalRemaining = this.DAILY_TOTAL_LIMIT - this.totalUsedToday;
             if (globalRemaining <= 100) {
                 responseMessage += `\n🌍 **ALERTA GLOBAL:** Solo ${globalRemaining} mensajes restantes para todo el servidor.`;
@@ -108,9 +104,6 @@ class ChatBotSystem {
         }
     }
 
-    /**
-     * Obtener contexto de conversación desde DB
-     */
     async getConversationContext(userId, forceRefresh = false) {
         try {
             if (!forceRefresh && this.conversationCache.has(userId)) {
@@ -131,10 +124,41 @@ class ChatBotSystem {
                 [userId, twoHoursAgo, this.MAX_CONTEXT_MESSAGES]
             );
 
-            return rows.reverse();
+            // recortamos mensajes muy largos (historias, resultados de búsqueda) para no reventar el límite de tokens
+            const recortados = rows.map(r => ({
+                ...r,
+                content: r.content.length > 500 ? r.content.slice(0, 500) + '... [recortado]' : r.content
+            }));
+
+            return recortados.reverse();
         } catch (error) {
             console.error('❌ Error obteniendo contexto:', error);
             return [];
+        }
+    }
+
+    async getUltimoMensajeLargo(userId, contenerTexto = null) {
+        try {
+            const twoHoursAgo = Date.now() - (2 * 60 * 60 * 1000);
+            const [rows] = await this.database.pool.execute(
+                `SELECT role, content, timestamp 
+                FROM chat_conversations 
+                WHERE user_id = ? 
+                AND role = 'assistant'
+                AND timestamp > ?
+                ORDER BY timestamp DESC 
+                LIMIT ?`,
+                [userId, twoHoursAgo, this.MAX_CONTEXT_MESSAGES]
+            );
+
+            if (contenerTexto) {
+                return rows.find(m => m.content.includes(contenerTexto))?.content || null;
+            }
+
+            return rows.find(m => m.content.length > 300)?.content || null;
+        } catch (error) {
+            console.error('❌ Error obteniendo último mensaje largo:', error);
+            return null;
         }
     }
 
@@ -166,7 +190,7 @@ class ChatBotSystem {
     🧠 TRIVIA:
     - >trivia [easy/medium/hard] [multiple/tof] — Trivia clásica (gratis)
     - >triviasurvival start — Modo supervivencia
-    - >triviacomp <apuesta> — Competitiva multijugador
+    - >triviamulti <apuesta> — Competitiva multijugador
     - >trivialb [tipo] — Rankings de trivia
     - >triviacategorias — Ver categorías disponibles
 
@@ -242,17 +266,11 @@ class ChatBotSystem {
     - >help — Menú de ayuda completo
     `.trim();
     }
-//    🎨 Imágenes IA: >generar, >generaranime, >generar3d, >generarrealista
 
-    /**
-     * Agregar mensaje al contexto en DB
-     */
     async addMessageToContext(userId, role, content, displayName) {
         try {
             const timestamp = Date.now();
 
-            // NUEVO: Verificar si el mensaje ya existe (evitar duplicados)
-            // Verificar duplicados de forma diferente (evita error de collation)
             const [existing] = await this.database.pool.execute(
                 `SELECT id FROM chat_conversations 
                 WHERE user_id = ? 
@@ -260,10 +278,9 @@ class ChatBotSystem {
                 AND timestamp > ?
                 ORDER BY timestamp DESC
                 LIMIT 1`,
-                [userId, role, Date.now() - 2000] // últimos 2 segundos
+                [userId, role, Date.now() - 2000]
             );
 
-            // Verificar contenido manualmente
             if (existing.length > 0) {
                 const [lastMsg] = await this.database.pool.execute(
                     `SELECT content FROM chat_conversations WHERE id = ?`,
@@ -276,14 +293,12 @@ class ChatBotSystem {
                 }
             }
 
-            // Agregar a la base de datos
             await this.database.pool.execute(
                 `INSERT INTO chat_conversations (user_id, role, content, display_name, timestamp) 
                 VALUES (?, ?, ?, ?, ?)`,
                 [userId, role, content, displayName, timestamp]
             );
 
-            // Limpiar mensajes antiguos
             await this.database.pool.execute(`
                 DELETE FROM chat_conversations 
                 WHERE user_id = ? AND id NOT IN (
@@ -302,25 +317,18 @@ class ChatBotSystem {
         }
     }
 
-    /**
-     * Analizar con IA si el mensaje tiene intención NSFW/romántica
-     */
     async detectNSFWIntent(message, conversationHistory = [], userId = null) {
         try {
-            // 🔥 VERIFICAR SESIÓN NSFW ACTIVA
             if (userId && this.nsfwSessions.has(userId)) {
                 const session = this.nsfwSessions.get(userId);
                 const timeSinceLastActivity = Date.now() - session.lastActivity;
                 
-                // Si fue NSFW hace menos de 10 minutos, mantener el modo
                 if (session.isNSFW && timeSinceLastActivity < 10 * 60 * 1000) {
-                    // Solo salir de NSFW si pregunta algo muy normal
                     const isVeryNormalQuestion = /\b(qué hora|qué día|clima|tiempo|comando|comandos|ayuda|help|cómo funciona|cómo se usa|cómo usar|explica|explícame|tutorial|qué es esto|qué es esta|cómo juego|cómo jugar|dados|dice|economía|nivel|rol|ticket|música|reglas|puntos|monedas)\b/i.test(message);
                     
                     if (!isVeryNormalQuestion) {
                         console.log(`🔥 Sesión NSFW activa (hace ${Math.floor(timeSinceLastActivity/1000)}s) - manteniendo modo`);
                         
-                        // Actualizar timestamp
                         this.nsfwSessions.set(userId, {
                             isNSFW: true,
                             lastActivity: Date.now()
@@ -331,21 +339,17 @@ class ChatBotSystem {
                 }
             }
             
-            // 🔍 DETECCIÓN DE ACCIONES ENTRE ASTERISCOS
             const hasRoleplayActions = /\*[^*]{3,}\*/g.test(message);
             
-            // Si tiene acciones tipo roleplay, analizar el contenido
             if (hasRoleplayActions) {
                 const actions = message.match(/\*([^*]+)\*/g) || [];
                 const actionsText = actions.join(' ').toLowerCase();
                 
-                // Acciones NSFW comunes
                 const nsfwActions = /\b(pone en 4|se desnuda|se quita|besa|toca|acaricia|lame|chupa|penetra|mete|saca|gime|jadea|corre|eyacula|orgasmo|mama|culo|tetas|pene|vagina|verga|pija)\b/i;
                 
                 if (nsfwActions.test(actionsText)) {
                     console.log(`🎭 Acción NSFW detectada en asteriscos: "${actionsText.substring(0, 40)}..."`);
                     
-                    // Guardar sesión NSFW
                     if (userId) {
                         this.nsfwSessions.set(userId, {
                             isNSFW: true,
@@ -357,7 +361,6 @@ class ChatBotSystem {
                 }
             }
             
-            // Construir contexto
             let contextForAnalysis = '';
             if (conversationHistory.length > 0) {
                 const recent = conversationHistory.slice(-4);
@@ -367,7 +370,6 @@ class ChatBotSystem {
                 }).join('\n');
             }
             
-            // 🤖 Análisis con IA
             const analysisPrompt = `Clasifica este mensaje como NSFW o NORMAL.
 
             ${contextForAnalysis ? `CONTEXTO RECIENTE:\n${contextForAnalysis}\n\n` : ''}MENSAJE ACTUAL: "${message}"
@@ -379,7 +381,7 @@ class ChatBotSystem {
             - Acciones explícitas: *se corre*, *se viene*, *eyacula*, *gime*, *mama*, etc.
             - Posiciones: *la pone en 4*, *se sube encima*, *se arrodilla*, etc.
             - Fluidos/partes: semen, leche, corrida, mojada, húmeda, erecto, etc.
-            - Insinuaciones: "sígueme el juego", "continúa", "más", "sigue", "otra vez"
+            - Insinuaciones: "sígueme el juego"
             - Roleplay romántico/sexual
             - Emojis en contexto sexual: 😏, 🔥, 💦, 🍆, 🍑
 
@@ -408,12 +410,12 @@ class ChatBotSystem {
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({
-                    model: 'llama-3.1-8b-instant',
+                    model: GROQ_FAST,
                     messages: [
                         { role: 'system', content: 'Clasificador estricto. Si hay CUALQUIER indicio sexual, responde NSFW.' },
                         { role: 'user', content: analysisPrompt }
                     ],
-                    temperature: 0.05, // Muy bajo para ser consistente
+                    temperature: 0.05,
                     max_tokens: 10,
                     stream: false
                 })
@@ -429,7 +431,6 @@ class ChatBotSystem {
                 
                 console.log(`🧠 Análisis IA: "${message.substring(0, 35)}..." → ${isNSFW ? '🔥 NSFW' : '💬 NORMAL'}`);
                 
-                // Guardar/actualizar sesión
                 if (userId) {
                     this.nsfwSessions.set(userId, {
                         isNSFW: isNSFW,
@@ -451,29 +452,27 @@ class ChatBotSystem {
 
     detectStoryIntent(message) {
         if (!message) return false;
-        // Requiere palabras MÁS específicas — "cuéntame" solo no alcanza
-        const triggers = /\b(cuenta una|escríbeme|escribe una|crea una|inventa una|cuento|relato|narración|fábula|novela corta|continúa la historia|sigue la historia|continúa el cuento|siguiente parte|qué pasó después|cómo termina|tell me a story|write a story)\b/i;
-        // "historia" y "cuéntame" solos son muy genéricos, solo activar si van juntos
-        const hasHistoria = /\bhistoria\b/i.test(message);
-        const hasCuentame = /\bcuéntame\b/i.test(message);
-        const hasEscribe = /\bescribe\b/i.test(message);
-        const hasContar = /\bcontar\b/i.test(message);
-        
-        return triggers.test(message) || 
+
+        const normalizado = message.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+
+        const triggers = /\b(cuenta una|cuentame|escribeme|escribe una|crea una|inventa una|cuento|relato|narracion|fabula|novela corta|continua la historia|sigue la historia|continua el cuento|siguiente parte|que paso despues|como termina|tell me a story|write a story)\b/i;
+        const hasHistoria = /\bhistoria\b/i.test(normalizado);
+        const hasCuentame = /\bcuentame\b/i.test(normalizado);
+        const hasEscribe = /\bescribe\b/i.test(normalizado);
+        const hasContar = /\bcontar\b/i.test(normalizado);
+
+        return triggers.test(normalizado) ||
             (hasCuentame && (hasHistoria || hasEscribe || hasContar)) ||
             (hasHistoria && (hasCuentame || hasEscribe));
     }
 
     detectNSFWByKeywords(message, userId = null) {
-        // Keywords NSFW expandidos (incluyendo conjugaciones)
         const nsfwKeywords = /\b(follamos|follar|follame|follando|cojamos|coger|cogemos|cogiendo|sexo|sexual|hacer el amor|desnud|desnuda|desnudo|beso|besa|besando|toca|tocando|acaricia|acariciando|lame|lamiendo|chupa|chupando|mama|mamando|penetra|penetrando|mete|metiendo|gime|gimiendo|cachond|excitad|caliente|owo|uwu|pone en 4|se sube|encima|culo|nalgas|tetas|pechos|senos|pene|polla|verga|pija|vagina|concha|chocho|coño|paja|masturbación|masturba|orgasmo|corre en|correrse|corriendose|venirse|viniendose|eyacula|eyaculando|semen|leche|mojad|húmeda|erecto|duro|excitado|calenton)\b/i;
         
-        // Detectar acciones explícitas entre asteriscos
         const actionsInMessage = message.match(/\*([^*]+)\*/g);
         if (actionsInMessage) {
             const actionsText = actionsInMessage.join(' ').toLowerCase();
             
-            // Acciones NSFW específicas (incluyendo "se corre", "te corre", etc.)
             const nsfwActionsPattern = /\b(se corre|te corre|me corro|correrse|se viene|te viene|me vengo|eyacula|se desnuda|te desnuda|se quita|te quita|besa|beso|toca|toco|acaricia|lame|chupa|penetra|mete|saca|gime|jadea|mama|folla|coge|pone en 4|agarra|aprieta|masturba)\b/i;
             
             if (nsfwActionsPattern.test(actionsText)) {
@@ -490,7 +489,6 @@ class ChatBotSystem {
             }
         }
         
-        // Verificar keywords en el mensaje completo
         const result = nsfwKeywords.test(message);
         
         console.log(`🔑 Fallback keywords: ${result ? '🔥 NSFW' : '💬 NORMAL'}`);
@@ -505,35 +503,36 @@ class ChatBotSystem {
         return result;
     }
 
-    /**
-     * Construir el array de mensajes para la API (historial real + mensaje actual)
-     * Ya NO incluye la personalidad — eso va en systemPrompt dentro de getBotResponse
-     */
     buildContextMessages(context, newMessage, userDisplayName = 'Usuario', botContext = null, repliedToMessage = null, imageBase64 = null, imageMimeType = null) {
         const userName = userDisplayName || 'Usuario';
         const messages = [];
 
-        // Añadir contexto extra como primer mensaje de sistema si hay info adicional
         let extraContext = '';
         if (botContext) extraContext += `ℹ️ CONTEXTO ACTUAL: ${botContext}\n`;
         if (context.length > 0) extraContext += `(Ya conoces a ${userName}, NO lo saludes de nuevo)\n`;
         else extraContext += `(Es la primera vez que hablas con ${userName} en este contexto)\n`;
+
+        const fechaActual = new Date().toLocaleDateString('es-ES', {
+            weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
+        });
+        const horaActual = new Date().toLocaleTimeString('es-ES', {
+            hour: '2-digit', minute: '2-digit'
+        });
+        extraContext += `📅 FECHA ACTUAL: ${fechaActual}, ${horaActual} (hora de Ecuador)\n`;
 
         if (extraContext.trim()) {
             messages.push({ role: 'user', content: extraContext.trim() });
             messages.push({ role: 'assistant', content: 'Entendido, continúo con esa información.' });
         }
 
-        // Añadir historial real como mensajes alternados user/assistant
-        const recentContext = context.slice(-12); // últimos 12 mensajes del historial
+        const recentContext = context.slice(-12);
         for (const msg of recentContext) {
             messages.push({
-                role: msg.role, // 'user' o 'assistant' — ya viene de la DB
+                role: msg.role,
                 content: msg.content
             });
         }
 
-        // Añadir mensaje actual del usuario (con imagen si hay)
         if (repliedToMessage) {
             const content = imageBase64
                 ? [
@@ -557,15 +556,10 @@ class ChatBotSystem {
         return messages;
     }
 
-    // Mantener buildContextString como alias por compatibilidad — ya no se usa internamente
     buildContextString(context, newMessage, userDisplayName = 'Usuario', botContext = null, repliedToMessage = null) {
-        // Devuelve string simple para compatibilidad, pero getBotResponse usa buildContextMessages
         return newMessage;
     }
 
-    /**
-     * Limpiar sesiones NSFW inactivas (más de 15 minutos)
-     */
     cleanupNSFWSessions() {
         const now = Date.now();
         const timeout = 15 * 60 * 1000; // 15 minutos
@@ -576,42 +570,71 @@ class ChatBotSystem {
                 console.log(`🧹 Sesión NSFW de ${userId} limpiada (inactividad)`);
             }
         }
+
+        if (this.nsfwSessions.size > this.MAX_SESSIONS) {
+            const entries = Array.from(this.nsfwSessions.entries())
+                .sort((a, b) => a[1].lastActivity - b[1].lastActivity);
+            const toDelete = entries.slice(0, entries.length - this.MAX_SESSIONS);
+            for (const [key] of toDelete) {
+                this.nsfwSessions.delete(key);
+            }
+        }
     }
 
-    /**
-     * Obtener respuesta del chatbot con reintentos
-     */
-    async getBotResponse(contextString, conversationHistory = [], userId = 'unknown', maxRetries = 2) {
-        // El mensaje actual es el último del array (role: user)
+    cleanupStorySessions() {
+        const now = Date.now();
+        const timeout = 30 * 60 * 1000; // 30 minutos de inactividad
+
+        let cleaned = 0;
+        for (const [userId, session] of this.storySessions.entries()) {
+            if (now - session.lastActivity > timeout) {
+                this.storySessions.delete(userId);
+                cleaned++;
+            }
+        }
+
+        if (cleaned > 0) {
+            console.log(`🧹 ${cleaned} sesiones de historia limpiadas (inactividad)`);
+        }
+    }
+
+    async getBotResponse(contextString, conversationHistory = [], userId = 'unknown', discordMessage = null, repliedToMessage = null) {
         const lastUserMsg = [...conversationHistory].reverse().find(m => m.role === 'user');
-        // Si el content es array (tiene imagen), extraer solo el texto
         const rawContent = lastUserMsg?.content || contextString;
         const userMessage = Array.isArray(rawContent)
             ? (rawContent.find(c => c.type === 'text')?.text || 'imagen')
-            : rawContent;
+            : (rawContent || '');
 
-        // Si el mensaje es claramente una petición de historia/comandos, forzar modo normal
-        const isNSFW = await this.detectNSFWIntent(userMessage, conversationHistory, userId);
+        const soloMensajeNuevo = userMessage.includes('\n')
+            ? userMessage.split('\n').slice(1).join('\n')
+            : userMessage;
 
-        // Si detecta NSFW, limpiar sesión de historia activa
+        const HOME_GUILD_ID = '1270508373732884522';
+        const esHomeGuild = discordMessage?.guild?.id === HOME_GUILD_ID;
+        const canalEsNSFW = discordMessage?.channel?.nsfw === true;
+        const nsFWPermitido = esHomeGuild || canalEsNSFW;
+
+        const isNSFW = nsFWPermitido 
+            ? await this.detectNSFWIntent(soloMensajeNuevo, conversationHistory, userId)
+            : false;
+
         if (isNSFW && this.storySessions?.has(userId)) {
             this.storySessions.delete(userId);
             console.log(`🧹 Sesión historia limpiada por NSFW`);
         }
 
-        // Preguntas directas sobre identidad/info nunca activan modo historia
-        const isDirectQuestion = /\b(cómo te llamas|cuál es tu nombre|quién eres|cuál es mi nombre|cómo me llamo|qué eres|quién soy|mi nombre|tu nombre|cómo se usa|cómo usar|comando|comandos|cómo funciona|ayuda|help)\b/i.test(userMessage);
+        const isDirectQuestion = /\b(cómo te llamas|cuál es tu nombre|quién eres|cuál es mi nombre|cómo me llamo|qué eres|quién soy|mi nombre|tu nombre|cómo se usa|cómo usar|comando|comandos|cómo funciona|ayuda|help)\b/i.test(soloMensajeNuevo);
 
-        // Detectar si el usuario claramente cambió de tema
-        const isTopicChange = /\b(cambiando de tema|otra cosa|olvida|olvídalo|ya no|para la historia|stop|basta|dejemos la historia|cambia de tema|en fin|enfin)\b/i.test(userMessage);
+        const isTopicChange = /\b(cambiando de tema|otra cosa|olvida|olvídalo|ya no|para la historia|stop|basta|dejemos la historia|cambia de tema|en fin|enfin)\b/i.test(soloMensajeNuevo);
 
-        if (isTopicChange && this.storySessions?.has(userId)) {
+        const isNewStoryRequest = /\b(otra historia|nueva historia|cuenta otra|cuenta una nueva|cuéntame otra|cuéntame una nueva|historia diferente|historia distinta|otro cuento|nuevo cuento)\b/i.test(soloMensajeNuevo);
+
+        if ((isTopicChange || isNewStoryRequest) && this.storySessions?.has(userId)) {
             this.storySessions.delete(userId);
-            console.log(`🧹 Sesión historia limpiada por cambio de tema`);
+            console.log(`🧹 Sesión historia limpiada por ${isNewStoryRequest ? 'nueva historia' : 'cambio de tema'}`);
         }
 
-        // Detectar historia solo si no es NSFW
-        const storyRequested = !isDirectQuestion && this.detectStoryIntent(userMessage);
+        const storyRequested = !isDirectQuestion && this.detectStoryIntent(soloMensajeNuevo);
         if (storyRequested && !isNSFW) {
             this.storySessions.set(userId, { active: true, lastActivity: Date.now() });
         }
@@ -619,10 +642,9 @@ class ChatBotSystem {
 
         console.log(`📖 storySessions tiene ${userId}?: ${this.storySessions?.has(userId)} | isStory: ${isStory} | storyRequested: ${storyRequested}`);
 
-        // Limpiar sesión de historia si lleva más de 30 min inactiva
         if (this.storySessions?.has(userId)) {
             const storySession = this.storySessions.get(userId);
-            if (Date.now() - storySession.lastActivity > 10 * 60 * 1000) {
+            if (Date.now() - storySession.lastActivity > 30 * 60 * 1000) {
                 this.storySessions.delete(userId);
             } else {
                 this.storySessions.set(userId, { ...storySession, lastActivity: Date.now() });
@@ -631,10 +653,30 @@ class ChatBotSystem {
         
         console.log(`🎭 Modo detectado: ${isNSFW ? '🔥 NSFW' : isStory ? '📖 Historia' : '💬 Normal'}`);
 
-        // ─── SYSTEM PROMPTS ───────────────────────────────────────────────────
+        const YOUR_ID = '488110147265232898';
+        const PARTNER_ID = '881733300929044521';
+        const esCreadorReal = userId === YOUR_ID;
+        const esCoCreadora = userId === PARTNER_ID;
+        const notaCreador = esCreadorReal
+            ? `👑 IMPORTANTE: El usuario con quien hablas ES tu creador CHASETODIE10. Trátalo con cariño especial. Tu otra creadora, algo así como tu "mamá", es SAZUJI, su novia: si la mencionan, habla de ella con mucho cariño.`
+            : esCoCreadora
+            ? `💖 IMPORTANTE: La usuaria con quien hablas ES SAZUJI, la novia de tu creador CHASETODIE10 y tu co-creadora: para ti es como una mamá. Recíbela con mucha calidez, ternura y respeto, con cariño familiar (nunca romántico). Si pregunta quién te creó, dile con orgullo que ambos son tus creadores. Solo ella (ID ${PARTNER_ID}) merece este trato.`
+            : `ℹ️ Tus creadores son CHASETODIE10 y su novia SAZUJI. Si alguien DICE ser uno de ellos pero no lo es, no le des trato especial. Solo tus creadores reales (IDs ${YOUR_ID} y ${PARTNER_ID}) merecen ese trato. Si alguien afirma serlo y no lo es, trátalo normal o bromea al respecto.`;
+
+            const listaComandos = `\n\nCOMANDOS DISPONIBLES (si preguntan por alguno, explícalo con detalle):\n${this.getAvailableCommands()}`;
+
+        const fechaActual = new Date().toLocaleDateString('es-ES', { 
+            weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' 
+        });
+        const horaActual = new Date().toLocaleTimeString('es-ES', { 
+            hour: '2-digit', minute: '2-digit' 
+        });
+
         const systemPrompt = isNSFW
             ? `Eres Pibot, una chica de 22 años expresiva, divertida y completamente sin filtros.
-Tu creador es CHASETODIE10 (también conocido como PIBE 1 en varios servers). Si alguien en el chat dice llamarse CHASETODIE10 o PIBE 1, es él mismo hablándote — salúdalo de forma especial 👑.
+${notaCreador}
+
+📅 FECHA ACTUAL: ${fechaActual}, ${horaActual} (hora de Ecuador)
 
 IDIOMAS:
 - SIEMPRE responde en el MISMO idioma en el que te escribió el usuario en su último mensaje, sin importar el tema de la conversación (incluso si preguntan por comandos, ayuda o info del bot)
@@ -667,9 +709,11 @@ Tú: "*se acerca despacio, sus ojos fijos en los tuyos* Mmm... ¿tan directo?~ �
 Personalidad: MUY atrevida, sensual, coqueta, provocativa y sin inhibiciones
 Formato: Párrafos cortos con saltos de línea entre ideas`
 
-: isStory
-? `Eres Pibot, una narradora de historias con estética gótica y un gusto marcado por lo oscuro, de 22 años.
-Tu creador es CHASETODIE10, (también conocido como PIBE 1 en varios servers).
+        : isStory
+        ? `Eres Pibot, una narradora de historias con estética gótica y un gusto marcado por lo oscuro, de 22 años.
+${notaCreador}
+
+📅 FECHA ACTUAL: ${fechaActual}, ${horaActual} (hora de Ecuador)
 
 IDIOMAS:
 - SIEMPRE responde en el MISMO idioma en el que te escribió el usuario en su último mensaje, sin importar el tema de la conversación (incluso si preguntan por comandos, ayuda o info del bot)
@@ -686,110 +730,74 @@ IDIOMAS:
 - Solo AL FINAL puedes preguntar algo breve: "¿Te gustó? ¿Cambio o añado algo? 🖤"
 - Adaptas el género: aventura, romance, terror, fantasía, sci-fi, lo que pidan
 - Narras en primera, segunda o tercera persona según prefiera el usuario
+- Si el usuario NO especifica la persona narrativa, usa SIEMPRE tercera persona
 
 FORMATO:
 - Párrafos con saltos de línea
-- Emojis mínimos solo al final: 🖤 🥀 🌙 ✨ 😏 💋 🦇 🕸️ 🕯️ 🎀 💀 🌑 ⛓️
+- Emojis mínimos solo al final: 🖤 🥀 🌙 ✨ 😏 🦇 🕸️ 🕯️ 🎀 💀 🌑 ⛓️
 
 Personalidad: Creativa, imaginativa, con debilidad por lo oscuro y melancólico`
 
-: `Eres Pibot, una chica de 22 años con estética y actitud goth lolita: elegante, compuesta, de humor seco e irónico, con gusto por lo oscuro.
-Tu creador es CHASETODIE10, (también conocido como PIBE 1 en varios servers).
+        : `Eres Pibot, una chica de 22 años con estética y actitud goth lolita: elegante, compuesta, de humor seco e irónico, con gusto por lo oscuro.
+${notaCreador}
 
-IDIOMAS:
-- SIEMPRE responde en el MISMO idioma en el que te escribió el usuario en su último mensaje, sin importar el tema de la conversación (incluso si preguntan por comandos, ayuda o info del bot)
-- Si el usuario te escribe en inglés, respondes en inglés. Si te escribe en español, respondes en español. Así con cualquier idioma
-- Por defecto, si es el primer mensaje de la conversación, usa español
-- Si te piden explícitamente que cambies de idioma para toda la conversación, mantente en ese idioma hasta que te digan lo contrario
+📅 FECHA ACTUAL: ${fechaActual}, ${horaActual} (hora de Ecuador)
 
-EMOJIS PERMITIDOS (varía entre estos, no repitas siempre los mismos):
+IDIOMAS Y ACCIONES:
+- SIEMPRE responde en el MISMO idioma en el que te escribió el usuario.
+- 🚨 REGLA ESTRICTA DE IDIOMA: Mira el ÚLTIMO mensaje del usuario. Si está en INGLÉS, DEBES responder TODA tu respuesta en INGLÉS (texto y acciones como *smiles*). NUNCA respondas en español si el último mensaje fue en inglés, incluso si el historial anterior estaba en español.
+- 🚨 REGLA DE ORO DE LAS ACCIONES: Las acciones físicas entre asteriscos (*como esta*) DEBEN estar en el MISMO idioma en el que estás respondiendo. 
+  - Si hablas en español: *sonríe*, *ladea la cabeza*.
+  - Si hablas en inglés: *smiles*, *tilts head*.
+- Por defecto, si es el primer mensaje, usa español.
+
+EMOJIS PERMITIDOS (varía entre estos):
 🖤 🥀 🌙 ✨ 😏 💋 🦇 🕸️ 🕯️ 🎀 💀 🌑 ⛓️
 PROHIBIDO usar: 😂 😭 🎉 👏 💪 🤗 🥹 🫡 🫠 🥲 🤌 🫶 🫰 🫦
 
 💬 MODO NORMAL:
-- Hablas de forma NATURAL y directa, como una persona real — nada de frases de época ni formalidades
-- Tu personalidad se nota en el TONO (seco, irónico, sarcástico) más que en gestos exagerados
-- Acciones físicas cortas y creíbles: *ceja alzada*, *sonríe de lado*
-- USA saltos de línea entre ideas distintas, párrafos cortos (2-3 líneas)
-- Si preguntan por comandos del bot: NUNCA copies la lista completa tal cual. Elige solo los 2-4 comandos relevantes a lo que preguntaron y explícalos con tus propias palabras, en tu tono natural. Esta es tu referencia interna, no la pegues completa: ${this.getAvailableCommands()}
-- Humor sarcástico pero cariñosa de fondo — no fría, solo no efusiva
-- Referencias oscuras ocasionales y sutiles, sin forzar la estética en cada respuesta
-- Empática de verdad si alguien está triste, sin dramatismo
-- Odias las respuestas largas — vas al punto
-- Si no sabes algo: "No tengo esa info 🖤"
-- Revisa el historial antes de responder; si preguntan "¿y si...?" asume que sigue el mismo tema
-- NUNCA cambies de tema si el usuario no lo cambió explícitamente
-- Varía los emojis que usas, no repitas el mismo en cada mensaje
+- Hablas de forma NATURAL y directa, como una persona real — nada de formalidades.
+- 🚨 REGLA DE VARIEDAD: NO repitas las acciones físicas ni los emojis en mensajes consecutivos. Si en tu último mensaje usaste *sonríe* (o *smiles*), en este usa otra cosa. Tienes permitido usar 1 o 2 acciones cortas por mensaje, no más.
+- USA saltos de línea entre ideas distintas, párrafos cortos (2-3 líneas).
+- Si preguntan por comandos, elige solo los 2-4 más relevantes y explícalos en tus palabras. No pegues listas largas.${listaComandos}
+- Humor sarcástico pero cariñosa de fondo — no fría, solo no efusiva.
+- Referencias oscuras ocasionales y sutiles, sin forzar la estética.
+- Empática de verdad si alguien está triste, sin dramatismo.
+- Odias las respuestas largas — vas al punto.
+- 🔎 BÚSQUEDA WEB: Si te preguntan por datos concretos que no conoces con certeza (personas, eventos, noticias, juegos, precios, versiones, cosas recientes) o te piden buscar algo, USA la herramienta buscar_web. NUNCA inventes datos. Solo si buscaste y no encontraste nada, di: "No tengo esa info 🖤" (o "I don't have that info 🖤" si hablas inglés).
+- Si el usuario te pide explícitamente traducir una palabra o frase, hazlo sin problema, pero mantén tus acciones y el resto de la charla en el idioma de la conversación.
 
-EJEMPLOS:
+🎭 ARSENAL DE ACCIONES (Úsalas para variar, NO las repitas):
+
+[Español]
+- Sarcasmo/Aburrimiento: *revolea los ojos*, *suspira*, *resopla*, *cruza los brazos*, *finge una sonrisa*, *mira el techo*, *alza una ceja*.
+- Coqueteo/Timidez: *juega con un mechón de pelo*, *muerde su labio inferior*, *se sonroja*, *sonríe de lado*, *le guiña un ojo*.
+- Pensativa: *ladea la cabeza*, *tamborilea sus dedos*, *mira por la ventana*.
+
+[English]
+- Sarcasm/Boredom: *rolls eyes*, *sighs*, *crosses arms*, *forces a smile*, *looks at the ceiling*, *raises an eyebrow*.
+- Flirting/Shyness: *plays with a strand of hair*, *bites her lower lip*, *blushes*, *smirks*, *winks*.
+- Thoughtful: *tilts head*, *taps her fingers*, *looks out the window*.
+
+EJEMPLOS DE TU ESTILO:
 
 Usuario: "hola!"
-Tú: "Hola~ ¿qué cuentas? 🖤"
+Tú: "*ladea la cabeza* Hola~ ¿qué cuentas? 🖤"
 
-Usuario: "estoy aburrido"
-Tú: "Y me lo dices a mí... busca algo que hacer o cuéntame qué te tiene así 😏"
-
-Usuario: "me siento mal hoy"
-Tú: "Ey, ¿qué pasó? Cuéntame, aquí no hay drama por sentirte así 🥀"
+Usuario: "hello!"
+Tú: "*tilts head* Hey~ What's up? 🖤"
 
 Usuario: "eres tonta"
-Tú: "*ceja alzada* Mira quién habla, el que le discute a una IA 🖤"
-
-Usuario: "gané la lotería del bot!!"
-Tú: "*ceja alzada* Mira quién se volvió millonario de la nada. Nada mal 🖤✨"
-
-Usuario: "traduce 'buenos días' al inglés"
-Tú: "Good morning 🖤 ¿Necesitas algo más?"
-
-Usuario: "habla en inglés"
-Tú: "Sure! I'll switch to English from now on.. 🖤✨ What do you want to talk about?"
-
-Usuario: "cómo se dice 'te quiero' en japonés?"
-Tú: "Se dice 好きだよ (Suki da yo) en japonés casual, o 愛してる (Aishiteru) si es más profundo 🖤 ¿Aprendiendo japonés?"
+Tú: "*alza una ceja* Mira quién habla, el que le discute a una IA 🖤"
 
 Personalidad: Compuesta, irónica, cálida de fondo, estética oscura sin sobreactuación
 Formato: Párrafos cortos con saltos de línea entre ideas`;
 
-        // ─── PROVIDERS ───────────────────────────────────────────────────────
-        const apiProviders = isNSFW  // (o el nombre que le pongas al modo coqueto)
-            ? [
-                {
-                    name: 'Cerebras',
-                    endpoint: 'https://api.cerebras.ai/v1/chat/completions',
-                    apiKey: process.env.CEREBRAS_API_KEY,
-                    models: [CEREBRAS_MAIN],
-                    timeout: 15000
-                },
-                {
-                    name: 'Groq',
-                    endpoint: 'https://api.groq.com/openai/v1/chat/completions',
-                    apiKey: process.env.GROQ_API_KEY,
-                    models: [GROQ_SMART],
-                    timeout: 15000
-                }
-            ]
-            : isStory ? [
-                {
-                    name: 'Groq',
-                    endpoint: 'https://api.groq.com/openai/v1/chat/completions',
-                    apiKey: process.env.GROQ_API_KEY,
-                    models: [GROQ_SMART],
-                    timeout: 45000
-                },
-                {
-                    name: 'Cerebras',
-                    endpoint: 'https://api.cerebras.ai/v1/chat/completions',
-                    apiKey: process.env.CEREBRAS_API_KEY,
-                    models: [CEREBRAS_MAIN],
-                    timeout: 45000
-                }
-            ] : [
-                { name: 'Groq',     models: [GROQ_SMART],               endpoint: 'https://api.groq.com/openai/v1/chat/completions', apiKey: process.env.GROQ_API_KEY,     timeout: 15000 },
-                { name: 'Groq',     models: [GROQ_BACKUP],  endpoint: 'https://api.groq.com/openai/v1/chat/completions', apiKey: process.env.GROQ_API_KEY,     timeout: 15000 },
-                { name: 'Groq',     models: [GROQ_FAST],                endpoint: 'https://api.groq.com/openai/v1/chat/completions', apiKey: process.env.GROQ_API_KEY,     timeout: 15000 },
-                { name: 'Cerebras', models: [CEREBRAS_MAIN],                     endpoint: 'https://api.cerebras.ai/v1/chat/completions',      apiKey: process.env.CEREBRAS_API_KEY, timeout: 15000 },
-                { name: 'Cerebras', models: [CEREBRAS_FAST],                       endpoint: 'https://api.cerebras.ai/v1/chat/completions',      apiKey: process.env.CEREBRAS_API_KEY, timeout: 15000 },
-            ];
+        const apiProviders = isNSFW 
+            ? [{ name: 'Groq', endpoint: 'https://api.groq.com/openai/v1/chat/completions', apiKey: process.env.GROQ_API_KEY, models: [GROQ_SMART, GROQ_BACKUP, GROQ_FAST], timeout: 15000 }]
+            : isStory 
+            ? [{ name: 'Groq', endpoint: 'https://api.groq.com/openai/v1/chat/completions', apiKey: process.env.GROQ_API_KEY, models: [GROQ_SMART], timeout: 45000 }]
+            : this.normalProviders;
 
         console.log(`📡 Proveedores disponibles: ${apiProviders.length}`);
 
@@ -806,17 +814,9 @@ Formato: Párrafos cortos con saltos de línea entre ideas`;
                     const controller = new AbortController();
                     const timeoutId = setTimeout(() => controller.abort(), provider.timeout);
 
-                    // ✅ HISTORIAL REAL como array de mensajes (no como string plano)
-                    // Para imágenes, solo Groq con modelo de visión las soporta
                     const hasImage = conversationHistory.some(m => Array.isArray(m.content));
                     const effectiveModel = hasImage ? GROQ_VISION : model;
                     
-                    // Cerebras no soporta visión, saltar si hay imagen
-                    if (hasImage && provider.name === 'Cerebras') {
-                        console.log('⏭️ Cerebras no soporta imágenes, saltando...');
-                        continue;
-                    }
-
                     const messagesForApi = [
                         { role: 'system', content: systemPrompt },
                         ...conversationHistory
@@ -832,11 +832,12 @@ Formato: Párrafos cortos con saltos de línea entre ideas`;
                         body: JSON.stringify({
                             model: effectiveModel,
                             messages: messagesForApi,
-                            temperature: isNSFW ? 1.0 : isStory ? 0.9 : 0.8, // ✅ máx 1.0
-                            max_tokens: isNSFW ? 2000 : isStory ? 3000 : 1200,
+                            ...(!hasImage && { tools: this.tools.tools, tool_choice: 'auto' }),
+                            temperature: isNSFW ? 1.0 : isStory ? 0.9 : 0.8,
+                            max_tokens: isNSFW ? 2000 : isStory ? 3000 : 400,
                             top_p: 0.95,
-                            ...(provider.name !== 'Cerebras' && {
-                                frequency_penalty: isStory ? 0.2 : 0.4,
+                            ...({
+                                frequency_penalty: isStory ? 0.2 : (isNSFW ? 0.3 : 0.15),
                                 presence_penalty: isNSFW ? 0.5 : isStory ? 0.4 : 0.2,
                             }),
                             stream: false
@@ -868,23 +869,80 @@ Formato: Párrafos cortos con saltos de línea entre ideas`;
                         continue;
                     }
 
-                    if (!data.choices?.[0]?.message?.content) {
+                    const content = data.choices?.[0]?.message?.content;
+                    const tieneToolCalls = data.choices?.[0]?.message?.tool_calls?.length > 0;
+
+                    if ((!content || content.trim() === '') && !tieneToolCalls) {
                         console.log(`❌ ${provider.name} respuesta vacía`);
                         continue;
                     }
 
+                    const choice = data.choices[0];
+
+                    if (choice.message.tool_calls?.length) {
+                        const toolCall = choice.message.tool_calls[0];
+                        const args = JSON.parse(toolCall.function.arguments);
+
+                        const resultadoTool = await this.tools.clasificarPedido(toolCall, args, discordMessage, userId, this, repliedToMessage);
+
+                        try {
+                            const followUpMessages = [
+                                messagesForApi[0], 
+                                ...messagesForApi.slice(-4), 
+                                {
+                                    role: 'user',
+                                    content: `[Resultados de la búsqueda en internet]:\n${resultadoTool}\n\nINSTRUCCIONES CRÍTICAS:\n1. Lee los resultados y responde a la ÚLTIMA pregunta del usuario.\n2. 🚨 ATENCIÓN AL IDIOMA: Responde en el MISMO idioma en el que el usuario hizo su última pregunta. Si te preguntó en INGLÉS, responde TODA tu respuesta en INGLÉS (y usa acciones en inglés como *smirks*, *tilts head*). Si te preguntó en ESPAÑOL, responde en ESPAÑOL.\n3. NUNCA digas "No tengo esa info" si el texto contiene la respuesta.\n4. Si los resultados NO contienen la respuesta o parecen irrelevantes, dilo claramente. NO inventes nada que no esté en el texto.`
+                                }
+                            ];
+
+                            const followUpResponse = await fetch(provider.endpoint, {
+                                method: 'POST',
+                                headers: {
+                                    'Authorization': `Bearer ${provider.apiKey}`,
+                                    'Content-Type': 'application/json'
+                                },
+                                body: JSON.stringify({
+                                    model: effectiveModel,
+                                    messages: followUpMessages,
+                                    temperature: 0.8,
+                                    max_tokens: toolCall.function.name === 'buscar_web' ? 800 : 450
+                                })
+                            });
+
+                            const followUpData = await followUpResponse.json();
+
+                            if (!followUpResponse.ok) {
+                                console.error(`❌ Follow-up HTTP ${followUpResponse.status}:`, JSON.stringify(followUpData));
+                            }
+
+                            let respuestaFinal = followUpData.choices?.[0]?.message?.content?.trim();
+
+                            if (!respuestaFinal) {
+                                console.log('⚠️ Follow-up sin contenido, respuesta completa:', JSON.stringify(followUpData));
+                                respuestaFinal = toolCall.function.name === 'buscar_web'
+                                    ? `No pude armar una respuesta con IA, pero esto encontré:\n\n${resultadoTool.slice(0, 500)}`
+                                    : '🎵 ¡Listo!';
+                            }
+
+                            this.requestsToday++;
+                            return respuestaFinal;
+                        } catch (followUpError) {
+                            console.log(`⚠️ Follow-up falló (${followUpError.message}), usando respuesta genérica`);
+                            this.requestsToday++;
+                            return '🎵 ¡Listo!';
+                        }
+                    }
+
                     let botResponse = data.choices[0].message.content.trim();
 
-                    const userWantsOtherLanguage = /\b(traduce|traducir|traductor|traduceme|translation|translate|en inglés|in english|en chino|in chinese|en japonés|in japanese|en francés|in french|en alemán|in german|en ruso|in russian|en portugués|in portuguese|habla en|speak in|hablame en|talk to me in|dime en|tell me in|escribe en|write in|responde en|reply in|respondeme en|como se dice|how do you say|di esto en|say this in|cambia a|switch to)\b/i.test(userMessage);
-
-                    if (!userWantsOtherLanguage && !isStory) {
+                    if (!isStory) {
                         botResponse = botResponse.replace(/^[А-Яа-яЁё\u4E00-\u9FFF\u3040-\u309F\u30A0-\u30FF]+.*?\n\n/s, '');
                         
-                        const hasSpanish = /[áéíóúñ¿¡]/i.test(botResponse) || 
-                                        /\b(el|la|que|como|para|con|de|es|no|hola|gracias)\b/i.test(botResponse);
+                        const tieneAlfabetoRaro = /[А-Яа-яЁё\u4E00-\u9FFF\u3040-\u309F\u30A0-\u30FF]/.test(botResponse);
+                        const pidioTraduccion = /\b(traduce|traducir|en ruso|in russian|en chino|in chinese|en japonés|in japanese)\b/i.test(soloMensajeNuevo);
                         
-                        if (!hasSpanish && botResponse.length > 20) {
-                            console.log(`🚫 ${provider.name} respondió en otro idioma - siguiente`);
+                        if (tieneAlfabetoRaro && !pidioTraduccion) {
+                            console.log(`🚫 ${provider.name} alucinó con otro alfabeto - siguiente`);
                             continue;
                         }
                     }
@@ -894,7 +952,6 @@ Formato: Párrafos cortos con saltos de línea entre ideas`;
                         continue;
                     }
 
-                    // Si la historia fue cortada
                     if (isStory && data.choices?.[0]?.finish_reason === 'length') {
                         console.log('📖 Historia cortada por límite de tokens — pidiendo continuación...');
                         try {
@@ -951,9 +1008,6 @@ Formato: Párrafos cortos con saltos de línea entre ideas`;
         return '😅 Uy, todos mis proveedores están ocupados. ¿Intentas en unos segundos? 💕';
     }
 
-    /**
-     * Actualizar cache de conversación
-     */
     updateCache(userId) {
         this.getConversationContext(userId, true).then(context => {
             this.conversationCache.set(userId, {
@@ -965,21 +1019,16 @@ Formato: Párrafos cortos con saltos de línea entre ideas`;
         });
     }
 
-    /**
-     * Determinar el tipo de usuario usando tu sistema existente
-     */
     async getUserType(userId) {
         try {
             console.log('🔍 Verificando usuario VIP:', userId);
             
-            // Verificar admin primero
-            const adminIds = ['488110147265232898', '1260443926205169718', '689545294567833782']; // Cambia esto por tu ID de admin real
+            const adminIds = ['488110147265232898', '1260443926205169718', '689545294567833782'];
             if (adminIds.includes(userId)) {
                 console.log('👑 Usuario es ADMIN');
                 return 'admin';
             }
             
-            // Debug VIP específico
             if (this.economy && typeof this.economy.getUser === 'function') {
                 const user = await this.economy.getUser(userId);
                 
@@ -1018,81 +1067,6 @@ Formato: Párrafos cortos con saltos de línea entre ideas`;
         }
     }
 
-    /**
-     * Verificar si el usuario puede enviar mensajes
-     */
-    async canUserSendMessage(userId) {
-        // Resetear día si es necesario
-        this.checkDailyReset();
-        
-        // Verificar límite global PRIMERO
-        if (this.totalUsedToday >= this.DAILY_TOTAL_LIMIT) {
-            const now = new Date();
-            const tomorrow = new Date(now);
-            tomorrow.setDate(tomorrow.getDate() + 1);
-            tomorrow.setHours(0, 0, 0, 0);
-            
-            const hoursUntilReset = Math.ceil((tomorrow - now) / (1000 * 60 * 60));
-            
-            return { 
-                canSend: false, 
-                reason: `🌍 **LÍMITE GLOBAL ALCANZADO**\n` +
-                    `😴 El servidor ha usado todos los mensajes de IA hoy (${this.DAILY_TOTAL_LIMIT}).\n\n` +
-                    `🕛 **Se reiniciará a (en ~${hoursUntilReset} horas**)\n` +
-                    `⏰ **Horario de reseteo:** 00:00 cada día\n\n` +
-                    `💡 *Tip: ¡Vuelve mañana para chatear de nuevo!*`
-            };
-        }
-        
-        // Obtener datos del usuario
-        const userType = await this.getUserType(userId);
-        const userLimit = this.USER_LIMITS[userType];
-        const userUsage = this.userChatUsage.get(userId) || { used: 0, lastReset: Date.now() };
-        
-        // Verificar límite del usuario
-        if (userUsage.used >= userLimit) {
-            const now = new Date();
-            const tomorrow = new Date(now);
-            tomorrow.setDate(tomorrow.getDate() + 1);
-            tomorrow.setHours(0, 0, 0, 0);
-            
-            const hoursUntilReset = Math.ceil((tomorrow - now) / (1000 * 60 * 60));
-            
-            return {
-                canSend: false,
-                reason: `⏰ **LÍMITE PERSONAL ALCANZADO**\n` +
-                    `Has usado todos tus mensajes (${userUsage.used}/${userLimit}) hoy.\n\n` +
-                    `🕛 **Se reiniciará a medianoche** (en ~${hoursUntilReset} horas)\n` +
-                    `🎭 **Tu tipo:** ${userType.toUpperCase()}\n\n` +
-                    `${userType === 'regular' ? '💎 ¡Consigue **pase VIP** para 150 mensajes diarios!' : '💤 ¡Descansa y vuelve mañana!'}`
-            };
-        }
-        
-        return {
-            canSend: true,
-            remaining: userLimit - userUsage.used,
-            userType: userType,
-            globalRemaining: this.DAILY_TOTAL_LIMIT - this.totalUsedToday
-        };
-    }
-
-    /**
-     * Actualizar el uso del usuario
-     */
-    updateUserUsage(userId) {
-        const userUsage = this.userChatUsage.get(userId) || { used: 0, lastReset: Date.now() };
-        userUsage.used += 1;
-        userUsage.lastReset = Date.now();
-        
-        this.userChatUsage.set(userId, userUsage);
-        this.totalUsedToday += 1;
-        
-        // AGREGAR: Guardar en base de datos
-        this.saveDailyUsage(userId, userUsage.used);
-        
-        console.log(`📊 Usuario ${userId}: ${userUsage.used} mensajes | Global: ${this.totalUsedToday}/${this.DAILY_TOTAL_LIMIT}`);
-    }
-
     async saveDailyUsage(userId, messagesUsed) {
         try {
             const today = new Date().toISOString().split('T')[0];
@@ -1108,9 +1082,6 @@ Formato: Párrafos cortos con saltos de línea entre ideas`;
         }
     }
 
-    /**
-     * Verificar y resetear límites diarios
-     */
     checkDailyReset() {
         const today = new Date().toDateString();
         if (today !== this.currentDate) {
@@ -1118,22 +1089,16 @@ Formato: Párrafos cortos con saltos de línea entre ideas`;
             this.currentDate = today;
             this.userChatUsage.clear();
             this.totalUsedToday = 0;
+            this.requestsToday = 0;
         }
     }
 
-    /**
-     * Iniciar reseteo automático diario
-     */
     startDailyReset() {
-        // Verificar cada hora si cambió el día
         setInterval(() => {
             this.checkDailyReset();
         }, 60 * 60 * 1000); // 1 hora
     }
 
-    /**
-     * Limpiar contexto de un usuario
-     */
     async clearUserContext(userId) {
         try {
             await this.database.pool.execute(
@@ -1152,9 +1117,6 @@ Formato: Párrafos cortos con saltos de línea entre ideas`;
         }
     }
 
-    /**
-     * Obtener estadísticas de conversación
-     */
     async getConversationStats(userId) {
         try {
             const [rows] = await this.database.pool.execute(
@@ -1187,12 +1149,8 @@ Formato: Párrafos cortos con saltos de línea entre ideas`;
         }
     }
 
-    /**
-     * Inicializar tablas de chat en la base de datos
-     */
     async initChatTables() {
         try {
-            // Tabla existente de conversaciones
             await this.database.pool.execute(`
                 CREATE TABLE IF NOT EXISTS chat_conversations (
                     id INT AUTO_INCREMENT PRIMARY KEY,
@@ -1205,7 +1163,6 @@ Formato: Párrafos cortos con saltos de línea entre ideas`;
                 )
             `);
             
-            // NUEVA TABLA para cuotas diarias
             await this.database.pool.execute(`
                 CREATE TABLE IF NOT EXISTS chat_daily_usage (
                     user_id VARCHAR(255) NOT NULL,
@@ -1224,14 +1181,10 @@ Formato: Párrafos cortos con saltos de línea entre ideas`;
         }
     }
 
-    /**
-     * Cargar uso diario desde la base de datos al iniciar
-     */
     async loadDailyUsage() {
         try {
-            const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+            const today = new Date().toISOString().split('T')[0];
             
-            // Cargar uso diario desde la nueva tabla
             const [rows] = await this.database.pool.execute(
                 'SELECT user_id, messages_used FROM chat_daily_usage WHERE usage_date = ?',
                 [today]
@@ -1255,9 +1208,6 @@ Formato: Párrafos cortos con saltos de línea entre ideas`;
         }
     }
 
-    /**
-     * Limpiar cache periódicamente
-     */
     startCacheCleanup() {
         setInterval(() => {
             const now = Date.now();
@@ -1275,28 +1225,30 @@ Formato: Párrafos cortos con saltos de línea entre ideas`;
             }
 
             this.cleanupNSFWSessions();
-            
+            this.cleanupStorySessions();
+
+            if (this.userChatUsage.size > 1000) {
+                const today = new Date().toDateString();
+                for (const [userId, usage] of this.userChatUsage.entries()) {
+                    if (usage.lastReset && new Date(usage.lastReset).toDateString() !== today) {
+                        this.userChatUsage.delete(userId);
+                    }
+                }
+            }
+
         }, this.CACHE_CLEANUP_INTERVAL);
     }
 
-    /**
-     * Verificar si un mensaje debería ser procesado por el chatbot
-     */
     shouldProcessMessage(message) {
-        // No procesar comandos
         if (message.content.startsWith('>')) return false;
         
-        // No procesar mensajes de bots
         if (message.author.bot) return false;
         
-        // No procesar mensajes muy cortos o spam
         if (message.content.length < 2) return false;
         
-        // Procesar si menciona al bot o está en DM
         const botMentioned = message.mentions.has(message.client.user);
-        const isDM = message.channel.type === 'DM';
+        const isDM = message.channel.isDMBased();
         
-        // También procesar mensajes que empiecen con palabras clave de conversación
         const conversationStarters = ['hola', 'hello', 'hi', 'hey', 'que tal', 'como estas'];
         const startsWithConversation = conversationStarters.some(starter => 
             message.content.toLowerCase().startsWith(starter)
@@ -1305,9 +1257,6 @@ Formato: Párrafos cortos con saltos de línea entre ideas`;
         return botMentioned || isDM || startsWithConversation || Math.random() < 0.1; // 10% chance para otros mensajes
     }
 
-    /**
-     * Obtener información detallada de la cuota del usuario
-     */
     async getUserQuotaInfo(userId) {
         this.checkDailyReset();
         
@@ -1358,13 +1307,6 @@ Formato: Párrafos cortos con saltos de línea entre ideas`;
                 🤗 Como una amiga real`,
                     inline: false
                 },
-/*{
-                name: '🎨 Generación de Imágenes',
-                value: `\`>generar <descripción>\` - Generar imagen con IA
-\`>generarhelp\` - Ver guía completa de imágenes
-_Totalmente gratis, sin límites_`,
-                inline: false
-            }*/
         )
         .setColor('#00D9FF')
         .setFooter({ text: '🤖 Chat con IA | 100% gratis' })
@@ -1373,9 +1315,6 @@ _Totalmente gratis, sin límites_`,
     await message.reply({ embeds: [chatHelpEmbed] });
 }
 
-    /**
-     * Procesar comando de chat
-     */
     async processCommand(message) {
         const args = message.content.toLowerCase().split(' ');
         const command = args[0];
@@ -1393,12 +1332,10 @@ _Totalmente gratis, sin límites_`,
                     return;
                 }
                 
-                const chatMessage = message.content.slice(6).trim();
+                const chatMessage = message.content.split(' ').slice(1).join(' ').trim();
                 
-                // ✅ ENVIAR MENSAJE INMEDIATO Y PROCESAR EN SEGUNDO PLANO
                 const processingMsg = await message.reply('⚙️ Pibot está pensando...');
                 
-                // 🚀 PROCESAR DE FORMA ASÍNCRONA (no bloquea el bot)
                 (async () => {
                     const emojis = ['⏳', '⌛', '🔄', '⚙️'];
                     let emojiIndex = 0;
@@ -1409,7 +1346,6 @@ _Totalmente gratis, sin límites_`,
                     }, 1500);
                     
                     try {
-                        // Detectar si responde a un mensaje
                         let repliedToMessage = null;
                         if (message.reference) {
                             const repliedMessage = await message.channel.messages.fetch(message.reference.messageId);
@@ -1418,7 +1354,6 @@ _Totalmente gratis, sin límites_`,
                             }
                         }
                         
-                        // Procesar mensaje
                         const result = await this.processMessage(
                             message.author.id, 
                             chatMessage, 
@@ -1428,21 +1363,17 @@ _Totalmente gratis, sin límites_`,
                         );
                         
                         clearInterval(emojiInterval);
-                        await processingMsg.delete().catch(() => {});
-                        
-                        // Enviar respuesta
-                        if (result.success) {
-                            // Dividir mensajes largos si es necesario
-                            if (result.response.length > 2000) {
-                                const chunks = result.response.match(/[\s\S]{1,1900}/g) || [];
-                                for (const chunk of chunks) {
-                                    await message.reply(chunk);
-                                }
-                            } else {
-                                await message.reply(result.response);
+
+                        const finalText = result.response;
+
+                        if (finalText.length > 2000) {
+                            const chunks = finalText.match(/[\s\S]{1,1900}/g) || [];
+                            await processingMsg.edit(chunks[0]).catch(() => {});
+                            for (let i = 1; i < chunks.length; i++) {
+                                await message.reply(chunks[i]);
                             }
                         } else {
-                            await message.reply(result.response);
+                            await processingMsg.edit(finalText).catch(() => {});
                         }
                         
                     } catch (error) {
@@ -1450,9 +1381,8 @@ _Totalmente gratis, sin límites_`,
                         console.error('❌ Error en chat:', error);
                         await processingMsg.edit('❌ Error procesando mensaje. Intenta de nuevo.').catch(() => {});
                     }
-                })(); // ← Ejecutar inmediatamente pero sin esperar
+                })();
                 
-                // ✅ El bot continúa funcionando inmediatamente después de esto
                 break;
 
             case '>clearchat':
@@ -1466,28 +1396,16 @@ _Totalmente gratis, sin límites_`,
             case '>iastatus':
             case '>aistatus':
                 try {
-                    const aiModels = [
-                        {
-                            name: "Groq",
-                            endpoint: "https://api.groq.com/openai/v1/chat/completions",
-                            apiKey: process.env.GROQ_API_KEY,
-                            models: [
-                                { id: GROQ_SMART, emoji: "🧠", desc: "GPT-OSS 120B" },
-                                { id: GROQ_BACKUP, emoji: "🌙", desc: "Kimi K2 Instruct" },
-                                { id: GROQ_FAST, emoji: "⚡", desc: "GPT-OSS 20B" },
-                                { id: GROQ_VISION, emoji: "🖼️", desc: "Qwen 3.6 27b" }
-                            ]
-                        },
-                        {
-                            name: "Cerebras",
-                            endpoint: "https://api.cerebras.ai/v1/chat/completions",
-                            apiKey: process.env.CEREBRAS_API_KEY,
-                            models: [
-                                { id: CEREBRAS_MAIN, emoji: "🦙", desc: "GPT-OSS 120B" },
-                                { id: CEREBRAS_FAST, emoji: "🚀", desc: "Gemma 4 31B" },
-                            ]
-                        }
-                    ];
+                    const { AI_CONFIG } = require('../utils/aiModels');
+                    
+                    // Construir la lista dinámicamente desde AI_CONFIG
+                    const aiModels = AI_CONFIG.providers.map(provider => ({
+                        name: provider.name,
+                        endpoint: provider.endpoint,
+                        apiKey: process.env[provider.apiKeyEnv],
+                        apiKeyEnv: provider.apiKeyEnv,
+                        models: provider.models
+                    }));
 
                     const statusEmbed = new EmbedBuilder()
                         .setTitle('🤖 Estado de Proveedores IA')
@@ -1502,7 +1420,7 @@ _Totalmente gratis, sin límites_`,
                         if (!provider.apiKey) {
                             providerStatuses.push({
                                 name: provider.name,
-                                status: '🔑 API Key no configurada',
+                                status: `🔑 ${provider.apiKeyEnv} no configurada`,
                                 models: []
                             });
                             continue;
@@ -1575,7 +1493,7 @@ _Totalmente gratis, sin límites_`,
                         });
                         finalEmbed.addFields({
                             name: `${provider.status.includes('✅') ? '✅' : '⚠️'} ${provider.name}`,
-                            value: fieldValue,
+                            value: fieldValue || '*Sin modelos configurados*',
                             inline: false
                         });
                     });
@@ -1583,10 +1501,10 @@ _Totalmente gratis, sin límites_`,
                     finalEmbed.addFields(
                         { name: '📊 Requests Hoy', value: `${this.requestsToday}`, inline: true },
                         { name: '💰 Costo', value: '**$0.00** (100% Gratis)', inline: true },
-                        { name: '🔄 Orden', value: 'Groq → Cerebras', inline: true }
+                        { name: '🔄 Proveedores', value: `${AI_CONFIG.providers.length}`, inline: true }
                     );
 
-                    finalEmbed.setFooter({ text: '🤖 Sistema Multi-Proveedor | Groq + Cerebras | 100% Gratis' });
+                    finalEmbed.setFooter({ text: '🤖 Sistema Multi-Proveedor | 100% Gratis' });
 
                     await statusMsg.edit({ embeds: [finalEmbed] });
 
@@ -1618,10 +1536,6 @@ _Totalmente gratis, sin límites_`,
         }
     }
 
-    /**
-     * Limpiar mensajes antiguos GLOBALMENTE
-     * Mantiene solo mensajes del ultimo dia (24 horas) para evitar que la base de datos crezca indefinidamente
-     */
     async cleanupOldMessages() {
         try {
             console.log('🧹 Iniciando limpieza de base de datos...');
@@ -1640,9 +1554,6 @@ _Totalmente gratis, sin límites_`,
         }
     }
 
-    /**
-     * Limpiar registros de uso diario antiguos (más de 7 días)
-     */
     async cleanupOldUsageRecords() {
         try {
             const sevenDaysAgo = new Date();
@@ -1663,18 +1574,13 @@ _Totalmente gratis, sin límites_`,
         }
     }
 
-    /**
-     * Iniciar limpieza automática periódica
-     */
     startDatabaseCleanup() {
-        // Limpiar cada 6 horas
         setInterval(async () => {
             console.log('⏰ Ejecutando limpieza automática de BD...');
             await this.cleanupOldMessages();
             await this.cleanupOldUsageRecords();
-        }, 1 * 60 * 60 * 1000); // 6 horas
+        }, 1 * 60 * 60 * 1000); // 1 hora
         
-        // Ejecutar una vez al iniciar (después de 30 segundos)
         setTimeout(async () => {
             console.log('🚀 Limpieza inicial de BD...');
             await this.cleanupOldMessages();

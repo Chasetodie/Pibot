@@ -5,9 +5,6 @@ const EquipmentSystem = require('./equipmentSystem');
 const DungeonSystem = require('./dungeonSystem');
 const { GROQ_FAST } = require('../utils/aiModels');
 
-const richUC = new Map();
-const heavyUsersCache = new Map();
-
 class EconomySystem {
     constructor(client) {
         this.database = null;
@@ -114,9 +111,30 @@ class EconomySystem {
         this.MAX_CACHE_SIZE = 500;
         this.cacheTimeout = 10 * 60 * 1000; // 5 minutos        
         
+        setInterval(() => {
+            const now = Date.now();
+            let cleaned = 0;
+            for (const [userId, cached] of this.userCache.entries()) {
+                if (now - cached.timestamp > 15 * 60 * 1000) { // 15 mins
+                    this.userCache.delete(userId);
+                    cleaned++;
+                }
+            }
+            if (cleaned > 0) console.log(`🧹 Economía: ${cleaned} usuarios eliminados de caché por inactividad`);
+        }, 5 * 60 * 1000);
+
         // Map para trackear robos activos
         this.activeRobberies = new Map();
         this.workStreaks = new Map(); // userId -> { streak, lastJob }
+
+        setInterval(() => {
+            const now = Date.now();
+            for (const [robberId, robbery] of this.activeRobberies.entries()) {
+                if (now - robbery.startTime > 5 * 60 * 1000) {
+                    this.activeRobberies.delete(robberId);
+                }
+            }
+        }, 2 * 60 * 1000);
 
         this.SEEDS = {
             common_seed:    { time: 2,  moneyMin: 100,   moneyMax: 500,   ingredient: 'herb_common',    emoji: '🌱' },
@@ -493,29 +511,14 @@ class EconomySystem {
     // Calcular XP necesaria para un nivel específico
     getXpForLevel(level) {
         if (level <= 1) return 0;
-        
-        // Fórmula más suave: base * (nivel ^ 1.5) en lugar de (nivel ^ exponente alto)
-        return Math.floor(100 * Math.pow(level - 1, 1.5));
+        // Curva más suave: 80 * (nivel ^ 1.25)
+        // Nivel 10: 80 * 10^1.25 = ~1,400 XP (antes 2,800)
+        // Nivel 20: 80 * 20^1.25 = ~3,300 XP (antes 8,200)
+        // Nivel 50: 80 * 50^1.25 = ~10,600 XP (antes 34,000)
+        // Nivel 100: 80 * 100^1.25 = ~25,300 XP (antes 98,000)
+        return Math.floor(80 * Math.pow(level, 1.25));
     }
 
-    calculateScaledXp(user, baseXp = this.config.xpPerMessage) {
-        const level = user.level;
-        
-        // Sistema escalonado más suave
-        if (level <= 10) {
-            return baseXp + Math.floor(level * 1.2); // +1-12 XP (niveles 1-10)
-        } else if (level <= 25) {
-            return baseXp + Math.floor(12 + (level - 10) * 1.5); // +12-34 XP (niveles 11-25)
-        } else if (level <= 50) {
-            return baseXp + Math.floor(34 + (level - 25) * 2); // +34-84 XP (niveles 26-50)
-        } else if (level <= 75) {
-            return baseXp + Math.floor(84 + (level - 50) * 2.5); // +84-146 XP (niveles 51-75)
-        } else {
-            return baseXp + Math.floor(146 + (level - 75) * 3); // +146+ XP (nivel 76+)
-        }
-    }
-
-    // Calcular nivel basado en XP total
     getLevelFromXp(totalXp) {
         let level = 1;
         let xpNeeded = 0;
@@ -527,10 +530,7 @@ class EconomySystem {
                 break; // Ya no puede subir más niveles
             }
             xpNeeded += xpForNextLevel;
-            level++;
-            
-            // Límite de seguridad
-            if (level >= 200) break;
+            level++;           
         }
         
         return level;
@@ -611,9 +611,7 @@ class EconomySystem {
         };
     }
 
-    // Procesar XP por mensaje (con cooldown)
     async processMessageXp(userId, guildId = null) {      
-        // LOGGING TEMPORAL - añadir al inicio
         const startMemory = process.memoryUsage().heapUsed;
         const startTime = Date.now();
         
@@ -622,29 +620,11 @@ class EconomySystem {
         const now = Date.now();
         const lastXp = this.userCooldowns.get(userId) || 0;
 
-        // Verificar cooldown
         if (now - lastXp < this.config.xpCooldown) {
-            return null; // Aún en cooldown
+            return null;
         }
 
-        // Cache para usuarios con muchos items
-        let userData = heavyUsersCache.get(userId);
-        if (!userData) {
-            userData = await this.getUser(userId); // UNA SOLA CARGA
-            
-            const itemCount = Object.keys(userData.items || {}).length;
-            if (userData.money > 1000000 || itemCount > 5) { // Rico O muchos items
-                heavyUsersCache.set(userId, userData);
-                setTimeout(() => heavyUsersCache.delete(userId), 300000);
-            }
-        }        
-
-        this.userCooldowns.set(userId, now);
-        
-/*        // Obtener usuario (ahora async)
-        const user = await this.getUser(userId);*/
-
-        const user = userData;
+        const user = await this.getUser(userId);
         
         try {
             // Agregar XP (ahora async)
@@ -701,22 +681,6 @@ class EconomySystem {
             this.userCooldowns.delete(userId);
             return null;
         }
-    }
-
-    // Obtener estadísticas de un usuario
-    getUserStats(userId) {
-        const user = this.getUser(userId);
-        const xpForNextLevel = this.getXpForLevel(user.level + 1);
-        const xpForCurrentLevel = this.getXpForLevel(user.level);
-        const xpProgress = user.totalXp - this.getXpNeededForLevel(user.level);
-        const xpNeeded = xpForNextLevel;
-        
-        return {
-            ...user,
-            xpForNextLevel: xpNeeded,
-            xpProgress: xpProgress,
-            xpNeeded: Math.max(0, xpNeeded - xpProgress)
-        };
     }
 
     // Calcular XP total necesaria para alcanzar un nivel
@@ -1632,7 +1596,6 @@ class EconomySystem {
         let finalEarnings = amount;
         let eventMessage = '';
 
-        // Aplicar eventos
         for (const event of (this.events?.getActiveEvents(guildId) || [])) {
             const workMultiplier = event.multipliers?.work || 1.0;
             if (workMultiplier !== 1.0) {
@@ -1688,12 +1651,21 @@ class EconomySystem {
             }
         }
 
-        const allBonusMessages = [eventMessage, pickaxeMessage, itemMessage, vipMessage].filter(msg => msg !== '');
+        const allBonusMessages = [eventMessage, pickaxeMessage, itemMessage, vipMessage].filter(msg => msg && msg.trim() !== '');
 
-        // Drop raro del mapa del tesoro (~5%)
+        // Drop raro del mapa del tesoro (~15%)
         let droppedMap = false;
-        if (Math.random() < 0.05) {
+        if (Math.random() < 0.015) {
             droppedMap = true;
+        }
+
+        const MAX_TOTAL_MULT = 2.5; // Máximo 2.5x la recompensa base
+        const totalMult = finalEarnings / amount;
+        if (totalMult > MAX_TOTAL_MULT) {
+            const capped = Math.floor(amount * MAX_TOTAL_MULT);
+            const diff = finalEarnings - capped;
+            finalEarnings = capped;
+            allBonusMessages.push(`⚖️ **Cap de multiplicador** (${diff.toFixed(0)} π-b$ recortados, máx 2.5x)`);
         }
 
         return {
@@ -1801,22 +1773,6 @@ class EconomySystem {
         };
     }
     
-    
-    // Después del método getUserNumber(), AGREGAR:
-    formatBonusMessages(eventMsg, itemMsg, vipMsg) {
-        const messages = [eventMsg, itemMsg, vipMsg].filter(msg => msg && msg.trim() !== '');
-        
-        if (messages.length === 0) {
-            return "No hay bonificaciones activas";
-        }
-        
-        return messages.join('\n');
-    }
-
-    // PROBLEMA 1: Prevenir transferencias durante robos activos
-    // Agrega este método a tu clase EconomySystem:
-
-    // Verificar si un usuario está siendo robado
     isBeingRobbed(userId) {
         for (const [robberId, robberyData] of this.activeRobberies) {
             if (robberyData.targetId === userId) {

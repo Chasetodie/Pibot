@@ -1,20 +1,14 @@
-const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, AttachmentBuilder } = require('discord.js');
-const EventsSystem = require('./events');
+const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 
 class AchievementsSystem {
     constructor(economySystem) {
         this.economy = economySystem;
         this.events = null;
 
-        // AGREGAR después de this.events = null;
         this.updateCooldowns = new Map();
-        this.achievementsCache = new Map();
-        this.MAX_CACHE_SIZE = 500;
-        this.cacheTimeout = 5 * 60 * 1000; // 5 minutos
+        this.cacheTimeout = 5 * 60 * 1000;
         
-        // Definir todos los logros disponibles
         this.achievements = {
-            // Logros de dinero
             'first_dollar': {
                 name: '💰 Primer Dólar',
                 description: 'Gana tu primer π-b Coin',
@@ -368,14 +362,13 @@ class AchievementsSystem {
             'completionist': {
                 name: '🏅 Completista',
                 description: 'Obtén todos los logros disponibles',
-                requirement: { type: 'achievements_count', value: () => Object.keys(this.achievements).length - 1 }, // -1 para excluirse a sí mismo
+                requirement: { type: 'achievements_count', value: () => Object.keys(this.achievements).length - 1 },
                 reward: { money: 100000, xp: 3000 },
                 rarity: 'legendary',
                 emoji: '🏅'
             }
         };
         
-        // Colores por rareza
         this.rarityColors = {
             'common': '#FFFFFF',
             'uncommon': '#1EFF00',
@@ -384,7 +377,6 @@ class AchievementsSystem {
             'legendary': '#FF6600'
         };
         
-        // Emojis por rareza
         this.rarityEmojis = {
             'common': '⚪',
             'uncommon': '🟢', 
@@ -393,7 +385,6 @@ class AchievementsSystem {
             'legendary': '🟠'
         };
 
-        // AGREGAR al final del constructor:
         setInterval(() => {
             const now = Date.now();
             for (const [key, timestamp] of this.updateCooldowns.entries()) {
@@ -404,13 +395,11 @@ class AchievementsSystem {
         }, 60000);
     }
 
-    // NUEVO: Inicializar achievements de un usuario existente
     async initializeUserAchievements(userId) {
         const user = await this.economy.getUser(userId);
         
         if (!user.achievements) {
             const achievements = {};
-            // Inicializar todos los achievements como 'not_completed'
             for (const achievementId of Object.keys(this.achievements)) {
                 achievements[achievementId] = 'not_completed';
             }
@@ -424,152 +413,80 @@ class AchievementsSystem {
         }
     }
 
-    // NUEVO: Detectar y completar logros ya cumplidos
     async detectExistingAchievements(userId, silent = false) {
         await this.initializeUserAchievements(userId);
         const user = await this.economy.getUser(userId);
         const completedAchievements = [];
         const unlockedAchievements = [];
+        const checkedInSession = new Set();
         
         for (const [achievementId, achievement] of Object.entries(this.achievements)) {
-            // Si ya está completado, saltarlo
             if (user.achievements[achievementId] === 'completed') continue;
             
             let currentValue = 0;
             const req = achievement.requirement;
             
-            // Obtener valor actual según el tipo de logro
             switch (req.type) {
-                case 'money_earned':
-                    currentValue = user.stats?.totalEarned || 0;
-                    break;
-                case 'money_balance':
-                    currentValue = user.balance || 0;
-                    break;
-                case 'level':
-                    currentValue = user.level || 1;
-                    break;
-                case 'messages':
-                    currentValue = user.messages_count || 0;
-                    break;
-                case 'work_count':
-                    currentValue = user.stats?.work_count || 0;
-                    break;
-                case 'daily_streak':
-                    currentValue = user.stats?.daily_streak || 0;
-                    break;
-                case 'games_played':
-                    currentValue = user.stats?.games_played || 0;
-                    break;
-                case 'win_streak':
-                    currentValue = user.stats?.current_win_streak || 0;
-                    break;
-                case 'total_bet':
-                    currentValue = user.stats?.total_bet || 0;
-                    break;
-                case 'money_given':
-                    currentValue = user.stats?.money_given || 0;
-                    break;
-                case 'achievements_count':
-                    // Contar achievements completados
-                    currentValue = Object.values(user.achievements || {}).filter(status => status === 'completed').length;
-                    break;
-                case 'lottery_wins':
-                    currentValue = user.stats?.lottery_wins || 0;
-                    break;
-                case 'auctions_created':
-                    currentValue = user.stats?.auctions_created || 0;
-                    break;
-                case 'auctions_won':
-                    currentValue = user.stats?.auctions_won || 0;
-                    break;
-                case 'items_crafted':
-                    currentValue = user.stats?.items_crafted || 0;
-                    break;
-                case 'single_bet_win':
-                    currentValue = user.stats?.max_single_bet_win || 0;
-                    break;
-                case 'triple_seven':
-                    currentValue = user.stats?.triple_seven_count || 0;
-                    break;
-                case 'diamond_jackpot':
-                    currentValue = user.stats?.diamond_jackpot_count || 0;
-                    break;
-                case 'slots_doubles':
-                    currentValue = user.stats?.slots_doubles || 0;
-                    break;
-                case 'slots_wins':
-                    currentValue = user.stats?.slots_wins || 0;
-                    break;
-                case 'trivia_perfect':
-                    currentValue = user.stats?.trivia_perfect || 0;
-                    break;
-                case 'trivia_tof_perfect':
-                    currentValue = user.stats?.trivia_tof_perfect || 0;
-                    break;
-                case 'loss_streak':
-                    currentValue = user.stats?.current_loss_streak || 0;
-                    break;
-                case 'lottery_wins':
-                    currentValue = user.stats?.lottery_wins || 0;
-                    break;
+                case 'money_earned': currentValue = user.stats?.totalEarned || 0; break;
+                case 'money_balance': currentValue = user.balance || 0; break;
+                case 'level': currentValue = user.level || 1; break;
+                case 'messages': currentValue = user.messages_count || 0; break;
+                case 'work_count': currentValue = user.stats?.work_count || 0; break;
+                case 'daily_streak': currentValue = user.stats?.daily_streak || 0; break;
+                case 'games_played': currentValue = user.stats?.games_played || 0; break;
+                case 'win_streak': currentValue = user.stats?.current_win_streak || 0; break;
+                case 'total_bet': currentValue = user.stats?.total_bet || 0; break;
+                case 'money_given': currentValue = user.stats?.money_given || 0; break;
+                case 'achievements_count': currentValue = Object.values(user.achievements || {}).filter(status => status === 'completed').length; break;
+                case 'lottery_wins': currentValue = user.stats?.lottery_wins || 0; break;
+                case 'auctions_created': currentValue = user.stats?.auctions_created || 0; break;
+                case 'auctions_won': currentValue = user.stats?.auctions_won || 0; break;
+                case 'items_crafted': currentValue = user.stats?.items_crafted || 0; break;
+                case 'single_bet_win': currentValue = user.stats?.max_single_bet_win || 0; break;
+                case 'triple_seven': currentValue = user.stats?.triple_seven_count || 0; break;
+                case 'diamond_jackpot': currentValue = user.stats?.diamond_jackpot_count || 0; break;
+                case 'slots_doubles': currentValue = user.stats?.slots_doubles || 0; break;
+                case 'slots_wins': currentValue = user.stats?.slots_wins || 0; break;
+                case 'trivia_perfect': currentValue = user.stats?.trivia_perfect || 0; break;
+                case 'trivia_tof_perfect': currentValue = user.stats?.trivia_tof_perfect || 0; break;
+                case 'loss_streak': currentValue = user.stats?.current_loss_streak || 0; break;
                 case 'inactive_streak':
-                    // Calcular días sin usar work ni daily
                     const now = Date.now();
                     const dayInMs = 24 * 60 * 60 * 1000;
                     const lastWork = user.last_work || 0;
                     const lastDaily = user.last_daily || 0;
                     const lastActivity = Math.max(lastWork, lastDaily);
                     
-                    if (lastActivity === 0) {
-                        // Si nunca ha usado work ni daily, no cuenta como inactivo
-                        currentValue = 0;
-                    } else {
-                        const daysInactive = Math.floor((now - lastActivity) / dayInMs);
-                        currentValue = daysInactive;
+                    if (lastActivity !== 0) {
+                        currentValue = Math.floor((now - lastActivity) / dayInMs);
                     }
                     break;
             }
             
-            // Verificar si completó el logro
             const requiredValue = typeof req.value === 'function' ? req.value() : req.value;
             if (currentValue >= requiredValue && !checkedInSession.has(achievementId)) {
-                // Marcar como verificado en esta sesion
                 checkedInSession.add(achievementId);
-
-                // Actualizar también en el objeto user local para evitar re-verificación
                 user.achievements[achievementId] = 'completed';
 
-                // Marcar como completado en la base de datos
                 const updateData = {
-                    achievements: {
-                        ...user.achievements,
-                        [achievementId]: 'completed'
-                    }
+                    achievements: { ...user.achievements, [achievementId]: 'completed' }
                 };
                 
                 unlockedAchievements.push(achievementId);
                 console.log(`🏆 ${userId} desbloqueó logro: ${achievement.name}`);
                 
-                // Dar recompensas
                 if (achievement.reward.money) {
                     let finalEarnings = achievement.reward.money;
                     let eventMessage = '';
 
                     for (const event of this.events.getActiveEvents()) {
-                        if (event.type === 'fever_time') {
-                            finalEarnings = Math.floor(achievement.reward.money * 1.6); // 🔥 +30%
-                            eventMessage = `🔥 **Tiempo Fiebre** (+${finalEarnings - achievement.reward.money} π-b$)`;
+                        const rewardMultiplier = event.multipliers?.rewards || 1.0;
+                        if (rewardMultiplier !== 1.0) {
+                            const baseReward = achievement.reward.money;
+                            finalEarnings = Math.floor(baseReward * rewardMultiplier);
+                            const diff = finalEarnings - baseReward;
+                            eventMessage = diff > 0 ? `${event.emoji} **${event.name}** (+${diff} π-b$)` : `${event.emoji} **${event.name}** (${diff} π-b$)`;
                             break;
-                        }
-                        else if (event.type === 'market_crash') {
-                            finalEarnings = Math.floor(achievement.reward.money * 0.8); // 📉 -30%
-                            eventMessage = `📉 **Crisis del Mercado** (-${achievement.reward.money - finalEarnings} π-b$)`;
-                            break;
-                        }
-                        else if (event.type === 'server_anniversary') {
-                            finalEarnings = Math.floor(achievement.reward.money * 2);
-                            eventMessage = `🎉 **Aniversario del Servidor** (+${finalEarnings - achievement.reward.money} π-b$)`
                         }
                     }
                     
@@ -579,29 +496,20 @@ class AchievementsSystem {
                     
                     updateData.stats = {
                         ...user.stats,
+                        totalEarned: (user.stats?.totalEarned || 0) + finalEarnings,
                         message_achievements: eventMessage
                     };
                 }
                                               
-                // Agregar XP por separado
                 if (achievement.reward.xp) {
                     let finalXp = achievement.reward.xp;
                     let eventMessage2 = '';
                     
                     for (const event of this.events.getActiveEvents()) {
-                        if (event.type === 'double_xp') {
-                            finalXp = achievement.reward.xp * 2; // Exactamente x2
-                            eventMessage2 = `\n⚡ **Doble XP** (+${finalXp - achievement.reward.xp} XP)`;
-                            break;
-                        }
-                        else if (event.type === 'fever_time') {
-                            finalXp = Math.floor(achievement.reward.xp * 1.5); // x1.5
-                            eventMessage2 = `\n🔥 **Tiempo Fiebre** (+${finalXp - achievement.reward.xp} XP)`;
-                            break;
-                        }
-                        else if (event.type === 'server_anniversary') {
-                            finalXp = Math.floor(achievement.reward.xp * 3); // x3
-                            eventMessage2 = `\n🎉 **Aniversario del Servidor** (+${finalXp - achievement.reward.xp} XP)`;
+                        const xpMultiplier = event.multipliers?.xp || 1.0;
+                        if (xpMultiplier !== 1.0) {
+                            finalXp = Math.floor(achievement.reward.xp * xpMultiplier);
+                            eventMessage2 = `\n⚡ **${event.name}** (+${finalXp - achievement.reward.xp} XP)`;
                             break;
                         }
                     }
@@ -609,13 +517,12 @@ class AchievementsSystem {
                     await this.economy.addXp(userId, finalXp);
 
                     updateData.stats = {
-                        ...user.stats,
+                        ...(updateData.stats || user.stats), 
                         message_achievements2: eventMessage2
-                    }
+                    };
                 }
 
                 await this.economy.updateUser(userId, updateData);
-                
                 completedAchievements.push(achievementId);
                 console.log(`🏆 ${userId} completó logro existente: ${achievement.name}`);
             }
@@ -624,12 +531,11 @@ class AchievementsSystem {
         return { completedAchievements, silent };
     }
 
-    // Verificar logros para un usuario (VERSION MEJORADA)
     async checkAchievements(userId, maxChecks = 3, checkedInSession = new Set()) {
         const cooldownKey = `achievement_check_${userId}`;
         if (this.updateCooldowns.has(cooldownKey)) {
             const lastCheck = this.updateCooldowns.get(cooldownKey);
-            if (Date.now() - lastCheck < 2000) { // 2 segundos de cooldown
+            if (Date.now() - lastCheck < 2000) { 
                 return [];
             }
         }
@@ -644,7 +550,6 @@ class AchievementsSystem {
         });
 
         if (hasBalanceChecks) {
-            // Refrescar balance para achievements de dinero
             const freshUser = await this.economy.getUser(userId);
             user.balance = freshUser.balance;
         }
@@ -657,7 +562,6 @@ class AchievementsSystem {
         }
 
         for (const [achievementId, achievement] of Object.entries(this.achievements)) {
-            // Si ya está completado, saltarlo
             if (user.achievements[achievementId] === 'completed' || checkedInSession.has(achievementId)) {
                 continue;
             }
@@ -665,7 +569,6 @@ class AchievementsSystem {
             let currentValue = 0;
             const req = achievement.requirement;
             
-            // Obtener valor actual según el tipo de logro
             switch (req.type) {
                 case 'money_earned':
                     currentValue = user.stats?.totalEarned || 0;
@@ -698,7 +601,6 @@ class AchievementsSystem {
                     currentValue = user.stats?.money_given || 0;
                     break;
                 case 'achievements_count':
-                    // Contar achievements completados
                     currentValue = Object.values(user.achievements || {}).filter(status => status === 'completed').length;
                     break;
                 case 'triple_seven':
@@ -721,6 +623,7 @@ class AchievementsSystem {
                     break;
                 case 'vending_plays':
                     currentValue = user.stats?.vending_plays || 0;
+                    break;
                 case 'loss_streak':
                     currentValue = user.stats?.current_loss_streak || 0;
                     break;
@@ -740,34 +643,25 @@ class AchievementsSystem {
                     currentValue = user.stats?.max_single_bet_win || 0;
                     break;
                 case 'inactive_streak':
-                    // Calcular días sin usar work ni daily
                     const now = Date.now();
                     const dayInMs = 24 * 60 * 60 * 1000;
                     const lastWork = user.last_work || 0;
                     const lastDaily = user.last_daily || 0;
                     const lastActivity = Math.max(lastWork, lastDaily);
                     
-                    if (lastActivity === 0) {
-                        // Si nunca ha usado work ni daily, no cuenta como inactivo
-                        currentValue = 0;
-                    } else {
-                        const daysInactive = Math.floor((now - lastActivity) / dayInMs);
-                        currentValue = daysInactive;
+                    if (lastActivity !== 0) {
+                        currentValue = Math.floor((now - lastActivity) / dayInMs);
                     }
                     break;
             }
             
-            // Verificar si completó el logro
             const requiredValue = typeof req.value === 'function' ? req.value() : req.value;
 
             if (currentValue >= requiredValue && !checkedInSession.has(achievementId)) {
-                // Marcar como verificado en esta sesion
                 checkedInSession.add(achievementId);
 
-                // Actualizar también en el objeto user local para evitar re-verificación
                 user.achievements[achievementId] = 'completed';
 
-                // Marcar como completado en la base de datos
                 const updateData = {
                     achievements: {
                         ...user.achievements,
@@ -775,7 +669,6 @@ class AchievementsSystem {
                     }
                 };
                 
-                // Dar recompensas
                 if (achievement.reward.money) {
                     let finalEarnings = achievement.reward.money;
                     let eventMessage = '';
@@ -805,33 +698,20 @@ class AchievementsSystem {
                     updateData.balance = user.balance + finalEarnings;
                     updateData.stats = {
                         ...user.stats,
-                        totalEarned: (user.stats.totalEarned || 0) + finalEarnings,
+                        totalEarned: (user.stats?.totalEarned || 0) + finalEarnings,
                         message_achievements: eventMessage
                     };
                 }
-
-                console.log(`🏆 ${userId} completó logro: ${achievement.name}\nRecompensa: ${achievement.reward.money} balance: ${updateData.balance} totalEarned: ${updateData.stats.totalEarned}`);
-
-                
-                // Agregar XP por separado
+               
                 if (achievement.reward.xp) {
                     let finalXp = achievement.reward.xp;
                     let eventMessage2 = '';
                     
                     for (const event of this.events.getActiveEvents()) {
-                        if (event.type === 'double_xp') {
-                            finalXp = achievement.reward.xp * 2; // Exactamente x2
-                            eventMessage2 = `\n⚡ **Doble XP** (+${finalXp - achievement.reward.xp} XP)`;
-                            break;
-                        }
-                        else if (event.type === 'fever_time') {
-                            finalXp = Math.floor(achievement.reward.xp * 1.5); // x1.5
-                            eventMessage2 = `\n🔥 **Tiempo Fiebre** (+${finalXp - achievement.reward.xp} XP)`;
-                            break;
-                        }
-                        else if (event.type === 'server_anniversary') {
-                            finalXp = Math.floor(achievement.reward.xp * 3); // x3
-                            eventMessage2 = `\n🎉 **Aniversario del Servidor** (+${finalXp - achievement.reward.xp} XP)`;
+                        const xpMultiplier = event.multipliers?.xp || 1.0;
+                        if (xpMultiplier !== 1.0) {
+                            finalXp = Math.floor(achievement.reward.xp * xpMultiplier);
+                            eventMessage2 = `\n⚡ **${event.name}** (+${finalXp - achievement.reward.xp} XP)`;
                             break;
                         }
                     }
@@ -839,11 +719,13 @@ class AchievementsSystem {
                     await this.economy.addXp(userId, finalXp);
 
                     updateData.stats = {
-                        ...user.stats,
+                        ...(updateData.stats || user.stats),
                         message_achievements2: eventMessage2
-                    }
+                    };
                 }
-                
+
+                console.log(`🏆 ${userId} completó logro: ${achievement.name}\nRecompensa: ${achievement.reward.money} balance: ${updateData.balance} totalEarned: ${updateData.stats?.totalEarned || 0}`);
+               
                 await this.economy.missions.updateMissionProgress(userId, 'achievements_unlocked_today', 1);
                 await this.economy.updateUser(userId, updateData);
                 unlockedAchievements.push(achievementId);
@@ -856,7 +738,6 @@ class AchievementsSystem {
                 );
                 unlockedAchievements.push(...additionalAchievements);
 
-                // Solo procesar un logro por ciclo para evitar problemas
                 break;
             }
         }
@@ -864,7 +745,6 @@ class AchievementsSystem {
         return unlockedAchievements;
     }
 
-    // Actualizar estadísticas específicas para logros (VERSION MEJORADA)
     async updateStats(userId, statType, value = 1) {
         const user = await this.economy.getUser(userId);
         const updateData = {};
@@ -883,7 +763,7 @@ class AchievementsSystem {
                     games_won: (user.stats?.games_won || 0) + 1,
                     current_win_streak: newWinStreak,
                     best_win_streak: Math.max(user.stats?.best_win_streak || 0, newWinStreak),
-                    current_loss_streak: 0 // ← AGREGAR ESTA LÍNEA
+                    current_loss_streak: 0
                 };
                 break;
             case 'game_lost':
@@ -893,7 +773,7 @@ class AchievementsSystem {
                     games_lost: (user.stats?.games_lost || 0) + 1,
                     current_loss_streak: newLossStreak,
                     best_loss_streak: Math.max(user.stats?.best_loss_streak || 0, newLossStreak),
-                    current_win_streak: 0 // Resetear racha de victorias
+                    current_win_streak: 0
                 };
                 break;
             case 'money_bet':
@@ -927,7 +807,6 @@ class AchievementsSystem {
                 }
                 break;
             case 'bet_win':
-                // value = cantidad ganada
                 updateData.stats = {
                     ...user.stats,
                     max_single_bet_win: Math.max(user.stats?.max_single_bet_win || 0, value)
@@ -982,12 +861,9 @@ class AchievementsSystem {
 
                 let newDailyStreak;
                 
-                // Verificar si es consecutivo (dentro de 48 horas de la última)
                 if (lastDaily && (now - lastDaily) <= (dayInMs * 2)) {
-                    // Es consecutivo, incrementar streak
                     newDailyStreak = (user.stats?.daily_streak || 0) + 1;
                 } else {
-                    // No es consecutivo o es el primer daily, reiniciar a 1
                     newDailyStreak = 1;
                 }
                 
@@ -1002,15 +878,12 @@ class AchievementsSystem {
         await this.economy.updateUser(userId, updateData);
     }
 
-    // NUEVO: Comando para mostrar logros del usuario
     async handleUserAchievements(message, args) {
         let targetUser = null;
         
-        // Verificar si mencionó a alguien
         if (message.mentions.users.size > 0) {
             targetUser = message.mentions.users.first();
         } else if (args.length > 1) {
-            // Buscar por ID
             try {
                 targetUser = await message.client.users.fetch(args[1]);
             } catch (error) {
@@ -1022,7 +895,6 @@ class AchievementsSystem {
         await this.showUserAchievements(message, targetUser);
     }
 
-    // NUEVO: Comando para detectar logros existentes
     async handleDetectAchievements(message) {
         const userId = message.author.id;
         
@@ -1033,7 +905,6 @@ class AchievementsSystem {
         if (result.completedAchievements.length > 0) {
             await message.reply(`✅ Se detectaron **${result.completedAchievements.length}** logros ya cumplidos y se agregaron a tu perfil. ¡Revisa tus recompensas!`);
             
-            // Mostrar los logros completados
             for (const achievementId of result.completedAchievements) {
                 await this.notifyAchievements(message, [achievementId]);
             }
@@ -1042,7 +913,6 @@ class AchievementsSystem {
         }
     }
 
-    // NUEVO: Comando para admin - detectar logros de todos los usuarios
     async handleDetectAllAchievements(message) {
         const YOUR_ID = '488110147265232898';
         const isOwner = message.author.id === YOUR_ID;
@@ -1055,7 +925,6 @@ class AchievementsSystem {
         await message.reply('🔍 Detectando logros para todos los usuarios...');
         
         try {
-            // CAMBIAR ESTO: en lugar de getAllUsers()
             console.log('[DEBUG] Obteniendo todos los usuarios...');
             
             const allUsers = await this.economy.getAllUsers();
@@ -1072,7 +941,6 @@ class AchievementsSystem {
                     totalDetected += result.completedAchievements.length;
                     usersProcessed++;
                     
-                    // Agregar delay para evitar sobrecarga
                     if (usersProcessed % 10 === 0) {
                         await new Promise(resolve => setTimeout(resolve, 1000));
                     }
@@ -1106,7 +974,6 @@ class AchievementsSystem {
         }
     }
 
-    // Mostrar logros de un usuario (VERSION MEJORADA)
     async showUserAchievements(message, targetUser = null) {
         const userId = targetUser ? targetUser.id : message.author.id;
         const displayName = targetUser ? targetUser.displayName : message.author.displayName;
@@ -1131,7 +998,6 @@ class AchievementsSystem {
             .setThumbnail((targetUser || message.author).displayAvatarURL({ dynamic: true }))
             .setTimestamp();
         
-        // Mostrar logros desbloqueados por rareza
         if (unlockedCount > 0) {
             const rarityGroups = {
                 'legendary': [],
@@ -1141,7 +1007,6 @@ class AchievementsSystem {
                 'common': []
             };
             
-            // Agrupar por rareza
             for (const [achievementId] of completedAchievements) {
                 const achievement = this.achievements[achievementId];
                 if (achievement) {
@@ -1165,7 +1030,6 @@ class AchievementsSystem {
                 inline: false
             });
         } else {
-            // Si no tiene logros completados
             embed.addFields({
                 name: '❌ Sin logros',
                 value: '¡Aún no has completado ningún logro! Usa `>progress` para ver tu progreso.'
@@ -1175,7 +1039,6 @@ class AchievementsSystem {
         await message.reply({ embeds: [embed] });
     }
 
-    // NUEVO: Calcular progreso de un logro
     calculateProgress(user, achievement) {
         let currentValue = 0;
         const req = achievement.requirement;
@@ -1213,6 +1076,7 @@ class AchievementsSystem {
                 break;
             case 'auctions_created':
                 currentValue = user.stats?.auctions_created || 0;
+                break;
             case 'auctions_won':
                 currentValue = user.stats?.auctions_won || 0;
                 break;
@@ -1249,9 +1113,21 @@ class AchievementsSystem {
             case 'loss_streak':
                 currentValue = user.stats?.current_loss_streak || 0;
                 break;
+            case 'lottery_wins':
+                currentValue = user.stats?.lottery_wins || 0;
+                break;
+            case 'inactive_streak':
+                const now = Date.now();
+                const dayInMs = 24 * 60 * 60 * 1000;
+                const lastWork = user.last_work || 0;
+                const lastDaily = user.last_daily || 0;
+                const lastActivity = Math.max(lastWork, lastDaily);
+                if (lastActivity !== 0) {
+                    currentValue = Math.floor((now - lastActivity) / dayInMs);
+                }
+                break;
         }
 
-        // Manejar requirement.value que sea una función
         let requiredValue = req.value;
         if (typeof req.value === 'function') {
             requiredValue = req.value();
@@ -1264,12 +1140,10 @@ class AchievementsSystem {
         };
     }
 
-    // Mostrar todos los logros disponibles (sin cambios)
     async showAllAchievements(message, page = 1) {
-        const itemsPerPage = 10; // 10 logros por página
+        const itemsPerPage = 10;
         const rarityOrder = ['legendary', 'epic', 'rare', 'uncommon', 'common'];
         
-        // Agrupar y aplanar
         let allAchievements = [];
         for (const rarity of rarityOrder) {
             const rarityAchievements = Object.entries(this.achievements)
@@ -1296,11 +1170,10 @@ class AchievementsSystem {
             embed.addFields({
                 name: `${rarityEmoji} ${achievement.emoji} ${achievement.name}`,
                 value: `${achievement.description}\n🎁 ${rewards.join(' + ')}`,
-                inline: true // 2 columnas
+                inline: true
             });
         }
         
-        // AGREGAR BOTONES de navegación
         const row = new ActionRowBuilder();
         if (page > 1) {
             row.addComponents(
@@ -1324,7 +1197,6 @@ class AchievementsSystem {
     }
 
     async handleAchievementPagination(interaction) {
-        // ach_prev_2  o  ach_next_3
         const parts = interaction.customId.split('_');
         const page = parseInt(parts[2], 10);
 
@@ -1345,7 +1217,6 @@ class AchievementsSystem {
         await this.showAllAchievements(fakeMessage, page);
     }
 
-    // Crear barra de progreso
     createProgressBar(current, max, length = 10) {
         const percentage = Math.max(0, Math.min(1, current / max));
         const filledLength = Math.floor(percentage * length);
@@ -1357,12 +1228,10 @@ class AchievementsSystem {
         return filledChar.repeat(filledLength) + emptyChar.repeat(emptyLength);
     }
 
-    // Formatear números
     formatNumber(num) {
         return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
     }
 
-    // Notificar logros desbloqueados (sin cambios)
     async notifyAchievements(message, achievementIds) {
         if (achievementIds.length === 0) return;
 
@@ -1381,7 +1250,6 @@ class AchievementsSystem {
                 .setTitle('🎉 ¡Logro Desbloqueado!')
                 .setDescription(`${rarityEmoji} ${achievement.emoji} **${achievement.name}**\n\n*${achievement.description}*`)
                 .setColor(rarityColor)
-//                .setThumbnail(achievement.emoji)
                 .addFields(
                     {
                         name: 'Recompensas',
@@ -1399,8 +1267,11 @@ class AchievementsSystem {
         }
     }
 
-    // Mostrar progreso de todos los logros (con paginación por rareza)
     async showProgressAchievements(message, rarityPage = 0) {
+        if (isNaN(rarityPage) || rarityPage < 0 || rarityPage > 4) {
+            rarityPage = 0;
+        }
+
         const userId = message.author.id;
         await this.initializeUserAchievements(userId);
         const user = await this.economy.getUser(userId);
@@ -1422,7 +1293,6 @@ class AchievementsSystem {
         let completedCount = 0;
         let totalInRarity = achievementsOfRarity.length;
         
-        // ← AGREGAR: Contar completados ANTES del loop
         for (const [id, achievement] of achievementsOfRarity) {
             const isCompleted = user.achievements[id] === 'completed';
             if (isCompleted) completedCount++;
@@ -1431,7 +1301,6 @@ class AchievementsSystem {
         for (const [id, achievement] of achievementsOfRarity) {
             const isCompleted = user.achievements[id] === 'completed';
             
-            // ← AGREGAR ESTA LÍNEA: Saltar logros completados
             if (isCompleted) continue;
             
             const progress = this.calculateProgress(user, achievement);
@@ -1450,21 +1319,20 @@ class AchievementsSystem {
             inline: false
         });
         
-        // Botones de navegación
         const row = new ActionRowBuilder();
         if (rarityPage > 0) {
             row.addComponents(
                 new ButtonBuilder()
-                    .setCustomId(`progress_prev_${rarityPage - 1}_${message.author.id}`) // ← Agregar userId
-                    .setLabel(`◀️ ${rarityOrder[rarityPage - 1].toUpperCase()}`)
+                    .setCustomId(`progress_prev_${rarityPage - 1}_${message.author.id}`)
+                    .setLabel(`◀️ ${rarityOrder[parseInt(rarityPage - 1)].toUpperCase()}`)
                     .setStyle(ButtonStyle.Secondary)
             );
         }
         if (rarityPage < rarityOrder.length - 1) {
             row.addComponents(
                 new ButtonBuilder()
-                    .setCustomId(`progress_next_${rarityPage + 1}_${message.author.id}`) // ← Agregar userId
-                    .setLabel(`${rarityOrder[rarityPage + 1].toUpperCase()} ▶️`)
+                    .setCustomId(`progress_next_${rarityPage + 1}_${message.author.id}`)
+                    .setLabel(`${rarityOrder[parseInt(rarityPage + 1)].toUpperCase()} ▶️`)
                     .setStyle(ButtonStyle.Primary)
             );
         }
@@ -1476,9 +1344,8 @@ class AchievementsSystem {
     async handleProgressPagination(interaction) {
         const parts = interaction.customId.split('_');
         const page = parseInt(parts[2], 10);
-        const originalUserId = parts[3]; // ← Obtener el userId del botón
+        const originalUserId = parts[3];
         
-        // Verificar que sea el mismo usuario
         if (interaction.user.id !== originalUserId) {
             return interaction.reply({ 
                 content: '❌ Solo el usuario que ejecutó el comando puede usar estos botones.', 
@@ -1503,7 +1370,6 @@ class AchievementsSystem {
         await this.showProgressAchievements(fakeMessage, page);
     }
    
-    // NUEVO: Procesador de comandos
     async processCommand(message) {
         await this.economy.checkPendingPassiveIncome(message.author.id);
         await this.economy.shop.checkAndNotifyExpiredItems(message.author.id, message);
@@ -1527,9 +1393,12 @@ class AchievementsSystem {
                     break;
                 case '>progress':
                 case '>progreso':
-                case '>progressachievements':
-                    await this.showProgressAchievements(message);
+                case '>progressachievements': {
+                    const rarityMap = { 'legendary': 0, 'epic': 1, 'rare': 2, 'uncommon': 3, 'common': 4 };
+                    const pageArg = args[1] ? rarityMap[args[1].toLowerCase()] : 0;
+                    await this.showProgressAchievements(message, pageArg !== undefined ? pageArg : 0);
                     break;
+                }
 
                 case '>detectachievements':
                 case '>detectlogros':
@@ -1550,7 +1419,6 @@ class AchievementsSystem {
         }
     }
 
-    // Método para conectar eventos
     connectEventsSystem(eventsSystem) {
         this.events = eventsSystem;
         console.log('🎮 Sistema de eventos conectado a achievements');
