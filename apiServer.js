@@ -163,6 +163,10 @@ function iniciarApiServer(client, economy, guildConfig, port) {
         'events_role',
         'guild_levelup_channel',
         'guild_levels_enabled',
+<<<<<<< HEAD
+=======
+        'events_globally_enabled',
+>>>>>>> 2a32a717032759b3f3371c2bb021560688aa5b14
       ];
 
       const config = {};
@@ -188,6 +192,10 @@ function iniciarApiServer(client, economy, guildConfig, port) {
         'events_role',
         'guild_levelup_channel',
         'guild_levels_enabled',
+<<<<<<< HEAD
+=======
+        'events_globally_enabled',
+>>>>>>> 2a32a717032759b3f3371c2bb021560688aa5b14
       ];
 
       const entradas = Object.entries(cambios).filter(([clave]) => clavesPermitidas.includes(clave));
