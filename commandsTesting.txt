@@ -74,7 +74,7 @@ achievements.js {
 minigames.js {
     >limits, >limites, >mylimits (sin parametros)
     >checklimits (parametros: user:String = opc)
-    >coinflip, >cf, >coin (parametros: tipoOpcion:String = oblig, dineroApostar:Integer = oblig)
++    >coinflip, >cf, >coin (parametros: tipoOpcion:String = oblig, dineroApostar:Integer = oblig)
     >dice, >dado, >d (parametros: tipoOpcion:String = oblig, dineroApostar:Integer = oblig)
     >lottery, >loteria, >lotto (parametros: numero:Integer = oblig, dineroApostar:Integer = oblig)
     >blackjack, >bj, >21 (parametros: dineroApostar:Integer = oblig)
@@ -115,13 +115,13 @@ minigames.js {
     >canceltrivia, >ct (sin parametros)
     >trivialb (parametros: categoria:String = opc, tipoRanking:String = opc)
     >triviacategorias, >triviacategories, >triviacat (sin parametros)
-    >games, >minigames, >juegos (sin parametros)
++    >games, >minigames, >juegos (sin parametros)
 }
 
 all-commands.js {
     >svconfig (sin parametros)
     >dashboard (sin parametros)
-    >balance, >bal, >money (parametros: user:String = opc)
++    >balance, >bal, >money (parametros: user:String = opc)
     >daily (sin parametros)
 +    >level, >lvl, >rank (parametros: user:String = opc)
     >pay, >transfer (parametros: user:String = oblig, dinero:Integer = oblig)

@@ -978,7 +978,7 @@ if (cosmeticRole?.name) {
             });
         }
 
-        const result = await this.economy.doPedir(userId);
+        const result = await this.economy.doPedir(userId, message.guild);
 
         if (!result.success) {
             const msgs = {

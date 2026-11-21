@@ -2673,7 +2673,7 @@ class EconomySystem {
         return { streak: newStreak, milestone, streakLost };
     }
 
-    async doPedir(userId) {
+    async doPedir(userId, guild) {
         const user = await this.getUser(userId);
 
         const lastPedir = user.last_pedir || 0;
@@ -2682,34 +2682,60 @@ class EconomySystem {
             return { success: false, reason: 'cooldown', timeLeft: cooldownLeft };
         }
 
-        // Obtener usuarios activos aleatorios (excluyendo al que pide)
         const allUsers = await this.getAllUsers();
-        const activeUsers = allUsers
-            .filter(u => 
-                u.id !== userId && 
-                u.last_presence > Date.now() - 7 * 24 * 60 * 60 * 1000 &&
-                u.balance >= this.mendicidadConfig.donationAmount
-            )
-            .sort(() => Math.random() - 0.5)
-            .slice(0, this.mendicidadConfig.usersToMention);
+        const MIN_DONOR_BALANCE = 500; // el tier más bajo de donación en handlePedir
 
-        if (activeUsers.length === 0) {
+        // Mezcla Fisher-Yates (el sort con random es sesgado)
+        const candidates = allUsers.filter(u =>
+            u.id !== userId &&
+            u.last_presence > Date.now() - 7 * 24 * 60 * 60 * 1000 &&
+            u.balance >= MIN_DONOR_BALANCE
+        );
+        for (let i = candidates.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [candidates[i], candidates[j]] = [candidates[j], candidates[i]];
+        }
+
+        // Quedarse solo con quienes están en ESTE servidor
+        const targets = [];
+        for (const u of candidates.slice(0, 60)) { // tope para no hacer cientos de fetch
+            if (targets.length >= this.mendicidadConfig.usersToMention) break;
+
+            let member = guild.members.cache.get(u.id);
+            if (!member) {
+                try { member = await guild.members.fetch(u.id); } catch { continue; }
+            }
+            if (member.user.bot) continue;
+            targets.push(u.id);
+        }
+
+        if (targets.length === 0) {
             return { success: false, reason: 'no_users' };
         }
 
         await this.updateUser(userId, { last_pedir: Date.now() });
-
-        return { success: true, targets: activeUsers.map(u => u.id) };
+        return { success: true, targets };
     }
 
     async processDonation(donorId, recipientId, amount) {
+        if (donorId === recipientId) return { success: false, reason: 'self' };
+
         const donor = await this.getUser(donorId);
-        if (donor.balance < amount) {
-            return { success: false, reason: 'too_poor' };
-        }
+        if (donor.balance < amount) return { success: false, reason: 'too_poor' };
+
         await this.removeMoney(donorId, amount, 'mendicidad_donate');
-        await this.addMoney(recipientId, amount, 'mendicidad_receive');
-        return { success: true, amount };
+        try {
+            const res = await this.addMoney(recipientId, amount, 'mendicidad_receive');
+            const received = res?.actualAmount ?? amount;
+            if (received < amount) {
+                await this.addMoney(donorId, amount - received, 'mendicidad_refund');
+            }
+            return { success: true, amount: received };
+        } catch (err) {
+            console.error('Error en donación:', err);
+            await this.addMoney(donorId, amount, 'mendicidad_refund');
+            return { success: false, reason: 'error' };
+        }
     }
 
     async doPacto(userId) {

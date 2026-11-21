@@ -106,6 +106,13 @@ class MaintenanceSystem {
                         }).catch(() => {});
                     }
 
+                    if (!changes || typeof changes !== 'object' || Array.isArray(changes)) {
+                        return channel.send({ embeds: [new EmbedBuilder()
+                            .setTitle('📋 Changelog')
+                            .setDescription('Este changelog no tiene contenido.')
+                            .setColor('#888888')] }).catch(() => {});
+                    }
+
                     const embed = new EmbedBuilder()
                         .setTitle('✨ ¡Pibot fue actualizado!')
                         .setDescription('Aquí están los cambios del último mantenimiento:')
@@ -163,6 +170,13 @@ class MaintenanceSystem {
                     .setDescription('El changelog está corrupto. Contacta al desarrollador.')
                     .setColor('#FF0000')]
             });
+        }
+
+        if (!changes || typeof changes !== 'object' || Array.isArray(changes)) {
+            return channel.send({ embeds: [new EmbedBuilder()
+                .setTitle('📋 Changelog')
+                .setDescription('Este changelog no tiene contenido.')
+                .setColor('#888888')] }).catch(() => {});
         }
 
         const embed = new EmbedBuilder()

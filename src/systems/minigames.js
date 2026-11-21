@@ -10128,43 +10128,25 @@ const userId = gameState.userId;
                     };
                 }
 
-                const allAnswersOriginal = [decodedCorrect, ...decodedIncorrect];
-                
-                // Intentar traducción con contexto (todo junto)
-                const contextTranslation = await this.translateTriviaQuestion(
-                    decodedQuestion, 
-                    allAnswersOriginal, 
-                    decodedCorrect
-                );
-                
+                const shuffled = this.shuffle([decodedCorrect, ...decodedIncorrect]);
+                const correctIndex = shuffled.indexOf(decodedCorrect);
+                const contextTranslation = await this.translateTriviaQuestion(decodedQuestion, shuffled);
+
                 if (contextTranslation) {
-                    // Traducción exitosa con contexto
-                    const translatedCorrect = contextTranslation.answers[allAnswersOriginal.indexOf(decodedCorrect)];
-                    
                     return {
                         question: contextTranslation.question,
-                        correct: translatedCorrect,
-                        answers: contextTranslation.answers.sort(() => Math.random() - 0.5), // Mezclar
-                        category: await this.translateText(this.decodeHTML(q.category))
-                    };
-                } else {
-                    // Fallback: traducción individual (método antiguo)
-                    console.log('⚠️ Usando traducción individual para esta pregunta');
-                    const translatedQuestion = await this.translateText(decodedQuestion);
-                    const translatedCorrect = await this.translateText(decodedCorrect);
-                    const translatedIncorrect = await Promise.all(
-                        decodedIncorrect.map(ans => this.translateText(ans))
-                    );
-
-                    const allAnswers = [translatedCorrect, ...translatedIncorrect].sort(() => Math.random() - 0.5);
-
-                    return {
-                        question: translatedQuestion,
-                        correct: translatedCorrect,
-                        answers: allAnswers,
-                        category: await this.translateText(this.decodeHTML(q.category))
+                        correct: contextTranslation.answers[correctIndex],
+                        answers: contextTranslation.answers
                     };
                 }
+
+                const translated = (await Promise.all(shuffled.map(a => this.translateText(a))))
+                    .map(a => this.cleanAnswer(a));
+                return {
+                    question: await this.translateText(decodedQuestion),
+                    correct: translated[correctIndex],
+                    answers: translated
+                };
             }));
 
             // Marcar como activo
@@ -10291,7 +10273,13 @@ const userId = gameState.userId;
                 }
 
                 const components = extraButtons.components.length > 0 ? [buttons, extraButtons] : [buttons];
-                await gameMessage.edit({ embeds: [questionEmbed], components });
+                const payload = { embeds: [questionEmbed], components };
+                if (currentQuestion === 0) {
+                    await gameMessage.edit(payload);                       // el primer mensaje ya existe
+                } else {
+                    gameMessage = await message.channel.send(payload);     // las demás se envían directo
+                }
+                console.log(`📨 Pregunta ${currentQuestion + 1} enviada (msg ${gameMessage.id})`);
 				
                 const filter = (i) => i.user.id === userId && i.customId.startsWith('trivia_');
 
@@ -10322,18 +10310,7 @@ const userId = gameState.userId;
                             correct: false
                         });
 
-                        try { await gameMessage.delete(); } catch (error) {}
-
-                        currentQuestion++;
-                        usedHintThisQuestion = false;
-                        
-                        if (currentQuestion < questions.length) {
-                            const loadingEmbed = new EmbedBuilder().setDescription('⏳ Preparando siguiente pregunta...').setColor('#9932CC');
-                            gameMessage = await message.channel.send({ embeds: [loadingEmbed] });
-                            await showQuestion();
-                        } else {
-                            await endGame();
-                        }
+                        await nextQuestion();
                         return;
                     }
 
@@ -10428,16 +10405,7 @@ const userId = gameState.userId;
                             skipped: true
                         });
 
-                        try { await gameMessage.delete(); } catch {}
-                        currentQuestion++;
-                        usedHintThisQuestion = false;
-                        if (currentQuestion < questions.length) {
-                            const loadingEmbed = new EmbedBuilder().setDescription('⏳ Preparando siguiente pregunta...').setColor('#9932CC');
-                            gameMessage = await message.channel.send({ embeds: [loadingEmbed] });
-                            await showQuestion();
-                        } else {
-                            await endGame();
-                        }
+                        await nextQuestion();
                         return;
                     }
 
@@ -10510,66 +10478,57 @@ const userId = gameState.userId;
                             .setColor('#00FF00');
 
                         await interaction.update({ embeds: [correctEmbed], components: [] });
-} else {
-    // Verificar si el shield absorbe este fallo
-    const isFirstWrong = questionResults.filter(r => !r.correct && !r.skipped).length === 1;
-    const shieldActivates = triviaWrongShield && isFirstWrong;
+                    } else {
+                        // Verificar si el shield absorbe este fallo
+                        const isFirstWrong = questionResults.filter(r => !r.correct && !r.skipped).length === 1;
+                        const shieldActivates = triviaWrongShield && isFirstWrong;
 
-    if (shieldActivates) {
-        // Marcar como protegida
-        questionResults[questionResults.length - 1].shielded = true;
+                        if (shieldActivates) {
+                            // Marcar como protegida
+                            questionResults[questionResults.length - 1].shielded = true;
 
-        const shieldEmbed = new EmbedBuilder()
-            .setTitle('🛡️ ¡Escudo Activado!')
-            .setDescription(
-                `<@${userId}> falló, pero el **Escudo de Trivia** absorbió el error\n\n` +
-                `**Pregunta:** ${q.question}\n\n` +
-                `❌ **Tu respuesta:** ${selectedAnswer}\n` +
-                `✅ **Respuesta correcta:** ${q.correct}\n\n` +
-                `> ⚠️ El escudo ya fue usado, el próximo fallo contará.`
-            )
-            .setColor('#FFD700');
+                            const shieldEmbed = new EmbedBuilder()
+                                .setTitle('🛡️ ¡Escudo Activado!')
+                                .setDescription(
+                                    `<@${userId}> falló, pero el **Escudo de Trivia** absorbió el error\n\n` +
+                                    `**Pregunta:** ${q.question}\n\n` +
+                                    `❌ **Tu respuesta:** ${selectedAnswer}\n` +
+                                    `✅ **Respuesta correcta:** ${q.correct}\n\n` +
+                                    `> ⚠️ El escudo ya fue usado, el próximo fallo contará.`
+                                )
+                                .setColor('#FFD700');
 
-        await interaction.update({ embeds: [shieldEmbed], components: [] });
-    } else {
-        const wrongEmbed = new EmbedBuilder()
-            .setTitle('❌ Incorrecto')
-            .setDescription(
-                `<@${userId}> respondió incorrectamente\n\n` +
-                `**Pregunta:** ${q.question}\n\n` +
-                `❌ **Tu respuesta:** ${selectedAnswer}\n` +
-                `✅ **Respuesta correcta:** ${q.correct}`
-            )
-            .setColor('#FF0000');
+                            await interaction.update({ embeds: [shieldEmbed], components: [] });
+                        } else {
+                            const wrongEmbed = new EmbedBuilder()
+                                .setTitle('❌ Incorrecto')
+                                .setDescription(
+                                    `<@${userId}> respondió incorrectamente\n\n` +
+                                    `**Pregunta:** ${q.question}\n\n` +
+                                    `❌ **Tu respuesta:** ${selectedAnswer}\n` +
+                                    `✅ **Respuesta correcta:** ${q.correct}`
+                                )
+                                .setColor('#FF0000');
 
-        await interaction.update({ embeds: [wrongEmbed], components: [] });
-    }
+                            await interaction.update({ embeds: [wrongEmbed], components: [] });
+                        }
 					}
 
                     await new Promise(resolve => setTimeout(resolve, 5000));
 
-                    try {
-                        await gameMessage.delete();
-                    } catch (error) {
-                        console.log('No se pudo borrar el mensaje:', error.message);
-                    }
-
-                    currentQuestion++;
-                    usedHintThisQuestion = false;
-                    
-                    if (currentQuestion < questions.length) {
-                        const loadingEmbed = new EmbedBuilder()
-                            .setDescription('⏳ Preparando siguiente pregunta...')
-                            .setColor('#9932CC');
-                        gameMessage = await message.channel.send({ embeds: [loadingEmbed] });
-                        await showQuestion();
-                    } else {
-                        await endGame();
-                    }
+                    await nextQuestion();
                 }
             }
 
             // Función para finalizar el juego
+            const nextQuestion = async () => {
+                try { await gameMessage.delete(); } catch {}
+                usedHintThisQuestion = false;
+                currentQuestion++;
+                if (currentQuestion < questions.length) await showQuestion();
+                else await endGame();
+            };
+
             const endGame = async () => {
                 const userId = message.author.id;
                 const user = await this.economy.getUser(userId);
@@ -11011,29 +10970,20 @@ const userId = gameState.userId;
                 const decodedQuestion = this.decodeHTML(q.question);
                 const decodedCorrect = this.decodeHTML(q.correct_answer);
                 const decodedIncorrect = q.incorrect_answers.map(ans => this.decodeHTML(ans));
-                const allAnswersOriginal = [decodedCorrect, ...decodedIncorrect];
+                const shuffled = this.shuffle([decodedCorrect, ...decodedIncorrect]);
+                const correctIndex = shuffled.indexOf(decodedCorrect);
+                const contextTranslation = await this.translateTriviaQuestion(decodedQuestion, shuffled);
 
-                // Traducir con contexto
-                const contextTranslation = await this.translateTriviaQuestion(
-                    decodedQuestion,
-                    allAnswersOriginal,
-                    decodedCorrect
-                );
-
-                let translatedQuestion, translatedCorrect, allAnswers;
-
+                let translatedQuestion, allAnswers;
                 if (contextTranslation) {
                     translatedQuestion = contextTranslation.question;
-                    translatedCorrect = contextTranslation.answers[allAnswersOriginal.indexOf(decodedCorrect)];
-                    allAnswers = contextTranslation.answers.sort(() => Math.random() - 0.5);
+                    allAnswers = contextTranslation.answers;
                 } else {
                     translatedQuestion = await this.translateText(decodedQuestion);
-                    translatedCorrect = await this.translateText(decodedCorrect);
-                    const translatedIncorrect = await Promise.all(
-                        decodedIncorrect.map(ans => this.translateText(ans))
-                    );
-                    allAnswers = [translatedCorrect, ...translatedIncorrect].sort(() => Math.random() - 0.5);
+                    allAnswers = (await Promise.all(shuffled.map(a => this.translateText(a))))
+                        .map(a => this.cleanAnswer(a));
                 }
+                const translatedCorrect = allAnswers[correctIndex];
 
                 return {
                     question: translatedQuestion,
@@ -11094,7 +11044,12 @@ const userId = gameState.userId;
                 const collectorPromise = gameMessage.awaitMessageComponent({ 
                     filter: (i) => i.user.id === userId && i.customId.startsWith('survival_'),
                     time: this.config.trivia.survival.timePerQuestion + 2000 
-                }).catch(() => null);
+                }).catch(err => {
+                    if (err.code !== 'InteractionCollectorError') {
+                        console.error('⚠️ awaitMessageComponent:', err.code, err.message);
+                    }
+                    return null;
+                });
 
                 const result = await Promise.race([timeoutPromise, collectorPromise]);
 
@@ -11476,33 +11431,29 @@ const userId = gameState.userId;
                 const decodedQuestion = this.decodeHTML(q.question);
                 const decodedCorrect = this.decodeHTML(q.correct_answer);
                 const decodedIncorrect = q.incorrect_answers.map(ans => this.decodeHTML(ans));
-                const allAnswersOriginal = [decodedCorrect, ...decodedIncorrect];
-                
-                const contextTranslation = await this.translateTriviaQuestion(
-                    decodedQuestion,
-                    allAnswersOriginal,
-                    decodedCorrect
-                );
-                
+                const shuffled = this.shuffle([decodedCorrect, ...decodedIncorrect]);
+                const correctIndex = shuffled.indexOf(decodedCorrect);
+                const category = await this.translateText(this.decodeHTML(q.category));
+                const contextTranslation = await this.translateTriviaQuestion(decodedQuestion, shuffled);
+
                 if (contextTranslation) {
-                    const translatedCorrect = contextTranslation.answers[allAnswersOriginal.indexOf(decodedCorrect)];
                     return {
                         question: contextTranslation.question,
-                        correct: translatedCorrect,
-                        answers: contextTranslation.answers.sort(() => Math.random() - 0.5)
-                    };
-                } else {
-                    const translatedQuestion = await this.translateText(decodedQuestion);
-                    const translatedCorrect = await this.translateText(decodedCorrect);
-                    const translatedIncorrect = await Promise.all(
-                        decodedIncorrect.map(ans => this.translateText(ans))
-                    );
-                    return {
-                        question: translatedQuestion,
-                        correct: translatedCorrect,
-                        answers: [translatedCorrect, ...translatedIncorrect].sort(() => Math.random() - 0.5)
+                        correct: contextTranslation.answers[correctIndex],
+                        answers: contextTranslation.answers,
+                        category
                     };
                 }
+
+                console.log('⚠️ Usando traducción individual para esta pregunta');
+                const translated = (await Promise.all(shuffled.map(a => this.translateText(a))))
+                    .map(a => this.cleanAnswer(a));
+                return {
+                    question: await this.translateText(decodedQuestion),
+                    correct: translated[correctIndex],
+                    answers: translated,
+                    category
+                };
             }));
             
             // Jugar cada pregunta
@@ -11939,7 +11890,24 @@ const userId = gameState.userId;
         await message.reply({ embeds: [embed] });
     }
 
-    async translateTriviaQuestion(question, answers, correctAnswer) {
+    shuffle(arr) {
+        const a = [...arr];
+        for (let i = a.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [a[i], a[j]] = [a[j], a[i]];
+        }
+        return a;
+    }
+
+    cleanAnswer(text) {
+        return String(text ?? '')
+            .replace(/[\(\[\{（]\s*(correct[ao]?|right)\s*[\)\]\}）]/gi, '')
+            .replace(/\*\*|__/g, '')
+            .replace(/\s{2,}/g, ' ')
+            .trim();
+    }
+    
+    async translateTriviaQuestion(question, answers) {
         try {
             const controller = new AbortController();
             const timeoutId = setTimeout(() => controller.abort(), 12000); // 12 segundos
@@ -12004,10 +11972,10 @@ const userId = gameState.userId;
                 // Parsear la respuesta
                 const lines = content.split('\n').filter(line => line.trim());
                 const translatedQuestion = lines.find(l => l.startsWith('PREGUNTA:'))?.replace('PREGUNTA:', '').trim();
-                const r1 = lines.find(l => l.startsWith('R1:'))?.replace('R1:', '').replace(/\(CORRECTA\)/gi, '').trim();
-                const r2 = lines.find(l => l.startsWith('R2:'))?.replace('R2:', '').replace(/\(CORRECTA\)/gi, '').trim();
-                const r3 = lines.find(l => l.startsWith('R3:'))?.replace('R3:', '').replace(/\(CORRECTA\)/gi, '').trim();
-                const r4 = lines.find(l => l.startsWith('R4:'))?.replace('R4:', '').replace(/\(CORRECTA\)/gi, '').trim();
+                const r1 = this.cleanAnswer(lines.find(l => l.startsWith('R1:'))?.replace('R1:', ''));
+                const r2 = this.cleanAnswer(lines.find(l => l.startsWith('R2:'))?.replace('R2:', ''));
+                const r3 = this.cleanAnswer(lines.find(l => l.startsWith('R3:'))?.replace('R3:', ''));
+                const r4 = this.cleanAnswer(lines.find(l => l.startsWith('R4:'))?.replace('R4:', ''));
                 
                 if (translatedQuestion && r1 && r2 && r3 && r4) {
                     console.log('✅ Traducción parseada exitosamente');
@@ -12032,10 +12000,10 @@ const userId = gameState.userId;
                     return {
                         question: qMatch[1].trim(),
                         answers: [
-                            r1Match[1].replace(/\(CORRECTA\)/gi, '').trim(),
-                            r2Match[1].replace(/\(CORRECTA\)/gi, '').trim(),
-                            r3Match[1].replace(/\(CORRECTA\)/gi, '').trim(),
-                            r4Match[1].replace(/\(CORRECTA\)/gi, '').trim()
+                            this.cleanAnswer(r1Match[1]),
+                            this.cleanAnswer(r2Match[1]),
+                            this.cleanAnswer(r3Match[1]),
+                            this.cleanAnswer(r4Match[1])
                         ]
                     };
                 }

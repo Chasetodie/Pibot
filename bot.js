@@ -675,7 +675,7 @@ const commands = [
         .setName('roulette')
         .setDescription('Jugar a la ruleta')
         .addIntegerOption(o => o.setName('apuesta').setDescription('Cantidad a apostar').setRequired(true).setMinValue(1))
-        .addStringOption(o => o.setName('opcion').setDescription('En qué apostar (ej: rojo, 7)').setRequired(false)),
+        .addStringOption(o => o.setName('opcion').setDescription('En qué apostar (ej: rojo, 7)').setRequired(true)),
 
     new SlashCommandBuilder()
         .setName('slots')
@@ -684,8 +684,9 @@ const commands = [
 
     new SlashCommandBuilder()
         .setName('lottery')
-        .setDescription('Comprar tickets de lotería')
-        .addIntegerOption(o => o.setName('tickets').setDescription('Cantidad (default: 1)').setRequired(false).setMinValue(1)),
+        .setDescription('Escoge un numero entre 1-100')
+        .addIntegerOption(o => o.setName('numero').setDescription('Número').setRequired(true).setMinValue(1))
+        .addIntegerOption(o => o.setName('apuesta').setDescription('Cantidad a apostar').setRequired(true).setMinValue(1)),
 
     new SlashCommandBuilder()
         .setName('horserace')
@@ -727,7 +728,7 @@ const commands = [
         .setDescription('Ver tus límites de juegos diarios'),
 
     new SlashCommandBuilder()
-        .setName('games')
+        .setName('minigames')
         .setDescription('Ver lista de todos los minijuegos'),
 
     // /uno agrupa: ujoin, ustart, ucancel, uplay, upickup, ushowhand, utable, sayuno, ucallout
@@ -757,7 +758,6 @@ const commands = [
             ))
         .addUserOption(o => o.setName('usuario').setDescription('Usuario a acusar (solo para "acusar")').setRequired(false)),
 
-    // /trivia agrupa: trivia, triviasurvival, triviamulti, jointrivia, starttrivia, canceltrivia, trivialb, triviacat
     new SlashCommandBuilder()
         .setName('trivia')
         .setDescription('Jugar trivia')
@@ -1560,7 +1560,7 @@ client.on('interactionCreate', async (interaction) => {
                     break;
                 }
                 case 'lottery': {
-                    fakeMessage.content = `>lottery ${interaction.options.getInteger('tickets') || 1}`;
+                    fakeMessage.content = `>lottery ${interaction.options.getInteger('numero')} ${interaction.options.getInteger('apuesta')}`;
                     await minigames.processCommand(fakeMessage);
                     break;
                 }
@@ -1625,8 +1625,8 @@ client.on('interactionCreate', async (interaction) => {
                     fakeMessage.content = '>limits';
                     await minigames.processCommand(fakeMessage);
                     break;
-                case 'games':
-                    fakeMessage.content = '>games';
+                case 'minigames':
+                    fakeMessage.content = '>minigames';
                     await minigames.processCommand(fakeMessage);
                     break;
  
@@ -1635,7 +1635,6 @@ client.on('interactionCreate', async (interaction) => {
                     const modo  = interaction.options.getString('modo') || 'normal';
                     const dif   = interaction.options.getString('dificultad') || '';
                     const cat   = interaction.options.getString('categoria')  || '';
-                    const rondas = interaction.options.getInteger('rondas')   || '';
                     switch (modo) {
                         case 'survival': fakeMessage.content = '>triviasurvival start'; break;
                         case 'multi':    fakeMessage.content = `>triviamultiplayer ${interaction.options.getInteger('apuesta') || 0}`.trim(); break;
