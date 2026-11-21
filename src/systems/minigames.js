@@ -1065,8 +1065,8 @@ class MinigamesSystem {
                     { name: '🪙 Resultado', value: result === 'cara' ? '🟡 Cara' : '⚪ Cruz', inline: true },
                     { name: '🎯 Tu Elección', value: normalizedChoice === 'cara' ? '🟡 Cara' : '⚪ Cruz', inline: true },
                     { name: '💰 Ganancia', value: `+${this.formatNumber(finalEarnings)} π-b$`, inline: true },
-                    { name: '💸 Balance Antiguo', value: `${this.formatNumber(userData.balance - finalEarnings)} π-b$`, inline: false },
-                    { name: '💳 Balance Actual', value: `${this.formatNumber(userData.balance)} π-b$`, inline: false },
+                    { name: '💸 Balance Antiguo', value: `${this.formatNumber(user.balance - finalEarnings)} π-b$`, inline: false },
+                    { name: '💳 Balance Actual', value: `${this.formatNumber(user.balance)} π-b$`, inline: false },
                     { name: '🎉 Bonificaciones', value: this.formatGameBonuses(eventMessage, luckMessage, itemMessage, '', professionMessage, petMessage), inline: false }
                 );
 
