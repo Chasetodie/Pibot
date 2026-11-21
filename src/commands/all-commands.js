@@ -3531,9 +3531,6 @@ const commandName = command.replace('>', '');
 
             embed.setFooter({ text: 'Pibot • Desarrollado por chasetodie10' });
 
-            const eventsEnabled = this.guildConfig
-                ? await this.guildConfig.areEventsEnabled(message.guild?.id)
-                : true;
             const isAdmin = message.member?.permissions?.has('ManageGuild');
             const uid = message.author.id;
 
@@ -5429,16 +5426,6 @@ const commandName = command.replace('>', '');
                 content: '❌ Solo administradores pueden ver esta sección.', 
                 ephemeral: true 
             });
-        }
-
-        if (category === 'Eventos' && this.guildConfig) {
-            const enabled = await this.guildConfig.areEventsEnabled(interaction.guild?.id);
-            if (!enabled) {
-                return interaction.reply({ 
-                    content: '❌ Los eventos están deshabilitados en este servidor.',
-                    ephemeral: true 
-                });
-            }
         }
 
         if (category === 'dev') {
