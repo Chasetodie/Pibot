@@ -1193,8 +1193,8 @@ class MinigamesSystem {
             } else {
                 embed.addFields(
                     { name: '💸 Perdiste', value: `${this.formatNumber(moneyBeforeLost)} π-b$`, inline: true },
-                    { name: '💸 Balance Antiguo', value: `${this.formatNumber(userData.balance + moneyBeforeLost)} π-b$`, inline: false },
-                    { name: '💳 Balance Actual', value: `${this.formatNumber(userData.balance)} π-b$`, inline: false },
+                    { name: '💸 Balance Antiguo', value: `${this.formatNumber(user.balance + moneyBeforeLost)} π-b$`, inline: false },
+                    { name: '💳 Balance Actual', value: `${this.formatNumber(user.balance)} π-b$`, inline: false },
                     { name: '⚔️ Profesiones', value: this.formatGameBonuses('', '', '', '', '', professionMessage), inline: false }
                 );
             }
@@ -10130,22 +10130,26 @@ const userId = gameState.userId;
 
                 const shuffled = this.shuffle([decodedCorrect, ...decodedIncorrect]);
                 const correctIndex = shuffled.indexOf(decodedCorrect);
+                const category = await this.translateText(this.decodeHTML(q.category));
                 const contextTranslation = await this.translateTriviaQuestion(decodedQuestion, shuffled);
 
                 if (contextTranslation) {
                     return {
                         question: contextTranslation.question,
                         correct: contextTranslation.answers[correctIndex],
-                        answers: contextTranslation.answers
+                        answers: contextTranslation.answers,
+                        category: category                                  // <-- tiene que estar
                     };
                 }
 
+                console.log('⚠️ Usando traducción individual para esta pregunta');
                 const translated = (await Promise.all(shuffled.map(a => this.translateText(a))))
                     .map(a => this.cleanAnswer(a));
                 return {
                     question: await this.translateText(decodedQuestion),
                     correct: translated[correctIndex],
-                    answers: translated
+                    answers: translated,
+                    category: category                                      // <-- y aquí también
                 };
             }));
 
@@ -10210,7 +10214,7 @@ const userId = gameState.userId;
                     .addFields(
                         { name: '📝 Opciones', value: optionsText, inline: false },
                         { name: '📊 Dificultad', value: difficulty.toUpperCase(), inline: true },
-                        { name: '📚 Categoría', value: q.category, inline: true },
+                        { name: '📚 Categoría', value: q.category || 'General', inline: true },
                         { name: '✅ Correctas', value: `${correctAnswers}`, inline: true }
                     )
                     .setColor('#9932CC')
