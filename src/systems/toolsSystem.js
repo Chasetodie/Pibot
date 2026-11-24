@@ -266,8 +266,20 @@ class ToolsSystem {
                     }
                 }
 
-                let textoLimpio = texto.replace(/!\[.*?\]\(.*?\)/g, '').replace(/\[(.*?)\]\(.*?\)/g, '$1').replace(/https?:\/\/[^\s]+/g, '').trim();
-                return textoLimpio.slice(0, 2500);
+                let textoLimpio = texto
+                    .replace(/!\[.*?\]\(.*?\)/g, '') 
+                    .replace(/\[(.*?)\]\(.*?\)/g, '$1') 
+                    .replace(/https?:\/\/[^\s]+/g, '') 
+                    .replace(/\[Image \d+\]/g, '')
+                    .replace(/Title: /g, '')
+                    .replace(/URL Source: /g, '')
+                    .replace(/Markdown Content:/g, '')
+                    .replace(/\n{3,}/g, '\n\n') 
+                    .trim();
+
+                console.log(`[Búsqueda Jina] ✅ Éxito con DuckDuckGo (Texto Limpio)`);
+                    
+                return textoLimpio.slice(0, 2000); 
             }
         } catch (error) {
             console.log(`[Búsqueda Profunda] ❌ Falló: ${error.message}`);

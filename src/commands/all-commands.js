@@ -224,26 +224,64 @@ if (cosmeticRole?.name) {
         const streak = user.presence_streak || 0;
         const lastPresence = user.last_presence || 0;
 
-        const nextMilestone = [3, 7, 15, 30].find(m => m > streak) || null;
-        const daysToNext = nextMilestone ? nextMilestone - streak : null;
+        let nextMilestone = null;
+        if (streak < 3) nextMilestone = 3;
+        else if (streak < 7) nextMilestone = 7;
+        else if (streak < 15) nextMilestone = 15;
+        else {
+            nextMilestone = Math.ceil((streak + 1) / 30) * 30; 
+        }
+
+        const daysToNext = nextMilestone - streak;
+
+        const [topRows] = await this.economy.database.pool.execute(
+            'SELECT id, presence_streak FROM users WHERE presence_streak > 0 ORDER BY presence_streak DESC LIMIT 5'
+        );
+
+        let topText = '';
+        const medals = ['🥇', '🥈', '🥉', '4️⃣', '5️⃣'];
+        
+        if (topRows.length === 0) {
+            topText = 'Nadie tiene racha aún.';
+        } else {
+            topRows.forEach((row, index) => {
+                const isUser = row.id === userId;
+                topText += `${medals[index]} <@${row.id}> — **${row.presence_streak}** días${isUser ? ' *(tú)*' : ''}\n`;
+            });
+        }
+
+        let userRankText = 'Sin ranking';
+        if (streak > 0) {
+            const [rankRows] = await this.economy.database.pool.execute(
+                'SELECT COUNT(*) + 1 as rank FROM users WHERE presence_streak > ?',
+                [streak]
+            );
+            const rank = rankRows[0].rank;
+            userRankText = `**#${rank}** (con **${streak}** días)`;
+        }
 
         const milestoneText =
-            `${streak >= 3  ? '✅' : '⬜'} 3 días — Notificación de racha\n` +
+            `${streak >= 3  ? '✅' : '⬜'} 3 días — Notificación\n` +
             `${streak >= 7  ? '✅' : '⬜'} 7 días — +500π\n` +
             `${streak >= 15 ? '✅' : '⬜'} 15 días — +2,000π + Energy Drink\n` +
-            `${streak >= 30 ? '✅' : '⬜'} 30 días — +10,000π + Mystery Box`;
+            `${streak >= 30 ? '✅' : '⬜'} 30 días — +10,000π + Mystery Box\n` +
+            `🔄 *Se repite cada 30 días*`;
 
         const embed = new EmbedBuilder()
             .setColor('#FFD700')
             .setTitle('🌱 Racha de Presencia')
             .setThumbnail(message.author.displayAvatarURL({ dynamic: true }))
             .addFields(
-                { name: '🔥 Racha actual', value: `**${streak}** días`, inline: true },
+                { name: '🔥 Tu Racha', value: `**${streak}** días`, inline: true },
                 { name: '📅 Última conexión', value: lastPresence ? `<t:${Math.floor(lastPresence / 1000)}:R>` : 'Nunca', inline: true },
-                { name: '🎯 Próximo hito', value: nextMilestone ? `${nextMilestone} días (faltan **${daysToNext}**)` : '🏆 ¡Completaste todos!', inline: true },
-                { name: '🏆 Hitos', value: milestoneText, inline: false }
+                { name: '🏆 Tu Posición', value: userRankText, inline: true },
+                
+                { name: '🎯 Próximo hito', value: `**${nextMilestone} días** (faltan **${daysToNext}**)`, inline: false },
+                
+                { name: '🏅 Top 5 del Servidor', value: topText, inline: false },
+                { name: '📜 Hitos Disponibles', value: milestoneText, inline: false }
             )
-            .setFooter({ text: 'Si no usas el bot por 48h tu racha se resetea' })
+            .setFooter({ text: 'La racha no se reinicia al llegar a 30. ¡Sigue sumando días!' })
             .setTimestamp();
 
         await message.reply({ embeds: [embed] });
@@ -2865,7 +2903,6 @@ if (cosmeticRole?.name) {
     }
 
     async processCommand(message) {
-        // Verificar ingresos pasivos pendientes
         await this.economy.checkPendingPassiveIncome(message.author.id);
         await this.economy.shop.checkAndNotifyExpiredItems(message.author.id, message);
         await this.shop.cleanupExpiredTokens(message.author.id);
@@ -2875,9 +2912,6 @@ if (cosmeticRole?.name) {
         const args = message.content.trim().split(/ +/g);
         const command = args[0].toLowerCase();
         const betId = args[1];
-/*
-const commandName = command.replace('>', '');
-        await this.economy.missions.updateMissionProgress(message.author.id, 'unique_commands_used', commandName);*/
 
         try {
             switch (command) {        
@@ -3426,7 +3460,7 @@ const commandName = command.replace('>', '');
                     await this.showHelp(message);
                     break;
                 default:
-                    // No es un comando de economía
+                    await message.reply('🕯️ ¿Un desliz en la oscuridad o un error de tipeo? Usa `>help` para ver los comandos, o escríbelo pegado así: `>comando` 🦇');
                     break;
             }
         } catch (error) {

@@ -41,9 +41,9 @@ class ChatBotSystem {
         };
 
         this.normalProviders = [
-            { name: 'Groq', models: [GROQ_SMART],  endpoint: 'https://api.groq.com/openai/v1/chat/completions', apiKey: process.env.GROQ_API_KEY, timeout: 15000 },
             { name: 'Groq', models: [GROQ_BACKUP], endpoint: 'https://api.groq.com/openai/v1/chat/completions', apiKey: process.env.GROQ_API_KEY, timeout: 15000 },
             { name: 'Groq', models: [GROQ_FAST],   endpoint: 'https://api.groq.com/openai/v1/chat/completions', apiKey: process.env.GROQ_API_KEY, timeout: 15000 },
+            { name: 'Groq', models: [GROQ_SMART],  endpoint: 'https://api.groq.com/openai/v1/chat/completions', apiKey: process.env.GROQ_API_KEY, timeout: 15000 },
         ];
         
         this.totalUsedToday = 0;
@@ -888,10 +888,10 @@ Formato: Párrafos cortos con saltos de línea entre ideas`;
                         try {
                             const followUpMessages = [
                                 messagesForApi[0], 
-                                ...messagesForApi.slice(-4), 
+                                ...messagesForApi.slice(-3), 
                                 {
                                     role: 'user',
-                                    content: `[Resultados de la búsqueda en internet]:\n${resultadoTool}\n\nINSTRUCCIONES CRÍTICAS:\n1. Lee los resultados y responde a la ÚLTIMA pregunta del usuario.\n2. 🚨 ATENCIÓN AL IDIOMA: Responde en el MISMO idioma en el que el usuario hizo su última pregunta. Si te preguntó en INGLÉS, responde TODA tu respuesta en INGLÉS (y usa acciones en inglés como *smirks*, *tilts head*). Si te preguntó en ESPAÑOL, responde en ESPAÑOL.\n3. NUNCA digas "No tengo esa info" si el texto contiene la respuesta.\n4. Si los resultados NO contienen la respuesta o parecen irrelevantes, dilo claramente. NO inventes nada que no esté en el texto.`
+                                    content: `[Resultados de la búsqueda en internet]:\n${resultadoTool.slice(0, 1500)}\n\nINSTRUCCIONES CRÍTICAS:\n1. Responde a la pregunta del usuario usando el texto de arriba.\n2. 🚨 REGLA DE VERDAD: Si el texto NO contiene la respuesta exacta, NO inventes datos. Pero SÍ puedes decirle al usuario lo que SÍ encontraste (ej: "Encontré que el récord general es de X rondas en tal mapa, pero no el de Kino específicamente").\n3. Solo si el texto es totalmente irrelevante (no habla del tema), di: "No encontré nada relevante en la web, pero puedo intentar de nuevo si me das más detalles 🖤".\n4. Responde en el MISMO idioma en el que el usuario hizo su última pregunta.`
                                 }
                             ];
 
@@ -902,10 +902,10 @@ Formato: Párrafos cortos con saltos de línea entre ideas`;
                                     'Content-Type': 'application/json'
                                 },
                                 body: JSON.stringify({
-                                    model: effectiveModel,
+                                    model: GROQ_SMART,
                                     messages: followUpMessages,
-                                    temperature: 0.8,
-                                    max_tokens: toolCall.function.name === 'buscar_web' ? 800 : 450
+                                    temperature: 0.4,
+                                    max_tokens: 800
                                 })
                             });
 
@@ -920,7 +920,7 @@ Formato: Párrafos cortos con saltos de línea entre ideas`;
                             if (!respuestaFinal) {
                                 console.log('⚠️ Follow-up sin contenido, respuesta completa:', JSON.stringify(followUpData));
                                 respuestaFinal = toolCall.function.name === 'buscar_web'
-                                    ? `No pude armar una respuesta con IA, pero esto encontré:\n\n${resultadoTool.slice(0, 500)}`
+                                    ? '❌ No pude procesar la búsqueda en este momento. Intenta de nuevo en unos segundos. 🖤'
                                     : '🎵 ¡Listo!';
                             }
 

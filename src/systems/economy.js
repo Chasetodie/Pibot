@@ -2614,35 +2614,57 @@ class EconomySystem {
         const user = await this.getUser(userId);
         const now = Date.now();
         const lastPresence = user.last_presence || 0;
-        const timeSinceLast = now - lastPresence;
-        const oneDay = 24 * 60 * 60 * 1000;
-        const twoDays = 48 * 60 * 60 * 1000;
+        
+        const getDateString = (timestamp) => {
+            const d = new Date(timestamp);
+            return `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`;
+        };
+        
+        const today = getDateString(now);
+        const lastDay = lastPresence ? getDateString(lastPresence) : null;
+        
+        if (!lastDay) {
+            await this.updateUser(userId, { presence_streak: 1, last_presence: now });
+            return { streak: 1, milestone: null, streakLost: null };
+        }
 
-        // Si ya se chequeó hoy, no hacer nada
-        if (timeSinceLast < oneDay) return null;
+        if (today === lastDay) return null;
+
+        const todayDate = new Date(today);
+        const lastDate = new Date(lastDay);
+        const diffTime = Math.abs(todayDate - lastDate);
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
         let newStreak = user.presence_streak || 0;
         let milestone = null;
-
-        // Si pasaron más de 48h, resetear racha
         let streakLost = null;
-        if (timeSinceLast > twoDays && user.presence_streak > 0) {
-            streakLost = user.presence_streak; // guardar racha perdida para notificar
+
+        if (diffDays > 2) {
+            if (newStreak > 0) streakLost = newStreak;
             newStreak = 1;
-        } else {
+        } else if (diffDays === 2) {
+            if (newStreak > 0) streakLost = newStreak;
+            newStreak = 1;
+        } else if (diffDays === 1) {
             newStreak += 1;
         }
 
-        // Verificar hitos
-        const milestones = {
-            3:  { bonus: 0,     item: null,             label: '🔥 ¡3 días seguidos!' },
-            7:  { bonus: 500,   item: null,             label: '🔥 ¡Una semana seguida! +500π' },
-            15: { bonus: 2000,  item: 'energy_drink',   label: '🔥 ¡15 días seguidos! +2000π + Energy Drink' },
-            30: { bonus: 10000, item: 'mystery_box',    label: '🔥 ¡30 días seguidos! +10000π + Mystery Box' },
-        };
+        if (newStreak === 3) {
+            milestone = { bonus: 0, item: null, label: '🔥 ¡3 días seguidos!' };
+        } else if (newStreak === 7) {
+            milestone = { bonus: 500, item: null, label: '🔥 ¡Una semana seguida! +500π' };
+        } else if (newStreak === 15) {
+            milestone = { bonus: 2000, item: 'energy_drink', label: '🔥 ¡15 días seguidos! +2000π + Energy Drink' };
+        } else if (newStreak % 30 === 0) {
+            milestone = { 
+                bonus: 10000, 
+                item: 'mystery_box', 
+                label: `🔥 ¡${newStreak} días seguidos! +10000π + Mystery Box` 
+            };
+        }
 
-        if (milestones[newStreak]) {
-            milestone = { ...milestones[newStreak], streak: newStreak };
+        if (milestone) {
+            milestone.streak = newStreak;
             if (milestone.bonus > 0) {
                 await this.addMoney(userId, milestone.bonus, 'presence_streak');
             }
@@ -2665,10 +2687,7 @@ class EconomySystem {
             }
         }
 
-        await this.updateUser(userId, {
-            presence_streak: newStreak,
-            last_presence: now,
-        });
+        await this.updateUser(userId, { presence_streak: newStreak, last_presence: now });
 
         return { streak: newStreak, milestone, streakLost };
     }

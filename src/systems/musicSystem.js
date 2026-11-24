@@ -591,7 +591,7 @@ class MusicSystem {
         const args = message.content.split(' ');
         const command = args[0].toLowerCase();
 
-        if (['>', '>m', '>musica', '>music'].includes(command)) {
+        if (['>m', '>musica', '>music'].includes(command)) {
             if (!args[1]) return this.showMusicHelp(message);
             const subcommand = args[1];
             const { member, channel, guild, author } = message;
