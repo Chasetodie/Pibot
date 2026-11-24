@@ -982,5 +982,13 @@
     "sintaxis": ">img <descripción>",
     "descripcion": "Alias corto de imagine",
     "permisos": "Ninguno"
+  },
+  {
+    "id": "cmd-124",
+    "nombre": "tts",
+    "categoria": "Social",
+    "sintaxis": ">tts <texto>",
+    "descripcion": "Generar audio con el texto enviado",
+    "permisos": "Ninguno"
   }
 ]

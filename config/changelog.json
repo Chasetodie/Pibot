@@ -1,14 +1,11 @@
 {
-    "Musica": [
-        "Se agregó el comando >statusnode para verificar el estado de los nodos",
-        "Se agregó el comando >changenode para cambiar de nodo, en caso de haber uno mejor",
-        "Se agregó el comando >fix para corregir errores en la reproducción de música",
-        "Al cambiar de nodo o arreglar el reproductor la configuración de volumen se mantiene, al igual que la cola de reproducción"
+    "Comandos y Mejoras": [
+        "El comando >rachas ahora muestra el top 5 de mejores rachas y entrega el premio más alto cada 30 días",
+        "Se agregó el comando >tts <texto> para que la IA genere un audio con lo que escribas"
     ],
     "Bugs": [
-        "Fix: Varios comandos funcionan correctamente",
-        "Fix: Trivia enviaba respuestas correctas",
-        "Fix: Al reproducir musica se encontraban varios fallos"
+        "Fix: Se corrigió un error que permitía la duplicación de apuestas",
+        "Fix: Ahora se muestra una ayuda básica correctamente al escribir únicamente >"
     ],
     "Info": [
         "¿Encontraste un bug o tienes una sugerencia? Contáctate con chasetodie10"
