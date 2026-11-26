@@ -3,111 +3,83 @@ const { EmbedBuilder, AttachmentBuilder } = require('discord.js');
 class ImageGenSystem {
     constructor() {
         this.providers = [
-            { name: 'Cloudflare', fn: this.generateCloudflare.bind(this) },
-            { name: 'ImageGPT',   fn: this.generateImageGPT.bind(this)   },
+            { name: 'HuggingFace', fn: this.generateHuggingFace.bind(this) },
+            { name: 'Pollinations', fn: this.generatePollinations.bind(this) },
+            { name: 'Cloudflare',  fn: this.generateCloudflare.bind(this) },
         ];
 
-        // Cooldown por usuario: 15 segundos
         this.cooldowns = new Map();
         this.COOLDOWN_MS = 15000;
     }
 
-    async generateImageGPT(prompt) {
-        const key = process.env.IMAGEGPT;
-        if (!key) throw new Error('No IMAGEGPT key');
-
-        const res = await fetch('https://api.imagegpt.online/generate/text-image', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'x-api-key': key
-            },
-            body: JSON.stringify({
-                prompt,
-                width: 512,
-                height: 512,
-                model: 'flux',  // ← corregido
-                outputType: 'url'
-            }),
-            signal: AbortSignal.timeout(30000)
-        });
-
-        const text = await res.text();
-        console.log(`ImageGPT status: ${res.status} | body: ${text.slice(0, 300)}`);
-        if (!res.ok) throw new Error(`ImageGPT HTTP ${res.status}`);
-
-        const data = JSON.parse(text);
-        const url = data?.url || data?.image_url || data?.output || data?.data?.url;
-        if (!url) throw new Error(`ImageGPT: no URL. Respuesta: ${text.slice(0, 200)}`);
-        return { url, type: 'url' };
+    isValidImage(buffer) {
+        if (!buffer || buffer.length < 10000) return false;
+        const isPNG = buffer[0] === 0x89 && buffer[1] === 0x50 && buffer[2] === 0x4E && buffer[3] === 0x47;
+        const isJPEG = buffer[0] === 0xFF && buffer[1] === 0xD8 && buffer[2] === 0xFF;
+        const isWEBP = buffer.toString('ascii', 0, 4) === 'RIFF' && buffer.toString('ascii', 8, 12) === 'WEBP';
+        return isPNG || isJPEG || isWEBP;
     }
 
-    // ─── CLOUDFLARE ───────────────────────────────────────────────────────────
-    // Modelo: Stable Diffusion XL via REST API de Cloudflare
-    // Requiere: Account ID y API Token con permisos de Workers AI
+    async generateHuggingFace(prompt) {
+        const token = process.env.HUGGINGFACE_API_KEY;
+        if (!token) throw new Error('HuggingFace: Falta HUGGINGFACE_API_KEY');
+
+        const model = 'black-forest-labs/FLUX.1-schnell';
+        const res = await fetch(`https://api-inference.huggingface.co/models/${model}`, {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ inputs: prompt }),
+            signal: AbortSignal.timeout(60000)
+        });
+
+        if (!res.ok) throw new Error(`HuggingFace HTTP ${res.status}`);
+        const arrayBuffer = await res.arrayBuffer();
+        const buffer = Buffer.from(new Uint8Array(arrayBuffer));
+        
+        if (!this.isValidImage(buffer)) throw new Error('HuggingFace: Imagen vacía o corrupta');
+        return { buffer, type: 'buffer' };
+    }
+
+    async generatePollinations(prompt) {
+        const url = `https://gen.pollinations.ai/image/${encodeURIComponent(prompt)}?model=flux&width=768&height=768&safe=false`;
+        const res = await fetch(url, { signal: AbortSignal.timeout(30000) });
+        if (!res.ok) throw new Error(`Pollinations HTTP ${res.status}`);
+        const arrayBuffer = await res.arrayBuffer();
+        const buffer = Buffer.from(new Uint8Array(arrayBuffer));
+        
+        if (!this.isValidImage(buffer)) throw new Error('Pollinations: Imagen vacía o corrupta');
+        return { buffer, type: 'buffer' };
+    }
+
     async generateCloudflare(prompt) {
         const token = process.env.CLOUDFARE;
         const accountId = process.env.CLOUDFARE_ACCOUNT_ID;
-        if (!token || !accountId) throw new Error('No CLOUDFARE key o CLOUDFARE_ACCOUNT_ID');
+        if (!token || !accountId) throw new Error('Cloudflare: Faltan credenciales');
 
-        const cfModels = [
-            /*'@cf/black-forest-labs/flux-1-schnell',  */       // FLUX clásico rápido
-            '@cf/stabilityai/stable-diffusion-xl-base-1.0', // SDXL estable
-            //'@cf/runwayml/stable-diffusion-v1-5',           // SD 1.5 fallback
-        ];
-
-        for (const model of cfModels) {
-            try {
-                console.log(`☁️ Cloudflare probando: ${model}`);
-                const res = await fetch(
-                    `https://api.cloudflare.com/client/v4/accounts/${accountId}/ai/run/${model}`,
-                    {
-                        method: 'POST',
-                        headers: {
-                            'Authorization': `Bearer ${token}`,
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify({ prompt }),
-                        signal: AbortSignal.timeout(60000)
-                    }
-                );
-
-                if (!res.ok) {
-                    const err = await res.text();
-                    console.warn(`☁️ Cloudflare [${model}] HTTP ${res.status}: ${err.slice(0, 100)}`);
-                    continue;
-                }
-
-                const arrayBuffer = await res.arrayBuffer();
-                if (!arrayBuffer || arrayBuffer.byteLength < 100) {
-                    console.warn(`☁️ Cloudflare [${model}]: buffer vacío`);
-                    continue;
-                }
-                // Convertir correctamente a Buffer de Node.js
-                const buffer = Buffer.from(new Uint8Array(arrayBuffer));
-                console.log(`✅ Cloudflare éxito con ${model} | tamaño: ${buffer.length} bytes`);
-                return { buffer, type: 'buffer' };
-            } catch (e) {
-                console.warn(`☁️ Cloudflare [${model}] error: ${e.message}`);
+        const model = '@cf/stabilityai/stable-diffusion-xl-base-1.0';
+        const res = await fetch(
+            `https://api.cloudflare.com/client/v4/accounts/${accountId}/ai/run/${model}`,
+            {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+                body: JSON.stringify({ prompt }),
+                signal: AbortSignal.timeout(60000)
             }
-        }
+        );
 
-        throw new Error('Cloudflare: todos los modelos fallaron');
+        if (!res.ok) throw new Error(`Cloudflare HTTP ${res.status}`);
+        const arrayBuffer = await res.arrayBuffer();
+        const buffer = Buffer.from(new Uint8Array(arrayBuffer));
+        
+        if (!this.isValidImage(buffer)) throw new Error('Cloudflare: Imagen vacía o corrupta');
+        return { buffer, type: 'buffer' };
     }
 
-    // ─── COMANDO PRINCIPAL ────────────────────────────────────────────────────
     async processImagine(message, args) {
         const prompt = args.slice(1).join(' ').trim();
+        if (!prompt) return message.reply('❌ Debes proporcionar un prompt.');
+        if (prompt.length > 500) return message.reply('❌ El prompt es muy largo (máximo 500 caracteres).');
 
-        if (!prompt) {
-            return message.reply('❌ Debes proporcionar un prompt.\nEjemplo: `>imagine un gato astronauta en la luna`');
-        }
-
-        if (prompt.length > 500) {
-            return message.reply('❌ El prompt es muy largo (máximo 500 caracteres).');
-        }
-
-        // Cooldown por usuario
         const userId = message.author.id;
         const lastUsed = this.cooldowns.get(userId) || 0;
         const remaining = this.COOLDOWN_MS - (Date.now() - lastUsed);
@@ -118,7 +90,6 @@ class ImageGenSystem {
 
         const loadingMsg = await message.reply('🎨 Generando imagen...');
         const startTime = Date.now();
-
         const emojis = ['🎨', '🖌️', '✨', '🖼️'];
         let emojiIndex = 0;
         const loadingInterval = setInterval(() => {
@@ -133,10 +104,8 @@ class ImageGenSystem {
                 const result = await provider.fn(prompt);
                 const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
 
-                // Éxito — actualizar cooldown
                 this.cooldowns.set(userId, Date.now());
 
-                // Construir embed
                 const embed = new EmbedBuilder()
                     .setTitle('🎨 Imagen Generada')
                     .setDescription(`**Prompt:** ${prompt}`)
@@ -162,17 +131,14 @@ class ImageGenSystem {
         }
 
         clearInterval(loadingInterval);
-        // Todos fallaron
         await loadingMsg.edit(`❌ No se pudo generar la imagen. Todos los proveedores fallaron.\nÚltimo error: \`${lastError?.message || 'desconocido'}\``);
     }
 
     async processCommand(message) {
         if (message.author.bot) return;
-        
         const content = message.content.toLowerCase();
         if (!content.startsWith('>imagine') && !content.startsWith('>img')) return;
-
-        const args = message.content.split(' '); // sin toLowerCase para preservar el prompt
+        const args = message.content.split(' ');
         await this.processImagine(message, args);
     }
 }

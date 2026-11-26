@@ -1498,20 +1498,54 @@ class MusicSystem {
     }
 
     async lyricsCommand(message, args) {
-        const query = args.slice(2).join(' ').trim();
+        let query = args.slice(2).join(' ').trim();
         if (!query) return message.reply('❌ Escribe el nombre de la canción. Ejemplo: `>m lyrics Artista - Canción`');
+
         const loadingMsg = await message.reply(`🔍 Buscando letra de **${query}**...`);
 
         try {
             const res = await fetch(`https://lrclib.net/api/search?q=${encodeURIComponent(query)}`, { signal: AbortSignal.timeout(8000) });
             const results = res.ok ? await res.json() : [];
-            const song = results.find(r => r.plainLyrics || r.syncedLyrics);
 
-            if (!song) {
-                return loadingMsg.edit('❌ No se encontró la letra.\nIntenta con: `>m lyrics Artista - Canción`');
+            if (!results || results.length === 0) {
+                return loadingMsg.edit(`❌ No se encontró ninguna canción con: **${query}**.\nIntenta ser más específico: \`>m lyrics Artista - Canción\``);
             }
 
-            const lyrics = (song.plainLyrics || song.syncedLyrics)
+            const queryLower = query.toLowerCase();
+            let mejorCancion = null;
+            let mejorPuntaje = -1;
+
+            for (const song of results) {
+                if (!song.plainLyrics && !song.syncedLyrics) continue;
+
+                let puntaje = 0;
+                const titulo = (song.trackName || '').toLowerCase();
+                const artista = (song.artistName || '').toLowerCase();
+
+                if (titulo === queryLower || queryLower === `${artista} - ${titulo}`) puntaje += 100;
+                else if (queryLower.includes(titulo) || titulo.includes(queryLower)) puntaje += 50;
+                if (queryLower.includes(artista) || artista.includes(queryLower)) puntaje += 30;
+
+                const palabrasQuery = queryLower.split(' ').filter(p => p.length > 2);
+                const textoCancion = `${titulo} ${artista}`;
+                for (const palabra of palabrasQuery) {
+                    if (textoCancion.includes(palabra)) puntaje += 10;
+                }
+
+                if (titulo.length < 3 && queryLower !== titulo) puntaje -= 50;
+
+                if (puntaje > mejorPuntaje) {
+                    mejorPuntaje = puntaje;
+                    mejorCancion = song;
+                }
+            }
+
+            if (!mejorCancion || mejorPuntaje < 10) {
+                return loadingMsg.edit(`❌ No pude encontrar una coincidencia exacta para **${query}**.\nIntenta con: \`>m lyrics ${query} - Artista\``);
+            }
+
+            // 🎵 4. Procesar la letra de la mejor canción encontrada
+            const lyrics = (mejorCancion.plainLyrics || mejorCancion.syncedLyrics)
                 .replace(/\r/g, '')
                 .replace(/\[\d+:\d+(?:\.\d+)?\]/g, '')
                 .split('\n').map(l => l.trim()).join('\n')
@@ -1525,10 +1559,10 @@ class MusicSystem {
                 msgId: loadingMsg.id,
                 chunks,
                 page: 1,
-                title: song.trackName || query,
-                artist: song.artistName || 'Desconocido',
-                album: song.albumName || null,
-                duration: song.duration ? this.formatTime(song.duration * 1000) : null,
+                title: mejorCancion.trackName || query,
+                artist: mejorCancion.artistName || 'Desconocido',
+                album: mejorCancion.albumName || null,
+                duration: mejorCancion.duration ? this.formatTime(mejorCancion.duration * 1000) : null,
                 requesterName: message.member?.displayName || message.author.username,
                 requesterAvatar: message.author.displayAvatarURL(),
                 timestamp: Date.now()
@@ -1536,6 +1570,7 @@ class MusicSystem {
 
             if (chunks.length > 1) this.lyricsPages.set(`${session.userId}_${session.msgId}`, session);
             return loadingMsg.edit(this.buildLyricsPayload(session, 1));
+            
         } catch (e) {
             console.error('Error en lyricsCommand:', e);
             await loadingMsg.edit('❌ Error buscando la letra.').catch(() => {});

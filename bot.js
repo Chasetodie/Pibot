@@ -2462,6 +2462,17 @@ function esComandoMalEscrito(content) {
     return false;
 }
 
+const MENSAJES_TIPEO = [
+    '🕯️ ¿Un desliz en la oscuridad o un error de tipeo? Usa `>help` para ver los comandos, o escríbelo pegado así: `>comando` 🦇',
+    '*revolea los ojos* Parece que tus dedos resbalaron. Revisa `>help` y asegúrate de usar el prefijo correcto, como `>comando` 🖤',
+    '🥀 ¿Acaso la oscuridad nubló tu vista? Ese comando no existe. Chequea `>help` y recuerda escribir todo junto: `>comando` ✨',
+    '😮‍💨 Ni siquiera yo puedo leer mentes tan confusas. Usa `>help` para ver qué hay, y no olvides que debe ir pegado: `>comando` 🕸️',
+    '💀 Ese hechizo no funcionó. Prueba con `>help` para ver el grimorio de comandos, y escríbelo bien pegadito: `>comando` 🕯️',
+    '😏 ¿Jugando a adivinar? Me gusta, pero no funciona. Mira `>help` y asegúrate de que sea `>comando` sin espacios antes de la palabra 🌑',
+    '🙂‍↔️ Error de sintaxis, cariño. Usa `>help` para guiarte y acuérdate: `>comando` ⛓️',
+    '🎀 Ups... te faltó algo ahí. Revisa `>help` y recuerda que debe ir todo junto: `>comando` 🖤'
+];
+
 client.on('messageCreate', async (message) => {
     if (message.author.bot) return;
     
@@ -2551,7 +2562,8 @@ client.on('messageCreate', async (message) => {
 
     if (message.content.startsWith('>')) {
         if (esComandoMalEscrito(message.content)) {
-            await message.reply('🕯️ ¿Un desliz en la oscuridad o un error de tipeo? Usa `>help` para ver los comandos, o escríbelo pegado así: `>comando` 🦇').catch(() => {});
+            const msgRandom = MENSAJES_TIPEO[Math.floor(Math.random() * MENSAJES_TIPEO.length)];
+            await message.reply(msgRandom).catch(() => {});
             return;
         }
 
