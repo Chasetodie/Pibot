@@ -2774,7 +2774,7 @@ class EconomySystem {
             return { success: false, reason: 'too_poor', minBalance: this.pactoConfig.minBalance };
         }
 
-        const half = Math.floor(user.balance * 0.30);
+        const half = Math.floor(user.balance * 0.50);
         const won = Math.random() < 0.5;
 
         if (won) {

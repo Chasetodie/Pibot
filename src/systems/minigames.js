@@ -2568,7 +2568,7 @@ const userId = gameState.userId;
         
         // ✅ DOBLAR APUESTA
         await this.economy.removeMoney(userId, player.bet, 'horserace_double');
-        this.applyMarriageBonusMinigame(userId, player.bet, true, message).catch(() => {});
+        this.applyMarriageBonusMinigame(userId, player.bet, true, interaction).catch(() => {});
         player.hasDoubled = true;
         
         if (game.mode === 'multi') {
