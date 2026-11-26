@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
-import comandosMock from "../../../commandsData.json";
+import comandosMock from "../../../config/commandsData.json";
 
 const COMANDOS_POR_PAGINA = 12;
 
