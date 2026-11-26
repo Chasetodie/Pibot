@@ -41,9 +41,13 @@ class ChatBotSystem {
         };
 
         this.normalProviders = [
-            { name: 'Groq', models: [GROQ_BACKUP], endpoint: 'https://api.groq.com/openai/v1/chat/completions', apiKey: process.env.GROQ_API_KEY, timeout: 15000 },
-            { name: 'Groq', models: [GROQ_FAST],   endpoint: 'https://api.groq.com/openai/v1/chat/completions', apiKey: process.env.GROQ_API_KEY, timeout: 15000 },
-            { name: 'Groq', models: [GROQ_SMART],  endpoint: 'https://api.groq.com/openai/v1/chat/completions', apiKey: process.env.GROQ_API_KEY, timeout: 15000 },
+            { 
+                name: 'Groq', 
+                models: [GROQ_SMART, GROQ_FAST, GROQ_BACKUP], 
+                endpoint: 'https://api.groq.com/openai/v1/chat/completions', 
+                apiKey: process.env.GROQ_API_KEY, 
+                timeout: 15000 
+            }
         ];
         
         this.totalUsedToday = 0;
@@ -757,7 +761,7 @@ PROHIBIDO usar: 😂 😭 🎉 👏 💪 🤗 🥹 🫡 🫠 🥲 🤌 🫶 🫰
 
 💬 MODO NORMAL:
 - Hablas de forma NATURAL y directa, como una persona real — nada de formalidades.
-- 🚨 REGLA DE VARIEDAD: NO repitas las acciones físicas ni los emojis en mensajes consecutivos. Si en tu último mensaje usaste *sonríe* (o *smiles*), en este usa otra cosa. Tienes permitido usar 1 o 2 acciones cortas por mensaje, no más.
+- 🚨 REGLA DE VARIEDAD: NO repitas las acciones físicas en mensajes consecutivos. Usa emojis variados acorde a tu lista, no los mismos. Si en tu último mensaje usaste *sonríe* (o *smiles*), en este usa otra cosa. Tienes permitido usar 1 o 3 acciones por mensaje, no más.
 - USA saltos de línea entre ideas distintas, párrafos cortos (2-3 líneas).
 - Si preguntan por comandos, elige solo los 2-4 más relevantes y explícalos en tus palabras. No pegues listas largas.${listaComandos}
 - Humor sarcástico pero cariñosa de fondo — no fría, solo no efusiva.
@@ -766,6 +770,7 @@ PROHIBIDO usar: 😂 😭 🎉 👏 💪 🤗 🥹 🫡 🫠 🥲 🤌 🫶 🫰
 - Odias las respuestas largas — vas al punto.
 - 🔎 BÚSQUEDA WEB: Si te preguntan por datos concretos que no conoces con certeza (personas, eventos, noticias, juegos, precios, versiones, cosas recientes) o te piden buscar algo, USA la herramienta buscar_web. NUNCA inventes datos. Solo si buscaste y no encontraste nada, di: "No tengo esa info 🖤" (o "I don't have that info 🖤" si hablas inglés).
 - Si el usuario te pide explícitamente traducir una palabra o frase, hazlo sin problema, pero mantén tus acciones y el resto de la charla en el idioma de la conversación.
+- 🚨 REGLA ESTRICTA: Si te preguntan por récords, estadísticas exactas, eventos actuales o datos de videojuegos que no tengas 100% claros, ES OBLIGATORIO usar la herramienta 'buscar_web'. No intentes adivinar ni usar tu conocimiento interno, usa la herramienta.
 
 🎭 ARSENAL DE ACCIONES (Úsalas para variar, NO las repitas):
 
@@ -807,15 +812,17 @@ Formato: Párrafos cortos con saltos de línea entre ideas`;
                 continue;
             }
 
-            for (const model of provider.models) {
+            const hasImage = conversationHistory.some(m => Array.isArray(m.content));           
+            const modelsToTry = hasImage ? [GROQ_VISION] : provider.models;
+
+            for (const model of modelsToTry) {
                 try {
                     console.log(`🎭 [${new Date().toLocaleTimeString()}] Probando ${provider.name} - ${model.split('/').pop()}`);
 
                     const controller = new AbortController();
                     const timeoutId = setTimeout(() => controller.abort(), provider.timeout);
 
-                    const hasImage = conversationHistory.some(m => Array.isArray(m.content));
-                    const effectiveModel = hasImage ? GROQ_VISION : model;
+                    const effectiveModel = model;
                     
                     const messagesForApi = [
                         { role: 'system', content: systemPrompt },

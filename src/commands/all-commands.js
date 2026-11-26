@@ -3422,7 +3422,7 @@ if (cosmeticRole?.name) {
                     let changes = {};
                     try {
                         const fs = require('fs');
-                        const raw = fs.readFileSync('./changelog.json', 'utf8');
+                        const raw = fs.readFileSync('../../config/changelog.json', 'utf8');
                         changes = JSON.parse(raw);
                     } catch {
                         changes = { '✨ Actualización': ['Mejoras generales y correcciones de bugs'] };
@@ -3460,7 +3460,6 @@ if (cosmeticRole?.name) {
                     await this.showHelp(message);
                     break;
                 default:
-                    await message.reply('🕯️ ¿Un desliz en la oscuridad o un error de tipeo? Usa `>help` para ver los comandos, o escríbelo pegado así: `>comando` 🦇');
                     break;
             }
         } catch (error) {
@@ -3546,13 +3545,12 @@ if (cosmeticRole?.name) {
                 .setDescription(
                     '> Usa los botones para explorar los comandos disponibles.\n' +
                     '> Escríbele a Pibot con **@Pibot** para chatear con la IA.\n\n' +
-                    '💡 `>changelog` — ver las últimas novedades\n' +
-                    '💡 `>profesion` — elige tu clase y desbloquea bonos\n' +
-                    '💡 `>recipes` — taller de crafteo con categorías'
+                    '💡 `>tts <texto>` — genera audios en base al texto enviado\n' +
+                    '💡 `>m statusnode` — verifica el estado de los nodos\n' +
+                    '💡 `>m changenode` — cambia entre los nodos disponibles'
                 )
                 .setColor('#5865F2');
 
-            // Genera los campos del menú principal a partir de las categorías reales
             for (const [nombreCat, meta] of Object.entries(categoryMeta)) {
                 if (grupos[nombreCat]) {
                     embed.addFields({
@@ -3588,7 +3586,6 @@ if (cosmeticRole?.name) {
                 );
             }
 
-            // Botón Dev (se mantiene aparte, no viene de commandsData.js)
             if (message.author.id === '488110147265232898') {
                 rows.push(new ActionRowBuilder().addComponents(
                     new ButtonBuilder().setCustomId(`help_dev_${uid}`).setLabel('🔧 Dev').setStyle(ButtonStyle.Danger)
@@ -3599,18 +3596,36 @@ if (cosmeticRole?.name) {
             return;
         }
 
-        // Categoría individual: genera los campos a partir de commandsData.js
         const comandosCategoria = grupos[category];
         if (comandosCategoria) {
             const meta = categoryMeta[category] || { emoji: '📋' };
-            embed.setTitle(`${meta.emoji} ${category}`);
-            embed.addFields(
-                comandosCategoria.map((cmd) => ({
-                    name: cmd.sintaxis,
-                    value: cmd.descripcion,
-                    inline: true
-                }))
-            );
+            const MAX_FIELDS = 25;
+            const embeds = [];
+
+            for (let i = 0; i < comandosCategoria.length; i += MAX_FIELDS) {
+                const chunk = comandosCategoria.slice(i, i + MAX_FIELDS);
+                const pageNum = Math.floor(i / MAX_FIELDS) + 1;
+                const totalPages = Math.ceil(comandosCategoria.length / MAX_FIELDS);
+
+                const pageEmbed = new EmbedBuilder()
+                    .setColor('#00BFFF')
+                    .setTimestamp()
+                    .setTitle(
+                        totalPages > 1
+                            ? `${meta.emoji} ${category} (${pageNum}/${totalPages})`
+                            : `${meta.emoji} ${category}`
+                    )
+                    .addFields(
+                        chunk.map((cmd) => ({
+                            name: cmd.sintaxis,
+                            value: cmd.descripcion,
+                            inline: true
+                        }))
+                    )
+                    .setFooter({ text: 'Pibot • Desarrollado por chasetodie10' });
+
+                embeds.push(pageEmbed);
+            }
 
             const backButton = new ActionRowBuilder().addComponents(
                 new ButtonBuilder()
@@ -3619,7 +3634,7 @@ if (cosmeticRole?.name) {
                     .setStyle(ButtonStyle.Secondary)
             );
 
-            await message.reply({ embeds: [embed], components: [backButton] });
+            await message.reply({ embeds: embeds.slice(0, 10), components: [backButton] });
         }
     }
 

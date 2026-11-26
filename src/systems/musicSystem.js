@@ -15,6 +15,7 @@ class MusicSystem {
         this.searchSessions = new Map();
         this.spotifySearchSessions = new Map();
         this.queuePages = new Map();
+        this.lyricsPages = new Map();
         this.failedNodesSince = new Map();
 
         this.initialize();
@@ -30,6 +31,10 @@ class MusicSystem {
             }
             for (const [key, page] of this.queuePages.entries()) {
                 if (now - page.timestamp > 60000) this.queuePages.delete(key);
+            }
+
+            for (const [key, session] of this.lyricsPages.entries()) {
+                if (now - session.timestamp > 600000) this.lyricsPages.delete(key);
             }
         }, 60000);
     }
@@ -848,6 +853,26 @@ class MusicSystem {
 
             if (interaction.user.id !== userId) return interaction.followUp({ content: '❌ Este menú no es tuyo.', ephemeral: true });
 
+            if (customId.startsWith('mly_')) {
+                const sessionKey = `${userId}_${guildId}`; // aquí guildId es en realidad el ID del mensaje
+                const session = this.lyricsPages.get(sessionKey);
+                if (!session) return interaction.editReply({ components: [] }); // sesión expirada: quita los botones
+
+                if (customId.startsWith('mly_close_')) {
+                    this.lyricsPages.delete(sessionKey);
+                    return interaction.editReply({ content: '❌ Letra cerrada.', embeds: [], components: [] });
+                }
+
+                let newPage = session.page;
+                if (customId.startsWith('mly_prev_')) newPage--;
+                if (customId.startsWith('mly_next_')) newPage++;
+                newPage = Math.min(Math.max(1, newPage), session.chunks.length);
+
+                session.page = newPage;
+                session.timestamp = Date.now();
+                return interaction.editReply(this.buildLyricsPayload(session, newPage));
+            }
+
             if (customId.startsWith('mq_')) {
                 const session = this.queuePages.get(`${userId}_${guildId}`);
                 if (!session) return interaction.editReply({ content: '❌ Sesión expirada.', embeds: [], components: [] });
@@ -1422,37 +1447,98 @@ class MusicSystem {
         await message.reply({ embeds: [new EmbedBuilder().setTitle('⏩ Adelantado').setDescription(`Posición: **${this.formatTime(target)}**`).setColor('#0099FF')] });
     }
 
+    splitLyrics(lyrics, maxLen = 3000) {
+        const stanzas = lyrics.split(/\n\s*\n/).map(s => s.trim()).filter(Boolean);
+        const chunks = [];
+        let current = '';
+
+        for (const stanza of stanzas) {
+            if (stanza.length > maxLen) {
+                if (current) { chunks.push(current); current = ''; }
+                let part = '';
+                for (const line of stanza.split('\n')) {
+                    if (part && (part + '\n' + line).length > maxLen) { chunks.push(part); part = line; }
+                    else part += (part ? '\n' : '') + line;
+                }
+                current = part;
+                continue;
+            }
+            if (current && (current + '\n\n' + stanza).length > maxLen) { chunks.push(current); current = stanza; }
+            else current += (current ? '\n\n' : '') + stanza;
+        }
+        if (current) chunks.push(current);
+        return chunks;
+    }
+
+    buildLyricsPayload(session, page) {
+        const total = session.chunks.length;
+        const footerParts = [];
+        if (session.album) footerParts.push(`💿 ${session.album}`);
+        if (session.duration) footerParts.push(`⏱️ ${session.duration}`);
+        if (total > 1) footerParts.push(`Página ${page}/${total}`);
+
+        const embed = new EmbedBuilder()
+            .setColor('#9932CC')
+            .setAuthor({ name: `🎤 ${session.artist}`.slice(0, 256) })
+            .setTitle(`🎵 ${session.title}`.slice(0, 256))
+            .setDescription(session.chunks[page - 1])
+            .setFooter({
+                text: [...footerParts, `Pedido por ${session.requesterName}`].join(' • ').slice(0, 2048),
+                iconURL: session.requesterAvatar
+            });
+
+        if (total <= 1) return { content: '', embeds: [embed], components: [] };
+
+        const row = new ActionRowBuilder().addComponents(
+            new ButtonBuilder().setCustomId(`mly_prev_${session.userId}_${session.msgId}`).setEmoji('⏮️').setStyle(ButtonStyle.Secondary).setDisabled(page <= 1),
+            new ButtonBuilder().setCustomId(`mly_close_${session.userId}_${session.msgId}`).setEmoji('❌').setStyle(ButtonStyle.Danger),
+            new ButtonBuilder().setCustomId(`mly_next_${session.userId}_${session.msgId}`).setEmoji('⏭️').setStyle(ButtonStyle.Secondary).setDisabled(page >= total),
+        );
+        return { content: '', embeds: [embed], components: [row] };
+    }
+
     async lyricsCommand(message, args) {
         const query = args.slice(2).join(' ').trim();
-        if (!query) return message.reply('❌ Escribe el nombre de la canción.');
+        if (!query) return message.reply('❌ Escribe el nombre de la canción. Ejemplo: `>m lyrics Artista - Canción`');
         const loadingMsg = await message.reply(`🔍 Buscando letra de **${query}**...`);
 
         try {
-            const lrclibRes = await fetch(`https://lrclib.net/api/search?q=${encodeURIComponent(query)}`, { signal: AbortSignal.timeout(8000) });
-            if (lrclibRes.ok) {
-                const results = await lrclibRes.json();
-                if (results.length > 0) {
-                    const song = results[0];
-                    let lyrics = song.plainLyrics || song.syncedLyrics;
-                    if (lyrics) {
-                        lyrics = lyrics.replace(/\[\d+:\d+\.\d+\]/g, '').trim();
-                        const lines = lyrics.split('\n'); const chunks = []; let currentChunk = '';
-                        for (const line of lines) {
-                            if ((currentChunk + '\n' + line).length > 1900) { if (currentChunk) chunks.push(currentChunk.trim()); currentChunk = line; } 
-                            else currentChunk += (currentChunk ? '\n' : '') + line;
-                        }
-                        if (currentChunk) chunks.push(currentChunk.trim());
-                        
-                        const embed = new EmbedBuilder().setTitle(`🎵 ${song.trackName}`).setDescription(chunks[0] + '\n\u200b').setColor('#9932CC').addFields({ name: '👤 Artista', value: song.artistName, inline: true }, { name: '📖 Fuente', value: 'lrclib', inline: true });
-                        if (chunks.length > 1) embed.setFooter({ text: `Página 1/${chunks.length}` });
-                        
-                        return loadingMsg.edit({ content: '', embeds: [embed] });
-                    }
-                }
+            const res = await fetch(`https://lrclib.net/api/search?q=${encodeURIComponent(query)}`, { signal: AbortSignal.timeout(8000) });
+            const results = res.ok ? await res.json() : [];
+            const song = results.find(r => r.plainLyrics || r.syncedLyrics);
+
+            if (!song) {
+                return loadingMsg.edit('❌ No se encontró la letra.\nIntenta con: `>m lyrics Artista - Canción`');
             }
-            await loadingMsg.edit(`❌ No se encontró la letra.\nIntenta con: \`>m lyrics Artista - Canción\``);
+
+            const lyrics = (song.plainLyrics || song.syncedLyrics)
+                .replace(/\r/g, '')
+                .replace(/\[\d+:\d+(?:\.\d+)?\]/g, '')
+                .split('\n').map(l => l.trim()).join('\n')
+                .trim();
+
+            const chunks = this.splitLyrics(lyrics);
+            if (!chunks.length) return loadingMsg.edit('❌ La letra está vacía.');
+
+            const session = {
+                userId: message.author.id,
+                msgId: loadingMsg.id,
+                chunks,
+                page: 1,
+                title: song.trackName || query,
+                artist: song.artistName || 'Desconocido',
+                album: song.albumName || null,
+                duration: song.duration ? this.formatTime(song.duration * 1000) : null,
+                requesterName: message.member?.displayName || message.author.username,
+                requesterAvatar: message.author.displayAvatarURL(),
+                timestamp: Date.now()
+            };
+
+            if (chunks.length > 1) this.lyricsPages.set(`${session.userId}_${session.msgId}`, session);
+            return loadingMsg.edit(this.buildLyricsPayload(session, 1));
         } catch (e) {
-            await loadingMsg.edit('❌ Error buscando la letra.');
+            console.error('Error en lyricsCommand:', e);
+            await loadingMsg.edit('❌ Error buscando la letra.').catch(() => {});
         }
     }
 

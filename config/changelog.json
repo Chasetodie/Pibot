@@ -1,11 +1,13 @@
 {
     "Comandos y Mejoras": [
-        "El comando >rachas ahora muestra el top 5 de mejores rachas y entrega el premio más alto cada 30 días",
-        "Se agregó el comando >tts <texto> para que la IA genere un audio con lo que escribas"
+        "Se agregó el comando >m lyrics <artista - canción> para consultar y mostrar la letra de una canción",
+        "Se realizaron mejoras en la IA al ejecutar búsquedas (ajuste en proceso, todavía no es una solución definitiva)",
+        "El comando >tts <texto> ahora funciona correctamente y genera los audios sin inconvenientes",
+        "Ahora el bot notifica cuando un usuario pierde su racha de presencia",
+        "La Página Web muestra los comandos agregados en las últimas actualizaciones"
     ],
     "Bugs": [
-        "Fix: Se corrigió un error que permitía la duplicación de apuestas",
-        "Fix: Ahora se muestra una ayuda básica correctamente al escribir únicamente >"
+        "Fix: Se corrigió un error que provocaba que el mensaje de ayuda apareciera cada vez que se ejecutaba un comando"
     ],
     "Info": [
         "¿Encontraste un bug o tienes una sugerencia? Contáctate con chasetodie10"

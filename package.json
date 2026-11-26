@@ -24,8 +24,10 @@
     "express-rate-limit": "^8.6.1",
     "genius-lyrics": "^4.4.7",
     "genius-lyrics-api": "^3.2.1",
+    "h2m-parser": "^1.0.0",
     "jsonwebtoken": "^9.0.3",
     "kazagumo": "^3.4.3",
+    "msedge-tts": "^2.1.1",
     "mysql2": "^3.14.3",
     "shoukaku": "^4.3.0",
     "xml2js": "^0.6.2"

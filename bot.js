@@ -2021,7 +2021,8 @@ client.on('interactionCreate', async (interaction) => {
             interaction.customId?.startsWith('msp_') ||
             interaction.customId?.startsWith('mspplay_') ||
             interaction.customId?.startsWith('mspback_') ||
-            interaction.customId?.startsWith('mq_')   // ← agregado
+            interaction.customId?.startsWith('mq_') ||
+            interaction.customId?.startsWith('mly_')
         ) {
             client.musicSystem.handleSearchInteraction(interaction).catch(e => {
                 console.error('handleSearchInteraction error:', e.message);
@@ -2408,22 +2409,70 @@ setInterval(() => {
     }
 }, 60000);
 
-// Manejar mensajes (COMANDOS + XP + ECONOMÍA)
+const RUTA_COMMANDS_DATA = './commandsData.json';
+const COMANDOS_EXTRA = [];
+
+function cargarComandosConocidos() {
+    const conocidos = new Set(COMANDOS_EXTRA.map(c => c.toLowerCase()));
+    const agregar = (texto, regex) => { for (const m of texto.matchAll(regex)) conocidos.add(m[1].toLowerCase()); };
+
+    try {
+        for (const c of require(RUTA_COMMANDS_DATA)) agregar(c.sintaxis || '', />([\p{L}\p{N}_]+)/gu);
+    } catch (e) {
+        console.warn('⚠️ No se pudo leer commandsData.json:', e.message);
+    }
+
+    const literal = /['"`]>([\p{L}\p{N}_]+)(?=['"`\s])/gu;
+    const escanear = (ruta) => {
+        for (const entrada of fs.readdirSync(ruta, { withFileTypes: true })) {
+            const completa = path.join(ruta, entrada.name);
+            if (entrada.isDirectory()) { if (entrada.name !== 'node_modules') escanear(completa); }
+            else if (entrada.name.endsWith('.js')) agregar(fs.readFileSync(completa, 'utf8'), literal);
+        }
+    };
+    try {
+        escanear(path.join(__dirname, 'src'));
+        agregar(fs.readFileSync(__filename, 'utf8'), literal);
+    } catch (e) {
+        console.warn('⚠️ No se pudo escanear el código para detectar comandos:', e.message);
+    }
+
+    console.log(`🔎 Comandos conocidos cargados: ${conocidos.size}`);
+    return conocidos;
+}
+const COMANDOS_CONOCIDOS = cargarComandosConocidos();
+
+function esComandoMalEscrito(content) {
+    const texto = content.trim();
+    if (texto === '>') return true;
+
+    const conEspacio = texto.match(/^>[ \t]+([\p{L}\p{N}_]+)(?=\s|$)/u);
+    if (conEspacio) {
+        return !texto.includes('\n')
+            && texto.split(/\s+/).length <= 5
+            && COMANDOS_CONOCIDOS.has(conEspacio[1].toLowerCase());
+    }
+
+    const pegado = texto.match(/^>([\p{L}\p{N}_]+)(?=\s|$)/u);
+    if (pegado) {
+        const existe = COMANDOS_CONOCIDOS.has(pegado[1].toLowerCase());
+        if (!existe) console.log(`[CMD] Comando desconocido: ">${pegado[1]}"`);
+        return !existe;
+    }
+    return false;
+}
+
 client.on('messageCreate', async (message) => {
-    // Ignorar mensajes de bots
     if (message.author.bot) return;
     
-    // AGREGAR ESTO AL INICIO:
     const userId = message.author.id;
     const now = Date.now();
 
-    // ← AGREGAR: Verificar reembolsos pendientes (máx 1 vez cada 24h por usuario)
     if (shop) {
         const lastRefundCheck = shop.refundCheckCache?.get(userId) || 0;
-        if (Date.now() - lastRefundCheck > 86400000) { // 24h
+        if (Date.now() - lastRefundCheck > 86400000) {
             if (!shop.refundCheckCache) shop.refundCheckCache = new Map();
             shop.refundCheckCache.set(userId, Date.now());
-            // No await — que corra en background sin bloquear
             shop.processUserRefund(userId, message.channel).catch(() => {});
         }
     }
@@ -2434,8 +2483,11 @@ client.on('messageCreate', async (message) => {
 
     await processUserActivityOptimized(userId, message);
 
-    // Racha de presencia — una vez por día por usuario
-    const presenceResult = await economy.checkPresenceStreak(userId).catch(() => null);
+    const presenceResult = await economy.checkPresenceStreak(userId).catch((err) => {
+        console.error('❌ Error en checkPresenceStreak:', err);
+        return null;
+    });
+
     if (presenceResult?.streakLost) {
         const lostEmbed = new EmbedBuilder()
             .setColor('#ff4444')
@@ -2446,8 +2498,14 @@ client.on('messageCreate', async (message) => {
             )
             .setFooter({ text: 'Conéctate cada día para mantener tu racha' })
             .setTimestamp();
-        message.channel.send({ embeds: [lostEmbed] }).catch(() => {});
+
+        message.channel.send({
+            content: `<@${userId}>`,
+            embeds: [lostEmbed],
+            allowedMentions: { users: [userId] }
+        }).catch((err) => console.error('❌ Error enviando embed de racha perdida:', err));
     }
+
     if (presenceResult?.milestone) {
         const { milestone } = presenceResult;
         const streakEmbed = new EmbedBuilder()
@@ -2462,7 +2520,6 @@ client.on('messageCreate', async (message) => {
         message.channel.send({ embeds: [streakEmbed] }).catch(() => {});
     }
 
-    // Verificar libros completados
     const completedBooks = await economy.checkCompletedBooks(userId).catch(() => []);
     if (completedBooks.length > 0) {
         for (const book of completedBooks) {
@@ -2492,9 +2549,12 @@ client.on('messageCreate', async (message) => {
     messageCount++;
     checkMessageRate();
 
-    // COMANDOS - SIN DELAYS ni restricciones
     if (message.content.startsWith('>')) {
-        // Procesar comandos inmediatamente, sin cooldowns ni lotes
+        if (esComandoMalEscrito(message.content)) {
+            await message.reply('🕯️ ¿Un desliz en la oscuridad o un error de tipeo? Usa `>help` para ver los comandos, o escríbelo pegado así: `>comando` 🦇').catch(() => {});
+            return;
+        }
+
         try {
             await Promise.allSettled([
                 achievements.processCommand(message),

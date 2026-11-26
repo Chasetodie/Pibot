@@ -6,7 +6,7 @@ const AI_CONFIG = {
             apiKeyEnv: 'GROQ_API_KEY',
             models: [
                 { id: 'openai/gpt-oss-120b', emoji: '🧠', desc: 'GPT-OSS 120B' },
-                { id: 'qwen/qwen3.8-27b', emoji: '🌙', desc: 'Kimi K2 Instruct' },
+                { id: 'qwen/qwen3.8-27b', emoji: '🌙', desc: 'Qwen 3.8 27B' },
                 { id: 'openai/gpt-oss-20b', emoji: '⚡', desc: 'GPT-OSS 20B' },
                 { id: 'qwen/qwen3.8-27b', emoji: '🖼️', desc: 'Qwen 3.8 27B' },
             ]
@@ -24,8 +24,8 @@ const AI_CONFIG = {
 };
 
 module.exports = {
-    GROQ_FAST: 'openai/gpt-oss-20b',
     GROQ_SMART: 'openai/gpt-oss-120b',
+    GROQ_FAST: 'openai/gpt-oss-20b',
     GROQ_BACKUP: 'qwen/qwen3.8-27b',
     GROQ_VISION: 'qwen/qwen3.8-27b',
     AI_CONFIG,

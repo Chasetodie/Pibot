@@ -2614,39 +2614,41 @@ class EconomySystem {
         const user = await this.getUser(userId);
         const now = Date.now();
         const lastPresence = user.last_presence || 0;
-        
-        const getDateString = (timestamp) => {
+
+        const toStartOfDay = (timestamp) => {
             const d = new Date(timestamp);
-            return `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`;
+            return new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
         };
-        
-        const today = getDateString(now);
-        const lastDay = lastPresence ? getDateString(lastPresence) : null;
-        
-        if (!lastDay) {
+
+        const todayStart = toStartOfDay(now);
+
+        if (!lastPresence) {
             await this.updateUser(userId, { presence_streak: 1, last_presence: now });
             return { streak: 1, milestone: null, streakLost: null };
         }
 
-        if (today === lastDay) return null;
+        const lastDayStart = toStartOfDay(lastPresence);
 
-        const todayDate = new Date(today);
-        const lastDate = new Date(lastDay);
-        const diffTime = Math.abs(todayDate - lastDate);
-        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        // Mismo día: no cambia la racha
+        if (todayStart === lastDayStart) return null;
+
+        const diffDays = Math.round((todayStart - lastDayStart) / (1000 * 60 * 60 * 24));
 
         let newStreak = user.presence_streak || 0;
         let milestone = null;
         let streakLost = null;
 
-        if (diffDays > 2) {
-            if (newStreak > 0) streakLost = newStreak;
-            newStreak = 1;
-        } else if (diffDays === 2) {
-            if (newStreak > 0) streakLost = newStreak;
-            newStreak = 1;
-        } else if (diffDays === 1) {
+        if (diffDays === 1) {
             newStreak += 1;
+        } else if (diffDays >= 2) {
+            if (newStreak > 0) {
+                streakLost = newStreak;
+            }
+            newStreak = 1;
+        } else {
+            // Por si lastPresence quedara en el futuro por algún desfase de reloj
+            await this.updateUser(userId, { last_presence: now });
+            return null;
         }
 
         if (newStreak === 3) {
@@ -2656,10 +2658,10 @@ class EconomySystem {
         } else if (newStreak === 15) {
             milestone = { bonus: 2000, item: 'energy_drink', label: '🔥 ¡15 días seguidos! +2000π + Energy Drink' };
         } else if (newStreak % 30 === 0) {
-            milestone = { 
-                bonus: 10000, 
-                item: 'mystery_box', 
-                label: `🔥 ¡${newStreak} días seguidos! +10000π + Mystery Box` 
+            milestone = {
+                bonus: 10000,
+                item: 'mystery_box',
+                label: `🔥 ¡${newStreak} días seguidos! +10000π + Mystery Box`
             };
         }
 
@@ -2671,7 +2673,7 @@ class EconomySystem {
             if (milestone.item) {
                 const userItems = user.items || {};
                 const item = this.shop.shopItems[milestone.item];
-                
+
                 if (item) {
                     if (userItems[milestone.item]) {
                         userItems[milestone.item].quantity += 1;
